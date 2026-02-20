@@ -41,6 +41,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { generateOilFields } from "./OilFieldGenerator";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -116,6 +117,8 @@ export class GameImpl implements Game {
       this.populateTeams();
     }
     this.addPlayers();
+
+    generateOilFields(this._map, this._config);
 
     if (!_config.disableNavMesh()) {
       const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
@@ -961,6 +964,12 @@ export class GameImpl implements Game {
   }
   setOwnerID(ref: TileRef, playerId: number): void {
     return this._map.setOwnerID(ref, playerId);
+  }
+  hasOilField(ref: TileRef): boolean {
+    return this._map.hasOilField(ref);
+  }
+  setOilField(ref: TileRef, value: boolean): void {
+    return this._map.setOilField(ref, value);
   }
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);

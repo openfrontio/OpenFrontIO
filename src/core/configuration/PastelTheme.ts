@@ -15,6 +15,7 @@ export class PastelTheme implements Theme {
   private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
   private background = colord("rgb(60,60,60)");
+  private oilField = colord("rgb(55,55,85)");
   private shore = colord("rgb(204,203,158)");
   private falloutColors = [
     colord("rgb(120,255,71)"), // Original color
@@ -147,6 +148,9 @@ export class PastelTheme implements Theme {
   // | **Water (Shore)** | 0         | Fixed: `rgb(100, 143, 255)`                   | Light blue near land.                                                |
   // | **Water (Deep)**  | 1 - 10+   | `rgb(70, 132, 180)` - `rgb(61, 123, 171)`   | Darker blue, adjusted slightly by distance to land.                  |
   terrainColor(gm: GameMap, tile: TileRef): Colord {
+    if (gm.hasOilField(tile)) {
+      return this.oilField;
+    }
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {
       return this.shore;

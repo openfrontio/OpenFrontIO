@@ -22,7 +22,7 @@ const isMac =
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
   buildCity: "Digit1",
-  buildFactory: "Digit2",
+  buildOilRig: "Digit2",
   buildPort: "Digit3",
   buildDefensePost: "Digit4",
   buildMissileSilo: "Digit5",
@@ -490,12 +490,12 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
-        action="buildFactory"
-        label=${translateText("user_setting.build_factory")}
-        description=${translateText("user_setting.build_factory_desc")}
+        action="buildOilRig"
+        label=${translateText("user_setting.build_oil_rig")}
+        description=${translateText("user_setting.build_oil_rig_desc")}
         defaultKey="Digit2"
-        .value=${this.getKeyValue("buildFactory")}
-        .display=${this.getKeyChar("buildFactory")}
+        .value=${this.getKeyValue("buildOilRig")}
+        .display=${this.getKeyChar("buildOilRig")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

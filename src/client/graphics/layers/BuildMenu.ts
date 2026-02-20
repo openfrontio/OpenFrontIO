@@ -26,12 +26,12 @@ import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
 import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import mirvIcon from "/images/MIRVIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
 import atomBombIcon from "/images/NukeIconWhite.svg?url";
+import oilRigIcon from "/images/oil-rig_2623991.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samlauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import shieldIcon from "/images/ShieldIconWhite.svg?url";
@@ -110,10 +110,10 @@ export const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
-      unitType: UnitType.Factory,
-      icon: factoryIcon,
-      description: "build_menu.desc.factory",
-      key: "unit_type.factory",
+      unitType: UnitType.OilRig,
+      icon: oilRigIcon,
+      description: "build_menu.desc.oil_rig",
+      key: "unit_type.oil_rig",
       countable: true,
     },
   ],

@@ -12,19 +12,19 @@ import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
 import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import mirvIcon from "/images/MIRVIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
 import atomBombIcon from "/images/NukeIconWhite.svg?url";
+import factoryIcon from "/images/oil-rig_2623991.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import defensePostIcon from "/images/ShieldIconWhite.svg?url";
 
 const BUILDABLE_UNITS: UnitType[] = [
   UnitType.City,
-  UnitType.Factory,
+  UnitType.OilRig,
   UnitType.Port,
   UnitType.DefensePost,
   UnitType.MissileSilo,
@@ -44,7 +44,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private keybinds: Record<string, { value: string; key: string }> = {};
   private _cities = 0;
   private _warships = 0;
-  private _factories = 0;
+  private _oilRigs = 0;
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
@@ -113,7 +113,7 @@ export class UnitDisplay extends LitElement implements Layer {
     this._port = player.totalUnitLevels(UnitType.Port);
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
-    this._factories = player.totalUnitLevels(UnitType.Factory);
+    this._oilRigs = player.totalUnitLevels(UnitType.OilRig);
     this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
   }
@@ -147,10 +147,10 @@ export class UnitDisplay extends LitElement implements Layer {
             )}
             ${this.renderUnitItem(
               factoryIcon,
-              this._factories,
-              UnitType.Factory,
-              "factory",
-              this.keybinds["buildFactory"]?.key ?? "2",
+              this._oilRigs,
+              UnitType.OilRig,
+              "oil_rig",
+              this.keybinds["buildOilRig"]?.key ?? "2",
             )}
             ${this.renderUnitItem(
               portIcon,

@@ -87,7 +87,7 @@ export class PortExecution implements Execution {
     const nearbyFactory = this.mg.hasUnitNearby(
       this.port.tile()!,
       this.mg.config().trainStationMaxRange(),
-      UnitType.Factory,
+      UnitType.OilRig,
     );
     if (nearbyFactory) {
       this.mg.addExecution(new TrainStationExecution(this.port));

@@ -265,10 +265,10 @@ export class DefaultConfig implements Config {
     return BigInt(this._gameConfig.startingGold ?? 0);
   }
 
-  trainSpawnRate(numPlayerFactories: number): number {
-    // hyperbolic decay, midpoint at 10 factories
-    // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 18;
+  trainSpawnRate(numPlayerOilRigs: number): number {
+    // hyperbolic decay, midpoint at 10 oil rigs
+    // expected number of trains = numPlayerOilRigs  / trainSpawnRate(numPlayerOilRigs)
+    return (numPlayerOilRigs + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     const multiplier = this.goldMultiplier();
@@ -362,7 +362,7 @@ export class DefaultConfig implements Config {
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Port,
-            UnitType.Factory,
+            UnitType.OilRig,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -436,12 +436,12 @@ export class DefaultConfig implements Config {
           upgradable: true,
         };
         break;
-      case UnitType.Factory:
+      case UnitType.OilRig:
         info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
-            UnitType.Factory,
+            UnitType.OilRig,
             UnitType.Port,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -910,5 +910,9 @@ export class DefaultConfig implements Config {
 
   allianceExtensionPromptOffset(): number {
     return 300; // 30 seconds before expiration
+  }
+
+  randomSeed(): number {
+    return simpleHash(JSON.stringify(this.gameConfig()));
   }
 }

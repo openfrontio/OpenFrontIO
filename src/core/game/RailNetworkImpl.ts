@@ -248,13 +248,13 @@ export class RailNetworkImpl implements RailNetwork {
     const maxPathSize = this.game.config().railroadMaxSize();
 
     // Cannot connect if outside the max range of a factory
-    if (!this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)) {
+    if (!this.game.hasUnitNearby(tile, maxRange, UnitType.OilRig)) {
       return [];
     }
 
     const neighbors = this.game.nearbyUnits(tile, maxRange, [
       UnitType.City,
-      UnitType.Factory,
+      UnitType.OilRig,
       UnitType.Port,
     ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
@@ -293,7 +293,7 @@ export class RailNetworkImpl implements RailNetwork {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      [UnitType.City, UnitType.OilRig, UnitType.Port],
     );
 
     const editedClusters = new Set<Cluster>();

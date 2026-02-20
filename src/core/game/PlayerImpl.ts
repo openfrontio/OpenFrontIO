@@ -1042,6 +1042,10 @@ export class PlayerImpl implements Player {
       (units === undefined || units.some((u) => isStructureType(u)))
         ? this.validStructureSpawnTiles(tile)
         : [];
+    const validOilRigTiles =
+      tile !== null && (units === undefined || units.includes(UnitType.OilRig))
+        ? this.validStructureSpawnTiles(tile, true)
+        : [];
     return Object.values(UnitType)
       .filter((u) => units === undefined || units.includes(u))
       .map((u) => {
@@ -1053,7 +1057,11 @@ export class PlayerImpl implements Player {
             canUpgrade = existingUnit.id();
           }
           if (tile !== null) {
-            canBuild = this.canBuild(u, tile, validTiles);
+            canBuild = this.canBuild(
+              u,
+              tile,
+              u === UnitType.OilRig ? validOilRigTiles : validTiles,
+            );
           }
         }
         return {
@@ -1117,8 +1125,12 @@ export class PlayerImpl implements Player {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
-      case UnitType.Factory:
-        return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.OilRig:
+        return this.landBasedStructureSpawn(
+          targetTile,
+          validTiles,
+          unitType === UnitType.OilRig,
+        );
       default:
         assertNever(unitType);
     }
@@ -1209,16 +1221,23 @@ export class PlayerImpl implements Player {
   landBasedStructureSpawn(
     tile: TileRef,
     validTiles: TileRef[] | null = null,
+    isOilRig: boolean = false,
   ): TileRef | false {
-    const tiles = validTiles ?? this.validStructureSpawnTiles(tile);
+    const tiles = validTiles ?? this.validStructureSpawnTiles(tile, isOilRig);
     if (tiles.length === 0) {
       return false;
     }
     return tiles[0];
   }
 
-  private validStructureSpawnTiles(tile: TileRef): TileRef[] {
+  private validStructureSpawnTiles(
+    tile: TileRef,
+    isOilRig: boolean = false,
+  ): TileRef[] {
     if (this.mg.owner(tile) !== this) {
+      return [];
+    }
+    if (isOilRig && !this.mg.hasOilField(tile)) {
       return [];
     }
     const searchRadius = 15;
@@ -1234,7 +1253,8 @@ export class PlayerImpl implements Player {
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
-        gm.ownerID(t) === this.smallID()
+        gm.ownerID(t) === this.smallID() &&
+        (!isOilRig || gm.hasOilField(t))
       );
     });
     const validSet: Set<TileRef> = new Set(nearbyTiles);

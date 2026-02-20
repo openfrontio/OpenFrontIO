@@ -25,6 +25,8 @@ export interface GameMap {
   hasOwner(ref: TileRef): boolean;
 
   setOwnerID(ref: TileRef, playerId: number): void;
+  hasOilField(ref: TileRef): boolean;
+  setOilField(ref: TileRef, value: boolean): void;
   hasFallout(ref: TileRef): boolean;
   setFallout(ref: TileRef, value: boolean): void;
   isOnEdgeOfMap(ref: TileRef): boolean;
@@ -76,6 +78,7 @@ export class GameMapImpl implements GameMap {
 
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_MASK = 0xfff;
+  private static readonly OIL_FIELD_BIT = 12;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
   // Bit 15 still reserved
@@ -190,6 +193,18 @@ export class GameMapImpl implements GameMap {
     }
     this.state[ref] =
       (this.state[ref] & ~GameMapImpl.PLAYER_ID_MASK) | playerId;
+  }
+
+  hasOilField(ref: TileRef): boolean {
+    return Boolean(this.state[ref] & (1 << GameMapImpl.OIL_FIELD_BIT));
+  }
+
+  setOilField(ref: TileRef, value: boolean): void {
+    if (value) {
+      this.state[ref] |= 1 << GameMapImpl.OIL_FIELD_BIT;
+    } else {
+      this.state[ref] &= ~(1 << GameMapImpl.OIL_FIELD_BIT);
+    }
   }
 
   hasFallout(ref: TileRef): boolean {

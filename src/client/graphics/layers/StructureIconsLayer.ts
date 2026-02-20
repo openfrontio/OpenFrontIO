@@ -84,7 +84,7 @@ export class StructureIconsLayer implements Layer {
   private factory: SpriteFactory;
   private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
     [UnitType.City, { visible: true }],
-    [UnitType.Factory, { visible: true }],
+    [UnitType.OilRig, { visible: true }],
     [UnitType.DefensePost, { visible: true }],
     [UnitType.Port, { visible: true }],
     [UnitType.MissileSilo, { visible: true }],

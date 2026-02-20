@@ -33,9 +33,9 @@ import { SpawnBarVisibleEvent } from "./SpawnTimer";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
 import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
+import factoryIcon from "/images/oil-rig_2623991.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import soldierIcon from "/images/SoldierIcon.svg?url";
@@ -380,7 +380,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           </div>
           <div class="flex gap-0.5 lg:gap-1 items-center mt-1">
             ${this.displayUnitCount(player, UnitType.City, cityIcon)}
-            ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
+            ${this.displayUnitCount(player, UnitType.OilRig, factoryIcon)}
             ${this.displayUnitCount(player, UnitType.Port, portIcon)}
             ${this.displayUnitCount(
               player,

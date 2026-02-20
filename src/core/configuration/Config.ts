@@ -132,7 +132,7 @@ export interface Config {
     numTradeShips: number,
   ): number;
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
-  trainSpawnRate(numPlayerFactories: number): number;
+  trainSpawnRate(numPlayerOilRigs: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
   railroadMaxSize(): number;
@@ -170,6 +170,7 @@ export interface Config {
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;
+  randomSeed(): number;
 }
 
 export interface Theme {

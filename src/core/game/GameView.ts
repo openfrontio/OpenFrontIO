@@ -34,6 +34,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { generateOilFields } from "./OilFieldGenerator";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
@@ -627,6 +628,7 @@ export class GameView implements GameMap {
         flag: nation.flag,
       } satisfies PlayerCosmetics);
     }
+    generateOilFields(this._map, this._config);
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {
@@ -899,6 +901,12 @@ export class GameView implements GameMap {
   }
   setOwnerID(ref: TileRef, playerId: number): void {
     return this._map.setOwnerID(ref, playerId);
+  }
+  hasOilField(ref: TileRef): boolean {
+    return this._map.hasOilField(ref);
+  }
+  setOilField(ref: TileRef, value: boolean): void {
+    return this._map.setOilField(ref, value);
   }
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);

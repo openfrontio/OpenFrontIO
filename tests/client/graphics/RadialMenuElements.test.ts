@@ -30,9 +30,9 @@ vi.mock("../../../src/client/graphics/layers/BuildMenu", async () => {
         countable: true,
       },
       {
-        unitType: UnitType.Factory,
-        key: "unit_type.factory",
-        description: "unit_type.factory_desc",
+        unitType: UnitType.OilRig,
+        key: "unit_type.oil_rig",
+        description: "unit_type.oil_rig_desc",
         icon: "factory-icon",
         countable: true,
       },
@@ -120,7 +120,7 @@ describe("RadialMenuElements", () => {
     mockPlayerActions = {
       buildableUnits: [
         { type: UnitType.City, canBuild: true },
-        { type: UnitType.Factory, canBuild: true },
+        { type: UnitType.OilRig, canBuild: true },
         { type: UnitType.AtomBomb, canBuild: true },
         { type: UnitType.Warship, canBuild: true },
         { type: UnitType.HydrogenBomb, canBuild: true },
@@ -211,7 +211,7 @@ describe("RadialMenuElements", () => {
 
       const subMenu = attackMenuElement.subMenu!(mockParams);
 
-      const constructionUnitTypes = [UnitType.City, UnitType.Factory];
+      const constructionUnitTypes = [UnitType.City, UnitType.OilRig];
       const returnedUnitTypes = subMenu.map((item) => {
         const unitTypeStr = item.id.replace("attack_", "");
         return Object.values(UnitType).find(
@@ -254,7 +254,7 @@ describe("RadialMenuElements", () => {
       expect(subMenu).toBeDefined();
       expect(subMenu.length).toBeGreaterThan(0);
 
-      const constructionUnitTypes = [UnitType.City, UnitType.Factory];
+      const constructionUnitTypes = [UnitType.City, UnitType.OilRig];
       const returnedUnitTypes = subMenu.map((item) => {
         const unitTypeStr = item.id.replace("build_", "");
         return Object.values(UnitType).find(
@@ -597,8 +597,8 @@ describe("RadialMenuElements", () => {
 
       expect(translateText).toHaveBeenCalledWith("unit_type.city");
       expect(translateText).toHaveBeenCalledWith("unit_type.city_desc");
-      expect(translateText).toHaveBeenCalledWith("unit_type.factory");
-      expect(translateText).toHaveBeenCalledWith("unit_type.factory_desc");
+      expect(translateText).toHaveBeenCalledWith("unit_type.oil_rig");
+      expect(translateText).toHaveBeenCalledWith("unit_type.oil_rig_desc");
     });
 
     it("should use translateText for tooltip items in attack menu", async () => {

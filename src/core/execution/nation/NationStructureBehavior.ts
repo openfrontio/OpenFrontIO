@@ -46,7 +46,7 @@ function getStructureRatios(
 ): Partial<Record<UnitType, StructureRatioConfig>> {
   return {
     [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
-    [UnitType.Factory]: {
+    [UnitType.OilRig]: {
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
     },
@@ -105,7 +105,7 @@ export class NationStructureBehavior {
     const buildOrder: UnitType[] = [
       UnitType.DefensePost,
       UnitType.Port,
-      UnitType.Factory,
+      UnitType.OilRig,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
     ];
@@ -185,7 +185,7 @@ export class NationStructureBehavior {
 
     // Heavily reduce factory spawning if we have coastal tiles
     if (
-      type === UnitType.Factory &&
+      type === UnitType.OilRig &&
       hasCoastalTiles &&
       !gameConfig.isUnitDisabled(UnitType.Port)
     ) {
@@ -446,7 +446,9 @@ export class NationStructureBehavior {
     const tiles =
       type === UnitType.Port
         ? this.randCoastalTileArray(25)
-        : randTerritoryTileArray(this.random, this.game, this.player, 25);
+        : type === UnitType.OilRig
+          ? this.randOilFieldTileArray(25)
+          : randTerritoryTileArray(this.random, this.game, this.player, 25);
     if (tiles.length === 0) return null;
     const valueFunction = this.structureSpawnTileValue(type);
     if (valueFunction === null) return null;
@@ -466,6 +468,13 @@ export class NationStructureBehavior {
   private randCoastalTileArray(numTiles: number): TileRef[] {
     const tiles = Array.from(this.player.borderTiles()).filter((t) =>
       this.game.isOceanShore(t),
+    );
+    return Array.from(this.arraySampler(tiles, numTiles));
+  }
+
+  private randOilFieldTileArray(numTiles: number): TileRef[] {
+    const tiles = Array.from(this.player.tiles()).filter((t) =>
+      this.game.hasOilField(t),
     );
     return Array.from(this.arraySampler(tiles, numTiles));
   }
@@ -490,7 +499,7 @@ export class NationStructureBehavior {
   ): ((tile: TileRef) => number) | null {
     switch (type) {
       case UnitType.City:
-      case UnitType.Factory:
+      case UnitType.OilRig:
       case UnitType.MissileSilo:
         return this.interiorStructureValue(type);
       case UnitType.Port:
@@ -652,7 +661,7 @@ export class NationStructureBehavior {
     for (const unit of player.units()) {
       switch (unit.type()) {
         case UnitType.City:
-        case UnitType.Factory:
+        case UnitType.OilRig:
         case UnitType.MissileSilo:
         case UnitType.Port:
           protectEntries.push({

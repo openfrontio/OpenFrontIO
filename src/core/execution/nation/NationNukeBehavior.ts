@@ -82,7 +82,7 @@ export class NationNukeBehavior {
       UnitType.MissileSilo,
       UnitType.Port,
       UnitType.SAMLauncher,
-      UnitType.Factory,
+      UnitType.OilRig,
     );
     const structureTiles = structures.map((u) => u.tile());
     const difficulty = this.game.config().gameConfig().difficulty;
@@ -571,7 +571,7 @@ export class NationNukeBehavior {
             return 50_000 * level;
           case UnitType.Port:
             return 15_000 * level;
-          case UnitType.Factory:
+          case UnitType.OilRig:
             return 15_000 * level;
           default:
             return 0;

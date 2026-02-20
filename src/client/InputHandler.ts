@@ -216,7 +216,7 @@ export class InputHandler {
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
-      buildFactory: "Digit2",
+      buildOilRig: "Digit2",
       buildPort: "Digit3",
       buildDefensePost: "Digit4",
       buildMissileSilo: "Digit5",
@@ -396,9 +396,9 @@ export class InputHandler {
         this.setGhostStructure(UnitType.City);
       }
 
-      if (e.code === this.keybinds.buildFactory) {
+      if (e.code === this.keybinds.buildOilRig) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
+        this.setGhostStructure(UnitType.OilRig);
       }
 
       if (e.code === this.keybinds.buildPort) {

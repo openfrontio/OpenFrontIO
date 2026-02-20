@@ -4,8 +4,8 @@ import { Cell, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "/images/AnchorIcon.png?url";
+import factoryIcon from "/images/buildings/oil-rig_2623991.png?url";
 import cityIcon from "/images/CityIcon.png?url";
-import factoryIcon from "/images/FactoryUnit.png?url";
 import missileSiloIcon from "/images/MissileSiloUnit.png?url";
 import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
 import shieldIcon from "/images/ShieldIcon.png?url";
@@ -13,7 +13,7 @@ import shieldIcon from "/images/ShieldIcon.png?url";
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",
   [UnitType.Port]: "pentagon",
-  [UnitType.Factory]: "circle",
+  [UnitType.OilRig]: "circle",
   [UnitType.DefensePost]: "octagon",
   [UnitType.SAMLauncher]: "square",
   [UnitType.MissileSilo]: "triangle",
@@ -57,7 +57,7 @@ export class SpriteFactory {
     { iconPath: string; image: HTMLImageElement | null }
   > = new Map([
     [UnitType.City, { iconPath: cityIcon, image: null }],
-    [UnitType.Factory, { iconPath: factoryIcon, image: null }],
+    [UnitType.OilRig, { iconPath: factoryIcon, image: null }],
     [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
     [UnitType.Port, { iconPath: anchorIcon, image: null }],
     [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
@@ -464,7 +464,7 @@ export class SpriteFactory {
       case UnitType.SAMLauncher:
         radius = this.game.config().samRange(level ?? 1);
         break;
-      case UnitType.Factory:
+      case UnitType.OilRig:
         radius = this.game.config().trainStationMaxRange();
         break;
       case UnitType.DefensePost:

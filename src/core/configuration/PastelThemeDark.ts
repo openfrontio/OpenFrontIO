@@ -19,6 +19,9 @@ export class PastelThemeDark extends PastelTheme {
   // | **Water (Deep)**  | 1 - 10+   | `rgb(22, 19, 38)` - `rgb(14, 11, 30)`       | Very dark blue/black. |
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
+    if (gm.hasOilField(tile)) {
+      return colord("rgb(50,40,80)");
+    }
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {
       return this.darkShore;

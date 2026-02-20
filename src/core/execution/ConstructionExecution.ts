@@ -2,10 +2,10 @@ import { Execution, Game, Player, Tick, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
-import { FactoryExecution } from "./FactoryExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
+import { OilRigExecution } from "./OilRigExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
 import { WarshipExecution } from "./WarshipExecution";
@@ -141,8 +141,8 @@ export class ConstructionExecution implements Execution {
       case UnitType.City:
         this.mg.addExecution(new CityExecution(this.structure!));
         break;
-      case UnitType.Factory:
-        this.mg.addExecution(new FactoryExecution(this.structure!));
+      case UnitType.OilRig:
+        this.mg.addExecution(new OilRigExecution(this.structure!));
         break;
       default:
         console.warn(
@@ -159,7 +159,7 @@ export class ConstructionExecution implements Execution {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
-      case UnitType.Factory:
+      case UnitType.OilRig:
         return true;
       default:
         return false;
