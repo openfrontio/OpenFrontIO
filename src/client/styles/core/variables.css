@@ -37,3 +37,8 @@
   --medal-impossible: #d32f2f;
   --medal-custom: #2196f3;
 }
+
+::view-transition-group(*) {
+  animation-duration: 500ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

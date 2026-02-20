@@ -112,7 +112,9 @@ export class MasterLobbyService {
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies();
 
-    for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
+    const types = Object.keys(lobbiesByType) as PublicGameType[];
+    for (let i = 0; i < types.length; i++) {
+      const type = types[i];
       const lobbies = lobbiesByType[type];
       if (lobbies.length >= 2) {
         continue;
@@ -120,7 +122,7 @@ export class MasterLobbyService {
 
       const lastStart = lobbies.reduce(
         (max, pb) => Math.max(max, pb.startsAt),
-        Date.now(),
+        Date.now() + i * 10_000,
       );
 
       const gameID = generateID();

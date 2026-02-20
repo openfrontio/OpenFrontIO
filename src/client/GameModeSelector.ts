@@ -24,6 +24,7 @@ const CARD_BG = "bg-sky-950";
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   private serverTimeOffset: number = 0;
+  private prevGameIds: string = "";
 
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
@@ -69,14 +70,45 @@ export class GameModeSelector extends LitElement {
   }
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
-    this.lobbies = lobbies;
-    this.serverTimeOffset = lobbies.serverTime - Date.now();
-    document.dispatchEvent(
-      new CustomEvent("public-lobbies-update", {
-        detail: { payload: lobbies },
-      }),
-    );
-    this.requestUpdate();
+    const newIds = this.extractSortedGameIds(lobbies);
+    const gameListChanged =
+      this.prevGameIds !== "" && newIds !== this.prevGameIds;
+    this.prevGameIds = newIds;
+
+    const applyUpdate = () => {
+      this.lobbies = lobbies;
+      this.serverTimeOffset = lobbies.serverTime - Date.now();
+      document.dispatchEvent(
+        new CustomEvent("public-lobbies-update", {
+          detail: { payload: lobbies },
+        }),
+      );
+      this.requestUpdate();
+    };
+
+    if (
+      gameListChanged &&
+      "startViewTransition" in document &&
+      typeof (document as any).startViewTransition === "function"
+    ) {
+      (document as any).startViewTransition(async () => {
+        applyUpdate();
+        await this.updateComplete;
+      });
+    } else {
+      applyUpdate();
+    }
+  }
+
+  private extractSortedGameIds(lobbies: PublicGames): string {
+    const ffa = lobbies.games?.["ffa"]?.[0];
+    const teams = lobbies.games?.["team"]?.[0];
+    const special = lobbies.games?.["special"]?.[0];
+    return [ffa, teams, special]
+      .filter((g): g is PublicGameInfo => !!g)
+      .sort((a, b) => a.startsAt - b.startsAt)
+      .map((g) => g.gameID)
+      .join(",");
   }
 
   private getSortedLobbies(): PublicGameInfo[] {
@@ -214,6 +246,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
+        style="view-transition-name: game-${lobby.gameID}"
         class="group relative w-full aspect-square text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] ring-1 ring-sky-400/30 shadow-[0_0_25px_-2px_rgba(56,189,248,0.2)] ${CARD_BG}"
       >
         ${mapImageSrc
@@ -293,6 +326,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
+        style="view-transition-name: game-${lobby.gameID}"
         class="group relative w-full flex-1 text-white uppercase rounded-xl overflow-hidden transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] ${CARD_BG}"
       >
         ${mapImageSrc
