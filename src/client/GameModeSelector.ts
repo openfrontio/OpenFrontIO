@@ -214,7 +214,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full aspect-square text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] ${CARD_BG}"
+        class="group relative w-full aspect-square text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] ring-1 ring-sky-400/30 shadow-[0_0_25px_-2px_rgba(56,189,248,0.2)] ${CARD_BG}"
       >
         ${mapImageSrc
           ? html`<img
@@ -300,7 +300,7 @@ export class GameModeSelector extends LitElement {
               src="${mapImageSrc}"
               alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
               draggable="false"
-              class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
+              class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none saturate-[.25] brightness-[.8] group-hover:saturate-100 group-hover:brightness-100 transition-[filter] duration-300"
             />`
           : null}
         <div class="absolute top-1 right-1">
