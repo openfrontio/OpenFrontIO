@@ -12,6 +12,13 @@ export class MouseUpEvent implements GameEvent {
   ) {}
 }
 
+export class DoubleClickEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class MouseOverEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -73,6 +80,10 @@ export class DragEvent implements GameEvent {
 
 export class AlternateViewEvent implements GameEvent {
   constructor(public readonly alternateView: boolean) {}
+}
+
+export class CityUpdateEvent implements GameEvent {
+  constructor(public readonly city: UnitView) {}
 }
 
 export class CloseViewEvent implements GameEvent {}
@@ -148,6 +159,9 @@ export class InputHandler {
   private lastPinchDistance: number = 0;
 
   private pointerDown: boolean = false;
+  private lastClickTime: number = 0;
+  private lastClickX: number = 0;
+  private lastClickY: number = 0;
 
   private alternateView = false;
 
@@ -516,6 +530,19 @@ export class InputHandler {
         event.preventDefault();
         return;
       }
+
+      const now = Date.now();
+      const clickDist =
+        Math.abs(event.x - this.lastClickX) +
+        Math.abs(event.y - this.lastClickY);
+      if (now - this.lastClickTime < 300 && clickDist < 20) {
+        this.eventBus.emit(new DoubleClickEvent(event.x, event.y));
+        this.lastClickTime = 0; // reset to prevent triple-click double events
+        return;
+      }
+      this.lastClickTime = now;
+      this.lastClickX = event.x;
+      this.lastClickY = event.y;
 
       if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));

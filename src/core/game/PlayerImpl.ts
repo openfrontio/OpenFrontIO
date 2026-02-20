@@ -948,6 +948,12 @@ export class PlayerImpl implements Player {
     ) {
       return false;
     }
+    if (
+      unit.type() === UnitType.City &&
+      this.troops() < 25_000 * unit.level()
+    ) {
+      return false;
+    }
     if (unit.owner() !== this) {
       return false;
     }
@@ -957,6 +963,9 @@ export class PlayerImpl implements Player {
   upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
     this.removeGold(cost);
+    if (unit.type() === UnitType.City) {
+      this.removeTroops(25_000 * unit.level());
+    }
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
   }

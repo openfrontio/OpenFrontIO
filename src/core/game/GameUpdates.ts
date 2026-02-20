@@ -140,6 +140,8 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  areaRadius?: number; // Only for cities
+  age?: number; // Only for cities
 }
 
 export interface AttackUpdate {

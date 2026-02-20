@@ -171,6 +171,31 @@ export class UnitView {
   level(): number {
     return this.data.level;
   }
+  areaRadius(): number {
+    return this.data.areaRadius ?? 7;
+  }
+  age(): number {
+    return this.data.age ?? 0;
+  }
+
+  private _density: number | null = null;
+  private _lastDensityTick = -1;
+
+  density(): number {
+    if (this.type() !== UnitType.City) return 0;
+    const tick = this.gameView.ticks();
+    if (tick === this._lastDensityTick && this._density !== null) {
+      return this._density;
+    }
+
+    const timeConstant = 200 * this.level();
+    const maxDensity = 0.5 + (this.level() - 1) * 0.5;
+    const density = (1 - Math.exp(-this.age() / timeConstant)) * maxDensity;
+
+    this._density = Math.max(0, density) || 0;
+    this._lastDensityTick = tick;
+    return this._density;
+  }
   hasTrainStation(): boolean {
     return this.data.hasTrainStation;
   }
@@ -198,6 +223,9 @@ export class PlayerView {
   private _borderColorDefendedNeutral: { light: Colord; dark: Colord };
   private _borderColorDefendedFriendly: { light: Colord; dark: Colord };
   private _borderColorDefendedEmbargo: { light: Colord; dark: Colord };
+
+  private _urbanizationBuildingColor: Colord;
+  private _urbanizationCoreColor: Colord;
 
   constructor(
     private game: GameView,
@@ -312,10 +340,21 @@ export class PlayerView {
       this._borderColorEmbargo,
     );
 
+    this._urbanizationBuildingColor = this._borderColor;
+    this._urbanizationCoreColor = this._borderColor.lighten(0.2);
+
     this.decoder =
       pattern === undefined
         ? undefined
         : new PatternDecoder(pattern, base64url.decode);
+  }
+
+  urbanizationBuildingColor(): Colord {
+    return this._urbanizationBuildingColor;
+  }
+
+  urbanizationCoreColor(): Colord {
+    return this._urbanizationCoreColor;
   }
 
   territoryColor(tile?: TileRef): Colord {
@@ -707,14 +746,16 @@ export class GameView implements GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
+    includeUnderConstruction?: boolean,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
       searchRange,
       types,
       predicate,
+      includeUnderConstruction,
     ) as Array<{
       unit: UnitView;
       distSquared: number;
@@ -953,5 +994,77 @@ export class GameView implements GameMap {
 
   focusedPlayer(): PlayerView | null {
     return this.myPlayer();
+  }
+
+  private urbanizationCache: Map<
+    TileRef,
+    { density: number; unit?: UnitView }
+  > = new Map();
+  private lastUrbanizationUpdate = -1;
+
+  getUrbanization(tile: TileRef): { density: number; unit?: UnitView } {
+    if (!this.isLand(tile)) return { density: 0 };
+
+    if (this.ticks() !== this.lastUrbanizationUpdate) {
+      this.urbanizationCache.clear();
+      this.lastUrbanizationUpdate = this.ticks();
+    }
+
+    const cached = this.urbanizationCache.get(tile);
+    if (cached) return cached;
+
+    const nearby = this.nearbyUnits(tile, 40, UnitType.City);
+    if (nearby.length === 0) {
+      const result = { density: 0 };
+      this.urbanizationCache.set(tile, result);
+      return result;
+    }
+
+    let maxDensity = 0;
+    let maxUnit: UnitView | undefined = undefined;
+
+    const tileOwnerID = this.ownerID(tile);
+    const tx = this.x(tile);
+    const ty = this.y(tile);
+
+    for (let i = 0; i < nearby.length; i++) {
+      const { unit, distSquared } = nearby[i];
+      if (unit.isUnderConstruction()) continue;
+
+      const owner = unit.owner();
+      if (!owner || owner.smallID() !== tileOwnerID) continue;
+
+      const dist = Math.sqrt(distSquared);
+      const radius = unit.areaRadius();
+
+      const ux = this.x(unit.tile());
+      const uy = this.y(unit.tile());
+      const dx = tx - ux;
+      const dy = ty - uy;
+
+      // Faster angle approximation or just use atan2 (it's called once per nearby city)
+      const angle = Math.atan2(dy, dx);
+      const uid = unit.id();
+
+      // Simplified noise with fewer sin calls
+      const noise =
+        1 + 0.18 * Math.sin(angle * 3 + uid) + 0.12 * Math.sin(angle * 5 - uid);
+
+      const irregularRadius = radius * noise;
+
+      if (dist <= irregularRadius) {
+        // Linear fade is faster than Math.pow
+        const fade = 1 - dist / irregularRadius;
+        const d = unit.density() * fade;
+
+        if (d > maxDensity) {
+          maxDensity = d;
+          maxUnit = unit;
+        }
+      }
+    }
+    const result = { density: maxDensity, unit: maxUnit };
+    this.urbanizationCache.set(tile, result);
+    return result;
   }
 }

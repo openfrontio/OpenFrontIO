@@ -141,6 +141,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
+
+      // Also check if we are hovering a city within this player's territory
+      const urbanization = this.game.getUrbanization(tile);
+      if (urbanization.unit) {
+        this.unit = urbanization.unit;
+      }
+
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
@@ -170,6 +177,33 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   setVisible(visible: boolean) {
     this._isInfoVisible = visible;
     this.requestUpdate();
+  }
+
+  private getUnitTypeKey(type: UnitType): string {
+    switch (type) {
+      case UnitType.City:
+        return "city";
+      case UnitType.DefensePost:
+        return "defense_post";
+      case UnitType.Port:
+        return "port";
+      case UnitType.Warship:
+        return "warship";
+      case UnitType.MissileSilo:
+        return "missile_silo";
+      case UnitType.SAMLauncher:
+        return "sam_launcher";
+      case UnitType.AtomBomb:
+        return "atom_bomb";
+      case UnitType.HydrogenBomb:
+        return "hydrogen_bomb";
+      case UnitType.MIRV:
+        return "mirv";
+      case UnitType.Factory:
+        return "factory";
+      default:
+        return type.toLowerCase().replace(/ /g, "_");
+    }
   }
 
   private getPlayerNameColor(
@@ -456,15 +490,44 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
+    const isCity = unit.type() === UnitType.City;
+    const area = Math.PI * Math.pow(unit.areaRadius(), 2);
+    const population = Math.floor(area * 1500 * (1 + unit.density()));
+
     return html`
-      <div class="p-2">
+      <div class="p-2 border-t border-gray-700/50">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
           ${unit.owner().name()}
         </div>
         <div class="mt-1">
-          <div class="text-sm opacity-80">${unit.type()}</div>
+          <div class="text-sm opacity-80">
+            ${translateText("unit_type." + this.getUnitTypeKey(unit.type()))}
+          </div>
+          ${isCity
+            ? html`
+                <div class="text-xs text-blue-300">
+                  ${translateText("player_panel.population")}:
+                  ${renderNumber(population)}
+                </div>
+                <div class="text-xs text-blue-200">
+                  ${translateText("player_panel.density")}:
+                  ${Math.round(unit.density() * 100)}%
+                </div>
+                ${unit.owner().isMe() && !unit.isUnderConstruction()
+                  ? html`<div class="text-[10px] text-gray-400 mt-1 italic">
+                      ${translateText(
+                        "events_display.double_click_expand_hint",
+                      )}
+                    </div>`
+                  : ""}
+              `
+            : ""}
           ${unit.hasHealth()
-            ? html` <div class="text-sm">Health: ${unit.health()}</div> `
+            ? html`
+                <div class="text-sm">
+                  ${translateText("player_stats_table.hits")}: ${unit.health()}
+                </div>
+              `
             : ""}
           ${unit.type() === UnitType.TransportShip
             ? html`

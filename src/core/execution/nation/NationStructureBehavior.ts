@@ -401,6 +401,15 @@ export class NationStructureBehavior {
     for (const structure of upgradable) {
       let score = 0;
 
+      // Cities are more valuable now, so prioritize them
+      if (structure.type() === UnitType.City) {
+        score += 20;
+        // Higher priority for smaller cities to help them reach density quicker
+        if (structure.level() < 5) {
+          score += 15;
+        }
+      }
+
       // Check if protected by any SAM, using per-SAM level-based range
       for (const sam of samLaunchers) {
         const samRange = this.game.config().samRange(sam.level());

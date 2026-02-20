@@ -590,6 +590,27 @@ export class DefaultConfig implements Config {
         throw new Error(`terrain type ${type} not supported`);
     }
     if (defender.isPlayer()) {
+      // City defense bonus based on density and area
+      const maxCitySearchRadius = 50;
+      const nearbyCities = gm.nearbyUnits(
+        tileToConquer,
+        maxCitySearchRadius,
+        UnitType.City,
+        ({ unit: u }) => u.owner() === defender && !u.isUnderConstruction(),
+      );
+      for (const { unit: city, distSquared } of nearbyCities) {
+        const areaRadius = city.areaRadius() || 0;
+        if (areaRadius > 0 && Math.sqrt(distSquared) <= areaRadius) {
+          // Denser cities are harder to capture
+          // Density bonus scales from 1.5x up to ~3x or more based on age and area
+          const density = city.density() || 0;
+          const densityBonus = 1.5 + density * 2;
+          mag *= densityBonus;
+          speed *= 0.7; // Moving through a city is slower
+          break;
+        }
+      }
+
       for (const dp of gm.nearbyUnits(
         tileToConquer,
         gm.config().defensePostRange(),
@@ -657,7 +678,8 @@ export class DefaultConfig implements Config {
           largeDefenderAttackDebuff *
           largeAttackBonus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+        defenderTroopLoss:
+          defender.troops() / Math.max(1, defender.numTilesOwned()),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
@@ -752,27 +774,31 @@ export class DefaultConfig implements Config {
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
             .units(UnitType.City)
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+            .filter((city) => !city.isUnderConstruction())
+            .reduce((acc, city) => {
+              const area = Math.PI * Math.pow(city.areaRadius() || 1, 2);
+              const density = city.density() || 0;
+              const population = area * 1500 * (1 + density);
+              return acc + (isNaN(population) ? 0 : population);
+            }, 0);
 
     if (player.type() === PlayerType.Bot) {
-      return maxTroops / 3;
+      return Math.max(1, maxTroops / 3);
     }
 
     if (player.type() === PlayerType.Human) {
-      return maxTroops;
+      return Math.max(1, maxTroops);
     }
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.5;
+        return Math.max(1, maxTroops * 0.5);
       case Difficulty.Medium:
-        return maxTroops * 0.75;
+        return Math.max(1, maxTroops * 0.75);
       case Difficulty.Hard:
-        return maxTroops * 1; // Like humans
+        return Math.max(1, maxTroops * 1); // Like humans
       case Difficulty.Impossible:
-        return maxTroops * 1.25;
+        return Math.max(1, maxTroops * 1.25);
       default:
         assertNever(this._gameConfig.difficulty);
     }
@@ -820,7 +846,22 @@ export class DefaultConfig implements Config {
     } else {
       baseRate = 100n;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+
+    // Cities generate extra gold based on area and density
+    let cityIncome = 0;
+    for (const city of player.units(UnitType.City)) {
+      if (!city.isUnderConstruction()) {
+        const area = Math.PI * Math.pow(city.areaRadius() || 1, 2);
+        const density = city.density() || 0;
+        cityIncome += area * 0.1 * (1 + density);
+      }
+    }
+
+    if (isNaN(cityIncome)) {
+      cityIncome = 0;
+    }
+
+    return BigInt(Math.floor((Number(baseRate) + cityIncome) * multiplier));
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

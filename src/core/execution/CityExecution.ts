@@ -21,6 +21,7 @@ export class CityExecution implements Execution {
       this.active = false;
       return;
     }
+    this.city.incrementAge();
   }
 
   isActive(): boolean {

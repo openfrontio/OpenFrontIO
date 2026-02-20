@@ -16,6 +16,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
+  CityUpdateEvent,
   DragEvent,
   MouseOverEvent,
 } from "../../InputHandler";
@@ -330,6 +331,9 @@ export class TerritoryLayer implements Layer {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
     });
+    this.eventBus.on(CityUpdateEvent, (e) => {
+      this.enqueueCityArea(e.city);
+    });
     this.redraw();
   }
 
@@ -586,7 +590,29 @@ export class TerritoryLayer implements Layer {
       // Alternative view only shows borders.
       this.clearAlternativeTile(tile);
 
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      if (!owner) {
+        this.clearTile(tile);
+        return;
+      }
+
+      const urbanization = this.game.getUrbanization(tile);
+      let color = owner.territoryColor(tile);
+      let alpha = 150;
+
+      if (urbanization.density > 0.05) {
+        // Alpha increases with density, making urban centers feel more "heavy" and established
+        alpha = 160 + Math.min(85, urbanization.density * 70);
+
+        // Lightness Gradient: Rural (Low density) is lighter, Urban (High density) is darker/richer.
+        // We interpolate between a "rural" shade and an "urban" shade of the player's color.
+        const ruralShade = color.lighten(0.15).desaturate(0.05);
+        const urbanShade = color.darken(0.15).saturate(0.2);
+
+        const mixRatio = Math.min(1, urbanization.density);
+        color = ruralShade.mix(urbanShade, mixRatio);
+      }
+
+      this.paintTile(this.imageData, tile, color, alpha);
     }
   }
 
@@ -636,6 +662,21 @@ export class TerritoryLayer implements Layer {
       tile: tile,
       lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
     });
+  }
+
+  enqueueCityArea(city: UnitView) {
+    const radius = Math.ceil(city.areaRadius() * 1.4 + 2);
+    const tile = city.tile();
+    const cx = this.game.x(tile);
+    const cy = this.game.y(tile);
+
+    for (let x = cx - radius; x <= cx + radius; x++) {
+      for (let y = cy - radius; y <= cy + radius; y++) {
+        if (this.game.isValidCoord(x, y)) {
+          this.enqueueTile(this.game.ref(x, y));
+        }
+      }
+    }
   }
 
   async enqueuePlayerBorder(player: PlayerView) {

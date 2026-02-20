@@ -1,9 +1,13 @@
 import { colord, Colord, extend } from "colord";
+import a11yPlugin from "colord/plugins/a11y";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
+import mixPlugin from "colord/plugins/mix";
 
 extend([lchPlugin]);
 extend([labPlugin]);
+extend([mixPlugin]);
+extend([a11yPlugin]);
 
 export const red = colord("rgb(235,51,51)");
 export const blue = colord("rgb(41,98,255)");

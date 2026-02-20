@@ -16,6 +16,8 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  CityUpdateEvent,
+  DoubleClickEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
@@ -172,6 +174,7 @@ export class StructureIconsLayer implements Layer {
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
     this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+    this.eventBus.on(DoubleClickEvent, (e) => this.onDoubleClick(e));
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
@@ -419,6 +422,33 @@ export class StructureIconsLayer implements Layer {
     this.removeGhostStructure();
   }
 
+  private onDoubleClick(e: DoubleClickEvent) {
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return;
+    const x = e.x - rect.left;
+    const y = e.y - rect.top;
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return;
+    const tileRef = this.game.ref(tile.x, tile.y);
+
+    // Find city at or near this tile
+    const radius = 10; // tolerance for clicking
+    const nearby = this.game.nearbyUnits(tileRef, radius, UnitType.City);
+    if (nearby.length > 0) {
+      // Sort by distance to find the closest city
+      nearby.sort((a, b) => a.distSquared - b.distSquared);
+      const city = nearby[0].unit;
+      if (
+        city.owner() === this.game.myPlayer() &&
+        !city.isUnderConstruction()
+      ) {
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(city.id(), UnitType.City),
+        );
+      }
+    }
+  }
+
   private moveGhost(e: MouseMoveEvent) {
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
@@ -558,13 +588,26 @@ export class StructureIconsLayer implements Layer {
     if (this.seenUnits.has(unitView)) {
       const render = this.findRenderByUnit(unitView);
       if (render) {
-        this.checkForConstructionState(render, unitView);
-        this.checkForDeletionState(render, unitView);
-        this.checkForOwnershipChange(render, unitView);
-        this.checkForLevelChange(render, unitView);
+        let changed = false;
+        if (this.checkForConstructionState(render, unitView)) changed = true;
+        if (this.checkForDeletionState(render, unitView)) changed = true;
+        if (this.checkForOwnershipChange(render, unitView)) changed = true;
+        if (this.checkForLevelChange(render, unitView)) changed = true;
+        if (this.checkForDensityChange(render, unitView)) changed = true;
+
+        if (changed) {
+          this.computeNewLocation(render);
+          if (unitView.type() === UnitType.City) {
+            this.eventBus.emit(new CityUpdateEvent(unitView));
+          }
+        }
       }
     } else if (this.structures.has(unitView.type())) {
+      const city = unitView.type() === UnitType.City;
       this.addNewStructure(unitView);
+      if (city) {
+        this.eventBus.emit(new CityUpdateEvent(unitView));
+      }
     }
   }
 
@@ -603,20 +646,25 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
-  private checkForDeletionState(render: StructureRenderInfo, unit: UnitView) {
+  private checkForDeletionState(
+    render: StructureRenderInfo,
+    unit: UnitView,
+  ): boolean {
     if (unit.markedForDeletion() !== false) {
       render.iconContainer?.destroy();
       render.dotContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
+      return true;
     }
+    return false;
   }
 
   private checkForConstructionState(
     render: StructureRenderInfo,
     unit: UnitView,
-  ) {
+  ): boolean {
     if (render.underConstruction && !unit.isUnderConstruction()) {
       render.underConstruction = false;
       render.iconContainer?.destroy();
@@ -624,10 +672,15 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
+      return true;
     }
+    return false;
   }
 
-  private checkForOwnershipChange(render: StructureRenderInfo, unit: UnitView) {
+  private checkForOwnershipChange(
+    render: StructureRenderInfo,
+    unit: UnitView,
+  ): boolean {
     if (render.owner !== unit.owner().id()) {
       render.owner = unit.owner().id();
       render.iconContainer?.destroy();
@@ -635,10 +688,15 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
+      return true;
     }
+    return false;
   }
 
-  private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
+  private checkForLevelChange(
+    render: StructureRenderInfo,
+    unit: UnitView,
+  ): boolean {
     if (render.level !== unit.level()) {
       render.level = unit.level();
       render.iconContainer?.destroy();
@@ -648,7 +706,32 @@ export class StructureIconsLayer implements Layer {
       render.levelContainer = this.createLevelSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
+      return true;
     }
+    return false;
+  }
+
+  private lastDensity = new Map<number, number>();
+
+  private checkForDensityChange(
+    render: StructureRenderInfo,
+    unit: UnitView,
+  ): boolean {
+    if (unit.type() !== UnitType.City || !unit.isActive() || !unit.owner())
+      return false;
+    const currentDensity = Math.round(unit.density() * 10) / 10;
+    const prevDensity = this.lastDensity.get(unit.id()) ?? 0;
+
+    if (currentDensity !== prevDensity) {
+      this.lastDensity.set(unit.id(), currentDensity);
+      render.iconContainer?.destroy();
+      render.dotContainer?.destroy();
+      render.iconContainer = this.createIconSprite(unit);
+      render.dotContainer = this.createDotSprite(unit);
+      this.modifyVisibility(render);
+      return true;
+    }
+    return false;
   }
 
   private computeNewLocation(render: StructureRenderInfo) {
@@ -753,5 +836,6 @@ export class StructureIconsLayer implements Layer {
     render.dotContainer?.destroy();
     this.renders = this.renders.filter((r) => r.unit !== render.unit);
     this.seenUnits.delete(render.unit);
+    this.lastDensity.delete(render.unit.id());
   }
 }

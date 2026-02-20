@@ -42,6 +42,8 @@ export class UnitImpl implements Unit {
   private _trajectoryIndex: number = 0;
   private _trajectory: TrajectoryTile[];
   private _deletionAt: number | null = null;
+  private _areaRadius: number = 0;
+  private _age: number = 0;
 
   constructor(
     private _type: UnitType,
@@ -68,6 +70,10 @@ export class UnitImpl implements Unit {
     this._loaded =
       "loaded" in params ? (params.loaded ?? undefined) : undefined;
     this._trainType = "trainType" in params ? params.trainType : undefined;
+
+    if (this._type === UnitType.City) {
+      this._areaRadius = 7;
+    }
 
     switch (this._type) {
       case UnitType.Warship:
@@ -142,6 +148,8 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      areaRadius: this.areaRadius() || undefined,
+      age: this.age() || undefined,
     };
   }
 
@@ -164,7 +172,7 @@ export class UnitImpl implements Unit {
   }
 
   setTroops(troops: number): void {
-    this._troops = troops;
+    this._troops = Math.max(0, troops);
   }
   troops(): number {
     return this._troops;
@@ -451,6 +459,9 @@ export class UnitImpl implements Unit {
 
   increaseLevel(): void {
     this._level++;
+    if (this.type() === UnitType.City) {
+      this._areaRadius += 2; // Expand city area with level
+    }
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.push(this.mg.ticks());
     }
@@ -459,6 +470,9 @@ export class UnitImpl implements Unit {
 
   decreaseLevel(destroyer?: Player): void {
     this._level--;
+    if (this.type() === UnitType.City) {
+      this._areaRadius = Math.max(7, this._areaRadius - 2);
+    }
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.pop();
     }
@@ -482,5 +496,33 @@ export class UnitImpl implements Unit {
       this._loaded = loaded;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  areaRadius(): number {
+    return Math.max(1, this._areaRadius);
+  }
+
+  age(): number {
+    return this._age;
+  }
+
+  incrementAge(): void {
+    this._age++;
+    // We update the unit every 10 ticks to avoid excessive network traffic
+    if (this._age % 10 === 0) {
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  density(): number {
+    if (this.type() !== UnitType.City) return 0;
+    // Growth rate: smaller cities fill up faster (lower time constant)
+    // One tick is 100ms, so 200 * Level is 20 * Level seconds to reach ~63% of potential
+    const timeConstant = 200 * this._level;
+    // Potential density: larger cities can become much denser (higher cap)
+    const maxDensity = 0.5 + (this._level - 1) * 0.5;
+
+    const density = (1 - Math.exp(-this._age / timeConstant)) * maxDensity;
+    return Math.max(0, density) || 0;
   }
 }

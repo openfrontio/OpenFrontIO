@@ -428,7 +428,11 @@ export class GameRenderer {
       );
 
       const layerStart = FrameProfiler.start();
-      layer.renderLayer?.(this.context);
+      try {
+        layer.renderLayer?.(this.context);
+      } catch (e) {
+        console.error(`Error rendering layer ${layer.constructor.name}:`, e);
+      }
       FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering

@@ -564,6 +564,12 @@ export interface Unit {
   // Warships
   setPatrolTile(tile: TileRef): void;
   patrolTile(): TileRef | undefined;
+
+  // Cities
+  areaRadius(): number;
+  age(): number;
+  density(): number;
+  incrementAge(): void;
 }
 
 export interface TerraNullius {
@@ -792,7 +798,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;

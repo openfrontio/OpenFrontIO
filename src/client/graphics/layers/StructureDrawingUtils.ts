@@ -88,6 +88,8 @@ export class SpriteFactory {
     image.onload = () => {
       unitInfo.image = image;
       this.invalidateTextureCache(unitType);
+      // We don't have direct access to layers to call redraw,
+      // but the next tick will pick up the new texture.
     };
     image.onerror = () => {
       console.error(
@@ -411,7 +413,7 @@ export class SpriteFactory {
 
     const structureInfo = this.structuresInfos.get(structureType);
 
-    if (structureInfo?.image && renderIcon) {
+    if (structureInfo?.image && structureInfo.image.width > 0 && renderIcon) {
       const SHAPE_OFFSETS = {
         triangle: [6, 11],
         square: [5, 5],
