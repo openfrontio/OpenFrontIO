@@ -173,12 +173,16 @@ export class GameRunner {
     }
 
     // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
+    const tileUpdates = updates[GameUpdateType.Tile];
+    const packedTileUpdates = new BigUint64Array(tileUpdates.length);
+    for (let i = 0; i < tileUpdates.length; i++) {
+      packedTileUpdates[i] = tileUpdates[i].update;
+    }
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
       tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
+      packedTileUpdates,
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,

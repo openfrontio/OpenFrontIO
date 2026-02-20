@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMapType, GameMode, GameType } from "./game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  RankedType,
+} from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -176,7 +182,7 @@ export type RankedLeaderboardEntry = z.infer<
 >;
 
 export const RankedLeaderboardResponseSchema = z.object({
-  "1v1": RankedLeaderboardEntrySchema.array(),
+  [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
