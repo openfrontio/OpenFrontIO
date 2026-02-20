@@ -31,6 +31,12 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
 }
 
 function sendMessage(message: WorkerMessage) {
+  if (message.type === "game_update") {
+    // Transfer the packed tile updates buffer to avoid structured-clone copies and
+    // reduce worker-side memory churn during long runs / catch-up.
+    ctx.postMessage(message, [message.gameUpdate.packedTileUpdates.buffer]);
+    return;
+  }
   ctx.postMessage(message);
 }
 
