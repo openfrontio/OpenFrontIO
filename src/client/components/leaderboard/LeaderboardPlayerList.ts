@@ -2,6 +2,7 @@ import { virtualize } from "@lit-labs/virtualizer/virtualize.js";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { PlayerLeaderboardEntry } from "../../../core/ApiSchemas";
+import { RankedType } from "../../../core/game/Game";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";
 
@@ -68,19 +69,19 @@ export class LeaderboardPlayerList extends LitElement {
         return;
       }
 
-      const nextPlayers: PlayerLeaderboardEntry[] = result["1v1"].map(
-        (entry) => ({
-          rank: entry.rank,
-          playerId: entry.public_id,
-          username: entry.username,
-          clanTag: entry.clanTag ?? undefined,
-          elo: entry.elo,
-          games: entry.total,
-          wins: entry.wins,
-          losses: entry.losses,
-          winRate: entry.total > 0 ? entry.wins / entry.total : 0,
-        }),
-      );
+      const nextPlayers: PlayerLeaderboardEntry[] = result[
+        RankedType.OneVOne
+      ].map((entry) => ({
+        rank: entry.rank,
+        playerId: entry.public_id,
+        username: entry.username,
+        clanTag: entry.clanTag ?? undefined,
+        elo: entry.elo,
+        games: entry.total,
+        wins: entry.wins,
+        losses: entry.losses,
+        winRate: entry.total > 0 ? entry.wins / entry.total : 0,
+      }));
 
       const receivedCount = nextPlayers.length;
       if (reset) {
