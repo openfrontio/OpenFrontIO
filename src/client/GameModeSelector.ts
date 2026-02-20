@@ -18,7 +18,7 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "./Utils";
 
-const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
+const CARD_BG = "bg-sky-950";
 
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
@@ -79,62 +79,93 @@ export class GameModeSelector extends LitElement {
     this.requestUpdate();
   }
 
-  render() {
+  private getSortedLobbies(): PublicGameInfo[] {
     const ffa = this.lobbies?.games?.["ffa"]?.[0];
     const teams = this.lobbies?.games?.["team"]?.[0];
     const special = this.lobbies?.games?.["special"]?.[0];
+    return [ffa, teams, special]
+      .filter((g): g is PublicGameInfo => !!g)
+      .sort((a, b) => a.startsAt - b.startsAt);
+  }
+
+  private getLobbyTitleContent(lobby: PublicGameInfo): string | TemplateResult {
+    if (lobby === this.lobbies?.games?.["special"]?.[0]) {
+      const subtitle = this.getLobbyTitle(lobby);
+      const mainTitle = translateText("mode_selector.special_title");
+      return subtitle
+        ? html`
+            <span class="block">${mainTitle}</span>
+            <span class="block text-[10px] leading-tight text-white/70">
+              ${subtitle}
+            </span>
+          `
+        : mainTitle;
+    }
+    return this.getLobbyTitle(lobby);
+  }
+
+  render() {
+    const sorted = this.getSortedLobbies();
+    const featured = sorted[0];
+    const upcoming = sorted.slice(1);
 
     return html`
-      <div
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
-      >
-        ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
-        ${teams
-          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+      <div class="flex flex-col w-[90%] lg:max-w-xl mx-auto">
+        <!-- Multiplayer Games -->
+        ${featured
+          ? html`<div
+              class="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-2"
+            >
+              ${this.renderFeaturedLobbyCard(
+                featured,
+                this.getLobbyTitleContent(featured),
+              )}
+              <div class="flex flex-col gap-2">
+                ${upcoming.map((lobby) =>
+                  this.renderUpcomingLobbyCard(
+                    lobby,
+                    this.getLobbyTitleContent(lobby),
+                  ),
+                )}
+              </div>
+            </div>`
           : nothing}
-        ${special ? this.renderSpecialLobbyCard(special) : nothing}
-        ${this.renderQuickActionsSection()}
+
+        <!-- Solo - Primary CTA -->
+        <div class="mt-4">${this.renderSingleplayerButton()}</div>
+
+        <!-- Advanced Options -->
+        <div class="mt-2">${this.renderSecondaryActions()}</div>
       </div>
     `;
   }
 
-  private renderSpecialLobbyCard(lobby: PublicGameInfo) {
-    const subtitle = this.getLobbyTitle(lobby);
-    const mainTitle = translateText("mode_selector.special_title");
-    const titleContent = subtitle
-      ? html`
-          <span class="block">${mainTitle}</span>
-          <span class="block text-[10px] leading-tight text-white/70">
-            ${subtitle}
-          </span>
-        `
-      : mainTitle;
-    return this.renderLobbyCard(lobby, titleContent);
+  private renderSingleplayerButton() {
+    return html`
+      <button
+        @click=${this.openSinglePlayerModal}
+        class="flex items-center justify-center w-full h-14 lg:h-16 rounded-lg bg-sky-600 hover:bg-sky-500 active:bg-sky-700 transition-colors text-lg lg:text-xl font-bold text-white uppercase tracking-widest"
+      >
+        ${translateText("main.solo")}
+      </button>
+    `;
   }
 
-  private renderQuickActionsSection() {
+  private renderSecondaryActions() {
     return html`
-      <div class="contents lg:flex lg:flex-col lg:gap-2 lg:h-56">
-        <div class="max-lg:order-first grid grid-cols-2 gap-2 h-20 lg:flex-1">
-          ${this.renderSmallActionCard(
-            translateText("main.solo"),
-            this.openSinglePlayerModal,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-          )}
-        </div>
-        <div class="grid grid-cols-2 gap-2 h-20 lg:flex-1">
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.join"),
-            this.openJoinLobby,
-          )}
-        </div>
+      <div class="grid grid-cols-3 gap-2 h-10 lg:h-12">
+        ${this.renderSmallActionCard(
+          translateText("mode_selector.ranked_title"),
+          this.openRankedMenu,
+        )}
+        ${this.renderSmallActionCard(
+          translateText("main.create"),
+          this.openHostLobby,
+        )}
+        ${this.renderSmallActionCard(
+          translateText("main.join"),
+          this.openJoinLobby,
+        )}
       </div>
     `;
   }
@@ -161,18 +192,92 @@ export class GameModeSelector extends LitElement {
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
 
-  private renderSmallActionCard(title: string, onClick: () => void) {
+  private renderFeaturedLobbyCard(
+    lobby: PublicGameInfo,
+    titleContent: string | TemplateResult,
+  ) {
+    const mapType = lobby.gameConfig!.gameMap as GameMapType;
+    const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
+    const timeRemaining = Math.max(
+      0,
+      Math.floor((lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000),
+    );
+    const timeDisplay = renderDuration(timeRemaining);
+    const mapName = getMapName(lobby.gameConfig?.gameMap);
+    const modifierLabels = this.getModifierLabels(
+      lobby.gameConfig?.publicGameModifiers,
+    );
+    if (modifierLabels.length > 1) {
+      modifierLabels.sort((a, b) => a.length - b.length);
+    }
+
     return html`
       <button
-        @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-xl ${CARD_BG} border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
+        @click=${() => this.validateAndJoin(lobby)}
+        class="group relative w-full aspect-square text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] ${CARD_BG}"
       >
-        ${title}
+        ${mapImageSrc
+          ? html`<img
+              src="${mapImageSrc}"
+              alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
+              draggable="false"
+              class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
+            />`
+          : null}
+        <div
+          class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
+        >
+          ${modifierLabels.length > 0
+            ? html`<div class="flex flex-col items-start gap-1">
+                ${modifierLabels.map(
+                  (label) =>
+                    html`<span
+                      class="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-widest bg-teal-600 text-white shadow-md"
+                      >${label}</span
+                    >`,
+                )}
+              </div>`
+            : html`<div></div>`}
+          <div class="shrink-0">
+            ${timeRemaining > 0
+              ? html`<span
+                  class="text-xs font-bold uppercase tracking-widest bg-blue-600 px-2.5 py-1 rounded shadow-md"
+                  >${timeDisplay}</span
+                >`
+              : html`<span
+                  class="text-xs font-bold uppercase tracking-widest bg-green-600 px-2.5 py-1 rounded shadow-md"
+                  >${translateText("public_lobby.starting_game")}</span
+                >`}
+          </div>
+        </div>
+        <div
+          class="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 py-4 bg-black/60 backdrop-blur-sm"
+        >
+          <div class="flex flex-col gap-1 min-w-0">
+            <h3
+              class="text-lg lg:text-2xl font-extrabold uppercase tracking-wider text-left leading-tight"
+            >
+              ${titleContent}
+            </h3>
+            ${mapName
+              ? html`<p
+                  class="text-sm text-white/90 uppercase tracking-wider text-left font-medium"
+                >
+                  ${mapName}
+                </p>`
+              : ""}
+          </div>
+          <span
+            class="text-sm font-bold uppercase tracking-widest shrink-0 ml-2"
+          >
+            ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
+          </span>
+        </div>
       </button>
     `;
   }
 
-  private renderLobbyCard(
+  private renderUpcomingLobbyCard(
     lobby: PublicGameInfo,
     titleContent: string | TemplateResult,
   ) {
@@ -185,76 +290,55 @@ export class GameModeSelector extends LitElement {
     const timeDisplay = renderDuration(timeRemaining);
     const mapName = getMapName(lobby.gameConfig?.gameMap);
 
-    const modifierLabels = this.getModifierLabels(
-      lobby.gameConfig?.publicGameModifiers,
-    );
-    // Sort by length for visual consistency (shorter labels first)
-    if (modifierLabels.length > 1) {
-      modifierLabels.sort((a, b) => a.length - b.length);
-    }
-
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-40 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
+        class="group relative w-full flex-1 text-white uppercase rounded-xl overflow-hidden transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] ${CARD_BG}"
       >
-        <div class="relative flex-1 overflow-hidden ${CARD_BG}">
-          ${mapImageSrc
-            ? html`<img
-                src="${mapImageSrc}"
-                alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
-                draggable="false"
-                class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
-              />`
-            : null}
-          <div
-            class="absolute inset-x-2 bottom-2 flex items-end justify-between gap-2"
-          >
-            ${modifierLabels.length > 0
-              ? html`<div class="flex flex-col items-start gap-1">
-                  ${modifierLabels.map(
-                    (label) =>
-                      html`<span
-                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
-                        >${label}</span
-                      >`,
-                  )}
-                </div>`
-              : html`<div></div>`}
-            <div class="shrink-0">
-              ${timeRemaining > 0
-                ? html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
-                    >${timeDisplay}</span
-                  >`
-                : html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded"
-                    >${translateText("public_lobby.starting_game")}</span
-                  >`}
-            </div>
-          </div>
+        ${mapImageSrc
+          ? html`<img
+              src="${mapImageSrc}"
+              alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
+              draggable="false"
+              class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
+            />`
+          : null}
+        <div class="absolute top-1 right-1">
+          ${timeRemaining > 0
+            ? html`<span
+                class="text-xs font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded shadow-md"
+                >${timeDisplay}</span
+              >`
+            : html`<span
+                class="text-xs font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded shadow-md"
+                >${translateText("public_lobby.starting_game")}</span
+              >`}
         </div>
-        <div class="flex items-center justify-between px-3 py-2">
-          <div class="flex flex-col gap-0.5 min-w-0">
-            <h3
-              class="text-sm lg:text-base font-bold uppercase tracking-wider text-left leading-tight"
-            >
-              ${titleContent}
-            </h3>
-            ${mapName
-              ? html`<p
-                  class="text-[10px] text-white/70 uppercase tracking-wider text-left"
-                >
-                  ${mapName}
-                </p>`
-              : ""}
-          </div>
+        <div
+          class="absolute inset-x-0 bottom-0 flex items-center justify-between px-2.5 py-2.5 bg-black/60 backdrop-blur-sm"
+        >
+          <h3
+            class="text-sm font-bold uppercase tracking-wider text-left leading-tight truncate"
+          >
+            ${titleContent}
+          </h3>
           <span
-            class="text-xs font-bold uppercase tracking-widest shrink-0 ml-2"
+            class="text-xs font-bold uppercase tracking-widest shrink-0 ml-1"
           >
             ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
           </span>
         </div>
+      </button>
+    `;
+  }
+
+  private renderSmallActionCard(title: string, onClick: () => void) {
+    return html`
+      <button
+        @click=${onClick}
+        class="flex items-center justify-center w-full h-full rounded-lg bg-slate-700 hover:bg-slate-600 active:bg-slate-800 transition-colors text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
+      >
+        ${title}
       </button>
     `;
   }

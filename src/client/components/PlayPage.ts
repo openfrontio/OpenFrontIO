@@ -17,7 +17,7 @@ export class PlayPage extends LitElement {
 
         <!-- Mobile: Fixed top bar -->
         <div
-          class="lg:hidden fixed left-0 right-0 top-0 z-40 pt-[env(safe-area-inset-top)] bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-b border-white/10"
+          class="lg:hidden fixed left-0 right-0 top-0 z-40 pt-[env(safe-area-inset-top)] bg-[color-mix(in_oklab,var(--frenchBlue)_50%,black)] border-b border-white/10"
         >
           <div
             class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-14 px-2 gap-2"
@@ -99,39 +99,22 @@ export class PlayPage extends LitElement {
           </div>
         </div>
 
+        <!-- Mobile: spacer for fixed top bar -->
+        <div class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)]"></div>
+
+        <!-- Section 1: User Customization -->
         <div
-          class="w-full pb-4 lg:pb-0 flex flex-col gap-0 lg:grid lg:grid-cols-12 lg:gap-2"
+          class="w-[90%] lg:max-w-xl mx-auto px-3 py-2.5 rounded-xl bg-[color-mix(in_oklab,var(--frenchBlue)_50%,black)] border border-white/10 overflow-visible relative z-20"
         >
-          <!-- Mobile: spacer for fixed top bar -->
-          <div class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)]"></div>
-
-          <div
-            class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:col-span-9 lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
-          >
-            <div class="flex items-center gap-2 min-w-0 w-full">
-              <username-input
-                class="flex-1 min-w-0 h-10 lg:h-[50px]"
-              ></username-input>
-              <pattern-input
-                id="pattern-input-mobile"
-                show-select-label
-                adaptive-size
-                class="shrink-0 lg:hidden"
-              ></pattern-input>
-            </div>
-          </div>
-
-          <div class="hidden lg:flex lg:col-span-3 h-[60px] gap-2">
+          <div class="flex items-center gap-2 min-w-0 w-full">
+            <username-input class="flex-1 min-w-0 h-10"></username-input>
             <pattern-input
-              id="pattern-input-desktop"
+              id="pattern-input"
               show-select-label
-              class="flex-1 h-full"
+              adaptive-size
+              class="shrink-0"
             ></pattern-input>
-            <flag-input
-              id="flag-input-desktop"
-              show-select-label
-              class="flex-1 h-full"
-            ></flag-input>
+            <flag-input id="flag-input" class="shrink-0 w-10 h-10"></flag-input>
           </div>
         </div>
 
