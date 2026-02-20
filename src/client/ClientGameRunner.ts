@@ -13,7 +13,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, StructureTypes, UnitType } from "../core/game/Game";
+import { BuildableUnit, StructureTypes, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -565,7 +565,7 @@ export class ClientGameRunner {
             this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canAutoBoat(actions, tile)) {
+      } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -653,8 +653,8 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
-      if (this.canBoatAttack(actions) !== false) {
+    this.myPlayer.buildables(tile, [UnitType.TransportShip]).then((buildables) => {
+      if (this.canBoatAttack(buildables) !== false) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -701,10 +701,8 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions): false | TileRef {
-    const bu = actions.buildableUnits.find(
-      (bu) => bu.type === UnitType.TransportShip,
-    );
+  private canBoatAttack(buildables: BuildableUnit[]): false | TileRef {
+    const bu = buildables.find((bu) => bu.type === UnitType.TransportShip);
     if (bu === undefined) {
       console.warn(`no transport ship buildable units`);
       return false;
@@ -723,10 +721,10 @@ export class ClientGameRunner {
     );
   }
 
-  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
+  private canAutoBoat(buildables: BuildableUnit[], tile: TileRef): boolean {
     if (!this.gameView.isLand(tile)) return false;
 
-    const canBuild = this.canBoatAttack(actions);
+    const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
     // TODO: Global enable flag
