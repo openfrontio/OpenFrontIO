@@ -20,6 +20,10 @@ import {
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
 import {
+  TimelineJumpEvent,
+  TimelineModeChangedEvent,
+} from "../../timeline/TimelineEvents";
+import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
   SendEmbargoAllIntentEvent,
@@ -85,6 +89,8 @@ export class PlayerPanel extends LitElement implements Layer {
         this.hide();
       }
     });
+    eventBus.on(TimelineJumpEvent, () => this.hide());
+    eventBus.on(TimelineModeChangedEvent, () => this.hide());
     eventBus.on(SwapRocketDirectionEvent, (event) => {
       this.uiState.rocketDirectionUp = event.rocketDirectionUp;
       this.requestUpdate();

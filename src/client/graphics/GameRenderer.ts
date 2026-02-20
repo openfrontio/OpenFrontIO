@@ -41,6 +41,7 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TimelinePanel } from "./layers/TimelinePanel";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
@@ -167,6 +168,15 @@ export function createRenderer(
   }
   replayPanel.eventBus = eventBus;
   replayPanel.game = game;
+
+  const timelinePanel = document.querySelector(
+    "timeline-panel",
+  ) as TimelinePanel;
+  if (!(timelinePanel instanceof TimelinePanel)) {
+    console.error("timeline panel not found");
+  }
+  timelinePanel.eventBus = eventBus;
+  timelinePanel.game = game;
 
   const gameRightSidebar = document.querySelector(
     "game-right-sidebar",
@@ -313,6 +323,7 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     winModal,
+    timelinePanel,
     replayPanel,
     settingsModal,
     teamStats,

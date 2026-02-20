@@ -94,6 +94,10 @@ export class GameRunner {
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   ) {}
 
+  public playerNameViewData(): Record<PlayerID, NameViewData> {
+    return this.playerViewData;
+  }
+
   init() {
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());

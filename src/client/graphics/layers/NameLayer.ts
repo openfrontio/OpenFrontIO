@@ -7,6 +7,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
+import { TimelineJumpEvent } from "../../timeline/TimelineEvents";
 import {
   computeAllianceClipPath,
   createAllianceProgressIcon,
@@ -99,6 +100,33 @@ export class NameLayer implements Layer {
     this.container.appendChild(style);
 
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
+    this.eventBus.on(TimelineJumpEvent, () => this.resetTimelineState());
+  }
+
+  private resetTimelineState() {
+    for (const render of this.renders) {
+      render.element.remove();
+    }
+    this.renders = [];
+    this.seenPlayers.clear();
+    this.firstPlace = null;
+
+    // Rebuild immediately so name labels match the new GameView objects even if
+    // renderer.tick() is throttled by per-layer tick intervals.
+    for (const player of this.game.playerViews()) {
+      if (!player.isAlive()) continue;
+      this.seenPlayers.add(player);
+      const info = new RenderInfo(
+        player,
+        0,
+        null,
+        0,
+        "",
+        this.createPlayerElement(player),
+      );
+      this.updateElementVisibility(info);
+      this.renders.push(info);
+    }
   }
 
   private onAlternateViewChange(event: AlternateViewEvent) {

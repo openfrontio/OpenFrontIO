@@ -29,6 +29,7 @@ import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
+import { TimelineModeChangedEvent } from "./timeline/TimelineEvents";
 
 export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -185,6 +186,7 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+  private timelineIsLive = true;
 
   constructor(
     private lobbyConfig: LobbyConfig,
@@ -262,6 +264,10 @@ export class Transport {
     this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
       this.onSendUpdateGameConfigIntent(e),
     );
+
+    this.eventBus.on(TimelineModeChangedEvent, (e) => {
+      this.timelineIsLive = e.isLive;
+    });
   }
 
   private startPing() {
@@ -644,6 +650,9 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
+    if (!this.timelineIsLive && intent.type !== "toggle_pause") {
+      return;
+    }
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
         type: "intent",

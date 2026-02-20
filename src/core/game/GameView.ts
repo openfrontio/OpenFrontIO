@@ -6,6 +6,7 @@ import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
+import { WorkerSnapshot } from "../worker/WorkerMessages";
 import {
   Cell,
   EmojiMessage,
@@ -25,13 +26,16 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
+  RailroadConstructionUpdate,
+  RailroadDestructionUpdate,
+  RailroadSnapUpdate,
   UnitUpdate,
 } from "./GameUpdates";
 import { TerrainMapData } from "./TerrainMapLoader";
@@ -81,6 +85,10 @@ export class UnitView {
     this.lastPos.push(data.pos);
     this._wasUpdated = true;
     this.data = data;
+  }
+
+  snapshotUpdate(): UnitUpdate {
+    return this.data;
   }
 
   id(): number {
@@ -582,12 +590,24 @@ export class PlayerView {
   }
 }
 
+export type GameViewCheckpoint = {
+  tick: number;
+  mapState: Uint16Array;
+  numTilesWithFallout: number;
+  players: PlayerUpdate[];
+  units: UnitUpdate[];
+  playerNameViewData: Record<string, NameViewData>;
+  toDeleteUnitIds: number[];
+  railroads: { id: number; tiles: TileRef[] }[];
+};
+
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
+  private railroadsById = new Map<number, TileRef[]>();
 
   private _myPlayer: PlayerView | null = null;
 
@@ -627,6 +647,10 @@ export class GameView implements GameMap {
         flag: nation.flag,
       } satisfies PlayerCosmetics);
     }
+  }
+
+  railroads(): ReadonlyMap<number, readonly TileRef[]> {
+    return this.railroadsById;
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {
@@ -702,6 +726,135 @@ export class GameView implements GameMap {
         this.toDelete.add(unit.id());
       }
     });
+
+    gu.updates[GameUpdateType.RailroadConstructionEvent]?.forEach(
+      (u: RailroadConstructionUpdate) => {
+        this.railroadsById.set(u.id, u.tiles);
+      },
+    );
+    gu.updates[GameUpdateType.RailroadSnapEvent]?.forEach(
+      (u: RailroadSnapUpdate) => {
+        this.railroadsById.delete(u.originalId);
+        this.railroadsById.set(u.newId1, u.tiles1);
+        this.railroadsById.set(u.newId2, u.tiles2);
+      },
+    );
+    gu.updates[GameUpdateType.RailroadDestructionEvent]?.forEach(
+      (u: RailroadDestructionUpdate) => {
+        this.railroadsById.delete(u.id);
+      },
+    );
+  }
+
+  exportCheckpoint(): GameViewCheckpoint {
+    const tick = this.ticks();
+    const map = this._map as unknown as GameMapImpl;
+    if (typeof map.exportMutableState !== "function") {
+      throw new Error("GameView map does not support exportMutableState()");
+    }
+    const { state, numTilesWithFallout } = map.exportMutableState();
+    return {
+      tick,
+      mapState: state,
+      numTilesWithFallout,
+      players: Array.from(this._players.values()).map((p) => p.data),
+      units: Array.from(this._units.values()).map((u) => u.snapshotUpdate()),
+      playerNameViewData: this.lastUpdate?.playerNameViewData ?? {},
+      toDeleteUnitIds: Array.from(this.toDelete.values()),
+      railroads: Array.from(this.railroadsById.entries()).map(
+        ([id, tiles]) => ({
+          id,
+          tiles: tiles.slice(),
+        }),
+      ),
+    };
+  }
+
+  importCheckpoint(checkpoint: GameViewCheckpoint): void {
+    const map = this._map as unknown as GameMapImpl;
+    if (typeof map.importMutableState !== "function") {
+      throw new Error("GameView map does not support mutable state import");
+    }
+
+    map.importMutableState(checkpoint.mapState, checkpoint.numTilesWithFallout);
+
+    this.smallIDToID.clear();
+    this._players.clear();
+    this._units.clear();
+    this.updatedTiles = [];
+    this._myPlayer = null;
+    this.toDelete = new Set(checkpoint.toDeleteUnitIds);
+    this.unitGrid = new UnitGrid(this._map);
+    this.railroadsById = new Map(
+      checkpoint.railroads.map((r) => [r.id, r.tiles.slice()]),
+    );
+
+    this.lastUpdate = {
+      tick: checkpoint.tick,
+      packedTileUpdates: new BigUint64Array(0),
+      updates: GameView.createEmptyGameUpdates(),
+      playerNameViewData: checkpoint.playerNameViewData,
+    };
+
+    const getNameData = (playerId: PlayerID): NameViewData => {
+      return (
+        (checkpoint.playerNameViewData[playerId] as
+          | NameViewData
+          | undefined) ?? {
+          x: 0,
+          y: 0,
+          size: 0,
+        }
+      );
+    };
+
+    for (const pu of checkpoint.players) {
+      this.smallIDToID.set(pu.smallID, pu.id);
+      this._players.set(
+        pu.id,
+        new PlayerView(
+          this,
+          pu,
+          getNameData(pu.id),
+          this._cosmetics.get(pu.clientID ?? "") ??
+            this._cosmetics.get(pu.name) ??
+            {},
+        ),
+      );
+    }
+
+    for (const uu of checkpoint.units) {
+      const unit = new UnitView(this, uu);
+      this._units.set(uu.id, unit);
+      if (uu.isActive) {
+        this.unitGrid.addUnit(unit);
+      }
+    }
+
+    this._myPlayer = this.playerByClientID(this._myClientID);
+  }
+
+  importWorkerSnapshot(snapshot: WorkerSnapshot): void {
+    this.importCheckpoint({
+      tick: snapshot.tick,
+      mapState: snapshot.mapState,
+      numTilesWithFallout: snapshot.numTilesWithFallout,
+      players: snapshot.players,
+      units: snapshot.units,
+      playerNameViewData: snapshot.playerNameViewData,
+      toDeleteUnitIds: snapshot.toDeleteUnitIds,
+      railroads: snapshot.railroads,
+    });
+  }
+
+  private static createEmptyGameUpdates(): GameUpdates {
+    const map = {} as GameUpdates;
+    Object.values(GameUpdateType)
+      .filter((key) => !isNaN(Number(key)))
+      .forEach((key) => {
+        map[key as GameUpdateType] = [];
+      });
+    return map;
   }
 
   recentlyUpdatedTiles(): TileRef[] {

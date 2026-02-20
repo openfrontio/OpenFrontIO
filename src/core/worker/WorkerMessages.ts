@@ -1,4 +1,5 @@
 import {
+  NameViewData,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
@@ -6,7 +7,12 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import {
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "../game/GameUpdates";
+import { RailroadSnapshot } from "../game/RailNetwork";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
@@ -15,6 +21,8 @@ export type WorkerMessageType =
   | "initialized"
   | "turn"
   | "game_update"
+  | "snapshot_request"
+  | "snapshot_response"
   | "player_actions"
   | "player_actions_result"
   | "player_profile"
@@ -56,6 +64,26 @@ export interface InitializedMessage extends BaseWorkerMessage {
 export interface GameUpdateMessage extends BaseWorkerMessage {
   type: "game_update";
   gameUpdate: GameUpdateViewData;
+}
+
+export type WorkerSnapshot = {
+  tick: number;
+  mapState: Uint16Array;
+  numTilesWithFallout: number;
+  players: PlayerUpdate[];
+  units: UnitUpdate[];
+  playerNameViewData: Record<string, NameViewData>;
+  toDeleteUnitIds: number[];
+  railroads: RailroadSnapshot[];
+};
+
+export interface SnapshotRequestMessage extends BaseWorkerMessage {
+  type: "snapshot_request";
+}
+
+export interface SnapshotResponseMessage extends BaseWorkerMessage {
+  type: "snapshot_response";
+  snapshot: WorkerSnapshot;
 }
 
 export interface PlayerActionsMessage extends BaseWorkerMessage {
@@ -119,6 +147,7 @@ export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
+  | SnapshotRequestMessage
   | PlayerActionsMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
@@ -129,6 +158,7 @@ export type MainThreadMessage =
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
+  | SnapshotResponseMessage
   | PlayerActionsResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage

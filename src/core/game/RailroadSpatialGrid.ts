@@ -84,6 +84,10 @@ export class RailSpatialGrid {
     return result;
   }
 
+  allRails(): Railroad[] {
+    return Array.from(this.railToCells.keys());
+  }
+
   private key(cx: number, cy: number): string {
     return `${cx}:${cy}`;
   }

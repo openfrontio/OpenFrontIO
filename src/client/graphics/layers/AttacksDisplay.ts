@@ -9,6 +9,10 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import {
+  TimelineJumpEvent,
+  TimelineModeChangedEvent,
+} from "../../timeline/TimelineEvents";
+import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
   SendAttackIntentEvent,
@@ -44,7 +48,14 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this;
   }
 
-  init() {}
+  init() {
+    this.eventBus.on(TimelineJumpEvent, () => this.resetForTimeline());
+    this.eventBus.on(TimelineModeChangedEvent, (e) => {
+      if (!e.isLive) {
+        this.resetForTimeline();
+      }
+    });
+  }
 
   tick() {
     this.active = true;
@@ -113,6 +124,16 @@ export class AttacksDisplay extends LitElement implements Layer {
   }
 
   renderLayer(): void {}
+
+  private resetForTimeline() {
+    this.incomingBoatIDs.clear();
+    this.incomingAttacks = [];
+    this.outgoingAttacks = [];
+    this.outgoingLandAttacks = [];
+    this.outgoingBoats = [];
+    this.incomingBoats = [];
+    this.requestUpdate();
+  }
 
   private renderButton(options: {
     content: any;

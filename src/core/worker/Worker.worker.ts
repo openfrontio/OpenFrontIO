@@ -9,14 +9,17 @@ import {
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  SnapshotResponseMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
+  WorkerSnapshot,
 } from "./WorkerMessages";
 
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 const MAX_TICKS_PER_HEARTBEAT = 4;
+let processTimer: number | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -36,7 +39,82 @@ function sendMessage(message: WorkerMessage) {
     ctx.postMessage(message, [message.gameUpdate.packedTileUpdates.buffer]);
     return;
   }
+  if (message.type === "snapshot_response") {
+    ctx.postMessage(message, [message.snapshot.mapState.buffer]);
+    return;
+  }
   ctx.postMessage(message);
+}
+
+function scheduleProcessing(delayMs: number) {
+  if (processTimer !== null) return;
+  processTimer = setTimeout(async () => {
+    processTimer = null;
+    await runProcessingStep();
+  }, delayMs) as unknown as number;
+}
+
+async function runProcessingStep() {
+  const gr = await gameRunner;
+  if (!gr) return;
+
+  const pendingTurns = gr.pendingTurns();
+  if (pendingTurns <= 0) {
+    scheduleProcessing(10);
+    return;
+  }
+
+  const ticksToRun = Math.min(pendingTurns, MAX_TICKS_PER_HEARTBEAT);
+  for (let i = 0; i < ticksToRun; i++) {
+    if (!gr.executeNextTick(gr.pendingTurns())) {
+      break;
+    }
+  }
+  scheduleProcessing(0);
+}
+
+async function buildSnapshot(gr: GameRunner): Promise<WorkerSnapshot> {
+  const tick = gr.game.ticks();
+  const map = gr.game.map() as any;
+  if (
+    typeof map.exportMutableState !== "function" ||
+    typeof map.numTilesWithFallout !== "function"
+  ) {
+    throw new Error("Game map does not support snapshot export");
+  }
+  const exported = map.exportMutableState() as {
+    state: Uint16Array;
+    numTilesWithFallout: number;
+  };
+
+  const mapState = exported.state;
+  const numTilesWithFallout = exported.numTilesWithFallout;
+
+  const players = gr.game.allPlayers().map((p) => p.toUpdate());
+  const units = gr.game
+    .allPlayers()
+    .flatMap((p) => p.units())
+    .map((u) => u.toUpdate());
+
+  // Best-effort: emulate client-side deferred deletion behavior by scheduling
+  // inactive units for deletion on the next tick.
+  const toDeleteUnitIds = units.filter((u) => !u.isActive).map((u) => u.id);
+
+  const railroads = gr.game.railNetwork().exportRailroads();
+
+  // Player name view data is only computed periodically in GameRunner.
+  const playerNameViewData = gr.playerNameViewData();
+
+  return {
+    tick,
+    mapState,
+    numTilesWithFallout,
+    players,
+    units,
+    playerNameViewData,
+    toDeleteUnitIds,
+    railroads,
+  };
 }
 
 ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
@@ -44,17 +122,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
   switch (message.type) {
     case "heartbeat": {
-      const gr = await gameRunner;
-      if (!gr) {
-        break;
-      }
-      const pendingTurns = gr.pendingTurns();
-      const ticksToRun = Math.min(pendingTurns, MAX_TICKS_PER_HEARTBEAT);
-      for (let i = 0; i < ticksToRun; i++) {
-        if (!gr.executeNextTick(gr.pendingTurns())) {
-          break;
-        }
-      }
+      // Heartbeats are optional; the worker is self-clocked.
+      scheduleProcessing(0);
       break;
     }
     case "init":
@@ -69,6 +138,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
             type: "initialized",
             id: message.id,
           } as InitializedMessage);
+          scheduleProcessing(0);
           return gr;
         });
       } catch (error) {
@@ -85,11 +155,25 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       try {
         const gr = await gameRunner;
         await gr.addTurn(message.turn);
+        scheduleProcessing(0);
       } catch (error) {
         console.error("Failed to process turn:", error);
         throw error;
       }
       break;
+    case "snapshot_request": {
+      const gr = await gameRunner;
+      if (!gr) {
+        throw new Error("Game runner not initialized");
+      }
+      const snapshot = await buildSnapshot(gr);
+      sendMessage({
+        type: "snapshot_response",
+        id: message.id,
+        snapshot,
+      } as SnapshotResponseMessage);
+      break;
+    }
 
     case "player_actions":
       if (!gameRunner) {

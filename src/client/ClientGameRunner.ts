@@ -51,6 +51,7 @@ import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
+import { TimelineController } from "./timeline/TimelineController";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -234,6 +235,13 @@ async function createClientGame(
 
   const canvas = createCanvas();
   const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const timelineController = new TimelineController(
+    worker,
+    gameView,
+    gameRenderer,
+    eventBus,
+  );
+  await timelineController.initialize();
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -248,6 +256,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    timelineController,
   );
 }
 
@@ -274,6 +283,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private timeline: TimelineController,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -369,8 +379,7 @@ export class ClientGameRunner {
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
-      this.gameView.update(gu);
-      this.renderer.tick();
+      this.timeline.onWorkerUpdate(gu);
 
       // Emit tick metrics event for performance overlay
       this.eventBus.emit(

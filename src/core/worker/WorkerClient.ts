@@ -10,7 +10,7 @@ import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
-import { WorkerMessage } from "./WorkerMessages";
+import { WorkerMessage, WorkerSnapshot } from "./WorkerMessages";
 
 export class WorkerClient {
   private worker: Worker;
@@ -106,6 +106,27 @@ export class WorkerClient {
   sendHeartbeat() {
     this.worker.postMessage({
       type: "heartbeat",
+    });
+  }
+
+  snapshot(): Promise<WorkerSnapshot> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "snapshot_response") {
+          resolve(message.snapshot);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "snapshot_request",
+        id: messageId,
+      });
     });
   }
 

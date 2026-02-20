@@ -22,6 +22,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
   @state()
   private isCatchingUp = false;
   private catchingUpTicks = 0;
+  private lastTickSeen = -1;
 
   private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
 
@@ -82,6 +83,16 @@ export class HeadsUpMessage extends LitElement implements Layer {
   }
 
   tick() {
+    const currentTick = this.game.ticks();
+    if (this.lastTickSeen >= 0 && currentTick < this.lastTickSeen) {
+      // Timeline scrubbed backwards; clear state that assumes monotonic time.
+      this.catchingUpTicks = 0;
+      this.isCatchingUp = false;
+      this.isPaused = false;
+      this.isImmunityActive = false;
+    }
+    this.lastTickSeen = currentTick;
+
     const updates = this.game.updatesSinceLastTick();
     if (updates && updates[GameUpdateType.GamePaused].length > 0) {
       const pauseUpdate = updates[GameUpdateType.GamePaused][0];

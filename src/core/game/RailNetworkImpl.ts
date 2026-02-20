@@ -2,7 +2,7 @@ import { PathFinding } from "../pathfinding/PathFinder";
 import { Game, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
-import { RailNetwork } from "./RailNetwork";
+import { RailNetwork, RailroadSnapshot } from "./RailNetwork";
 import { Railroad } from "./Railroad";
 import { RailSpatialGrid } from "./RailroadSpatialGrid";
 import { Cluster, TrainStation } from "./TrainStation";
@@ -128,6 +128,13 @@ export class RailNetworkImpl implements RailNetwork {
       }
     }
     this.dirtyClusters.clear();
+  }
+
+  exportRailroads(): RailroadSnapshot[] {
+    return this.railGrid.allRails().map((r) => ({
+      id: r.id,
+      tiles: r.tiles.slice(),
+    }));
   }
 
   removeStation(unit: Unit): void {

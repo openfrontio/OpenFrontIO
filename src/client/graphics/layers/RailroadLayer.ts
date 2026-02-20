@@ -2,24 +2,14 @@ import { colord } from "colord";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { PlayerID, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import {
-  GameUpdateType,
-  RailroadConstructionUpdate,
-  RailroadDestructionUpdate,
-  RailroadSnapUpdate,
-} from "../../../core/game/GameUpdates";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { AlternateViewEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
-import {
-  computeRailTiles,
-  RailroadView,
-  RailTile,
-  RailType,
-} from "./RailroadView";
+import { computeRailTiles, RailTile, RailType } from "./RailroadView";
 
 type RailRef = {
   tile: RailTile;
@@ -41,9 +31,6 @@ export class RailroadLayer implements Layer {
   private alternativeView = false;
   // Save the number of railroads per tiles. Delete when it reaches 0
   private existingRailroads = new Map<TileRef, RailRef>();
-  private railroads = new Map<number, RailroadView>();
-  // Railroads under construction
-  private pendingRailroads = new Set<number>();
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
   private railTileIndex = new Map<TileRef, number>();
@@ -62,45 +49,15 @@ export class RailroadLayer implements Layer {
   }
 
   tick() {
-    this.updatePendingRailroads();
     const updates = this.game.updatesSinceLastTick();
-    if (!updates) return;
-    // The event has to be handled in this specific order: construction / snap / destruction
-    // Otherwise some ID may not be available yet/anymore
-    updates[GameUpdateType.RailroadConstructionEvent]?.forEach((update) => {
-      if (update === undefined) return;
-      this.onRailroadConstruction(update);
-    });
-    updates[GameUpdateType.RailroadSnapEvent]?.forEach((update) => {
-      if (update === undefined) return;
-      this.onRailroadSnapEvent(update);
-    });
-    updates[GameUpdateType.RailroadDestructionEvent]?.forEach((update) => {
-      if (update === undefined) return;
-      this.onRailroadDestruction(update);
-    });
-  }
-
-  updatePendingRailroads() {
-    for (const id of this.pendingRailroads) {
-      const pending = this.railroads.get(id);
-      if (pending === undefined) {
-        // Rail deleted or snapped before the end of the animation
-        this.pendingRailroads.delete(id);
-        continue;
-      }
-      const newTiles = pending.tick();
-      if (newTiles.length === 0) {
-        // Animation complete
-        this.pendingRailroads.delete(id);
-        continue;
-      }
-
-      for (const railTile of newTiles) {
-        this.paintRailTile(railTile);
-        this.eventBus.emit(new RailTileChangedEvent(railTile.tile));
-      }
+    const hasRailUpdates =
+      (updates?.[GameUpdateType.RailroadConstructionEvent]?.length ?? 0) > 0 ||
+      (updates?.[GameUpdateType.RailroadSnapEvent]?.length ?? 0) > 0 ||
+      (updates?.[GameUpdateType.RailroadDestructionEvent]?.length ?? 0) > 0;
+    if (hasRailUpdates) {
+      this.rebuildFromGameView();
     }
+    this.updateRailColors();
   }
 
   updateRailColors() {
@@ -142,9 +99,7 @@ export class RailroadLayer implements Layer {
   init() {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
-      for (const { tile } of this.existingRailroads.values()) {
-        this.paintRail(tile);
-      }
+      this.rebuildFromGameView();
     });
     this.redraw();
   }
@@ -162,9 +117,28 @@ export class RailroadLayer implements Layer {
     this.canvas.width = this.game.width() * 2;
     this.canvas.height = this.game.height() * 2;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const [_, rail] of this.existingRailroads) {
-      this.paintRail(rail.tile);
+    this.rebuildFromGameView();
+  }
+
+  private rebuildFromGameView() {
+    if (this.context === undefined) return;
+
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.existingRailroads.clear();
+    this.railTileList = [];
+    this.railTileIndex.clear();
+    this.nextRailIndexToCheck = 0;
+
+    for (const tiles of this.game.railroads().values()) {
+      const railTiles = computeRailTiles(this.game, Array.from(tiles));
+      for (const railTile of railTiles) {
+        this.registerRailTile(railTile);
+      }
+    }
+
+    for (const { tile } of this.existingRailroads.values()) {
+      this.paintRail(tile);
+      this.eventBus.emit(new RailTileChangedEvent(tile.tile));
     }
   }
 
@@ -183,13 +157,12 @@ export class RailroadLayer implements Layer {
     const offsetY = -this.game.height() / 2;
     context.fillStyle = "rgba(0, 255, 0, 0.4)";
     for (const id of this.uiState.overlappingRailroads) {
-      const rail = this.railroads.get(id);
-      if (rail) {
-        for (const railTile of rail.drawnTiles()) {
-          const x = this.game.x(railTile.tile);
-          const y = this.game.y(railTile.tile);
-          context.fillRect(x + offsetX - 1, y + offsetY - 1, 2.5, 2.5);
-        }
+      const tiles = this.game.railroads().get(id);
+      if (!tiles) continue;
+      for (const tile of tiles) {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        context.fillRect(x + offsetX - 1, y + offsetY - 1, 2.5, 2.5);
       }
     }
   }
@@ -293,77 +266,7 @@ export class RailroadLayer implements Layer {
     }
   }
 
-  private onRailroadSnapEvent(update: RailroadSnapUpdate) {
-    const original = this.railroads.get(update.originalId);
-    if (!original) {
-      console.warn("Could not snap railroad: ", update.originalId);
-      return;
-    }
-    if (!original.isComplete()) {
-      // The animation is not complete but we don't want to compute where the animation should resume
-      // Just draw every remaining rails at once
-      this.drawRemainingTiles(original);
-    }
-
-    // No need to compute the directions here, the rails are already painted
-    const directions1: RailTile[] = update.tiles1.map((tile) => ({
-      tile,
-      type: RailType.HORIZONTAL,
-    }));
-    const directions2: RailTile[] = update.tiles2.map((tile) => ({
-      tile,
-      type: RailType.HORIZONTAL,
-    }));
-    // The rails are already painted, consider them complete
-    this.railroads.set(
-      update.newId1,
-      new RailroadView(update.newId1, directions1, true),
-    );
-    this.railroads.set(
-      update.newId2,
-      new RailroadView(update.newId2, directions2, true),
-    );
-
-    this.railroads.delete(update.originalId);
-  }
-
-  private drawRemainingTiles(railroad: RailroadView) {
-    for (const tile of railroad.remainingTiles()) {
-      this.paintRail(tile);
-    }
-    this.pendingRailroads.delete(railroad.id);
-  }
-
-  private onRailroadConstruction(railUpdate: RailroadConstructionUpdate) {
-    const railTiles = computeRailTiles(this.game, railUpdate.tiles);
-    const rail = new RailroadView(railUpdate.id, railTiles);
-    this.addRailroad(rail);
-  }
-
-  private onRailroadDestruction(railUpdate: RailroadDestructionUpdate) {
-    const railroad = this.railroads.get(railUpdate.id);
-    if (!railroad) {
-      console.warn("Can't remove unexisting railroad: ", railUpdate.id);
-      return;
-    }
-    this.removeRailroad(railroad);
-  }
-
-  private addRailroad(railroad: RailroadView) {
-    this.railroads.set(railroad.id, railroad);
-    this.pendingRailroads.add(railroad.id);
-  }
-
-  private removeRailroad(railroad: RailroadView) {
-    this.pendingRailroads.delete(railroad.id);
-    for (const railTile of railroad.drawnTiles()) {
-      this.clearRailroad(railTile.tile);
-      this.eventBus.emit(new RailTileChangedEvent(railTile.tile));
-    }
-    this.railroads.delete(railroad.id);
-  }
-
-  private paintRailTile(railTile: RailTile) {
+  private registerRailTile(railTile: RailTile) {
     const currentOwner = this.game.owner(railTile.tile)?.id() ?? null;
     const railRef = this.existingRailroads.get(railTile.tile);
 
@@ -379,51 +282,6 @@ export class RailroadLayer implements Layer {
       });
       this.railTileIndex.set(railTile.tile, this.railTileList.length);
       this.railTileList.push(railTile.tile);
-      this.paintRail(railTile);
-    }
-  }
-
-  private clearRailroad(railroad: TileRef) {
-    const ref = this.existingRailroads.get(railroad);
-    if (ref) ref.numOccurence--;
-
-    if (!ref || ref.numOccurence <= 0) {
-      this.existingRailroads.delete(railroad);
-      this.removeRailTile(railroad);
-      if (this.context === undefined) throw new Error("Not initialized");
-      if (this.game.isWater(railroad)) {
-        this.context.clearRect(
-          this.game.x(railroad) * 2 - 2,
-          this.game.y(railroad) * 2 - 2,
-          5,
-          6,
-        );
-      } else {
-        this.context.clearRect(
-          this.game.x(railroad) * 2 - 1,
-          this.game.y(railroad) * 2 - 1,
-          3,
-          3,
-        );
-      }
-    }
-  }
-
-  private removeRailTile(tile: TileRef) {
-    const idx = this.railTileIndex.get(tile);
-    if (idx === undefined) return;
-
-    const lastIndex = this.railTileList.length - 1;
-    const lastTile = this.railTileList[lastIndex];
-
-    this.railTileList[idx] = lastTile;
-    this.railTileIndex.set(lastTile, idx);
-
-    this.railTileList.pop();
-    this.railTileIndex.delete(tile);
-
-    if (this.nextRailIndexToCheck >= this.railTileList.length) {
-      this.nextRailIndexToCheck = 0;
     }
   }
 

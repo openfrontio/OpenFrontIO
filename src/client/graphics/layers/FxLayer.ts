@@ -5,6 +5,10 @@ import { TileRef } from "../../../core/game/GameMap";
 import { ConquestUpdate, GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import {
+  TimelineJumpEvent,
+  TimelineModeChangedEvent,
+} from "../../timeline/TimelineEvents";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
@@ -235,6 +239,13 @@ export class FxLayer implements Layer {
     this.eventBus.on(RailTileChangedEvent, (e) => {
       this.onRailroadEvent(e.tile);
     });
+
+    this.eventBus.on(TimelineJumpEvent, () => this.resetForTimeline());
+    this.eventBus.on(TimelineModeChangedEvent, (e) => {
+      if (!e.isLive) {
+        this.resetForTimeline();
+      }
+    });
     try {
       this.animatedSpriteLoader.loadAllAnimatedSpriteImages();
       console.log("FX sprites loaded successfully");
@@ -251,6 +262,14 @@ export class FxLayer implements Layer {
     this.context.imageSmoothingEnabled = false;
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+  }
+
+  private resetForTimeline() {
+    this.allFx = [];
+    this.hasBufferedFrame = false;
+    if (this.context) {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
 
   renderLayer(context: CanvasRenderingContext2D) {

@@ -27,6 +27,7 @@ export class AlertFrame extends LitElement implements Layer {
   private animationTimeout: number | null = null;
   private seenAttackIds: Set<string> = new Set();
   private lastAlertTick: number = -1;
+  private lastTickSeen: number = -1;
   // Map of player ID -> tick when we last attacked them
   private outgoingAttackTicks: Map<number, number> = new Map();
 
@@ -91,6 +92,16 @@ export class AlertFrame extends LitElement implements Layer {
     if (!this.game) {
       return; // Game not initialized yet
     }
+
+    const currentTick = this.game.ticks();
+    if (this.lastTickSeen >= 0 && currentTick < this.lastTickSeen) {
+      // Timeline scrubbed backwards; clear state that assumes monotonic time.
+      this.seenAttackIds.clear();
+      this.outgoingAttackTicks.clear();
+      this.lastAlertTick = -1;
+      this.isActive = false;
+    }
+    this.lastTickSeen = currentTick;
 
     const myPlayer = this.game.myPlayer();
 

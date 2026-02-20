@@ -3,6 +3,8 @@ import { TileRef } from "./GameMap";
 import { StationManager } from "./RailNetworkImpl";
 import { TrainStation } from "./TrainStation";
 
+export type RailroadSnapshot = { id: number; tiles: TileRef[] };
+
 export interface RailNetwork {
   connectStation(station: TrainStation): void;
   removeStation(unit: Unit): void;
@@ -11,4 +13,5 @@ export interface RailNetwork {
   overlappingRailroads(tile: TileRef): number[];
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][];
   recomputeClusters(): void;
+  exportRailroads(): RailroadSnapshot[];
 }

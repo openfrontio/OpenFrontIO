@@ -109,6 +109,28 @@ export class GameMapImpl implements GameMap {
       }
     }
   }
+
+  exportMutableState(): { state: Uint16Array; numTilesWithFallout: number } {
+    return {
+      state: new Uint16Array(this.state),
+      numTilesWithFallout: this._numTilesWithFallout,
+    };
+  }
+
+  importMutableState(state: Uint16Array, numTilesWithFallout: number): void {
+    if (state.length !== this.state.length) {
+      throw new Error(
+        `State length ${state.length} doesn't match map state length ${this.state.length}`,
+      );
+    }
+    this.state.set(state);
+    this._numTilesWithFallout = numTilesWithFallout;
+  }
+
+  resetMutableState(): void {
+    this.state.fill(0);
+    this._numTilesWithFallout = 0;
+  }
   numTilesWithFallout(): number {
     return this._numTilesWithFallout;
   }

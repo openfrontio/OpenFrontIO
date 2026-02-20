@@ -34,6 +34,10 @@ import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
+import {
+  TimelineJumpEvent,
+  TimelineModeChangedEvent,
+} from "../../timeline/TimelineEvents";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
@@ -183,7 +187,27 @@ export class EventsDisplay extends LitElement implements Layer {
     this.events = [];
   }
 
-  init() {}
+  init() {
+    this.eventBus.on(TimelineJumpEvent, () => this.resetForTimeline());
+    this.eventBus.on(TimelineModeChangedEvent, (e) => {
+      if (!e.isLive) {
+        this.resetForTimeline();
+      }
+    });
+  }
+
+  private resetForTimeline() {
+    this.events = [];
+    this.alliancesCheckedAt.clear();
+    this.newEvents = 0;
+    this.latestGoldAmount = null;
+    this.goldAmountAnimating = false;
+    if (this.goldAmountTimeoutId) {
+      clearTimeout(this.goldAmountTimeoutId);
+      this.goldAmountTimeoutId = null;
+    }
+    this.requestUpdate();
+  }
 
   tick() {
     this.active = true;
