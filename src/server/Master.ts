@@ -145,6 +145,15 @@ app.get("/api/env", async (req, res) => {
   res.json(envConfig);
 });
 
+app.get("/api/health", async (_req, res) => {
+  const ready = lobbyService?.isHealthy() ?? false;
+  if (ready) {
+    res.json({ status: "ok" });
+  } else {
+    res.status(503).json({ status: "unavailable" });
+  }
+});
+
 // SPA fallback route
 app.get("*", async function (_req, res) {
   try {
