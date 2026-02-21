@@ -798,7 +798,7 @@ export class GameImpl implements Game {
   }
 
   teamSpawnArea(team: Team): SpawnArea | undefined {
-    if (!this._teamGameSpawnAreas || !this.playerTeams) {
+    if (!this._teamGameSpawnAreas) {
       return undefined;
     }
     const numTeams = this.playerTeams.length;
