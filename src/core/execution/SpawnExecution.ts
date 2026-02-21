@@ -79,12 +79,13 @@ export class SpawnExecution implements Execution {
   }
 
   private randomSpawnLand(): TileRef | undefined {
+    const spawnArea = this.getTeamSpawnArea();
     let tries = 0;
 
     while (tries < SpawnExecution.MAX_SPAWN_TRIES) {
       tries++;
 
-      const tile = this.randTile();
+      const tile = this.randTile(spawnArea);
 
       if (
         !this.mg.isLand(tile) ||
@@ -120,8 +121,7 @@ export class SpawnExecution implements Execution {
     return;
   }
 
-  private randTile(): TileRef {
-    const area = this.getTeamSpawnArea();
+  private randTile(area?: SpawnArea): TileRef {
     if (area) {
       const x = this.random.nextInt(area.x, area.x + area.width);
       const y = this.random.nextInt(area.y, area.y + area.height);
