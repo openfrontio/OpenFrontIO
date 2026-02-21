@@ -133,9 +133,6 @@ export class SpawnExecution implements Execution {
   }
 
   private getTeamSpawnArea(): SpawnArea | undefined {
-    if (!this.mg.hasPlayer(this.playerInfo.id)) {
-      return undefined;
-    }
     const player = this.mg.player(this.playerInfo.id);
     const team = player.team();
     if (team === null) {

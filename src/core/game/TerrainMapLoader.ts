@@ -10,7 +10,7 @@ export type TerrainMapData = {
   teamGameSpawnAreas?: TeamGameSpawnAreas;
 };
 
-const loadedMaps = new Map<GameMapType, TerrainMapData>();
+const loadedMaps = new Map<string, TerrainMapData>();
 
 export interface MapMetadata {
   width: number;
@@ -38,7 +38,8 @@ export async function loadTerrainMap(
   mapSize: GameMapSize,
   terrainMapFileLoader: GameMapLoader,
 ): Promise<TerrainMapData> {
-  const cached = loadedMaps.get(map);
+  const cacheKey = `${map}:${mapSize}`;
+  const cached = loadedMaps.get(cacheKey);
   if (cached !== undefined) return cached;
   const mapFiles = terrainMapFileLoader.getMapData(map);
   const manifest = await mapFiles.manifest();
@@ -73,8 +74,8 @@ export async function loadTerrainMap(
       scaled[key] = areas.map((a) => ({
         x: Math.floor(a.x / 2),
         y: Math.floor(a.y / 2),
-        width: Math.floor(a.width / 2),
-        height: Math.floor(a.height / 2),
+        width: Math.max(1, Math.floor(a.width / 2)),
+        height: Math.max(1, Math.floor(a.height / 2)),
       }));
     }
     teamGameSpawnAreas = scaled;
@@ -86,7 +87,7 @@ export async function loadTerrainMap(
     miniGameMap: miniMap,
     teamGameSpawnAreas,
   };
-  loadedMaps.set(map, result);
+  loadedMaps.set(cacheKey, result);
   return result;
 }
 
