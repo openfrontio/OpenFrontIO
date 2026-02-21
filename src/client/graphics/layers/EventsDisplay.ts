@@ -85,38 +85,10 @@ export class EventsDisplay extends LitElement implements Layer {
   private _eventsContainer?: HTMLDivElement;
   private _shouldScrollToBottom = true;
 
-  @query(".alliance-slot")
-  private _allianceSlot?: HTMLDivElement;
-  private _allianceOriginalParent?: Element | null = null;
-
   updated(changed: Map<string, unknown>) {
     super.updated(changed);
     if (this._eventsContainer && this._shouldScrollToBottom) {
       this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
-    }
-    // Reparent <alliance-display> into the slot between button bar and
-    // content area. This is a DOM move (not a clone), so the element keeps
-    // its internal state, event listeners, and Lit lifecycle intact.
-    // Side-effect: the element's parentElement changes, which means any
-    // external code using document.querySelector("alliance-display") will
-    // still find it, but its position in the DOM tree shifts. If this
-    // causes issues with layout or third-party observers, consider using a
-    // placeholder/sentinel element or CSS-based repositioning instead.
-    const ad = document.querySelector("alliance-display");
-    if (this._allianceSlot && ad) {
-      this._allianceOriginalParent ??= ad.parentElement;
-      if (ad.parentElement !== this._allianceSlot) {
-        this._allianceSlot.appendChild(ad);
-      }
-    } else if (
-      ad &&
-      this._allianceOriginalParent &&
-      document.contains(this._allianceOriginalParent) &&
-      ad.parentElement !== this._allianceOriginalParent
-    ) {
-      // Panel is hidden/collapsed — move alliance-display back to its
-      // original parent, but only if that parent is still in the document.
-      this._allianceOriginalParent.appendChild(ad);
     }
   }
 
@@ -264,18 +236,6 @@ export class EventsDisplay extends LitElement implements Layer {
       clearTimeout(this.goldAmountTimeoutId);
       this.goldAmountTimeoutId = null;
     }
-    // Restore <alliance-display> to its original parent so it isn't lost
-    // when EventsDisplay is removed from the DOM.
-    const ad = document.querySelector("alliance-display");
-    if (
-      ad &&
-      this._allianceOriginalParent &&
-      document.contains(this._allianceOriginalParent) &&
-      ad.parentElement !== this._allianceOriginalParent
-    ) {
-      this._allianceOriginalParent.appendChild(ad);
-    }
-    this._allianceOriginalParent = null;
   }
 
   private addEvent(event: GameEvent) {
@@ -752,9 +712,6 @@ export class EventsDisplay extends LitElement implements Layer {
                   </div>
                 </div>
               </div>
-
-              <!-- Alliance Display Slot -->
-              <div class="alliance-slot"></div>
 
               <!-- Content Area -->
               <div
