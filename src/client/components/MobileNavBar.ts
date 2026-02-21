@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
 import { NavNotificationsController } from "./NavNotificationsController";
 
@@ -40,6 +40,12 @@ export class MobileNavBar extends LitElement {
         el.classList.remove("active");
       }
     });
+  }
+
+  private _renderDot(color: string): TemplateResult {
+    return html`<span
+      class="w-2 h-2 ${color} rounded-full ml-2 shrink-0 -mt-2"
+    ></span>`;
   }
 
   render() {
@@ -123,22 +129,17 @@ export class MobileNavBar extends LitElement {
           data-page="page-play"
           data-i18n="main.play"
         ></button>
-        <div class="relative w-fit">
+        <div
+          class="nav-menu-item flex items-center w-full cursor-pointer"
+          data-page="page-news"
+          @click=${this._notifications.onNewsClick}
+        >
           <button
-            class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-news"
+            class="block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-i18n="main.news"
-            @click=${this._notifications.onNewsClick}
           ></button>
           ${this._notifications.showNewsDot()
-            ? html`
-                <span
-                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"
-                ></span>
-                <span
-                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full"
-                ></span>
-              `
+            ? this._renderDot("bg-red-500")
             : ""}
         </div>
         <button
@@ -146,22 +147,17 @@ export class MobileNavBar extends LitElement {
           data-page="page-leaderboard"
           data-i18n="main.leaderboard"
         ></button>
-        <div class="relative w-fit no-crazygames">
+        <div
+          class="no-crazygames nav-menu-item flex items-center w-full cursor-pointer"
+          data-page="page-item-store"
+          @click=${this._notifications.onStoreClick}
+        >
           <button
-            class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-item-store"
+            class="block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-i18n="main.store"
-            @click=${this._notifications.onStoreClick}
           ></button>
           ${this._notifications.showStoreDot()
-            ? html`
-                <span
-                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"
-                ></span>
-                <span
-                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full"
-                ></span>
-              `
+            ? this._renderDot("bg-red-500")
             : ""}
         </div>
         <button
@@ -174,22 +170,17 @@ export class MobileNavBar extends LitElement {
           data-page="page-account"
           data-i18n="main.account"
         ></button>
-        <div class="relative w-fit">
+        <div
+          class="nav-menu-item flex items-center w-full cursor-pointer"
+          data-page="page-help"
+          @click=${this._notifications.onHelpClick}
+        >
           <button
-            class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-help"
+            class="block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-i18n="main.help"
-            @click=${this._notifications.onHelpClick}
           ></button>
           ${this._notifications.showHelpDot()
-            ? html`
-                <span
-                  class="absolute top-1 -right-3 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
-                ></span>
-                <span
-                  class="absolute top-1 -right-3 w-2 h-2 bg-yellow-400 rounded-full"
-                ></span>
-              `
+            ? this._renderDot("bg-yellow-400")
             : ""}
         </div>
         <div

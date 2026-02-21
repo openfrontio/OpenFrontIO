@@ -8,7 +8,7 @@ const STORE_SEEN_HASH_KEY = "storeSeenHash";
 const NEWS_SEEN_VERSION_KEY = "newsSeenVersion";
 
 export class NavNotificationsController implements ReactiveController {
-  host: ReactiveControllerHost;
+  private host: ReactiveControllerHost;
 
   private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
   private _hasNewCosmetics = false;
@@ -26,11 +26,13 @@ export class NavNotificationsController implements ReactiveController {
 
   hostConnected(): void {
     // Check if cosmetics have changed
-    getCosmeticsHash().then((hash: string | null) => {
-      const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
-      this._hasNewCosmetics = hash !== null && hash !== seenHash;
-      this.host.requestUpdate();
-    });
+    getCosmeticsHash()
+      .then((hash: string | null) => {
+        const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
+        this._hasNewCosmetics = hash !== null && hash !== seenHash;
+        this.host.requestUpdate();
+      })
+      .catch(() => {});
 
     // Check if version has changed
     const currentVersion = this.normalizedVersion;
@@ -71,11 +73,13 @@ export class NavNotificationsController implements ReactiveController {
 
   onStoreClick = (): void => {
     this._hasNewCosmetics = false;
-    getCosmeticsHash().then((hash: string | null) => {
-      if (hash !== null) {
-        localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
-      }
-    });
+    getCosmeticsHash()
+      .then((hash: string | null) => {
+        if (hash !== null) {
+          localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
+        }
+      })
+      .catch(() => {});
     this.host.requestUpdate();
   };
 
