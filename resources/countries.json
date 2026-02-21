@@ -276,6 +276,11 @@
     "name": "Bonaire, Sint Eustatius and Saba"
   },
   {
+    "code": "Jatibonicu",
+    "continent": "North America",
+    "name": "Borikén Taíno"
+  },
+  {
     "code": "ba",
     "continent": "Europe",
     "name": "Bosnia and Herzegovina"
@@ -293,6 +298,11 @@
     "code": "br",
     "continent": "South America",
     "name": "Brazil"
+  },
+  {
+    "code": "gb-hn",
+    "continent": "North America",
+    "name": "British Honduras"
   },
   {
     "code": "io",
@@ -434,6 +444,16 @@
     "name": "Chinook"
   },
   {
+    "code": "pa-4",
+    "continent": "North America",
+    "name": "Chiriquí"
+  },
+  {
+    "code": "co-cho",
+    "continent": "South America",
+    "name": "Chocó"
+  },
+  {
     "code": "cx",
     "continent": "Asia",
     "name": "Christmas Island"
@@ -453,6 +473,11 @@
     "name": "Clipperton Island"
   },
   {
+    "code": "pa-2",
+    "continent": "North America",
+    "name": "Coclé"
+  },
+  {
     "code": "cc",
     "continent": "Asia",
     "name": "Cocos (Keeling) Islands"
@@ -468,6 +493,11 @@
     "name": "Colombia"
   },
   {
+    "code": "pa-3",
+    "continent": "North America",
+    "name": "Colón"
+  },
+  {
     "code": "Colorado",
     "continent": "North America",
     "name": "Colorado"
@@ -480,6 +510,11 @@
   {
     "code": "Communist flag",
     "name": "Communist Flag"
+  },
+  {
+    "code": "fl-cr",
+    "continent": "North America",
+    "name": "Conch Republic"
   },
   {
     "code": "Confederate States",
@@ -501,6 +536,11 @@
     "code": "cordoba",
     "continent": "Europe",
     "name": "Cordoba"
+  },
+  {
+    "code": "co-cor",
+    "continent": "South America",
+    "name": "Córdoba"
   },
   {
     "code": "Corsica",
@@ -555,6 +595,11 @@
     "code": "1_Dalriata",
     "continent": "Europe",
     "name": "Dál Riata"
+  },
+  {
+    "code": "pa-5",
+    "continent": "North America",
+    "name": "Darién"
   },
   {
     "code": "dk",
@@ -639,6 +684,11 @@
     "code": "granada",
     "continent": "Europe",
     "name": "Emirate of Granada"
+  },
+  {
+    "code": "Empire of Haiti",
+    "continent": "North America",
+    "name": "Empire of Haiti"
   },
   {
     "code": "Empire of Japan",
@@ -765,6 +815,11 @@
     "name": "Frost Giant"
   },
   {
+    "code": "fr-gp",
+    "continent": "North America",
+    "name": "Guadeloupe"
+  },
+  {
     "code": "tf",
     "continent": "Africa",
     "name": "French Southern Territories"
@@ -871,6 +926,11 @@
     "name": "Guinea-Bissau"
   },
   {
+    "code": "pa-ky",
+    "continent": "North America",
+    "name": "Guna Yala"
+  },
+  {
     "code": "1_Gwent",
     "continent": "Europe",
     "name": "Gwent"
@@ -903,6 +963,11 @@
   {
     "code": "hm",
     "name": "Heard Island and McDonald Islands"
+  },
+  {
+    "code": "cr-h",
+    "continent": "North America",
+    "name": "Heredia"
   },
   {
     "code": "va",
@@ -1119,6 +1184,11 @@
     "name": "Kyrgyzstan"
   },
   {
+    "code": "cu-lh",
+    "continent": "North America",
+    "name": "La Habana"
+  },
+  {
     "code": "1_Laigin",
     "continent": "Europe",
     "name": "Laigin"
@@ -1189,6 +1259,11 @@
     "code": "lt",
     "continent": "Europe",
     "name": "Lithuania"
+  },
+  {
+    "code": "pa-7",
+    "continent": "North America",
+    "name": "Los Santos"
   },
   {
     "code": "Louisiana",
@@ -1454,6 +1529,11 @@
     "name": "New Zealand"
   },
   {
+    "code": "pa-nb",
+    "continent": "North America",
+    "name": "Ngäbe-Buglé Comarca"
+  },
+  {
     "code": "ni",
     "continent": "North America",
     "name": "Nicaragua"
@@ -1559,6 +1639,11 @@
     "name": "Oregon"
   },
   {
+    "code": "cu-or",
+    "continent": "North America",
+    "name": "Oriente"
+  },
+  {
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
@@ -1582,6 +1667,11 @@
     "code": "pa",
     "continent": "North America",
     "name": "Panama"
+  },
+  {
+    "code": "pa-10",
+    "continent": "North America",
+    "name": "Panamá Oeste"
   },
   {
     "code": "pg",
@@ -1673,6 +1763,11 @@
     "name": "Puerto Rico"
   },
   {
+    "code": "cr-p",
+    "continent": "North America",
+    "name": "Puntarenas"
+  },
+  {
     "code": "qa",
     "continent": "Asia",
     "name": "Qatar"
@@ -1716,6 +1811,11 @@
     "code": "Republic of Pirates",
     "continent": "North America",
     "name": "Republic of Pirates"
+  },
+  {
+    "code": "do",
+    "continent": "North America",
+    "name": "República Dominicana"
   },
   {
     "code": "re",
@@ -1805,6 +1905,11 @@
     "code": "ws",
     "continent": "Oceania",
     "name": "Samoa"
+  },
+  {
+    "code": "pr-sj",
+    "continent": "North America",
+    "name": "San Juan"
   },
   {
     "code": "sm",
@@ -2325,6 +2430,11 @@
     "code": "ye",
     "continent": "Asia",
     "name": "Yemen"
+  },
+  {
+    "code": "mx-yuc",
+    "continent": "North America",
+    "name": "Yucatán"
   },
   {
     "code": "yugoslavia",

@@ -172,6 +172,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Yenisei,
     GameMapType.Hawaii,
     GameMapType.Alps,
+    GameMapType.Panama,
   ],
   fantasy: [
     GameMapType.Pangaea,
