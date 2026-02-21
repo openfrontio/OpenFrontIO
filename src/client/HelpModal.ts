@@ -970,7 +970,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/oil-rig_2623991.svg"
+                        src="/images/OilRigWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>

@@ -4,9 +4,9 @@ import { Cell, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "/images/AnchorIcon.png?url";
-import factoryIcon from "/images/buildings/oil-rig_2623991.png?url";
 import cityIcon from "/images/CityIcon.png?url";
 import missileSiloIcon from "/images/MissileSiloUnit.png?url";
+import factoryIcon from "/images/OilRigMapIcon.png?url";
 import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
 import shieldIcon from "/images/ShieldIcon.png?url";
 
