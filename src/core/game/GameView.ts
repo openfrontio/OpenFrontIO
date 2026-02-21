@@ -38,6 +38,13 @@ import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
+import {
+  MOTION_PLANS_SCHEMA_VERSION,
+  MotionPlanRecord,
+  unpackMotionPlans,
+} from "./MotionPlans";
+import { UniversalPathFinding } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 
 const userSettings: UserSettings = new UserSettings();
 
@@ -81,6 +88,17 @@ export class UnitView {
     this.lastPos.push(data.pos);
     this._wasUpdated = true;
     this.data = data;
+  }
+
+  applyDerivedPosition(pos: TileRef) {
+    const prev = this.data.pos;
+    this.lastPos.push(pos);
+    this._wasUpdated = true;
+    this.data = {
+      ...this.data,
+      lastPos: prev,
+      pos,
+    };
   }
 
   id(): number {
@@ -592,6 +610,15 @@ export class GameView implements GameMap {
   private _myPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
+  private unitMotionPlans = new Map<
+    number,
+    {
+      planId: number;
+      startTick: number;
+      ticksPerStep: number;
+      path: Uint32Array;
+    }
+  >();
 
   private toDelete = new Set<number>();
 
@@ -637,6 +664,22 @@ export class GameView implements GameMap {
     return this.lastUpdate?.updates ?? null;
   }
 
+  public hasMotionPlan(unitId: number): boolean {
+    return this.unitMotionPlans.has(unitId);
+  }
+
+  public motionPlans(): ReadonlyMap<
+    number,
+    {
+      planId: number;
+      startTick: number;
+      ticksPerStep: number;
+      path: Uint32Array;
+    }
+  > {
+    return this.unitMotionPlans;
+  }
+
   public isCatchingUp(): boolean {
     return (this.lastUpdate?.pendingTurns ?? 0) > 1;
   }
@@ -654,6 +697,13 @@ export class GameView implements GameMap {
       const state = packed[i + 1];
       this.updateTile(tile, state);
       this.updatedTiles.push(tile);
+    }
+
+    if (gu.packedMotionPlans) {
+      const { schemaVersion, records } = unpackMotionPlans(gu.packedMotionPlans);
+      if (schemaVersion === MOTION_PLANS_SCHEMA_VERSION) {
+        this.applyMotionPlanRecords(records);
+      }
     }
 
     if (gu.updates === null) {
@@ -704,8 +754,115 @@ export class GameView implements GameMap {
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
         this.toDelete.add(unit.id());
+        this.unitMotionPlans.delete(unit.id());
       }
     });
+
+    this.advanceMotionPlannedUnits(gu.tick);
+  }
+
+  private advanceMotionPlannedUnits(currentTick: Tick): void {
+    for (const [unitId, plan] of this.unitMotionPlans) {
+      const unit = this._units.get(unitId);
+      if (!unit || !unit.isActive()) {
+        this.unitMotionPlans.delete(unitId);
+        continue;
+      }
+
+      const oldTile = unit.tile();
+      const newTile = this.motionTileAtTick(plan, currentTick);
+      unit.applyDerivedPosition(newTile);
+
+      if (newTile !== oldTile) {
+        this.unitGrid.updateUnitCell(unit);
+      }
+    }
+  }
+
+  private motionTileAtTick(
+    plan: { startTick: number; ticksPerStep: number; path: Uint32Array },
+    tick: Tick,
+  ): TileRef {
+    if (plan.path.length < 1) {
+      throw new Error("motion plan path must be non-empty");
+    }
+    const dt = tick - plan.startTick;
+    const stepIndex =
+      dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
+    const idx = Math.max(0, Math.min(plan.path.length - 1, stepIndex));
+    return plan.path[idx] as TileRef;
+  }
+
+  private applyMotionPlanRecords(records: readonly MotionPlanRecord[]): void {
+    for (const record of records) {
+      switch (record.kind) {
+        case "reset_all":
+          this.unitMotionPlans.clear();
+          break;
+        case "clear": {
+          const existing = this.unitMotionPlans.get(record.unitId);
+          if (!existing) {
+            break;
+          }
+          if (record.planId === 0 || existing.planId === record.planId) {
+            this.unitMotionPlans.delete(record.unitId);
+          }
+          break;
+        }
+        case "grid": {
+          if (record.ticksPerStep < 1 || record.path.length < 1) {
+            break;
+          }
+          const existing = this.unitMotionPlans.get(record.unitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+
+          const path =
+            (record.path as unknown) instanceof Uint32Array
+              ? (record.path as unknown as Uint32Array)
+              : Uint32Array.from(record.path as readonly number[]);
+
+          this.unitMotionPlans.set(record.unitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            ticksPerStep: record.ticksPerStep,
+            path,
+          });
+          break;
+        }
+        case "parabola": {
+          const existing = this.unitMotionPlans.get(record.unitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+
+          const pf = UniversalPathFinding.Parabola(this._map, {
+            increment: record.increment,
+            distanceBasedHeight: record.distanceBasedHeight,
+            directionUp: record.directionUp,
+          });
+
+          const tiles: number[] = [record.src];
+          for (let i = 0; i < 20000; i++) {
+            const step = pf.next(record.src, record.dst, record.increment);
+            if (step.status === PathStatus.NEXT) {
+              tiles.push(step.node);
+              continue;
+            }
+            break;
+          }
+
+          this.unitMotionPlans.set(record.unitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            ticksPerStep: 1,
+            path: Uint32Array.from(tiles),
+          });
+          break;
+        }
+      }
+    }
   }
 
   recentlyUpdatedTiles(): TileRef[] {

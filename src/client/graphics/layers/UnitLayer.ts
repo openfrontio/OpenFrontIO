@@ -545,6 +545,10 @@ export class UnitLayer implements Layer {
   }
 
   drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
+    if (this.game.hasMotionPlan(unit.id())) {
+      return;
+    }
+
     const x = this.game.x(unit.tile());
     const y = this.game.y(unit.tile());
 

@@ -13,6 +13,7 @@ import {
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
+import type { MotionPlanRecord } from "./MotionPlans";
 
 function isEnumValue<T extends Record<string, string | number>>(
   enumObj: T,
@@ -767,6 +768,8 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
+  recordMotionPlan(record: MotionPlanRecord): void;
+  drainPackedMotionPlans(): Uint32Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;

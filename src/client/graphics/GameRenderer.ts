@@ -44,6 +44,7 @@ import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
+import { MotionPlanLayer } from "./layers/MotionPlanLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -284,6 +285,7 @@ export function createRenderer(
     new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
     samRadiusLayer,
+    new MotionPlanLayer(game, eventBus),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),

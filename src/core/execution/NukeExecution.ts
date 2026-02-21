@@ -16,6 +16,7 @@ import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 import { listNukeBreakAlliance } from "./Util";
+import { MotionPlanRecord } from "../game/MotionPlans";
 
 const SPRITE_RADIUS = 16;
 
@@ -139,6 +140,19 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+
+      const motionPlan: MotionPlanRecord = {
+        kind: "parabola",
+        unitId: this.nuke.id(),
+        planId: 1,
+        startTick: ticks + 1 + this.waitTicks,
+        src: spawn,
+        dst: this.dst,
+        increment: this.speed,
+        distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
+        directionUp: this.rocketDirectionUp,
+      };
+      this.mg.recordMotionPlan(motionPlan);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
         this.maybeBreakAlliances();
       }

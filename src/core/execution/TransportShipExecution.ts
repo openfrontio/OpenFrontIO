@@ -13,6 +13,7 @@ import { targetTransportTile } from "../game/TransportShipUtils";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
+import { MotionPlanRecord } from "../game/MotionPlans";
 
 const malusForRetreat = 25;
 
@@ -30,6 +31,8 @@ export class TransportShipExecution implements Execution {
   private dst: TileRef | null;
   private src: TileRef | null;
   private boat: Unit;
+  private motionPlanId = 1;
+  private motionPlanDst: TileRef | null = null;
 
   private originalOwner: Player;
 
@@ -108,6 +111,22 @@ export class TransportShipExecution implements Execution {
       troops: this.troops,
       targetTile: this.dst,
     });
+
+    const fullPath = this.pathFinder.findPath(this.src, this.dst) ?? [this.src];
+    if (fullPath.length === 0 || fullPath[0] !== this.src) {
+      fullPath.unshift(this.src);
+    }
+
+    const motionPlan: MotionPlanRecord = {
+      kind: "grid",
+      unitId: this.boat.id(),
+      planId: this.motionPlanId,
+      startTick: ticks + this.ticksPerMove,
+      ticksPerStep: this.ticksPerMove,
+      path: fullPath,
+    };
+    this.mg.recordMotionPlan(motionPlan);
+    this.motionPlanDst = this.dst;
 
     // Notify the target player about the incoming naval invasion
     if (this.target.id() !== mg.terraNullius().id()) {
@@ -248,6 +267,25 @@ export class TransportShipExecution implements Execution {
         this.active = false;
         return;
       }
+    }
+
+    if (this.dst !== null && this.dst !== this.motionPlanDst) {
+      this.motionPlanId++;
+      const fullPath =
+        this.pathFinder.findPath(this.boat.tile(), this.dst) ?? [this.boat.tile()];
+      if (fullPath.length === 0 || fullPath[0] !== this.boat.tile()) {
+        fullPath.unshift(this.boat.tile());
+      }
+
+      this.mg.recordMotionPlan({
+        kind: "grid",
+        unitId: this.boat.id(),
+        planId: this.motionPlanId,
+        startTick: ticks + 1,
+        ticksPerStep: this.ticksPerMove,
+        path: fullPath,
+      });
+      this.motionPlanDst = this.dst;
     }
   }
 
