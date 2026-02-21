@@ -65,11 +65,27 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
-    const unitIds = this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
+    const updatedUnitIds =
+      this.game
+        .updatesSinceLastTick()
+        ?.[GameUpdateType.Unit]?.map((unit) => unit.id) ?? [];
 
-    this.updateUnitsSprites(unitIds ?? []);
+    const motionPlanUnitIds = Array.from(this.game.motionPlans().keys());
+
+    if (updatedUnitIds.length === 0) {
+      this.updateUnitsSprites(motionPlanUnitIds);
+      return;
+    }
+    if (motionPlanUnitIds.length === 0) {
+      this.updateUnitsSprites(updatedUnitIds);
+      return;
+    }
+
+    const unitIds = new Set<number>(updatedUnitIds);
+    for (const id of motionPlanUnitIds) {
+      unitIds.add(id);
+    }
+    this.updateUnitsSprites(Array.from(unitIds));
   }
 
   init() {
