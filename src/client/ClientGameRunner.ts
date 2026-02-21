@@ -654,8 +654,7 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      const canBoat = this.canBoatAttack(actions);
-      if (canBoat === false) {
+      if (this.canBoatAttack(actions) === false) {
         console.warn(
           "Boat attack triggered but can't send Transport Ship to tile",
         );
