@@ -1,18 +1,11 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import version from "resources/version.txt?raw";
-import { getCosmeticsHash } from "../Cosmetics";
-import { getGamesPlayed } from "../Utils";
-
-const HELP_SEEN_KEY = "helpSeen";
-const STORE_SEEN_HASH_KEY = "storeSeenHash";
-const NEWS_SEEN_VERSION_KEY = "newsSeenVersion";
+import { customElement } from "lit/decorators.js";
+import { NavNotificationsController } from "./NavNotificationsController";
 
 @customElement("mobile-nav-bar")
 export class MobileNavBar extends LitElement {
-  @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
-  @state() private _hasNewCosmetics = false;
-  @state() private _hasNewVersion = false;
+  private _notifications = new NavNotificationsController(this);
+
   createRenderRoot() {
     return this;
   }
@@ -26,22 +19,6 @@ export class MobileNavBar extends LitElement {
       this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
-    }
-
-    // Check if cosmetics have changed
-    getCosmeticsHash().then((hash: string | null) => {
-      const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
-      this._hasNewCosmetics = hash !== null && hash !== seenHash;
-    });
-
-    // Check if version has changed
-    const trimmed = version.trim();
-    const currentVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-    const seenVersion = localStorage.getItem(NEWS_SEEN_VERSION_KEY);
-    this._hasNewVersion =
-      seenVersion !== null && seenVersion !== currentVersion;
-    if (seenVersion === null) {
-      localStorage.setItem(NEWS_SEEN_VERSION_KEY, currentVersion);
     }
   }
 
@@ -64,46 +41,6 @@ export class MobileNavBar extends LitElement {
       }
     });
   }
-
-  private showHelpDot(): boolean {
-    // Only show one dot at a time to prevent
-    // overwhelming users.
-    return (
-      getGamesPlayed() < 10 &&
-      !this._helpSeen &&
-      !this.showNewsDot() &&
-      !this.showStoreDot()
-    );
-  }
-
-  private showStoreDot(): boolean {
-    return this._hasNewCosmetics && !this.showNewsDot();
-  }
-
-  private showNewsDot(): boolean {
-    return this._hasNewVersion;
-  }
-
-  private onStoreClick = () => {
-    this._hasNewCosmetics = false;
-    getCosmeticsHash().then((hash: string | null) => {
-      if (hash !== null) {
-        localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
-      }
-    });
-  };
-
-  private onNewsClick = () => {
-    this._hasNewVersion = false;
-    const trimmed = version.trim();
-    const currentVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-    localStorage.setItem(NEWS_SEEN_VERSION_KEY, currentVersion);
-  };
-
-  private onHelpClick = () => {
-    localStorage.setItem(HELP_SEEN_KEY, "true");
-    this._helpSeen = true;
-  };
 
   render() {
     window.currentPageId ??= "page-play";
@@ -191,9 +128,9 @@ export class MobileNavBar extends LitElement {
             class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-news"
             data-i18n="main.news"
-            @click=${this.onNewsClick}
+            @click=${this._notifications.onNewsClick}
           ></button>
-          ${this.showNewsDot()
+          ${this._notifications.showNewsDot()
             ? html`
                 <span
                   class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"
@@ -214,9 +151,9 @@ export class MobileNavBar extends LitElement {
             class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-item-store"
             data-i18n="main.store"
-            @click=${this.onStoreClick}
+            @click=${this._notifications.onStoreClick}
           ></button>
-          ${this.showStoreDot()
+          ${this._notifications.showStoreDot()
             ? html`
                 <span
                   class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"
@@ -242,9 +179,9 @@ export class MobileNavBar extends LitElement {
             class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-help"
             data-i18n="main.help"
-            @click=${this.onHelpClick}
+            @click=${this._notifications.onHelpClick}
           ></button>
-          ${this.showHelpDot()
+          ${this._notifications.showHelpDot()
             ? html`
                 <span
                   class="absolute top-1 -right-3 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
