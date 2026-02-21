@@ -1,7 +1,8 @@
-import { Execution, Game, Player } from "../game/Game";
+import { Execution, Game, isStructureType, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
+import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class BotExecution implements Execution {
@@ -38,6 +39,7 @@ export class BotExecution implements Execution {
     if (ticks % this.attackRate !== this.attackTick) return;
 
     if (!this.bot.isAlive()) {
+      //removeOnDeath is called from bot's PlayerExecution
       this.active = false;
       return;
     }
@@ -58,6 +60,7 @@ export class BotExecution implements Execution {
     }
 
     this.acceptAllAllianceRequests();
+    this.deleteAllStructures();
     this.maybeAttack();
   }
 
@@ -77,6 +80,14 @@ export class BotExecution implements Execution {
       this.mg.addExecution(
         new AllianceExtensionExecution(this.bot, human.id()),
       );
+    }
+  }
+
+  private deleteAllStructures() {
+    for (const unit of this.bot.units()) {
+      if (isStructureType(unit.type()) && this.bot.canDeleteUnit()) {
+        this.mg.addExecution(new DeleteUnitExecution(this.bot, unit.id()));
+      }
     }
   }
 

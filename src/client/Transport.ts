@@ -55,13 +55,8 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendAllianceReplyIntentEvent implements GameEvent {
-  constructor(
-    // The original alliance requestor
-    public readonly requestor: PlayerView,
-    public readonly recipient: PlayerView,
-    public readonly accepted: boolean,
-  ) {}
+export class SendAllianceRejectIntentEvent implements GameEvent {
+  constructor(public readonly requestor: PlayerView) {}
 }
 
 export class SendAllianceExtensionIntentEvent implements GameEvent {
@@ -204,8 +199,8 @@ export class Transport {
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
     );
-    this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
-      this.onAllianceRequestReplyUIEvent(e),
+    this.eventBus.on(SendAllianceRejectIntentEvent, (e) =>
+      this.onAllianceRejectUIEvent(e),
     );
     this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
       this.onSendAllianceExtensionIntent(e),
@@ -402,7 +397,7 @@ export class Transport {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
-      clientID: this.lobbyConfig.clientID,
+      // Note: clientID is not sent - server assigns it based on persistentID
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
@@ -414,7 +409,7 @@ export class Transport {
     this.sendMsg({
       type: "rejoin",
       gameID: this.lobbyConfig.gameID,
-      clientID: this.lobbyConfig.clientID,
+      // Note: clientID is not sent - server looks it up from persistentID in token
       lastTurn: lastTurn,
       token: await getPlayToken(),
     } satisfies ClientRejoinMessage);
@@ -443,24 +438,20 @@ export class Transport {
   private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {
     this.sendIntent({
       type: "allianceRequest",
-      clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
     });
   }
 
-  private onAllianceRequestReplyUIEvent(event: SendAllianceReplyIntentEvent) {
+  private onAllianceRejectUIEvent(event: SendAllianceRejectIntentEvent) {
     this.sendIntent({
-      type: "allianceRequestReply",
-      clientID: this.lobbyConfig.clientID,
+      type: "allianceReject",
       requestor: event.requestor.id(),
-      accept: event.accepted,
     });
   }
 
   private onBreakAllianceRequestUIEvent(event: SendBreakAllianceIntentEvent) {
     this.sendIntent({
       type: "breakAlliance",
-      clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
     });
   }
@@ -470,7 +461,6 @@ export class Transport {
   ) {
     this.sendIntent({
       type: "allianceExtension",
-      clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
     });
   }
@@ -478,7 +468,6 @@ export class Transport {
   private onSendSpawnIntentEvent(event: SendSpawnIntentEvent) {
     this.sendIntent({
       type: "spawn",
-      clientID: this.lobbyConfig.clientID,
       tile: event.tile,
     });
   }
@@ -486,7 +475,6 @@ export class Transport {
   private onSendAttackIntent(event: SendAttackIntentEvent) {
     this.sendIntent({
       type: "attack",
-      clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
     });
@@ -495,7 +483,6 @@ export class Transport {
   private onSendBoatAttackIntent(event: SendBoatAttackIntentEvent) {
     this.sendIntent({
       type: "boat",
-      clientID: this.lobbyConfig.clientID,
       troops: event.troops,
       dst: event.dst,
     });
@@ -505,7 +492,6 @@ export class Transport {
     this.sendIntent({
       type: "upgrade_structure",
       unit: event.unitType,
-      clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });
   }
@@ -513,7 +499,6 @@ export class Transport {
   private onSendTargetPlayerIntent(event: SendTargetPlayerIntentEvent) {
     this.sendIntent({
       type: "targetPlayer",
-      clientID: this.lobbyConfig.clientID,
       target: event.targetID,
     });
   }
@@ -521,7 +506,6 @@ export class Transport {
   private onSendEmojiIntent(event: SendEmojiIntentEvent) {
     this.sendIntent({
       type: "emoji",
-      clientID: this.lobbyConfig.clientID,
       recipient:
         event.recipient === AllPlayers ? AllPlayers : event.recipient.id(),
       emoji: event.emoji,
@@ -531,7 +515,6 @@ export class Transport {
   private onSendDonateGoldIntent(event: SendDonateGoldIntentEvent) {
     this.sendIntent({
       type: "donate_gold",
-      clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       gold: event.gold ? Number(event.gold) : null,
     });
@@ -540,7 +523,6 @@ export class Transport {
   private onSendDonateTroopIntent(event: SendDonateTroopsIntentEvent) {
     this.sendIntent({
       type: "donate_troops",
-      clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       troops: event.troops,
     });
@@ -549,7 +531,6 @@ export class Transport {
   private onSendQuickChatIntent(event: SendQuickChatEvent) {
     this.sendIntent({
       type: "quick_chat",
-      clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
       target: event.target,
@@ -559,7 +540,6 @@ export class Transport {
   private onSendEmbargoIntent(event: SendEmbargoIntentEvent) {
     this.sendIntent({
       type: "embargo",
-      clientID: this.lobbyConfig.clientID,
       targetID: event.target.id(),
       action: event.action,
     });
@@ -568,7 +548,6 @@ export class Transport {
   private onSendEmbargoAllIntent(event: SendEmbargoAllIntentEvent) {
     this.sendIntent({
       type: "embargo_all",
-      clientID: this.lobbyConfig.clientID,
       action: event.action,
     });
   }
@@ -576,7 +555,6 @@ export class Transport {
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
       type: "build_unit",
-      clientID: this.lobbyConfig.clientID,
       unit: event.unit,
       tile: event.tile,
       rocketDirectionUp: event.rocketDirectionUp,
@@ -586,7 +564,6 @@ export class Transport {
   private onPauseGameIntent(event: PauseGameIntentEvent) {
     this.sendIntent({
       type: "toggle_pause",
-      clientID: this.lobbyConfig.clientID,
       paused: event.paused,
     });
   }
@@ -626,7 +603,6 @@ export class Transport {
   private onCancelAttackIntentEvent(event: CancelAttackIntentEvent) {
     this.sendIntent({
       type: "cancel_attack",
-      clientID: this.lobbyConfig.clientID,
       attackID: event.attackID,
     });
   }
@@ -634,7 +610,6 @@ export class Transport {
   private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
     this.sendIntent({
       type: "cancel_boat",
-      clientID: this.lobbyConfig.clientID,
       unitID: event.unitID,
     });
   }
@@ -642,7 +617,6 @@ export class Transport {
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
       type: "move_warship",
-      clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
     });
@@ -651,7 +625,6 @@ export class Transport {
   private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
     this.sendIntent({
       type: "delete_unit",
-      clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });
   }
@@ -659,7 +632,6 @@ export class Transport {
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
     this.sendIntent({
       type: "kick_player",
-      clientID: this.lobbyConfig.clientID,
       target: event.target,
     });
   }
@@ -667,7 +639,6 @@ export class Transport {
   private onSendUpdateGameConfigIntent(event: SendUpdateGameConfigIntentEvent) {
     this.sendIntent({
       type: "update_game_config",
-      clientID: this.lobbyConfig.clientID,
       config: event.config,
     });
   }

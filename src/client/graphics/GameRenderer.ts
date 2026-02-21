@@ -7,6 +7,7 @@ import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -53,11 +54,13 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = {
+  const uiState: UIState = {
     attackRatio: 20,
     ghostStructure: null,
+    overlappingRailroads: [],
+    ghostRailPaths: [],
     rocketDirectionUp: true,
-  } as UIState;
+  };
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -97,6 +100,7 @@ export function createRenderer(
     console.error("GameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
+  gameLeftSidebar.eventBus = eventBus;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!teamStats || !(teamStats instanceof TeamStats)) {
@@ -122,6 +126,16 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const attacksDisplay = document.querySelector(
+    "attacks-display",
+  ) as AttacksDisplay;
+  if (!(attacksDisplay instanceof AttacksDisplay)) {
+    console.error("attacks display not found");
+  }
+  attacksDisplay.eventBus = eventBus;
+  attacksDisplay.game = game;
+  attacksDisplay.uiState = uiState;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -235,6 +249,7 @@ export function createRenderer(
     console.error("spawn timer not found");
   }
   spawnTimer.game = game;
+  spawnTimer.eventBus = eventBus;
   spawnTimer.transformHandler = transformHandler;
 
   const immunityTimer = document.querySelector(
@@ -244,6 +259,7 @@ export function createRenderer(
     console.error("immunity timer not found");
   }
   immunityTimer.game = game;
+  immunityTimer.eventBus = eventBus;
 
   const inGameHeaderAd = document.querySelector(
     "in-game-header-ad",
@@ -265,17 +281,18 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, eventBus, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
+    attacksDisplay,
     chatDisplay,
     buildMenu,
     new MainRadialMenu(

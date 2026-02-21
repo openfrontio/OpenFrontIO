@@ -17,6 +17,11 @@ export function normaliseMapKey(mapName: string): string {
   return mapName.toLowerCase().replace(/[\s.]+/g, "");
 }
 
+export function getMapName(mapName: string | undefined): string | null {
+  if (!mapName) return null;
+  return translateText(`map.${normaliseMapKey(mapName)}`);
+}
+
 /**
  * Returns a display label for the game mode (e.g. "FFA", "4 Teams", "Duos").
  */
@@ -44,12 +49,36 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
     }
   }
 
-  // Numeric team count
+  // Numeric team count (e.g. "5 teams of 20")
   const teamCount =
     typeof playerTeams === "number"
       ? playerTeams
       : getTeamCount(playerTeams, maxPlayers ?? 0);
-  return translateText("public_lobby.teams", { num: teamCount });
+  const teamSize =
+    teamCount > 0 ? Math.floor((maxPlayers ?? 0) / teamCount) : 0;
+
+  // If the computed team size matches a named format, use that label instead
+  const namedTeamType =
+    teamSize === 2
+      ? Duos
+      : teamSize === 3
+        ? Trios
+        : teamSize === 4
+          ? Quads
+          : null;
+  if (namedTeamType) {
+    const teamKey = `public_lobby.teams_${namedTeamType}`;
+    const translated = translateText(teamKey, { team_count: teamCount });
+    if (translated !== teamKey) {
+      return translated;
+    }
+  }
+
+  const teamsLabel = translateText("public_lobby.teams", { num: teamCount });
+  if (teamSize > 0) {
+    return `${teamsLabel} ${translateText("public_lobby.players_per_team", { num: teamSize })}`;
+  }
+  return teamsLabel;
 }
 
 function getTeamCount(

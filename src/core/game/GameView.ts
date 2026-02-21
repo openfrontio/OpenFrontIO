@@ -25,7 +25,7 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
@@ -403,11 +403,12 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef): Promise<PlayerActions> {
+  async actions(tile?: TileRef, units?: UnitType[]): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
+      units,
     );
   }
 
@@ -603,12 +604,20 @@ export class GameView implements GameMap {
     private _config: Config,
     private _mapData: TerrainMapData,
     private _myClientID: ClientID,
+    private _myUsername: string,
     private _gameID: GameID,
     private humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
+    // Replace the local player's username with their own stored username.
+    // This way the user does not know they are being censored.
+    for (const h of this.humans) {
+      if (h.clientID === this._myClientID) {
+        h.username = this._myUsername;
+      }
+    }
     this._cosmetics = new Map(
       this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
@@ -628,6 +637,10 @@ export class GameView implements GameMap {
     return this.lastUpdate?.updates ?? null;
   }
 
+  public isCatchingUp(): boolean {
+    return (this.lastUpdate?.pendingTurns ?? 0) > 1;
+  }
+
   public update(gu: GameUpdateViewData) {
     this.toDelete.forEach((id) => this._units.delete(id));
     this.toDelete.clear();
@@ -635,9 +648,13 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
-    });
+    const packed = this.lastUpdate.packedTileUpdates;
+    for (let i = 0; i + 1 < packed.length; i += 2) {
+      const tile = packed[i];
+      const state = packed[i + 1];
+      this.updateTile(tile, state);
+      this.updatedTiles.push(tile);
+    }
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
@@ -698,7 +715,7 @@ export class GameView implements GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
@@ -804,6 +821,19 @@ export class GameView implements GameMap {
   }
   inSpawnPhase(): boolean {
     return this.ticks() <= this._config.numSpawnPhaseTurns();
+  }
+  isSpawnImmunityActive(): boolean {
+    return (
+      this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
+      this.ticks()
+    );
+  }
+  isNationSpawnImmunityActive(): boolean {
+    return (
+      this._config.numSpawnPhaseTurns() +
+        this._config.nationSpawnImmunityDuration() >
+      this.ticks()
+    );
   }
   config(): Config {
     return this._config;
@@ -923,11 +953,11 @@ export class GameView implements GameMap {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): void {
+    this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

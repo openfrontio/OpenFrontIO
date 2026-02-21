@@ -125,6 +125,31 @@ export async function createCheckoutSession(
   }
 }
 
+export async function grantTemporaryFlare(flare: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/flares_granted/temporary`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ flare }),
+    });
+    if (!response.ok) {
+      console.error(
+        "grantTemporaryFlare: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("grantTemporaryFlare: request failed", e);
+    return false;
+  }
+}
+
 export function getApiBase() {
   const domainname = getAudience();
 
@@ -235,13 +260,6 @@ export async function fetchPlayerLeaderboard(
     });
 
     if (!res.ok) {
-      // Handle "Page must be between X and Y" error as end of list
-      if (res.status === 400) {
-        const errorJson = await res.json().catch(() => null);
-        if (errorJson?.message?.includes("Page must be between")) {
-          return "reached_limit";
-        }
-      }
       console.warn(
         "fetchPlayerLeaderboard: unexpected status",
         res.status,
@@ -253,6 +271,10 @@ export async function fetchPlayerLeaderboard(
     const json = await res.json();
     const parsed = RankedLeaderboardResponseSchema.safeParse(json);
     if (!parsed.success) {
+      // Handle "Page must be between X and Y" error as end of list
+      if (json?.message?.includes?.("Page must be between")) {
+        return "reached_limit";
+      }
       console.warn(
         "fetchPlayerLeaderboard: Zod validation failed",
         parsed.error.toString(),

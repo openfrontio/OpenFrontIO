@@ -67,7 +67,7 @@ export class OModal extends LitElement {
 
     const wrapperClass = this.inline
       ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
-      : `relative flex flex-col w-[90%] min-w-[400px] max-w-[900px] m-8 rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.8)] max-h-[calc(100vh-4rem)] ${
+      : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.8)] lg:max-h-[calc(100vh-4rem)] ${
           this.alwaysMaximized ? "h-auto" : ""
         }`;
     const wrapperStyle =
@@ -101,7 +101,7 @@ export class OModal extends LitElement {
                     </div>`
                   : html``}
                 <section
-                  class="relative flex-1 min-h-0 p-[1.4rem] text-white bg-[#23232382] backdrop-blur-md rounded-lg overflow-y-auto"
+                  class="relative flex-1 min-h-0 p-0 lg:p-[1.4rem] text-white bg-[#23232382] backdrop-blur-md lg:rounded-lg overflow-y-auto"
                 >
                   <slot></slot>
                 </section>
