@@ -81,7 +81,13 @@ export class SpawnExecution implements Execution {
 
   private getSpawn(center?: TileRef): Spawn | undefined {
     if (center !== undefined) {
-      return { center, tiles: getSpawnTiles(this.mg, center, false) };
+      const tiles = getSpawnTiles(this.mg, center, false);
+
+      if (!tiles.length) {
+        return;
+      }
+
+      return { center, tiles };
     }
 
     let tries = 0;
