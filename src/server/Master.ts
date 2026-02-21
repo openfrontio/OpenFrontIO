@@ -145,7 +145,7 @@ app.get("/api/env", async (req, res) => {
   res.json(envConfig);
 });
 
-app.get("/api/health", async (_req, res) => {
+app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
   if (ready) {
     res.json({ status: "ok" });
