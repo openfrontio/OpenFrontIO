@@ -62,6 +62,10 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+
+  renderType?: string;
+
+  timerFraction?: (params: MenuElementParams) => number; // 0..1, for arc timer overlay
 }
 
 export interface TooltipKey {
@@ -213,6 +217,36 @@ const allyRequestElement: MenuElement = {
     );
     params.closeMenu();
   },
+};
+
+const allyExtendElement: MenuElement = {
+  id: "ally_extend",
+  name: "extend",
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.allianceInfo?.inExtensionWindow,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.allianceInfo?.canExtend,
+  color: COLORS.ally,
+  icon: allianceIcon,
+  action: (params: MenuElementParams) => {
+    if (!params.playerActions?.interaction?.allianceInfo?.canExtend) return;
+    params.playerActionHandler.handleExtendAlliance(params.selected!);
+    params.closeMenu();
+  },
+  timerFraction: (params: MenuElementParams): number => {
+    const interaction = params.playerActions?.interaction;
+    if (!interaction?.allianceInfo) return 1;
+    const remaining = Math.max(
+      0,
+      interaction.allianceInfo.expiresAt - params.game.ticks(),
+    );
+    const extensionWindow = Math.max(
+      1,
+      params.game.config().allianceExtensionPromptOffset(),
+    );
+    return Math.max(0, Math.min(1, remaining / extensionWindow));
+  },
+  renderType: "allyExtend",
 };
 
 const allyBreakElement: MenuElement = {
@@ -628,13 +662,16 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    const inExtensionWindow =
+      params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
-            allyRequestElement,
+            inExtensionWindow ? allyExtendElement : allyRequestElement,
             isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,

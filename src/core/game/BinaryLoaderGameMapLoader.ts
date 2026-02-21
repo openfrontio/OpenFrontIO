@@ -54,9 +54,7 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
           return res.json() as Promise<MapManifest>;
         }),
       ),
-      webpPath: this.createLazyLoader(() =>
-        Promise.resolve(`${mapBasePath}/thumbnail.webp`),
-      ),
+      webpPath: `${mapBasePath}/thumbnail.webp`,
     } satisfies MapData;
 
     this.maps.set(map, mapData);

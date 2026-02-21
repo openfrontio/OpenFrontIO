@@ -59,6 +59,13 @@ export class MasterLobbyService {
     this.readyWorkers.delete(workerId);
   }
 
+  isHealthy(): boolean {
+    // We consider the lobby service healthy if at least half of the workers are ready.
+    // This allows for some leeway if a worker crashes.
+    const minWorkers = Math.max(this.config.numWorkers() / 2, 1);
+    return this.started && this.readyWorkers.size >= minWorkers;
+  }
+
   private handleWorkerReady(workerId: number) {
     this.readyWorkers.add(workerId);
     this.log.info(

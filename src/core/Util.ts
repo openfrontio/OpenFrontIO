@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import { Cell, Unit } from "./game/Game";
+import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
   GameConfig,
@@ -345,10 +345,10 @@ export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
 
 export function createRandomName(
   name: string,
-  playerType: string,
+  playerType: PlayerType,
 ): string | null {
   let randomName: string | null = null;
-  if (playerType === "HUMAN") {
+  if (playerType === PlayerType.Human) {
     const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
     const suffixIndex =
