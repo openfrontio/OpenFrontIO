@@ -66,11 +66,18 @@ export class MobileNavBar extends LitElement {
   }
 
   private showHelpDot(): boolean {
-    return getGamesPlayed() < 10 && !this._helpSeen;
+    // Only show one dot at a time to prevent
+    // overwhelming users.
+    return (
+      getGamesPlayed() < 10 &&
+      !this._helpSeen &&
+      !this.showNewsDot() &&
+      !this.showStoreDot()
+    );
   }
 
   private showStoreDot(): boolean {
-    return this._hasNewCosmetics && !this.showHelpDot();
+    return this._hasNewCosmetics && !this.showNewsDot();
   }
 
   private showNewsDot(): boolean {
