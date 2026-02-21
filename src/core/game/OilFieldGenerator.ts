@@ -8,7 +8,20 @@ export function generateOilFields(map: GameMap, config: Config) {
     simpleHash("oil-fields-" + config.randomSeed()),
   );
 
-  const numFields = random.nextInt(7, 10);
+  const landTiles = map.numLandTiles();
+  let numFields: number;
+
+  if (landTiles < 500000) {
+    // Small maps
+    numFields = random.nextInt(2, 5);
+  } else if (landTiles < 1500000) {
+    // Medium maps
+    numFields = random.nextInt(4, 8);
+  } else {
+    // Large maps
+    numFields = random.nextInt(7, 11);
+  }
+
   const width = map.width();
   const height = map.height();
 
@@ -66,8 +79,7 @@ export function generateOilFields(map: GameMap, config: Config) {
   }
 
   // 2. Elliptical Noise Base
-  const totalLand = map.numLandTiles();
-  const avgTilesPerField = (totalLand * 0.045) / numFields;
+  const avgTilesPerField = (landTiles * 0.045) / numFields;
 
   for (const seed of seeds) {
     const targetSize = avgTilesPerField * (0.6 + random.next() * 1.8);
