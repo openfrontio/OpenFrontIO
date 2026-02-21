@@ -22,11 +22,7 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-} from "./game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -172,13 +168,7 @@ export class GameRunner {
       });
     }
 
-    // Many tiles are updated to pack it into an array
-    const tileUpdates = updates[GameUpdateType.Tile];
-    const packedTileUpdates = new BigUint64Array(tileUpdates.length);
-    for (let i = 0; i < tileUpdates.length; i++) {
-      packedTileUpdates[i] = tileUpdates[i].update;
-    }
-    updates[GameUpdateType.Tile] = [];
+    const packedTileUpdates = this.game.drainPackedTileUpdates();
 
     this.callBack({
       tick: this.game.ticks(),

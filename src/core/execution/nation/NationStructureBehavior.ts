@@ -57,7 +57,7 @@ function getStructureRatios(
     },
     [UnitType.SAMLauncher]: {
       ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
-      perceivedCostIncreasePerOwned: 1,
+      perceivedCostIncreasePerOwned: 0.5,
     },
     [UnitType.MissileSilo]: {
       ratioPerCity: 0.2,
