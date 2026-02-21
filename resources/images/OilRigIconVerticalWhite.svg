@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="white">
+  <!-- Iconic A-frame Oil Derrick Logo -->
+  <!-- Main A-Frame legs -->
+  <path d="M32 4 L14 60 L20 60 L32 12 L44 60 L50 60 Z"/>
+  
+  <!-- Horizontal Braces -->
+  <rect x="24" y="24" width="16" height="4"/>
+  <rect x="20" y="40" width="24" height="4"/>
+  
+  <!-- Bottom Foundation/Platform -->
+  <rect x="8" y="56" width="48" height="6" rx="1"/>
+  
+  <!-- Top Cap -->
+  <rect x="28" y="2" width="8" height="4" rx="1"/>
+</svg>

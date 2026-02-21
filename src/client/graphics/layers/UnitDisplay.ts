@@ -17,7 +17,7 @@ import mirvIcon from "/images/MIRVIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
 import atomBombIcon from "/images/NukeIconWhite.svg?url";
-import factoryIcon from "/images/OilRigWhite.svg?url";
+import factoryIcon from "/images/OilRigIconVerticalWhite.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import defensePostIcon from "/images/ShieldIconWhite.svg?url";

@@ -35,7 +35,7 @@ import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
 import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
-import factoryIcon from "/images/OilRigWhite.svg?url";
+import factoryIcon from "/images/OilRigIconVerticalWhite.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import soldierIcon from "/images/SoldierIcon.svg?url";
