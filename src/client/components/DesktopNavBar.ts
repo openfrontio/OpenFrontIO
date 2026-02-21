@@ -1,15 +1,18 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import version from "resources/version.txt?raw";
 import { getCosmeticsHash } from "../Cosmetics";
 import { getGamesPlayed } from "../Utils";
 
 const HELP_SEEN_KEY = "helpSeen";
 const STORE_SEEN_HASH_KEY = "storeSeenHash";
+const NEWS_SEEN_VERSION_KEY = "newsSeenVersion";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
   @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
   @state() private _hasNewCosmetics = false;
+  @state() private _hasNewVersion = false;
 
   createRenderRoot() {
     return this;
@@ -32,6 +35,16 @@ export class DesktopNavBar extends LitElement {
       const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
       this._hasNewCosmetics = hash !== null && hash !== seenHash;
     });
+
+    // Check if version has changed
+    const trimmed = version.trim();
+    const currentVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+    const seenVersion = localStorage.getItem(NEWS_SEEN_VERSION_KEY);
+    this._hasNewVersion =
+      seenVersion !== null && seenVersion !== currentVersion;
+    if (seenVersion === null) {
+      localStorage.setItem(NEWS_SEEN_VERSION_KEY, currentVersion);
+    }
   }
 
   disconnectedCallback() {
@@ -64,6 +77,10 @@ export class DesktopNavBar extends LitElement {
     return this._hasNewCosmetics && !this.showHelpDot();
   }
 
+  private showNewsDot(): boolean {
+    return this._hasNewVersion;
+  }
+
   private onHelpClick = () => {
     localStorage.setItem(HELP_SEEN_KEY, "true");
     this._helpSeen = true;
@@ -76,6 +93,13 @@ export class DesktopNavBar extends LitElement {
         localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
       }
     });
+  };
+
+  private onNewsClick = () => {
+    this._hasNewVersion = false;
+    const trimmed = version.trim();
+    const currentVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+    localStorage.setItem(NEWS_SEEN_VERSION_KEY, currentVersion);
   };
 
   render() {
@@ -142,13 +166,26 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.play"
         ></button>
         <!-- Desktop Navigation Menu Items -->
-        <button
-          class="nav-menu-item ${currentPage === "page-news"
-            ? "active"
-            : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-news"
-          data-i18n="main.news"
-        ></button>
+        <div class="relative">
+          <button
+            class="nav-menu-item ${currentPage === "page-news"
+              ? "active"
+              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-news"
+            data-i18n="main.news"
+            @click=${this.onNewsClick}
+          ></button>
+          ${this.showNewsDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <div class="relative no-crazygames">
           <button
             class="nav-menu-item ${currentPage === "page-item-store"

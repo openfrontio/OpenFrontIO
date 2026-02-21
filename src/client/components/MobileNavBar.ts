@@ -1,8 +1,18 @@
 import { LitElement, html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+import version from "resources/version.txt?raw";
+import { getCosmeticsHash } from "../Cosmetics";
+import { getGamesPlayed } from "../Utils";
+
+const HELP_SEEN_KEY = "helpSeen";
+const STORE_SEEN_HASH_KEY = "storeSeenHash";
+const NEWS_SEEN_VERSION_KEY = "newsSeenVersion";
 
 @customElement("mobile-nav-bar")
 export class MobileNavBar extends LitElement {
+  @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
+  @state() private _hasNewCosmetics = false;
+  @state() private _hasNewVersion = false;
   createRenderRoot() {
     return this;
   }
@@ -16,6 +26,22 @@ export class MobileNavBar extends LitElement {
       this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
+    }
+
+    // Check if cosmetics have changed
+    getCosmeticsHash().then((hash: string | null) => {
+      const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
+      this._hasNewCosmetics = hash !== null && hash !== seenHash;
+    });
+
+    // Check if version has changed
+    const trimmed = version.trim();
+    const currentVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+    const seenVersion = localStorage.getItem(NEWS_SEEN_VERSION_KEY);
+    this._hasNewVersion =
+      seenVersion !== null && seenVersion !== currentVersion;
+    if (seenVersion === null) {
+      localStorage.setItem(NEWS_SEEN_VERSION_KEY, currentVersion);
     }
   }
 
@@ -38,6 +64,39 @@ export class MobileNavBar extends LitElement {
       }
     });
   }
+
+  private showHelpDot(): boolean {
+    return getGamesPlayed() < 10 && !this._helpSeen;
+  }
+
+  private showStoreDot(): boolean {
+    return this._hasNewCosmetics && !this.showHelpDot();
+  }
+
+  private showNewsDot(): boolean {
+    return this._hasNewVersion;
+  }
+
+  private onStoreClick = () => {
+    this._hasNewCosmetics = false;
+    getCosmeticsHash().then((hash: string | null) => {
+      if (hash !== null) {
+        localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
+      }
+    });
+  };
+
+  private onNewsClick = () => {
+    this._hasNewVersion = false;
+    const trimmed = version.trim();
+    const currentVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+    localStorage.setItem(NEWS_SEEN_VERSION_KEY, currentVersion);
+  };
+
+  private onHelpClick = () => {
+    localStorage.setItem(HELP_SEEN_KEY, "true");
+    this._helpSeen = true;
+  };
 
   render() {
     window.currentPageId ??= "page-play";
@@ -120,26 +179,46 @@ export class MobileNavBar extends LitElement {
           data-page="page-play"
           data-i18n="main.play"
         ></button>
-        <button
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-news"
-          data-i18n="main.news"
-        ></button>
+        <div class="relative w-fit">
+          <button
+            class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-news"
+            data-i18n="main.news"
+            @click=${this.onNewsClick}
+          ></button>
+          ${this.showNewsDot()
+            ? html`
+                <span
+                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <button
           class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
           data-page="page-leaderboard"
           data-i18n="main.leaderboard"
         ></button>
-        <div class="relative no-crazygames">
+        <div class="relative w-fit no-crazygames">
           <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-item-store"
             data-i18n="main.store"
+            @click=${this.onStoreClick}
           ></button>
-          <span
-            class="absolute top-[45%] -translate-y-1/2 right-4 bg-gradient-to-br from-red-600 to-red-700 text-white text-[10px] font-black tracking-wider px-2.5 py-1 rounded rotate-12 shadow-lg shadow-red-600/50 animate-pulse pointer-events-none"
-            data-i18n="main.store_new_badge"
-          ></span>
+          ${this.showStoreDot()
+            ? html`
+                <span
+                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute top-1 -right-3 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
         </div>
         <button
           class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
@@ -151,11 +230,24 @@ export class MobileNavBar extends LitElement {
           data-page="page-account"
           data-i18n="main.account"
         ></button>
-        <button
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-help"
-          data-i18n="main.help"
-        ></button>
+        <div class="relative w-fit">
+          <button
+            class="nav-menu-item block text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-help"
+            data-i18n="main.help"
+            @click=${this.onHelpClick}
+          ></button>
+          ${this.showHelpDot()
+            ? html`
+                <span
+                  class="absolute top-1 -right-3 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute top-1 -right-3 w-2 h-2 bg-yellow-400 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <div
           class="flex flex-col w-full mt-auto [.in-game_&]:hidden items-end justify-end pt-4 border-t border-white/10"
         >
