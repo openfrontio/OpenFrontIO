@@ -34,18 +34,22 @@ export class MobileNavBar extends LitElement {
 
   private _updateActiveState(pageId: string) {
     this.querySelectorAll(".nav-menu-item").forEach((el) => {
+      const inner = el.querySelector("button");
       if ((el as HTMLElement).dataset.page === pageId) {
         el.classList.add("active");
+        inner?.classList.add("active");
       } else {
         el.classList.remove("active");
+        inner?.classList.remove("active");
       }
     });
   }
 
   private _renderDot(color: string): TemplateResult {
-    return html`<span
-      class="w-2 h-2 ${color} rounded-full ml-2 shrink-0 -mt-2"
-    ></span>`;
+    return html`<span class="relative ml-2 shrink-0 -mt-2 w-2 h-2">
+      <span class="absolute inset-0 ${color} rounded-full animate-ping"></span>
+      <span class="absolute inset-0 ${color} rounded-full"></span>
+    </span>`;
   }
 
   render() {
