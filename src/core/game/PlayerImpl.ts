@@ -1070,7 +1070,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    units?: readonly PlayerBuildableUnitType[],
+    units: readonly PlayerBuildableUnitType[] = PlayerBuildableTypes,
   ): BuildableUnit[] {
     const mg = this.mg;
     const config = mg.config();
@@ -1083,14 +1083,10 @@ export class PlayerImpl implements Player {
         ? this.validStructureSpawnTiles(tile)
         : [];
 
-    const selectedTypes =
-      units === undefined ? null : new Set<PlayerBuildableUnitType>(units);
     const result: BuildableUnit[] = [];
 
-    for (const u of PlayerBuildableTypes) {
-      if (selectedTypes !== null && !selectedTypes.has(u)) {
-        continue;
-      }
+    for (let i = 0, len = units.length; i < len; i++) {
+      const u = units[i];
 
       const cost = config.unitInfo(u).cost(mg, this);
       let canUpgrade: number | false = false;
