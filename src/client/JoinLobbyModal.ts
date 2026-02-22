@@ -18,6 +18,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
+import { clientInfoListsEqual } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
@@ -61,7 +62,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
-    this.currentClientID = event.myClientID;
+    if (this.currentClientID !== event.myClientID) {
+      this.currentClientID = event.myClientID;
+    }
     // Only stop showing spinner when we have player info
     if (this.isConnecting && lobby.clients) {
       this.isConnecting = false;
@@ -514,21 +517,36 @@ export class JoinLobbyModal extends BaseModal {
   // --- Lobby event handling ---
 
   private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
-    this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
-    this.lobbyStartAt = lobby.startsAt ?? null;
+    const nextPlayers = "clients" in lobby ? (lobby.clients ?? []) : [];
+    if (!clientInfoListsEqual(this.players, nextPlayers)) {
+      this.players = nextPlayers;
+    }
+
+    const nextLobbyStartAt = lobby.startsAt ?? null;
+    if (this.lobbyStartAt !== nextLobbyStartAt) {
+      this.lobbyStartAt = nextLobbyStartAt;
+    }
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
-      this.gameConfig = lobby.gameConfig;
+      // Avoid unnecessary rerenders from per-second lobby_info broadcasts.
+      if (
+        JSON.stringify(this.gameConfig) !== JSON.stringify(lobby.gameConfig)
+      ) {
+        this.gameConfig = lobby.gameConfig;
+      }
       if (mapChanged) {
         this.loadNationCount();
       }
     }
 
-    this.lobbyCreatorClientID =
+    const nextLobbyCreatorClientID =
       "lobbyCreatorClientID" in lobby
         ? (lobby.lobbyCreatorClientID ?? null)
         : null;
+    if (this.lobbyCreatorClientID !== nextLobbyCreatorClientID) {
+      this.lobbyCreatorClientID = nextLobbyCreatorClientID;
+    }
   }
 
   private startLobbyUpdates() {

@@ -19,7 +19,7 @@ import {
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { clientInfoListsEqual, generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -90,7 +90,7 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
-    if (lobby.clients) {
+    if (lobby.clients && !clientInfoListsEqual(this.clients, lobby.clients)) {
       this.clients = lobby.clients;
     }
   };

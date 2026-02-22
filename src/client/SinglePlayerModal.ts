@@ -622,22 +622,7 @@ export class SinglePlayerModal extends BaseModal {
       console.warn("Username input element not found");
       return;
     }
-    if (!usernameInput.isValid()) {
-      const message =
-        usernameInput.validationError ||
-        translateText("username.invalid_chars");
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message,
-            color: "red",
-            duration: 2500,
-          },
-        }),
-      );
-      document
-        .getElementById("username-validation-error")
-        ?.classList.remove("hidden");
+    if (!usernameInput.validateOrShowError()) {
       return;
     }
 

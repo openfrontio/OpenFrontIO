@@ -17,7 +17,11 @@ import { getCompactMapNationCount } from "../../core/game/NationCreation";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
-import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
+import {
+  clientInfoListsEqual,
+  createRandomName,
+  formatPlayerDisplayName,
+} from "../../core/Util";
 import { translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -28,7 +32,12 @@ export interface TeamPreviewData {
 @customElement("lobby-player-view")
 export class LobbyTeamView extends LitElement {
   @property({ type: String }) gameMode: GameMode = GameMode.FFA;
-  @property({ type: Array }) clients: ClientInfo[] = [];
+  @property({
+    type: Array,
+    hasChanged: (value: ClientInfo[], oldValue: ClientInfo[] | undefined) =>
+      !clientInfoListsEqual(value, oldValue),
+  })
+  clients: ClientInfo[] = [];
   @state() private teamPreview: TeamPreviewData[] = [];
   @state() private teamMaxSize: number = 0;
   @property({ type: String }) lobbyCreatorClientID: string = "";
@@ -376,11 +385,12 @@ export class LobbyTeamView extends LitElement {
     if (!this.userSettings.anonymousNames()) {
       return full;
     }
-
     if (this.currentClientID && client.clientID === this.currentClientID) {
       return full;
     }
-
-    return createRandomName(full, PlayerType.Human) ?? full;
+    // Keep clan tag visible while anonymizing only the username.
+    const anonymizedUsername =
+      createRandomName(client.username, PlayerType.Human) ?? client.username;
+    return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
   }
 }

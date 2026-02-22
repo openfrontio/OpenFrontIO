@@ -737,22 +737,7 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
-    if (this.usernameInput && !this.usernameInput.isValid()) {
-      const message =
-        this.usernameInput.validationError ||
-        translateText("username.invalid_chars");
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message,
-            color: "red",
-            duration: 2500,
-          },
-        }),
-      );
-      document
-        .getElementById("username-validation-error")
-        ?.classList.remove("hidden");
+    if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
     }
 

@@ -7,6 +7,7 @@ import {
   MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
   MIN_CLAN_TAG_LENGTH,
+  MIN_USERNAME_LENGTH,
   validateClanTag,
   validateUsername,
 } from "../core/validations/username";
@@ -78,6 +79,7 @@ export class UsernameInput extends LitElement {
           .value=${this.clanTag}
           @input=${this.handleClanTagChange}
           placeholder="${translateText("username.tag")}"
+          minlength="${MIN_CLAN_TAG_LENGTH}"
           maxlength="${MAX_CLAN_TAG_LENGTH}"
           class="w-[6rem] text-xl font-bold text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
         />
@@ -86,6 +88,7 @@ export class UsernameInput extends LitElement {
           .value=${this.baseUsername}
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
+          minlength="${MIN_USERNAME_LENGTH}"
           maxlength="${MAX_USERNAME_LENGTH}"
           class="flex-1 min-w-0 border-0 text-2xl font-bold text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
@@ -170,6 +173,31 @@ export class UsernameInput extends LitElement {
 
   public isValid(): boolean {
     return this._isValid;
+  }
+
+  public showValidationFeedback(): void {
+    const message =
+      this.validationError || translateText("username.invalid_chars");
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message,
+          color: "red",
+          duration: 2500,
+        },
+      }),
+    );
+    document
+      .getElementById("username-validation-error")
+      ?.classList.remove("hidden");
+  }
+
+  public validateOrShowError(): boolean {
+    if (this.isValid()) {
+      return true;
+    }
+    this.showValidationFeedback();
+    return false;
   }
 }
 
