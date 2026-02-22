@@ -18,7 +18,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { clientInfoListsEqual } from "../core/Util";
+import { clientInfoListsEqual, gameConfigsEqual } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
@@ -530,9 +530,7 @@ export class JoinLobbyModal extends BaseModal {
     if (lobby.gameConfig) {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
       // Avoid unnecessary rerenders from per-second lobby_info broadcasts.
-      if (
-        JSON.stringify(this.gameConfig) !== JSON.stringify(lobby.gameConfig)
-      ) {
+      if (!gameConfigsEqual(this.gameConfig, lobby.gameConfig)) {
         this.gameConfig = lobby.gameConfig;
       }
       if (mapChanged) {

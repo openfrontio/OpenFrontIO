@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
-import { UsernameSchema } from "./Schemas";
+import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
 import {
   Difficulty,
@@ -10,19 +10,17 @@ import {
   RankedType,
 } from "./game/Game";
 
-const StrictClanTagSchema = z.string().regex(/^[a-zA-Z0-9]{2,5}$/);
-
 function stripClanTagFromUsername(username: string): string {
   return username.replace(/^\s*\[[a-zA-Z0-9]{2,5}\]\s*/u, "").trim();
 }
 
-// Historical leaderboard rows can include legacy usernames/clan tags
+// Historical leaderboard rows can include legacy usernames
 // that predate current strict join-time validation rules.
 const LeaderboardUsernameSchema = z
   .string()
   .transform(stripClanTagFromUsername)
-  .pipe(z.union([UsernameSchema, z.string().min(1).max(64)]));
-const LeaderboardClanTagSchema = z.string().trim().min(1).max(10);
+  .pipe(z.string().min(1).max(64));
+const LeaderboardClanTagSchema = ClanTagSchema.unwrap();
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -137,7 +135,7 @@ export const PlayerProfileSchema = z.object({
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
 export const ClanLeaderboardEntrySchema = z.object({
-  clanTag: StrictClanTagSchema,
+  clanTag: LeaderboardClanTagSchema,
   games: z.number(),
   wins: z.number(),
   losses: z.number(),

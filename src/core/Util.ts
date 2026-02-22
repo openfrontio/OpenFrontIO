@@ -360,12 +360,88 @@ export function clientInfoListsEqual(
     if (
       left.clientID !== right.clientID ||
       left.username !== right.username ||
-      (left.clanTag ?? undefined) !== (right.clanTag ?? undefined)
+      left.clanTag !== right.clanTag
     ) {
       return false;
     }
   }
   return true;
+}
+
+function sortedArraysEqual(
+  left: readonly string[] = [],
+  right: readonly string[] = [],
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  for (let i = 0; i < sortedLeft.length; i++) {
+    if (sortedLeft[i] !== sortedRight[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function publicGameModifiersEqual(
+  left: GameConfig["publicGameModifiers"],
+  right: GameConfig["publicGameModifiers"],
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  return (
+    left.isCompact === right.isCompact &&
+    left.isRandomSpawn === right.isRandomSpawn &&
+    left.isCrowded === right.isCrowded &&
+    left.startingGold === right.startingGold
+  );
+}
+
+export function gameConfigsEqual(
+  left: GameConfig | null | undefined,
+  right: GameConfig | null | undefined,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  return (
+    left.gameMap === right.gameMap &&
+    left.difficulty === right.difficulty &&
+    left.donateGold === right.donateGold &&
+    left.donateTroops === right.donateTroops &&
+    left.gameType === right.gameType &&
+    left.gameMode === right.gameMode &&
+    left.rankedType === right.rankedType &&
+    left.gameMapSize === right.gameMapSize &&
+    publicGameModifiersEqual(
+      left.publicGameModifiers,
+      right.publicGameModifiers,
+    ) &&
+    left.disableNations === right.disableNations &&
+    left.bots === right.bots &&
+    left.infiniteGold === right.infiniteGold &&
+    left.infiniteTroops === right.infiniteTroops &&
+    left.instantBuild === right.instantBuild &&
+    left.disableNavMesh === right.disableNavMesh &&
+    left.randomSpawn === right.randomSpawn &&
+    left.maxPlayers === right.maxPlayers &&
+    left.maxTimerValue === right.maxTimerValue &&
+    left.spawnImmunityDuration === right.spawnImmunityDuration &&
+    sortedArraysEqual(left.disabledUnits, right.disabledUnits) &&
+    left.playerTeams === right.playerTeams &&
+    left.goldMultiplier === right.goldMultiplier &&
+    left.startingGold === right.startingGold
+  );
 }
 
 const CLAN_TAG_CHARS = "a-zA-Z0-9";
