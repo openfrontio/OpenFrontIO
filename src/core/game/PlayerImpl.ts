@@ -1029,10 +1029,7 @@ export class PlayerImpl implements Player {
   }
 
   private canUpgradeUnitType(unitType: UnitType): boolean {
-    if (!this.mg.config().unitInfo(unitType).upgradable) {
-      return false;
-    }
-    return true;
+    return Boolean(this.mg.config().unitInfo(unitType).upgradable);
   }
 
   private isUnitValidToUpgrade(unit: Unit): boolean {
