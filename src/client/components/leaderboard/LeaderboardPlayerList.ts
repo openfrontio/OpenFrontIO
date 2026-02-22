@@ -230,30 +230,32 @@ export class LeaderboardPlayerList extends LitElement {
     return html`
       <div
         data-current-user=${isCurrentUser ? "true" : "false"}
-        class="flex items-center border-b border-white/5 py-3 px-6 hover:bg-white/[0.07] transition-colors w-full ${isCurrentUser
-          ? "bg-blue-500/15 border-l-4 border-l-blue-500 pl-5"
+        class="flex items-center border-b border-white/5 py-3 px-4 hover:bg-white/[0.07] transition-colors group w-full ${isCurrentUser
+          ? "bg-blue-500/15 border-l-4 border-l-blue-500 pl-3"
           : ""}"
       >
-        <div class="w-16 shrink-0 text-center">
+        <div class="w-10 shrink-0 text-center">
           <div
             class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
           >
             ${rankIcon}
           </div>
         </div>
-        <div class="flex-1 flex items-center gap-3 overflow-hidden ml-4">
+        <div
+          class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden ml-4"
+        >
           <span class="font-bold text-blue-300 truncate text-base"
             >${player.username}</span
           >
           ${player.clanTag
             ? html`<div
-                class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
+                class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
               >
                 ${player.clanTag}
               </div>`
             : ""}
         </div>
-        <div class="flex flex-col items-end gap-1 w-32">
+        <div class="flex flex-col items-end gap-1 w-20 shrink-0">
           <div class="text-right font-mono text-white font-medium">
             ${player.elo}
             <span class="text-[10px] text-white/30 truncate"
@@ -261,7 +263,7 @@ export class LeaderboardPlayerList extends LitElement {
             >
           </div>
         </div>
-        <div class="flex-col items-end gap-1 w-32 hidden md:flex">
+        <div class="flex-col items-end gap-1 w-20 shrink-0 hidden md:flex">
           <div class="text-right font-mono text-white font-medium">
             ${player.games}
             <span class="text-[10px] text-white/30 uppercase"
@@ -269,7 +271,7 @@ export class LeaderboardPlayerList extends LitElement {
             >
           </div>
         </div>
-        <div class="inline-flex flex-col items-end pr-6 w-32">
+        <div class="inline-flex flex-col items-end pr-4 w-20 shrink-0">
           <span
             class="font-mono font-bold ${winRate >= 0.5
               ? "text-green-400"
@@ -372,81 +374,87 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.error) return this.renderError();
 
     return html`
-      <div class="flex flex-col h-full overflow-hidden">
+      <div class="h-full px-6 pb-6">
         <div
-          class="flex items-center text-[10px] uppercase tracking-wider text-white/40 font-bold px-6 py-4 border-b border-white/5 bg-white/2"
+          class="h-full overflow-y-auto overflow-x-auto rounded-xl border border-white/5 bg-black/20"
         >
-          <div class="w-16 text-center">
-            ${translateText("leaderboard_modal.rank")}
-          </div>
-          <div class="flex-1 ml-4">
-            ${translateText("leaderboard_modal.player")}
-          </div>
-          <div class="w-32 text-right">
-            ${translateText("leaderboard_modal.elo")}
-          </div>
-          <div class="w-32 text-right hidden md:block">
-            ${translateText("leaderboard_modal.games")}
-          </div>
-          <div class="w-32 text-right pr-6">
-            ${translateText("leaderboard_modal.win_loss_ratio")}
-          </div>
-        </div>
-        <div class="relative flex-1 min-h-0">
-          <div
-            class="virtualizer-container h-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 ${this
-              .showStickyUser
-              ? "pb-20"
-              : "pb-0"}"
-            @scroll=${() => this.handleScroll()}
-          >
-            ${virtualize({
-              items: this.playerData,
-              renderItem: (player) => this.renderPlayerRow(player),
-              scroller: true,
-            })}
-            ${this.renderPlayerFooter()}
-          </div>
-          ${this.currentUserEntry
-            ? html`
-                <div class="absolute inset-x-0 bottom-0">
-                  <div
-                    class="bg-blue-600/90 backdrop-blur-md border-t border-blue-400/30 py-4 px-6 shadow-2xl flex items-center transition-all duration-200 ${this
-                      .showStickyUser
-                      ? "opacity-100 translate-y-0"
-                      : "opacity-0 translate-y-3 pointer-events-none"}"
-                    aria-hidden=${this.showStickyUser ? "false" : "true"}
-                  >
-                    <div class="w-16 text-center">
+          <div class="min-w-[28rem] flex flex-col h-full">
+            <div
+              class="flex items-center text-[10px] uppercase tracking-wider text-white/40 font-bold px-4 py-4 border-b border-white/5 bg-white/2"
+            >
+              <div class="w-10 text-center">
+                ${translateText("leaderboard_modal.rank")}
+              </div>
+              <div class="flex-1 ml-4">
+                ${translateText("leaderboard_modal.player")}
+              </div>
+              <div class="w-20 text-right">
+                ${translateText("leaderboard_modal.elo")}
+              </div>
+              <div class="w-20 text-right hidden md:block">
+                ${translateText("leaderboard_modal.games")}
+              </div>
+              <div class="w-20 text-right pr-4">
+                ${translateText("leaderboard_modal.win_loss_ratio")}
+              </div>
+            </div>
+            <div class="relative flex-1 min-h-0">
+              <div
+                class="virtualizer-container h-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 ${this
+                  .showStickyUser
+                  ? "pb-20"
+                  : "pb-0"}"
+                @scroll=${() => this.handleScroll()}
+              >
+                ${virtualize({
+                  items: this.playerData,
+                  renderItem: (player) => this.renderPlayerRow(player),
+                  scroller: true,
+                })}
+                ${this.renderPlayerFooter()}
+              </div>
+              ${this.currentUserEntry
+                ? html`
+                    <div class="absolute inset-x-0 bottom-0">
                       <div
-                        class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+                        class="bg-blue-600/90 backdrop-blur-md border-t border-blue-400/30 py-4 px-6 shadow-2xl flex items-center transition-all duration-200 ${this
+                          .showStickyUser
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-3 pointer-events-none"}"
+                        aria-hidden=${this.showStickyUser ? "false" : "true"}
                       >
-                        ${this.currentUserEntry.rank}
+                        <div class="w-10 text-center">
+                          <div
+                            class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+                          >
+                            ${this.currentUserEntry.rank}
+                          </div>
+                        </div>
+                        <div class="flex-1 flex flex-col ml-4">
+                          <span
+                            class="text-[10px] uppercase font-bold text-blue-200/60 leading-tight"
+                            >${translateText(
+                              "leaderboard_modal.your_ranking",
+                            )}</span
+                          >
+                          <span class="font-bold text-white text-base"
+                            >${this.currentUserEntry.username}</span
+                          >
+                        </div>
+                        <div class="flex flex-col items-end w-20">
+                          <div class="font-mono text-white font-bold text-lg">
+                            ${this.currentUserEntry.elo}
+                            <span class="text-[10px] text-white/60"
+                              >${translateText("leaderboard_modal.elo")}</span
+                            >
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div class="flex-1 flex flex-col ml-4">
-                      <span
-                        class="text-[10px] uppercase font-bold text-blue-200/60 leading-tight"
-                        >${translateText(
-                          "leaderboard_modal.your_ranking",
-                        )}</span
-                      >
-                      <span class="font-bold text-white text-base"
-                        >${this.currentUserEntry.username}</span
-                      >
-                    </div>
-                    <div class="flex flex-col items-end w-32">
-                      <div class="font-mono text-white font-bold text-lg">
-                        ${this.currentUserEntry.elo}
-                        <span class="text-[10px] text-white/60"
-                          >${translateText("leaderboard_modal.elo")}</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              `
-            : ""}
+                  `
+                : ""}
+            </div>
+          </div>
         </div>
       </div>
     `;

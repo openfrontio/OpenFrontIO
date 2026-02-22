@@ -273,6 +273,7 @@ export class LeaderboardClanTable extends LitElement {
                   class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors"
                 >
                   <button
+                    class="whitespace-nowrap"
                     @click=${() => this.handleSort("ratio")}
                     aria-sort=${this.sortBy === "ratio"
                       ? this.sortOrder === "asc"
