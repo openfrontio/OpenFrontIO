@@ -992,9 +992,13 @@ export class PlayerImpl implements Player {
     const closest = findClosestBy(
       this.mg.nearbyUnits(targetTile, range, type, undefined, true),
       (entry) => entry.distSquared,
-      (entry) => this.canUpgradeUnit(entry.unit),
     );
-    return closest?.unit ?? false;
+
+    return closest === null
+      ? false
+      : this.canUpgradeUnit(closest.unit)
+        ? closest.unit
+        : false;
   }
 
   public canUpgradeUnit(unit: Unit): boolean {
