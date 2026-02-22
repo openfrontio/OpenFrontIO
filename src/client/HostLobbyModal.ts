@@ -1,17 +1,14 @@
-import { TemplateResult, html } from "lit";
+import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
-  Duos,
   GameMapSize,
   GameMapType,
   GameMode,
   HumansVsNations,
-  Quads,
-  Trios,
   UnitType,
 } from "../core/game/Game";
 import {
@@ -27,19 +24,23 @@ import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
-import "./components/Difficulties";
-import "./components/FluentSlider";
+import "./components/GameConfigSettings";
 import "./components/LobbyPlayerView";
-import "./components/map/MapPicker";
+import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
-  renderToggleInputCard,
-  renderToggleInputCardInput,
-} from "./utilities/RenderToggleInputCard";
-import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+  getBotsForCompactMap,
+  getRandomMapType,
+  getUpdatedDisabledUnits,
+  parseBoundedFloatFromInput,
+  parseBoundedIntegerFromInput,
+  preventDisallowedKeys,
+  toOptionalNumber,
+} from "./utilities/GameConfigHelpers";
+
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
@@ -77,8 +78,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private nationCount: number = 0;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
-
-  private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
@@ -87,37 +86,14 @@ export class HostLobbyModal extends BaseModal {
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
+    if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
+      return;
+    }
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
     }
   };
-
-  private renderOptionToggle(
-    labelKey: string,
-    checked: boolean,
-    onChange: (val: boolean) => void,
-    hidden: boolean = false,
-  ): TemplateResult {
-    if (hidden) return html``;
-
-    return html`
-      <button
-        class="relative p-4 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-2 h-full min-h-[100px] w-full cursor-pointer ${checked
-          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
-        @click=${() => onChange(!checked)}
-      >
-        <div
-          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight break-words hyphens-auto ${checked
-            ? "text-white"
-            : "text-white/60"}"
-        >
-          ${translateText(labelKey)}
-        </div>
-      </button>
-    `;
-  }
 
   private getRandomString(): string {
     const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -165,39 +141,76 @@ export class HostLobbyModal extends BaseModal {
   }
 
   render() {
-    const maxTimerHandlers = this.createToggleHandlers(
-      () => this.maxTimer,
-      (val) => (this.maxTimer = val),
-      () => this.maxTimerValue,
-      (val) => (this.maxTimerValue = val),
-      30,
-    );
-    const spawnImmunityHandlers = this.createToggleHandlers(
-      () => this.spawnImmunity,
-      (val) => (this.spawnImmunity = val),
-      () => this.spawnImmunityDurationMinutes,
-      (val) => (this.spawnImmunityDurationMinutes = val),
-      5,
-    );
-    const goldMultiplierHandlers = this.createToggleHandlers(
-      () => this.goldMultiplier,
-      (val) => (this.goldMultiplier = val),
-      () => this.goldMultiplierValue,
-      (val) => (this.goldMultiplierValue = val),
-      2,
-    );
-    const startingGoldHandlers = this.createToggleHandlers(
-      () => this.startingGold,
-      (val) => (this.startingGold = val),
-      () => this.startingGoldValue,
-      (val) => (this.startingGoldValue = val),
-      5000000,
-    );
+    const inputCards = [
+      html`<toggle-input-card
+        .labelKey=${"host_modal.max_timer"}
+        .checked=${this.maxTimer}
+        .inputMin=${1}
+        .inputMax=${120}
+        .inputValue=${this.maxTimerValue}
+        .inputAriaLabel=${translateText("host_modal.max_timer")}
+        .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
+        .defaultInputValue=${30}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleMaxTimerToggle}
+        .onInput=${this.handleMaxTimerValueChanges}
+        .onKeyDown=${this.handleMaxTimerValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.player_immunity_duration"}
+        .checked=${this.spawnImmunity}
+        .inputMin=${0}
+        .inputMax=${120}
+        .inputStep=${1}
+        .inputValue=${this.spawnImmunityDurationMinutes}
+        .inputAriaLabel=${translateText("host_modal.player_immunity_duration")}
+        .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleSpawnImmunityToggle}
+        .onInput=${this.handleSpawnImmunityDurationInput}
+        .onKeyDown=${this.handleSpawnImmunityDurationKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.gold_multiplier"}
+        .checked=${this.goldMultiplier}
+        .inputId=${"gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.goldMultiplierValue}
+        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "single_modal.gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleGoldMultiplierToggle}
+        .onChange=${this.handleGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.starting_gold"}
+        .checked=${this.startingGold}
+        .inputId=${"starting-gold-value"}
+        .inputMin=${0}
+        .inputMax=${1000000000}
+        .inputStep=${100000}
+        .inputValue=${this.startingGoldValue}
+        .inputAriaLabel=${translateText("single_modal.starting_gold")}
+        .inputPlaceholder=${translateText(
+          "single_modal.starting_gold_placeholder",
+        )}
+        .defaultInputValue=${5000000}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleStartingGoldToggle}
+        .onInput=${this.handleStartingGoldValueChanges}
+        .onKeyDown=${this.handleStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
+    ];
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("host_modal.title"),
@@ -215,420 +228,101 @@ export class HostLobbyModal extends BaseModal {
           `,
         })}
 
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1">
-          <div class="max-w-5xl mx-auto space-y-10">
-            <!-- Map Selection -->
-            <div class="space-y-6">
-              <div
-                class="flex items-center gap-4 pb-2 border-b border-white/10"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-5 h-5"
-                  >
-                    <path
-                      d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z"
-                    />
-                  </svg>
-                </div>
-                <h3
-                  class="text-lg font-bold text-white uppercase tracking-wider"
-                >
-                  ${translateText("map.map")}
-                </h3>
-              </div>
-              <map-picker
-                .selectedMap=${this.selectedMap}
-                .useRandomMap=${this.useRandomMap}
-                .randomMapDivider=${true}
-                .onSelectMap=${(mapValue: GameMapType) =>
-                  this.handleMapSelection(mapValue)}
-                .onSelectRandom=${() => this.handleSelectRandomMap()}
-              ></map-picker>
-            </div>
+        <div
+          class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
+        >
+          <game-config-settings
+            class="block"
+            .sectionGapClass=${"space-y-10"}
+            .settings=${{
+              map: {
+                selected: this.selectedMap,
+                useRandom: this.useRandomMap,
+                randomMapDivider: true,
+              },
+              difficulty: {
+                selected: this.selectedDifficulty,
+                disabled: this.disableNations,
+              },
+              gameMode: {
+                selected: this.gameMode,
+              },
+              teamCount: {
+                selected: this.teamCount,
+              },
+              options: {
+                titleKey: "host_modal.options_title",
+                bots: {
+                  value: this.bots,
+                  labelKey: "host_modal.bots",
+                  disabledKey: "host_modal.bots_disabled",
+                },
+                toggles: [
+                  {
+                    labelKey: "host_modal.disable_nations",
+                    checked: this.disableNations,
+                    hidden:
+                      this.gameMode === GameMode.Team &&
+                      this.teamCount === HumansVsNations,
+                  },
+                  {
+                    labelKey: "host_modal.instant_build",
+                    checked: this.instantBuild,
+                  },
+                  {
+                    labelKey: "host_modal.random_spawn",
+                    checked: this.randomSpawn,
+                  },
+                  {
+                    labelKey: "host_modal.donate_gold",
+                    checked: this.donateGold,
+                  },
+                  {
+                    labelKey: "host_modal.donate_troops",
+                    checked: this.donateTroops,
+                  },
+                  {
+                    labelKey: "host_modal.infinite_gold",
+                    checked: this.infiniteGold,
+                  },
+                  {
+                    labelKey: "host_modal.infinite_troops",
+                    checked: this.infiniteTroops,
+                  },
+                  {
+                    labelKey: "host_modal.compact_map",
+                    checked: this.compactMap,
+                  },
+                ],
+                inputCards,
+              },
+              unitTypes: {
+                titleKey: "host_modal.enables_title",
+                disabledUnits: this.disabledUnits,
+              },
+            }}
+            @map-selected=${this.handleConfigMapSelected}
+            @random-map-selected=${this.handleConfigRandomMapSelected}
+            @difficulty-selected=${this.handleConfigDifficultySelected}
+            @game-mode-selected=${this.handleConfigGameModeSelected}
+            @team-count-selected=${this.handleConfigTeamCountSelected}
+            @bots-changed=${this.handleBotsChange}
+            @option-toggle-changed=${this.handleConfigOptionToggleChanged}
+            @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
+          ></game-config-settings>
 
-            <!-- Difficulty Selection -->
-            <div class="space-y-6">
-              <div
-                class="flex items-center gap-4 pb-2 border-b border-white/10"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-5 h-5"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M12.97 3.97a.75.75 0 011.06 0l7.5 7.5a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 11-1.06-1.06l6.22-6.22H3a.75.75 0 010-1.5h16.19l-6.22-6.22a.75.75 0 010-1.06z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <h3
-                  class="text-lg font-bold text-white uppercase tracking-wider"
-                >
-                  ${translateText("difficulty.difficulty")}
-                </h3>
-              </div>
-
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                ${Object.entries(Difficulty)
-                  .filter(([key]) => isNaN(Number(key)))
-                  .map(([key, value]) => {
-                    const isSelected = this.selectedDifficulty === value;
-                    const isDisabled = this.disableNations;
-                    return html`
-                      <button
-                        ?disabled=${isDisabled}
-                        @click=${() =>
-                          !isDisabled && this.handleDifficultySelection(value)}
-                        class="relative group rounded-xl border transition-all duration-200 w-full overflow-hidden flex flex-col items-center p-4 gap-3 ${isDisabled
-                          ? "opacity-30 grayscale cursor-not-allowed bg-white/5 border-white/5"
-                          : isSelected
-                            ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      >
-                        <difficulty-display
-                          .difficultyKey=${key}
-                          class="transform scale-125 origin-center ${isDisabled
-                            ? "pointer-events-none"
-                            : ""}"
-                        ></difficulty-display>
-                        <div
-                          class="text-xs font-bold text-white uppercase tracking-wider text-center w-full mt-1 break-words hyphens-auto"
-                        >
-                          ${translateText(`difficulty.${key.toLowerCase()}`)}
-                        </div>
-                      </button>
-                    `;
-                  })}
-              </div>
-            </div>
-
-            <!-- Game Mode -->
-            <div class="space-y-6">
-              <div
-                class="flex items-center gap-4 pb-2 border-b border-white/10"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-5 h-5"
-                  >
-                    <path
-                      d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"
-                    />
-                  </svg>
-                </div>
-                <h3
-                  class="text-lg font-bold text-white uppercase tracking-wider"
-                >
-                  ${translateText("host_modal.mode")}
-                </h3>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                ${[GameMode.FFA, GameMode.Team].map((mode) => {
-                  const isSelected = this.gameMode === mode;
-                  return html`
-                    <button
-                      class="w-full py-6 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-3 ${isSelected
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${() => this.handleGameModeSelection(mode)}
-                    >
-                      <span
-                        class="text-sm font-bold text-white uppercase tracking-widest break-words hyphens-auto"
-                      >
-                        ${mode === GameMode.FFA
-                          ? translateText("game_mode.ffa")
-                          : translateText("game_mode.teams")}
-                      </span>
-                    </button>
-                  `;
-                })}
-              </div>
-            </div>
-
-            ${this.gameMode === GameMode.FFA
-              ? ""
-              : html`
-                  <!-- Team Count -->
-                  <div class="space-y-6">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                    >
-                      ${translateText("host_modal.team_count")}
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      ${[
-                        2,
-                        3,
-                        4,
-                        5,
-                        6,
-                        7,
-                        Quads,
-                        Trios,
-                        Duos,
-                        HumansVsNations,
-                      ].map((o) => {
-                        const isSelected = this.teamCount === o;
-                        return html`
-                          <button
-                            @click=${() => this.handleTeamCountSelection(o)}
-                            class="w-full px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${isSelected
-                              ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                          >
-                            <span
-                              class="text-xs font-bold uppercase tracking-wider text-center text-white break-words hyphens-auto"
-                            >
-                              ${typeof o === "string"
-                                ? o === HumansVsNations
-                                  ? translateText("public_lobby.teams_hvn")
-                                  : translateText(`host_modal.teams_${o}`)
-                                : translateText("public_lobby.teams", {
-                                    num: o,
-                                  })}
-                            </span>
-                          </button>
-                        `;
-                      })}
-                    </div>
-                  </div>
-                `}
-
-            <!-- Game Options -->
-            <div class="space-y-6">
-              <div
-                class="flex items-center gap-4 pb-2 border-b border-white/10"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-5 h-5"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.922-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <h3
-                  class="text-lg font-bold text-white uppercase tracking-wider"
-                >
-                  ${translateText("host_modal.options_title")}
-                </h3>
-              </div>
-              <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Bots Slider -->
-                <div
-                  class="col-span-2 rounded-xl p-4 flex flex-col justify-center min-h-[100px] border transition-all duration-200 ${this
-                    .bots > 0
-                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
-                >
-                  <fluent-slider
-                    min="0"
-                    max="400"
-                    step="1"
-                    .value=${this.bots}
-                    labelKey="host_modal.bots"
-                    disabledKey="host_modal.bots_disabled"
-                    @value-changed=${this.handleBotsChange}
-                  ></fluent-slider>
-                </div>
-
-                ${!(
-                  this.gameMode === GameMode.Team &&
-                  this.teamCount === HumansVsNations
-                )
-                  ? this.renderOptionToggle(
-                      "host_modal.disable_nations",
-                      this.disableNations,
-                      this.handleDisableNationsChange,
-                    )
-                  : ""}
-                ${this.renderOptionToggle(
-                  "host_modal.instant_build",
-                  this.instantBuild,
-                  this.handleInstantBuildChange,
-                )}
-                ${this.renderOptionToggle(
-                  "host_modal.random_spawn",
-                  this.randomSpawn,
-                  this.handleRandomSpawnChange,
-                )}
-                ${this.renderOptionToggle(
-                  "host_modal.donate_gold",
-                  this.donateGold,
-                  this.handleDonateGoldChange,
-                )}
-                ${this.renderOptionToggle(
-                  "host_modal.donate_troops",
-                  this.donateTroops,
-                  this.handleDonateTroopsChange,
-                )}
-                ${this.renderOptionToggle(
-                  "host_modal.infinite_gold",
-                  this.infiniteGold,
-                  this.handleInfiniteGoldChange,
-                )}
-                ${this.renderOptionToggle(
-                  "host_modal.infinite_troops",
-                  this.infiniteTroops,
-                  this.handleInfiniteTroopsChange,
-                )}
-                ${this.renderOptionToggle(
-                  "host_modal.compact_map",
-                  this.compactMap,
-                  this.handleCompactMapChange,
-                )}
-
-                <!-- Max Timer -->
-                ${renderToggleInputCard({
-                  labelKey: "host_modal.max_timer",
-                  checked: this.maxTimer,
-                  onClick: maxTimerHandlers.click,
-                  input: renderToggleInputCardInput({
-                    min: 0,
-                    max: 120,
-                    value: this.maxTimerValue ?? 0,
-                    ariaLabel: translateText("host_modal.max_timer"),
-                    placeholder: translateText("host_modal.mins_placeholder"),
-                    onInput: this.handleMaxTimerValueChanges,
-                    onKeyDown: this.handleMaxTimerValueKeyDown,
-                  }),
-                })}
-
-                <!-- Spawn Immunity -->
-                ${renderToggleInputCard({
-                  labelKey: "host_modal.player_immunity_duration",
-                  checked: this.spawnImmunity,
-                  onClick: spawnImmunityHandlers.click,
-                  input: renderToggleInputCardInput({
-                    min: 0,
-                    max: 120,
-                    step: 1,
-                    value: this.spawnImmunityDurationMinutes ?? 0,
-                    ariaLabel: translateText(
-                      "host_modal.player_immunity_duration",
-                    ),
-                    placeholder: translateText("host_modal.mins_placeholder"),
-                    onInput: this.handleSpawnImmunityDurationInput,
-                    onKeyDown: this.handleSpawnImmunityDurationKeyDown,
-                  }),
-                })}
-
-                <!-- Gold Multiplier -->
-                ${renderToggleInputCard({
-                  labelKey: "single_modal.gold_multiplier",
-                  checked: this.goldMultiplier,
-                  onClick: goldMultiplierHandlers.click,
-                  input: renderToggleInputCardInput({
-                    id: "gold-multiplier-value",
-                    min: 0.1,
-                    max: 1000,
-                    step: "any",
-                    value: this.goldMultiplierValue ?? "",
-                    ariaLabel: translateText("single_modal.gold_multiplier"),
-                    placeholder: translateText(
-                      "single_modal.gold_multiplier_placeholder",
-                    ),
-                    onChange: this.handleGoldMultiplierValueChanges,
-                    onKeyDown: this.handleGoldMultiplierValueKeyDown,
-                  }),
-                })}
-
-                <!-- Starting Gold -->
-                ${renderToggleInputCard({
-                  labelKey: "single_modal.starting_gold",
-                  checked: this.startingGold,
-                  onClick: startingGoldHandlers.click,
-                  input: renderToggleInputCardInput({
-                    id: "starting-gold-value",
-                    min: 0,
-                    max: 1000000000,
-                    step: 100000,
-                    value: this.startingGoldValue ?? "",
-                    ariaLabel: translateText("single_modal.starting_gold"),
-                    placeholder: translateText(
-                      "single_modal.starting_gold_placeholder",
-                    ),
-                    onInput: this.handleStartingGoldValueChanges,
-                    onKeyDown: this.handleStartingGoldValueKeyDown,
-                  }),
-                })}
-              </div>
-            </div>
-
-            <!-- Enabled Items -->
-            <div class="space-y-6">
-              <div
-                class="flex items-center gap-4 pb-2 border-b border-white/10"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-5 h-5"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm0 8.625a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM15.375 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zM7.5 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <h3
-                  class="text-lg font-bold text-white uppercase tracking-wider"
-                >
-                  ${translateText("host_modal.enables_title")}
-                </h3>
-              </div>
-              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                ${renderUnitTypeOptions({
-                  disabledUnits: this.disabledUnits,
-                  toggleUnit: this.toggleUnit.bind(this),
-                })}
-              </div>
-            </div>
-
-            <!-- Player List -->
-            <lobby-player-view
-              .gameMode=${this.gameMode}
-              .clients=${this.clients}
-              .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-              .currentClientID=${this.lobbyCreatorClientID}
-              .teamCount=${this.teamCount}
-              .nationCount=${this.nationCount}
-              .disableNations=${this.disableNations}
-              .isCompactMap=${this.compactMap}
-              .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
-            ></lobby-player-view>
-          </div>
+          <lobby-player-view
+            class="mt-10"
+            .gameMode=${this.gameMode}
+            .clients=${this.clients}
+            .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+            .currentClientID=${this.lobbyCreatorClientID}
+            .teamCount=${this.teamCount}
+            .nationCount=${this.nationCount}
+            .disableNations=${this.disableNations}
+            .isCompactMap=${this.compactMap}
+            .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+          ></lobby-player-view>
         </div>
 
         <!-- Player List / footer -->
@@ -696,42 +390,7 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       };
     }
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
-  }
-
-  private createToggleHandlers(
-    toggleStateGetter: () => boolean,
-    toggleStateSetter: (val: boolean) => void,
-    valueGetter: () => number | undefined,
-    valueSetter: (val: number | undefined) => void,
-    defaultValue: number = 0,
-  ) {
-    const toggleLogic = () => {
-      const newState = !toggleStateGetter();
-      toggleStateSetter(newState);
-      if (newState) {
-        valueSetter(valueGetter() ?? defaultValue);
-      } else {
-        valueSetter(undefined);
-      }
-      this.putGameConfig();
-      this.requestUpdate();
-    };
-
-    return {
-      click: (e: Event) => {
-        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
-        toggleLogic();
-      },
-      keydown: (e: KeyboardEvent) => {
-        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggleLogic();
-        }
-      },
-    };
   }
 
   private leaveLobby() {
@@ -757,10 +416,6 @@ export class HostLobbyModal extends BaseModal {
     crazyGamesSDK.hideInviteButton();
 
     // Clean up timers and resources
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
     if (this.botsUpdateTimer !== null) {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
@@ -800,10 +455,14 @@ export class HostLobbyModal extends BaseModal {
 
   private async handleSelectRandomMap() {
     this.useRandomMap = true;
-    this.selectedMap = this.getRandomMap();
+    this.selectedMap = getRandomMapType();
     await this.loadNationCount();
     this.putGameConfig();
   }
+
+  private handleConfigRandomMapSelected = () => {
+    void this.handleSelectRandomMap();
+  };
 
   private async handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
@@ -812,13 +471,81 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
+  private handleConfigMapSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ map: GameMapType }>;
+    void this.handleMapSelection(customEvent.detail.map);
+  };
+
   private async handleDifficultySelection(value: Difficulty) {
     this.selectedDifficulty = value;
     this.putGameConfig();
   }
 
+  private handleConfigDifficultySelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
+    void this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigGameModeSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ mode: GameMode }>;
+    void this.handleGameModeSelection(customEvent.detail.mode);
+  };
+
+  private handleConfigTeamCountSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ count: TeamCountConfig }>;
+    void this.handleTeamCountSelection(customEvent.detail.count);
+  };
+
+  private handleConfigOptionToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{
+      labelKey: string;
+      checked: boolean;
+    }>;
+    const { labelKey, checked } = customEvent.detail;
+
+    switch (labelKey) {
+      case "host_modal.disable_nations":
+        void this.handleDisableNationsChange(checked);
+        break;
+      case "host_modal.instant_build":
+        this.handleInstantBuildChange(checked);
+        break;
+      case "host_modal.random_spawn":
+        this.handleRandomSpawnChange(checked);
+        break;
+      case "host_modal.donate_gold":
+        this.handleDonateGoldChange(checked);
+        break;
+      case "host_modal.donate_troops":
+        this.handleDonateTroopsChange(checked);
+        break;
+      case "host_modal.infinite_gold":
+        this.handleInfiniteGoldChange(checked);
+        break;
+      case "host_modal.infinite_troops":
+        this.handleInfiniteTroopsChange(checked);
+        break;
+      case "host_modal.compact_map":
+        this.handleCompactMapChange(checked);
+        break;
+      default:
+        break;
+    }
+  };
+
+  private handleConfigUnitToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{ unit: UnitType; checked: boolean }>;
+    const { unit, checked } = customEvent.detail;
+    this.disabledUnits = getUpdatedDisabledUnits(
+      this.disabledUnits,
+      unit,
+      checked,
+    );
+    this.putGameConfig();
+  };
+
   // Modified to include debouncing
-  private handleBotsChange(e: Event) {
+  private handleBotsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
     if (isNaN(value) || value < 0 || value > 400) {
@@ -838,67 +565,94 @@ export class HostLobbyModal extends BaseModal {
       this.putGameConfig();
       this.botsUpdateTimer = null;
     }, 300);
-  }
+  };
 
   private handleInstantBuildChange = (val: boolean) => {
     this.instantBuild = val;
     this.putGameConfig();
   };
 
-  private handleSpawnImmunityDurationKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleMaxTimerToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.maxTimer = checked;
+    this.maxTimerValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
 
-  private handleSpawnImmunityDurationInput(e: Event) {
+  private handleSpawnImmunityToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.spawnImmunity = checked;
+    this.spawnImmunityDurationMinutes = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.goldMultiplier = checked;
+    this.goldMultiplierValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleStartingGoldToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.startingGold = checked;
+    this.startingGoldValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleSpawnImmunityDurationKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleSpawnImmunityDurationInput = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value, 10);
-    if (Number.isNaN(value) || value < 0 || value > 120) {
+    const value = parseBoundedIntegerFromInput(input, { min: 0, max: 120 });
+    if (value === undefined) {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
     this.putGameConfig();
-  }
+  };
 
-  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
-    if (["+", "-", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
 
-  private handleGoldMultiplierValueChanges(e: Event) {
+  private handleGoldMultiplierValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseFloat(input.value);
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
 
-    if (isNaN(value) || value < 0.1 || value > 1000) {
+    if (value === undefined) {
       this.goldMultiplierValue = undefined;
       input.value = "";
     } else {
       this.goldMultiplierValue = value;
     }
     this.putGameConfig();
-  }
+  };
 
-  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleStartingGoldValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
 
-  private handleStartingGoldValueChanges(e: Event) {
+  private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value);
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 1000000000,
+    });
 
-    if (isNaN(value) || value < 0 || value > 1000000000) {
-      this.startingGoldValue = undefined;
-    } else {
-      this.startingGoldValue = value;
-    }
+    this.startingGoldValue = value;
     this.putGameConfig();
-  }
+  };
 
   private handleRandomSpawnChange = (val: boolean) => {
     this.randomSpawn = val;
@@ -922,11 +676,7 @@ export class HostLobbyModal extends BaseModal {
 
   private handleCompactMapChange = (val: boolean) => {
     this.compactMap = val;
-    if (val && this.bots === 400) {
-      this.bots = 100;
-    } else if (!val && this.bots === 100) {
-      this.bots = 400;
-    }
+    this.bots = getBotsForCompactMap(this.bots, val);
     this.putGameConfig();
   };
 
@@ -935,24 +685,24 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
-  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
 
-  private handleMaxTimerValueChanges(e: Event) {
-    (e.target as HTMLInputElement).value = (
-      e.target as HTMLInputElement
-    ).value.replace(/[e+-]/gi, "");
-    const value = parseInt((e.target as HTMLInputElement).value);
+  private handleMaxTimerValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 1,
+      max: 120,
+      stripPattern: /[e+-]/gi,
+    });
 
-    if (isNaN(value) || value < 0 || value > 120) {
+    if (value === undefined) {
       return;
     }
     this.maxTimerValue = value;
     this.putGameConfig();
-  }
+  };
 
   private handleDisableNationsChange = async (val: boolean) => {
     this.disableNations = val;
@@ -1029,20 +779,6 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  private toggleUnit(unit: UnitType, checked: boolean): void {
-    this.disabledUnits = checked
-      ? [...this.disabledUnits, unit]
-      : this.disabledUnits.filter((u) => u !== unit);
-
-    this.putGameConfig();
-  }
-
-  private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
-  }
-
   private async startGame() {
     await this.putGameConfig();
     console.log(
@@ -1067,20 +803,6 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobbyOnClose = true;
     }
     return response;
-  }
-
-  private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        this.clients = data.clients ?? [];
-      });
   }
 
   private kickPlayer(clientID: string) {

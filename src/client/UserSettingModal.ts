@@ -477,20 +477,18 @@ export class UserSettingModal extends BaseModal {
         : this.renderKeybindSettings();
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <div
-          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
+          class="relative flex flex-col border-b border-white/10 lg:pb-4 shrink-0"
         >
           ${modalHeader({
             title: translateText("user_setting.title"),
-            onBack: this.close,
+            onBack: () => this.close(),
             ariaLabel: translateText("common.back"),
             showDivider: true,
           })}
 
-          <div class="hidden md:flex items-center gap-2 justify-center mt-4">
+          <div class="hidden lg:flex items-center gap-2 justify-center mt-4">
             <button
               class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
                 .activeTab === "basic"

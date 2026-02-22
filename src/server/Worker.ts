@@ -36,7 +36,7 @@ const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
-const playlist = new MapPlaylist(true);
+const playlist = new MapPlaylist();
 
 // Worker setup
 export async function startWorker() {
@@ -46,6 +46,7 @@ export async function startWorker() {
   const __dirname = path.dirname(__filename);
 
   const app = express();
+  app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true });
 
@@ -67,6 +68,8 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     config.jwtIssuer() + "/cosmetics.json",
+    config.jwtIssuer() + "/profane_words_game_server",
+    config.apiKey(),
     log,
   );
   privilegeRefresher.start();
@@ -182,7 +185,7 @@ export async function startWorker() {
     const game = gm.createGame(id, gc, creatorPersistentID);
 
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? GameType.Public : GameType.Private}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
     );
     res.json(game.gameInfo());
   });
@@ -436,6 +439,11 @@ export async function startWorker() {
           }
         }
 
+        // Censor profane usernames server-side (don't reject, just rename)
+        const censoredUsername = privilegeRefresher
+          .get()
+          .censorUsername(clientMsg.username);
+
         // Create client and add to game
         const client = new Client(
           generateID(),
@@ -444,6 +452,7 @@ export async function startWorker() {
           roles,
           flares,
           ip,
+          censoredUsername,
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,
@@ -557,15 +566,18 @@ async function startMatchmakingPolling(gm: GameManager) {
         log.info(`Lobby poll successful:`, data);
 
         if (data.assignment) {
-          const gameConfig = playlist.get1v1Config();
-          const game = gm.createGame(gameId, gameConfig);
-          setTimeout(() => {
-            // Wait a few seconds to allow clients to connect.
-            console.log(`Starting game ${gameId}`);
-            game.start();
-          }, 7000);
+          gm.createGame(
+            gameId,
+            playlist.get1v1Config(),
+            undefined,
+            Date.now() + 7000,
+          );
         }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // Abort is expected if no game is scheduled on this worker.
+          return;
+        }
         log.error(`Error polling lobby:`, error);
       }
     },

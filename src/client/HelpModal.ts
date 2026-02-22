@@ -111,14 +111,10 @@ export class HelpModal extends BaseModal {
     const keybinds = this.keybinds;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("main.help"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 
@@ -165,7 +161,7 @@ export class HelpModal extends BaseModal {
               <iframe
                 id="tutorial-video-iframe"
                 class="absolute top-0 left-0 w-full h-full"
-                src="${TUTORIAL_VIDEO_URL}"
+                src="${this.isModalOpen ? TUTORIAL_VIDEO_URL : ""}"
                 title="${translateText("help_modal.video_tutorial_title")}"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

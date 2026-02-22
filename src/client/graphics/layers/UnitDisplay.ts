@@ -22,6 +22,19 @@ import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import defensePostIcon from "/images/ShieldIconWhite.svg?url";
 
+const BUILDABLE_UNITS: UnitType[] = [
+  UnitType.City,
+  UnitType.Factory,
+  UnitType.Port,
+  UnitType.DefensePost,
+  UnitType.MissileSilo,
+  UnitType.SAMLauncher,
+  UnitType.Warship,
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+];
+
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
   public game: GameView;
@@ -55,17 +68,7 @@ export class UnitDisplay extends LitElement implements Layer {
       }
     }
 
-    this.allDisabled =
-      config.isUnitDisabled(UnitType.City) &&
-      config.isUnitDisabled(UnitType.Factory) &&
-      config.isUnitDisabled(UnitType.Port) &&
-      config.isUnitDisabled(UnitType.DefensePost) &&
-      config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher) &&
-      config.isUnitDisabled(UnitType.Warship) &&
-      config.isUnitDisabled(UnitType.AtomBomb) &&
-      config.isUnitDisabled(UnitType.HydrogenBomb) &&
-      config.isUnitDisabled(UnitType.MIRV);
+    this.allDisabled = BUILDABLE_UNITS.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
   }
 
@@ -116,7 +119,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
   tick() {
     const player = this.game?.myPlayer();
-    player?.actions().then((actions) => {
+    player?.actions(undefined, BUILDABLE_UNITS).then((actions) => {
       this.playerActions = actions;
     });
     if (!player) return;

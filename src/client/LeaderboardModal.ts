@@ -76,13 +76,13 @@ export class LeaderboardModal extends BaseModal {
         >(${start} - ${end})</span
       >`;
     }
+    const refreshTime = html`<span
+      class="text-sm font-normal text-white/40 ml-2 wrap-break-words italic"
+      >(${translateText("leaderboard_modal.refresh_time")})</span
+    >`;
 
     const content = html`
-      <div
-        class="h-full flex flex-col overflow-hidden ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           titleContent: html`
             <div class="flex flex-wrap items-center gap-2">
@@ -92,9 +92,10 @@ export class LeaderboardModal extends BaseModal {
                 ${translateText("leaderboard_modal.title")}
               </span>
               ${this.activeTab === "clans" ? dateRange : ""}
+              ${this.activeTab === "players" ? refreshTime : ""}
             </div>
           `,
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.close"),
         })}
 

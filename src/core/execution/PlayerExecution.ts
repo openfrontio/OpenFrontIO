@@ -1,5 +1,12 @@
 import { Config } from "../configuration/Config";
-import { Cell, Execution, Game, Player, UnitType } from "../game/Game";
+import {
+  Cell,
+  Execution,
+  Game,
+  isStructureType,
+  Player,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -35,7 +42,7 @@ export class PlayerExecution implements Execution {
   tick(ticks: number) {
     this.player.decayRelations();
     for (const u of this.player.units()) {
-      if (!u.info().territoryBound) {
+      if (!isStructureType(u.type())) {
         continue;
       }
 
@@ -60,19 +67,7 @@ export class PlayerExecution implements Execution {
     }
 
     if (!this.player.isAlive()) {
-      // Player has no tiles, delete any remaining units and gold
-      const gold = this.player.gold();
-      this.player.removeGold(gold);
-      this.player.units().forEach((u) => {
-        if (
-          u.type() !== UnitType.AtomBomb &&
-          u.type() !== UnitType.HydrogenBomb &&
-          u.type() !== UnitType.MIRVWarhead &&
-          u.type() !== UnitType.MIRV
-        ) {
-          u.delete();
-        }
-      });
+      this.removeOnDeath();
       this.active = false;
       this.mg.stats().playerKilled(this.player, ticks);
       return;
@@ -399,5 +394,25 @@ export class PlayerExecution implements Execution {
     }
 
     return result;
+  }
+
+  private removeOnDeath(): void {
+    // Player (bot, human, nation) has no tiles
+    // Delete any remaining gold, non-nuke units and alliances
+    const gold = this.player.gold();
+    this.player.removeGold(gold);
+
+    this.player.units().forEach((u) => {
+      if (
+        u.type() !== UnitType.AtomBomb &&
+        u.type() !== UnitType.HydrogenBomb &&
+        u.type() !== UnitType.MIRVWarhead &&
+        u.type() !== UnitType.MIRV
+      ) {
+        u.delete();
+      }
+    });
+
+    this.player.removeAllAlliances();
   }
 }

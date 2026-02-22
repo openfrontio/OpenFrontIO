@@ -17,6 +17,11 @@ export function normaliseMapKey(mapName: string): string {
   return mapName.toLowerCase().replace(/[\s.]+/g, "");
 }
 
+export function getMapName(mapName: string | undefined): string | null {
+  if (!mapName) return null;
+  return translateText(`map.${normaliseMapKey(mapName)}`);
+}
+
 /**
  * Returns a display label for the game mode (e.g. "FFA", "4 Teams", "Duos").
  */
