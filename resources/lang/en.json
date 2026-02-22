@@ -851,7 +851,10 @@
     "frame": "Frame:",
     "tick_exec": "Tick Exec:",
     "tick_delay": "Tick Delay:",
-    "layers_header": "Layers (avg / max, sorted by total time):"
+    "layers_header": "Render Layers (avg / max | tick avg, sorted by total time):",
+    "render_layers_summary": "Last tick: {frames} frames, {ms}ms",
+    "tick_layers_header": "Tick Layers (avg / max, sorted by total time):",
+    "tick_layers_summary": "Last tick: {count} layers, {ms}ms"
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",

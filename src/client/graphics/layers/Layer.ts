@@ -1,4 +1,9 @@
 export interface Layer {
+  /**
+   * Stable display name for profiling/overlays. Avoid relying on
+   * `constructor.name` since production builds may minify it.
+   */
+  profileName?: string;
   init?: () => void;
   tick?: () => void;
   // Optional hint to throttle expensive ticks by wall-clock.

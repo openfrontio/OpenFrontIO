@@ -77,6 +77,44 @@ export class PerformanceOverlay extends LitElement implements Layer {
     total: number;
   }[] = [];
 
+  // Smoothed per-layer tick timings (EMA over recent ticks)
+  private tickLayerStats: Map<
+    string,
+    { avg: number; max: number; last: number; total: number }
+  > = new Map();
+
+  @state()
+  private tickLayerBreakdown: {
+    name: string;
+    avg: number;
+    max: number;
+    total: number;
+  }[] = [];
+
+  @state()
+  private tickLayerLastCount: number = 0;
+
+  @state()
+  private tickLayerLastTotalMs: number = 0;
+
+  @state()
+  private tickLayerLastDurations: Record<string, number> = {};
+
+  @state()
+  private renderLastTickFrameCount: number = 0;
+
+  @state()
+  private renderLastTickLayerTotalMs: number = 0;
+
+  @state()
+  private renderLastTickLayerDurations: Record<string, number> = {};
+
+  // Smoothed per-layer render-per-tick timings (EMA over recent ticks)
+  private renderPerTickLayerStats: Map<
+    string,
+    { avg: number; max: number; last: number; total: number }
+  > = new Map();
+
   static styles = css`
     .performance-overlay {
       position: fixed;
@@ -85,7 +123,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       transform: var(--transform, translateX(-50%));
       background: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 8px 16px;
+      padding: 32px 16px 8px;
       border-radius: 4px;
       font-family: monospace;
       font-size: 12px;
@@ -190,6 +228,19 @@ export class PerformanceOverlay extends LitElement implements Layer {
       gap: 6px;
       font-size: 11px;
       margin-top: 2px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      background: linear-gradient(
+        90deg,
+        rgba(56, 189, 248, 0.35) 0%,
+        rgba(56, 189, 248, 0.35) var(--pct, 0%),
+        rgba(56, 189, 248, 0) var(--pct, 0%),
+        rgba(56, 189, 248, 0) 100%
+      );
+    }
+
+    .layer-row.inactive {
+      opacity: 0.5;
     }
 
     .layer-name {
@@ -197,21 +248,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .layer-bar {
-      flex: 1;
-      height: 6px;
-      background: rgba(148, 163, 184, 0.25);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .layer-bar-fill {
-      height: 100%;
-      width: var(--width);
-      background: #38bdf8;
-      border-radius: 3px;
     }
 
     .layer-metrics {
@@ -312,6 +348,17 @@ export class PerformanceOverlay extends LitElement implements Layer {
     // reset layer breakdown
     this.layerStats.clear();
     this.layerBreakdown = [];
+
+    // reset tick layer breakdown
+    this.tickLayerStats.clear();
+    this.tickLayerBreakdown = [];
+    this.tickLayerLastCount = 0;
+    this.tickLayerLastTotalMs = 0;
+    this.tickLayerLastDurations = {};
+    this.renderLastTickFrameCount = 0;
+    this.renderLastTickLayerTotalMs = 0;
+    this.renderLastTickLayerDurations = {};
+    this.renderPerTickLayerStats.clear();
 
     this.requestUpdate();
   };
@@ -419,6 +466,86 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.layerBreakdown = breakdown;
   }
 
+  updateRenderPerTickMetrics(
+    frameCount: number,
+    layerDurations: Record<string, number>,
+  ) {
+    if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+
+    const alpha = 0.2; // smoothing factor for EMA
+
+    this.renderLastTickFrameCount = frameCount;
+    this.renderLastTickLayerDurations = { ...layerDurations };
+    this.renderLastTickLayerTotalMs = Object.values(layerDurations).reduce(
+      (acc, ms) => acc + ms,
+      0,
+    );
+
+    for (const [name, duration] of Object.entries(layerDurations)) {
+      const existing = this.renderPerTickLayerStats.get(name);
+      if (!existing) {
+        this.renderPerTickLayerStats.set(name, {
+          avg: duration,
+          max: duration,
+          last: duration,
+          total: duration,
+        });
+        continue;
+      }
+
+      const avg = existing.avg + alpha * (duration - existing.avg);
+      const max = Math.max(existing.max, duration);
+      const total = existing.total + duration;
+      this.renderPerTickLayerStats.set(name, {
+        avg,
+        max,
+        last: duration,
+        total,
+      });
+    }
+  }
+
+  updateTickLayerMetrics(tickLayerDurations: Record<string, number>) {
+    if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+
+    const alpha = 0.2; // smoothing factor for EMA
+
+    const entries = Object.entries(tickLayerDurations);
+    this.tickLayerLastCount = entries.length;
+    this.tickLayerLastDurations = { ...tickLayerDurations };
+    this.tickLayerLastTotalMs = entries.reduce((acc, [, duration]) => {
+      return acc + duration;
+    }, 0);
+
+    entries.forEach(([name, duration]) => {
+      const existing = this.tickLayerStats.get(name);
+      if (!existing) {
+        this.tickLayerStats.set(name, {
+          avg: duration,
+          max: duration,
+          last: duration,
+          total: duration,
+        });
+      } else {
+        const avg = existing.avg + alpha * (duration - existing.avg);
+        const max = Math.max(existing.max, duration);
+        const total = existing.total + duration;
+        this.tickLayerStats.set(name, { avg, max, last: duration, total });
+      }
+    });
+
+    const breakdown = Array.from(this.tickLayerStats.entries())
+      .map(([name, stats]) => ({
+        name,
+        avg: stats.avg,
+        max: stats.max,
+        total: stats.total,
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    this.tickLayerBreakdown = breakdown;
+  }
+
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -486,7 +613,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
         executionSamples: [...this.tickExecutionTimes],
         delaySamples: [...this.tickDelayTimes],
       },
+      renderPerTickLast: {
+        frames: this.renderLastTickFrameCount,
+        layerTotalMs: this.renderLastTickLayerTotalMs,
+        layers: { ...this.renderLastTickLayerDurations },
+      },
       layers: this.layerBreakdown.map((layer) => ({ ...layer })),
+      tickLayers: this.tickLayerBreakdown.map((layer) => ({ ...layer })),
     };
   }
 
@@ -545,9 +678,17 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ? translateText("performance_overlay.failed_copy")
           : translateText("performance_overlay.copy_clipboard");
 
+    const renderLayersToShow = this.layerBreakdown.slice(0, 10);
+    const tickLayersToShow = this.tickLayerBreakdown.slice(0, 10);
+
     const maxLayerAvg =
-      this.layerBreakdown.length > 0
-        ? Math.max(...this.layerBreakdown.map((l) => l.avg))
+      renderLayersToShow.length > 0
+        ? Math.max(...renderLayersToShow.map((l) => l.avg))
+        : 1;
+
+    const maxTickLayerAvg =
+      tickLayersToShow.length > 0
+        ? Math.max(...tickLayersToShow.map((l) => l.avg))
         : 1;
 
     return html`
@@ -601,21 +742,68 @@ export class PerformanceOverlay extends LitElement implements Layer {
               <div class="performance-line">
                 ${translateText("performance_overlay.layers_header")}
               </div>
-              ${this.layerBreakdown.map((layer) => {
+              <div class="performance-line">
+                ${translateText("performance_overlay.render_layers_summary", {
+                  frames: this.renderLastTickFrameCount,
+                  ms: this.renderLastTickLayerTotalMs.toFixed(2),
+                })}
+              </div>
+              ${renderLayersToShow.map((layer) => {
                 const width = Math.min(
                   100,
                   (layer.avg / maxLayerAvg) * 100 || 0,
                 );
-                return html`<div class="layer-row">
+                const perTickRenderMs =
+                  this.renderLastTickLayerDurations[layer.name] ?? 0;
+                const perTickRenderAvgMs =
+                  this.renderPerTickLayerStats.get(layer.name)?.avg ?? 0;
+                const isInactive = perTickRenderMs <= 0.01;
+                const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
+                  2,
+                )}ms`;
+                return html`<div
+                  class="layer-row ${isInactive ? "inactive" : ""}"
+                  style="--pct: ${width}%;"
+                  title=${title}
+                >
                   <span class="layer-name" title=${layer.name}
                     >${layer.name}
                   </span>
-                  <div class="layer-bar">
-                    <div
-                      class="layer-bar-fill"
-                      style="--width: ${width}%;"
-                    ></div>
-                  </div>
+                  <span class="layer-metrics">
+                    ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms |
+                    ${perTickRenderAvgMs.toFixed(2)}ms
+                  </span>
+                </div>`;
+              })}
+            </div>`
+          : html``}
+        ${this.tickLayerBreakdown.length
+          ? html`<div class="layers-section">
+              <div class="performance-line">
+                ${translateText("performance_overlay.tick_layers_header")}
+              </div>
+              <div class="performance-line">
+                ${translateText("performance_overlay.tick_layers_summary", {
+                  count: this.tickLayerLastCount,
+                  ms: this.tickLayerLastTotalMs.toFixed(2),
+                })}
+              </div>
+              ${tickLayersToShow.map((layer) => {
+                const width = Math.min(
+                  100,
+                  (layer.avg / maxTickLayerAvg) * 100 || 0,
+                );
+                const lastTickMs = this.tickLayerLastDurations[layer.name] ?? 0;
+                const isInactive = lastTickMs <= 0.01;
+                const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
+                return html`<div
+                  class="layer-row ${isInactive ? "inactive" : ""}"
+                  style="--pct: ${width}%;"
+                  title=${title}
+                >
+                  <span class="layer-name" title=${layer.name}
+                    >${layer.name}</span
+                  >
                   <span class="layer-metrics">
                     ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
                   </span>

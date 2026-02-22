@@ -46,6 +46,20 @@ import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
+function namedLayer<T extends Layer>(layer: T, profileName: string): T {
+  layer.profileName = profileName;
+  return layer;
+}
+
+function getProfileLabel(layer: Layer): string {
+  const base = layer.profileName ?? "UnknownLayer";
+  if (layer instanceof HTMLElement) {
+    const tag = layer.tagName?.toLowerCase();
+    if (tag) return `${base} (${tag})`;
+  }
+  return base;
+}
+
 export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
@@ -279,50 +293,68 @@ export function createRenderer(
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
-    new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, eventBus, transformHandler, uiState),
-    structureLayer,
-    samRadiusLayer,
-    new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game, eventBus, transformHandler),
-    new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
-    new StructureIconsLayer(game, eventBus, uiState, transformHandler),
-    new DynamicUILayer(game, transformHandler, eventBus),
-    new NameLayer(game, transformHandler, eventBus),
-    eventsDisplay,
-    attacksDisplay,
-    chatDisplay,
-    buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerPanel,
+    namedLayer(new TerrainLayer(game, transformHandler), "TerrainLayer"),
+    namedLayer(
+      new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+      "TerritoryLayer",
     ),
-    spawnTimer,
-    immunityTimer,
-    leaderboard,
-    gameLeftSidebar,
-    unitDisplay,
-    gameRightSidebar,
-    controlPanel,
-    playerInfo,
-    winModal,
-    replayPanel,
-    settingsModal,
-    teamStats,
-    playerPanel,
-    headsUpMessage,
-    multiTabModal,
-    inGameHeaderAd,
-    spawnVideoAd,
-    alertFrame,
-    performanceOverlay,
+    namedLayer(
+      new RailroadLayer(game, eventBus, transformHandler, uiState),
+      "RailroadLayer",
+    ),
+    namedLayer(structureLayer, "StructureLayer"),
+    namedLayer(samRadiusLayer, "SAMRadiusLayer"),
+    namedLayer(new UnitLayer(game, eventBus, transformHandler), "UnitLayer"),
+    namedLayer(new FxLayer(game, eventBus, transformHandler), "FxLayer"),
+    namedLayer(new UILayer(game, eventBus, transformHandler), "UILayer"),
+    namedLayer(
+      new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
+      "NukeTrajectoryPreviewLayer",
+    ),
+    namedLayer(
+      new StructureIconsLayer(game, eventBus, uiState, transformHandler),
+      "StructureIconsLayer",
+    ),
+    namedLayer(
+      new DynamicUILayer(game, transformHandler, eventBus),
+      "DynamicUILayer",
+    ),
+    namedLayer(new NameLayer(game, transformHandler, eventBus), "NameLayer"),
+    namedLayer(eventsDisplay, "EventsDisplay"),
+    namedLayer(attacksDisplay, "AttacksDisplay"),
+    namedLayer(chatDisplay, "ChatDisplay"),
+    namedLayer(buildMenu, "BuildMenu"),
+    namedLayer(
+      new MainRadialMenu(
+        eventBus,
+        game,
+        transformHandler,
+        emojiTable as EmojiTable,
+        buildMenu,
+        uiState,
+        playerPanel,
+      ),
+      "MainRadialMenu",
+    ),
+    namedLayer(spawnTimer, "SpawnTimer"),
+    namedLayer(immunityTimer, "ImmunityTimer"),
+    namedLayer(leaderboard, "Leaderboard"),
+    namedLayer(gameLeftSidebar, "GameLeftSidebar"),
+    namedLayer(unitDisplay, "UnitDisplay"),
+    namedLayer(gameRightSidebar, "GameRightSidebar"),
+    namedLayer(controlPanel, "ControlPanel"),
+    namedLayer(playerInfo, "PlayerInfoOverlay"),
+    namedLayer(winModal, "WinModal"),
+    namedLayer(replayPanel, "ReplayPanel"),
+    namedLayer(settingsModal, "SettingsModal"),
+    namedLayer(teamStats, "TeamStats"),
+    namedLayer(playerPanel, "PlayerPanel"),
+    namedLayer(headsUpMessage, "HeadsUpMessage"),
+    namedLayer(multiTabModal, "MultiTabModal"),
+    namedLayer(inGameHeaderAd, "InGameHeaderAd"),
+    namedLayer(spawnVideoAd, "SpawnVideoAd"),
+    namedLayer(alertFrame, "AlertFrame"),
+    namedLayer(performanceOverlay, "PerformanceOverlay"),
   ];
 
   return new GameRenderer(
@@ -339,6 +371,8 @@ export function createRenderer(
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
+  private renderFramesSinceLastTick: number = 0;
+  private renderLayerDurationsSinceLastTick: Record<string, number> = {};
 
   constructor(
     private game: GameView,
@@ -431,7 +465,7 @@ export class GameRenderer {
 
       const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
-      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
+      FrameProfiler.end(getProfileLabel(layer), layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -440,6 +474,13 @@ export class GameRenderer {
     const duration = performance.now() - start;
 
     const layerDurations = FrameProfiler.consume();
+    if (FrameProfiler.isEnabled()) {
+      this.renderFramesSinceLastTick++;
+      for (const [name, ms] of Object.entries(layerDurations)) {
+        this.renderLayerDurationsSinceLastTick[name] =
+          (this.renderLayerDurationsSinceLastTick[name] ?? 0) + ms;
+      }
+    }
     this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
 
     if (duration > 50) {
@@ -451,6 +492,18 @@ export class GameRenderer {
 
   tick() {
     const nowMs = performance.now();
+    const shouldProfileTick = FrameProfiler.isEnabled();
+
+    if (shouldProfileTick) {
+      this.performanceOverlay.updateRenderPerTickMetrics(
+        this.renderFramesSinceLastTick,
+        this.renderLayerDurationsSinceLastTick,
+      );
+      this.renderFramesSinceLastTick = 0;
+      this.renderLayerDurationsSinceLastTick = {};
+    }
+
+    const tickLayerDurations: Record<string, number> = {};
 
     for (const layer of this.layers) {
       if (!layer.tick) {
@@ -470,7 +523,17 @@ export class GameRenderer {
       state.lastTickAtMs = nowMs;
       this.layerTickState.set(layer, state);
 
+      const tickStart = shouldProfileTick ? performance.now() : 0;
       layer.tick();
+      if (shouldProfileTick && tickStart !== 0) {
+        const duration = performance.now() - tickStart;
+        const label = getProfileLabel(layer);
+        tickLayerDurations[label] = (tickLayerDurations[label] ?? 0) + duration;
+      }
+    }
+
+    if (shouldProfileTick) {
+      this.performanceOverlay.updateTickLayerMetrics(tickLayerDurations);
     }
   }
 
