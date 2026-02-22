@@ -10,6 +10,7 @@ describe("TradeShipExecution", () => {
   let pirate: Player;
   let srcPort: Unit;
   let piratePort: Unit;
+  let piratePort2: Unit;
   let tradeShip: Unit;
   let dstPort: Unit;
   let tradeShipExecution: TradeShipExecution;
@@ -48,25 +49,31 @@ describe("TradeShipExecution", () => {
       id: vi.fn(() => 3),
       addGold: vi.fn(),
       displayName: vi.fn(() => "Destination"),
-      units: vi.fn(() => [piratePort]),
-      unitCount: vi.fn(() => 1),
+      units: vi.fn(() => [piratePort, piratePort2]),
+      unitCount: vi.fn(() => 2),
       canTrade: vi.fn(() => true),
     } as any;
 
     piratePort = {
-      tile: vi.fn(() => 40011),
+      tile: vi.fn(() => 56),
+      owner: vi.fn(() => pirate),
+      isActive: vi.fn(() => true),
+    } as any;
+
+    piratePort2 = {
+      tile: vi.fn(() => 75),
       owner: vi.fn(() => pirate),
       isActive: vi.fn(() => true),
     } as any;
 
     srcPort = {
-      tile: vi.fn(() => 20011),
+      tile: vi.fn(() => 10),
       owner: vi.fn(() => origOwner),
       isActive: vi.fn(() => true),
     } as any;
 
     dstPort = {
-      tile: vi.fn(() => 30015), // 15x15
+      tile: vi.fn(() => 100),
       owner: vi.fn(() => dstOwner),
       isActive: vi.fn(() => true),
     } as any;
@@ -78,13 +85,13 @@ describe("TradeShipExecution", () => {
       setTargetUnit: vi.fn(),
       setSafeFromPirates: vi.fn(),
       delete: vi.fn(),
-      tile: vi.fn(() => 2001),
+      tile: vi.fn(() => 32),
     } as any;
 
     tradeShipExecution = new TradeShipExecution(origOwner, srcPort, dstPort);
     tradeShipExecution.init(game, 0);
     tradeShipExecution["pathFinder"] = {
-      next: vi.fn(() => ({ status: PathStatus.NEXT, node: 2001 })),
+      next: vi.fn(() => ({ status: PathStatus.NEXT, node: 32 })),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
   });
@@ -115,7 +122,7 @@ describe("TradeShipExecution", () => {
 
   it("should complete trade and award gold", () => {
     tradeShipExecution["pathFinder"] = {
-      next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 2001 })),
+      next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
     } as any;
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);

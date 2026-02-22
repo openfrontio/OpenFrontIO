@@ -78,13 +78,15 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
+    const curTile = this.tradeShip.tile();
+
     if (
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
       const nearestPort = findClosestBy(
-        this.tradeShip.owner().units(UnitType.Port),
-        (port) => this.mg.manhattanDist(port.tile(), this.tradeShip!.tile()),
+        tradeShipOwner.units(UnitType.Port),
+        (port) => this.mg.manhattanDist(port.tile(), curTile),
       );
       if (nearestPort === null) {
         this.tradeShip.delete(false);
@@ -96,7 +98,6 @@ export class TradeShipExecution implements Execution {
       }
     }
 
-    const curTile = this.tradeShip.tile();
     if (curTile === this.dstPort()) {
       this.complete();
       return;
