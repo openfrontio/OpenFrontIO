@@ -43,6 +43,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private isVisible: boolean = false;
 
   @state()
+  private currentTPS: number = 0;
+
+  @state()
+  private averageTPS: number = 0;
+
+  @state()
   private isDragging: boolean = false;
 
   @state()
@@ -60,6 +66,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
   private tickExecutionTimes: number[] = [];
   private tickDelayTimes: number[] = [];
+  private tickTimestamps: number[] = [];
+  private tickHead1s: number = 0;
+  private tickHead60s: number = 0;
 
   private copyStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -370,6 +379,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.tickExecutionMax = 0;
     this.tickDelayAvg = 0;
     this.tickDelayMax = 0;
+    this.currentTPS = 0;
+    this.averageTPS = 0;
+    this.tickTimestamps = [];
+    this.tickHead1s = 0;
+    this.tickHead60s = 0;
 
     // reset layer breakdown
     this.layerStats.clear();
@@ -567,6 +581,34 @@ export class PerformanceOverlay extends LitElement implements Layer {
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible) return;
 
+    const now = performance.now();
+    this.tickTimestamps.push(now);
+
+    while (
+      this.tickHead1s < this.tickTimestamps.length &&
+      now - this.tickTimestamps[this.tickHead1s] > 1000
+    ) {
+      this.tickHead1s++;
+    }
+    while (
+      this.tickHead60s < this.tickTimestamps.length &&
+      now - this.tickTimestamps[this.tickHead60s] > 60000
+    ) {
+      this.tickHead60s++;
+    }
+
+    const ticksLast1s = this.tickTimestamps.length - this.tickHead1s;
+    const ticksLast60s = this.tickTimestamps.length - this.tickHead60s;
+    this.currentTPS = ticksLast1s;
+    this.averageTPS = Math.round((ticksLast60s / 60) * 10) / 10;
+
+    // Compact occasionally to avoid unbounded growth on long sessions.
+    if (this.tickHead60s > 4000) {
+      this.tickTimestamps = this.tickTimestamps.slice(this.tickHead60s);
+      this.tickHead1s = Math.max(0, this.tickHead1s - this.tickHead60s);
+      this.tickHead60s = 0;
+    }
+
     // Update tick execution duration stats
     if (tickExecutionDuration !== undefined) {
       this.tickExecutionTimes.push(tickExecutionDuration);
@@ -614,6 +656,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
     return "performance-bad";
   }
 
+  private getTPSColor(tps: number): string {
+    if (tps >= 18) return "performance-good";
+    if (tps >= 10) return "performance-warning";
+    return "performance-bad";
+  }
+
   private buildPerformanceSnapshot() {
     return {
       timestamp: new Date().toISOString(),
@@ -622,6 +670,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
         average60s: this.averageFPS,
         frameTimeMs: this.frameTime,
         history: [...this.fpsHistory],
+      },
+      tps: {
+        current: this.currentTPS,
+        average60s: this.averageTPS,
       },
       ticks: {
         executionAvgMs: this.tickExecutionAvg,
@@ -754,6 +806,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
           <span class="${this.getPerformanceColor(1000 / this.frameTime)}"
             >${this.frameTime}ms</span
           >
+        </div>
+        <div class="performance-line">
+          ${translateText("performance_overlay.tps")}
+          <span class="${this.getTPSColor(this.currentTPS)}"
+            >${this.currentTPS}</span
+          >
+          (${translateText("performance_overlay.tps_avg_60s")}
+          <span>${this.averageTPS}</span>)
         </div>
         <div class="performance-line">
           ${translateText("performance_overlay.tick_exec")}

@@ -849,6 +849,8 @@
     "fps": "FPS:",
     "avg_60s": "Avg (60s):",
     "frame": "Frame:",
+    "tps": "TPS:",
+    "tps_avg_60s": "Avg:",
     "tick_exec": "Tick Exec:",
     "tick_delay": "Tick Delay:",
     "layers_header": "Render Layers (avg / max | tick avg, sorted by total time):",
