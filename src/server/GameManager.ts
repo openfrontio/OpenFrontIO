@@ -46,10 +46,11 @@ export class GameManager {
     persistentID: string,
     gameID: GameID,
     lastTurn: number = 0,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn);
+    return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
   }
 
   createGame(

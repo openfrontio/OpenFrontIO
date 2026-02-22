@@ -255,12 +255,13 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // Only the WebSocket is updated — username, cosmetics, etc. are preserved
-  // from the original join to maintain consistency throughout the game session.
+  // WebSocket is always updated. Optional identity updates are applied only
+  // before the game has started.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -280,6 +281,10 @@ export class GameServer {
       (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
+    if (identityUpdate && !this.hasStarted()) {
+      client.username = identityUpdate.username;
+      client.clanTag = identityUpdate.clanTag;
+    }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
 
