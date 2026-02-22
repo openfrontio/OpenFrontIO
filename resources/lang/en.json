@@ -849,9 +849,16 @@
     "fps": "FPS:",
     "avg_60s": "Avg (60s):",
     "frame": "Frame:",
+    "tps": "TPS:",
+    "tps_avg_60s": "Avg:",
     "tick_exec": "Tick Exec:",
     "tick_delay": "Tick Delay:",
-    "layers_header": "Layers (avg / max, sorted by total time):"
+    "layers_header": "Render Layers",
+    "render_layers_table_header": "avg / max | tick avg",
+    "render_layers_summary": "Last tick: {frames} frames, {ms}ms",
+    "tick_layers_header": "Tick Layers",
+    "tick_layers_table_header": "avg / max",
+    "tick_layers_summary": "Last tick: {count} layers, {ms}ms"
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
