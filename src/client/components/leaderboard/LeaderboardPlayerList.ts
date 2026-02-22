@@ -375,37 +375,53 @@ export class LeaderboardPlayerList extends LitElement {
     return html`
       <div class="h-full">
         <div
-          class="h-full overflow-y-auto overflow-x-auto border border-white/5 bg-black/20 relative"
+          class="h-full flex flex-col border border-white/5 bg-black/20 relative"
         >
+          <table class="w-full text-sm border-collapse table-fixed shrink-0">
+            <colgroup>
+              <col style="width: 4rem" />
+              <col />
+              <col style="width: 6rem" />
+              <col style="width: 6rem" />
+              <col style="width: 6rem" />
+            </colgroup>
+            <thead>
+              <tr
+                class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
+              >
+                <th class="py-4 px-4 text-center font-bold">
+                  ${translateText("leaderboard_modal.rank")}
+                </th>
+                <th class="py-4 px-4 text-left font-bold">
+                  ${translateText("leaderboard_modal.player")}
+                </th>
+                <th class="py-4 px-4 text-right font-bold">
+                  ${translateText("leaderboard_modal.elo")}
+                </th>
+                <th class="py-4 px-4 text-right font-bold">
+                  ${translateText("leaderboard_modal.games")}
+                </th>
+                <th class="py-4 px-4 text-right font-bold pr-6">
+                  ${translateText("leaderboard_modal.win_loss_ratio")}
+                </th>
+              </tr>
+            </thead>
+          </table>
           <div
-            class="virtualizer-container h-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 ${this
+            class="virtualizer-container flex-1 overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
               .showStickyUser
               ? "pb-20"
               : "pb-0"}"
             @scroll=${() => this.handleScroll()}
           >
-            <table class="w-full text-sm border-collapse">
-              <thead class="sticky top-0 z-10">
-                <tr
-                  class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
-                >
-                  <th class="py-4 px-4 text-center font-bold w-16">
-                    ${translateText("leaderboard_modal.rank")}
-                  </th>
-                  <th class="py-4 px-4 text-left font-bold">
-                    ${translateText("leaderboard_modal.player")}
-                  </th>
-                  <th class="py-4 px-4 text-right font-bold">
-                    ${translateText("leaderboard_modal.elo")}
-                  </th>
-                  <th class="py-4 px-4 text-right font-bold">
-                    ${translateText("leaderboard_modal.games")}
-                  </th>
-                  <th class="py-4 px-4 text-right font-bold pr-6">
-                    ${translateText("leaderboard_modal.win_loss_ratio")}
-                  </th>
-                </tr>
-              </thead>
+            <table class="w-full text-sm border-collapse table-fixed">
+              <colgroup>
+                <col style="width: 4rem" />
+                <col />
+                <col style="width: 6rem" />
+                <col style="width: 6rem" />
+                <col style="width: 6rem" />
+              </colgroup>
               <tbody>
                 ${this.playerData.map((player) => this.renderPlayerRow(player))}
               </tbody>

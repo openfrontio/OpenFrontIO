@@ -196,22 +196,28 @@ export class LeaderboardClanTable extends LitElement {
 
     return html`
       <div class="h-full">
-        <div
-          class="h-full overflow-y-auto overflow-x-auto border border-white/5 bg-black/20"
-        >
-          <table class="w-full text-sm border-collapse">
-            <thead class="sticky top-0 z-10">
+        <div class="h-full flex flex-col border border-white/5 bg-black/20">
+          <table class="w-full text-sm border-collapse table-fixed shrink-0">
+            <colgroup>
+              <col style="width: 4rem" />
+              <col />
+              <col style="width: 8rem" />
+              <col style="width: 6rem" />
+              <col style="width: 6rem" />
+              <col style="width: 6rem" />
+            </colgroup>
+            <thead>
               <tr
                 class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
               >
-                <th class="py-4 px-4 text-center font-bold w-16">
+                <th class="py-4 px-4 text-center font-bold">
                   ${translateText("leaderboard_modal.rank")}
                 </th>
                 <th class="py-4 px-4 text-left font-bold">
                   ${translateText("leaderboard_modal.clan")}
                 </th>
                 <th
-                  class="py-4 px-4 text-right font-bold w-32 cursor-pointer hover:text-white/60 transition-colors"
+                  class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
                 >
                   <button
                     class="whitespace-nowrap uppercase"
@@ -294,92 +300,109 @@ export class LeaderboardClanTable extends LitElement {
                 </th>
               </tr>
             </thead>
-            <tbody>
-              ${sorted.map((clan, index) => {
-                const displayRank = index + 1;
-                const rankColor =
-                  displayRank === 1
-                    ? "text-yellow-400 bg-yellow-400/10 ring-1 ring-yellow-400/20"
-                    : displayRank === 2
-                      ? "text-slate-300 bg-slate-400/10 ring-1 ring-slate-400/20"
-                      : displayRank === 3
-                        ? "text-amber-600 bg-amber-600/10 ring-1 ring-amber-600/20"
-                        : "text-white/40 bg-white/5";
-                const rankIcon =
-                  displayRank === 1
-                    ? "👑"
-                    : displayRank === 2
-                      ? "🥈"
-                      : displayRank === 3
-                        ? "🥉"
-                        : String(displayRank);
-
-                return html`
-                  <tr
-                    class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group"
-                  >
-                    <td class="py-3 px-4 text-center">
-                      <div
-                        class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
-                      >
-                        ${rankIcon}
-                      </div>
-                    </td>
-                    <td class="py-3 px-4 font-bold text-blue-300">
-                      <div
-                        class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 inline-block"
-                      >
-                        ${clan.clanTag}
-                      </div>
-                    </td>
-                    <td class="py-3 px-4 text-right">
-                      <div class="flex flex-col items-end gap-1">
-                        <span class="text-white font-mono font-medium"
-                          >${clan.games.toLocaleString()}</span
-                        >
-                        <div
-                          class="w-24 h-1 bg-white/10 rounded-full overflow-hidden"
-                        >
-                          <div
-                            class="h-full bg-blue-500/50 rounded-full"
-                            style="width: ${(clan.games / maxGames) * 100}%"
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td
-                      class="py-3 px-4 text-right font-mono text-green-400/90"
-                    >
-                      ${clan.weightedWins.toLocaleString("fullwide", {
-                        maximumFractionDigits: 1,
-                      })}
-                    </td>
-                    <td class="py-3 px-4 text-right font-mono text-red-400/90">
-                      ${clan.weightedLosses.toLocaleString("fullwide", {
-                        maximumFractionDigits: 1,
-                      })}
-                    </td>
-                    <td class="py-3 px-4 text-right pr-6">
-                      <div class="inline-flex flex-col items-end">
-                        <span
-                          class="font-mono font-bold ${clan.weightedWLRatio >= 1
-                            ? "text-green-400"
-                            : "text-red-400"}"
-                          >${clan.weightedWLRatio.toLocaleString("fullwide", {
-                            maximumFractionDigits: 2,
-                          })}</span
-                        >
-                        <span
-                          class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
-                          >${translateText("leaderboard_modal.ratio")}</span
-                        >
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              })}
-            </tbody>
           </table>
+          <div
+            class="flex-1 overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20"
+          >
+            <table class="w-full text-sm border-collapse table-fixed">
+              <colgroup>
+                <col style="width: 4rem" />
+                <col />
+                <col style="width: 8rem" />
+                <col style="width: 6rem" />
+                <col style="width: 6rem" />
+                <col style="width: 6rem" />
+              </colgroup>
+              <tbody>
+                ${sorted.map((clan, index) => {
+                  const displayRank = index + 1;
+                  const rankColor =
+                    displayRank === 1
+                      ? "text-yellow-400 bg-yellow-400/10 ring-1 ring-yellow-400/20"
+                      : displayRank === 2
+                        ? "text-slate-300 bg-slate-400/10 ring-1 ring-slate-400/20"
+                        : displayRank === 3
+                          ? "text-amber-600 bg-amber-600/10 ring-1 ring-amber-600/20"
+                          : "text-white/40 bg-white/5";
+                  const rankIcon =
+                    displayRank === 1
+                      ? "👑"
+                      : displayRank === 2
+                        ? "🥈"
+                        : displayRank === 3
+                          ? "🥉"
+                          : String(displayRank);
+
+                  return html`
+                    <tr
+                      class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group"
+                    >
+                      <td class="py-3 px-4 text-center">
+                        <div
+                          class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
+                        >
+                          ${rankIcon}
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 font-bold text-blue-300">
+                        <div
+                          class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 inline-block"
+                        >
+                          ${clan.clanTag}
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 text-right">
+                        <div class="flex flex-col items-end gap-1">
+                          <span class="text-white font-mono font-medium"
+                            >${clan.games.toLocaleString()}</span
+                          >
+                          <div
+                            class="w-24 h-1 bg-white/10 rounded-full overflow-hidden"
+                          >
+                            <div
+                              class="h-full bg-blue-500/50 rounded-full"
+                              style="width: ${(clan.games / maxGames) * 100}%"
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td
+                        class="py-3 px-4 text-right font-mono text-green-400/90"
+                      >
+                        ${clan.weightedWins.toLocaleString("fullwide", {
+                          maximumFractionDigits: 1,
+                        })}
+                      </td>
+                      <td
+                        class="py-3 px-4 text-right font-mono text-red-400/90"
+                      >
+                        ${clan.weightedLosses.toLocaleString("fullwide", {
+                          maximumFractionDigits: 1,
+                        })}
+                      </td>
+                      <td class="py-3 px-4 text-right pr-6">
+                        <div class="inline-flex flex-col items-end">
+                          <span
+                            class="font-mono font-bold ${clan.weightedWLRatio >=
+                            1
+                              ? "text-green-400"
+                              : "text-red-400"}"
+                            >${clan.weightedWLRatio.toLocaleString("fullwide", {
+                              maximumFractionDigits: 2,
+                            })}</span
+                          >
+                          <span
+                            class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
+                            >${translateText("leaderboard_modal.ratio")}</span
+                          >
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     `;
