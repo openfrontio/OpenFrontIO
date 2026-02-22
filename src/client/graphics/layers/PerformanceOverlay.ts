@@ -600,7 +600,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const ticksLast1s = this.tickTimestamps.length - this.tickHead1s;
     const ticksLast60s = this.tickTimestamps.length - this.tickHead60s;
     this.currentTPS = ticksLast1s;
-    this.averageTPS = Math.round((ticksLast60s / 60) * 10) / 10;
+    const oldest60 =
+      ticksLast60s > 0 ? this.tickTimestamps[this.tickHead60s] : now;
+    const elapsed60s = Math.min(60, Math.max(1, (now - oldest60) / 1000));
+    this.averageTPS = Math.round((ticksLast60s / elapsed60s) * 10) / 10;
 
     // Compact occasionally to avoid unbounded growth on long sessions.
     if (this.tickHead60s > 4000) {
