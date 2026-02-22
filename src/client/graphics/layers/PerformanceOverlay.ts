@@ -281,6 +281,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
       );
     }
 
+    .layer-row.table-header {
+      background: none;
+      opacity: 0.75;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
     .layer-row.inactive {
       opacity: 0.5;
     }
@@ -893,33 +900,41 @@ export class PerformanceOverlay extends LitElement implements Layer {
                 })}
               </div>
               ${this.renderLayersExpanded
-                ? renderLayersToShow.map((layer) => {
-                    const width = Math.min(
-                      100,
-                      (layer.avg / maxLayerAvg) * 100 || 0,
-                    );
-                    const perTickRenderMs =
-                      this.renderLastTickLayerDurations[layer.name] ?? 0;
-                    const perTickRenderAvgMs =
-                      this.renderPerTickLayerStats.get(layer.name)?.avg ?? 0;
-                    const isInactive = perTickRenderMs <= 0.01;
-                    const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
-                      2,
-                    )}ms`;
-                    return html`<div
-                      class="layer-row ${isInactive ? "inactive" : ""}"
-                      style="--pct: ${width}%;"
-                      title=${title}
-                    >
-                      <span class="layer-name" title=${layer.name}
-                        >${layer.name}
-                      </span>
+                ? html`<div class="layer-row table-header" style="--pct: 0%;">
+                      <span class="layer-name"></span>
                       <span class="layer-metrics">
-                        ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms |
-                        ${perTickRenderAvgMs.toFixed(2)}ms
+                        ${translateText(
+                          "performance_overlay.render_layers_table_header",
+                        )}
                       </span>
-                    </div>`;
-                  })
+                    </div>
+                    ${renderLayersToShow.map((layer) => {
+                      const width = Math.min(
+                        100,
+                        (layer.avg / maxLayerAvg) * 100 || 0,
+                      );
+                      const perTickRenderMs =
+                        this.renderLastTickLayerDurations[layer.name] ?? 0;
+                      const perTickRenderAvgMs =
+                        this.renderPerTickLayerStats.get(layer.name)?.avg ?? 0;
+                      const isInactive = perTickRenderMs <= 0.01;
+                      const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
+                        2,
+                      )}ms`;
+                      return html`<div
+                        class="layer-row ${isInactive ? "inactive" : ""}"
+                        style="--pct: ${width}%;"
+                        title=${title}
+                      >
+                        <span class="layer-name" title=${layer.name}
+                          >${layer.name}
+                        </span>
+                        <span class="layer-metrics">
+                          ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms |
+                          ${perTickRenderAvgMs.toFixed(2)}ms
+                        </span>
+                      </div>`;
+                    })}`
                 : html``}
             </div>`
           : html``}
@@ -946,28 +961,36 @@ export class PerformanceOverlay extends LitElement implements Layer {
                 })}
               </div>
               ${this.tickLayersExpanded
-                ? tickLayersToShow.map((layer) => {
-                    const width = Math.min(
-                      100,
-                      (layer.avg / maxTickLayerAvg) * 100 || 0,
-                    );
-                    const lastTickMs =
-                      this.tickLayerLastDurations[layer.name] ?? 0;
-                    const isInactive = lastTickMs <= 0.01;
-                    const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
-                    return html`<div
-                      class="layer-row ${isInactive ? "inactive" : ""}"
-                      style="--pct: ${width}%;"
-                      title=${title}
-                    >
-                      <span class="layer-name" title=${layer.name}
-                        >${layer.name}</span
-                      >
+                ? html`<div class="layer-row table-header" style="--pct: 0%;">
+                      <span class="layer-name"></span>
                       <span class="layer-metrics">
-                        ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
+                        ${translateText(
+                          "performance_overlay.tick_layers_table_header",
+                        )}
                       </span>
-                    </div>`;
-                  })
+                    </div>
+                    ${tickLayersToShow.map((layer) => {
+                      const width = Math.min(
+                        100,
+                        (layer.avg / maxTickLayerAvg) * 100 || 0,
+                      );
+                      const lastTickMs =
+                        this.tickLayerLastDurations[layer.name] ?? 0;
+                      const isInactive = lastTickMs <= 0.01;
+                      const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
+                      return html`<div
+                        class="layer-row ${isInactive ? "inactive" : ""}"
+                        style="--pct: ${width}%;"
+                        title=${title}
+                      >
+                        <span class="layer-name" title=${layer.name}
+                          >${layer.name}</span
+                        >
+                        <span class="layer-metrics">
+                          ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
+                        </span>
+                      </div>`;
+                    })}`
                 : html``}
             </div>`
           : html``}
