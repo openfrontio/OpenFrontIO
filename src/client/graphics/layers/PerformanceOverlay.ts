@@ -46,7 +46,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private isDragging: boolean = false;
 
   @state()
-  private position: { x: number; y: number } = { x: 50, y: 20 }; // Percentage values
+  private position: { x: number; y: number } = { x: 8, y: 8 }; // px values
 
   @state()
   private copyStatus: "idle" | "success" | "error" = "idle";
@@ -131,7 +131,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
       user-select: none;
       cursor: move;
       transition: none;
-      min-width: 420px;
+      box-sizing: border-box;
+      width: min(460px, calc(100vw - 16px));
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 16px);
+      overflow: auto;
     }
 
     .performance-overlay.dragging {
@@ -307,13 +311,17 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const newX = e.clientX - this.dragStart.x;
     const newY = e.clientY - this.dragStart.y;
 
-    // Convert to percentage of viewport
+    const margin = 8;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    const overlayWidth = Math.min(420, Math.max(0, viewportWidth - margin * 2));
 
     this.position = {
-      x: Math.max(0, Math.min(viewportWidth - 100, newX)), // Keep within viewport bounds
-      y: Math.max(0, Math.min(viewportHeight - 100, newY)),
+      x: Math.max(
+        margin,
+        Math.min(viewportWidth - overlayWidth - margin, newX),
+      ),
+      y: Math.max(margin, Math.min(viewportHeight - 100, newY)),
     };
 
     this.requestUpdate();
@@ -671,6 +679,17 @@ export class PerformanceOverlay extends LitElement implements Layer {
       return html``;
     }
 
+    const margin = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const overlayWidth = Math.min(420, Math.max(0, viewportWidth - margin * 2));
+    const maxLeft = Math.max(margin, viewportWidth - overlayWidth - margin);
+    const clampedX = Math.max(margin, Math.min(this.position.x, maxLeft));
+    const clampedY = Math.max(
+      margin,
+      Math.min(this.position.y, viewportHeight),
+    );
+
     const copyLabel =
       this.copyStatus === "success"
         ? translateText("performance_overlay.copied")
@@ -694,8 +713,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     return html`
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
-        style="--left: ${this.position.x}px; --top: ${this.position
-          .y}px; --transform: none;"
+        style="--left: ${clampedX}px; --top: ${clampedY}px; --transform: none;"
         @mousedown="${this.handleMouseDown}"
       >
         <button class="reset-button" @click="${this.handleReset}">
