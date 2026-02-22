@@ -385,7 +385,7 @@ export class LeaderboardPlayerList extends LitElement {
             @scroll=${() => this.handleScroll()}
           >
             <table class="w-full text-sm border-collapse">
-              <thead>
+              <thead class="sticky top-0 z-10">
                 <tr
                   class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
                 >

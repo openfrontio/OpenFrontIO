@@ -200,7 +200,7 @@ export class LeaderboardClanTable extends LitElement {
           class="h-full overflow-y-auto overflow-x-auto border border-white/5 bg-black/20"
         >
           <table class="w-full text-sm border-collapse">
-            <thead>
+            <thead class="sticky top-0 z-10">
               <tr
                 class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
               >
