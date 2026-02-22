@@ -7,6 +7,8 @@ import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
 import { getSpawnTiles } from "./Util";
 
+type Spawn = { center: TileRef; tiles: TileRef[] };
+
 export class SpawnExecution implements Execution {
   private random: PseudoRandom;
   active: boolean = true;
@@ -47,15 +49,15 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    this.tile ??= this.randomSpawnLand();
+    const spawn = this.getSpawn(this.tile);
 
-    if (this.tile === undefined) {
+    if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);
       return;
     }
 
     player.tiles().forEach((t) => player.relinquish(t));
-    getSpawnTiles(this.mg, this.tile).forEach((t) => {
+    spawn.tiles.forEach((t) => {
       player.conquer(t);
     });
 
@@ -66,7 +68,7 @@ export class SpawnExecution implements Execution {
       }
     }
 
-    player.setSpawnTile(this.tile);
+    player.setSpawnTile(spawn.center);
   }
 
   isActive(): boolean {
@@ -77,18 +79,28 @@ export class SpawnExecution implements Execution {
     return true;
   }
 
-  private randomSpawnLand(): TileRef | undefined {
+  private getSpawn(center?: TileRef): Spawn | undefined {
+    if (center !== undefined) {
+      const tiles = getSpawnTiles(this.mg, center, false);
+
+      if (!tiles.length) {
+        return;
+      }
+
+      return { center, tiles };
+    }
+
     let tries = 0;
 
     while (tries < SpawnExecution.MAX_SPAWN_TRIES) {
       tries++;
 
-      const tile = this.randTile();
+      const center = this.randTile();
 
       if (
-        !this.mg.isLand(tile) ||
-        this.mg.hasOwner(tile) ||
-        this.mg.isBorder(tile)
+        !this.mg.isLand(center) ||
+        this.mg.hasOwner(center) ||
+        this.mg.isBorder(center)
       ) {
         continue;
       }
@@ -104,7 +116,7 @@ export class SpawnExecution implements Execution {
           }
 
           return (
-            this.mg.manhattanDist(spawnTile, tile) <
+            this.mg.manhattanDist(spawnTile, center) <
             this.mg.config().minDistanceBetweenPlayers()
           );
         });
@@ -113,7 +125,13 @@ export class SpawnExecution implements Execution {
         continue;
       }
 
-      return tile;
+      const tiles = getSpawnTiles(this.mg, center, true);
+      if (!tiles) {
+        // if some of the spawn tile is outside of the land, we want to find another spawn tile
+        continue;
+      }
+
+      return { center, tiles };
     }
 
     return;

@@ -86,7 +86,7 @@ export class GameModeSelector extends LitElement {
 
     return html`
       <div
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
+        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto pb-4 lg:pb-0"
       >
         ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
         ${teams
@@ -178,11 +178,24 @@ export class GameModeSelector extends LitElement {
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
     const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
-    const timeRemaining = Math.max(
-      0,
-      Math.floor((lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000),
-    );
-    const timeDisplay = renderDuration(timeRemaining);
+    const timeRemaining = lobby.startsAt
+      ? Math.max(
+          0,
+          Math.floor(
+            (lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000,
+          ),
+        )
+      : undefined;
+
+    let timeDisplay: string = "";
+    if (timeRemaining === undefined) {
+      timeDisplay = "-s";
+    } else if (timeRemaining > 0) {
+      timeDisplay = renderDuration(timeRemaining);
+    } else {
+      timeDisplay = translateText("public_lobby.starting_game");
+    }
+
     const mapName = getMapName(lobby.gameConfig?.gameMap);
 
     const modifierLabels = this.getModifierLabels(
@@ -222,15 +235,10 @@ export class GameModeSelector extends LitElement {
                 </div>`
               : html`<div></div>`}
             <div class="shrink-0">
-              ${timeRemaining > 0
-                ? html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
-                    >${timeDisplay}</span
-                  >`
-                : html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded"
-                    >${translateText("public_lobby.starting_game")}</span
-                  >`}
+              <span
+                class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
+                >${timeDisplay}</span
+              >
             </div>
           </div>
         </div>
