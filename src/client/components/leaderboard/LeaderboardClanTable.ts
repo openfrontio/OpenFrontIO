@@ -196,113 +196,9 @@ export class LeaderboardClanTable extends LitElement {
 
     return html`
       <div class="h-full">
-        <div class="h-full flex flex-col border border-white/5 bg-black/20">
-          <table class="w-full text-sm border-collapse table-fixed shrink-0">
-            <colgroup>
-              <col style="width: 4rem" />
-              <col />
-              <col style="width: 8rem" />
-              <col style="width: 6rem" />
-              <col style="width: 6rem" />
-              <col style="width: 6rem" />
-            </colgroup>
-            <thead>
-              <tr
-                class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
-              >
-                <th class="py-4 px-4 text-center font-bold">
-                  ${translateText("leaderboard_modal.rank")}
-                </th>
-                <th class="py-4 px-4 text-left font-bold">
-                  ${translateText("leaderboard_modal.clan")}
-                </th>
-                <th
-                  class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
-                >
-                  <button
-                    class="whitespace-nowrap uppercase"
-                    @click=${() => this.handleSort("games")}
-                    aria-sort=${this.sortBy === "games"
-                      ? this.sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : "none"}
-                  >
-                    ${translateText("leaderboard_modal.games")}
-                    ${this.sortBy === "games"
-                      ? this.sortOrder === "asc"
-                        ? "↑"
-                        : "↓"
-                      : "↕"}
-                  </button>
-                </th>
-                <th
-                  class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
-                  title=${translateText("leaderboard_modal.win_score_tooltip")}
-                >
-                  <button
-                    class="whitespace-nowrap uppercase"
-                    @click=${() => this.handleSort("winScore")}
-                    aria-sort=${this.sortBy === "winScore"
-                      ? this.sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : "none"}
-                  >
-                    ${translateText("leaderboard_modal.win_score")}
-                    ${this.sortBy === "winScore"
-                      ? this.sortOrder === "asc"
-                        ? "↑"
-                        : "↓"
-                      : "↕"}
-                  </button>
-                </th>
-                <th
-                  class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
-                  title=${translateText("leaderboard_modal.loss_score_tooltip")}
-                >
-                  <button
-                    class="whitespace-nowrap uppercase"
-                    @click=${() => this.handleSort("lossScore")}
-                    aria-sort=${this.sortBy === "lossScore"
-                      ? this.sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : "none"}
-                  >
-                    ${translateText("leaderboard_modal.loss_score")}
-                    ${this.sortBy === "lossScore"
-                      ? this.sortOrder === "asc"
-                        ? "↑"
-                        : "↓"
-                      : "↕"}
-                  </button>
-                </th>
-                <th
-                  class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors"
-                >
-                  <button
-                    class="whitespace-nowrap uppercase"
-                    @click=${() => this.handleSort("ratio")}
-                    aria-sort=${this.sortBy === "ratio"
-                      ? this.sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : "none"}
-                  >
-                    ${translateText("leaderboard_modal.win_loss_ratio")}
-                    ${this.sortBy === "ratio"
-                      ? this.sortOrder === "asc"
-                        ? "↑"
-                        : "↓"
-                      : "↕"}
-                  </button>
-                </th>
-              </tr>
-            </thead>
-          </table>
+        <div class="h-full border border-white/5 bg-black/20">
           <div
-            class="flex-1 overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20"
+            class="h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20"
           >
             <table class="w-full text-sm border-collapse table-fixed">
               <colgroup>
@@ -313,6 +209,104 @@ export class LeaderboardClanTable extends LitElement {
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
               </colgroup>
+              <thead class="sticky top-0 z-10">
+                <tr
+                  class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-[#1e2433]"
+                >
+                  <th class="py-4 px-4 text-center font-bold">
+                    ${translateText("leaderboard_modal.rank")}
+                  </th>
+                  <th class="py-4 px-4 text-left font-bold">
+                    ${translateText("leaderboard_modal.clan")}
+                  </th>
+                  <th
+                    class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
+                  >
+                    <button
+                      class="whitespace-nowrap uppercase"
+                      @click=${() => this.handleSort("games")}
+                      aria-sort=${this.sortBy === "games"
+                        ? this.sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"}
+                    >
+                      ${translateText("leaderboard_modal.games")}
+                      ${this.sortBy === "games"
+                        ? this.sortOrder === "asc"
+                          ? "↑"
+                          : "↓"
+                        : "↕"}
+                    </button>
+                  </th>
+                  <th
+                    class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
+                    title=${translateText(
+                      "leaderboard_modal.win_score_tooltip",
+                    )}
+                  >
+                    <button
+                      class="whitespace-nowrap uppercase"
+                      @click=${() => this.handleSort("winScore")}
+                      aria-sort=${this.sortBy === "winScore"
+                        ? this.sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"}
+                    >
+                      ${translateText("leaderboard_modal.win_score")}
+                      ${this.sortBy === "winScore"
+                        ? this.sortOrder === "asc"
+                          ? "↑"
+                          : "↓"
+                        : "↕"}
+                    </button>
+                  </th>
+                  <th
+                    class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
+                    title=${translateText(
+                      "leaderboard_modal.loss_score_tooltip",
+                    )}
+                  >
+                    <button
+                      class="whitespace-nowrap uppercase"
+                      @click=${() => this.handleSort("lossScore")}
+                      aria-sort=${this.sortBy === "lossScore"
+                        ? this.sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"}
+                    >
+                      ${translateText("leaderboard_modal.loss_score")}
+                      ${this.sortBy === "lossScore"
+                        ? this.sortOrder === "asc"
+                          ? "↑"
+                          : "↓"
+                        : "↕"}
+                    </button>
+                  </th>
+                  <th
+                    class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors"
+                  >
+                    <button
+                      class="whitespace-nowrap uppercase"
+                      @click=${() => this.handleSort("ratio")}
+                      aria-sort=${this.sortBy === "ratio"
+                        ? this.sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"}
+                    >
+                      ${translateText("leaderboard_modal.win_loss_ratio")}
+                      ${this.sortBy === "ratio"
+                        ? this.sortOrder === "asc"
+                          ? "↑"
+                          : "↓"
+                        : "↕"}
+                    </button>
+                  </th>
+                </tr>
+              </thead>
               <tbody>
                 ${sorted.map((clan, index) => {
                   const displayRank = index + 1;
@@ -369,14 +363,14 @@ export class LeaderboardClanTable extends LitElement {
                       <td
                         class="py-3 px-4 text-right font-mono text-green-400/90"
                       >
-                        ${clan.weightedWins.toLocaleString("fullwide", {
+                        ${clan.weightedWins.toLocaleString(undefined, {
                           maximumFractionDigits: 1,
                         })}
                       </td>
                       <td
                         class="py-3 px-4 text-right font-mono text-red-400/90"
                       >
-                        ${clan.weightedLosses.toLocaleString("fullwide", {
+                        ${clan.weightedLosses.toLocaleString(undefined, {
                           maximumFractionDigits: 1,
                         })}
                       </td>
@@ -387,7 +381,7 @@ export class LeaderboardClanTable extends LitElement {
                             1
                               ? "text-green-400"
                               : "text-red-400"}"
-                            >${clan.weightedWLRatio.toLocaleString("fullwide", {
+                            >${clan.weightedWLRatio.toLocaleString(undefined, {
                               maximumFractionDigits: 2,
                             })}</span
                           >

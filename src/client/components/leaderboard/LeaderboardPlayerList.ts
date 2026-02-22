@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { PlayerLeaderboardEntry } from "../../../core/ApiSchemas";
 import { RankedType } from "../../../core/game/Game";
@@ -210,7 +210,6 @@ export class LeaderboardPlayerList extends LitElement {
   private renderPlayerRow(player: PlayerLeaderboardEntry) {
     const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
     const displayRank = player.rank;
-    const winRate = player.games > 0 ? player.wins / player.games : 0;
 
     const rankColor =
       {
@@ -258,23 +257,17 @@ export class LeaderboardPlayerList extends LitElement {
         </td>
         <td class="py-3 px-4 text-right">
           <span class="font-mono text-white font-medium">${player.elo}</span>
-          <span class="text-[10px] text-white/30 ml-1"
-            >${translateText("leaderboard_modal.elo")}</span
-          >
         </td>
         <td class="py-3 px-4 text-right">
           <span class="font-mono text-white font-medium">${player.games}</span>
-          <span class="text-[10px] text-white/30 uppercase ml-1"
-            >${translateText("leaderboard_modal.games")}</span
-          >
         </td>
         <td class="py-3 px-4 text-right pr-6">
           <div class="inline-flex flex-col items-end">
             <span
-              class="font-mono font-bold ${winRate >= 0.5
+              class="font-mono font-bold ${player.winRate >= 0.5
                 ? "text-green-400"
                 : "text-red-400"}"
-              >${(winRate * 100).toFixed(1)}%</span
+              >${(player.winRate * 100).toFixed(1)}%</span
             >
             <span
               class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
@@ -374,41 +367,9 @@ export class LeaderboardPlayerList extends LitElement {
 
     return html`
       <div class="h-full">
-        <div
-          class="h-full flex flex-col border border-white/5 bg-black/20 relative"
-        >
-          <table class="w-full text-sm border-collapse table-fixed shrink-0">
-            <colgroup>
-              <col style="width: 4rem" />
-              <col />
-              <col style="width: 6rem" />
-              <col style="width: 6rem" />
-              <col style="width: 6rem" />
-            </colgroup>
-            <thead>
-              <tr
-                class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/2"
-              >
-                <th class="py-4 px-4 text-center font-bold">
-                  ${translateText("leaderboard_modal.rank")}
-                </th>
-                <th class="py-4 px-4 text-left font-bold">
-                  ${translateText("leaderboard_modal.player")}
-                </th>
-                <th class="py-4 px-4 text-right font-bold">
-                  ${translateText("leaderboard_modal.elo")}
-                </th>
-                <th class="py-4 px-4 text-right font-bold">
-                  ${translateText("leaderboard_modal.games")}
-                </th>
-                <th class="py-4 px-4 text-right font-bold pr-6">
-                  ${translateText("leaderboard_modal.win_loss_ratio")}
-                </th>
-              </tr>
-            </thead>
-          </table>
+        <div class="h-full border border-white/5 bg-black/20 relative">
           <div
-            class="virtualizer-container flex-1 overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
+            class="virtualizer-container h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
               .showStickyUser
               ? "pb-20"
               : "pb-0"}"
@@ -422,6 +383,27 @@ export class LeaderboardPlayerList extends LitElement {
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
               </colgroup>
+              <thead class="sticky top-0 z-10">
+                <tr
+                  class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-[#1e2433]"
+                >
+                  <th class="py-4 px-4 text-center font-bold">
+                    ${translateText("leaderboard_modal.rank")}
+                  </th>
+                  <th class="py-4 px-4 text-left font-bold">
+                    ${translateText("leaderboard_modal.player")}
+                  </th>
+                  <th class="py-4 px-4 text-right font-bold">
+                    ${translateText("leaderboard_modal.elo")}
+                  </th>
+                  <th class="py-4 px-4 text-right font-bold">
+                    ${translateText("leaderboard_modal.games")}
+                  </th>
+                  <th class="py-4 px-4 text-right font-bold pr-6">
+                    ${translateText("leaderboard_modal.win_loss_ratio")}
+                  </th>
+                </tr>
+              </thead>
               <tbody>
                 ${this.playerData.map((player) => this.renderPlayerRow(player))}
               </tbody>
@@ -436,7 +418,7 @@ export class LeaderboardPlayerList extends LitElement {
                       .showStickyUser
                       ? "opacity-100 translate-y-0"
                       : "opacity-0 translate-y-3 pointer-events-none"}"
-                    aria-hidden=${this.showStickyUser ? "false" : "true"}
+                    aria-hidden=${this.showStickyUser ? nothing : "true"}
                   >
                     <div class="w-10 text-center">
                       <div
@@ -453,7 +435,12 @@ export class LeaderboardPlayerList extends LitElement {
                         )}</span
                       >
                       <span class="font-bold text-white text-base"
-                        >${this.currentUserEntry.username}</span
+                        >${this.currentUserEntry.clanTag
+                          ? this.currentUserEntry.username.replace(
+                              /^\[.*?\]\s*/,
+                              "",
+                            )
+                          : this.currentUserEntry.username}</span
                       >
                     </div>
                     <div class="flex flex-col items-end w-20">
