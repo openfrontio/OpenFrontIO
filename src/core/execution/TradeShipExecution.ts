@@ -87,6 +87,10 @@ export class TradeShipExecution implements Execution {
       const nearestPort = findClosestBy(
         tradeShipOwner.units(UnitType.Port),
         (port) => this.mg.manhattanDist(port.tile(), curTile),
+        (port) =>
+          port.isActive() &&
+          !port.isMarkedForDeletion() &&
+          !port.isUnderConstruction(),
       );
       if (nearestPort === null) {
         this.tradeShip.delete(false);
