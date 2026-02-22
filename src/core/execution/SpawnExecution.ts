@@ -49,6 +49,7 @@ export class SpawnExecution implements Execution {
       return;
     }
 
+    player.tiles().forEach((t) => player.relinquish(t));
     const spawn = this.getSpawn(this.tile);
 
     if (!spawn) {
@@ -56,7 +57,6 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    player.tiles().forEach((t) => player.relinquish(t));
     spawn.tiles.forEach((t) => {
       player.conquer(t);
     });
