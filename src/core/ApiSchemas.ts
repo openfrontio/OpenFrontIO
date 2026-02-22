@@ -161,7 +161,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
   username: LeaderboardUsernameSchema,
-  clanTag: LeaderboardClanTagSchema.optional(),
+  clanTag: LeaderboardClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
