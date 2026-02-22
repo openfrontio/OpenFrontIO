@@ -332,7 +332,7 @@ export class PlayerImpl implements Player {
   }
 
   tiles(): ReadonlySet<TileRef> {
-    return new Set(this._tiles.values()) as Set<TileRef>;
+    return this._tiles;
   }
 
   borderTiles(): ReadonlySet<TileRef> {
