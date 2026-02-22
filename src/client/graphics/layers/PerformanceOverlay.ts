@@ -63,6 +63,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private tickLayersExpanded: boolean = false;
 
+  @state()
+  private overlayWidthPx: number | null = null;
+
   private frameCount: number = 0;
   private lastTime: number = 0;
   private frameTimes: number[] = [];
@@ -77,6 +80,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private tickHead60s: number = 0;
 
   private copyStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  private resizeState: {
+    pointerId: number;
+    startClientX: number;
+    startWidthPx: number;
+    pendingWidthPx: number;
+  } | null = null;
 
   // Smoothed per-layer render timings (EMA over recent frames)
   private layerStats: Map<
@@ -147,7 +157,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       cursor: move;
       transition: none;
       box-sizing: border-box;
-      width: min(460px, calc(100vw - 16px));
+      width: var(--overlay-width, min(460px, calc(100vw - 16px)));
       max-width: calc(100vw - 16px);
       max-height: calc(100vh - 16px);
       overflow: auto;
@@ -184,6 +194,28 @@ export class PerformanceOverlay extends LitElement implements Layer {
       cursor: pointer;
       user-select: none;
       pointer-events: auto;
+    }
+
+    .resize-handle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: 12px;
+      cursor: ew-resize;
+      touch-action: none;
+      pointer-events: auto;
+    }
+
+    .resize-handle::after {
+      content: "";
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      right: 4px;
+      width: 2px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.25);
     }
 
     .performance-good {
@@ -337,6 +369,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
   setVisible(visible: boolean) {
     this.isVisible = visible;
     FrameProfiler.setEnabled(visible);
+
+    if (!visible && this.resizeState) {
+      globalThis.removeEventListener("pointermove", this.onResizePointerMove);
+      globalThis.removeEventListener("pointerup", this.onResizePointerUp);
+      globalThis.removeEventListener("pointercancel", this.onResizePointerUp);
+      this.resizeState = null;
+    }
+
     this.requestUpdate();
   }
 
@@ -353,7 +393,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
       target.classList.contains("close-button") ||
       target.classList.contains("reset-button") ||
       target.classList.contains("copy-json-button") ||
-      target.classList.contains("collapse-button")
+      target.classList.contains("collapse-button") ||
+      target.classList.contains("resize-handle")
     ) {
       return;
     }
@@ -378,7 +419,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const margin = 8;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const overlayWidth = Math.min(420, Math.max(0, viewportWidth - margin * 2));
+    const defaultWidth = Math.min(460, Math.max(0, viewportWidth - margin * 2));
+    const overlayWidth = Math.min(
+      this.overlayWidthPx ?? defaultWidth,
+      viewportWidth - margin * 2,
+    );
 
     this.position = {
       x: Math.max(
@@ -395,6 +440,59 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.isDragging = false;
     document.removeEventListener("mousemove", this.handleMouseMove);
     document.removeEventListener("mouseup", this.handleMouseUp);
+  };
+
+  private onResizePointerMove = (e: PointerEvent) => {
+    if (!this.resizeState || e.pointerId !== this.resizeState.pointerId) return;
+
+    const margin = 8;
+    const minWidthPx = 260;
+    const viewportWidth = window.innerWidth;
+    const left = Math.max(margin, Math.min(this.position.x, viewportWidth));
+    const maxWidthPx = Math.max(minWidthPx, viewportWidth - left - margin);
+
+    const delta = e.clientX - this.resizeState.startClientX;
+    const nextWidth = this.resizeState.startWidthPx + delta;
+    const clamped = Math.max(minWidthPx, Math.min(maxWidthPx, nextWidth));
+    this.resizeState.pendingWidthPx = clamped;
+
+    const overlay = this.renderRoot.querySelector<HTMLElement>(
+      ".performance-overlay",
+    );
+    overlay?.style.setProperty("--overlay-width", `${clamped}px`);
+  };
+
+  private onResizePointerUp = (e: PointerEvent) => {
+    if (!this.resizeState || e.pointerId !== this.resizeState.pointerId) return;
+
+    globalThis.removeEventListener("pointermove", this.onResizePointerMove);
+    globalThis.removeEventListener("pointerup", this.onResizePointerUp);
+    globalThis.removeEventListener("pointercancel", this.onResizePointerUp);
+
+    this.overlayWidthPx = this.resizeState.pendingWidthPx;
+    this.resizeState = null;
+    this.requestUpdate();
+  };
+
+  private handleResizePointerDown = (e: PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const overlay = this.renderRoot.querySelector<HTMLElement>(
+      ".performance-overlay",
+    );
+    const startWidth = overlay?.getBoundingClientRect().width ?? 460;
+
+    this.resizeState = {
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startWidthPx: startWidth,
+      pendingWidthPx: startWidth,
+    };
+
+    globalThis.addEventListener("pointermove", this.onResizePointerMove);
+    globalThis.addEventListener("pointerup", this.onResizePointerUp);
+    globalThis.addEventListener("pointercancel", this.onResizePointerUp);
   };
 
   private handleReset = () => {
@@ -798,7 +896,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const margin = 8;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const overlayWidth = Math.min(420, Math.max(0, viewportWidth - margin * 2));
+    const defaultWidth = Math.min(460, Math.max(0, viewportWidth - margin * 2));
+    const overlayWidth = Math.min(
+      this.overlayWidthPx ?? defaultWidth,
+      viewportWidth - margin * 2,
+    );
     const maxLeft = Math.max(margin, viewportWidth - overlayWidth - margin);
     const clampedX = Math.max(margin, Math.min(this.position.x, maxLeft));
     const clampedY = Math.max(
@@ -826,10 +928,15 @@ export class PerformanceOverlay extends LitElement implements Layer {
         ? Math.max(...tickLayersToShow.map((l) => l.avg))
         : 1;
 
+    const overlayWidthStyle =
+      this.overlayWidthPx === null
+        ? ""
+        : `--overlay-width: ${this.overlayWidthPx}px;`;
+
     return html`
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
-        style="--left: ${clampedX}px; --top: ${clampedY}px; --transform: none;"
+        style="--left: ${clampedX}px; --top: ${clampedY}px; --transform: none; ${overlayWidthStyle}"
         @mousedown="${this.handleMouseDown}"
       >
         <button class="reset-button" @click="${this.handleReset}">
@@ -843,6 +950,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${copyLabel}
         </button>
         <button class="close-button" @click="${this.handleClose}">×</button>
+        <div
+          class="resize-handle"
+          @pointerdown=${this.handleResizePointerDown}
+        ></div>
         <div class="performance-line">
           ${translateText("performance_overlay.fps")}
           <span class="${this.getPerformanceColor(this.currentFPS)}"
