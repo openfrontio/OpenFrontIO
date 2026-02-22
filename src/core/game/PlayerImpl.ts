@@ -1155,7 +1155,7 @@ export class PlayerImpl implements Player {
     const bestSilo = findClosestBy(
       this.units(UnitType.MissileSilo),
       (silo) => mg.manhattanDist(silo.tile(), tile),
-      (silo) => !silo.isInCooldown() && !silo.isUnderConstruction(),
+      (silo) => silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
     );
 
     return bestSilo?.tile() ?? false;
@@ -1189,8 +1189,10 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const bestPort = findClosestBy(this.units(UnitType.Port), (port) =>
-      this.mg.manhattanDist(port.tile(), tile),
+    const bestPort = findClosestBy(
+      this.units(UnitType.Port),
+      (port) => this.mg.manhattanDist(port.tile(), tile),
+      (port) => port.isActive() && !port.isUnderConstruction(),
     );
 
     return bestPort?.tile() ?? false;
