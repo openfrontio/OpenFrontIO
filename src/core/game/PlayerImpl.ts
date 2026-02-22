@@ -1078,8 +1078,7 @@ export class PlayerImpl implements Player {
     const inSpawnPhase = mg.inSpawnPhase();
 
     const validTiles =
-      tile !== null &&
-      (units === undefined || units.some((u) => isStructureType(u)))
+      tile !== null && units.some((u) => isStructureType(u))
         ? this.validStructureSpawnTiles(tile)
         : [];
 
