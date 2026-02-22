@@ -429,7 +429,10 @@ export class GameRenderer {
   }
 
   renderGame() {
-    FrameProfiler.clear();
+    const shouldProfileFrame = FrameProfiler.isEnabled();
+    if (shouldProfileFrame) {
+      FrameProfiler.clear();
+    }
     const start = performance.now();
     // Set background
     this.context.fillStyle = this.game
@@ -463,9 +466,13 @@ export class GameRenderer {
         isTransformActive,
       );
 
-      const layerStart = FrameProfiler.start();
-      layer.renderLayer?.(this.context);
-      FrameProfiler.end(getProfileLabel(layer), layerStart);
+      if (shouldProfileFrame) {
+        const layerStart = FrameProfiler.start();
+        layer.renderLayer?.(this.context);
+        FrameProfiler.end(getProfileLabel(layer), layerStart);
+      } else {
+        layer.renderLayer?.(this.context);
+      }
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -473,15 +480,15 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    const layerDurations = FrameProfiler.consume();
-    if (FrameProfiler.isEnabled()) {
+    if (shouldProfileFrame) {
+      const layerDurations = FrameProfiler.consume();
       this.renderFramesSinceLastTick++;
       for (const [name, ms] of Object.entries(layerDurations)) {
         this.renderLayerDurationsSinceLastTick[name] =
           (this.renderLayerDurationsSinceLastTick[name] ?? 0) + ms;
       }
+      this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
     }
-    this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
 
     if (duration > 50) {
       console.warn(

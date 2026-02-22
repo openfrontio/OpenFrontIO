@@ -265,22 +265,40 @@ export class PerformanceOverlay extends LitElement implements Layer {
   }
 
   init() {
+    this.setVisible(this.userSettings.performanceOverlay());
+
     this.eventBus.on(TogglePerformanceOverlayEvent, () => {
-      this.userSettings.togglePerformanceOverlay();
-      this.setVisible(this.userSettings.performanceOverlay());
+      const nextVisible = !this.isVisible;
+      this.setVisible(nextVisible);
+      this.userSettings.set("settings.performanceOverlay", nextVisible);
     });
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
       this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
+    });
+
+    globalThis.addEventListener("user-settings-changed", (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        key?: string;
+        value?: unknown;
+      }>;
+      if (customEvent.detail?.key !== "settings.performanceOverlay") return;
+
+      const nextVisible = customEvent.detail.value === true;
+      if (this.isVisible === nextVisible) return;
+      this.setVisible(nextVisible);
     });
   }
 
   setVisible(visible: boolean) {
     this.isVisible = visible;
     FrameProfiler.setEnabled(visible);
+    this.requestUpdate();
   }
 
   private handleClose() {
-    this.userSettings.togglePerformanceOverlay();
+    const nextVisible = false;
+    this.setVisible(nextVisible);
+    this.userSettings.set("settings.performanceOverlay", nextVisible);
   }
 
   private handleMouseDown = (e: MouseEvent) => {
@@ -375,14 +393,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
     frameDuration: number,
     layerDurations?: Record<string, number>,
   ) {
-    const wasVisible = this.isVisible;
-    this.isVisible = this.userSettings.performanceOverlay();
-
-    // Update FrameProfiler enabled state when visibility changes
-    if (wasVisible !== this.isVisible) {
-      FrameProfiler.setEnabled(this.isVisible);
-    }
-
     if (!this.isVisible) return;
 
     const now = performance.now();
@@ -478,7 +488,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     frameCount: number,
     layerDurations: Record<string, number>,
   ) {
-    if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+    if (!this.isVisible) return;
 
     const alpha = 0.2; // smoothing factor for EMA
 
@@ -514,7 +524,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   }
 
   updateTickLayerMetrics(tickLayerDurations: Record<string, number>) {
-    if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+    if (!this.isVisible) return;
 
     const alpha = 0.2; // smoothing factor for EMA
 
@@ -555,7 +565,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   }
 
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
-    if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+    if (!this.isVisible) return;
 
     // Update tick execution duration stats
     if (tickExecutionDuration !== undefined) {
