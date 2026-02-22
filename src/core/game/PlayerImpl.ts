@@ -1155,7 +1155,8 @@ export class PlayerImpl implements Player {
     const bestSilo = findClosestBy(
       this.units(UnitType.MissileSilo),
       (silo) => mg.manhattanDist(silo.tile(), tile),
-      (silo) => silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
+      (silo) =>
+        silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
     );
 
     return bestSilo?.tile() ?? false;
