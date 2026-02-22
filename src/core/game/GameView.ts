@@ -25,7 +25,7 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
@@ -648,9 +648,13 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
-    });
+    const packed = this.lastUpdate.packedTileUpdates;
+    for (let i = 0; i + 1 < packed.length; i += 2) {
+      const tile = packed[i];
+      const state = packed[i + 1];
+      this.updateTile(tile, state);
+      this.updatedTiles.push(tile);
+    }
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
@@ -949,11 +953,11 @@ export class GameView implements GameMap {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): void {
+    this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

@@ -514,6 +514,10 @@ export class GameServer {
     }
   }
 
+  public setStartsAt(startsAt: number) {
+    this.startsAt = startsAt;
+  }
+
   public numClients(): number {
     return this.activeClients.length;
   }
@@ -795,7 +799,7 @@ export class GameServer {
 
     // Public Games
 
-    const lessThanLifetime = Date.now() < this.startsAt!;
+    const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     const notEnoughPlayers =
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&

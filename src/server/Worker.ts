@@ -566,13 +566,12 @@ async function startMatchmakingPolling(gm: GameManager) {
         log.info(`Lobby poll successful:`, data);
 
         if (data.assignment) {
-          const gameConfig = playlist.get1v1Config();
-          const game = gm.createGame(gameId, gameConfig);
-          setTimeout(() => {
-            // Wait a few seconds to allow clients to connect.
-            console.log(`Starting game ${gameId}`);
-            game.start();
-          }, 7000);
+          gm.createGame(
+            gameId,
+            playlist.get1v1Config(),
+            undefined,
+            Date.now() + 7000,
+          );
         }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
