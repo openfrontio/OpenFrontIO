@@ -1083,9 +1083,10 @@ export class PlayerImpl implements Player {
         ? this.validStructureSpawnTiles(tile)
         : [];
 
-    const result: BuildableUnit[] = [];
+    const len = units.length;
+    const result = new Array<BuildableUnit>(len);
 
-    for (let i = 0, len = units.length; i < len; i++) {
+    for (let i = 0; i < len; i++) {
       const u = units[i];
 
       const cost = config.unitInfo(u).cost(mg, this);
@@ -1105,7 +1106,7 @@ export class PlayerImpl implements Player {
         canBuild = this.canSpawnUnitType(u, tile, validTiles);
       }
 
-      result.push({
+      result[i] = {
         type: u,
         canBuild,
         canUpgrade,
@@ -1114,7 +1115,7 @@ export class PlayerImpl implements Player {
           canBuild !== false ? rail.overlappingRailroads(canBuild) : [],
         ghostRailPaths:
           canBuild !== false ? rail.computeGhostRailPaths(u, canBuild) : [],
-      });
+      };
     }
 
     return result;
