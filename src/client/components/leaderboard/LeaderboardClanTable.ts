@@ -195,9 +195,9 @@ export class LeaderboardClanTable extends LitElement {
     const maxGames = Math.max(...clans.map((c) => c.games), 1);
 
     return html`
-      <div class="h-full px-6 pb-6">
+      <div class="h-full">
         <div
-          class="h-full overflow-y-auto overflow-x-auto rounded-xl border border-white/5 bg-black/20"
+          class="h-full overflow-y-auto overflow-x-auto border border-white/5 bg-black/20"
         >
           <table class="w-full text-sm border-collapse">
             <thead>
@@ -214,7 +214,7 @@ export class LeaderboardClanTable extends LitElement {
                   class="py-4 px-4 text-right font-bold w-32 cursor-pointer hover:text-white/60 transition-colors"
                 >
                   <button
-                    class="whitespace-nowrap"
+                    class="whitespace-nowrap uppercase"
                     @click=${() => this.handleSort("games")}
                     aria-sort=${this.sortBy === "games"
                       ? this.sortOrder === "asc"
@@ -235,7 +235,7 @@ export class LeaderboardClanTable extends LitElement {
                   title=${translateText("leaderboard_modal.win_score_tooltip")}
                 >
                   <button
-                    class="whitespace-nowrap"
+                    class="whitespace-nowrap uppercase"
                     @click=${() => this.handleSort("winScore")}
                     aria-sort=${this.sortBy === "winScore"
                       ? this.sortOrder === "asc"
@@ -256,7 +256,7 @@ export class LeaderboardClanTable extends LitElement {
                   title=${translateText("leaderboard_modal.loss_score_tooltip")}
                 >
                   <button
-                    class="whitespace-nowrap"
+                    class="whitespace-nowrap uppercase"
                     @click=${() => this.handleSort("lossScore")}
                     aria-sort=${this.sortBy === "lossScore"
                       ? this.sortOrder === "asc"
@@ -276,7 +276,7 @@ export class LeaderboardClanTable extends LitElement {
                   class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors"
                 >
                   <button
-                    class="whitespace-nowrap"
+                    class="whitespace-nowrap uppercase"
                     @click=${() => this.handleSort("ratio")}
                     aria-sort=${this.sortBy === "ratio"
                       ? this.sortOrder === "asc"
