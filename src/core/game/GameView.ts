@@ -657,6 +657,7 @@ export class GameView implements GameMap {
       this._myUsername,
       this._myClanTag,
     );
+    const myPlayerUpdateCandidates: PlayerUpdate[] = [];
 
     gu.updates[GameUpdateType.Player].forEach((pu) => {
       const isMyPlayerUpdate =
@@ -667,11 +668,7 @@ export class GameView implements GameMap {
           pu.displayName === myDisplayName);
 
       if (isMyPlayerUpdate) {
-        pu.name = this._myUsername;
-        pu.displayName = formatPlayerDisplayName(
-          this._myUsername,
-          this._myClanTag,
-        );
+        myPlayerUpdateCandidates.push(pu);
       }
 
       this.smallIDToID.set(pu.smallID, pu.id);
@@ -694,11 +691,14 @@ export class GameView implements GameMap {
         );
         this._players.set(pu.id, player);
       }
-
-      if (isMyPlayerUpdate) {
-        this._myPlayer = player;
-      }
     });
+
+    if (myPlayerUpdateCandidates.length === 1) {
+      const myUpdate = myPlayerUpdateCandidates[0];
+      myUpdate.name = this._myUsername;
+      myUpdate.displayName = myDisplayName;
+      this._myPlayer = this._players.get(myUpdate.id) ?? null;
+    }
 
     this._myPlayer ??= this.playerByClientID(this._myClientID);
     if (this._myPlayer === null) {
