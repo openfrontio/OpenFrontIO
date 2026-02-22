@@ -58,24 +58,32 @@ describe("TradeShipExecution", () => {
       tile: vi.fn(() => 56),
       owner: vi.fn(() => pirate),
       isActive: vi.fn(() => true),
+      isUnderConstruction: vi.fn(() => false),
+      isMarkedForDeletion: vi.fn(() => false),
     } as any;
 
     piratePort2 = {
       tile: vi.fn(() => 75),
       owner: vi.fn(() => pirate),
       isActive: vi.fn(() => true),
+      isUnderConstruction: vi.fn(() => false),
+      isMarkedForDeletion: vi.fn(() => false),
     } as any;
 
     srcPort = {
       tile: vi.fn(() => 10),
       owner: vi.fn(() => origOwner),
       isActive: vi.fn(() => true),
+      isUnderConstruction: vi.fn(() => false),
+      isMarkedForDeletion: vi.fn(() => false),
     } as any;
 
     dstPort = {
       tile: vi.fn(() => 100),
       owner: vi.fn(() => dstOwner),
       isActive: vi.fn(() => true),
+      isUnderConstruction: vi.fn(() => false),
+      isMarkedForDeletion: vi.fn(() => false),
     } as any;
 
     tradeShip = {
