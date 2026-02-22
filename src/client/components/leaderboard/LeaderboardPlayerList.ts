@@ -22,7 +22,7 @@ export class LeaderboardPlayerList extends LitElement {
   private currentUserId: string | null = null;
   private currentUserIdLoaded = false;
 
-  @query(".virtualizer-container") private virtualizerContainer?: HTMLElement;
+  @query(".scroll-container") private scrollContainer?: HTMLElement;
 
   createRenderRoot() {
     return this;
@@ -151,12 +151,12 @@ export class LeaderboardPlayerList extends LitElement {
       return;
     }
 
-    if (!this.virtualizerContainer || !this.isVisible()) {
+    if (!this.scrollContainer || !this.isVisible()) {
       this.showStickyUser = false;
       return;
     }
 
-    const currentRow = this.virtualizerContainer.querySelector(
+    const currentRow = this.scrollContainer.querySelector(
       '[data-current-user="true"]',
     ) as HTMLElement | null;
 
@@ -165,7 +165,7 @@ export class LeaderboardPlayerList extends LitElement {
       return;
     }
 
-    const containerRect = this.virtualizerContainer.getBoundingClientRect();
+    const containerRect = this.scrollContainer.getBoundingClientRect();
     const rowRect = currentRow.getBoundingClientRect();
     const isVisible =
       rowRect.top >= containerRect.top &&
@@ -187,12 +187,12 @@ export class LeaderboardPlayerList extends LitElement {
   private maybeLoadMorePlayers() {
     if (this.isLoading || this.isLoadingMore) return;
     if (!this.playerHasMore || this.error || this.loadMoreError) return;
-    if (!this.virtualizerContainer || !this.isVisible()) return;
+    if (!this.scrollContainer || !this.isVisible()) return;
 
     const threshold = 64 * 3;
-    const scrollTop = this.virtualizerContainer.scrollTop;
-    const containerHeight = this.virtualizerContainer.clientHeight;
-    const scrollHeight = this.virtualizerContainer.scrollHeight;
+    const scrollTop = this.scrollContainer.scrollTop;
+    const containerHeight = this.scrollContainer.clientHeight;
+    const scrollHeight = this.scrollContainer.scrollHeight;
     const nearBottom = scrollTop + containerHeight >= scrollHeight - threshold;
 
     if (containerHeight === 0 || scrollHeight === 0) return; // guard
@@ -245,7 +245,7 @@ export class LeaderboardPlayerList extends LitElement {
               ? html`<div
                   class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
                 >
-                  ${player.clanTag.replace(/^\[|\]$/g, "")}
+                  ${player.clanTag}
                 </div>`
               : ""}
             <span class="font-bold text-blue-300 truncate text-base"
@@ -369,7 +369,7 @@ export class LeaderboardPlayerList extends LitElement {
       <div class="h-full">
         <div class="h-full border border-white/5 bg-black/20 relative">
           <div
-            class="virtualizer-container h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
+            class="scroll-container h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
               .showStickyUser
               ? "pb-20"
               : "pb-0"}"
