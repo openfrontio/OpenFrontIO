@@ -86,7 +86,7 @@ export class GameModeSelector extends LitElement {
 
     return html`
       <div
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
+        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto pb-4 lg:pb-0"
       >
         ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
         ${teams
