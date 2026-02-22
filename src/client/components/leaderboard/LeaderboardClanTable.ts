@@ -214,6 +214,7 @@ export class LeaderboardClanTable extends LitElement {
                   class="py-4 px-4 text-right font-bold w-32 cursor-pointer hover:text-white/60 transition-colors"
                 >
                   <button
+                    class="whitespace-nowrap"
                     @click=${() => this.handleSort("games")}
                     aria-sort=${this.sortBy === "games"
                       ? this.sortOrder === "asc"
@@ -230,10 +231,11 @@ export class LeaderboardClanTable extends LitElement {
                   </button>
                 </th>
                 <th
-                  class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors"
+                  class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
                   title=${translateText("leaderboard_modal.win_score_tooltip")}
                 >
                   <button
+                    class="whitespace-nowrap"
                     @click=${() => this.handleSort("winScore")}
                     aria-sort=${this.sortBy === "winScore"
                       ? this.sortOrder === "asc"
@@ -250,10 +252,11 @@ export class LeaderboardClanTable extends LitElement {
                   </button>
                 </th>
                 <th
-                  class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors"
+                  class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
                   title=${translateText("leaderboard_modal.loss_score_tooltip")}
                 >
                   <button
+                    class="whitespace-nowrap"
                     @click=${() => this.handleSort("lossScore")}
                     aria-sort=${this.sortBy === "lossScore"
                       ? this.sortOrder === "asc"
@@ -345,15 +348,13 @@ export class LeaderboardClanTable extends LitElement {
                       </div>
                     </td>
                     <td
-                      class="py-3 px-4 text-right font-mono text-green-400/90 hidden md:table-cell"
+                      class="py-3 px-4 text-right font-mono text-green-400/90"
                     >
                       ${clan.weightedWins.toLocaleString("fullwide", {
                         maximumFractionDigits: 1,
                       })}
                     </td>
-                    <td
-                      class="py-3 px-4 text-right font-mono text-red-400/90 hidden md:table-cell"
-                    >
+                    <td class="py-3 px-4 text-right font-mono text-red-400/90">
                       ${clan.weightedLosses.toLocaleString("fullwide", {
                         maximumFractionDigits: 1,
                       })}

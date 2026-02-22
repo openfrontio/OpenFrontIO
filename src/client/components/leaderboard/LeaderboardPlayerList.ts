@@ -263,7 +263,7 @@ export class LeaderboardPlayerList extends LitElement {
             >
           </div>
         </div>
-        <div class="flex-col items-end gap-1 w-20 shrink-0 hidden md:flex">
+        <div class="flex flex-col items-end gap-1 w-20 shrink-0">
           <div class="text-right font-mono text-white font-medium">
             ${player.games}
             <span class="text-[10px] text-white/30 uppercase"
@@ -378,7 +378,7 @@ export class LeaderboardPlayerList extends LitElement {
         <div
           class="h-full overflow-y-auto overflow-x-auto rounded-xl border border-white/5 bg-black/20"
         >
-          <div class="min-w-[28rem] flex flex-col h-full">
+          <div class="min-w-[36rem] flex flex-col h-full">
             <div
               class="flex items-center text-[10px] uppercase tracking-wider text-white/40 font-bold px-4 py-4 border-b border-white/5 bg-white/2"
             >
@@ -391,7 +391,7 @@ export class LeaderboardPlayerList extends LitElement {
               <div class="w-20 text-right">
                 ${translateText("leaderboard_modal.elo")}
               </div>
-              <div class="w-20 text-right hidden md:block">
+              <div class="w-20 text-right">
                 ${translateText("leaderboard_modal.games")}
               </div>
               <div class="w-20 text-right pr-4">
