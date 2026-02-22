@@ -15,7 +15,6 @@ import {
 import {
   createPartialGameRecord,
   decompressGameRecord,
-  getClanTag,
   replacer,
 } from "../core/Util";
 import { getPersistentID } from "./Auth";
@@ -240,10 +239,10 @@ export class LocalServer {
       {
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
+        clanTag: this.lobbyConfig.playerClanTag ?? undefined,
         clientID: this.clientID!,
         stats: this.allPlayersStats[this.clientID!],
         cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
-        clanTag: getClanTag(this.lobbyConfig.playerName) ?? undefined,
       },
     ];
     if (this.lobbyConfig.gameStartInfo === undefined) {

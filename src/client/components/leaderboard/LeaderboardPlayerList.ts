@@ -249,9 +249,7 @@ export class LeaderboardPlayerList extends LitElement {
                 </div>`
               : ""}
             <span class="font-bold text-blue-300 truncate text-base"
-              >${player.clanTag
-                ? player.username.replace(/^\[.*?\]\s*/, "")
-                : player.username}</span
+              >${player.username}</span
             >
           </div>
         </td>
@@ -435,12 +433,7 @@ export class LeaderboardPlayerList extends LitElement {
                         )}</span
                       >
                       <span class="font-bold text-white text-base"
-                        >${this.currentUserEntry.clanTag
-                          ? this.currentUserEntry.username.replace(
-                              /^\[.*?\]\s*/,
-                              "",
-                            )
-                          : this.currentUserEntry.username}</span
+                        >${this.currentUserEntry.username}</span
                       >
                     </div>
                     <div class="flex flex-col items-end w-20">

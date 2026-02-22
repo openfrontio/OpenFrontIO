@@ -283,7 +283,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.addEvent({
         description: translateText("events_display.about_to_expire", {
-          name: other.name(),
+          name: other.displayName(),
         }),
         type: MessageType.RENEW_ALLIANCE,
         duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
@@ -296,7 +296,7 @@ export class EventsDisplay extends LitElement implements Layer {
           },
           {
             text: translateText("events_display.renew_alliance", {
-              name: other.name(),
+              name: other.displayName(),
             }),
             className: "btn",
             action: () =>
@@ -460,7 +460,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.request_alliance", {
-        name: requestor.name(),
+        name: requestor.displayName(),
       }),
       buttons: [
         {
@@ -525,7 +525,7 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
     this.addEvent({
       description: translateText("events_display.alliance_request_status", {
-        name: recipient.name(),
+        name: recipient.displayName(),
         status: update.accepted
           ? translateText("events_display.alliance_accepted")
           : translateText("events_display.alliance_rejected"),
@@ -569,7 +569,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.addEvent({
         description: translateText("events_display.betrayal_description", {
-          name: betrayed.name(),
+          name: betrayed.displayName(),
           malusPercent: malusPercent,
           durationText: durationText,
         }),
@@ -589,7 +589,7 @@ export class EventsDisplay extends LitElement implements Layer {
       ];
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
-          name: traitor.name(),
+          name: traitor.displayName(),
         }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
@@ -616,7 +616,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.alliance_expired", {
-        name: other.name(),
+        name: other.displayName(),
       }),
       type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
@@ -639,8 +639,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.attack_request", {
-        name: other.name(),
-        target: target.name(),
+        name: other.displayName(),
+        target: target.displayName(),
       }),
       type: MessageType.ATTACK_REQUEST,
       highlight: true,

@@ -4,7 +4,6 @@ import { GameEndInfo } from "../core/Schemas";
 import { GameMapType, hasUnusualThumbnailSize } from "../core/game/Game";
 import { fetchGameById } from "./Api";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { UsernameInput } from "./UsernameInput";
 import { renderDuration, translateText } from "./Utils";
 import {
   PlayerInfo,
@@ -28,7 +27,7 @@ export class GameInfoModal extends LitElement {
   @property({ type: String }) gameId: string | null = null;
   @property({ type: String }) rankType = RankType.Lifetime;
 
-  @state() private username: string | null = null;
+  @state() private currentClientID: string | null = null;
   @state() private isLoadingGame: boolean = true;
 
   private ranking: Ranking | null = null;
@@ -155,7 +154,7 @@ export class GameInfoModal extends LitElement {
               .score=${this.ranking?.score(player, this.rankType) ?? 0}
               .rankType=${this.rankType}
               .bestScore=${bestScore}
-              .currentPlayer=${this.username === player.rawUsername}
+              .currentPlayer=${this.currentClientID === player.id}
             ></player-row>
           `,
         )}
@@ -186,26 +185,16 @@ export class GameInfoModal extends LitElement {
     }
   }
 
-  public loadUserName() {
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
-    if (usernameInput) {
-      this.username = usernameInput.getCurrentUsername();
-    }
-  }
-
-  public async loadGame(gameId: string) {
+  public async loadGame(gameId: string, currentClientID: string | null = null) {
     try {
       this.isLoadingGame = true;
-      this.loadUserName();
+      this.currentClientID = currentClientID;
       const session = await fetchGameById(gameId);
       if (!session) return;
 
       this.gameInfo = session.info;
       this.ranking = new Ranking(session);
       this.updateRanking();
-      this.isLoadingGame = false;
       await this.loadMapImage(session.info.config.gameMap);
     } catch (err) {
       console.error("Failed to load game:", err);

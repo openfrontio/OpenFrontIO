@@ -439,10 +439,10 @@ export async function startWorker() {
           }
         }
 
-        // Censor profane usernames server-side (don't reject, just rename)
-        const censoredUsername = privilegeRefresher
+        // Censor profane usernames and clan tags server-side (don't reject, just rename)
+        const censored = privilegeRefresher
           .get()
-          .censorUsername(clientMsg.username);
+          .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
         // Create client and add to game
         const client = new Client(
@@ -452,8 +452,8 @@ export async function startWorker() {
           roles,
           flares,
           ip,
-          censoredUsername,
-          clientMsg.username,
+          censored.username,
+          censored.clanTag,
           ws,
           cosmeticResult.cosmetics,
         );

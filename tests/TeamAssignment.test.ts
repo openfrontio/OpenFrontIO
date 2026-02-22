@@ -5,12 +5,13 @@ const teams = [ColoredTeams.Red, ColoredTeams.Blue];
 
 describe("assignTeams", () => {
   const createPlayer = (id: string, clan?: string): PlayerInfo => {
-    const name = clan ? `[${clan}]Player ${id}` : `Player ${id}`;
     return new PlayerInfo(
-      name,
+      `Player ${id}`,
       PlayerType.Human,
       null, // clientID (null for testing)
       id,
+      false,
+      clan,
     );
   };
 

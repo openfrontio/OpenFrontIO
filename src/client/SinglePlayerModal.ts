@@ -617,9 +617,28 @@ export class SinglePlayerModal extends BaseModal {
 
     const usernameInput = document.querySelector(
       "username-input",
-    ) as UsernameInput;
+    ) as UsernameInput | null;
     if (!usernameInput) {
       console.warn("Username input element not found");
+      return;
+    }
+    if (!usernameInput.isValid()) {
+      const message =
+        usernameInput.validationError ||
+        translateText("username.invalid_chars");
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message,
+            color: "red",
+            duration: 2500,
+          },
+        }),
+      );
+      document
+        .getElementById("username-validation-error")
+        ?.classList.remove("hidden");
+      return;
     }
 
     await crazyGamesSDK.requestMidgameAd();
@@ -633,7 +652,8 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getCurrentUsername(),
+                username: usernameInput.getUsername(),
+                clanTag: usernameInput.getClanTag() ?? undefined,
                 cosmetics: await getPlayerCosmetics(),
               },
             ],

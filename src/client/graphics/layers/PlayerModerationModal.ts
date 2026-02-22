@@ -65,7 +65,7 @@ export class PlayerModerationModal extends LitElement {
     if (!targetClientID || targetClientID.length === 0) return;
 
     const confirmed = confirm(
-      translateText("player_panel.kick_confirm", { name: other.name() }),
+      translateText("player_panel.kick_confirm", { name: other.displayName() }),
     );
     if (!confirmed) return;
 
@@ -142,9 +142,9 @@ export class PlayerModerationModal extends LitElement {
             >
               <div
                 class="text-sm font-semibold text-zinc-100 truncate"
-                title=${other.name()}
+                title=${other.displayName()}
               >
-                ${other.name()}
+                ${other.displayName()}
               </div>
             </div>
 

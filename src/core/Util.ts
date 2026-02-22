@@ -339,29 +339,17 @@ export function sigmoid(
   return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
 }
 
-// Compute clan from name
-export function getClanTag(name: string): string | null {
-  const clanTag = clanMatch(name);
-  return clanTag ? clanTag[1].toUpperCase() : null;
-}
-
-export function getClanTagOriginalCase(name: string): string | null {
-  const clanTag = clanMatch(name);
-  return clanTag ? clanTag[1] : null;
+export function formatPlayerDisplayName(
+  username: string,
+  clanTag?: string | null,
+): string {
+  return clanTag ? `[${clanTag}] ${username}` : username;
 }
 
 const CLAN_TAG_CHARS = "a-zA-Z0-9";
 
 const CLAN_TAG_INVALID_CHARS = new RegExp(`[^${CLAN_TAG_CHARS}]`, "g");
-const CLAN_TAG_REGEX = new RegExp(`\\[([${CLAN_TAG_CHARS}]{2,5})\\]`);
 
 export function sanitizeClanTag(tag: string): string {
   return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
-}
-
-function clanMatch(name: string): RegExpMatchArray | null {
-  if (!name.includes("[") || !name.includes("]")) {
-    return null;
-  }
-  return name.match(CLAN_TAG_REGEX);
 }

@@ -52,7 +52,7 @@ export function placeName(game: Game, player: Player): NameViewData {
     ),
   );
 
-  const fontSize = calculateFontSize(largestRectangle, player.name());
+  const fontSize = calculateFontSize(largestRectangle, player.displayName());
   center = new Cell(center.x, center.y - fontSize / 3);
 
   return {

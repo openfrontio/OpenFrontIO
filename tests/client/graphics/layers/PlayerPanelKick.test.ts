@@ -53,6 +53,7 @@ describe("PlayerPanel - kick player moderation", () => {
     const other = {
       id: () => 2,
       name: () => "Other",
+      displayName: () => "[TAG] Other",
       type: () => PlayerType.Human,
       clientID: () => "client-2",
     } as unknown as PlayerView;
@@ -84,6 +85,7 @@ describe("PlayerPanel - kick player moderation", () => {
     const other = {
       id: () => 2,
       name: () => "Other",
+      displayName: () => "[TAG] Other",
       type: () => PlayerType.Human,
       clientID: () => "client-2",
     } as unknown as PlayerView;
@@ -119,6 +121,7 @@ describe("PlayerModerationModal - kick confirmation", () => {
     const other = {
       id: () => 2,
       name: () => "Other",
+      displayName: () => "[TAG] Other",
       type: () => PlayerType.Human,
       clientID: () => "client-2",
     } as unknown as PlayerView;
@@ -151,6 +154,7 @@ describe("PlayerModerationModal - kick confirmation", () => {
     const other = {
       id: () => 2,
       name: () => "Other",
+      displayName: () => "[TAG] Other",
       type: () => PlayerType.Human,
       clientID: () => "client-2",
     } as unknown as PlayerView;

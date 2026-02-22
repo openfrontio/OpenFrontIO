@@ -16,24 +16,24 @@ export function assignTeams(
 
   // Sort players into clan groups or no-clan list
   for (const player of players) {
-    if (player.clan) {
-      if (!clanGroups.has(player.clan)) {
-        clanGroups.set(player.clan, []);
+    const clanTag = player.clanTag;
+    if (clanTag) {
+      if (!clanGroups.has(clanTag)) {
+        clanGroups.set(clanTag, []);
       }
-      clanGroups.get(player.clan)!.push(player);
+      clanGroups.get(clanTag)!.push(player);
     } else {
       noClanPlayers.push(player);
     }
   }
 
   // Sort clans by size (largest first)
-  const sortedClans = Array.from(clanGroups.entries()).sort(
-    (a, b) => b[1].length - a[1].length,
+  const sortedClanPlayers = Array.from(clanGroups.values()).sort(
+    (a, b) => b.length - a.length,
   );
 
   // First, assign clan players
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const [_, clanPlayers] of sortedClans) {
+  for (const clanPlayers of sortedClanPlayers) {
     // Try to keep the clan together on the team with fewer players
     let team: Team | null = null;
     let teamSize = 0;

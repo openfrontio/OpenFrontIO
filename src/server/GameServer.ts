@@ -23,7 +23,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord, getClanTag } from "../core/Util";
+import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
@@ -613,6 +613,7 @@ export class GameServer {
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
+        clanTag: c.clanTag ?? undefined,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -824,6 +825,7 @@ export class GameServer {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
+        clanTag: c.clanTag ?? undefined,
         clientID: c.clientID,
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
@@ -934,11 +936,11 @@ export class GameServer {
         return {
           clientID: player.clientID,
           username: player.username,
+          clanTag: player.clanTag,
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
-          clanTag: getClanTag(player.username) ?? undefined,
         } satisfies PlayerRecord;
       },
     );

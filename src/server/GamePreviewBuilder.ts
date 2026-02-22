@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, UsernameSchema } from "../core/Schemas";
 import { GameMode } from "../core/game/Game";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
-  username: z.string().optional(),
+  username: UsernameSchema.optional(),
   stats: z.unknown().optional(),
 });
 

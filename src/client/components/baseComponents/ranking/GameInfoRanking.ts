@@ -26,9 +26,8 @@ export enum RankType {
 
 export interface PlayerInfo {
   id: string;
-  rawUsername: string;
   username: string;
-  tag?: string;
+  clanTag?: string;
   killedAt?: number;
   gold: bigint[];
   conquests: bigint[];
@@ -77,18 +76,12 @@ export class Ranking {
     for (const player of session.info.players) {
       if (player === undefined || !hasPlayed(player)) continue;
       const stats = player.stats!;
-      const match = player.username.match(/^\[(.*?)\]\s*(.*)$/);
-      let username = player.username;
-      if (player.clanTag && match) {
-        username = match[2];
-      }
       const gold = (stats.gold ?? []).map((v) => BigInt(v ?? 0));
       const conquests = (stats.conquests ?? []).map((v) => BigInt(v ?? 0));
       players[player.clientID] = {
         id: player.clientID,
-        rawUsername: player.username,
-        username,
-        tag: player.clanTag,
+        username: player.username,
+        clanTag: player.clanTag,
         conquests,
         flag: player.cosmetics?.flag ?? undefined,
         killedAt: stats.killedAt !== null ? Number(stats.killedAt) : undefined,

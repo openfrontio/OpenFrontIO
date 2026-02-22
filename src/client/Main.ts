@@ -737,6 +737,25 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
+    if (this.usernameInput && !this.usernameInput.isValid()) {
+      const message =
+        this.usernameInput.validationError ||
+        translateText("username.invalid_chars");
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message,
+            color: "red",
+            duration: 2500,
+          },
+        }),
+      );
+      document
+        .getElementById("username-validation-error")
+        ?.classList.remove("hidden");
+      return;
+    }
+
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -758,8 +777,8 @@ class Client {
         serverConfig: config,
         cosmetics: await getPlayerCosmeticsRefs(),
         turnstileToken: await this.getTurnstileToken(lobby),
-        playerName:
-          this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
+        playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
+        playerClanTag: this.usernameInput?.getClanTag() ?? null,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
