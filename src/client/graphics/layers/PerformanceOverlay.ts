@@ -72,7 +72,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private fpsHistory: number[] = [];
   private lastSecondTime: number = 0;
   private framesThisSecond: number = 0;
-  private dragStart: { x: number; y: number } = { x: 0, y: 0 };
   private tickExecutionTimes: number[] = [];
   private tickDelayTimes: number[] = [];
   private tickTimestamps: number[] = [];
@@ -86,6 +85,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     startClientX: number;
     startWidthPx: number;
     pendingWidthPx: number;
+  } | null = null;
+
+  private dragState: {
+    pointerId: number;
+    dragStart: { x: number; y: number };
   } | null = null;
 
   // Smoothed per-layer render timings (EMA over recent frames)
@@ -154,19 +158,39 @@ export class PerformanceOverlay extends LitElement implements Layer {
       font-size: 12px;
       z-index: 9999;
       user-select: none;
-      cursor: move;
+      cursor: default;
       transition: none;
       box-sizing: border-box;
       width: var(--overlay-width, min(460px, calc(100vw - 16px)));
       max-width: calc(100vw - 16px);
       max-height: calc(100vh - 16px);
+      overflow: hidden;
+    }
+
+    .overlay-scroll {
       overflow: auto;
+      max-height: calc(100vh - 56px);
     }
 
     .performance-overlay.dragging {
       cursor: grabbing;
       transition: none;
       opacity: 0.5;
+    }
+
+    .drag-handle {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 12px; /* leave space for the resize handle */
+      height: 32px;
+      cursor: grab;
+      touch-action: none;
+      pointer-events: auto;
+    }
+
+    .performance-overlay.dragging .drag-handle {
+      cursor: grabbing;
     }
 
     .performance-line {
@@ -377,6 +401,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.resizeState = null;
     }
 
+    if (!visible && this.dragState) {
+      globalThis.removeEventListener("pointermove", this.onDragPointerMove);
+      globalThis.removeEventListener("pointerup", this.onDragPointerUp);
+      globalThis.removeEventListener("pointercancel", this.onDragPointerUp);
+      this.dragState = null;
+      this.isDragging = false;
+    }
+
     this.requestUpdate();
   }
 
@@ -386,35 +418,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.userSettings.set("settings.performanceOverlay", nextVisible);
   }
 
-  private handleMouseDown = (e: MouseEvent) => {
-    // Don't start dragging if clicking on close button
-    const target = e.target as HTMLElement;
-    if (
-      target.classList.contains("close-button") ||
-      target.classList.contains("reset-button") ||
-      target.classList.contains("copy-json-button") ||
-      target.classList.contains("collapse-button") ||
-      target.classList.contains("resize-handle")
-    ) {
-      return;
-    }
+  private onDragPointerMove = (e: PointerEvent) => {
+    if (!this.dragState || e.pointerId !== this.dragState.pointerId) return;
 
-    this.isDragging = true;
-    this.dragStart = {
-      x: e.clientX - this.position.x,
-      y: e.clientY - this.position.y,
-    };
-
-    document.addEventListener("mousemove", this.handleMouseMove);
-    document.addEventListener("mouseup", this.handleMouseUp);
-    e.preventDefault();
-  };
-
-  private handleMouseMove = (e: MouseEvent) => {
-    if (!this.isDragging) return;
-
-    const newX = e.clientX - this.dragStart.x;
-    const newY = e.clientY - this.dragStart.y;
+    const newX = e.clientX - this.dragState.dragStart.x;
+    const newY = e.clientY - this.dragState.dragStart.y;
 
     const margin = 8;
     const viewportWidth = window.innerWidth;
@@ -436,20 +444,44 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.requestUpdate();
   };
 
-  private handleMouseUp = () => {
+  private onDragPointerUp = (e: PointerEvent) => {
+    if (!this.dragState || e.pointerId !== this.dragState.pointerId) return;
+
+    globalThis.removeEventListener("pointermove", this.onDragPointerMove);
+    globalThis.removeEventListener("pointerup", this.onDragPointerUp);
+    globalThis.removeEventListener("pointercancel", this.onDragPointerUp);
+
+    this.dragState = null;
     this.isDragging = false;
-    document.removeEventListener("mousemove", this.handleMouseMove);
-    document.removeEventListener("mouseup", this.handleMouseUp);
+    this.requestUpdate();
+  };
+
+  private handleDragPointerDown = (e: PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    this.isDragging = true;
+    this.dragState = {
+      pointerId: e.pointerId,
+      dragStart: {
+        x: e.clientX - this.position.x,
+        y: e.clientY - this.position.y,
+      },
+    };
+
+    globalThis.addEventListener("pointermove", this.onDragPointerMove);
+    globalThis.addEventListener("pointerup", this.onDragPointerUp);
+    globalThis.addEventListener("pointercancel", this.onDragPointerUp);
   };
 
   private onResizePointerMove = (e: PointerEvent) => {
     if (!this.resizeState || e.pointerId !== this.resizeState.pointerId) return;
 
     const margin = 8;
-    const minWidthPx = 260;
     const viewportWidth = window.innerWidth;
     const left = Math.max(margin, Math.min(this.position.x, viewportWidth));
-    const maxWidthPx = Math.max(minWidthPx, viewportWidth - left - margin);
+    const maxWidthPx = Math.max(120, viewportWidth - left - margin);
+    const minWidthPx = Math.min(260, maxWidthPx);
 
     const delta = e.clientX - this.resizeState.startClientX;
     const nextWidth = this.resizeState.startWidthPx + delta;
@@ -937,8 +969,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
         style="--left: ${clampedX}px; --top: ${clampedY}px; --transform: none; ${overlayWidthStyle}"
-        @mousedown="${this.handleMouseDown}"
       >
+        <div
+          class="drag-handle"
+          @pointerdown=${this.handleDragPointerDown}
+        ></div>
         <button class="reset-button" @click="${this.handleReset}">
           ${translateText("performance_overlay.reset")}
         </button>
@@ -954,157 +989,160 @@ export class PerformanceOverlay extends LitElement implements Layer {
           class="resize-handle"
           @pointerdown=${this.handleResizePointerDown}
         ></div>
-        <div class="performance-line">
-          ${translateText("performance_overlay.fps")}
-          <span class="${this.getPerformanceColor(this.currentFPS)}"
-            >${this.currentFPS}</span
-          >
-        </div>
-        <div class="performance-line">
-          ${translateText("performance_overlay.avg_60s")}
-          <span class="${this.getPerformanceColor(this.averageFPS)}"
-            >${this.averageFPS}</span
-          >
-        </div>
-        <div class="performance-line">
-          ${translateText("performance_overlay.frame")}
-          <span class="${this.getPerformanceColor(1000 / this.frameTime)}"
-            >${this.frameTime}ms</span
-          >
-        </div>
-        <div class="performance-line">
-          ${translateText("performance_overlay.tps")}
-          <span class="${this.getTPSColor(this.currentTPS)}"
-            >${this.currentTPS}</span
-          >
-          (${translateText("performance_overlay.tps_avg_60s")}
-          <span>${this.averageTPS}</span>)
-        </div>
-        <div class="performance-line">
-          ${translateText("performance_overlay.tick_exec")}
-          <span>${this.tickExecutionAvg.toFixed(2)}ms</span>
-          (max: <span>${this.tickExecutionMax}ms</span>)
-        </div>
-        <div class="performance-line">
-          ${translateText("performance_overlay.tick_delay")}
-          <span>${this.tickDelayAvg.toFixed(2)}ms</span>
-          (max: <span>${this.tickDelayMax}ms</span>)
-        </div>
-        ${this.layerBreakdown.length
-          ? html`<div class="layers-section">
-              <div class="performance-line section-header">
-                <span
-                  >${translateText("performance_overlay.layers_header")}</span
-                >
-                <button
-                  class="collapse-button"
-                  @click=${this.toggleRenderLayersExpanded}
-                  title=${this.renderLayersExpanded ? "Collapse" : "Expand"}
-                >
-                  ${this.renderLayersExpanded ? "▾" : "▸"}
-                </button>
-              </div>
-              <div class="performance-line">
-                ${translateText("performance_overlay.render_layers_summary", {
-                  frames: this.renderLastTickFrameCount,
-                  ms: this.renderLastTickLayerTotalMs.toFixed(2),
-                })}
-              </div>
-              ${this.renderLayersExpanded
-                ? html`<div class="layer-row table-header" style="--pct: 0%;">
-                      <span class="layer-name"></span>
-                      <span class="layer-metrics">
-                        ${translateText(
-                          "performance_overlay.render_layers_table_header",
-                        )}
-                      </span>
-                    </div>
-                    ${renderLayersToShow.map((layer) => {
-                      const width = Math.min(
-                        100,
-                        (layer.avg / maxLayerAvg) * 100 || 0,
-                      );
-                      const perTickRenderMs =
-                        this.renderLastTickLayerDurations[layer.name] ?? 0;
-                      const perTickRenderAvgMs =
-                        this.renderPerTickLayerStats.get(layer.name)?.avg ?? 0;
-                      const isInactive = perTickRenderMs <= 0.01;
-                      const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
-                        2,
-                      )}ms`;
-                      return html`<div
-                        class="layer-row ${isInactive ? "inactive" : ""}"
-                        style="--pct: ${width}%;"
-                        title=${title}
-                      >
-                        <span class="layer-name" title=${layer.name}
-                          >${layer.name}
-                        </span>
+        <div class="overlay-scroll">
+          <div class="performance-line">
+            ${translateText("performance_overlay.fps")}
+            <span class="${this.getPerformanceColor(this.currentFPS)}"
+              >${this.currentFPS}</span
+            >
+          </div>
+          <div class="performance-line">
+            ${translateText("performance_overlay.avg_60s")}
+            <span class="${this.getPerformanceColor(this.averageFPS)}"
+              >${this.averageFPS}</span
+            >
+          </div>
+          <div class="performance-line">
+            ${translateText("performance_overlay.frame")}
+            <span class="${this.getPerformanceColor(1000 / this.frameTime)}"
+              >${this.frameTime}ms</span
+            >
+          </div>
+          <div class="performance-line">
+            ${translateText("performance_overlay.tps")}
+            <span class="${this.getTPSColor(this.currentTPS)}"
+              >${this.currentTPS}</span
+            >
+            (${translateText("performance_overlay.tps_avg_60s")}
+            <span>${this.averageTPS}</span>)
+          </div>
+          <div class="performance-line">
+            ${translateText("performance_overlay.tick_exec")}
+            <span>${this.tickExecutionAvg.toFixed(2)}ms</span>
+            (max: <span>${this.tickExecutionMax}ms</span>)
+          </div>
+          <div class="performance-line">
+            ${translateText("performance_overlay.tick_delay")}
+            <span>${this.tickDelayAvg.toFixed(2)}ms</span>
+            (max: <span>${this.tickDelayMax}ms</span>)
+          </div>
+          ${this.layerBreakdown.length
+            ? html`<div class="layers-section">
+                <div class="performance-line section-header">
+                  <span
+                    >${translateText("performance_overlay.layers_header")}</span
+                  >
+                  <button
+                    class="collapse-button"
+                    @click=${this.toggleRenderLayersExpanded}
+                    title=${this.renderLayersExpanded ? "Collapse" : "Expand"}
+                  >
+                    ${this.renderLayersExpanded ? "▾" : "▸"}
+                  </button>
+                </div>
+                <div class="performance-line">
+                  ${translateText("performance_overlay.render_layers_summary", {
+                    frames: this.renderLastTickFrameCount,
+                    ms: this.renderLastTickLayerTotalMs.toFixed(2),
+                  })}
+                </div>
+                ${this.renderLayersExpanded
+                  ? html`<div class="layer-row table-header" style="--pct: 0%;">
+                        <span class="layer-name"></span>
                         <span class="layer-metrics">
-                          ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms |
-                          ${perTickRenderAvgMs.toFixed(2)}ms
+                          ${translateText(
+                            "performance_overlay.render_layers_table_header",
+                          )}
                         </span>
-                      </div>`;
-                    })}`
-                : html``}
-            </div>`
-          : html``}
-        ${this.tickLayerBreakdown.length
-          ? html`<div class="layers-section">
-              <div class="performance-line section-header">
-                <span
-                  >${translateText(
-                    "performance_overlay.tick_layers_header",
-                  )}</span
-                >
-                <button
-                  class="collapse-button"
-                  @click=${this.toggleTickLayersExpanded}
-                  title=${this.tickLayersExpanded ? "Collapse" : "Expand"}
-                >
-                  ${this.tickLayersExpanded ? "▾" : "▸"}
-                </button>
-              </div>
-              <div class="performance-line">
-                ${translateText("performance_overlay.tick_layers_summary", {
-                  count: this.tickLayerLastCount,
-                  ms: this.tickLayerLastTotalMs.toFixed(2),
-                })}
-              </div>
-              ${this.tickLayersExpanded
-                ? html`<div class="layer-row table-header" style="--pct: 0%;">
-                      <span class="layer-name"></span>
-                      <span class="layer-metrics">
-                        ${translateText(
-                          "performance_overlay.tick_layers_table_header",
-                        )}
-                      </span>
-                    </div>
-                    ${tickLayersToShow.map((layer) => {
-                      const width = Math.min(
-                        100,
-                        (layer.avg / maxTickLayerAvg) * 100 || 0,
-                      );
-                      const lastTickMs =
-                        this.tickLayerLastDurations[layer.name] ?? 0;
-                      const isInactive = lastTickMs <= 0.01;
-                      const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
-                      return html`<div
-                        class="layer-row ${isInactive ? "inactive" : ""}"
-                        style="--pct: ${width}%;"
-                        title=${title}
-                      >
-                        <span class="layer-name" title=${layer.name}
-                          >${layer.name}</span
+                      </div>
+                      ${renderLayersToShow.map((layer) => {
+                        const width = Math.min(
+                          100,
+                          (layer.avg / maxLayerAvg) * 100 || 0,
+                        );
+                        const perTickRenderMs =
+                          this.renderLastTickLayerDurations[layer.name] ?? 0;
+                        const perTickRenderAvgMs =
+                          this.renderPerTickLayerStats.get(layer.name)?.avg ??
+                          0;
+                        const isInactive = perTickRenderMs <= 0.01;
+                        const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
+                          2,
+                        )}ms`;
+                        return html`<div
+                          class="layer-row ${isInactive ? "inactive" : ""}"
+                          style="--pct: ${width}%;"
+                          title=${title}
                         >
+                          <span class="layer-name" title=${layer.name}
+                            >${layer.name}
+                          </span>
+                          <span class="layer-metrics">
+                            ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
+                            | ${perTickRenderAvgMs.toFixed(2)}ms
+                          </span>
+                        </div>`;
+                      })}`
+                  : html``}
+              </div>`
+            : html``}
+          ${this.tickLayerBreakdown.length
+            ? html`<div class="layers-section">
+                <div class="performance-line section-header">
+                  <span
+                    >${translateText(
+                      "performance_overlay.tick_layers_header",
+                    )}</span
+                  >
+                  <button
+                    class="collapse-button"
+                    @click=${this.toggleTickLayersExpanded}
+                    title=${this.tickLayersExpanded ? "Collapse" : "Expand"}
+                  >
+                    ${this.tickLayersExpanded ? "▾" : "▸"}
+                  </button>
+                </div>
+                <div class="performance-line">
+                  ${translateText("performance_overlay.tick_layers_summary", {
+                    count: this.tickLayerLastCount,
+                    ms: this.tickLayerLastTotalMs.toFixed(2),
+                  })}
+                </div>
+                ${this.tickLayersExpanded
+                  ? html`<div class="layer-row table-header" style="--pct: 0%;">
+                        <span class="layer-name"></span>
                         <span class="layer-metrics">
-                          ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
+                          ${translateText(
+                            "performance_overlay.tick_layers_table_header",
+                          )}
                         </span>
-                      </div>`;
-                    })}`
-                : html``}
-            </div>`
-          : html``}
+                      </div>
+                      ${tickLayersToShow.map((layer) => {
+                        const width = Math.min(
+                          100,
+                          (layer.avg / maxTickLayerAvg) * 100 || 0,
+                        );
+                        const lastTickMs =
+                          this.tickLayerLastDurations[layer.name] ?? 0;
+                        const isInactive = lastTickMs <= 0.01;
+                        const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
+                        return html`<div
+                          class="layer-row ${isInactive ? "inactive" : ""}"
+                          style="--pct: ${width}%;"
+                          title=${title}
+                        >
+                          <span class="layer-name" title=${layer.name}
+                            >${layer.name}</span
+                          >
+                          <span class="layer-metrics">
+                            ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
+                          </span>
+                        </div>`;
+                      })}`
+                  : html``}
+              </div>`
+            : html``}
+        </div>
       </div>
     `;
   }
