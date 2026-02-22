@@ -455,6 +455,8 @@ export interface MutableAlliance extends Alliance {
   id(): number;
   extend(): void;
   onlyOneAgreedToExtend(): boolean;
+
+  agreedToExtend(player: Player): boolean;
 }
 
 export class PlayerInfo {
@@ -662,6 +664,7 @@ export interface Player {
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
+  allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   removeAllAlliances(): void;
@@ -765,6 +768,7 @@ export interface Game extends GameMap {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
+  drainPackedTileUpdates(): Uint32Array;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
@@ -864,6 +868,14 @@ export interface PlayerBorderTiles {
   borderTiles: ReadonlySet<TileRef>;
 }
 
+export interface AllianceInfo {
+  expiresAt: Tick;
+  inExtensionWindow: boolean;
+  myPlayerAgreedToExtend: boolean;
+  otherAgreedToExtend: boolean;
+  canExtend: boolean;
+}
+
 export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
@@ -873,7 +885,7 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
-  allianceExpiresAt?: Tick;
+  allianceInfo?: AllianceInfo;
 }
 
 export interface EmojiMessage {

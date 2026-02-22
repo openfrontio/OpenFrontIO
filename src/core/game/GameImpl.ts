@@ -39,7 +39,7 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -93,6 +93,7 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
+  private tileUpdatePairs: number[] = [];
   private unitGrid: UnitGrid;
 
   private playerTeams: Team[] = [];
@@ -261,10 +262,7 @@ export class GameImpl implements Game {
       return;
     }
     this._map.setFallout(tile, value);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -392,6 +390,7 @@ export class GameImpl implements Game {
 
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
+    this.tileUpdatePairs.length = 0;
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
@@ -428,6 +427,20 @@ export class GameImpl implements Game {
     }
     this._ticks++;
     return this.updates;
+  }
+
+  private recordTileUpdate(tile: TileRef): void {
+    this.tileUpdatePairs.push(tile, this._map.tileState(tile));
+  }
+
+  drainPackedTileUpdates(): Uint32Array {
+    const pairs = this.tileUpdatePairs;
+    const packed = new Uint32Array(pairs.length);
+    for (let i = 0; i < pairs.length; i++) {
+      packed[i] = pairs[i];
+    }
+    pairs.length = 0;
+    return packed;
   }
 
   private hash(): number {
@@ -601,10 +614,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   relinquish(tile: TileRef) {
@@ -622,10 +632,7 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   private updateBorders(tile: TileRef) {
@@ -1046,11 +1053,11 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): void {
+    this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

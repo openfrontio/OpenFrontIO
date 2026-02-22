@@ -139,6 +139,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
 export class DefaultConfig implements Config {
   private pastelTheme: PastelTheme = new PastelTheme();
   private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
+  private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
@@ -323,30 +324,40 @@ export class DefaultConfig implements Config {
   }
 
   unitInfo(type: UnitType): UnitInfo {
+    const cached = this.unitInfoCache.get(type);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    let info: UnitInfo;
     switch (type) {
       case UnitType.TransportShip:
-        return {
+        info = {
           cost: () => 0n,
         };
+        break;
       case UnitType.Warship:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
             UnitType.Warship,
           ),
           maxHealth: 1000,
         };
+        break;
       case UnitType.Shell:
-        return {
+        info = {
           cost: () => 0n,
           damage: 250,
         };
+        break;
       case UnitType.SAMMissile:
-        return {
+        info = {
           cost: () => 0n,
         };
+        break;
       case UnitType.Port:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
@@ -356,16 +367,19 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.AtomBomb:
-        return {
+        info = {
           cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
         };
+        break;
       case UnitType.HydrogenBomb:
-        return {
+        info = {
           cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
         };
+        break;
       case UnitType.MIRV:
-        return {
+        info = {
           cost: (game: Game, player: Player) => {
             if (player.type() === PlayerType.Human && this.infiniteGold()) {
               return 0n;
@@ -373,30 +387,35 @@ export class DefaultConfig implements Config {
             return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
           },
         };
+        break;
       case UnitType.MIRVWarhead:
-        return {
+        info = {
           cost: () => 0n,
         };
+        break;
       case UnitType.TradeShip:
-        return {
+        info = {
           cost: () => 0n,
         };
+        break;
       case UnitType.MissileSilo:
-        return {
+        info = {
           cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.DefensePost:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
             UnitType.DefensePost,
           ),
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
+        break;
       case UnitType.SAMLauncher:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(3_000_000, (numUnits + 1) * 1_500_000),
@@ -405,8 +424,9 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.City:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
@@ -415,8 +435,9 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.Factory:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
@@ -426,13 +447,18 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.Train:
-        return {
+        info = {
           cost: () => 0n,
         };
+        break;
       default:
         assertNever(type);
     }
+
+    this.unitInfoCache.set(type, info);
+    return info;
   }
 
   private costWrapper(
