@@ -658,6 +658,10 @@ export class ClientGameRunner {
       .then((buildables) => {
         if (this.canBoatAttack(buildables) !== false) {
           this.sendBoatAttackIntent(tile);
+        } else {
+          console.warn(
+            "Boat attack triggered but can't send Transport Ship to tile",
+          );
         }
       });
   }
@@ -705,11 +709,7 @@ export class ClientGameRunner {
 
   private canBoatAttack(buildables: BuildableUnit[]): false | TileRef {
     const bu = buildables.find((bu) => bu.type === UnitType.TransportShip);
-    if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
-      return false;
-    }
-    return bu.canBuild;
+    return bu?.canBuild ?? false;
   }
 
   private sendBoatAttackIntent(tile: TileRef) {

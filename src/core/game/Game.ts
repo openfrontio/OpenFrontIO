@@ -816,6 +816,7 @@ export interface Game extends GameMap {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
+  drainPackedTileUpdates(): Uint32Array;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
