@@ -6,6 +6,7 @@ import { generateID } from "../core/Util";
 import {
   MasterCreateGame,
   MasterLobbiesBroadcast,
+  MasterUpdateGame,
   WorkerMessageSchema,
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
@@ -93,7 +94,16 @@ export class MasterLobbyService {
     }
 
     for (const type of Object.keys(result) as PublicGameType[]) {
-      result[type].sort((a, b) => a.startsAt - b.startsAt);
+      result[type].sort((a, b) => {
+        if (a.startsAt === undefined && b.startsAt === undefined) {
+          // Sort by game id for stability.
+          return a.gameID > b.gameID ? 1 : -1;
+        }
+        // If a lobby has startsAt set, we assume it's the active one.
+        if (a.startsAt === undefined) return 1;
+        if (b.startsAt === undefined) return -1;
+        return a.startsAt - b.startsAt;
+      });
     }
 
     return result;
@@ -124,39 +134,36 @@ export class MasterLobbyService {
       if (lobbies.length >= 2) {
         continue;
       }
-
-      const lastStart = lobbies.reduce(
-        (max, pb) => Math.max(max, pb.startsAt),
-        Date.now(),
-      );
-
-      const gameID = generateID();
-      const workerId = this.config.workerIndex(gameID);
-
-      const gameConfig = await this.playlist.gameConfig(type);
-      const worker = this.workers.get(workerId);
-      if (!worker) {
-        this.log.error(`Worker ${workerId} not found`);
-        continue;
+      const nextLobby = lobbies[0];
+      if (nextLobby && nextLobby.startsAt === undefined) {
+        // The previous game has started, so we need to set the timer on the next game.
+        this.sendMessageToWorker({
+          type: "updateLobby",
+          gameID: nextLobby.gameID,
+          startsAt: Date.now() + this.config.gameCreationRate(),
+        });
       }
 
-      worker.send(
-        {
-          type: "createGame",
-          gameID,
-          gameConfig,
-          startsAt: lastStart + this.config.gameCreationRate(),
-          publicGameType: type,
-        } satisfies MasterCreateGame,
-        (e) => {
-          if (e) {
-            this.log.error("Failed to schedule lobby on worker:", e);
-          }
-        },
-      );
-      this.log.info(
-        `Scheduled public game ${gameID} (${type}) on worker ${workerId}`,
-      );
+      this.sendMessageToWorker({
+        type: "createGame",
+        gameID: generateID(),
+        gameConfig: await this.playlist.gameConfig(type),
+        publicGameType: type,
+      } satisfies MasterCreateGame);
     }
+  }
+
+  private sendMessageToWorker(msg: MasterCreateGame | MasterUpdateGame): void {
+    const workerId = this.config.workerIndex(msg.gameID);
+    const worker = this.workers.get(workerId);
+    if (!worker) {
+      this.log.error(`Worker ${workerId} not found`);
+      return;
+    }
+    worker.send(msg, (e) => {
+      if (e) {
+        this.log.error("Failed to send message to worker:", e);
+      }
+    });
   }
 }
