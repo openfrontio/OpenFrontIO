@@ -394,17 +394,11 @@ export class MapPlaylist {
   }
 
   private getRandomPublicGameModifiers(): PublicGameModifiers {
-    const rates = {
-      isRandomSpawn: 0.1,
-      isCompact: 0.05,
-      isCrowded: 0.05,
-      startingGold: 0.05,
-    };
     return {
-      isRandomSpawn: Math.random() < rates.isRandomSpawn,
-      isCompact: Math.random() < rates.isCompact,
-      isCrowded: Math.random() < rates.isCrowded,
-      startingGold: Math.random() < rates.startingGold ? 5_000_000 : undefined,
+      isRandomSpawn: Math.random() < 0.1, // 10% chance
+      isCompact: Math.random() < 0.05, // 5% chance
+      isCrowded: Math.random() < 0.05, // 5% chance
+      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
     };
   }
 
