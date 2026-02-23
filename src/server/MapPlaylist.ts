@@ -322,13 +322,13 @@ export class MapPlaylist {
   private generateNewPlaylist(type: PublicGameType): GameMapType[] {
     const maps = this.buildMapsList(type);
     const rand = new PseudoRandom(Date.now());
-    const shuffledSource = rand.shuffleArray([...maps]);
     const playlist: GameMapType[] = [];
 
     const numAttempts = 10000;
     for (let attempt = 0; attempt < numAttempts; attempt++) {
       playlist.length = 0;
-      const source = [...shuffledSource];
+      // Re-shuffle every attempt so retries can explore different orderings.
+      const source = rand.shuffleArray([...maps]);
 
       let success = true;
       while (source.length > 0) {
