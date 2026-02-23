@@ -21,15 +21,6 @@ import { getMapLandTiles } from "./MapLandTiles";
 const log = logger.child({});
 const ARCADE_MAPS = new Set(mapCategories.arcade);
 
-function isSpecialModifiers(modifiers: PublicGameModifiers): boolean {
-  return Boolean(
-    modifiers.isCompact ||
-      modifiers.isRandomSpawn ||
-      modifiers.isCrowded ||
-      modifiers.startingGold !== undefined,
-  );
-}
-
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
 const frequency: Partial<Record<GameMapName, number>> = {
@@ -189,59 +180,31 @@ export class MapPlaylist {
       mode === GameMode.Team ? this.getTeamCount() : undefined;
     const supportsCompact =
       mode !== GameMode.Team || (await this.supportsCompactMapForTeams(map));
+    const rolled = this.getRandomPublicGameModifiers({ specialRates: true });
+    const { isCrowded, startingGold } = rolled;
+    let { isCompact } = rolled;
+    let { isRandomSpawn } = rolled;
 
-    let modifiers: PublicGameModifiers = {
-      isCompact: false,
-      isRandomSpawn: false,
-      isCrowded: false,
-      startingGold: undefined,
-    };
+    if (!supportsCompact) {
+      isCompact = false;
+    }
+
+    if (
+      playerTeams === Duos ||
+      playerTeams === Trios ||
+      playerTeams === Quads
+    ) {
+      isRandomSpawn = false;
+    }
+
     let crowdedMaxPlayers: number | undefined;
-
-    // Reroll until a special modifier survives constraints.
-    while (true) {
-      const rolled = this.getRandomPublicGameModifiers();
-      let { isCompact, isRandomSpawn, isCrowded } = rolled;
-      const { startingGold } = rolled;
-
-      if (!supportsCompact) {
-        isCompact = false;
-      }
-
-      if (
-        playerTeams === Duos ||
-        playerTeams === Trios ||
-        playerTeams === Quads
-      ) {
-        isRandomSpawn = false;
-      }
-
-      crowdedMaxPlayers = undefined;
-      if (isCrowded) {
-        crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
-        if (crowdedMaxPlayers === undefined) {
-          isCrowded = false;
-        } else {
-          crowdedMaxPlayers = this.adjustForTeams(
-            crowdedMaxPlayers,
-            playerTeams,
-          );
-        }
-      }
-
-      modifiers = {
-        isCompact,
-        isRandomSpawn,
-        isCrowded,
-        startingGold,
-      };
-
-      if (isSpecialModifiers(modifiers)) {
-        break;
+    if (isCrowded) {
+      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
+      if (crowdedMaxPlayers !== undefined) {
+        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
       }
     }
 
-    const { isCompact, isRandomSpawn, isCrowded, startingGold } = modifiers;
     const maxPlayers = Math.max(
       2,
       crowdedMaxPlayers ??
@@ -393,7 +356,49 @@ export class MapPlaylist {
     return TEAM_WEIGHTS[0].config;
   }
 
-  private getRandomPublicGameModifiers(): PublicGameModifiers {
+  private getRandomPublicGameModifiers(options?: {
+    specialRates?: boolean;
+  }): PublicGameModifiers {
+    if (options?.specialRates) {
+      const weightedModifiers: Array<{
+        key: "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold";
+        weight: number;
+      }> = [
+        { key: "isRandomSpawn", weight: 4 },
+        { key: "isCompact", weight: 7 },
+        { key: "isCrowded", weight: 1 },
+        { key: "startingGold", weight: 6 },
+      ];
+      const selected = new Set<
+        "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold"
+      >();
+      const k = Math.floor(Math.random() * weightedModifiers.length) + 1;
+
+      for (let i = 0; i < k && weightedModifiers.length > 0; i++) {
+        const totalWeight = weightedModifiers.reduce(
+          (sum, modifier) => sum + modifier.weight,
+          0,
+        );
+        let roll = Math.random() * totalWeight;
+        for (let j = 0; j < weightedModifiers.length; j++) {
+          const modifier = weightedModifiers[j];
+          roll -= modifier.weight;
+          if (roll <= 0) {
+            selected.add(modifier.key);
+            weightedModifiers.splice(j, 1);
+            break;
+          }
+        }
+      }
+
+      return {
+        isRandomSpawn: selected.has("isRandomSpawn"),
+        isCompact: selected.has("isCompact"),
+        isCrowded: selected.has("isCrowded"),
+        startingGold: selected.has("startingGold") ? 5_000_000 : undefined,
+      };
+    }
+
     return {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
