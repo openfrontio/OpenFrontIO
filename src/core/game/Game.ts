@@ -11,7 +11,6 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
-import { SpawnArea } from "./SpawnArea";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
 
@@ -52,6 +51,15 @@ export const isDifficulty = (value: unknown): value is Difficulty =>
   isEnumValue(Difficulty, value);
 
 export type Team = string;
+
+export interface SpawnArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type TeamGameSpawnAreas = Record<string, SpawnArea[]>;
 
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;

@@ -1,7 +1,6 @@
-import { GameMapSize, GameMapType } from "./Game";
+import { GameMapSize, GameMapType, TeamGameSpawnAreas } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";
-import { TeamGameSpawnAreas } from "./SpawnArea";
 
 export type TerrainMapData = {
   nations: Nation[];

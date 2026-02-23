@@ -31,7 +31,9 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
+  SpawnArea,
   Team,
+  TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
   Trios,
@@ -44,7 +46,6 @@ import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
-import { SpawnArea, TeamGameSpawnAreas } from "./SpawnArea";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
