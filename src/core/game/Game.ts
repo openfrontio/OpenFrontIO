@@ -111,6 +111,7 @@ export enum GameMapType {
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
   Sierpinski = "Sierpinski",
+  FireAndIce = "Fire and Ice",
   TheBox = "The Box",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
@@ -184,6 +185,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Svalmel,
     GameMapType.Surrounded,
     GameMapType.TradersDream,
+    GameMapType.FireAndIce,
   ],
   arcade: [
     GameMapType.TheBox,
