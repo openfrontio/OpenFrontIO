@@ -8,7 +8,6 @@ import {
 import * as d3 from "d3";
 import "./styles.css";
 
-const DEFAULT_BUCKET_MODE: BucketMode = "game_mode_team";
 const DEFAULT_LOOKBACK_HOURS = 24;
 const DEFAULT_ORDER_COUNT = 40;
 

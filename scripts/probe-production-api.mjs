@@ -1,10 +1,11 @@
 import WebSocket from "ws";
 
-const BASE_URL = process.env.TARGET_BASE_URL || "https://openfront.io";
-const ARCHIVE_API_BASE = process.env.ARCHIVE_API_BASE || "https://api.openfront.io";
-const NUM_WORKERS = Number(process.env.NUM_WORKERS || "20");
-const WS_WAIT_MS = Number(process.env.WS_WAIT_MS || "6000");
-const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || "5000");
+const BASE_URL = process.env.TARGET_BASE_URL ?? "https://openfront.io";
+const ARCHIVE_API_BASE =
+  process.env.ARCHIVE_API_BASE ?? "https://api.openfront.io";
+const NUM_WORKERS = Number(process.env.NUM_WORKERS ?? "20");
+const WS_WAIT_MS = Number(process.env.WS_WAIT_MS ?? "6000");
+const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS ?? "5000");
 
 const trim = (v) => v.replace(/\/+$/, "");
 const base = trim(BASE_URL);
@@ -20,8 +21,6 @@ const workerIndexForGame = (gameID, workers) => {
   return Math.abs(hash) % Math.max(1, workers);
 };
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const fetchJson = async (url, timeoutMs = 6000) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -30,7 +29,7 @@ const fetchJson = async (url, timeoutMs = 6000) => {
       signal: controller.signal,
       headers: { Accept: "application/json" },
     });
-    const contentType = response.headers.get("content-type") || "";
+    const contentType = response.headers.get("content-type") ?? "";
     const text = await response.text();
     let json = null;
     if (contentType.includes("application/json")) {
@@ -93,7 +92,9 @@ const wsProbe = async (url, waitMs = WS_WAIT_MS) => {
       result.error = "connect-timeout";
       try {
         ws?.terminate();
-      } catch {}
+      } catch (error) {
+        result.error = result.error ?? String(error);
+      }
       finish();
     }, CONNECT_TIMEOUT_MS);
 
@@ -113,7 +114,9 @@ const wsProbe = async (url, waitMs = WS_WAIT_MS) => {
       setTimeout(() => {
         try {
           ws.close(1000, "probe-done");
-        } catch {}
+        } catch (error) {
+          result.error = result.error ?? String(error);
+        }
       }, waitMs);
     });
 
@@ -207,7 +210,11 @@ async function main() {
   }
 
   printHeader("Sample game follow-up");
-  const parsed = JSON.parse(withLobbies.firstMessageRaw || withLobbies.firstMessageSample);
+  const firstPayload =
+    withLobbies.firstMessageRaw === ""
+      ? withLobbies.firstMessageSample
+      : withLobbies.firstMessageRaw;
+  const parsed = JSON.parse(firstPayload);
   const game = parsed.games?.[0] ?? parsed.data?.lobbies?.[0];
   if (!game?.gameID) {
     console.log("No sample game in first games payload.");

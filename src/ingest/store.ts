@@ -375,7 +375,6 @@ export class JsonStore {
       this.flushTimer = null;
       void this.flush().catch((error) => {
         this.dirty = true;
-        // eslint-disable-next-line no-console
         console.error("[lobbystatistics] db flush failed", error);
       });
     }, 500);

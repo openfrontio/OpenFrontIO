@@ -95,17 +95,14 @@ async function main() {
   });
 
   const server = app.listen(config.port, () => {
-    // eslint-disable-next-line no-console
     console.log(`[lobbystatistics] ingest server listening on :${config.port}`);
   });
 
   process.on("unhandledRejection", (reason) => {
-    // eslint-disable-next-line no-console
     console.error("[lobbystatistics] unhandledRejection", reason);
   });
 
   process.on("uncaughtException", (error) => {
-    // eslint-disable-next-line no-console
     console.error("[lobbystatistics] uncaughtException", error);
   });
 
@@ -122,7 +119,6 @@ async function main() {
 }
 
 void main().catch((error) => {
-  // eslint-disable-next-line no-console
   console.error("[lobbystatistics] fatal startup error", error);
   process.exit(1);
 });

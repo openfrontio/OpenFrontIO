@@ -172,7 +172,6 @@ export class LobbyIngestService {
         this.store.systemNote(
           `Invalid /lobbies JSON parse error: ${String(error)} | payload=${payload}`,
         );
-        // eslint-disable-next-line no-console
         console.error("[lobbystatistics] invalid websocket payload", {
           error,
           payload,
@@ -183,7 +182,6 @@ export class LobbyIngestService {
       if (json && typeof json === "object" && (json as { type?: string }).type === "error") {
         const payload = compactPayload(text);
         this.store.systemNote(`WebSocket error reply received: payload=${payload}`);
-        // eslint-disable-next-line no-console
         console.error("[lobbystatistics] websocket error reply", payload);
         return;
       }
@@ -195,7 +193,6 @@ export class LobbyIngestService {
           `Invalid /lobbies schema: ${normalized.error
             .slice(0, 240)} | payload=${payload}`,
         );
-        // eslint-disable-next-line no-console
         console.error("[lobbystatistics] websocket schema mismatch", {
           error: normalized.error,
           payload,
@@ -525,7 +522,6 @@ export class LobbyIngestService {
       await fn();
     } catch (error) {
       this.store.systemNote(`Task ${label} failed: ${String(error)}`);
-      // eslint-disable-next-line no-console
       console.error(`[lobbystatistics] task ${label} failed`, error);
     }
   }
