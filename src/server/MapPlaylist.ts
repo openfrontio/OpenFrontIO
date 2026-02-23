@@ -372,7 +372,15 @@ export class MapPlaylist {
       const selected = new Set<
         "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold"
       >();
-      const k = Math.floor(Math.random() * 3) + 1;
+      const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
+      const k =
+        modifierCountRoll <= 3
+          ? 1
+          : modifierCountRoll <= 7
+            ? 2
+            : modifierCountRoll <= 9
+              ? 3
+              : 4;
 
       for (let i = 0; i < k && weightedModifiers.length > 0; i++) {
         const totalWeight = weightedModifiers.reduce(
