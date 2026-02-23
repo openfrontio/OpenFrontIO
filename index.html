@@ -127,20 +127,20 @@
         id="background-layer"
         class="absolute inset-0 bg-cover bg-center opacity-50 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
         style="
-          background-image: url(&quot;/resources/images/background.png&quot;);
+          background-image: url(&quot;/resources/images/background.webp&quot;);
         "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
         style="
-          background-image: url(&quot;/resources/images/OpenFront.png&quot;);
+          background-image: url(&quot;/resources/images/OpenFront.webp&quot;);
           opacity: 0.25;
         "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
         style="
-          background-image: url(&quot;/resources/images/OF.png&quot;);
+          background-image: url(&quot;/resources/images/OF.webp&quot;);
           opacity: 0.25;
         "
       ></div>
@@ -268,16 +268,20 @@
       class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
     >
       <div
-        class="order-2 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
+        class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
       >
-        <attacks-display></attacks-display>
-        <control-panel></control-panel>
+        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
+        <control-panel class="order-4 sm:order-none w-full"></control-panel>
       </div>
       <div
-        class="order-1 sm:order-none w-full sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
+        class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
       >
-        <chat-display></chat-display>
-        <events-display></events-display>
+        <chat-display
+          class="order-1 sm:order-none w-full sm:w-auto"
+        ></chat-display>
+        <events-display
+          class="order-3 sm:order-none w-full sm:w-auto"
+        ></events-display>
       </div>
     </div>
 

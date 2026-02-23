@@ -1,5 +1,4 @@
-import { virtualize } from "@lit-labs/virtualizer/virtualize.js";
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { PlayerLeaderboardEntry } from "../../../core/ApiSchemas";
 import { RankedType } from "../../../core/game/Game";
@@ -23,7 +22,7 @@ export class LeaderboardPlayerList extends LitElement {
   private currentUserId: string | null = null;
   private currentUserIdLoaded = false;
 
-  @query(".virtualizer-container") private virtualizerContainer?: HTMLElement;
+  @query(".scroll-container") private scrollContainer?: HTMLElement;
 
   createRenderRoot() {
     return this;
@@ -152,12 +151,12 @@ export class LeaderboardPlayerList extends LitElement {
       return;
     }
 
-    if (!this.virtualizerContainer || !this.isVisible()) {
+    if (!this.scrollContainer || !this.isVisible()) {
       this.showStickyUser = false;
       return;
     }
 
-    const currentRow = this.virtualizerContainer.querySelector(
+    const currentRow = this.scrollContainer.querySelector(
       '[data-current-user="true"]',
     ) as HTMLElement | null;
 
@@ -166,7 +165,7 @@ export class LeaderboardPlayerList extends LitElement {
       return;
     }
 
-    const containerRect = this.virtualizerContainer.getBoundingClientRect();
+    const containerRect = this.scrollContainer.getBoundingClientRect();
     const rowRect = currentRow.getBoundingClientRect();
     const isVisible =
       rowRect.top >= containerRect.top &&
@@ -188,12 +187,12 @@ export class LeaderboardPlayerList extends LitElement {
   private maybeLoadMorePlayers() {
     if (this.isLoading || this.isLoadingMore) return;
     if (!this.playerHasMore || this.error || this.loadMoreError) return;
-    if (!this.virtualizerContainer || !this.isVisible()) return;
+    if (!this.scrollContainer || !this.isVisible()) return;
 
     const threshold = 64 * 3;
-    const scrollTop = this.virtualizerContainer.scrollTop;
-    const containerHeight = this.virtualizerContainer.clientHeight;
-    const scrollHeight = this.virtualizerContainer.scrollHeight;
+    const scrollTop = this.scrollContainer.scrollTop;
+    const containerHeight = this.scrollContainer.clientHeight;
+    const scrollHeight = this.scrollContainer.scrollHeight;
     const nearBottom = scrollTop + containerHeight >= scrollHeight - threshold;
 
     if (containerHeight === 0 || scrollHeight === 0) return; // guard
@@ -211,7 +210,6 @@ export class LeaderboardPlayerList extends LitElement {
   private renderPlayerRow(player: PlayerLeaderboardEntry) {
     const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
     const displayRank = player.rank;
-    const winRate = player.games > 0 ? player.wins / player.games : 0;
 
     const rankColor =
       {
@@ -228,60 +226,56 @@ export class LeaderboardPlayerList extends LitElement {
       }?.[displayRank] ?? String(displayRank);
 
     return html`
-      <div
+      <tr
         data-current-user=${isCurrentUser ? "true" : "false"}
-        class="flex items-center border-b border-white/5 py-3 px-6 hover:bg-white/[0.07] transition-colors w-full ${isCurrentUser
-          ? "bg-blue-500/15 border-l-4 border-l-blue-500 pl-5"
+        class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group ${isCurrentUser
+          ? "bg-blue-500/15"
           : ""}"
       >
-        <div class="w-16 shrink-0 text-center">
+        <td class="py-3 px-4 text-center">
           <div
             class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
           >
             ${rankIcon}
           </div>
-        </div>
-        <div class="flex-1 flex items-center gap-3 overflow-hidden ml-4">
-          <span class="font-bold text-blue-300 truncate text-base"
-            >${player.username}</span
-          >
-          ${player.clanTag
-            ? html`<div
-                class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
-              >
-                ${player.clanTag}
-              </div>`
-            : ""}
-        </div>
-        <div class="flex flex-col items-end gap-1 w-32">
-          <div class="text-right font-mono text-white font-medium">
-            ${player.elo}
-            <span class="text-[10px] text-white/30 truncate"
-              >${translateText("leaderboard_modal.elo")}</span
+        </td>
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-2">
+            ${player.clanTag
+              ? html`<div
+                  class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-300 shrink-0"
+                >
+                  ${player.clanTag}
+                </div>`
+              : ""}
+            <span class="font-bold text-blue-300 truncate text-base"
+              >${player.clanTag
+                ? player.username.replace(/^\[.*?\]\s*/, "")
+                : player.username}</span
             >
           </div>
-        </div>
-        <div class="flex-col items-end gap-1 w-32 hidden md:flex">
-          <div class="text-right font-mono text-white font-medium">
-            ${player.games}
-            <span class="text-[10px] text-white/30 uppercase"
-              >${translateText("leaderboard_modal.games")}</span
+        </td>
+        <td class="py-3 px-4 text-right">
+          <span class="font-mono text-white font-medium">${player.elo}</span>
+        </td>
+        <td class="py-3 px-4 text-right">
+          <span class="font-mono text-white font-medium">${player.games}</span>
+        </td>
+        <td class="py-3 px-4 text-right pr-6">
+          <div class="inline-flex flex-col items-end">
+            <span
+              class="font-mono font-bold ${player.winRate >= 0.5
+                ? "text-green-400"
+                : "text-red-400"}"
+              >${(player.winRate * 100).toFixed(1)}%</span
+            >
+            <span
+              class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
+              >${translateText("leaderboard_modal.ratio")}</span
             >
           </div>
-        </div>
-        <div class="inline-flex flex-col items-end pr-6 w-32">
-          <span
-            class="font-mono font-bold ${winRate >= 0.5
-              ? "text-green-400"
-              : "text-red-400"}"
-            >${(winRate * 100).toFixed(1)}%</span
-          >
-          <span
-            class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
-            >${translateText("leaderboard_modal.ratio")}</span
-          >
-        </div>
-      </div>
+        </td>
+      </tr>
     `;
   }
 
@@ -372,52 +366,61 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.error) return this.renderError();
 
     return html`
-      <div class="flex flex-col h-full overflow-hidden">
-        <div
-          class="flex items-center text-[10px] uppercase tracking-wider text-white/40 font-bold px-6 py-4 border-b border-white/5 bg-white/2"
-        >
-          <div class="w-16 text-center">
-            ${translateText("leaderboard_modal.rank")}
-          </div>
-          <div class="flex-1 ml-4">
-            ${translateText("leaderboard_modal.player")}
-          </div>
-          <div class="w-32 text-right">
-            ${translateText("leaderboard_modal.elo")}
-          </div>
-          <div class="w-32 text-right hidden md:block">
-            ${translateText("leaderboard_modal.games")}
-          </div>
-          <div class="w-32 text-right pr-6">
-            ${translateText("leaderboard_modal.win_loss_ratio")}
-          </div>
-        </div>
-        <div class="relative flex-1 min-h-0">
+      <div class="h-full">
+        <div class="h-full border border-white/5 bg-black/20 relative">
           <div
-            class="virtualizer-container h-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 ${this
+            class="scroll-container h-full overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 ${this
               .showStickyUser
               ? "pb-20"
               : "pb-0"}"
             @scroll=${() => this.handleScroll()}
           >
-            ${virtualize({
-              items: this.playerData,
-              renderItem: (player) => this.renderPlayerRow(player),
-              scroller: true,
-            })}
+            <table class="w-full text-sm border-collapse table-fixed">
+              <colgroup>
+                <col style="width: 4rem" />
+                <col />
+                <col style="width: 6rem" />
+                <col style="width: 6rem" />
+                <col style="width: 6rem" />
+              </colgroup>
+              <thead class="sticky top-0 z-10">
+                <tr
+                  class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-[#1e2433]"
+                >
+                  <th class="py-4 px-4 text-center font-bold">
+                    ${translateText("leaderboard_modal.rank")}
+                  </th>
+                  <th class="py-4 px-4 text-left font-bold">
+                    ${translateText("leaderboard_modal.player")}
+                  </th>
+                  <th class="py-4 px-4 text-right font-bold">
+                    ${translateText("leaderboard_modal.elo")}
+                  </th>
+                  <th class="py-4 px-4 text-right font-bold">
+                    ${translateText("leaderboard_modal.games")}
+                  </th>
+                  <th class="py-4 px-4 text-right font-bold pr-6">
+                    ${translateText("leaderboard_modal.win_loss_ratio")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.playerData.map((player) => this.renderPlayerRow(player))}
+              </tbody>
+            </table>
             ${this.renderPlayerFooter()}
           </div>
           ${this.currentUserEntry
             ? html`
-                <div class="absolute inset-x-0 bottom-0">
+                <div class="absolute inset-x-0 bottom-0 z-20">
                   <div
                     class="bg-blue-600/90 backdrop-blur-md border-t border-blue-400/30 py-4 px-6 shadow-2xl flex items-center transition-all duration-200 ${this
                       .showStickyUser
                       ? "opacity-100 translate-y-0"
                       : "opacity-0 translate-y-3 pointer-events-none"}"
-                    aria-hidden=${this.showStickyUser ? "false" : "true"}
+                    aria-hidden=${this.showStickyUser ? nothing : "true"}
                   >
-                    <div class="w-16 text-center">
+                    <div class="w-10 text-center">
                       <div
                         class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
                       >
@@ -432,10 +435,15 @@ export class LeaderboardPlayerList extends LitElement {
                         )}</span
                       >
                       <span class="font-bold text-white text-base"
-                        >${this.currentUserEntry.username}</span
+                        >${this.currentUserEntry.clanTag
+                          ? this.currentUserEntry.username.replace(
+                              /^\[.*?\]\s*/,
+                              "",
+                            )
+                          : this.currentUserEntry.username}</span
                       >
                     </div>
-                    <div class="flex flex-col items-end w-32">
+                    <div class="flex flex-col items-end w-20">
                       <div class="font-mono text-white font-bold text-lg">
                         ${this.currentUserEntry.elo}
                         <span class="text-[10px] text-white/60"

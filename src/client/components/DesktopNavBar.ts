@@ -1,15 +1,10 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { getCosmeticsHash } from "../Cosmetics";
-import { getGamesPlayed } from "../Utils";
-
-const HELP_SEEN_KEY = "helpSeen";
-const STORE_SEEN_HASH_KEY = "storeSeenHash";
+import { customElement } from "lit/decorators.js";
+import { NavNotificationsController } from "./NavNotificationsController";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
-  @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
-  @state() private _hasNewCosmetics = false;
+  private _notifications = new NavNotificationsController(this);
 
   createRenderRoot() {
     return this;
@@ -26,12 +21,6 @@ export class DesktopNavBar extends LitElement {
         this._updateActiveState(current);
       });
     }
-
-    // Check if cosmetics have changed
-    getCosmeticsHash().then((hash: string | null) => {
-      const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
-      this._hasNewCosmetics = hash !== null && hash !== seenHash;
-    });
   }
 
   disconnectedCallback() {
@@ -53,30 +42,6 @@ export class DesktopNavBar extends LitElement {
       }
     });
   }
-
-  private showHelpDot(): boolean {
-    // Only show one dot at a time to prevent
-    // overwhelming users.
-    return getGamesPlayed() < 10 && !this._helpSeen;
-  }
-
-  private showStoreDot(): boolean {
-    return this._hasNewCosmetics && !this.showHelpDot();
-  }
-
-  private onHelpClick = () => {
-    localStorage.setItem(HELP_SEEN_KEY, "true");
-    this._helpSeen = true;
-  };
-
-  private onStoreClick = () => {
-    this._hasNewCosmetics = false;
-    getCosmeticsHash().then((hash: string | null) => {
-      if (hash !== null) {
-        localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
-      }
-    });
-  };
 
   render() {
     window.currentPageId ??= "page-play";
@@ -142,13 +107,26 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.play"
         ></button>
         <!-- Desktop Navigation Menu Items -->
-        <button
-          class="nav-menu-item ${currentPage === "page-news"
-            ? "active"
-            : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-news"
-          data-i18n="main.news"
-        ></button>
+        <div class="relative">
+          <button
+            class="nav-menu-item ${currentPage === "page-news"
+              ? "active"
+              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-news"
+            data-i18n="main.news"
+            @click=${this._notifications.onNewsClick}
+          ></button>
+          ${this._notifications.showNewsDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <div class="relative no-crazygames">
           <button
             class="nav-menu-item ${currentPage === "page-item-store"
@@ -156,9 +134,9 @@ export class DesktopNavBar extends LitElement {
               : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-item-store"
             data-i18n="main.store"
-            @click=${this.onStoreClick}
+            @click=${this._notifications.onStoreClick}
           ></button>
-          ${this.showStoreDot()
+          ${this._notifications.showStoreDot()
             ? html`
                 <span
                   class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
@@ -184,9 +162,9 @@ export class DesktopNavBar extends LitElement {
             class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-help"
             data-i18n="main.help"
-            @click=${this.onHelpClick}
+            @click=${this._notifications.onHelpClick}
           ></button>
-          ${this.showHelpDot()
+          ${this._notifications.showHelpDot()
             ? html`
                 <span
                   class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
