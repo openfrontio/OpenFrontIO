@@ -472,6 +472,7 @@
     "title": "Select Language"
   },
   "unit_type": {
+    "boat": "Boat",
     "city": "City",
     "defense_post": "Defense Post",
     "port": "Port",
