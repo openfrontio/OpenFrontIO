@@ -1258,13 +1258,9 @@ export class PlayerImpl implements Player {
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
-    const spawns = this.units(UnitType.Port).filter(
-      (u) => u.tile() === targetTile,
-    );
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+    return this.units(UnitType.Port).find((u) => u.tile() === targetTile)
+      ? targetTile
+      : false;
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
