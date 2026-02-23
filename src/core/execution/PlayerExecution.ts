@@ -81,15 +81,13 @@ export class PlayerExecution implements Execution {
     // Record stats
     this.mg.stats().goldWork(this.player, goldFromWorkers);
 
-    const alliances = Array.from(this.player.alliances());
-    for (const alliance of alliances) {
+    for (const alliance of this.player.alliances()) {
       if (alliance.expiresAt() <= this.mg.ticks()) {
         alliance.expire();
       }
     }
 
-    const embargoes = this.player.getEmbargoes();
-    for (const embargo of embargoes) {
+    for (const embargo of this.player.getEmbargoes()) {
       if (
         embargo.isTemporary &&
         this.mg.ticks() - embargo.createdAt >
