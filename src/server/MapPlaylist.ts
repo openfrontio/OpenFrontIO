@@ -180,7 +180,10 @@ export class MapPlaylist {
       mode === GameMode.Team ? this.getTeamCount() : undefined;
     const supportsCompact =
       mode !== GameMode.Team || (await this.supportsCompactMapForTeams(map));
-    const rolled = this.getRandomPublicGameModifiers({ specialRates: true });
+    const rolled = this.getRandomPublicGameModifiers({
+      specialRates: true,
+      excludedModifiers: supportsCompact ? [] : ["isCompact"],
+    });
     const { isCrowded, startingGold } = rolled;
     let { isCompact } = rolled;
     let { isRandomSpawn } = rolled;
@@ -358,6 +361,9 @@ export class MapPlaylist {
 
   private getRandomPublicGameModifiers(options?: {
     specialRates?: boolean;
+    excludedModifiers?: Array<
+      "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold"
+    >;
   }): PublicGameModifiers {
     if (options?.specialRates) {
       const weightedModifiers: Array<{
@@ -368,7 +374,9 @@ export class MapPlaylist {
         { key: "isCompact", weight: 7 },
         { key: "isCrowded", weight: 1 },
         { key: "startingGold", weight: 6 },
-      ];
+      ].filter(
+        (modifier) => !options.excludedModifiers?.includes(modifier.key),
+      );
       const selected = new Set<
         "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold"
       >();
