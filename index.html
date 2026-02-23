@@ -122,12 +122,29 @@
   <body
     class="h-full select-none font-sans min-h-screen bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
-    <div
-      class="fixed inset-0 w-full h-full -z-50 bg-cover bg-center bg-fixed pointer-events-none brightness-[0.5]"
-      style="
-        background-image: url(&quot;/images/EuropeBackgroundBlurred.webp&quot;);
-      "
-    ></div>
+    <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
+      <div
+        id="background-layer"
+        class="absolute inset-0 bg-cover bg-center opacity-50 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        style="
+          background-image: url(&quot;/resources/images/background.webp&quot;);
+        "
+      ></div>
+      <div
+        class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
+        style="
+          background-image: url(&quot;/resources/images/OpenFront.webp&quot;);
+          opacity: 0.25;
+        "
+      ></div>
+      <div
+        class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
+        style="
+          background-image: url(&quot;/resources/images/OF.webp&quot;);
+          opacity: 0.25;
+        "
+      ></div>
+    </div>
 
     <!-- LEFT SIDEBAR MENU -->
 
@@ -140,10 +157,9 @@
 
     <mobile-nav-bar
       id="sidebar-menu"
-      class="peer in-[.in-game]:hidden z-40001 fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-[80%] [&.open]:translate-x-0 lg:hidden"
+      class="peer [.in-game_&]:hidden z-[40001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/70 backdrop-blur-xl border-r border-white/10 transition-transform duration-500 ease-out transform -translate-x-full w-[70%] [&.open]:translate-x-0 lg:hidden"
       role="dialog"
       data-i18n-aria-label="main.menu"
-      aria-hidden="true"
     ></mobile-nav-bar>
 
     <!-- MAIN CONTENT AREA -->
@@ -163,7 +179,11 @@
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
         <play-page class="contents"></play-page>
-
+        <matchmaking-modal
+          id="page-matchmaking"
+          inline
+          class="hidden w-full h-full page-content"
+        ></matchmaking-modal>
         <news-modal
           id="page-news"
           inline
@@ -225,6 +245,11 @@
           inline
           class="hidden w-full h-full page-content"
         ></flag-input-modal>
+        <ranked-modal
+          id="page-ranked"
+          inline
+          class="hidden w-full h-full page-content"
+        ></ranked-modal>
       </main-layout>
 
       <!-- Desktop Footer -->
@@ -243,13 +268,13 @@
       class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
     >
       <div
-        class="order-2 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
+        class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
       >
-        <attacks-display></attacks-display>
-        <control-panel></control-panel>
+        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
+        <control-panel class="order-4 sm:order-none w-full"></control-panel>
       </div>
       <div
-        class="order-1 sm:order-none w-full sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
+        class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
       >
         <chat-display></chat-display>
         <div class="w-full min-[1200px]:w-96 flex flex-col gap-6">

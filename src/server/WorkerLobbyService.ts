@@ -51,10 +51,21 @@ export class WorkerLobbyService {
             msg.gameID,
             msg.gameConfig,
             undefined,
-            msg.startsAt,
+            undefined,
             msg.publicGameType,
           );
           break;
+        case "updateLobby": {
+          const game = this.gm.game(msg.gameID);
+          if (!game) {
+            this.log.warn("cannot update game, not found", {
+              gameID: msg.gameID,
+            });
+            return;
+          }
+          game.setStartsAt(msg.startsAt);
+          break;
+        }
       }
     });
   }
@@ -72,7 +83,7 @@ export class WorkerLobbyService {
         return {
           gameID: gi.gameID,
           numClients: gi.clients?.length ?? 0,
-          startsAt: gi.startsAt!,
+          startsAt: gi.startsAt,
           gameConfig: gi.gameConfig,
           publicGameType: gi.publicGameType!,
         } satisfies PublicGameInfo;

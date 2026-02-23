@@ -4,6 +4,20 @@ import { PlayerPattern } from "../Schemas";
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
+  private emitChange(key: string, value: boolean | number): void {
+    try {
+      const maybeDispatch = (globalThis as any)?.dispatchEvent;
+      if (typeof maybeDispatch !== "function") return;
+      (globalThis as any).dispatchEvent(
+        new CustomEvent("user-settings-changed", {
+          detail: { key, value },
+        }),
+      );
+    } catch {
+      // Ignore - settings should still be applied even if event dispatch fails.
+    }
+  }
+
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
@@ -17,6 +31,7 @@ export class UserSettings {
 
   set(key: string, value: boolean) {
     localStorage.setItem(key, value ? "true" : "false");
+    this.emitChange(key, value);
   }
 
   getFloat(key: string, defaultValue: number): number {
@@ -31,6 +46,7 @@ export class UserSettings {
 
   setFloat(key: string, value: number) {
     localStorage.setItem(key, value.toString());
+    this.emitChange(key, value);
   }
 
   emojis() {

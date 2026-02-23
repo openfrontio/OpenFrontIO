@@ -76,78 +76,77 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
-    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
-    const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
+    const mg = this.mg;
+    const config = mg.config();
+    const owner = this.warship.owner();
+    const hasPort = owner.unitCount(UnitType.Port) > 0;
+    const patrolTile = this.warship.patrolTile()!;
+    const patrolRangeSquared = config.warshipPatrolRange() ** 2;
 
-    const ships = this.mg.nearbyUnits(
+    const ships = mg.nearbyUnits(
       this.warship.tile()!,
-      this.mg.config().warshipTargettingRange(),
+      config.warshipTargettingRange(),
       [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
     );
-    const potentialTargets: { unit: Unit; distSquared: number }[] = [];
+
+    let bestUnit: Unit | undefined = undefined;
+    let bestTypePriority = 0;
+    let bestDistSquared = 0;
+
     for (const { unit, distSquared } of ships) {
       if (
-        unit.owner() === this.warship.owner() ||
+        unit.owner() === owner ||
         unit === this.warship ||
-        !this.warship.owner().canAttackPlayer(unit.owner(), true) ||
+        !owner.canAttackPlayer(unit.owner(), true) ||
         this.alreadySentShell.has(unit)
       ) {
         continue;
       }
-      if (unit.type() === UnitType.TradeShip) {
+
+      const type = unit.type();
+      if (type === UnitType.TradeShip) {
         if (
           !hasPort ||
           unit.isSafeFromPirates() ||
-          unit.targetUnit()?.owner() === this.warship.owner() || // trade ship is coming to my port
-          unit.targetUnit()?.owner().isFriendly(this.warship.owner()) // trade ship is coming to my ally
+          unit.targetUnit()?.owner() === owner || // trade ship is coming to my port
+          unit.targetUnit()?.owner().isFriendly(owner) // trade ship is coming to my ally
         ) {
           continue;
         }
         if (
-          this.mg.euclideanDistSquared(
-            this.warship.patrolTile()!,
-            unit.tile(),
-          ) > patrolRangeSquared
+          mg.euclideanDistSquared(patrolTile, unit.tile()) > patrolRangeSquared
         ) {
           // Prevent warship from chasing trade ship that is too far away from
           // the patrol tile to prevent warships from wandering around the map.
           continue;
         }
       }
-      potentialTargets.push({ unit: unit, distSquared });
+
+      const typePriority =
+        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
+
+      if (bestUnit === undefined) {
+        bestUnit = unit;
+        bestTypePriority = typePriority;
+        bestDistSquared = distSquared;
+        continue;
+      }
+
+      // Match existing `sort()` semantics:
+      // - Lower priority is better (TransportShip < Warship < TradeShip).
+      // - For same type, smaller distance is better.
+      // - For exact ties, keep the first encountered (stable sort behavior).
+      if (
+        typePriority < bestTypePriority ||
+        (typePriority === bestTypePriority && distSquared < bestDistSquared)
+      ) {
+        bestUnit = unit;
+        bestTypePriority = typePriority;
+        bestDistSquared = distSquared;
+      }
     }
 
-    return potentialTargets.sort((a, b) => {
-      const { unit: unitA, distSquared: distA } = a;
-      const { unit: unitB, distSquared: distB } = b;
-
-      // Prioritize Transport Ships above all other units
-      if (
-        unitA.type() === UnitType.TransportShip &&
-        unitB.type() !== UnitType.TransportShip
-      )
-        return -1;
-      if (
-        unitA.type() !== UnitType.TransportShip &&
-        unitB.type() === UnitType.TransportShip
-      )
-        return 1;
-
-      // Then prioritize Warships.
-      if (
-        unitA.type() === UnitType.Warship &&
-        unitB.type() !== UnitType.Warship
-      )
-        return -1;
-      if (
-        unitA.type() !== UnitType.Warship &&
-        unitB.type() === UnitType.Warship
-      )
-        return 1;
-
-      // If both are the same type, sort by distance (lower `distSquared` means closer)
-      return distA - distB;
-    })[0]?.unit;
+    return bestUnit;
   }
 
   private shootTarget() {

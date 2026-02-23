@@ -55,11 +55,13 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = {
+  const uiState: UIState = {
     attackRatio: 20,
     ghostStructure: null,
+    overlappingRailroads: [],
+    ghostRailPaths: [],
     rocketDirectionUp: true,
-  } as UIState;
+  };
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -349,6 +351,8 @@ export function createRenderer(
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
+  private renderFramesSinceLastTick: number = 0;
+  private renderLayerDurationsSinceLastTick: Record<string, number> = {};
 
   constructor(
     private game: GameView,
@@ -405,7 +409,10 @@ export class GameRenderer {
   }
 
   renderGame() {
-    FrameProfiler.clear();
+    const shouldProfileFrame = FrameProfiler.isEnabled();
+    if (shouldProfileFrame) {
+      FrameProfiler.clear();
+    }
     const start = performance.now();
     // Set background
     this.context.fillStyle = this.game
@@ -439,9 +446,16 @@ export class GameRenderer {
         isTransformActive,
       );
 
-      const layerStart = FrameProfiler.start();
-      layer.renderLayer?.(this.context);
-      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
+      if (shouldProfileFrame) {
+        const layerStart = FrameProfiler.start();
+        layer.renderLayer?.(this.context);
+        FrameProfiler.end(
+          layer.constructor?.name ?? "UnknownLayer",
+          layerStart,
+        );
+      } else {
+        layer.renderLayer?.(this.context);
+      }
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -449,8 +463,15 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    const layerDurations = FrameProfiler.consume();
-    this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
+    if (shouldProfileFrame) {
+      const layerDurations = FrameProfiler.consume();
+      this.renderFramesSinceLastTick++;
+      for (const [name, ms] of Object.entries(layerDurations)) {
+        this.renderLayerDurationsSinceLastTick[name] =
+          (this.renderLayerDurationsSinceLastTick[name] ?? 0) + ms;
+      }
+      this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
+    }
 
     if (duration > 50) {
       console.warn(
@@ -461,6 +482,18 @@ export class GameRenderer {
 
   tick() {
     const nowMs = performance.now();
+    const shouldProfileTick = FrameProfiler.isEnabled();
+
+    if (shouldProfileTick) {
+      this.performanceOverlay.updateRenderPerTickMetrics(
+        this.renderFramesSinceLastTick,
+        this.renderLayerDurationsSinceLastTick,
+      );
+      this.renderFramesSinceLastTick = 0;
+      this.renderLayerDurationsSinceLastTick = {};
+    }
+
+    const tickLayerDurations: Record<string, number> = {};
 
     for (const layer of this.layers) {
       if (!layer.tick) {
@@ -480,7 +513,17 @@ export class GameRenderer {
       state.lastTickAtMs = nowMs;
       this.layerTickState.set(layer, state);
 
+      const tickStart = shouldProfileTick ? performance.now() : 0;
       layer.tick();
+      if (shouldProfileTick && tickStart !== 0) {
+        const duration = performance.now() - tickStart;
+        const label = layer.constructor?.name ?? "UnknownLayer";
+        tickLayerDurations[label] = (tickLayerDurations[label] ?? 0) + duration;
+      }
+    }
+
+    if (shouldProfileTick) {
+      this.performanceOverlay.updateTickLayerMetrics(tickLayerDurations);
     }
   }
 
