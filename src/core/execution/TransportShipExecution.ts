@@ -29,7 +29,7 @@ export class TransportShipExecution implements Execution {
 
   private dst: TileRef | null;
   private src: TileRef | null;
-  private retreatDst: TileRef | null = null;
+  private retreatDst: TileRef | false | null = null;
   private boat: Unit;
 
   private originalOwner: Player;
@@ -158,14 +158,11 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       // Resolve retreat destination once, based on current boat location when retreat begins.
-      if (this.retreatDst === null) {
-        const retreatDst = this.attacker.bestTransportShipSpawn(
-          this.boat.tile(),
-        );
-        this.retreatDst = retreatDst === false ? null : retreatDst;
-      }
+      this.retreatDst ??= this.attacker.bestTransportShipSpawn(
+        this.boat.tile(),
+      );
 
-      if (this.retreatDst === null) {
+      if (this.retreatDst === false) {
         console.warn(
           `TransportShipExecution: retreating but no retreat destination found`,
         );
