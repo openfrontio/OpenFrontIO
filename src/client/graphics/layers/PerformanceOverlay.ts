@@ -1108,7 +1108,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
                   <button
                     class="collapse-button"
                     @click=${this.toggleRenderLayersExpanded}
-                    title=${this.renderLayersExpanded ? "Collapse" : "Expand"}
+                    title=${this.renderLayersExpanded
+                      ? translateText("performance_overlay.collapse")
+                      : translateText("performance_overlay.expand")}
                   >
                     ${this.renderLayersExpanded ? "▾" : "▸"}
                   </button>
@@ -1170,7 +1172,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
                   <button
                     class="collapse-button"
                     @click=${this.toggleTickLayersExpanded}
-                    title=${this.tickLayersExpanded ? "Collapse" : "Expand"}
+                    title=${this.tickLayersExpanded
+                      ? translateText("performance_overlay.collapse")
+                      : translateText("performance_overlay.expand")}
                   >
                     ${this.tickLayersExpanded ? "▾" : "▸"}
                   </button>
