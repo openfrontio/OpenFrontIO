@@ -12,6 +12,7 @@ import {
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
+  AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
@@ -24,7 +25,8 @@ import {
 } from "../../../core/game/GameUpdates";
 import {
   SendAllianceExtensionIntentEvent,
-  SendAllianceReplyIntentEvent,
+  SendAllianceRejectIntentEvent,
+  SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -175,6 +177,10 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
     [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
     [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
+    [
+      GameUpdateType.AllianceExtension,
+      this.onAllianceExtensionEvent.bind(this),
+    ],
   ] as const;
 
   constructor() {
@@ -468,16 +474,14 @@ export class EventsDisplay extends LitElement implements Layer {
           className: "btn",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, true),
+              new SendAllianceRequestIntentEvent(recipient, requestor),
             ),
         },
         {
           text: translateText("events_display.reject_alliance"),
           className: "btn-info",
           action: () =>
-            this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, false),
-            ),
+            this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor)),
         },
       ],
       highlight: true,
@@ -619,6 +623,11 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       focusID: otherID,
     });
+  }
+
+  private onAllianceExtensionEvent(update: AllianceExtensionUpdate) {
+    this.removeAllianceRenewalEvents(update.allianceID);
+    this.requestUpdate();
   }
 
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
@@ -800,7 +809,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg max-sm:rounded-tr-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
               })}
             </div>
           `

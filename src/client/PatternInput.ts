@@ -15,6 +15,9 @@ export class PatternInput extends LitElement {
   @property({ type: Boolean, attribute: "show-select-label" })
   public showSelectLabel: boolean = false;
 
+  @property({ type: Boolean, attribute: "adaptive-size" })
+  public adaptiveSize: boolean = false;
+
   private _abortController: AbortController | null = null;
 
   private _onPatternSelected = async () => {
@@ -60,13 +63,39 @@ export class PatternInput extends LitElement {
     return this;
   }
 
+  private getIsDefaultPattern(): boolean {
+    return this.pattern === null && this.selectedColor === null;
+  }
+
+  private shouldShowSelectLabel(): boolean {
+    return this.showSelectLabel && this.getIsDefaultPattern();
+  }
+
+  private applyAdaptiveSize(): void {
+    if (!this.adaptiveSize) {
+      this.style.removeProperty("width");
+      this.style.removeProperty("height");
+      return;
+    }
+
+    const showSelect = this.showSelectLabel && this.getIsDefaultPattern();
+    this.style.setProperty("height", "3rem");
+    this.style.setProperty(
+      "width",
+      showSelect ? "clamp(6.5rem, 28vw, 9.5rem)" : "3rem",
+    );
+  }
+
+  protected updated(): void {
+    this.applyAdaptiveSize();
+  }
+
   render() {
     if (crazyGamesSDK.isOnCrazyGames()) {
       return html``;
     }
 
-    const isDefault = this.pattern === null && this.selectedColor === null;
-    const showSelect = this.showSelectLabel && isDefault;
+    const showSelect = this.shouldShowSelectLabel();
     const buttonTitle = translateText("territory_patterns.title");
 
     // Show loading state
@@ -74,7 +103,7 @@ export class PatternInput extends LitElement {
       return html`
         <button
           id="pattern-input"
-          class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-slate-900/80 rounded-lg overflow-hidden"
+          class="pattern-btn m-0 p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] rounded-lg overflow-hidden"
           disabled
         >
           <span
@@ -94,7 +123,7 @@ export class PatternInput extends LitElement {
     return html`
       <button
         id="pattern-input"
-        class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden"
+        class="pattern-btn m-0 p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] hover:brightness-[1.08] active:brightness-[0.95] rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
       >
@@ -107,7 +136,7 @@ export class PatternInput extends LitElement {
         </span>
         ${showSelect
           ? html`<span
-              class="text-[10px] font-black text-white/40 uppercase leading-none break-words w-full text-center px-1"
+              class="text-[10px] font-black text-white uppercase leading-none break-words w-full text-center px-1"
             >
               ${translateText("territory_patterns.select_skin")}
             </span>`

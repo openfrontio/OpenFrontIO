@@ -15,6 +15,8 @@ export class MapDisplay extends LitElement {
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
   @state() private hasNations = true;
+  private observer: IntersectionObserver | null = null;
+  private dataLoaded = false;
 
   createRenderRoot() {
     return this;
@@ -22,7 +24,23 @@ export class MapDisplay extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadMapData();
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && !this.dataLoaded) {
+          this.dataLoaded = true;
+          this.loadMapData();
+          this.observer?.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    this.observer.observe(this);
+  }
+
+  disconnectedCallback() {
+    this.observer?.disconnect();
+    this.observer = null;
+    super.disconnectedCallback();
   }
 
   private async loadMapData() {
@@ -32,7 +50,7 @@ export class MapDisplay extends LitElement {
       this.isLoading = true;
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
-      this.mapWebpPath = await data.webpPath();
+      this.mapWebpPath = data.webpPath;
       const manifest = await data.manifest();
       this.mapName = manifest.name;
       this.hasNations =
