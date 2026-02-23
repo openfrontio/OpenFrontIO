@@ -183,10 +183,9 @@ export class MapPlaylist {
       mode === GameMode.Team ? this.getTeamCount() : undefined;
     const supportsCompact =
       mode !== GameMode.Team || (await this.supportsCompactMapForTeams(map));
-    const rolled = this.getRandomPublicGameModifiers({
-      specialRates: true,
-      excludedModifiers: supportsCompact ? [] : ["isCompact"],
-    });
+    const rolled = this.getRandomSpecialGameModifiers(
+      supportsCompact ? [] : ["isCompact"],
+    );
     const { isCrowded, startingGold } = rolled;
     const { isCompact } = rolled;
     let { isRandomSpawn } = rolled;
@@ -358,61 +357,60 @@ export class MapPlaylist {
     return TEAM_WEIGHTS[0].config;
   }
 
-  private getRandomPublicGameModifiers(options?: {
-    specialRates?: boolean;
-    excludedModifiers?: ModifierKey[];
-  }): PublicGameModifiers {
-    if (options?.specialRates) {
-      const baseWeightedModifiers: WeightedModifier[] = [
-        { key: "isRandomSpawn", weight: 4 },
-        { key: "isCompact", weight: 7 },
-        { key: "isCrowded", weight: 1 },
-        { key: "startingGold", weight: 6 },
-      ];
-      const weightedModifiers = baseWeightedModifiers.filter(
-        (modifier) => !options.excludedModifiers?.includes(modifier.key),
-      );
-      const selected = new Set<ModifierKey>();
-      const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
-      const k =
-        modifierCountRoll <= 3
-          ? 1
-          : modifierCountRoll <= 7
-            ? 2
-            : modifierCountRoll <= 9
-              ? 3
-              : 4;
-
-      for (let i = 0; i < k && weightedModifiers.length > 0; i++) {
-        const totalWeight = weightedModifiers.reduce(
-          (sum, modifier) => sum + modifier.weight,
-          0,
-        );
-        let roll = Math.random() * totalWeight;
-        for (let j = 0; j < weightedModifiers.length; j++) {
-          const modifier = weightedModifiers[j];
-          roll -= modifier.weight;
-          if (roll <= 0) {
-            selected.add(modifier.key);
-            weightedModifiers.splice(j, 1);
-            break;
-          }
-        }
-      }
-
-      return {
-        isRandomSpawn: selected.has("isRandomSpawn"),
-        isCompact: selected.has("isCompact"),
-        isCrowded: selected.has("isCrowded"),
-        startingGold: selected.has("startingGold") ? 5_000_000 : undefined,
-      };
-    }
-
+  private getRandomPublicGameModifiers(): PublicGameModifiers {
     return {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
       isCrowded: Math.random() < 0.05, // 5% chance
       startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
+    };
+  }
+
+  private getRandomSpecialGameModifiers(
+    excludedModifiers: ModifierKey[] = [],
+  ): PublicGameModifiers {
+    const baseWeightedModifiers: WeightedModifier[] = [
+      { key: "isRandomSpawn", weight: 4 },
+      { key: "isCompact", weight: 7 },
+      { key: "isCrowded", weight: 1 },
+      { key: "startingGold", weight: 6 },
+    ];
+    const weightedModifiers = baseWeightedModifiers.filter(
+      (modifier) => !excludedModifiers.includes(modifier.key),
+    );
+    const selected = new Set<ModifierKey>();
+    const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
+    const k =
+      modifierCountRoll <= 3
+        ? 1
+        : modifierCountRoll <= 7
+          ? 2
+          : modifierCountRoll <= 9
+            ? 3
+            : 4;
+
+    for (let i = 0; i < k && weightedModifiers.length > 0; i++) {
+      const totalWeight = weightedModifiers.reduce(
+        (sum, modifier) => sum + modifier.weight,
+        0,
+      );
+      let roll = Math.random() * totalWeight;
+      for (let j = 0; j < weightedModifiers.length; j++) {
+        const modifier = weightedModifiers[j];
+        roll -= modifier.weight;
+        if (roll <= 0) {
+          selected.add(modifier.key);
+          weightedModifiers.splice(j, 1);
+          break;
+        }
+      }
+    }
+
+    return {
+      isRandomSpawn: selected.has("isRandomSpawn"),
+      isCompact: selected.has("isCompact"),
+      isCrowded: selected.has("isCrowded"),
+      startingGold: selected.has("startingGold") ? 5_000_000 : undefined,
     };
   }
 
