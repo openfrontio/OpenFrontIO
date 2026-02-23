@@ -87,6 +87,9 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: HumansVsNations, weight: 20 },
 ];
 
+type ModifierKey = "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold";
+type WeightedModifier = { key: ModifierKey; weight: number };
+
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
     ffa: [],
@@ -185,12 +188,8 @@ export class MapPlaylist {
       excludedModifiers: supportsCompact ? [] : ["isCompact"],
     });
     const { isCrowded, startingGold } = rolled;
-    let { isCompact } = rolled;
+    const { isCompact } = rolled;
     let { isRandomSpawn } = rolled;
-
-    if (!supportsCompact) {
-      isCompact = false;
-    }
 
     if (
       playerTeams === Duos ||
@@ -361,25 +360,19 @@ export class MapPlaylist {
 
   private getRandomPublicGameModifiers(options?: {
     specialRates?: boolean;
-    excludedModifiers?: Array<
-      "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold"
-    >;
+    excludedModifiers?: ModifierKey[];
   }): PublicGameModifiers {
     if (options?.specialRates) {
-      const weightedModifiers: Array<{
-        key: "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold";
-        weight: number;
-      }> = [
+      const baseWeightedModifiers: WeightedModifier[] = [
         { key: "isRandomSpawn", weight: 4 },
         { key: "isCompact", weight: 7 },
         { key: "isCrowded", weight: 1 },
         { key: "startingGold", weight: 6 },
-      ].filter(
+      ];
+      const weightedModifiers = baseWeightedModifiers.filter(
         (modifier) => !options.excludedModifiers?.includes(modifier.key),
       );
-      const selected = new Set<
-        "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold"
-      >();
+      const selected = new Set<ModifierKey>();
       const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
       const k =
         modifierCountRoll <= 3
