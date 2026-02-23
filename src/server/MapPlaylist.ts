@@ -195,8 +195,8 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    const rolled = this.getRandomSpecialGameModifiers(excludedModifiers);
-    const { isCompact, isRandomSpawn, isCrowded, startingGold } = rolled;
+    const { isCrowded, startingGold, isCompact, isRandomSpawn } =
+      this.getRandomSpecialGameModifiers(excludedModifiers);
 
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
