@@ -9,12 +9,15 @@ vi.mock("../../src/client/Utils", () => ({
 // Mock cosmetics fetch + relationship logic so we can deterministically render
 // purchasable vs owned patterns without depending on real server data.
 const fetchCosmeticsMock = vi.fn();
+const getPlayerCosmeticsMock = vi.fn();
 const patternRelationshipMock = vi.fn();
 const handlePurchaseMock = vi.fn();
 vi.mock("../../src/client/Cosmetics", () => ({
   fetchCosmetics: (...args: any[]) => fetchCosmeticsMock(...args),
+  getPlayerCosmetics: (...args: any[]) => getPlayerCosmeticsMock(...args),
   patternRelationship: (...args: any[]) => patternRelationshipMock(...args),
   handlePurchase: (...args: any[]) => handlePurchaseMock(...args),
+  TEMP_FLARE_OFFSET: 0,
 }));
 
 // Mock PatternButton to avoid canvas + pattern decoding in JSDOM, while still
@@ -157,6 +160,10 @@ describe("TerritoryPatternsModal skin button simulation", () => {
     }
 
     fetchCosmeticsMock.mockResolvedValue(makeCosmetics());
+    getPlayerCosmeticsMock.mockResolvedValue({
+      pattern: null,
+      color: null,
+    });
     patternRelationshipMock.mockImplementation((pattern: any) => {
       if (pattern?.name === "owned_pattern") return "owned";
       if (pattern?.name === "purch_pattern") return "purchasable";
