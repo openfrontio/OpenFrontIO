@@ -200,10 +200,7 @@ export class MapPlaylist {
 
     // Reroll until a special modifier survives constraints.
     while (true) {
-      const rolled = this.getRandomPublicGameModifiers({
-        ensureSpecial: true,
-        specialRates: true,
-      });
+      const rolled = this.getRandomPublicGameModifiers();
       let { isCompact, isRandomSpawn, isCrowded } = rolled;
       const { startingGold } = rolled;
 
@@ -396,36 +393,19 @@ export class MapPlaylist {
     return TEAM_WEIGHTS[0].config;
   }
 
-  private getRandomPublicGameModifiers(options?: {
-    ensureSpecial?: boolean;
-    specialRates?: boolean;
-  }): PublicGameModifiers {
-    const rates = options?.specialRates
-      ? {
-          isRandomSpawn: 0.2,
-          isCompact: 0.3,
-          isCrowded: 0.2,
-          startingGold: 0.2,
-        }
-      : {
-          isRandomSpawn: 0.1,
-          isCompact: 0.05,
-          isCrowded: 0.05,
-          startingGold: 0.05,
-        };
-
-    const rollModifiers = (): PublicGameModifiers => ({
+  private getRandomPublicGameModifiers(): PublicGameModifiers {
+    const rates = {
+      isRandomSpawn: 0.1,
+      isCompact: 0.05,
+      isCrowded: 0.05,
+      startingGold: 0.05,
+    };
+    return {
       isRandomSpawn: Math.random() < rates.isRandomSpawn,
       isCompact: Math.random() < rates.isCompact,
       isCrowded: Math.random() < rates.isCrowded,
       startingGold: Math.random() < rates.startingGold ? 5_000_000 : undefined,
-    });
-
-    let modifiers = rollModifiers();
-    while (options?.ensureSpecial && !isSpecialModifiers(modifiers)) {
-      modifiers = rollModifiers();
-    }
-    return modifiers;
+    };
   }
 
   // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
