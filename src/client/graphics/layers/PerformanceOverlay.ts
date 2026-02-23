@@ -937,7 +937,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const clampedX = Math.max(margin, Math.min(this.position.x, maxLeft));
     const clampedY = Math.max(
       margin,
-      Math.min(this.position.y, viewportHeight),
+      Math.min(this.position.y, viewportHeight - 100),
     );
 
     const copyLabel =
