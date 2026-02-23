@@ -366,20 +366,20 @@ export class PlayerImpl implements Player {
     this.mg.conquer(this, tile);
   }
   orderRetreat(id: string) {
-    const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
-    if (!attack || !attack[0]) {
+    const attack = this._outgoingAttacks.find((attack) => attack.id() === id);
+    if (!attack) {
       console.warn(`Didn't find outgoing attack with id ${id}`);
       return;
     }
-    attack[0].orderRetreat();
+    attack.orderRetreat();
   }
   executeRetreat(id: string): void {
-    const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
+    const attack = this._outgoingAttacks.find((attack) => attack.id() === id);
     // Execution is delayed so it's not an error that the attack does not exist.
-    if (!attack || !attack[0]) {
+    if (!attack) {
       return;
     }
-    attack[0].executeRetreat();
+    attack.executeRetreat();
   }
   relinquish(tile: TileRef) {
     if (this.mg.owner(tile) !== this) {
@@ -1258,13 +1258,9 @@ export class PlayerImpl implements Player {
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
-    const spawns = this.units(UnitType.Port).filter(
-      (u) => u.tile() === targetTile,
-    );
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+    return this.units(UnitType.Port).find((u) => u.tile() === targetTile)
+      ? targetTile
+      : false;
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
