@@ -119,7 +119,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 100;
   }
   gameCreationRate(): number {
-    return 60 * 1000;
+    return 2 * 60 * 1000;
   }
 
   workerIndex(gameID: GameID): number {

@@ -378,7 +378,7 @@ export class LeaderboardPlayerList extends LitElement {
             <table class="w-full text-sm border-collapse table-fixed">
               <colgroup>
                 <col style="width: 4rem" />
-                <col />
+                <col style="width: 12rem" />
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
