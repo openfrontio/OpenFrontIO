@@ -31,7 +31,9 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
+  SpawnArea,
   Team,
+  TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
   Trios,
@@ -56,9 +58,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    teamGameSpawnAreas,
+  );
 }
 
 export type CellString = string;
@@ -86,7 +97,7 @@ export class GameImpl implements Game {
   private tileUpdatePairs: number[] = [];
   private unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
+  private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -97,6 +108,7 @@ export class GameImpl implements Game {
   private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
+  private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -105,9 +117,11 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    teamGameSpawnAreas?: TeamGameSpawnAreas,
   ) {
     const constructorStart = performance.now();
 
+    this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -789,6 +803,22 @@ export class GameImpl implements Game {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
+  }
+
+  teamSpawnArea(team: Team): SpawnArea | undefined {
+    if (!this._teamGameSpawnAreas) {
+      return undefined;
+    }
+    const numTeams = this.playerTeams.length;
+    const areas = this._teamGameSpawnAreas[String(numTeams)];
+    if (!areas) {
+      return undefined;
+    }
+    const teamIndex = this.playerTeams.indexOf(team);
+    if (teamIndex < 0 || teamIndex >= areas.length) {
+      return undefined;
+    }
+    return areas[teamIndex];
   }
 
   displayMessage(
