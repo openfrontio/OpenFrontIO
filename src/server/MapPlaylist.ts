@@ -183,20 +183,20 @@ export class MapPlaylist {
       mode === GameMode.Team ? this.getTeamCount() : undefined;
     const supportsCompact =
       mode !== GameMode.Team || (await this.supportsCompactMapForTeams(map));
-    const rolled = this.getRandomSpecialGameModifiers(
-      supportsCompact ? [] : ["isCompact"],
-    );
-    const { isCrowded, startingGold } = rolled;
-    const { isCompact } = rolled;
-    let { isRandomSpawn } = rolled;
-
+    const excludedModifiers: ModifierKey[] = [];
+    if (!supportsCompact) {
+      excludedModifiers.push("isCompact");
+    }
     if (
       playerTeams === Duos ||
       playerTeams === Trios ||
       playerTeams === Quads
     ) {
-      isRandomSpawn = false;
+      excludedModifiers.push("isRandomSpawn");
     }
+
+    const rolled = this.getRandomSpecialGameModifiers(excludedModifiers);
+    const { isCompact, isRandomSpawn, isCrowded, startingGold } = rolled;
 
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
