@@ -366,7 +366,7 @@ export class MapPlaylist {
       }> = [
         { key: "isRandomSpawn", weight: 4 },
         { key: "isCompact", weight: 7 },
-        { key: "isCrowded", weight: 0 },
+        { key: "isCrowded", weight: 1 },
         { key: "startingGold", weight: 6 },
       ];
       const selected = new Set<
