@@ -21,6 +21,7 @@ var maps = []struct {
 	Name   string
 	IsTest bool
 }{
+	{Name: "test"},
 	{Name: "africa"},
 	{Name: "asia"},
 	{Name: "australia"},

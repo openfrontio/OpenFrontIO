@@ -1,0 +1,17 @@
+{
+  "name": "test",
+  "nations": [
+    {
+      "coordinates": [644, 327],
+      "name": "test 1"
+    },
+    {
+      "coordinates": [1009, 592],
+      "name": "test 2"
+    },
+    {
+      "coordinates": [1360, 572],
+      "name": "test 3"
+    }
+  ]
+}

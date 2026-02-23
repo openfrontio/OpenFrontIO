@@ -1,0 +1,41 @@
+{
+  "map": {
+    "height": 980,
+    "num_land_tiles": 422065,
+    "width": 1584
+  },
+  "map16x": {
+    "height": 245,
+    "num_land_tiles": 24084,
+    "width": 396
+  },
+  "map4x": {
+    "height": 490,
+    "num_land_tiles": 102384,
+    "width": 792
+  },
+  "name": "test",
+  "nations": [
+    {
+      "coordinates": [
+        644,
+        327
+      ],
+      "name": "test 1"
+    },
+    {
+      "coordinates": [
+        1009,
+        592
+      ],
+      "name": "test 2"
+    },
+    {
+      "coordinates": [
+        1360,
+        572
+      ],
+      "name": "test 3"
+    }
+  ]
+}
