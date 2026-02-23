@@ -18,6 +18,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public userSettings!: UserSettings;
 
+  private subscribedEventBus: EventBus | null = null;
+  private isUserSettingsListenerAttached: boolean = false;
+
   @state()
   private currentFPS: number = 0;
 
@@ -365,29 +368,99 @@ export class PerformanceOverlay extends LitElement implements Layer {
     super();
   }
 
+  private onTogglePerformanceOverlay = (
+    _event: TogglePerformanceOverlayEvent,
+  ) => {
+    const nextVisible = !this.isVisible;
+    this.setVisible(nextVisible);
+    this.userSettings.set("settings.performanceOverlay", nextVisible);
+  };
+
+  private onTickMetricsEvent = (event: TickMetricsEvent) => {
+    this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
+  };
+
+  private onUserSettingsChanged = (event: Event) => {
+    const customEvent = event as CustomEvent<{
+      key?: string;
+      value?: unknown;
+    }>;
+    if (customEvent.detail?.key !== "settings.performanceOverlay") return;
+
+    const nextVisible = customEvent.detail.value === true;
+    if (this.isVisible === nextVisible) return;
+    this.setVisible(nextVisible);
+  };
+
   init() {
     this.setVisible(this.userSettings.performanceOverlay());
 
-    this.eventBus.on(TogglePerformanceOverlayEvent, () => {
-      const nextVisible = !this.isVisible;
-      this.setVisible(nextVisible);
-      this.userSettings.set("settings.performanceOverlay", nextVisible);
-    });
-    this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
-      this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
-    });
+    if (this.subscribedEventBus && this.subscribedEventBus !== this.eventBus) {
+      this.subscribedEventBus.off(
+        TogglePerformanceOverlayEvent,
+        this.onTogglePerformanceOverlay,
+      );
+      this.subscribedEventBus.off(TickMetricsEvent, this.onTickMetricsEvent);
+      this.subscribedEventBus = null;
+    }
 
-    globalThis.addEventListener("user-settings-changed", (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        key?: string;
-        value?: unknown;
-      }>;
-      if (customEvent.detail?.key !== "settings.performanceOverlay") return;
+    if (this.subscribedEventBus !== this.eventBus) {
+      this.eventBus.on(
+        TogglePerformanceOverlayEvent,
+        this.onTogglePerformanceOverlay,
+      );
+      this.eventBus.on(TickMetricsEvent, this.onTickMetricsEvent);
+      this.subscribedEventBus = this.eventBus;
+    }
 
-      const nextVisible = customEvent.detail.value === true;
-      if (this.isVisible === nextVisible) return;
-      this.setVisible(nextVisible);
-    });
+    if (!this.isUserSettingsListenerAttached) {
+      globalThis.addEventListener(
+        "user-settings-changed",
+        this.onUserSettingsChanged,
+      );
+      this.isUserSettingsListenerAttached = true;
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+
+    if (this.isUserSettingsListenerAttached) {
+      globalThis.removeEventListener(
+        "user-settings-changed",
+        this.onUserSettingsChanged,
+      );
+      this.isUserSettingsListenerAttached = false;
+    }
+
+    if (this.subscribedEventBus) {
+      this.subscribedEventBus.off(
+        TogglePerformanceOverlayEvent,
+        this.onTogglePerformanceOverlay,
+      );
+      this.subscribedEventBus.off(TickMetricsEvent, this.onTickMetricsEvent);
+      this.subscribedEventBus = null;
+    }
+
+    if (this.copyStatusTimeoutId) {
+      clearTimeout(this.copyStatusTimeoutId);
+      this.copyStatusTimeoutId = null;
+    }
+
+    if (this.resizeState) {
+      globalThis.removeEventListener("pointermove", this.onResizePointerMove);
+      globalThis.removeEventListener("pointerup", this.onResizePointerUp);
+      globalThis.removeEventListener("pointercancel", this.onResizePointerUp);
+      this.resizeState = null;
+    }
+
+    if (this.dragState) {
+      globalThis.removeEventListener("pointermove", this.onDragPointerMove);
+      globalThis.removeEventListener("pointerup", this.onDragPointerUp);
+      globalThis.removeEventListener("pointercancel", this.onDragPointerUp);
+      this.dragState = null;
+      this.isDragging = false;
+    }
   }
 
   setVisible(visible: boolean) {
