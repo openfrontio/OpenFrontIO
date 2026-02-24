@@ -70,7 +70,7 @@ export class UnitLayer implements Layer {
         .updatesSinceLastTick()
         ?.[GameUpdateType.Unit]?.map((unit) => unit.id) ?? [];
 
-    const motionPlanUnitIds = Array.from(this.game.motionPlans().keys());
+    const motionPlanUnitIds = this.game.motionPlannedUnitIds();
 
     if (updatedUnitIds.length === 0) {
       this.updateUnitsSprites(motionPlanUnitIds);

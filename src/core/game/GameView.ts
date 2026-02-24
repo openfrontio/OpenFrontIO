@@ -598,6 +598,20 @@ export class PlayerView {
   }
 }
 
+type TrainPlanState = {
+  planId: number;
+  startTick: number;
+  speed: number;
+  spacing: number;
+  carUnitIds: Uint32Array;
+  path: Uint32Array;
+  cursor: number;
+  usedTilesBuf: Uint32Array;
+  usedHead: number;
+  usedLen: number;
+  lastAdvancedTick: Tick;
+};
+
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
   private smallIDToID = new Map<number, PlayerID>();
@@ -617,6 +631,8 @@ export class GameView implements GameMap {
       path: Uint32Array;
     }
   >();
+  private trainMotionPlans = new Map<number, TrainPlanState>();
+  private trainUnitToEngine = new Map<number, number>();
 
   private toDelete = new Set<number>();
 
@@ -672,6 +688,21 @@ export class GameView implements GameMap {
     }
   > {
     return this.unitMotionPlans;
+  }
+
+  public motionPlannedUnitIds(): number[] {
+    const out: number[] = [];
+    for (const unitId of this.unitMotionPlans.keys()) {
+      out.push(unitId);
+    }
+    for (const [engineId, plan] of this.trainMotionPlans) {
+      out.push(engineId);
+      for (let i = 0; i < plan.carUnitIds.length; i++) {
+        const id = plan.carUnitIds[i] >>> 0;
+        if (id !== 0) out.push(id);
+      }
+    }
+    return out;
   }
 
   public isCatchingUp(): boolean {
@@ -751,6 +782,7 @@ export class GameView implements GameMap {
         // Wait until next tick to delete the unit.
         this.toDelete.add(unit.id());
         this.unitMotionPlans.delete(unit.id());
+        this.clearTrainPlanForUnit(unit.id());
       }
     });
 
@@ -772,6 +804,106 @@ export class GameView implements GameMap {
       if (newTile !== oldTile) {
         this.unitGrid.updateUnitCell(unit);
       }
+    }
+
+    this.advanceTrainMotionPlannedUnits(currentTick);
+  }
+
+  private clearTrainPlanForUnit(unitId: number): void {
+    const engineId =
+      this.trainUnitToEngine.get(unitId) ??
+      (this.trainMotionPlans.has(unitId) ? unitId : null);
+    if (engineId === null) {
+      return;
+    }
+    const plan = this.trainMotionPlans.get(engineId);
+    if (!plan) {
+      this.trainUnitToEngine.delete(unitId);
+      return;
+    }
+    this.trainMotionPlans.delete(engineId);
+    this.trainUnitToEngine.delete(engineId);
+    for (let i = 0; i < plan.carUnitIds.length; i++) {
+      const id = plan.carUnitIds[i] >>> 0;
+      if (id !== 0) this.trainUnitToEngine.delete(id);
+    }
+  }
+
+  private advanceTrainMotionPlannedUnits(currentTick: Tick): void {
+    const staleEngineIds: number[] = [];
+    for (const [engineId, plan] of this.trainMotionPlans) {
+      const engine = this._units.get(engineId);
+      if (!engine || !engine.isActive()) {
+        staleEngineIds.push(engineId);
+        continue;
+      }
+
+      const steps = currentTick - plan.lastAdvancedTick;
+      if (steps <= 0) {
+        continue;
+      }
+
+      const path = plan.path;
+      const cap = plan.usedTilesBuf.length;
+
+      const pushUsed = (tile: TileRef) => {
+        if (cap === 0) return;
+        if (plan.usedLen < cap) {
+          const idx = (plan.usedHead + plan.usedLen) % cap;
+          plan.usedTilesBuf[idx] = tile >>> 0;
+          plan.usedLen++;
+        } else {
+          plan.usedTilesBuf[plan.usedHead] = tile >>> 0;
+          plan.usedHead = (plan.usedHead + 1) % cap;
+          plan.usedLen = cap;
+        }
+      };
+
+      const usedGet = (index: number): TileRef | null => {
+        if (index < 0 || index >= plan.usedLen || cap === 0) return null;
+        const idx = (plan.usedHead + index) % cap;
+        return plan.usedTilesBuf[idx] as TileRef;
+      };
+
+      for (let step = 0; step < steps; step++) {
+        const cursor = plan.cursor;
+        for (let i = 0; i < plan.speed && cursor + i < path.length; i++) {
+          pushUsed(path[cursor + i] as TileRef);
+        }
+
+        plan.cursor = Math.min(path.length - 1, cursor + plan.speed);
+
+        for (let i = plan.carUnitIds.length - 1; i >= 0; --i) {
+          const carId = plan.carUnitIds[i] >>> 0;
+          if (carId === 0) continue;
+          const car = this._units.get(carId);
+          if (!car || !car.isActive()) {
+            continue;
+          }
+          const carTileIndex = (i + 1) * plan.spacing + 2;
+          const tile = usedGet(carTileIndex);
+          if (tile !== null) {
+            const oldTile = car.tile();
+            car.applyDerivedPosition(tile);
+            if (tile !== oldTile) {
+              this.unitGrid.updateUnitCell(car);
+            }
+          }
+        }
+
+        const newEngineTile = path[plan.cursor] as TileRef;
+        const oldEngineTile = engine.tile();
+        engine.applyDerivedPosition(newEngineTile);
+        if (newEngineTile !== oldEngineTile) {
+          this.unitGrid.updateUnitCell(engine);
+        }
+      }
+
+      plan.lastAdvancedTick = currentTick;
+    }
+
+    for (const engineId of staleEngineIds) {
+      this.clearTrainPlanForUnit(engineId);
     }
   }
 
@@ -812,6 +944,52 @@ export class GameView implements GameMap {
             ticksPerStep: record.ticksPerStep,
             path,
           });
+          break;
+        }
+        case "train": {
+          if (record.speed < 1 || record.path.length < 1) {
+            break;
+          }
+          const existing = this.trainMotionPlans.get(record.engineUnitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+          if (existing) {
+            this.clearTrainPlanForUnit(record.engineUnitId);
+          }
+
+          const carUnitIds =
+            record.carUnitIds instanceof Uint32Array
+              ? record.carUnitIds
+              : Uint32Array.from(record.carUnitIds);
+          const path =
+            record.path instanceof Uint32Array
+              ? record.path
+              : Uint32Array.from(record.path);
+
+          const usedCap = carUnitIds.length * record.spacing + 3;
+          const usedTilesBuf = new Uint32Array(Math.max(0, usedCap));
+
+          this.trainMotionPlans.set(record.engineUnitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            speed: record.speed,
+            spacing: record.spacing,
+            carUnitIds,
+            path,
+            cursor: 0,
+            usedTilesBuf,
+            usedHead: 0,
+            usedLen: 0,
+            lastAdvancedTick: record.startTick,
+          });
+
+          this.trainUnitToEngine.set(record.engineUnitId, record.engineUnitId);
+          for (let i = 0; i < carUnitIds.length; i++) {
+            const carId = carUnitIds[i] >>> 0;
+            if (carId !== 0)
+              this.trainUnitToEngine.set(carId, record.engineUnitId);
+          }
           break;
         }
       }

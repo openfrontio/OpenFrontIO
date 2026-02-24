@@ -452,6 +452,12 @@ export class GameImpl implements Game {
       case "grid":
         this.planDrivenUnitIds.add(record.unitId);
         break;
+      case "train":
+        this.planDrivenUnitIds.add(record.engineUnitId);
+        for (const unitId of record.carUnitIds) {
+          this.planDrivenUnitIds.add(unitId);
+        }
+        break;
     }
     this.motionPlanRecords.push(record);
   }
