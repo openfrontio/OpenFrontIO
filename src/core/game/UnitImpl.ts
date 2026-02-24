@@ -160,7 +160,9 @@ export class UnitImpl implements Unit {
     this._lastTile = this._tile;
     this._tile = tile;
     this.mg.updateUnitTile(this);
-    this.mg.addUpdate(this.toUpdate());
+    if (!this.mg.isUnitPlanDriven(this._id)) {
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
   setTroops(troops: number): void {
@@ -336,7 +338,10 @@ export class UnitImpl implements Unit {
     if (this.type() !== UnitType.TransportShip) {
       throw new Error(`Cannot retreat ${this.type()}`);
     }
-    this._retreating = true;
+    if (!this._retreating) {
+      this._retreating = true;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
   isUnderConstruction(): boolean {
