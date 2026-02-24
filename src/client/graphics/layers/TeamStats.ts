@@ -5,6 +5,7 @@ import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import {
   formatPercentage,
+  getTranslatedPlayerTeamLabel,
   renderNumber,
   renderTroops,
   translateText,
@@ -71,7 +72,7 @@ export class TeamStats extends LitElement implements Layer {
     for (const player of players) {
       let team = player.team();
       if (team === null) continue;
-      team = translateText(`team_colors.${team.toLowerCase()}`);
+      team = getTranslatedPlayerTeamLabel(team);
       grouped[team] ??= [];
       grouped[team].push(player);
     }

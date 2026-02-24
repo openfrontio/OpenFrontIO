@@ -19,6 +19,7 @@ import {
   TouchEvent,
 } from "../../InputHandler";
 import {
+  getTranslatedPlayerTeamLabel,
   renderDuration,
   renderNumber,
   renderTroops,
@@ -314,10 +315,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         playerType = translateText("player_type.player");
         break;
     }
-    let playerTeam = player.team();
-    if (playerTeam !== null) {
-      playerTeam = translateText(`team_colors.${playerTeam.toLowerCase()}`);
-    }
+    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
       <div class="flex items-start gap-2 lg:gap-3 p-1.5 lg:p-2">
@@ -361,7 +359,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   />`
               : html``}
             <span>${player.name()}</span>
-            ${playerTeam !== null && player.type() !== PlayerType.Bot
+            ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
                     >${playerType}</span
