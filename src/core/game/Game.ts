@@ -52,6 +52,15 @@ export const isDifficulty = (value: unknown): value is Difficulty =>
 
 export type Team = string;
 
+export interface SpawnArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type TeamGameSpawnAreas = Record<string, SpawnArea[]>;
+
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
@@ -753,6 +762,7 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
   alliances(): MutableAlliance[];
