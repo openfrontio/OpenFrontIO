@@ -24,6 +24,13 @@ export interface GameUpdateViewData {
    * state (`uint16`) stored in a `uint32` lane.
    */
   packedTileUpdates: Uint32Array;
+  /**
+   * Optional packed motion plan records.
+   *
+   * When present, this buffer is expected to be transferred worker -> main
+   * (similar to `packedTileUpdates`) to avoid structured-clone copies.
+   */
+  packedMotionPlans?: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
   tickExecutionDuration?: number;
   pendingTurns?: number;

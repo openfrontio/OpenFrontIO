@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MotionPlanRecord } from "../game/MotionPlans";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { distSortUnit } from "../Util";
@@ -19,6 +20,8 @@ export class TradeShipExecution implements Execution {
   private wasCaptured = false;
   private pathFinder: SteppingPathFinder<TileRef>;
   private tilesTraveled = 0;
+  private motionPlanId = 1;
+  private motionPlanDst: TileRef | null = null;
 
   constructor(
     private origOwner: Player,
@@ -32,6 +35,7 @@ export class TradeShipExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    let spawnedThisTick = false;
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
@@ -47,6 +51,18 @@ export class TradeShipExecution implements Execution {
         lastSetSafeFromPirates: ticks,
       });
       this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
+      spawnedThisTick = true;
+
+      const placeholderPlan: MotionPlanRecord = {
+        kind: "grid",
+        unitId: this.tradeShip.id(),
+        planId: this.motionPlanId,
+        startTick: ticks + 1,
+        ticksPerStep: 1,
+        path: [spawn],
+      };
+      this.mg.recordMotionPlan(placeholderPlan);
+      this.motionPlanDst = this._dstPort.tile();
     }
 
     if (!this.tradeShip.isActive()) {
@@ -93,6 +109,8 @@ export class TradeShipExecution implements Execution {
       } else {
         this._dstPort = ports[0];
         this.tradeShip.setTargetUnit(this._dstPort);
+        // Plan-driven units don't emit per-tick unit updates, so force a sync for the new target.
+        this.tradeShip.touch();
       }
     }
 
@@ -106,8 +124,6 @@ export class TradeShipExecution implements Execution {
 
     switch (result.status) {
       case PathStatus.PENDING:
-        // Fire unit event to rerender.
-        this.tradeShip.move(curTile);
         break;
       case PathStatus.NEXT:
         // Update safeFromPirates status
@@ -127,6 +143,26 @@ export class TradeShipExecution implements Execution {
         }
         this.active = false;
         break;
+    }
+
+    const dst = this._dstPort.tile();
+    if (spawnedThisTick || dst !== this.motionPlanDst) {
+      this.motionPlanId++;
+      const from = this.tradeShip.tile();
+      const path = this.pathFinder.findPath(from, dst) ?? [from];
+      if (path.length === 0 || path[0] !== from) {
+        path.unshift(from);
+      }
+
+      this.mg.recordMotionPlan({
+        kind: "grid",
+        unitId: this.tradeShip.id(),
+        planId: this.motionPlanId,
+        startTick: ticks + 1,
+        ticksPerStep: 1,
+        path,
+      });
+      this.motionPlanDst = dst;
     }
   }
 
