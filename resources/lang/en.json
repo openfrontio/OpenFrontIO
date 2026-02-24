@@ -208,7 +208,7 @@
   },
   "account_modal": {
     "title": "Account",
-    "connected_as": "Connected with the following Discord account",
+    "connected_as": "Connected with the following account",
     "stats_overview": "Stats Overview",
     "link_discord": "Link Discord Account",
     "log_out": "Log Out",
