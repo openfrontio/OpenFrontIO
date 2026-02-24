@@ -195,7 +195,7 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    const { isCrowded, startingGold, isCompact, isRandomSpawn } =
+    let { isCrowded, startingGold, isCompact, isRandomSpawn } =
       this.getRandomSpecialGameModifiers(excludedModifiers);
 
     let crowdedMaxPlayers: number | undefined;
@@ -203,6 +203,10 @@ export class MapPlaylist {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
       if (crowdedMaxPlayers !== undefined) {
         crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+      } else {
+        excludedModifiers.push("isCrowded");
+        ({ isCrowded, startingGold, isCompact, isRandomSpawn } =
+          this.getRandomSpecialGameModifiers(excludedModifiers));
       }
     }
 
