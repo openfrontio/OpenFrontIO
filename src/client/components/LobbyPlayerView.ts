@@ -18,7 +18,7 @@ import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName } from "../../core/Util";
-import { translateText } from "../Utils";
+import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {
   team: Team;
@@ -192,6 +192,8 @@ export class LobbyTeamView extends LitElement {
       preview.team === ColoredTeams.Nations
         ? effectiveNationCount
         : this.teamMaxSize;
+
+    preview.team = getTranslatedPlayerTeamLabel(preview.team);
 
     return html`
       <div class="bg-gray-800 border border-gray-700 rounded-xl flex flex-col">
