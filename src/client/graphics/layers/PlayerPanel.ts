@@ -347,7 +347,7 @@ export class PlayerPanel extends LitElement implements Layer {
       case PlayerType.Bot:
         return {
           labelKey: "player_type.bot",
-          aria: "Bot",
+          aria: "Tribe",
           classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
           icon: "🤖",
         };

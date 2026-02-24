@@ -69,8 +69,9 @@ export class TeamStats extends LitElement implements Layer {
     }
 
     for (const player of players) {
-      const team = player.team();
+      let team = player.team();
       if (team === null) continue;
+      team = translateText(`team_colors.${team.toLowerCase()}`);
       grouped[team] ??= [];
       grouped[team].push(player);
     }

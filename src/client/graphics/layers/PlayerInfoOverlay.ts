@@ -314,6 +314,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         playerType = translateText("player_type.player");
         break;
     }
+    let playerTeam = player.team();
+    if (playerTeam !== null) {
+      playerTeam = translateText(`team_colors.${playerTeam.toLowerCase()}`);
+    }
 
     return html`
       <div class="flex items-start gap-2 lg:gap-3 p-1.5 lg:p-2">
@@ -357,7 +361,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   />`
               : html``}
             <span>${player.name()}</span>
-            ${player.team() !== null && player.type() !== PlayerType.Bot
+            ${playerTeam !== null && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
                     >${playerType}</span
@@ -369,7 +373,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                         .theme()
                         .teamColor(player.team()!)
                         .toHex()}"
-                      >${player.team()}</span
+                      >${playerTeam}</span
                     >]</span
                   >
                 </div>`
