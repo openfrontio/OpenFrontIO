@@ -340,14 +340,14 @@ export class PlayerPanel extends LitElement implements Layer {
       case PlayerType.Nation:
         return {
           labelKey: "player_type.nation",
-          aria: "Nation player",
+          aria: translateText("player_type.nation"),
           classes: "border-indigo-400/25 bg-indigo-500/10 text-indigo-200",
           icon: "🏛️",
         };
       case PlayerType.Bot:
         return {
           labelKey: "player_type.bot",
-          aria: "Tribe",
+          aria: translateText("player_type.bot"),
           classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
           icon: "⚔️",
         };
@@ -355,7 +355,7 @@ export class PlayerPanel extends LitElement implements Layer {
       default:
         return {
           labelKey: "player_type.player",
-          aria: "Human player",
+          aria: translateText("player_type.player"),
           classes: "border-zinc-400/20 bg-zinc-500/5 text-zinc-300",
           icon: "👤",
         };
