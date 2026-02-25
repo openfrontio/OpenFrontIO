@@ -351,24 +351,26 @@ export const translateText = (
   }
 
   const translations = langSelector.translations;
-  if (!translations) return key;
+  const defaultTranslations = langSelector.defaultTranslations;
+  if (!translations && !defaultTranslations) return key;
 
   if (self.lastLang !== langSelector.currentLang) {
     self.formatterCache.clear();
     self.lastLang = langSelector.currentLang;
   }
 
-  const hasPrimaryTranslation = translations[key] !== undefined;
-  let message = translations[key];
+  let message = translations?.[key];
+  const hasPrimaryTranslation = message !== undefined;
 
-  if (!message && langSelector.defaultTranslations) {
-    message = langSelector.defaultTranslations[key];
-  }
+  message ??= defaultTranslations?.[key];
 
-  if (!message) return key;
+  if (message === undefined) return key;
 
   // Fast path: no params and no ICU placeholders.
-  if (resolvedParams === EMPTY_TRANSLATION_PARAMS && !message.includes("{")) {
+  if (
+    resolvedParams === EMPTY_TRANSLATION_PARAMS &&
+    message.indexOf("{") === -1
+  ) {
     return message;
   }
 
