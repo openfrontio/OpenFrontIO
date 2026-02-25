@@ -16,32 +16,110 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
-const MAX_TICKS_PER_HEARTBEAT = 4;
+// Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
+// and flooding the main thread with messages during catch-up.
+const MAX_TICKS_BEFORE_YIELD = 4;
 
-function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
-  // skip if ErrorUpdate
-  if (!("updates" in gu)) {
+let drainScheduled = false;
+let draining = false;
+let drainRequested = false;
+
+function scheduleDrain(): void {
+  drainRequested = true;
+  if (drainScheduled || draining) {
     return;
   }
-  sendMessage({
-    type: "game_update",
-    gameUpdate: gu,
-  });
+  drainScheduled = true;
+  setTimeout(() => {
+    void drain().catch((e) => {
+      console.error("Worker drain failed:", e);
+    });
+  }, 0);
+}
+
+async function drain(): Promise<void> {
+  drainScheduled = false;
+  if (draining) {
+    return;
+  }
+  if (!gameRunner) {
+    return;
+  }
+
+  draining = true;
+  drainRequested = false;
+  let shouldContinue = false;
+  try {
+    const gr = await gameRunner;
+    if (!gr) {
+      return;
+    }
+
+    const batch: GameUpdateViewData[] = [];
+    const onTickUpdate = (gu: GameUpdateViewData | ErrorUpdate) => {
+      if (!("updates" in gu)) {
+        return;
+      }
+      batch.push(gu);
+    };
+
+    // Temporarily route tick callbacks into this drain's batch.
+    tickUpdateSink = onTickUpdate;
+
+    let ticksRun = 0;
+    while (ticksRun < MAX_TICKS_BEFORE_YIELD && gr.pendingTurns() > 0) {
+      const ok = gr.executeNextTick(gr.pendingTurns());
+      if (!ok) {
+        break;
+      }
+      ticksRun++;
+    }
+
+    tickUpdateSink = null;
+
+    sendGameUpdateBatch(batch);
+
+    shouldContinue = gr.pendingTurns() > 0;
+  } finally {
+    tickUpdateSink = null;
+    draining = false;
+  }
+
+  if (shouldContinue || drainRequested) {
+    scheduleDrain();
+  }
+}
+
+let tickUpdateSink: ((gu: GameUpdateViewData | ErrorUpdate) => void) | null =
+  null;
+
+function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
+  tickUpdateSink?.(gu);
+}
+
+function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
+  if (gameUpdates.length === 0) {
+    return;
+  }
+
+  const transfers: Transferable[] = [];
+  for (const gu of gameUpdates) {
+    transfers.push(gu.packedTileUpdates.buffer);
+    if (gu.packedMotionPlans) {
+      transfers.push(gu.packedMotionPlans.buffer);
+    }
+  }
+
+  ctx.postMessage(
+    {
+      type: "game_update_batch",
+      gameUpdates,
+    } as WorkerMessage,
+    transfers,
+  );
 }
 
 function sendMessage(message: WorkerMessage) {
-  if (message.type === "game_update") {
-    // Transfer the packed tile updates buffer to avoid structured-clone copies and
-    // reduce worker-side memory churn during long runs / catch-up.
-    const transfers: Transferable[] = [
-      message.gameUpdate.packedTileUpdates.buffer,
-    ];
-    if (message.gameUpdate.packedMotionPlans) {
-      transfers.push(message.gameUpdate.packedMotionPlans.buffer);
-    }
-    ctx.postMessage(message, transfers);
-    return;
-  }
   ctx.postMessage(message);
 }
 
@@ -49,20 +127,6 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   const message = e.data;
 
   switch (message.type) {
-    case "heartbeat": {
-      const gr = await gameRunner;
-      if (!gr) {
-        break;
-      }
-      const pendingTurns = gr.pendingTurns();
-      const ticksToRun = Math.min(pendingTurns, MAX_TICKS_PER_HEARTBEAT);
-      for (let i = 0; i < ticksToRun; i++) {
-        if (!gr.executeNextTick(gr.pendingTurns())) {
-          break;
-        }
-      }
-      break;
-    }
     case "init":
       try {
         gameRunner = createGameRunner(
@@ -90,7 +154,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
       try {
         const gr = await gameRunner;
-        await gr.addTurn(message.turn);
+        gr.addTurn(message.turn);
+        scheduleDrain();
       } catch (error) {
         console.error("Failed to process turn:", error);
         throw error;
