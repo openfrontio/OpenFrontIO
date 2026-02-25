@@ -778,11 +778,6 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
-  /**
-   * Marks a unit as "plan-driven" so its per-tile `Unit` updates can be suppressed.
-   * The client is expected to advance the unit position via motion plans.
-   */
-  markUnitPlanDriven(unitId: number): void;
   recordMotionPlan(record: MotionPlanRecord): void;
   drainPackedMotionPlans(): Uint32Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;

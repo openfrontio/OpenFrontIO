@@ -48,9 +48,6 @@ export class TradeShipExecution implements Execution {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
-      // This unit can move immediately, but plan-driven units don't emit per-step Unit updates.
-      // Mark it plan-driven up-front so its first move doesn't generate redundant traffic.
-      this.mg.markUnitPlanDriven(this.tradeShip.id());
       this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
     }
 
@@ -109,12 +106,49 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    const result = this.pathFinder.next(curTile, this._dstPort.tile());
+    const dst = this._dstPort.tile();
+    const result = this.pathFinder.next(curTile, dst);
 
     switch (result.status) {
       case PathStatus.PENDING:
+        if (dst !== this.motionPlanDst) {
+          this.motionPlanId++;
+          const from = curTile;
+          const path = this.pathFinder.findPath(from, dst) ?? [from];
+          if (path.length === 0 || path[0] !== from) {
+            path.unshift(from);
+          }
+
+          this.mg.recordMotionPlan({
+            kind: "grid",
+            unitId: this.tradeShip.id(),
+            planId: this.motionPlanId,
+            startTick: ticks + 1,
+            ticksPerStep: 1,
+            path,
+          });
+          this.motionPlanDst = dst;
+        }
         break;
       case PathStatus.NEXT:
+        if (dst !== this.motionPlanDst) {
+          this.motionPlanId++;
+          const from = result.node;
+          const path = this.pathFinder.findPath(from, dst) ?? [from];
+          if (path.length === 0 || path[0] !== from) {
+            path.unshift(from);
+          }
+
+          this.mg.recordMotionPlan({
+            kind: "grid",
+            unitId: this.tradeShip.id(),
+            planId: this.motionPlanId,
+            startTick: ticks + 1,
+            ticksPerStep: 1,
+            path,
+          });
+          this.motionPlanDst = dst;
+        }
         // Update safeFromPirates status
         if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
           this.tradeShip.setSafeFromPirates();
@@ -132,26 +166,6 @@ export class TradeShipExecution implements Execution {
         }
         this.active = false;
         return;
-    }
-
-    const dst = this._dstPort.tile();
-    if (dst !== this.motionPlanDst) {
-      this.motionPlanId++;
-      const from = this.tradeShip.tile();
-      const path = this.pathFinder.findPath(from, dst) ?? [from];
-      if (path.length === 0 || path[0] !== from) {
-        path.unshift(from);
-      }
-
-      this.mg.recordMotionPlan({
-        kind: "grid",
-        unitId: this.tradeShip.id(),
-        planId: this.motionPlanId,
-        startTick: ticks + 1,
-        ticksPerStep: 1,
-        path,
-      });
-      this.motionPlanDst = dst;
     }
   }
 
