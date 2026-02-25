@@ -923,6 +923,7 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
