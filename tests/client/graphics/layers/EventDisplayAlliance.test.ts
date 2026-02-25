@@ -1,3 +1,5 @@
+import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
+
 vi.mock("lit", () => ({
   html: () => {},
   LitElement: class {},
@@ -115,7 +117,7 @@ describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
     (display as any).events = [makeRenewal(allianceID, mySmallID)];
 
     (display as any).onAllianceExtensionEvent({
-      type: "AllianceExtension",
+      type: GameUpdateType.AllianceExtension,
       playerID: mySmallID,
       allianceID,
     });
