@@ -124,14 +124,14 @@ export class TradeShipExecution implements Execution {
         break;
       case PathStatus.COMPLETE:
         this.complete();
-        break;
+        return;
       case PathStatus.NOT_FOUND:
         console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
         this.active = false;
-        break;
+        return;
     }
 
     const dst = this._dstPort.tile();
