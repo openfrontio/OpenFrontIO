@@ -1,7 +1,5 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, Tick } from "../../../core/game/Game";
 import {
@@ -11,7 +9,6 @@ import {
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRejectIntentEvent,
@@ -20,6 +17,7 @@ import {
 import { translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { GameEvent } from "./EventsDisplay";
+import { renderEventContent } from "./EventRenderUtils";
 import { Layer } from "./Layer";
 import { GoToPlayerEvent } from "./Leaderboard";
 
@@ -35,6 +33,8 @@ export class AllianceDisplay extends LitElement implements Layer {
   // allianceID -> last checked at tick
   private alliancesCheckedAt = new Map<number, Tick>();
   @state() private _isVisible: boolean = false;
+  @state() private isHovered: boolean = false;
+  private pendingRemovals: Set<GameEvent> = new Set();
 
   createRenderRoot() {
     return this;
@@ -44,38 +44,63 @@ export class AllianceDisplay extends LitElement implements Layer {
 
   tick() {
     this.active = true;
+    let needsUpdate = false;
 
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this._isVisible = true;
+      needsUpdate = true;
     }
 
     const myPlayer = this.game.myPlayer();
     if (!myPlayer || !myPlayer.isAlive()) {
       if (this._isVisible) {
         this._isVisible = false;
+        needsUpdate = true;
       }
+      if (needsUpdate) this.requestUpdate();
       return;
     }
 
+    const oldEventsLength = this.events.length;
     this.checkForAllianceExpirations();
     this.processAllianceUpdates();
+    if (this.events.length !== oldEventsLength) {
+      needsUpdate = true;
+    }
 
     // Expire old events
     const remainingEvents = this.events.filter((event) => {
-      const shouldKeep =
-        this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
-        !event.shouldDelete?.(this.game);
-      if (!shouldKeep && event.onDelete) {
-        event.onDelete();
+      const isExpired = this.game.ticks() - event.createdAt >= (event.duration ?? 600);
+      const shouldDelete = event.shouldDelete?.(this.game);
+      
+      if (isExpired || shouldDelete) {
+        if (this.isHovered) {
+          this.pendingRemovals.add(event);
+          return true;
+        } else {
+          if (event.onDelete) event.onDelete();
+          this.pendingRemovals.delete(event);
+          return false;
+        }
       }
-      return shouldKeep;
+      
+      if (!this.isHovered && this.pendingRemovals.has(event)) {
+        if (event.onDelete) event.onDelete();
+        this.pendingRemovals.delete(event);
+        return false;
+      }
+      
+      return true;
     });
 
     if (this.events.length !== remainingEvents.length) {
       this.events = remainingEvents;
+      needsUpdate = true;
     }
 
-    this.requestUpdate();
+    if (needsUpdate) {
+      this.requestUpdate();
+    }
   }
 
   shouldTransform(): boolean {
@@ -226,20 +251,51 @@ export class AllianceDisplay extends LitElement implements Layer {
     if (!myPlayer) return;
 
     if (update.request.recipientID === myPlayer.smallID()) {
-      this.events = this.events.filter(
+      const toRemove = this.events.filter(
         (event) =>
-          !(
-            event.type === MessageType.ALLIANCE_REQUEST &&
-            event.focusID === update.request.requestorID
-          ),
+          event.type === MessageType.ALLIANCE_REQUEST &&
+          event.focusID === update.request.requestorID
       );
-      this.requestUpdate();
+      
+      if (this.isHovered) {
+        toRemove.forEach(e => this.pendingRemovals.add(e));
+      } else {
+        this.events = this.events.filter(e => !toRemove.includes(e));
+        this.requestUpdate();
+      }
       return;
     }
   }
 
   private onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
     this.removeAllianceRenewalEvents(update.allianceID);
+    
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+
+    const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
+    const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
+
+    if (betrayed === myPlayer) {
+      this.addEvent({
+        description: translateText("events_display.betrayed_you", {
+          name: traitor.name(),
+        }),
+        type: MessageType.ALLIANCE_BROKEN,
+        highlight: true,
+        createdAt: this.game.ticks(),
+        focusID: update.traitorID,
+        buttons: [
+          {
+            text: translateText("events_display.focus"),
+            className: "btn-gray",
+            action: () => this.eventBus.emit(new GoToPlayerEvent(traitor)),
+            preventClose: true,
+          },
+        ],
+      });
+    }
+
     this.requestUpdate();
   }
 
@@ -258,13 +314,17 @@ export class AllianceDisplay extends LitElement implements Layer {
   }
 
   removeAllianceRenewalEvents(allianceID: number) {
-    this.events = this.events.filter(
+    const toRemove = this.events.filter(
       (event) =>
-        !(
-          event.type === MessageType.RENEW_ALLIANCE &&
-          event.allianceID === allianceID
-        ),
+        event.type === MessageType.RENEW_ALLIANCE &&
+        event.allianceID === allianceID
     );
+    
+    if (this.isHovered) {
+      toRemove.forEach(e => this.pendingRemovals.add(e));
+    } else {
+      this.events = this.events.filter(e => !toRemove.includes(e));
+    }
   }
 
   // ── Rendering helpers ───────────────────────────────────────────────
@@ -273,89 +333,6 @@ export class AllianceDisplay extends LitElement implements Layer {
     const player = this.game.playerBySmallID(playerID) as PlayerView;
     if (!player) return;
     this.eventBus.emit(new GoToPlayerEvent(player));
-  }
-
-  private getEventDescription(
-    event: GameEvent,
-  ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
-    return event.unsafeDescription
-      ? unsafeHTML(onlyImages(event.description))
-      : event.description;
-  }
-
-  private renderButton(options: {
-    content: any;
-    onClick?: () => void;
-    className?: string;
-    disabled?: boolean;
-    translate?: boolean;
-    hidden?: boolean;
-  }) {
-    const {
-      content,
-      onClick,
-      className = "",
-      disabled = false,
-      translate = true,
-      hidden = false,
-    } = options;
-
-    if (hidden) return html``;
-
-    return html`
-      <button
-        class="${className}"
-        @click=${onClick}
-        ?disabled=${disabled}
-        ?translate=${translate}
-      >
-        ${content}
-      </button>
-    `;
-  }
-
-  private renderEventButtons(event: GameEvent) {
-    if (!event.buttons) return "";
-    return html`
-      <div class="flex flex-wrap gap-1.5 mt-1">
-        ${event.buttons.map(
-          (btn) => html`
-            <button
-              class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
-                ${btn.className.includes("btn-info")
-                ? "bg-blue-500 hover:bg-blue-600"
-                : btn.className.includes("btn-gray")
-                  ? "bg-gray-500 hover:bg-gray-600"
-                  : "bg-green-600 hover:bg-green-700"}"
-              @click=${() => {
-                btn.action();
-                if (!btn.preventClose) {
-                  const idx = this.events.findIndex((e) => e === event);
-                  if (idx !== -1) this.removeEvent(idx);
-                }
-                this.requestUpdate();
-              }}
-            >
-              ${btn.text}
-            </button>
-          `,
-        )}
-      </div>
-    `;
-  }
-
-  private renderEventContent(event: GameEvent) {
-    const description = event.focusID
-      ? this.renderButton({
-          content: this.getEventDescription(event),
-          onClick: () => {
-            if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
-          },
-          className: "text-left",
-        })
-      : this.getEventDescription(event);
-
-    return html`${description} ${this.renderEventButtons(event)}`;
   }
 
   private renderBetrayalDebuffTimer() {
@@ -373,7 +350,7 @@ export class AllianceDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="px-2 py-1.5 text-yellow-400 text-md md:text-sm border-b border-gray-700/50"
+        class="px-3 py-2 text-yellow-400 text-md md:text-sm border-b border-gray-700/50"
       >
         ${translateText("events_display.betrayal_debuff_ends", {
           time: remainingSeconds,
@@ -408,7 +385,9 @@ export class AllianceDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mb-1 pointer-events-auto text-white text-sm lg:text-base"
+        class="w-full pointer-events-auto text-white text-sm lg:text-base"
+        @mouseenter=${() => { this.isHovered = true; }}
+        @mouseleave=${() => { this.isHovered = false; }}
       >
         <!-- Betrayal debuff timer -->
         ${hasBetrayal ? this.renderBetrayalDebuffTimer() : ""}
@@ -417,15 +396,24 @@ export class AllianceDisplay extends LitElement implements Layer {
         ${pinnedEvents.length > 0
           ? html`
               <div
-                class="bg-gray-900/80 border-b border-gray-700/30 max-h-[20vh] overflow-y-auto"
+                class="bg-gray-800/70 sm:rounded-l-lg min-[1200px]:rounded-lg max-h-[20vh] overflow-y-auto shadow-lg backdrop-blur-xs"
               >
                 ${pinnedEvents.map(
                   (event) => html`
                     <div
-                      class="px-2 py-1.5 border-b border-gray-700/50 last:border-b-0"
+                      class="px-3 py-2 border-b border-gray-700/50 last:border-b-0"
                     >
                       <div class="text-md md:text-sm">
-                        ${this.renderEventContent(event)}
+                        ${renderEventContent(
+                          event,
+                          (id) => this.emitGoToPlayerEvent(id),
+                          () => {}, // no unit focus in alliance display
+                          (e) => {
+                            const idx = this.events.findIndex((ev) => ev === e);
+                            if (idx !== -1) this.removeEvent(idx);
+                          },
+                          () => this.requestUpdate()
+                        )}
                       </div>
                     </div>
                   `,

@@ -1,7 +1,5 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -25,10 +23,10 @@ import {
 import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
+import { renderEventContent, renderButton } from "./EventRenderUtils";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import allianceIconWhite from "/images/AllianceIconWhite.svg?url";
@@ -93,43 +91,10 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
-  private renderButton(options: {
-    content: any; // Can be string, TemplateResult, or other renderable content
-    onClick?: () => void;
-    className?: string;
-    disabled?: boolean;
-    translate?: boolean;
-    hidden?: boolean;
-  }) {
-    const {
-      content,
-      onClick,
-      className = "",
-      disabled = false,
-      translate = true,
-      hidden = false,
-    } = options;
-
-    if (hidden) {
-      return html``;
-    }
-
-    return html`
-      <button
-        class="${className}"
-        @click=${onClick}
-        ?disabled=${disabled}
-        ?translate=${translate}
-      >
-        ${content}
-      </button>
-    `;
-  }
-
   private renderToggleButton(src: string, category: MessageCategory) {
     // Adding the literal for the default size ensures tailwind will generate the class
     const toggleButtonSizeMap = { default: "h-5" };
-    return this.renderButton({
+    return renderButton({
       content: html`<img
         src="${src}"
         class="${toggleButtonSizeMap["default"]}"
@@ -256,58 +221,6 @@ export class EventsDisplay extends LitElement implements Layer {
       ...this.events.slice(0, index),
       ...this.events.slice(index + 1),
     ];
-  }
-
-  private renderEventButtons(event: GameEvent) {
-    if (!event.buttons) return "";
-    return html`
-      <div class="flex flex-wrap gap-1.5 mt-1">
-        ${event.buttons.map(
-          (btn) => html`
-            <button
-              class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
-                ${btn.className.includes("btn-info")
-                ? "bg-blue-500 hover:bg-blue-600"
-                : btn.className.includes("btn-gray")
-                  ? "bg-gray-500 hover:bg-gray-600"
-                  : "bg-green-600 hover:bg-green-700"}"
-              @click=${() => {
-                btn.action();
-                if (!btn.preventClose) {
-                  const idx = this.events.findIndex((e) => e === event);
-                  if (idx !== -1) this.removeEvent(idx);
-                }
-                this.requestUpdate();
-              }}
-            >
-              ${btn.text}
-            </button>
-          `,
-        )}
-      </div>
-    `;
-  }
-
-  private renderEventContent(event: GameEvent) {
-    const description = event.focusID
-      ? this.renderButton({
-          content: this.getEventDescription(event),
-          onClick: () => {
-            if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
-          },
-          className: "text-left",
-        })
-      : event.unitView
-        ? this.renderButton({
-            content: this.getEventDescription(event),
-            onClick: () => {
-              if (event.unitView) this.emitGoToUnitEvent(event.unitView);
-            },
-            className: "text-left",
-          })
-        : this.getEventDescription(event);
-
-    return html`${description} ${this.renderEventButtons(event)}`;
   }
 
   shouldTransform(): boolean {
@@ -484,24 +397,6 @@ export class EventsDisplay extends LitElement implements Layer {
         createdAt: this.game.ticks(),
         focusID: update.betrayedID,
       });
-    } else if (betrayed === myPlayer) {
-      this.addEvent({
-        description: translateText("events_display.betrayed_you", {
-          name: traitor.name(),
-        }),
-        type: MessageType.ALLIANCE_BROKEN,
-        highlight: true,
-        createdAt: this.game.ticks(),
-        focusID: update.traitorID,
-        buttons: [
-          {
-            text: translateText("events_display.focus"),
-            className: "btn-gray",
-            action: () => this.eventBus.emit(new GoToPlayerEvent(traitor)),
-            preventClose: true,
-          },
-        ],
-      });
     }
   }
 
@@ -599,14 +494,6 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
-  private getEventDescription(
-    event: GameEvent,
-  ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
-    return event.unsafeDescription
-      ? unsafeHTML(onlyImages(event.description))
-      : event.description;
-  }
-
   render() {
     if (!this.active || !this._isVisible) {
       return html``;
@@ -654,7 +541,7 @@ export class EventsDisplay extends LitElement implements Layer {
       ${this._hidden
         ? html`
             <div class="relative w-fit min-[1200px]:bottom-4 z-50">
-              ${this.renderButton({
+              ${renderButton({
                 content: html`
                   <span class="flex items-center gap-2">
                     ${translateText("events_display.events")}
@@ -711,7 +598,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           >+${renderNumber(this.latestGoldAmount)}</span
                         >`
                       : ""}
-                    ${this.renderButton({
+                    ${renderButton({
                       content: translateText("leaderboard.hide"),
                       onClick: this.toggleHidden,
                       className:
@@ -738,7 +625,16 @@ export class EventsDisplay extends LitElement implements Layer {
                                 event.type,
                               )}"
                             >
-                              ${this.renderEventContent(event)}
+                              ${renderEventContent(
+                                event,
+                                (id) => this.emitGoToPlayerEvent(id),
+                                (unit) => this.emitGoToUnitEvent(unit),
+                                (e) => {
+                                  const idx = this.events.findIndex((ev) => ev === e);
+                                  if (idx !== -1) this.removeEvent(idx);
+                                },
+                                () => this.requestUpdate()
+                              )}
                             </td>
                           </tr>
                         `,
