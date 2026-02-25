@@ -433,6 +433,10 @@ export class GameImpl implements Game {
     return packed;
   }
 
+  markUnitPlanDriven(unitId: number): void {
+    this.planDrivenUnitIds.add(unitId);
+  }
+
   recordMotionPlan(record: MotionPlanRecord): void {
     switch (record.kind) {
       case "grid":
