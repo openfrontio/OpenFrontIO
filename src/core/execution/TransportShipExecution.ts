@@ -277,7 +277,7 @@ export class TransportShipExecution implements Execution {
         kind: "grid",
         unitId: this.boat.id(),
         planId: this.motionPlanId,
-        startTick: ticks + 1,
+        startTick: ticks + this.ticksPerMove,
         ticksPerStep: this.ticksPerMove,
         path: fullPath,
       });

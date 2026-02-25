@@ -8,7 +8,6 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { MotionPlanRecord } from "../game/MotionPlans";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { distSortUnit } from "../Util";
@@ -35,7 +34,6 @@ export class TradeShipExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    let spawnedThisTick = false;
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
@@ -50,19 +48,10 @@ export class TradeShipExecution implements Execution {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
+      // This unit can move immediately, but plan-driven units don't emit per-step Unit updates.
+      // Mark it plan-driven up-front so its first move doesn't generate redundant traffic.
+      this.mg.markUnitPlanDriven(this.tradeShip.id());
       this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
-      spawnedThisTick = true;
-
-      const placeholderPlan: MotionPlanRecord = {
-        kind: "grid",
-        unitId: this.tradeShip.id(),
-        planId: this.motionPlanId,
-        startTick: ticks + 1,
-        ticksPerStep: 1,
-        path: [spawn],
-      };
-      this.mg.recordMotionPlan(placeholderPlan);
-      this.motionPlanDst = this._dstPort.tile();
     }
 
     if (!this.tradeShip.isActive()) {
@@ -146,7 +135,7 @@ export class TradeShipExecution implements Execution {
     }
 
     const dst = this._dstPort.tile();
-    if (spawnedThisTick || dst !== this.motionPlanDst) {
+    if (dst !== this.motionPlanDst) {
       this.motionPlanId++;
       const from = this.tradeShip.tile();
       const path = this.pathFinder.findPath(from, dst) ?? [from];
