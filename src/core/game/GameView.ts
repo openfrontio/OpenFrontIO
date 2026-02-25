@@ -848,6 +848,7 @@ export class GameView implements GameMap {
       }
 
       const path = plan.path;
+      const lastIndex = path.length - 1;
       const cap = plan.usedTilesBuf.length;
 
       const pushUsed = (tile: TileRef) => {
@@ -869,13 +870,17 @@ export class GameView implements GameMap {
         return plan.usedTilesBuf[idx] as TileRef;
       };
 
+      let didMove = false;
       for (let step = 0; step < steps; step++) {
         const cursor = plan.cursor;
+        if (cursor >= lastIndex) {
+          break;
+        }
         for (let i = 0; i < plan.speed && cursor + i < path.length; i++) {
           pushUsed(path[cursor + i] as TileRef);
         }
 
-        plan.cursor = Math.min(path.length - 1, cursor + plan.speed);
+        plan.cursor = Math.min(lastIndex, cursor + plan.speed);
 
         for (let i = plan.carUnitIds.length - 1; i >= 0; --i) {
           const carId = plan.carUnitIds[i] >>> 0;
@@ -888,22 +893,33 @@ export class GameView implements GameMap {
           const tile = usedGet(carTileIndex);
           if (tile !== null) {
             const oldTile = car.tile();
-            car.applyDerivedPosition(tile);
             if (tile !== oldTile) {
+              car.applyDerivedPosition(tile);
               this.unitGrid.updateUnitCell(car);
+              didMove = true;
             }
           }
         }
 
         const newEngineTile = path[plan.cursor] as TileRef;
         const oldEngineTile = engine.tile();
-        engine.applyDerivedPosition(newEngineTile);
         if (newEngineTile !== oldEngineTile) {
+          engine.applyDerivedPosition(newEngineTile);
           this.unitGrid.updateUnitCell(engine);
+          didMove = true;
         }
       }
 
       plan.lastAdvancedTick = currentTick;
+
+      // Preserve the final-step redraw (plan remains for the tick where motion ends),
+      // then clear once the train has settled and no longer moves.
+      // Note: trains are currently deleted at the end of TrainExecution, and the ensuing
+      // `Unit` update (isActive=false) also clears any associated motion plan records.
+      // This expiry is defensive to avoid keeping stale plans around if that behavior changes.
+      if (!didMove && plan.cursor >= lastIndex) {
+        staleEngineIds.push(engineId);
+      }
     }
 
     for (const engineId of staleEngineIds) {
