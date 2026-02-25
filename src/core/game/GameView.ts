@@ -790,11 +790,23 @@ export class GameView implements GameMap {
       }
 
       const oldTile = unit.tile();
-      const newTile = this.motionTileAtTick(plan, currentTick);
-      unit.applyDerivedPosition(newTile);
+      const dt = currentTick - plan.startTick;
+      const stepIndex =
+        dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
+      const lastIndex = plan.path.length - 1;
+      const idx = Math.max(0, Math.min(lastIndex, stepIndex));
+      const newTile = plan.path[idx] as TileRef;
 
       if (newTile !== oldTile) {
+        unit.applyDerivedPosition(newTile);
         this.unitGrid.updateUnitCell(unit);
+        continue;
+      }
+
+      // Once a plan is past its final step, `newTile` remains clamped to the last path tile.
+      // Drop finished plans to avoid repeatedly marking static units as updated each tick.
+      if (dt > 0 && stepIndex >= lastIndex) {
+        this.unitMotionPlans.delete(unitId);
       }
     }
 
@@ -897,20 +909,6 @@ export class GameView implements GameMap {
     for (const engineId of staleEngineIds) {
       this.clearTrainPlanForUnit(engineId);
     }
-  }
-
-  private motionTileAtTick(
-    plan: { startTick: number; ticksPerStep: number; path: Uint32Array },
-    tick: Tick,
-  ): TileRef {
-    if (plan.path.length < 1) {
-      throw new Error("motion plan path must be non-empty");
-    }
-    const dt = tick - plan.startTick;
-    const stepIndex =
-      dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
-    const idx = Math.max(0, Math.min(plan.path.length - 1, stepIndex));
-    return plan.path[idx] as TileRef;
   }
 
   private applyMotionPlanRecords(records: readonly MotionPlanRecord[]): void {
