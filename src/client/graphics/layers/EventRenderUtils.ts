@@ -1,8 +1,8 @@
 import { html } from "lit";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { GameEvent } from "./EventsDisplay";
 import { onlyImages } from "../../../core/Util";
+import { GameEvent } from "./EventsDisplay";
 
 export function getEventDescription(
   event: GameEvent,
@@ -46,7 +46,7 @@ export function renderButton(options: {
 export function renderEventButtons(
   event: GameEvent,
   onRemoveEvent: (event: GameEvent) => void,
-  requestUpdate: () => void
+  requestUpdate: () => void,
 ) {
   if (!event.buttons) return "";
   return html`
@@ -81,7 +81,7 @@ export function renderEventContent(
   onFocusPlayer: (id: number) => void,
   onFocusUnit: (unit: any) => void,
   onRemoveEvent: (event: GameEvent) => void,
-  requestUpdate: () => void
+  requestUpdate: () => void,
 ) {
   const description = event.focusID
     ? renderButton({
@@ -101,5 +101,6 @@ export function renderEventContent(
         })
       : getEventDescription(event);
 
-  return html`${description} ${renderEventButtons(event, onRemoveEvent, requestUpdate)}`;
+  return html`${description}
+  ${renderEventButtons(event, onRemoveEvent, requestUpdate)}`;
 }
