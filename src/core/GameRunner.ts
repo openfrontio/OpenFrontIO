@@ -22,11 +22,7 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-} from "./game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -70,6 +66,7 @@ export async function createGameRunner(
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    gameMap.teamGameSpawnAreas,
   );
 
   const gr = new GameRunner(
@@ -172,13 +169,11 @@ export class GameRunner {
       });
     }
 
-    // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
-    updates[GameUpdateType.Tile] = [];
+    const packedTileUpdates = this.game.drainPackedTileUpdates();
 
     this.callBack({
       tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
+      packedTileUpdates,
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,
@@ -219,11 +214,8 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        allianceInfo: player.allianceInfo(other) ?? undefined,
       };
-      const alliance = player.allianceWith(other as Player);
-      if (alliance) {
-        actions.interaction.allianceExpiresAt = alliance.expiresAt();
-      }
     }
 
     return actions;

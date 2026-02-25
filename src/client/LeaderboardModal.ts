@@ -82,11 +82,7 @@ export class LeaderboardModal extends BaseModal {
     >`;
 
     const content = html`
-      <div
-        class="h-full flex flex-col overflow-hidden ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           titleContent: html`
             <div class="flex flex-wrap items-center gap-2">
@@ -99,7 +95,7 @@ export class LeaderboardModal extends BaseModal {
               ${this.activeTab === "players" ? refreshTime : ""}
             </div>
           `,
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.close"),
         })}
 

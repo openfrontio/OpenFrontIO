@@ -47,7 +47,7 @@ export class LeaderboardTabs extends LitElement {
     return html`
       <div
         role="tablist"
-        class="flex gap-2 p-1 bg-white/5 rounded-full border border-white/10 mb-6 w-fit mx-auto mt-4"
+        class="flex gap-2 p-1 bg-white/5 rounded-full border border-white/10 mb-4 w-fit mx-auto mt-4"
       >
         <button
           type="button"
