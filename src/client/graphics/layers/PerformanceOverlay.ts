@@ -153,6 +153,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     tps: string;
     tpsAvg60s: string;
     tickExec: string;
+    maxLabel: string;
     tickDelay: string;
     layersHeader: string;
     tickLayersHeader: string;
@@ -172,6 +173,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     tps: "performance_overlay.tps",
     tpsAvg60s: "performance_overlay.tps_avg_60s",
     tickExec: "performance_overlay.tick_exec",
+    maxLabel: "performance_overlay.max_label",
     tickDelay: "performance_overlay.tick_delay",
     layersHeader: "performance_overlay.layers_header",
     tickLayersHeader: "performance_overlay.tick_layers_header",
@@ -215,6 +217,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       tps: translateText("performance_overlay.tps"),
       tpsAvg60s: translateText("performance_overlay.tps_avg_60s"),
       tickExec: translateText("performance_overlay.tick_exec"),
+      maxLabel: translateText("performance_overlay.max_label"),
       tickDelay: translateText("performance_overlay.tick_delay"),
       layersHeader: translateText("performance_overlay.layers_header"),
       tickLayersHeader: translateText("performance_overlay.tick_layers_header"),
@@ -1169,12 +1172,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
           <div class="performance-line">
             ${this.uiText.tickExec}
             <span>${this.tickExecutionAvg.toFixed(2)}ms</span>
-            (max: <span>${this.tickExecutionMax}ms</span>)
+            (${this.uiText.maxLabel} <span>${this.tickExecutionMax}ms</span>)
           </div>
           <div class="performance-line">
             ${this.uiText.tickDelay}
             <span>${this.tickDelayAvg.toFixed(2)}ms</span>
-            (max: <span>${this.tickDelayMax}ms</span>)
+            (${this.uiText.maxLabel} <span>${this.tickDelayMax}ms</span>)
           </div>
           ${this.layerStats.size
             ? html`<div class="layers-section">
