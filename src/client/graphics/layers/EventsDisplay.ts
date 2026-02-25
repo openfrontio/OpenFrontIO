@@ -26,9 +26,9 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
-import { renderEventContent, renderButton } from "./EventRenderUtils";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
+import { renderButton, renderEventContent } from "./EventRenderUtils";
 import allianceIconWhite from "/images/AllianceIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
@@ -630,10 +630,12 @@ export class EventsDisplay extends LitElement implements Layer {
                                 (id) => this.emitGoToPlayerEvent(id),
                                 (unit) => this.emitGoToUnitEvent(unit),
                                 (e) => {
-                                  const idx = this.events.findIndex((ev) => ev === e);
+                                  const idx = this.events.findIndex(
+                                    (ev) => ev === e,
+                                  );
                                   if (idx !== -1) this.removeEvent(idx);
                                 },
-                                () => this.requestUpdate()
+                                () => this.requestUpdate(),
                               )}
                             </td>
                           </tr>

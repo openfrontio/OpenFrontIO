@@ -16,8 +16,8 @@ import {
 } from "../../Transport";
 import { translateText } from "../../Utils";
 import { UIState } from "../UIState";
-import { GameEvent } from "./EventsDisplay";
 import { renderEventContent } from "./EventRenderUtils";
+import { GameEvent } from "./EventsDisplay";
 import { Layer } from "./Layer";
 import { GoToPlayerEvent } from "./Leaderboard";
 
@@ -70,9 +70,10 @@ export class AllianceDisplay extends LitElement implements Layer {
 
     // Expire old events
     const remainingEvents = this.events.filter((event) => {
-      const isExpired = this.game.ticks() - event.createdAt >= (event.duration ?? 600);
+      const isExpired =
+        this.game.ticks() - event.createdAt >= (event.duration ?? 600);
       const shouldDelete = event.shouldDelete?.(this.game);
-      
+
       if (isExpired || shouldDelete) {
         if (this.isHovered) {
           this.pendingRemovals.add(event);
@@ -83,13 +84,13 @@ export class AllianceDisplay extends LitElement implements Layer {
           return false;
         }
       }
-      
+
       if (!this.isHovered && this.pendingRemovals.has(event)) {
         if (event.onDelete) event.onDelete();
         this.pendingRemovals.delete(event);
         return false;
       }
-      
+
       return true;
     });
 
@@ -254,13 +255,13 @@ export class AllianceDisplay extends LitElement implements Layer {
       const toRemove = this.events.filter(
         (event) =>
           event.type === MessageType.ALLIANCE_REQUEST &&
-          event.focusID === update.request.requestorID
+          event.focusID === update.request.requestorID,
       );
-      
+
       if (this.isHovered) {
-        toRemove.forEach(e => this.pendingRemovals.add(e));
+        toRemove.forEach((e) => this.pendingRemovals.add(e));
       } else {
-        this.events = this.events.filter(e => !toRemove.includes(e));
+        this.events = this.events.filter((e) => !toRemove.includes(e));
         this.requestUpdate();
       }
       return;
@@ -269,7 +270,7 @@ export class AllianceDisplay extends LitElement implements Layer {
 
   private onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
     this.removeAllianceRenewalEvents(update.allianceID);
-    
+
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
@@ -317,13 +318,13 @@ export class AllianceDisplay extends LitElement implements Layer {
     const toRemove = this.events.filter(
       (event) =>
         event.type === MessageType.RENEW_ALLIANCE &&
-        event.allianceID === allianceID
+        event.allianceID === allianceID,
     );
-    
+
     if (this.isHovered) {
-      toRemove.forEach(e => this.pendingRemovals.add(e));
+      toRemove.forEach((e) => this.pendingRemovals.add(e));
     } else {
-      this.events = this.events.filter(e => !toRemove.includes(e));
+      this.events = this.events.filter((e) => !toRemove.includes(e));
     }
   }
 
@@ -386,8 +387,12 @@ export class AllianceDisplay extends LitElement implements Layer {
     return html`
       <div
         class="w-full pointer-events-auto text-white text-sm lg:text-base"
-        @mouseenter=${() => { this.isHovered = true; }}
-        @mouseleave=${() => { this.isHovered = false; }}
+        @mouseenter=${() => {
+          this.isHovered = true;
+        }}
+        @mouseleave=${() => {
+          this.isHovered = false;
+        }}
       >
         <!-- Betrayal debuff timer -->
         ${hasBetrayal ? this.renderBetrayalDebuffTimer() : ""}
@@ -412,7 +417,7 @@ export class AllianceDisplay extends LitElement implements Layer {
                             const idx = this.events.findIndex((ev) => ev === e);
                             if (idx !== -1) this.removeEvent(idx);
                           },
-                          () => this.requestUpdate()
+                          () => this.requestUpdate(),
                         )}
                       </div>
                     </div>
