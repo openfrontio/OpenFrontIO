@@ -1,7 +1,5 @@
 import { TileRef } from "./GameMap";
 
-export const MOTION_PLANS_SCHEMA_VERSION = 4;
-
 export enum PackedMotionPlanKind {
   GridPathSet = 1,
   TrainRailPathSet = 2,
@@ -41,7 +39,7 @@ export type MotionPlanRecord = GridPathPlan | TrainRailPathPlan;
 export function packMotionPlans(
   records: readonly MotionPlanRecord[],
 ): Uint32Array {
-  let totalWords = 2;
+  let totalWords = 1;
   for (const record of records) {
     switch (record.kind) {
       case "grid": {
@@ -59,10 +57,9 @@ export function packMotionPlans(
   }
 
   const out = new Uint32Array(totalWords);
-  out[0] = MOTION_PLANS_SCHEMA_VERSION >>> 0;
-  out[1] = records.length >>> 0;
+  out[0] = records.length >>> 0;
 
-  let offset = 2;
+  let offset = 1;
   for (const record of records) {
     switch (record.kind) {
       case "grid": {
@@ -120,19 +117,14 @@ export function packMotionPlans(
   return out;
 }
 
-export function unpackMotionPlans(packed: Uint32Array): {
-  schemaVersion: number;
-  records: MotionPlanRecord[];
-} {
-  if (packed.length < 2) {
-    return { schemaVersion: 0, records: [] };
+export function unpackMotionPlans(packed: Uint32Array): MotionPlanRecord[] {
+  if (packed.length < 1) {
+    return [];
   }
 
-  const schemaVersion = packed[0] >>> 0;
-  const recordCount = packed[1] >>> 0;
-
+  const recordCount = packed[0] >>> 0;
   const records: MotionPlanRecord[] = [];
-  let offset = 2;
+  let offset = 1;
 
   for (let i = 0; i < recordCount && offset + 1 < packed.length; i++) {
     const kind = packed[offset] >>> 0;
@@ -216,5 +208,5 @@ export function unpackMotionPlans(packed: Uint32Array): {
     offset += wordCount;
   }
 
-  return { schemaVersion, records };
+  return records;
 }

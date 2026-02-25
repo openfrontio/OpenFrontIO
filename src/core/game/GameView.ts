@@ -34,11 +34,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
-import {
-  MOTION_PLANS_SCHEMA_VERSION,
-  MotionPlanRecord,
-  unpackMotionPlans,
-} from "./MotionPlans";
+import { MotionPlanRecord, unpackMotionPlans } from "./MotionPlans";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
@@ -725,12 +721,8 @@ export class GameView implements GameMap {
     }
 
     if (gu.packedMotionPlans) {
-      const { schemaVersion, records } = unpackMotionPlans(
-        gu.packedMotionPlans,
-      );
-      if (schemaVersion === MOTION_PLANS_SCHEMA_VERSION) {
-        this.applyMotionPlanRecords(records);
-      }
+      const records = unpackMotionPlans(gu.packedMotionPlans);
+      this.applyMotionPlanRecords(records);
     }
 
     if (gu.updates === null) {
