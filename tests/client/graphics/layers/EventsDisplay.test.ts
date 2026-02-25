@@ -23,14 +23,15 @@ describe("EventsDisplay alliance informational handlers", () => {
     expect(addEvent.mock.calls[0][0].type).toBe(MessageType.ALLIANCE_ACCEPTED);
   });
 
-  it("creates betrayed event with focus button for betrayed player", () => {
+  it("creates betrayed event for traitor player", () => {
     const addEvent = vi.fn();
     const betrayedPlayer = {
       isDisconnected: () => false,
       isTraitor: () => false,
+      name: () => "Betrayed",
     };
-    const myPlayer = betrayedPlayer;
-    const traitorPlayer = { name: () => "Traitor" };
+    const myPlayer = { name: () => "Traitor" };
+    const traitorPlayer = myPlayer;
 
     const fakeThis = {
       addEvent,
@@ -54,7 +55,7 @@ describe("EventsDisplay alliance informational handlers", () => {
 
     expect(addEvent).toHaveBeenCalledOnce();
     expect(addEvent.mock.calls[0][0].type).toBe(MessageType.ALLIANCE_BROKEN);
-    expect(addEvent.mock.calls[0][0].buttons).toHaveLength(1);
+    expect(addEvent.mock.calls[0][0].buttons).toBeUndefined();
   });
 
   it("creates alliance expired event for involved alive player", () => {
