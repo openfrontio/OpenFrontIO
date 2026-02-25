@@ -159,10 +159,7 @@ export class UnitImpl implements Unit {
     }
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.updateUnitTile(this);
-    if (!this.mg.isUnitPlanDriven(this._id)) {
-      this.mg.addUpdate(this.toUpdate());
-    }
+    this.mg.onUnitMoved(this);
   }
 
   setTroops(troops: number): void {

@@ -433,10 +433,6 @@ export class GameImpl implements Game {
     return packed;
   }
 
-  markUnitPlanDriven(unitId: number): void {
-    this.planDrivenUnitIds.add(unitId);
-  }
-
   recordMotionPlan(record: MotionPlanRecord): void {
     switch (record.kind) {
       case "grid":
@@ -452,8 +448,19 @@ export class GameImpl implements Game {
     this.motionPlanRecords.push(record);
   }
 
-  isUnitPlanDriven(unitId: number): boolean {
+  private isUnitPlanDriven(unitId: number): boolean {
     return this.planDrivenUnitIds.has(unitId);
+  }
+
+  maybeAddUnitUpdate(unit: Unit): void {
+    if (!this.isUnitPlanDriven(unit.id())) {
+      this.addUpdate(unit.toUpdate());
+    }
+  }
+
+  onUnitMoved(unit: Unit): void {
+    this.updateUnitTile(unit);
+    this.maybeAddUnitUpdate(unit);
   }
 
   drainPackedMotionPlans(): Uint32Array | null {
