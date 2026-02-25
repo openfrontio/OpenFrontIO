@@ -110,26 +110,6 @@ export class TradeShipExecution implements Execution {
     const result = this.pathFinder.next(curTile, dst);
 
     switch (result.status) {
-      case PathStatus.PENDING:
-        if (dst !== this.motionPlanDst) {
-          this.motionPlanId++;
-          const from = curTile;
-          const path = this.pathFinder.findPath(from, dst) ?? [from];
-          if (path.length === 0 || path[0] !== from) {
-            path.unshift(from);
-          }
-
-          this.mg.recordMotionPlan({
-            kind: "grid",
-            unitId: this.tradeShip.id(),
-            planId: this.motionPlanId,
-            startTick: ticks + 1,
-            ticksPerStep: 1,
-            path,
-          });
-          this.motionPlanDst = dst;
-        }
-        break;
       case PathStatus.NEXT:
         if (dst !== this.motionPlanDst) {
           this.motionPlanId++;

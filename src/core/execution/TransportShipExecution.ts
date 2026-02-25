@@ -248,8 +248,6 @@ export class TransportShipExecution implements Execution {
       case PathStatus.NEXT:
         this.boat.move(result.node);
         break;
-      case PathStatus.PENDING:
-        break;
       case PathStatus.NOT_FOUND: {
         // TODO: add to poisoned port list
         const map = this.mg.map();
