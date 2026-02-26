@@ -105,7 +105,7 @@ describe("AllianceDisplay - alliance renewal cleanup (allianceID based)", () => 
   });
 
   test("onAllianceExtensionEvent removes renewal when playerID matches myPlayer", () => {
-    const display = new EventsDisplay();
+    const display = new AllianceDisplay();
 
     const allianceID = 42;
     const mySmallID = 7;
@@ -127,7 +127,7 @@ describe("AllianceDisplay - alliance renewal cleanup (allianceID based)", () => 
   });
 
   test("onAllianceExtensionEvent keeps renewal when playerID does not match myPlayer", () => {
-    const display = new EventsDisplay();
+    const display = new AllianceDisplay();
 
     const allianceID = 42;
     const mySmallID = 7;
@@ -150,7 +150,7 @@ describe("AllianceDisplay - alliance renewal cleanup (allianceID based)", () => 
   });
 
   test("onAllianceExtensionEvent keeps renewal when myPlayer is null", () => {
-    const display = new EventsDisplay();
+    const display = new AllianceDisplay();
 
     const allianceID = 42;
 
