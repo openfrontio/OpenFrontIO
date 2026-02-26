@@ -1,4 +1,5 @@
 import { EventBus } from "../../../core/EventBus";
+import { listNukeBreakAlliance } from "../../../core/execution/Util";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
@@ -137,7 +138,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     // Get buildable units to find spawn tile (expensive call - only on tick when tile changes)
     player
-      .actions(targetTile)
+      .actions(targetTile, [ghostStructure])
       .then((actions) => {
         // Ignore stale results if target changed
         if (this.lastTargetTile !== targetTile) {
@@ -258,6 +259,18 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         break;
       }
     }
+    const playersToBreakAllianceWith = listNukeBreakAlliance({
+      game: this.game,
+      targetTile,
+      magnitude: this.game.config().nukeMagnitudes(ghostStructure),
+      allySmallIds: new Set(
+        this.game
+          .myPlayer()
+          ?.allies()
+          .map((a) => a.smallID()),
+      ),
+      threshold: this.game.config().nukeAllianceBreakThreshold(),
+    });
     // Find the point where SAM can intercept
     this.targetedIndex = this.trajectoryPoints.length;
     // Check trajectory
@@ -270,7 +283,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       )) {
         if (
           sam.unit.owner().isMe() ||
-          this.game.myPlayer()?.isFriendly(sam.unit.owner())
+          (this.game.myPlayer()?.isFriendly(sam.unit.owner()) &&
+            !playersToBreakAllianceWith.has(sam.unit.owner().smallID()))
         ) {
           continue;
         }

@@ -34,10 +34,20 @@ describe("InputHandler AutoUpgrade", () => {
     eventBus = new EventBus();
 
     inputHandler = new InputHandler(
-      { attackRatio: 20, ghostStructure: null, rocketDirectionUp: true },
+      {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      },
       mockCanvas,
       eventBus,
     );
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
   });
 
   describe("Middle Mouse Button Handling", () => {

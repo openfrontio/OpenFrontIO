@@ -8,6 +8,7 @@ import {
   MIN_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 
 const usernameKey: string = "username";
 
@@ -39,8 +40,20 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    const stored = this.getStoredUsername();
+    const stored = this.getUsername();
     this.parseAndSetUsername(stored);
+    crazyGamesSDK.getUsername().then((username) => {
+      if (username) {
+        this.parseAndSetUsername(username ?? genAnonUsername());
+        this.requestUpdate();
+      }
+    });
+    crazyGamesSDK.addAuthListener((user) => {
+      if (user) {
+        this.parseAndSetUsername(user?.username);
+      }
+      this.requestUpdate();
+    });
   }
 
   private parseAndSetUsername(fullUsername: string) {
@@ -52,6 +65,8 @@ export class UsernameInput extends LitElement {
       this.clanTag = "";
       this.baseUsername = fullUsername;
     }
+
+    this.validateAndStore();
   }
 
   render() {
@@ -63,7 +78,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleClanTagChange}
           placeholder="${translateText("username.tag")}"
           maxlength="5"
-          class="w-[6rem] bg-transparent border-b border-white/20 text-white placeholder-white/30 text-xl font-bold text-center focus:outline-none focus:border-white/50 transition-colors uppercase shrink-0"
+          class="w-[6rem] text-xl font-bold text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
         />
         <input
           type="text"
@@ -71,7 +86,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
           maxlength="${MAX_USERNAME_LENGTH}"
-          class="flex-1 min-w-0 bg-transparent border-0 text-white placeholder-white/30 text-2xl font-bold text-left focus:outline-none focus:ring-0 transition-colors overflow-x-auto whitespace-nowrap text-ellipsis pr-2"
+          class="flex-1 min-w-0 border-0 text-2xl font-bold text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
       </div>
       ${this.validationError
@@ -133,7 +148,8 @@ export class UsernameInput extends LitElement {
 
   private validateAndStore() {
     // Prevent empty username even if clan tag is present
-    if (!this.baseUsername.trim()) {
+    const trimmedBase = this.baseUsername.trim();
+    if (!trimmedBase || trimmedBase.length < MIN_USERNAME_LENGTH) {
       this._isValid = false;
       this.validationError = translateText("username.too_short", {
         min: MIN_USERNAME_LENGTH,
@@ -161,7 +177,7 @@ export class UsernameInput extends LitElement {
     }
   }
 
-  private getStoredUsername(): string {
+  private getUsername(): string {
     const storedUsername = localStorage.getItem(usernameKey);
     if (storedUsername) {
       return storedUsername;
@@ -176,20 +192,20 @@ export class UsernameInput extends LitElement {
   }
 
   private generateNewUsername(): string {
-    const newUsername = "Anon" + this.uuidToThreeDigits();
+    const newUsername = genAnonUsername();
     this.storeUsername(newUsername);
     return newUsername;
-  }
-
-  private uuidToThreeDigits(): string {
-    const uuid = uuidv4();
-    const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-    const decimal = BigInt(`0x${cleanUuid}`);
-    const threeDigits = decimal % 1000n;
-    return threeDigits.toString().padStart(3, "0");
   }
 
   public isValid(): boolean {
     return this._isValid;
   }
+}
+
+export function genAnonUsername(): string {
+  const uuid = uuidv4();
+  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
+  const decimal = BigInt(`0x${cleanUuid}`);
+  const threeDigits = decimal % 1000n;
+  return "Anon" + threeDigits.toString().padStart(3, "0");
 }

@@ -8,7 +8,6 @@ import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
-  PlayerActions,
   PlayerID,
   UnitType,
 } from "../../../core/game/Game";
@@ -74,7 +73,6 @@ export class StructureIconsLayer implements Layer {
   private ghostStage: PIXI.Container;
   private levelsStage: PIXI.Container;
   private rootStage: PIXI.Container = new PIXI.Container();
-  public playerActions: PlayerActions | null = null;
   private dotsStage: PIXI.Container;
   private readonly theme: Theme;
   private renderer: PIXI.Renderer | null = null;
@@ -270,8 +268,8 @@ export class StructureIconsLayer implements Layer {
       myPlayer &&
       (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
     ) {
-      // Only check if player has allies
-      const allies = myPlayer.allies();
+      // Only check connected allies - nuking disconnected allies doesn't cause a traitor debuff
+      const allies = myPlayer.allies().filter((a) => !a.isDisconnected());
       if (allies.length > 0) {
         targetingAlly = wouldNukeBreakAlliance({
           game: this.game,
@@ -285,7 +283,7 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef)
+      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((actions) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];
@@ -333,10 +331,18 @@ export class StructureIconsLayer implements Layer {
               new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
             ];
           }
+          // No overlapping when a structure is upgradable
+          this.uiState.overlappingRailroads = [];
+          this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
+          this.uiState.overlappingRailroads = [];
+          this.uiState.ghostRailPaths = [];
+        } else {
+          this.uiState.overlappingRailroads = unit.overlappingRailroads;
+          this.uiState.ghostRailPaths = unit.ghostRailPaths;
         }
 
         const scale = this.transformHandler.scale;
@@ -450,7 +456,14 @@ export class StructureIconsLayer implements Layer {
       priceGroup: ghost.priceGroup,
       priceBox: ghost.priceBox,
       range: null,
-      buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
+      buildableUnit: {
+        type,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 0n,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      },
     };
     const showPrice = this.game.config().userSettings().cursorCostLabel();
     this.updateGhostPrice(0, showPrice);
@@ -469,6 +482,7 @@ export class StructureIconsLayer implements Layer {
       this.potentialUpgrade.dotContainer.filters = [];
       this.potentialUpgrade = undefined;
     }
+    this.uiState.ghostRailPaths = [];
   }
 
   private removeGhostStructure() {

@@ -4,7 +4,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   TerraNullius,
   Unit,
   UnitType,
@@ -16,33 +15,29 @@ import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
+
 export class TransportShipExecution implements Execution {
-  private lastMove: number;
+  private active = true;
 
   // TODO: make this configurable
   private ticksPerMove = 1;
-
-  private active = true;
+  private lastMove: number;
 
   private mg: Game;
   private target: Player | TerraNullius;
-
-  // TODO make private
-  public path: TileRef[];
-  private dst: TileRef | null;
-
-  private boat: Unit;
-
   private pathFinder: SteppingPathFinder<TileRef>;
+
+  private dst: TileRef | null;
+  private src: TileRef | null;
+  private retreatDst: TileRef | false | null = null;
+  private boat: Unit;
 
   private originalOwner: Player;
 
   constructor(
     private attacker: Player,
-    private targetID: PlayerID | null,
     private ref: TileRef,
-    private startTroops: number,
-    private src: TileRef | null,
+    private troops: number,
   ) {
     this.originalOwner = this.attacker;
   }
@@ -52,24 +47,15 @@ export class TransportShipExecution implements Execution {
   }
 
   init(mg: Game, ticks: number) {
-    if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
-      console.warn(`TransportShipExecution: target ${this.targetID} not found`);
-      this.active = false;
-      return;
-    }
     if (!mg.isValidRef(this.ref)) {
       console.warn(`TransportShipExecution: ref ${this.ref} not valid`);
-      this.active = false;
-      return;
-    }
-    if (this.src !== null && !mg.isValidRef(this.src)) {
-      console.warn(`TransportShipExecution: src ${this.src} not valid`);
       this.active = false;
       return;
     }
 
     this.lastMove = ticks;
     this.mg = mg;
+    this.target = mg.owner(this.ref);
     this.pathFinder = PathFinding.Water(mg);
 
     if (
@@ -87,73 +73,51 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    if (
-      this.targetID === null ||
-      this.targetID === this.mg.terraNullius().id()
-    ) {
-      this.target = mg.terraNullius();
-    } else {
-      this.target = mg.player(this.targetID);
-    }
     if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
       this.active = false;
       return;
     }
 
-    this.startTroops ??= this.mg
+    this.troops ??= this.mg
       .config()
       .boatAttackAmount(this.attacker, this.target);
-
-    this.startTroops = Math.min(this.startTroops, this.attacker.troops());
+    this.troops = Math.min(this.troops, this.attacker.troops());
 
     this.dst = targetTransportTile(this.mg, this.ref);
+
     if (this.dst === null) {
       console.warn(
-        `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
+        `${this.attacker} cannot send ship to ${this.target}, cannot find target tile`,
       );
       this.active = false;
       return;
     }
 
-    const closestTileSrc = this.attacker.canBuild(
-      UnitType.TransportShip,
-      this.dst,
-    );
-    if (closestTileSrc === false) {
-      console.warn(`can't build transport ship`);
+    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+
+    if (src === false) {
+      console.warn(
+        `${this.attacker} cannot send ship to ${this.target}, cannot find start tile`,
+      );
       this.active = false;
       return;
     }
 
-    if (this.src === null) {
-      // Only update the src if it's not already set
-      // because we assume that the src is set to the best spawn tile
-      this.src = closestTileSrc;
-    } else {
-      if (
-        this.mg.owner(this.src) !== this.attacker ||
-        !this.mg.isShore(this.src)
-      ) {
-        console.warn(
-          `src is not a shore tile or not owned by: ${this.attacker.name()}`,
-        );
-        this.src = closestTileSrc;
-      }
-    }
+    this.src = src;
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
-      troops: this.startTroops,
-      targetTile: this.dst ?? undefined,
+      troops: this.troops,
+      targetTile: this.dst,
     });
 
     // Notify the target player about the incoming naval invasion
-    if (this.targetID && this.targetID !== mg.terraNullius().id()) {
+    if (this.target.id() !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
         // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        `Naval invasion incoming from ${this.attacker.displayName()} (${renderTroops(this.boat.troops())})`,
         MessageType.NAVAL_INVASION_INBOUND,
-        this.targetID,
+        this.target.id(),
       );
     }
 
@@ -193,27 +157,21 @@ export class TransportShipExecution implements Execution {
     }
 
     if (this.boat.retreating()) {
-      // Ensure retreat source is still valid for (new) owner
-      if (this.mg.owner(this.src!) !== this.attacker) {
-        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
-        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-        if (newSrc === false) {
-          this.src = null;
-        } else {
-          this.src = newSrc;
-        }
-      }
+      // Resolve retreat destination once, based on current boat location when retreat begins.
+      this.retreatDst ??= this.attacker.bestTransportShipSpawn(
+        this.boat.tile(),
+      );
 
-      if (this.src === null) {
+      if (this.retreatDst === false) {
         console.warn(
-          `TransportShipExecution: retreating but no src found for new attacker`,
+          `TransportShipExecution: retreating but no retreat destination found`,
         );
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;
         return;
       } else {
-        this.dst = this.src;
+        this.dst = this.retreatDst;
 
         if (this.boat.targetTile() !== this.dst) {
           this.boat.setTargetTile(this.dst);
@@ -254,7 +212,7 @@ export class TransportShipExecution implements Execution {
             new AttackExecution(
               this.boat.troops(),
               this.attacker,
-              this.targetID,
+              this.target.id(),
               this.dst,
               false,
             ),
@@ -278,7 +236,7 @@ export class TransportShipExecution implements Execution {
         const map = this.mg.map();
         const boatTile = this.boat.tile();
         console.warn(
-          `TransportShip path not found: boat@(${map.x(boatTile)},${map.y(boatTile)}) -> dst@(${map.x(this.dst)},${map.y(this.dst)}), attacker=${this.attacker.id()}, target=${this.targetID}`,
+          `TransportShip path not found: boat@(${map.x(boatTile)},${map.y(boatTile)}) -> dst@(${map.x(this.dst)},${map.y(this.dst)}), attacker=${this.attacker.id()}, target=${this.target.id()}`,
         );
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);

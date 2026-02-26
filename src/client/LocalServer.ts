@@ -2,13 +2,14 @@ import { z } from "zod";
 import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
+  ClientID,
   ClientMessage,
   ClientSendWinnerMessage,
-  Intent,
   PartialGameRecordSchema,
   PlayerRecord,
   ServerMessage,
   ServerStartGameMessage,
+  StampedIntent,
   Turn,
 } from "../core/Schemas";
 import {
@@ -20,7 +21,13 @@ import {
 import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+import {
+  defaultReplaySpeedMultiplier,
+  ReplaySpeedMultiplier,
+} from "./utilities/ReplaySpeedMultiplier";
+
+// build a small backlog so MAX can catch up.
+const MAX_REPLAY_BACKLOG_TURNS = 60;
 
 export class LocalServer {
   // All turns from the game record on replay.
@@ -28,12 +35,13 @@ export class LocalServer {
 
   private turns: Turn[] = [];
 
-  private intents: Intent[] = [];
+  private intents: StampedIntent[] = [];
   private startedAt: number;
 
   private paused = false;
   private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
 
+  private clientID: ClientID | undefined;
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
 
@@ -64,9 +72,16 @@ export class LocalServer {
       const turnIntervalMs =
         this.lobbyConfig.serverConfig.turnIntervalMs() *
         this.replaySpeedMultiplier;
+      const backlog = Math.max(0, this.turns.length - this.turnsExecuted);
+      const allowReplayBacklog =
+        this.replaySpeedMultiplier === ReplaySpeedMultiplier.fastest &&
+        this.lobbyConfig.gameRecord !== undefined;
+      const maxBacklog = allowReplayBacklog ? MAX_REPLAY_BACKLOG_TURNS : 0;
 
+      const canQueueNextTurn =
+        backlog === 0 || (maxBacklog > 0 && backlog < maxBacklog);
       if (
-        this.turnsExecuted === this.turns.length &&
+        canQueueNextTurn &&
         Date.now() > this.turnStartTime + turnIntervalMs
       ) {
         this.turnStartTime = Date.now();
@@ -89,34 +104,48 @@ export class LocalServer {
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
+    this.clientID = this.lobbyConfig.gameStartInfo.players[0]?.clientID;
+    if (!this.clientID) {
+      throw new Error("missing clientID");
+    }
     this.clientMessage({
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
+      myClientID: this.clientID,
     } satisfies ServerStartGameMessage);
   }
 
   onMessage(clientMsg: ClientMessage) {
     if (clientMsg.type === "rejoin") {
+      if (!this.clientID) {
+        throw new Error("missing clientID");
+      }
       this.clientMessage({
         type: "start",
         gameStartInfo: this.lobbyConfig.gameStartInfo!,
         turns: this.turns,
         lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
+        myClientID: this.clientID,
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {
-      if (clientMsg.intent.type === "toggle_pause") {
-        if (clientMsg.intent.paused) {
+      // Server stamps clientID - client doesn't send it
+      const stampedIntent = {
+        ...clientMsg.intent,
+        clientID: this.clientID!,
+      };
+      if (stampedIntent.type === "toggle_pause") {
+        if (stampedIntent.paused) {
           // Pausing: add intent and end turn before pause takes effect
-          this.intents.push(clientMsg.intent);
+          this.intents.push(stampedIntent);
           this.endTurn();
           this.paused = true;
         } else {
           // Unpausing: clear pause flag before adding intent so next turn can execute
           this.paused = false;
-          this.intents.push(clientMsg.intent);
+          this.intents.push(stampedIntent);
           this.endTurn();
         }
         return;
@@ -126,7 +155,7 @@ export class LocalServer {
         return;
       }
 
-      this.intents.push(clientMsg.intent);
+      this.intents.push(stampedIntent);
     }
     if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
@@ -211,8 +240,8 @@ export class LocalServer {
       {
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
-        clientID: this.lobbyConfig.clientID,
-        stats: this.allPlayersStats[this.lobbyConfig.clientID],
+        clientID: this.clientID!,
+        stats: this.allPlayersStats[this.clientID!],
         cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
         clanTag: getClanTag(this.lobbyConfig.playerName) ?? undefined,
       },

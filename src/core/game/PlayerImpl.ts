@@ -12,6 +12,7 @@ import {
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
+  AllianceInfo,
   AllianceRequest,
   AllPlayers,
   Attack,
@@ -20,7 +21,9 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
   Gold,
+  isStructureType,
   MessageType,
   MutableAlliance,
   Player,
@@ -29,6 +32,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
+  StructureTypes,
   Team,
   TerraNullius,
   Tick,
@@ -211,11 +215,58 @@ export class PlayerImpl implements Player {
   }
 
   units(...types: UnitType[]): Unit[] {
-    if (types.length === 0) {
+    const len = types.length;
+    if (len === 0) {
       return this._units;
     }
+
+    // Fast paths for common small arity calls to avoid Set allocation.
+    if (len === 1) {
+      const t0 = types[0]!;
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        if (u.type() === t0) out.push(u);
+      }
+      return out;
+    }
+
+    if (len === 2) {
+      const t0 = types[0]!;
+      const t1 = types[1]!;
+      if (t0 === t1) {
+        const out: Unit[] = [];
+        for (const u of this._units) {
+          if (u.type() === t0) out.push(u);
+        }
+        return out;
+      }
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === t0 || t === t1) out.push(u);
+      }
+      return out;
+    }
+
+    if (len === 3) {
+      const t0 = types[0]!;
+      const t1 = types[1]!;
+      const t2 = types[2]!;
+      // Keep semantics identical for duplicates in types by using direct comparisons.
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === t0 || t === t1 || t === t2) out.push(u);
+      }
+      return out;
+    }
+
     const ts = new Set(types);
-    return this._units.filter((u) => ts.has(u.type()));
+    const out: Unit[] = [];
+    for (const u of this._units) {
+      if (ts.has(u.type())) out.push(u);
+    }
+    return out;
   }
 
   private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
@@ -315,20 +366,20 @@ export class PlayerImpl implements Player {
     this.mg.conquer(this, tile);
   }
   orderRetreat(id: string) {
-    const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
-    if (!attack || !attack[0]) {
+    const attack = this._outgoingAttacks.find((attack) => attack.id() === id);
+    if (!attack) {
       console.warn(`Didn't find outgoing attack with id ${id}`);
       return;
     }
-    attack[0].orderRetreat();
+    attack.orderRetreat();
   }
   executeRetreat(id: string): void {
-    const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
+    const attack = this._outgoingAttacks.find((attack) => attack.id() === id);
     // Execution is delayed so it's not an error that the attack does not exist.
-    if (!attack || !attack[0]) {
+    if (!attack) {
       return;
     }
-    attack[0].executeRetreat();
+    attack.executeRetreat();
   }
   relinquish(tile: TileRef) {
     if (this.mg.owner(tile) !== this) {
@@ -400,6 +451,30 @@ export class PlayerImpl implements Player {
     );
   }
 
+  allianceInfo(other: Player): AllianceInfo | null {
+    const alliance = this.allianceWith(other);
+    if (!alliance) {
+      return null;
+    }
+    const inExtensionWindow =
+      alliance.expiresAt() <=
+      this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset();
+    const canExtend =
+      !this.isDisconnected() &&
+      !other.isDisconnected() &&
+      this.isAlive() &&
+      other.isAlive() &&
+      inExtensionWindow &&
+      !alliance.agreedToExtend(this);
+    return {
+      expiresAt: alliance.expiresAt(),
+      inExtensionWindow,
+      myPlayerAgreedToExtend: alliance.agreedToExtend(this),
+      otherAgreedToExtend: alliance.agreedToExtend(other),
+      canExtend,
+    };
+  }
+
   canSendAllianceRequest(other: Player): boolean {
     if (other === this) {
       return false;
@@ -423,6 +498,14 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+    const hasIncoming = this.incomingAllianceRequests().some(
+      (ar) => ar.requestor() === other,
+    );
+
+    if (hasIncoming) {
+      return true;
+    }
+
     const recent = this.pastOutgoingAllianceRequests
       .filter((ar) => ar.recipient() === other)
       .sort((a, b) => b.createdAt() - a.createdAt());
@@ -438,6 +521,10 @@ export class PlayerImpl implements Player {
 
   breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
+  }
+
+  removeAllAlliances(): void {
+    this.mg.removeAlliancesByPlayerSilently(this);
   }
 
   isTraitor(): boolean {
@@ -946,26 +1033,44 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
-      let canUpgrade: number | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
+  public buildableUnits(
+    tile: TileRef | null,
+    units?: UnitType[],
+  ): BuildableUnit[] {
+    const validTiles =
+      tile !== null &&
+      (units === undefined || units.some((u) => isStructureType(u)))
+        ? this.validStructureSpawnTiles(tile)
+        : [];
+    return Object.values(UnitType)
+      .filter((u) => units === undefined || units.includes(u))
+      .map((u) => {
+        let canUpgrade: number | false = false;
+        let canBuild: TileRef | false = false;
+        if (!this.mg.inSpawnPhase()) {
+          const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
+          if (existingUnit !== false) {
+            canUpgrade = existingUnit.id();
+          }
+          if (tile !== null) {
+            canBuild = this.canBuild(u, tile, validTiles);
+          }
         }
-      }
-      return {
-        type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this.mg, this),
-      } as BuildableUnit;
-    });
+        return {
+          type: u,
+          canBuild,
+          canUpgrade,
+          cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+          overlappingRailroads:
+            canBuild !== false
+              ? this.mg.railNetwork().overlappingRailroads(canBuild)
+              : [],
+          ghostRailPaths:
+            canBuild !== false
+              ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
+              : [],
+        };
+      });
   }
 
   canBuild(
@@ -978,7 +1083,10 @@ export class PlayerImpl implements Player {
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
-    if (!this.isAlive() || this.gold() < cost) {
+    if (
+      unitType !== UnitType.MIRVWarhead &&
+      (!this.isAlive() || this.gold() < cost)
+    ) {
       return false;
     }
     switch (unitType) {
@@ -986,10 +1094,10 @@ export class PlayerImpl implements Player {
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
@@ -1016,7 +1124,7 @@ export class PlayerImpl implements Player {
     }
   }
 
-  nukeSpawn(tile: TileRef): TileRef | false {
+  nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
     if (this.mg.isSpawnImmunityActive()) {
       return false;
     }
@@ -1026,6 +1134,24 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
+
+    // Prevent launching nukes that would hit teammate structures (only in team games)
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.Team &&
+      nukeType !== UnitType.MIRV
+    ) {
+      const magnitude = this.mg.config().nukeMagnitudes(nukeType);
+      const wouldHitTeammate = this.mg.anyUnitNearby(
+        tile,
+        magnitude.outer,
+        StructureTypes,
+        (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
+      );
+      if (wouldHitTeammate) {
+        return false;
+      }
+    }
+
     // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
@@ -1097,14 +1223,11 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
-      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
-    });
 
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      types,
+      StructureTypes,
       undefined,
       true,
     );
@@ -1135,13 +1258,9 @@ export class PlayerImpl implements Player {
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
-    const spawns = this.units(UnitType.Port).filter(
-      (u) => u.tile() === targetTile,
-    );
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+    return this.units(UnitType.Port).find((u) => u.tile() === targetTile)
+      ? targetTile
+      : false;
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
@@ -1211,18 +1330,25 @@ export class PlayerImpl implements Player {
   }
 
   public isImmune(): boolean {
-    return this.type() === PlayerType.Human && this.mg.isSpawnImmunityActive();
+    if (this.type() === PlayerType.Human) {
+      return this.mg.isSpawnImmunityActive();
+    }
+    if (this.type() === PlayerType.Nation) {
+      return this.mg.isNationSpawnImmunityActive();
+    }
+    return false;
   }
 
   public canAttackPlayer(
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    if (this.type() === PlayerType.Human) {
-      return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+    if (this.type() === PlayerType.Bot) {
+      // Bots are not affected by immunity
+      return !this.isFriendly(player, treatAFKFriendly);
     }
-    // Only humans are affected by immunity, bots and nations should be able to attack freely
-    return !this.isFriendly(player, treatAFKFriendly);
+    // Humans and Nations respect immunity
+    return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
   }
 
   public canAttack(tile: TileRef): boolean {

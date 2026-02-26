@@ -1,70 +1,45 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { isInIframe } from "./Utils";
-
-const LEFT_FUSE = "gutter-ad-container-left";
-const RIGHT_FUSE = "gutter-ad-container-right";
-// Minimum screen width to show ads (larger than typical Chromebook)
-const MIN_SCREEN_WIDTH = 1400;
 
 @customElement("gutter-ads")
 export class GutterAds extends LitElement {
   @state()
   private isVisible: boolean = false;
 
+  @state()
+  private adLoaded: boolean = false;
+
+  private leftAdType: string = "standard_iab_left2";
+  private rightAdType: string = "standard_iab_rght1";
+  private leftContainerId: string = "gutter-ad-container-left";
+  private rightContainerId: string = "gutter-ad-container-right";
+
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
     return this;
   }
 
-  private readonly boundUserMeHandler = (event: Event) =>
-    this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
+  static styles = css``;
 
   connectedCallback() {
     super.connectedCallback();
-    document.addEventListener(
-      "userMeResponse",
-      this.boundUserMeHandler as EventListener,
-    );
-  }
-
-  private onUserMe(userMeResponse: UserMeResponse | false): void {
-    const flares =
-      userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
-    const hasFlare = flares.some((flare) => flare.startsWith("pattern:"));
-    if (hasFlare) {
-      console.log("No ads because you have patterns");
-      window.enableAds = false;
-    } else {
-      console.log("No flares, showing ads");
-      this.show();
-      window.enableAds = true;
-    }
-  }
-
-  private isScreenLargeEnough(): boolean {
-    return window.innerWidth >= MIN_SCREEN_WIDTH;
+    document.addEventListener("userMeResponse", () => {
+      if (window.adsEnabled) {
+        console.log("showing gutter ads");
+        this.show();
+      } else {
+        console.log("not showing gutter ads");
+      }
+    });
   }
 
   // Called after the component's DOM is first rendered
   firstUpdated() {
     // DOM is guaranteed to be available here
-    console.log("GutterAd DOM is ready");
+    console.log("GutterAdModal DOM is ready");
   }
 
   public show(): void {
-    if (!this.isScreenLargeEnough()) {
-      console.log("Screen too small for gutter ads, skipping");
-      return;
-    }
-
-    if (isInIframe()) {
-      console.log("In iframe, showing gutter ads");
-      return;
-    }
-
-    console.log("showing GutterAds");
     this.isVisible = true;
     this.requestUpdate();
 
@@ -74,58 +49,67 @@ export class GutterAds extends LitElement {
     });
   }
 
-  public hide(): void {
-    this.isVisible = false;
-    console.log("hiding GutterAds");
-    this.destroyAds();
-    document.removeEventListener(
-      "userMeResponse",
-      this.boundUserMeHandler as EventListener,
-    );
-    this.requestUpdate();
+  public close(): void {
+    try {
+      window.ramp.destroyUnits(this.leftAdType);
+      window.ramp.destroyUnits(this.rightAdType);
+      console.log("successfully destroyed gutter ads");
+    } catch (e) {
+      console.error("error destroying gutter ads", e);
+    }
   }
 
   private loadAds(): void {
+    console.log("loading ramp ads");
     // Ensure the container elements exist before loading ads
-    const leftContainer = this.querySelector(`#${LEFT_FUSE}`);
-    const rightContainer = this.querySelector(`#${RIGHT_FUSE}`);
+    const leftContainer = this.querySelector(`#${this.leftContainerId}`);
+    const rightContainer = this.querySelector(`#${this.rightContainerId}`);
 
     if (!leftContainer || !rightContainer) {
       console.warn("Ad containers not found in DOM");
       return;
     }
 
-    if (!window.fusetag) {
-      console.warn("Fuse tag not available");
+    if (!window.ramp) {
+      console.warn("Playwire RAMP not available");
+      return;
+    }
+
+    if (this.adLoaded) {
+      console.log("Ads already loaded, skipping");
       return;
     }
 
     try {
-      console.log("registering zones");
-      window.fusetag.que.push(() => {
-        window.fusetag.registerZone(LEFT_FUSE);
-        window.fusetag.registerZone(RIGHT_FUSE);
+      window.ramp.que.push(() => {
+        try {
+          window.ramp.spaAddAds([
+            {
+              type: this.leftAdType,
+              selectorId: this.leftContainerId,
+            },
+            {
+              type: this.rightAdType,
+              selectorId: this.rightContainerId,
+            },
+          ]);
+          this.adLoaded = true;
+          console.log(
+            "Playwire ads loaded:",
+            this.leftAdType,
+            this.rightAdType,
+          );
+        } catch (e) {
+          console.log(e);
+        }
       });
     } catch (error) {
-      console.error("Failed to load fuse ads:", error);
-      this.hide();
+      console.error("Failed to load Playwire ads:", error);
     }
-  }
-
-  private destroyAds(): void {
-    if (!window.fusetag) {
-      return;
-    }
-    window.fusetag.que.push(() => {
-      window.fusetag.destroyZone(LEFT_FUSE);
-      window.fusetag.destroyZone(RIGHT_FUSE);
-    });
-    this.requestUpdate();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.hide();
   }
 
   render() {
@@ -134,11 +118,26 @@ export class GutterAds extends LitElement {
     }
 
     return html`
-      <div class="fixed left-0 top-1/2 -translate-y-1/2 z-10">
-        <div id="${LEFT_FUSE}" data-fuse="lhs_sticky_vrec"></div>
+      <!-- Left Gutter Ad -->
+      <div
+        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
+        style="left: calc(50% - 10cm - 230px); top: calc(50% + 10px);"
+      >
+        <div
+          id="${this.leftContainerId}"
+          class="w-full h-full flex items-center justify-center p-2"
+        ></div>
       </div>
-      <div class="fixed right-0 top-1/2 -translate-y-1/2 z-10">
-        <div id="${RIGHT_FUSE}" data-fuse="rhs_sticky_vrec"></div>
+
+      <!-- Right Gutter Ad -->
+      <div
+        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
+        style="left: calc(50% + 10cm + 70px); top: calc(50% + 10px);"
+      >
+        <div
+          id="${this.rightContainerId}"
+          class="w-full h-full flex items-center justify-center p-2"
+        ></div>
       </div>
     `;
   }

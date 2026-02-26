@@ -21,10 +21,8 @@ let defender: Player;
 let defenderSpawn: TileRef;
 let attackerSpawn: TileRef;
 
-function sendBoat(target: TileRef, source: TileRef, troops: number) {
-  game.addExecution(
-    new TransportShipExecution(defender, null, target, troops, source),
-  );
+function sendBoat(target: TileRef, troops: number) {
+  game.addExecution(new TransportShipExecution(defender, target, troops));
 }
 
 const immunityPhaseTicks = 10;
@@ -114,7 +112,7 @@ describe("Attack", () => {
     constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
 
-    sendBoat(game.ref(15, 8), game.ref(10, 5), 100);
+    sendBoat(game.ref(15, 8), 100);
 
     constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
     const nuke = defender.units(UnitType.AtomBomb)[0];
@@ -133,7 +131,7 @@ describe("Attack", () => {
     const player_start_troops = defender.troops();
     const boat_troops = player_start_troops * 0.5;
 
-    sendBoat(game.ref(15, 8), game.ref(10, 5), boat_troops);
+    sendBoat(game.ref(15, 8), boat_troops);
 
     game.executeNextTick();
 
@@ -185,7 +183,7 @@ describe("Attack race condition with alliance requests", () => {
       null,
       "playerB_id",
     );
-    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 10));
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
@@ -225,6 +223,9 @@ describe("Attack race condition with alliance requests", () => {
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
+
+    expect(playerA.isAlive()).toBe(true);
+    expect(playerB.isAlive()).toBe(true);
 
     // Player A should not be marked as traitor because the alliance was formed after the attack started
     expect(playerA.isTraitor()).toBe(false);
@@ -357,7 +358,7 @@ describe("Attack immunity", () => {
       null,
       "playerB_id",
     );
-    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
@@ -393,17 +394,17 @@ describe("Attack immunity", () => {
 
   test("Ensure a player can't attack during all the immunity phase", async () => {
     // Execute a few ticks but stop right before the immunity phase is over
-    for (let i = 0; i < immunityPhaseTicks - 1; i++) {
+    for (let i = 0; i < immunityPhaseTicks - 2; i++) {
       game.executeNextTick();
     }
     // Player A attacks Player B
     game.addExecution(new AttackExecution(null, playerA, playerB.id(), null));
-    game.executeNextTick(); // ticks === immunityPhaseTicks here
+    game.executeNextTick(); // ticks === immunityPhaseTicks - 1 here
     // Attack is not possible during immunity
     expect(playerA.outgoingAttacks()).toHaveLength(0);
 
     // Retry after the immunity is over
-    game.executeNextTick(); // ticks === immunityPhaseTicks + 1
+    game.executeNextTick(); // ticks === immunityPhaseTicks
     game.addExecution(new AttackExecution(null, playerA, playerB.id(), null));
     game.executeNextTick();
     // Attack is now possible right after
@@ -412,15 +413,7 @@ describe("Attack immunity", () => {
 
   test("Should not be able to send a boat during immunity phase", async () => {
     // Player A sends a boat targeting Player B
-    game.addExecution(
-      new TransportShipExecution(
-        playerA,
-        playerB.id(),
-        game.ref(15, 8),
-        10,
-        game.ref(10, 5),
-      ),
-    );
+    game.addExecution(new TransportShipExecution(playerA, game.ref(7, 15), 10));
     game.executeNextTick();
     expect(playerA.units(UnitType.TransportShip)).toHaveLength(0);
   });
@@ -428,24 +421,34 @@ describe("Attack immunity", () => {
   test("Should be able to send a boat after immunity phase", async () => {
     waitForImmunityToEnd();
     // Player A sends a boat targeting Player B
-    game.addExecution(
-      new TransportShipExecution(
-        playerA,
-        playerB.id(),
-        game.ref(15, 8),
-        10,
-        game.ref(7, 0),
-      ),
-    );
+    game.addExecution(new TransportShipExecution(playerA, game.ref(7, 15), 10));
     game.executeNextTick();
     expect(playerA.units(UnitType.TransportShip)).toHaveLength(1);
   });
 
-  test("Should be able to attack nations during immunity phase", async () => {
+  test("Should not be able to attack nations during nation immunity phase", async () => {
+    (game.config() as TestConfig).setNationSpawnImmunityDuration(
+      immunityPhaseTicks,
+    );
     const nationId = "nation_id";
     const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
     game.addPlayer(nation);
-    // Player A attacks the nation
+    // Player A attacks the nation during nation immunity
+    const attackExecution = new AttackExecution(null, playerA, nationId, null);
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(0);
+  });
+
+  test("Should be able to attack nations after nation immunity phase", async () => {
+    (game.config() as TestConfig).setNationSpawnImmunityDuration(
+      immunityPhaseTicks,
+    );
+    const nationId = "nation_id";
+    const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
+    game.addPlayer(nation);
+    waitForImmunityToEnd();
+    // Player A attacks the nation after immunity
     const attackExecution = new AttackExecution(null, playerA, nationId, null);
     game.addExecution(attackExecution);
     game.executeNextTick();

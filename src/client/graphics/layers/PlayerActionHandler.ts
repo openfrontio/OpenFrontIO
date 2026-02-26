@@ -1,8 +1,8 @@
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions, PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
+  SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -23,13 +23,6 @@ export class PlayerActionHandler {
     private uiState: UIState,
   ) {}
 
-  async getPlayerActions(
-    player: PlayerView,
-    tile: TileRef,
-  ): Promise<PlayerActions> {
-    return await player.actions(tile);
-  }
-
   handleAttack(player: PlayerView, targetId: string | null) {
     this.eventBus.emit(
       new SendAttackIntentEvent(
@@ -39,18 +32,11 @@ export class PlayerActionHandler {
     );
   }
 
-  handleBoatAttack(
-    player: PlayerView,
-    targetId: PlayerID | null,
-    targetTile: TileRef,
-    spawnTile: TileRef | null,
-  ) {
+  handleBoatAttack(player: PlayerView, targetTile: TileRef) {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
-        targetId,
         targetTile,
         this.uiState.attackRatio * player.troops(),
-        spawnTile,
       ),
     );
   }
@@ -68,6 +54,10 @@ export class PlayerActionHandler {
 
   handleAllianceRequest(player: PlayerView, recipient: PlayerView) {
     this.eventBus.emit(new SendAllianceRequestIntentEvent(player, recipient));
+  }
+
+  handleExtendAlliance(recipient: PlayerView) {
+    this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
   }
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {

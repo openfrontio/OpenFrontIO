@@ -1,8 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { NavNotificationsController } from "./NavNotificationsController";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
+  private _notifications = new NavNotificationsController(this);
+
   createRenderRoot() {
     return this;
   }
@@ -11,7 +14,7 @@ export class DesktopNavBar extends LitElement {
     super.connectedCallback();
     window.addEventListener("showPage", this._onShowPage);
 
-    const current = (window as any).currentPageId;
+    const current = window.currentPageId;
     if (current) {
       // Wait for render
       this.updateComplete.then(() => {
@@ -41,9 +44,12 @@ export class DesktopNavBar extends LitElement {
   }
 
   render() {
+    window.currentPageId ??= "page-play";
+    const currentPage = window.currentPageId;
+
     return html`
       <nav
-        class="hidden lg:flex w-full bg-slate-950/70 backdrop-blur-md border-b border-white/10 items-center justify-center gap-8 py-4 shrink-0 transition-opacity z-50 relative"
+        class="hidden lg:flex w-full bg-slate-900 items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8 text-[#2563eb]">
@@ -51,7 +57,7 @@ export class DesktopNavBar extends LitElement {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 1364 259"
               fill="currentColor"
-              class="h-full w-auto drop-shadow-[0_0_10px_rgba(37,99,235,0.4)]"
+              class="h-full w-auto"
             >
               <path
                 d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
@@ -93,22 +99,54 @@ export class DesktopNavBar extends LitElement {
             class="l-header__highlightText text-center"
           ></div>
         </div>
-        <!-- Desktop Navigation Menu Items -->
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="nav-menu-item ${currentPage === "page-play"
+            ? "active"
+            : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-play"
           data-i18n="main.play"
         ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-news"
-          data-i18n="main.news"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
-          data-page="page-item-store"
-          data-i18n="main.store"
-        ></button>
+        <!-- Desktop Navigation Menu Items -->
+        <div class="relative">
+          <button
+            class="nav-menu-item ${currentPage === "page-news"
+              ? "active"
+              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-news"
+            data-i18n="main.news"
+            @click=${this._notifications.onNewsClick}
+          ></button>
+          ${this._notifications.showNewsDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
+        <div class="relative no-crazygames">
+          <button
+            class="nav-menu-item ${currentPage === "page-item-store"
+              ? "active"
+              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-item-store"
+            data-i18n="main.store"
+            @click=${this._notifications.onStoreClick}
+          ></button>
+          ${this._notifications.showStoreDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-settings"
@@ -116,25 +154,38 @@ export class DesktopNavBar extends LitElement {
         ></button>
         <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-stats"
-          data-i18n="main.stats"
+          data-page="page-leaderboard"
+          data-i18n="main.leaderboard"
         ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-help"
-          data-i18n="main.help"
-        ></button>
+        <div class="relative">
+          <button
+            class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-help"
+            data-i18n="main.help"
+            @click=${this._notifications.onHelpClick}
+          ></button>
+          ${this._notifications.showHelpDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <lang-selector></lang-selector>
         <button
           id="nav-account-button"
-          class="nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
+          class="no-crazygames nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
           data-page="page-account"
           data-i18n-aria-label="main.account"
           data-i18n-title="main.account"
         >
           <img
             id="nav-account-avatar"
-            class="hidden w-8 h-8 rounded-full object-cover"
+            class="no-crazygames hidden w-8 h-8 rounded-full object-cover"
             alt=""
             data-i18n-alt="main.discord_avatar_alt"
             referrerpolicy="no-referrer"

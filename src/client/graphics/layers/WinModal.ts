@@ -1,12 +1,14 @@
-import { LitElement, TemplateResult, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   getGamesPlayed,
   isInIframe,
   translateText,
+  TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
+import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
@@ -37,6 +39,9 @@ export class WinModal extends LitElement implements Layer {
   private isWin = false;
 
   @state()
+  private isRankedGame = false;
+
+  @state()
   private patternContent: TemplateResult | null = null;
 
   private _title: string;
@@ -56,7 +61,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175 animate-fadeIn"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175"
           : "hidden"}"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
@@ -74,33 +79,26 @@ export class WinModal extends LitElement implements Layer {
           >
             ${translateText("win_modal.exit")}
           </button>
+          ${this.isRankedGame
+            ? html`
+                <button
+                  @click=${this._handleRequeue}
+                  class="flex-1 px-3 py-3 text-base cursor-pointer bg-purple-600 text-white border-0 rounded-sm transition-all duration-200 hover:bg-purple-500 hover:-translate-y-px active:translate-y-px"
+                >
+                  ${translateText("win_modal.requeue")}
+                </button>
+              `
+            : null}
           <button
             @click=${this.hide}
             class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
-            ${this.isWin
+            ${this.game?.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
           </button>
         </div>
       </div>
-
-      <style>
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -48%);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      </style>
     `;
   }
 
@@ -131,9 +129,7 @@ export class WinModal extends LitElement implements Layer {
         <div class="relative w-full pb-[56.25%]">
           <iframe
             class="absolute top-0 left-0 w-full h-full rounded-sm"
-            src="${this.isVisible
-              ? "https://www.youtube.com/embed/EN2oOog3pSs"
-              : ""}"
+            src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
             title="YouTube video player"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -205,6 +201,7 @@ export class WinModal extends LitElement implements Layer {
               .pattern=${pattern}
               .colorPalette=${colorPalette}
               .requiresPurchase=${true}
+              .allowTrial=${false}
               .onSelect=${(p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
                 handlePurchase(p, colorPalette)}
@@ -250,7 +247,11 @@ export class WinModal extends LitElement implements Layer {
   }
 
   async show() {
+    crazyGamesSDK.gameplayStop();
     await this.loadPatternContent();
+    // Check if this is a ranked game
+    this.isRankedGame =
+      this.game.config().gameConfig().rankedType === RankedType.OneVOne;
     this.isVisible = true;
     this.requestUpdate();
     setTimeout(() => {
@@ -268,6 +269,12 @@ export class WinModal extends LitElement implements Layer {
   private _handleExit() {
     this.hide();
     window.location.href = "/";
+  }
+
+  private _handleRequeue() {
+    this.hide();
+    // Navigate to homepage and open matchmaking modal
+    window.location.href = "/?requeue";
   }
 
   init() {}

@@ -1,5 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  PlayerActions,
+  StructureTypes,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -46,7 +51,7 @@ export interface MenuElement {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
-  color?: string;
+  color?: string | ((params: MenuElementParams) => string);
   icon?: string;
   text?: string;
   fontSize?: string;
@@ -57,6 +62,10 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+
+  renderType?: string;
+
+  timerFraction?: (params: MenuElementParams) => number; // 0..1, for arc timer overlay
 }
 
 export interface TooltipKey {
@@ -76,6 +85,7 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  breakAllyNoDebuff: "#d4882b",
   delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
@@ -115,6 +125,14 @@ function isFriendlyTarget(params: MenuElementParams): boolean {
   const isFriendly = (selectedPlayer as PlayerView).isFriendly;
   if (typeof isFriendly !== "function") return false;
   return isFriendly.call(selectedPlayer, params.myPlayer);
+}
+
+function isDisconnectedTarget(params: MenuElementParams): boolean {
+  const selectedPlayer = params.selected;
+  if (selectedPlayer === null) return false;
+  const isDisconnected = (selectedPlayer as PlayerView).isDisconnected;
+  if (typeof isDisconnected !== "function") return false;
+  return isDisconnected.call(selectedPlayer);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -201,6 +219,36 @@ const allyRequestElement: MenuElement = {
   },
 };
 
+const allyExtendElement: MenuElement = {
+  id: "ally_extend",
+  name: "extend",
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.allianceInfo?.inExtensionWindow,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.allianceInfo?.canExtend,
+  color: COLORS.ally,
+  icon: allianceIcon,
+  action: (params: MenuElementParams) => {
+    if (!params.playerActions?.interaction?.allianceInfo?.canExtend) return;
+    params.playerActionHandler.handleExtendAlliance(params.selected!);
+    params.closeMenu();
+  },
+  timerFraction: (params: MenuElementParams): number => {
+    const interaction = params.playerActions?.interaction;
+    if (!interaction?.allianceInfo) return 1;
+    const remaining = Math.max(
+      0,
+      interaction.allianceInfo.expiresAt - params.game.ticks(),
+    );
+    const extensionWindow = Math.max(
+      1,
+      params.game.config().allianceExtensionPromptOffset(),
+    );
+    return Math.max(0, Math.min(1, remaining / extensionWindow));
+  },
+  renderType: "allyExtend",
+};
+
 const allyBreakElement: MenuElement = {
   id: "ally_break",
   name: "break",
@@ -208,7 +256,10 @@ const allyBreakElement: MenuElement = {
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
+  color: (params: MenuElementParams) =>
+    params.selected?.isTraitor() || params.selected?.isDisconnected()
+      ? COLORS.breakAllyNoDebuff
+      : COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
@@ -326,29 +377,24 @@ export const infoMenuElement: MenuElement = {
 };
 
 function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const Units: Set<UnitType> = new Set<UnitType>();
+  const units: Set<UnitType> = new Set<UnitType>();
 
-  const addStructureIfEnabled = (unitType: UnitType) => {
+  const addIfEnabled = (unitType: UnitType) => {
     if (!config.isUnitDisabled(unitType)) {
-      Units.add(unitType);
+      units.add(unitType);
     }
   };
 
   if (myPlayer) {
-    addStructureIfEnabled(UnitType.City);
-    addStructureIfEnabled(UnitType.DefensePost);
-    addStructureIfEnabled(UnitType.Port);
-    addStructureIfEnabled(UnitType.MissileSilo);
-    addStructureIfEnabled(UnitType.SAMLauncher);
-    addStructureIfEnabled(UnitType.Factory);
+    StructureTypes.forEach(addIfEnabled);
   } else {
-    addStructureIfEnabled(UnitType.Warship);
-    addStructureIfEnabled(UnitType.HydrogenBomb);
-    addStructureIfEnabled(UnitType.MIRV);
-    addStructureIfEnabled(UnitType.AtomBomb);
+    addIfEnabled(UnitType.Warship);
+    addIfEnabled(UnitType.HydrogenBomb);
+    addIfEnabled(UnitType.MIRV);
+    addIfEnabled(UnitType.AtomBomb);
   }
 
-  return Units;
+  return units;
 }
 
 const ATTACK_UNIT_TYPES: UnitType[] = [
@@ -376,48 +422,50 @@ function createMenuElements(
           ? ATTACK_UNIT_TYPES.includes(item.unitType)
           : !ATTACK_UNIT_TYPES.includes(item.unitType)),
     )
-    .map((item: BuildItemDisplay) => ({
-      id: `${elementIdPrefix}_${item.unitType}`,
-      name: item.key
-        ? item.key.replace("unit_type.", "")
-        : item.unitType.toString(),
-      disabled: (params: MenuElementParams) =>
-        !params.buildMenu.canBuildOrUpgrade(item),
-      color: params.buildMenu.canBuildOrUpgrade(item)
-        ? filterType === "attack"
-          ? COLORS.attack
-          : COLORS.building
-        : undefined,
-      icon: item.icon,
-      tooltipItems: [
-        { text: translateText(item.key ?? ""), className: "title" },
-        {
-          text: translateText(item.description ?? ""),
-          className: "description",
+    .map((item: BuildItemDisplay) => {
+      const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);
+      return {
+        id: `${elementIdPrefix}_${item.unitType}`,
+        name: item.key
+          ? item.key.replace("unit_type.", "")
+          : item.unitType.toString(),
+        disabled: () => !canBuildOrUpgrade,
+        color: canBuildOrUpgrade
+          ? filterType === "attack"
+            ? COLORS.attack
+            : COLORS.building
+          : undefined,
+        icon: item.icon,
+        tooltipItems: [
+          { text: translateText(item.key ?? ""), className: "title" },
+          {
+            text: translateText(item.description ?? ""),
+            className: "description",
+          },
+          {
+            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+            className: "cost",
+          },
+          item.countable
+            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+            : null,
+        ].filter(
+          (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+        ),
+        action: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (buildableUnit === undefined) {
+            return;
+          }
+          if (canBuildOrUpgrade) {
+            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+          }
+          params.closeMenu();
         },
-        {
-          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-          className: "cost",
-        },
-        item.countable
-          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-          : null,
-      ].filter(
-        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-      ),
-      action: (params: MenuElementParams) => {
-        const buildableUnit = params.playerActions.buildableUnits.find(
-          (bu) => bu.type === item.unitType,
-        );
-        if (buildableUnit === undefined) {
-          return;
-        }
-        if (params.buildMenu.canBuildOrUpgrade(item)) {
-          params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
-        }
-        params.closeMenu();
-      },
-    }));
+      };
+    });
 }
 
 export const attackMenuElement: MenuElement = {
@@ -548,17 +596,7 @@ export const boatMenuElement: MenuElement = {
   color: COLORS.boat,
 
   action: async (params: MenuElementParams) => {
-    const spawn = await params.playerActionHandler.findBestTransportShipSpawn(
-      params.myPlayer,
-      params.tile,
-    );
-
-    params.playerActionHandler.handleBoatAttack(
-      params.myPlayer,
-      params.selected?.id() ?? null,
-      params.tile,
-      spawn !== false ? spawn : null,
-    );
+    params.playerActionHandler.handleBoatAttack(params.myPlayer, params.tile);
 
     params.closeMenu();
   },
@@ -572,13 +610,16 @@ export const centerButtonElement: CenterButtonElement = {
       return true;
     }
     if (params.game.inSpawnPhase()) {
+      if (params.game.config().isRandomSpawn()) {
+        return true;
+      }
       if (tileOwner.isPlayer()) {
         return true;
       }
       return false;
     }
 
-    if (isFriendlyTarget(params)) {
+    if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
       return !params.playerActions.interaction?.canDonateTroops;
     }
 
@@ -588,7 +629,7 @@ export const centerButtonElement: CenterButtonElement = {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      if (isFriendlyTarget(params)) {
+      if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
         const selectedPlayer = params.selected as PlayerView;
         const ratio = params.uiState?.attackRatio ?? 1;
         const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
@@ -616,24 +657,25 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
-    let ally = allyRequestElement;
-    if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
-    }
+    const isAllied = params.selected?.isAlliedWith(params.myPlayer);
+    const isDisconnected = isDisconnectedTarget(params);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    const inExtensionWindow =
+      params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
+        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            boatMenuElement,
-            ally,
-            isFriendlyTarget(params)
+            isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
+            inExtensionWindow ? allyExtendElement : allyRequestElement,
+            isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),

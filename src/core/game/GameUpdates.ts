@@ -12,14 +12,21 @@ import {
   TrainType,
   UnitType,
 } from "./Game";
-import { TileRef, TileUpdate } from "./GameMap";
+import { TileRef } from "./GameMap";
 
 export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
-  packedTileUpdates: BigUint64Array;
+  /**
+   * Packed tile updates as `[tileRef, state]` uint32 pairs.
+   *
+   * `tileRef` is a `TileRef` (fits in uint32), and `state` is the packed per-tile
+   * state (`uint16`) stored in a `uint32` lane.
+   */
+  packedTileUpdates: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
   tickExecutionDuration?: number;
+  pendingTurns?: number;
 }
 
 export interface ErrorUpdate {
@@ -28,6 +35,7 @@ export interface ErrorUpdate {
 }
 
 export enum GameUpdateType {
+  // Tile updates are delivered via `packedTileUpdates` on the outer GameUpdateViewData.
   Tile,
   Unit,
   Player,
@@ -44,14 +52,15 @@ export enum GameUpdateType {
   Hash,
   UnitIncoming,
   BonusEvent,
-  RailroadEvent,
+  RailroadDestructionEvent,
+  RailroadConstructionEvent,
+  RailroadSnapEvent,
   ConquestEvent,
   EmbargoEvent,
   GamePaused,
 }
 
 export type GameUpdate =
-  | TileUpdateWrapper
   | UnitUpdate
   | PlayerUpdate
   | AllianceRequestUpdate
@@ -67,7 +76,9 @@ export type GameUpdate =
   | UnitIncomingUpdate
   | AllianceExtensionUpdate
   | BonusEventUpdate
-  | RailroadUpdate
+  | RailroadConstructionUpdate
+  | RailroadDestructionUpdate
+  | RailroadSnapUpdate
   | ConquestUpdate
   | EmbargoUpdate
   | GamePausedUpdate;
@@ -80,24 +91,24 @@ export interface BonusEventUpdate {
   troops: number;
 }
 
-export enum RailType {
-  VERTICAL,
-  HORIZONTAL,
-  TOP_LEFT,
-  TOP_RIGHT,
-  BOTTOM_LEFT,
-  BOTTOM_RIGHT,
+export interface RailroadConstructionUpdate {
+  type: GameUpdateType.RailroadConstructionEvent;
+  id: number;
+  tiles: TileRef[];
 }
 
-export interface RailTile {
-  tile: TileRef;
-  railType: RailType;
+export interface RailroadDestructionUpdate {
+  type: GameUpdateType.RailroadDestructionEvent;
+  id: number;
 }
 
-export interface RailroadUpdate {
-  type: GameUpdateType.RailroadEvent;
-  isActive: boolean;
-  railTiles: RailTile[];
+export interface RailroadSnapUpdate {
+  type: GameUpdateType.RailroadSnapEvent;
+  originalId: number;
+  newId1: number;
+  newId2: number;
+  tiles1: TileRef[];
+  tiles2: TileRef[];
 }
 
 export interface ConquestUpdate {
@@ -105,11 +116,6 @@ export interface ConquestUpdate {
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
-}
-
-export interface TileUpdateWrapper {
-  type: GameUpdateType.Tile;
-  update: TileUpdate;
 }
 
 export interface UnitUpdate {

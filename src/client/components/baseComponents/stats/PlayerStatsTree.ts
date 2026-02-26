@@ -50,8 +50,8 @@ export class PlayerStatsTreeView extends LitElement {
 
   private labelForMode(m: GameMode) {
     return m === GameMode.FFA
-      ? translateText("player_stats_tree.mode_ffa")
-      : translateText("player_stats_tree.mode_team");
+      ? translateText("game_mode.ffa")
+      : translateText("game_mode.teams");
   }
 
   createRenderRoot() {
@@ -149,7 +149,7 @@ export class PlayerStatsTreeView extends LitElement {
       attacks: this.mergeStatArrays(base.attacks, next.attacks),
       betrayals: this.mergeStatValue(base.betrayals, next.betrayals),
       killedAt: this.mergeStatValue(base.killedAt, next.killedAt),
-      conquests: this.mergeStatValue(base.conquests, next.conquests),
+      conquests: this.mergeStatArrays(base.conquests, next.conquests),
       boats: this.mergeStatRecord(base.boats, next.boats),
       bombs: this.mergeStatRecord(base.bombs, next.bombs),
       gold: this.mergeStatArrays(base.gold, next.gold),
@@ -203,7 +203,7 @@ export class PlayerStatsTreeView extends LitElement {
       attacks: stats.attacks ? [...stats.attacks] : undefined,
       betrayals: stats.betrayals,
       killedAt: stats.killedAt,
-      conquests: stats.conquests,
+      conquests: stats.conquests ? [...stats.conquests] : undefined,
       boats: stats.boats ? { ...stats.boats } : undefined,
       bombs: stats.bombs ? { ...stats.bombs } : undefined,
       gold: stats.gold ? [...stats.gold] : undefined,

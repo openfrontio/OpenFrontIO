@@ -31,7 +31,7 @@ export class FetchGameMapLoader implements GameMapLoader {
       map4xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map4x.bin")),
       map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
       manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
-      webpPath: async () => this.url(fileName, "thumbnail.webp"),
+      webpPath: this.url(fileName, "thumbnail.webp"),
     } satisfies MapData;
 
     this.maps.set(map, mapData);
@@ -51,6 +51,7 @@ export class FetchGameMapLoader implements GameMapLoader {
   }
 
   private async loadBinaryFromUrl(url: string) {
+    const startTime = performance.now();
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -58,6 +59,9 @@ export class FetchGameMapLoader implements GameMapLoader {
     }
 
     const data = await response.arrayBuffer();
+    console.log(
+      `[MapLoader] ${url}: ${(performance.now() - startTime).toFixed(0)}ms`,
+    );
     return new Uint8Array(data);
   }
 

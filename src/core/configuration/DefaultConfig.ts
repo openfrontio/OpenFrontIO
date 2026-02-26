@@ -28,6 +28,7 @@ import { PastelThemeDark } from "./PastelThemeDark";
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
+const DEFAULT_SPAWN_IMMUNITY_TICKS = 5 * 10;
 
 const JwksSchema = z.object({
   keys: z
@@ -118,7 +119,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 100;
   }
   gameCreationRate(): number {
-    return 60 * 1000;
+    return 2 * 60 * 1000;
   }
 
   workerIndex(gameID: GameID): number {
@@ -138,6 +139,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
 export class DefaultConfig implements Config {
   private pastelTheme: PastelTheme = new PastelTheme();
   private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
+  private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
@@ -163,7 +165,15 @@ export class DefaultConfig implements Config {
     return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
-    return this._gameConfig.spawnImmunityDuration ?? 5 * 10; // default to 5 seconds
+    return (
+      this._gameConfig.spawnImmunityDuration ?? DEFAULT_SPAWN_IMMUNITY_TICKS
+    );
+  }
+  nationSpawnImmunityDuration(): Tick {
+    return DEFAULT_SPAWN_IMMUNITY_TICKS;
+  }
+  hasExtendedSpawnImmunity(): boolean {
+    return this.spawnImmunityDuration() > DEFAULT_SPAWN_IMMUNITY_TICKS;
   }
 
   gameConfig(): GameConfig {
@@ -294,9 +304,8 @@ export class DefaultConfig implements Config {
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
+    tradeShipSpawnRejections: number,
     numTradeShips: number,
-    numPlayerPorts: number,
-    numPlayerTradeShips: number,
   ): number {
     if (numPlayerPorts <= 3) return 18;
     if (numPlayerPorts <= 5) return 25;
@@ -306,154 +315,144 @@ export class DefaultConfig implements Config {
     return 50;
   }
 
-  private tradeShipBaseSpawn(
-    numTradeShips: number,
-    numPlayerTradeShips: number,
-  ): number {
-    if (numPlayerTradeShips < 3) {
-      // If other players have many ports, then they can starve out smaller players.
-      // So this prevents smaller players from being completely starved out.
-      return 1;
-    }
-    const decayRate = Math.LN2 / 10;
-    return 1 - sigmoid(numTradeShips, decayRate, 55);
-  }
+    // Pity timer: increases spawn chance after consecutive rejections
+    const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-  private tradeShipPortMultiplier(numPlayerPorts: number): number {
-    // Hyperbolic decay function with midpoint at 10 ports
-    // Expected trade ship spawn rate is proportional to numPlayerPorts * multiplier
-    // Gradual decay prevents scenario where more ports => fewer ships
-    const decayRate = 1 / 10;
-    return 1 / (1 + decayRate * numPlayerPorts);
+    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
   }
 
   unitInfo(type: UnitType): UnitInfo {
+    const cached = this.unitInfoCache.get(type);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    let info: UnitInfo;
     switch (type) {
       case UnitType.TransportShip:
-        return {
+        info = {
           cost: () => 0n,
-          territoryBound: false,
         };
+        break;
       case UnitType.Warship:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
             UnitType.Warship,
           ),
-          territoryBound: false,
           maxHealth: 1000,
         };
+        break;
       case UnitType.Shell:
-        return {
+        info = {
           cost: () => 0n,
-          territoryBound: false,
           damage: 250,
         };
+        break;
       case UnitType.SAMMissile:
-        return {
+        info = {
           cost: () => 0n,
-          territoryBound: false,
         };
+        break;
       case UnitType.Port:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Port,
             UnitType.Factory,
           ),
-          territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
-          canBuildTrainStation: true,
         };
+        break;
       case UnitType.AtomBomb:
-        return {
+        info = {
           cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
-          territoryBound: false,
         };
+        break;
       case UnitType.HydrogenBomb:
-        return {
+        info = {
           cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
-          territoryBound: false,
         };
+        break;
       case UnitType.MIRV:
         return {
           cost: this.costWrapper(() => 35_000_000),
           territoryBound: false,
         };
+        break;
       case UnitType.MIRVWarhead:
-        return {
+        info = {
           cost: () => 0n,
-          territoryBound: false,
         };
+        break;
       case UnitType.TradeShip:
-        return {
+        info = {
           cost: () => 0n,
-          territoryBound: false,
         };
+        break;
       case UnitType.MissileSilo:
-        return {
+        info = {
           cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
-          territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.DefensePost:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
             UnitType.DefensePost,
           ),
-          territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
+        break;
       case UnitType.SAMLauncher:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(3_000_000, (numUnits + 1) * 1_500_000),
             UnitType.SAMLauncher,
           ),
-          territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
+        break;
       case UnitType.City:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.City,
           ),
-          territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
-          canBuildTrainStation: true,
         };
+        break;
       case UnitType.Factory:
-        return {
+        info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Factory,
             UnitType.Port,
           ),
-          territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
-          canBuildTrainStation: true,
-          experimental: true,
           upgradable: true,
         };
+        break;
       case UnitType.Train:
-        return {
+        info = {
           cost: () => 0n,
-          territoryBound: false,
-          experimental: true,
         };
+        break;
       default:
         assertNever(type);
     }
+
+    this.unitInfoCache.set(type, info);
+    return info;
   }
 
   private costWrapper(
@@ -525,6 +524,9 @@ export class DefaultConfig implements Config {
     return 80;
   }
   boatMaxNumber(): number {
+    if (this.isUnitDisabled(UnitType.TransportShip)) {
+      return 0;
+    }
     return 3;
   }
   numSpawnPhaseTurns(): number {
@@ -629,15 +631,23 @@ export class DefaultConfig implements Config {
         largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
       }
 
+      const defenderTroopLoss = defender.troops() / defender.numTilesOwned();
+      const traitorMod = defender.isTraitor() ? this.traitorDefenseDebuff() : 1;
+      const currentAttackerLoss =
+        within(defender.troops() / attackTroops, 0.6, 2) *
+        mag *
+        0.8 *
+        largeDefenderAttackDebuff *
+        largeAttackBonus *
+        traitorMod;
+      const altAttackerLoss =
+        1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
+      const attackerTroopLoss =
+        0.5 * currentAttackerLoss + 0.5 * altAttackerLoss;
+
       return {
-        attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
-          mag *
-          0.8 *
-          largeDefenderAttackDebuff *
-          largeAttackBonus *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+        attackerTroopLoss,
+        defenderTroopLoss,
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
@@ -711,11 +721,11 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750;
+          return 12_500;
         case Difficulty.Medium:
-          return 25_000; // Like humans
+          return 18_750;
         case Difficulty.Hard:
-          return 28_125;
+          return 25_000; // Like humans
         case Difficulty.Impossible:
           return 31_250;
         default:
@@ -746,11 +756,11 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.75;
+        return maxTroops * 0.5;
       case Difficulty.Medium:
-        return maxTroops * 1; // Like humans
+        return maxTroops * 0.75;
       case Difficulty.Hard:
-        return maxTroops * 1.125;
+        return maxTroops * 1; // Like humans
       case Difficulty.Impossible:
         return maxTroops * 1.25;
       default:
@@ -773,13 +783,13 @@ export class DefaultConfig implements Config {
     if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.95;
+          toAdd *= 0.9;
           break;
         case Difficulty.Medium:
-          toAdd *= 1; // Like humans
+          toAdd *= 0.95;
           break;
         case Difficulty.Hard:
-          toAdd *= 1.025;
+          toAdd *= 1; // Like humans
           break;
         case Difficulty.Impossible:
           toAdd *= 1.05;

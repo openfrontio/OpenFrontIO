@@ -5,6 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+import "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
@@ -361,6 +362,23 @@ export class UserSettingModal extends BaseModal {
     }
   }
 
+  private changeAttackRatioIncrement(
+    e: CustomEvent<{ value: number | string }>,
+  ) {
+    const rawValue = e.detail?.value;
+    const value =
+      typeof rawValue === "number" ? rawValue : parseInt(String(rawValue), 10);
+    if (!Number.isFinite(value)) {
+      console.warn("Select event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setFloat(
+      "settings.attackRatioIncrement",
+      Math.round(value),
+    );
+    this.requestUpdate();
+  }
+
   private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -394,20 +412,18 @@ export class UserSettingModal extends BaseModal {
         : this.renderKeybindSettings();
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <div
-          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
+          class="relative flex flex-col border-b border-white/10 lg:pb-4 shrink-0"
         >
           ${modalHeader({
             title: translateText("user_setting.title"),
-            onBack: this.close,
+            onBack: () => this.close(),
             ariaLabel: translateText("common.back"),
             showDivider: true,
           })}
 
-          <div class="hidden md:flex items-center gap-2 justify-center mt-4">
+          <div class="hidden lg:flex items-center gap-2 justify-center mt-4">
             <button
               class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
                 .activeTab === "basic"
@@ -616,7 +632,9 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
-        description=${translateText("user_setting.attack_ratio_down_desc")}
+        description=${translateText("user_setting.attack_ratio_down_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyT"
         .value=${this.getKeyValue("attackRatioDown")}
         .display=${this.getKeyChar("attackRatioDown")}
@@ -626,7 +644,9 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
-        description=${translateText("user_setting.attack_ratio_up_desc")}
+        description=${translateText("user_setting.attack_ratio_up_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyY"
         .value=${this.getKeyValue("attackRatioUp")}
         .display=${this.getKeyChar("attackRatioUp")}
@@ -894,6 +914,21 @@ export class UserSettingModal extends BaseModal {
         100}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
+
+      <!-- ⚔️ Attack Ratio Increment -->
+      <setting-select
+        label=${translateText("user_setting.attack_ratio_increment_label")}
+        description=${translateText("user_setting.attack_ratio_increment_desc")}
+        .options=${[
+          { value: 1, label: "1%" },
+          { value: 2, label: "2%" },
+          { value: 5, label: "5%" },
+          { value: 10, label: "10%" },
+          { value: 20, label: "20%" },
+        ]}
+        .value=${String(this.userSettings.attackRatioIncrement())}
+        @change=${this.changeAttackRatioIncrement}
+      ></setting-select>
 
       ${this.showEasterEggSettings
         ? html`

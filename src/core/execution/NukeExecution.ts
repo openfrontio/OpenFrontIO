@@ -4,7 +4,6 @@ import {
   isStructureType,
   MessageType,
   Player,
-  StructureTypes,
   TerraNullius,
   TrajectoryTile,
   Unit,
@@ -16,7 +15,7 @@ import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola"
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
-import { computeNukeBlastCounts } from "./Util";
+import { listNukeBreakAlliance } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -85,35 +84,21 @@ export class NukeExecution implements Execution {
     }
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
-    const threshold = this.mg.config().nukeAllianceBreakThreshold();
 
-    // Use shared utility to compute weighted tile counts per player
-    const blastCounts = computeNukeBlastCounts({
-      gm: this.mg,
+    const playersToBreakAllianceWith = listNukeBreakAlliance({
+      game: this.mg,
       targetTile: this.dst,
       magnitude,
+      allySmallIds: new Set(this.player.allies().map((a) => a.smallID())),
+      threshold: this.mg.config().nukeAllianceBreakThreshold(),
     });
 
-    // Collect all players that should have alliance broken:
-    // either exceeds tile threshold OR has a structure in blast radius
-    const playersToBreakAllianceWith = new Set<number>();
-
-    for (const [playerSmallId, totalWeight] of blastCounts) {
-      if (totalWeight > threshold) {
-        playersToBreakAllianceWith.add(playerSmallId);
+    // Automatically reject incoming alliance requests.
+    for (const incoming of this.player.incomingAllianceRequests()) {
+      if (playersToBreakAllianceWith.has(incoming.requestor().smallID())) {
+        incoming.reject();
       }
     }
-
-    // Also check if any allied structures would be destroyed
-    this.mg
-      .nearbyUnits(this.dst, magnitude.outer, [...StructureTypes])
-      .filter(
-        ({ unit }) =>
-          unit.owner().isPlayer() && this.player.isAlliedWith(unit.owner()),
-      )
-      .forEach(({ unit }) =>
-        playersToBreakAllianceWith.add(unit.owner().smallID()),
-      );
 
     for (const playerSmallId of playersToBreakAllianceWith) {
       const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
@@ -123,11 +108,12 @@ export class NukeExecution implements Execution {
 
       // Resolves exploit of alliance breaking in which a pending alliance request
       // was accepted in the middle of a missile attack.
-      const allianceRequest = attackedPlayer
+      const outgoingAllianceRequest = attackedPlayer
         .incomingAllianceRequests()
         .find((ar) => ar.requestor() === this.player);
-      if (allianceRequest) {
-        allianceRequest.reject();
+      if (outgoingAllianceRequest) {
+        outgoingAllianceRequest.reject();
+        continue;
       }
 
       const alliance = this.player.allianceWith(attackedPlayer);
@@ -266,69 +252,83 @@ export class NukeExecution implements Execution {
       throw new Error("Not initialized");
     }
 
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const mg = this.mg;
+    const config = mg.config();
+
+    const magnitude = config.nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
 
-    const maxTroops = this.target().isPlayer()
-      ? this.mg.config().maxTroops(this.target() as Player)
-      : 1;
-
+    // Retrieve all impacted players and the number of tiles
+    const tilesPerPlayers = new Map<Player, number>();
     for (const tile of toDestroy) {
-      const owner = this.mg.owner(tile);
+      const owner = mg.owner(tile);
       if (owner.isPlayer()) {
         owner.relinquish(tile);
-        owner.removeTroops(
-          this.mg
-            .config()
-            .nukeDeathFactor(
-              this.nukeType,
-              owner.troops(),
-              owner.numTilesOwned(),
-              maxTroops,
-            ),
-        );
-        owner.outgoingAttacks().forEach((attack) => {
-          const deaths =
-            this.mg
-              ?.config()
-              .nukeDeathFactor(
-                this.nukeType,
-                attack.troops(),
-                owner.numTilesOwned(),
-                maxTroops,
-              ) ?? 0;
-          attack.setTroops(attack.troops() - deaths);
-        });
-        owner.units(UnitType.TransportShip).forEach((attack) => {
-          const deaths =
-            this.mg
-              ?.config()
-              .nukeDeathFactor(
-                this.nukeType,
-                attack.troops(),
-                owner.numTilesOwned(),
-                maxTroops,
-              ) ?? 0;
-          attack.setTroops(attack.troops() - deaths);
-        });
+        tilesPerPlayers.set(owner, (tilesPerPlayers.get(owner) ?? 0) + 1);
       }
 
-      if (this.mg.isLand(tile)) {
-        this.mg.setFallout(tile, true);
+      if (mg.isLand(tile)) {
+        mg.setFallout(tile, true);
+      }
+    }
+
+    // Then compute the explosion effect on each player
+    for (const [player, numImpactedTiles] of tilesPerPlayers) {
+      const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
+      const transportShips = player.units(UnitType.TransportShip);
+      const outgoingAttacks = player.outgoingAttacks();
+      const maxTroops = config.maxTroops(player);
+      // nukeDeathFactor could compute the complete fallout in a single call instead
+      for (let i = 0; i < numImpactedTiles; i++) {
+        // Diminishing effect as each affected tile has been nuked
+        const numTilesLeft = tilesBeforeNuke - i;
+        player.removeTroops(
+          config.nukeDeathFactor(
+            this.nukeType,
+            player.troops(),
+            numTilesLeft,
+            maxTroops,
+          ),
+        );
+        for (const attack of outgoingAttacks) {
+          const attackTroops = attack.troops();
+          const deaths = config.nukeDeathFactor(
+            this.nukeType,
+            attackTroops,
+            numTilesLeft,
+            maxTroops,
+          );
+          attack.setTroops(attackTroops - deaths);
+        }
+        for (const unit of transportShips) {
+          const unitTroops = unit.troops();
+          const deaths = config.nukeDeathFactor(
+            this.nukeType,
+            unitTroops,
+            numTilesLeft,
+            maxTroops,
+          );
+          unit.setTroops(unitTroops - deaths);
+        }
       }
     }
 
     const outer2 = magnitude.outer * magnitude.outer;
-    for (const unit of this.mg.units()) {
+    const dst = this.dst;
+    const destroyer = this.player;
+    for (const unit of mg.units()) {
+      const type = unit.type();
       if (
-        unit.type() !== UnitType.AtomBomb &&
-        unit.type() !== UnitType.HydrogenBomb &&
-        unit.type() !== UnitType.MIRVWarhead &&
-        unit.type() !== UnitType.MIRV
+        type === UnitType.AtomBomb ||
+        type === UnitType.HydrogenBomb ||
+        type === UnitType.MIRVWarhead ||
+        type === UnitType.MIRV ||
+        type === UnitType.SAMMissile
       ) {
-        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          unit.delete(true, this.player);
-        }
+        continue;
+      }
+      if (mg.euclideanDistSquared(dst, unit.tile()) < outer2) {
+        unit.delete(true, destroyer);
       }
     }
 

@@ -16,6 +16,7 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
+const MAX_TICKS_PER_HEARTBEAT = 4;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -29,6 +30,12 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
 }
 
 function sendMessage(message: WorkerMessage) {
+  if (message.type === "game_update") {
+    // Transfer the packed tile updates buffer to avoid structured-clone copies and
+    // reduce worker-side memory churn during long runs / catch-up.
+    ctx.postMessage(message, [message.gameUpdate.packedTileUpdates.buffer]);
+    return;
+  }
   ctx.postMessage(message);
 }
 
@@ -36,9 +43,20 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   const message = e.data;
 
   switch (message.type) {
-    case "heartbeat":
-      (await gameRunner)?.executeNextTick();
+    case "heartbeat": {
+      const gr = await gameRunner;
+      if (!gr) {
+        break;
+      }
+      const pendingTurns = gr.pendingTurns();
+      const ticksToRun = Math.min(pendingTurns, MAX_TICKS_PER_HEARTBEAT);
+      for (let i = 0; i < ticksToRun; i++) {
+        if (!gr.executeNextTick(gr.pendingTurns())) {
+          break;
+        }
+      }
       break;
+    }
     case "init":
       try {
         gameRunner = createGameRunner(
@@ -83,6 +101,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.playerID,
           message.x,
           message.y,
+          message.units,
         );
         sendMessage({
           type: "player_actions_result",
@@ -90,7 +109,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: actions,
         } as PlayerActionsResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get actions:", error);
         throw error;
       }
       break;
@@ -107,7 +126,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: profile,
         } as PlayerProfileResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get profile:", error);
         throw error;
       }
       break;

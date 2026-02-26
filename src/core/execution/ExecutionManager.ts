@@ -1,10 +1,10 @@
 import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID, GameID, Intent, Turn } from "../Schemas";
+import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
+import { AllianceRejectExecution } from "./alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
@@ -46,7 +46,7 @@ export class Executor {
     return turn.intents.map((i) => this.createExec(i));
   }
 
-  createExec(intent: Intent): Execution {
+  createExec(intent: StampedIntent): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -72,21 +72,11 @@ export class Executor {
       case "spawn":
         return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
-        return new TransportShipExecution(
-          player,
-          intent.targetID,
-          intent.dst,
-          intent.troops,
-          intent.src,
-        );
+        return new TransportShipExecution(player, intent.dst, intent.troops);
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);
-      case "allianceRequestReply":
-        return new AllianceRequestReplyExecution(
-          intent.requestor,
-          player,
-          intent.accept,
-        );
+      case "allianceReject":
+        return new AllianceRejectExecution(intent.requestor, player);
       case "breakAlliance":
         return new BreakAllianceExecution(player, intent.recipient);
       case "targetPlayer":

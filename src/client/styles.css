@@ -57,13 +57,36 @@ body {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  scrollbar-width: auto;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Hide scrollbar on mobile, show on larger screens */
+@media (max-width: 1023px) {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
 }
 
 /* Add custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 12px;
+}
+
+@media (min-width: 1024px) {
+  ::-webkit-scrollbar {
+    width: 12px;
+    display: block;
+  }
 }
 
 ::-webkit-scrollbar-track {
@@ -546,7 +569,6 @@ label.option-card:hover {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  padding: 0 16px;
 }
 
 /* News Button Notification */

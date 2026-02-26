@@ -1,4 +1,4 @@
-import { Unit } from "../../../src/core/game/Game";
+import { Unit, UnitType } from "../../../src/core/game/Game";
 import {
   RailNetworkImpl,
   StationManagerImpl,
@@ -14,6 +14,7 @@ const createMockStation = (unitId: number): any => {
     unit: {
       id: unitId,
       setTrainStation: vi.fn(),
+      type: vi.fn(() => UnitType.City),
     },
     tile: vi.fn(),
     neighbors: vi.fn(() => []),
@@ -64,6 +65,7 @@ describe("RailNetworkImpl", () => {
       findStationsPath: vi.fn(() => [0]),
     };
     game = {
+      hasUnitNearby: vi.fn(() => true),
       nearbyUnits: vi.fn(() => []),
       addExecution: vi.fn(),
       config: () => ({
@@ -71,6 +73,8 @@ describe("RailNetworkImpl", () => {
         trainStationMinRange: () => 10,
         railroadMaxSize: () => 100,
       }),
+      x: vi.fn(() => 0),
+      y: vi.fn(() => 0),
     };
 
     network = new RailNetworkImpl(game, stationManager, pathService);
@@ -162,5 +166,168 @@ describe("RailNetworkImpl", () => {
     // Both station should have their cluster reset to the merged one
     expect(station.setCluster).toHaveBeenCalled();
     expect(neighborStation.setCluster).toHaveBeenCalled();
+  });
+
+  describe("computeGhostRailPaths", () => {
+    test("returns empty when snappable rails exist nearby", () => {
+      const tile = 42 as any;
+      // Accessing private railGrid via any to set up mock
+      const railGridMock = { query: vi.fn(() => new Set([{}])) };
+      (network as any).railGrid = railGridMock;
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([]);
+      expect(railGridMock.query).toHaveBeenCalledWith(tile, 3);
+    });
+
+    test("returns empty when no nearby stations found", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+      game.nearbyUnits.mockReturnValue([]);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([]);
+    });
+
+    test("returns paths to nearby stations within range", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      const neighborStation = createMockStation(1);
+      neighborStation.tile.mockReturnValue(100);
+      stationManager.findStation.mockReturnValue(neighborStation);
+
+      const mockPath = [42, 50, 60, 100];
+      pathService.findTilePath.mockReturnValue(mockPath);
+
+      game.nearbyUnits.mockReturnValue([
+        { unit: neighborStation.unit, distSquared: 400 },
+      ]);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([mockPath]);
+      expect(pathService.findTilePath).toHaveBeenCalledWith(tile, 100);
+    });
+
+    test("skips neighbors within min range", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      const neighborStation = createMockStation(1);
+      neighborStation.tile.mockReturnValue(43);
+      stationManager.findStation.mockReturnValue(neighborStation);
+
+      // distSquared = 50 <= minRange^2 (10^2 = 100)
+      game.nearbyUnits.mockReturnValue([
+        { unit: neighborStation.unit, distSquared: 50 },
+      ]);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([]);
+    });
+
+    test("skips neighbors without train stations", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      stationManager.findStation.mockReturnValue(null);
+
+      game.nearbyUnits.mockReturnValue([{ unit: { id: 1 }, distSquared: 400 }]);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([]);
+    });
+
+    test("skips paths that exceed max railroad size", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      const neighborStation = createMockStation(1);
+      neighborStation.tile.mockReturnValue(100);
+      stationManager.findStation.mockReturnValue(neighborStation);
+
+      // Path length >= railroadMaxSize (100)
+      pathService.findTilePath.mockReturnValue(new Array(100));
+
+      game.nearbyUnits.mockReturnValue([
+        { unit: neighborStation.unit, distSquared: 400 },
+      ]);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result).toEqual([]);
+    });
+
+    test("limits to at most 5 paths", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      const neighbors: Array<{ unit: any; distSquared: number }> = [];
+      for (let i = 0; i < 7; i++) {
+        const station = createMockStation(i);
+        station.tile.mockReturnValue(100 + i);
+        neighbors.push({ unit: station.unit, distSquared: 400 + i });
+      }
+
+      stationManager.findStation.mockImplementation((unit: any) => {
+        const station = createMockStation(unit.id);
+        station.tile.mockReturnValue(100 + unit.id);
+        return station;
+      });
+
+      pathService.findTilePath.mockImplementation((_from: any, to: any) => [
+        _from,
+        to,
+      ]);
+
+      game.nearbyUnits.mockReturnValue(neighbors);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      expect(result.length).toBe(5);
+    });
+
+    test("skips stations reachable through already-connected stations", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      // Create two neighbor stations where B is reachable from A
+      const stationA = createMockStation(1);
+      stationA.tile.mockReturnValue(100);
+      const stationB = createMockStation(2);
+      stationB.tile.mockReturnValue(200);
+
+      // Make A and B neighbors of each other (1 hop apart)
+      stationA.neighbors.mockReturnValue([stationB]);
+      stationB.neighbors.mockReturnValue([stationA]);
+
+      stationManager.findStation.mockImplementation((unit: any) => {
+        if (unit.id === 1) return stationA;
+        if (unit.id === 2) return stationB;
+        return null;
+      });
+
+      pathService.findTilePath.mockImplementation((_from: any, to: any) => [
+        _from,
+        to,
+      ]);
+
+      // Station A is closer, station B is farther
+      game.nearbyUnits.mockReturnValue([
+        { unit: stationA.unit, distSquared: 400 },
+        { unit: stationB.unit, distSquared: 900 },
+      ]);
+
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
+      // Only station A should get a path; B is reachable from A within maxConnectionDistance - 1
+      expect(result.length).toBe(1);
+      expect(pathService.findTilePath).toHaveBeenCalledTimes(1);
+      expect(pathService.findTilePath).toHaveBeenCalledWith(tile, 100);
+    });
   });
 });

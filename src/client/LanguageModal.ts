@@ -31,12 +31,12 @@ export class LanguageModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="${this.modalContainerClass}"
       >
         <!-- Header -->
         ${modalHeader({
           title: translateText("select_lang.title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 
@@ -70,18 +70,18 @@ export class LanguageModal extends BaseModal {
                 >
                   <img
                     src="/flags/${lang.svg}.svg"
-                    class="w-8 h-6 object-contain shadow-sm rounded-sm shrink-0"
+                    class="w-8 h-6 object-contain rounded-sm shrink-0"
                     alt="${lang.code}"
                   />
                   <div class="flex flex-col items-start min-w-0">
                     <span
-                      class="text-sm font-bold uppercase tracking-wider truncate w-full text-left ${isActive
+                      class="text-sm font-bold uppercase tracking-wider whitespace-normal break-words w-full text-left ${isActive
                         ? "text-white"
                         : "text-gray-200 group-hover:text-white"}"
                       >${lang.native}</span
                     >
                     <span
-                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors truncate w-full text-left"
+                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors whitespace-normal break-words w-full text-left"
                       >${lang.en}</span
                     >
                   </div>

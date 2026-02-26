@@ -36,7 +36,7 @@ export function computeNukeBlastCounts(
 }
 
 export interface NukeAllianceCheckParams {
-  game: GameView;
+  game: Game | GameView;
   targetTile: TileRef;
   magnitude: NukeMagnitude;
   allySmallIds: Set<number>;
@@ -93,10 +93,67 @@ export function wouldNukeBreakAlliance(
   return result;
 }
 
-export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
-  return Array.from(gm.bfs(tile, euclDistFN(tile, 4, true))).filter(
-    (t) => !gm.hasOwner(t) && gm.isLand(t),
-  );
+// Same as wouldNukeBreakAlliance(), but takes time to find every player
+// that would be "angered" from this nuke.
+// This includes unallied players!
+export function listNukeBreakAlliance(
+  params: NukeAllianceCheckParams,
+): Set<number> {
+  const { game, targetTile, magnitude, threshold } = params;
+
+  // Collect all players that should have alliance broken:
+  // either exceeds tile threshold OR has a structure in blast radius
+  const playersToBreakAllianceWith = new Set<number>();
+
+  // compute tile breakage threshold
+  const blastCounts = computeNukeBlastCounts({
+    gm: game,
+    targetTile,
+    magnitude,
+  });
+  for (const [playerSmallId, totalWeight] of blastCounts) {
+    if (totalWeight > threshold) {
+      playersToBreakAllianceWith.add(playerSmallId);
+    }
+  }
+
+  // Also check if any allied structures would be destroyed
+  game
+    .nearbyUnits(targetTile, magnitude.outer, StructureTypes)
+    .forEach(({ unit }) =>
+      playersToBreakAllianceWith.add(unit.owner().smallID()),
+    );
+
+  return playersToBreakAllianceWith;
+}
+export function getSpawnTiles(
+  gm: GameMap,
+  tile: TileRef,
+  requireAllValid: true,
+): TileRef[] | null;
+export function getSpawnTiles(
+  gm: GameMap,
+  tile: TileRef,
+  requireAllValid?: false,
+): TileRef[];
+export function getSpawnTiles(
+  gm: GameMap,
+  tile: TileRef,
+  requireAllValid = false,
+): TileRef[] | null {
+  const spawnTiles = Array.from(gm.bfs(tile, euclDistFN(tile, 4, true)));
+
+  const isInvalid = (t: TileRef) => gm.hasOwner(t) || !gm.isLand(t);
+
+  if (!requireAllValid) {
+    return spawnTiles.filter((t) => !isInvalid(t));
+  }
+
+  if (spawnTiles.some(isInvalid)) {
+    return null;
+  }
+
+  return spawnTiles;
 }
 
 export function closestTile(

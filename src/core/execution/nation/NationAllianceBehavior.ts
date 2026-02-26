@@ -87,7 +87,7 @@ export class NationAllianceBehavior {
       }
       return false;
     }
-    // Reject if otherPlayer has allied with 50% or more of all players (Hard and Impossible only)
+    // Reject if otherPlayer has allied with a lot of players (Hard and Impossible only)
     // To make sure there are enough non-friendly players in the game to stop the crown with nukes
     if (this.hasTooManyAlliances(otherPlayer)) {
       return false;
@@ -143,10 +143,16 @@ export class NationAllianceBehavior {
       return false;
     }
 
-    const totalPlayers = this.game.players().length;
+    const totalPlayers = this.game
+      .players()
+      .filter((p) => p.type() !== PlayerType.Bot).length;
     const otherPlayerAlliances = otherPlayer.alliances().length;
 
-    return otherPlayerAlliances >= totalPlayers * 0.5;
+    if (difficulty === Difficulty.Hard) {
+      return otherPlayerAlliances >= totalPlayers * 0.5;
+    } else {
+      return otherPlayerAlliances >= totalPlayers * 0.25;
+    }
   }
 
   private isConfused(): boolean {
@@ -240,13 +246,13 @@ export class NationAllianceBehavior {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return false; // 0% chance to reject on easy
+        return this.random.nextInt(0, 100) < 25; // 25% chance to reject on easy
       case Difficulty.Medium:
-        return this.random.nextInt(0, 100) < 20; // 20% chance to reject on medium
+        return this.random.nextInt(0, 100) < 50; // 50% chance to reject on medium
       case Difficulty.Hard:
-        return this.random.nextInt(0, 100) < 40; // 40% chance to reject on hard
+        return this.random.nextInt(0, 100) < 75; // 75% chance to reject on hard
       case Difficulty.Impossible:
-        return this.random.nextInt(0, 100) < 60; // 60% chance to reject on impossible
+        return true; // 100% chance to reject on impossible
       default:
         assertNever(difficulty);
     }

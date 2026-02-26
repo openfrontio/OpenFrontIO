@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMapType, GameMode, GameType } from "./game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  RankedType,
+} from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -56,6 +62,8 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
+    flareExpiration: z.record(z.string(), z.number()).optional(),
+    tempFlaresCooldown: z.boolean(),
     achievements: z
       .array(
         z.object({
@@ -132,4 +140,50 @@ export const ClanLeaderboardResponseSchema = z.object({
 });
 export type ClanLeaderboardResponse = z.infer<
   typeof ClanLeaderboardResponseSchema
+>;
+
+export const PlayerLeaderboardEntrySchema = z.object({
+  rank: z.number(),
+  playerId: z.string(),
+  username: z.string(),
+  clanTag: z.string().optional(),
+  flag: z.string().optional(),
+  elo: z.number(),
+  games: z.number(),
+  wins: z.number(),
+  losses: z.number(),
+  winRate: z.number(),
+});
+export type PlayerLeaderboardEntry = z.infer<
+  typeof PlayerLeaderboardEntrySchema
+>;
+
+export const PlayerLeaderboardResponseSchema = z.object({
+  players: PlayerLeaderboardEntrySchema.array(),
+});
+export type PlayerLeaderboardResponse = z.infer<
+  typeof PlayerLeaderboardResponseSchema
+>;
+
+export const RankedLeaderboardEntrySchema = z.object({
+  rank: z.number(),
+  elo: z.number(),
+  peakElo: z.number().nullable(),
+  wins: z.number(),
+  losses: z.number(),
+  total: z.number(),
+  public_id: z.string(),
+  user: DiscordUserSchema.nullable().optional(),
+  username: z.string(),
+  clanTag: z.string().nullable().optional(),
+});
+export type RankedLeaderboardEntry = z.infer<
+  typeof RankedLeaderboardEntrySchema
+>;
+
+export const RankedLeaderboardResponseSchema = z.object({
+  [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
+});
+export type RankedLeaderboardResponse = z.infer<
+  typeof RankedLeaderboardResponseSchema
 >;

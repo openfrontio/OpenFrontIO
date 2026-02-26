@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import { Cell, Unit } from "./game/Game";
+import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
   GameConfig,
@@ -80,13 +80,14 @@ export function calculateBoundingBox(
     maxX = -Infinity,
     maxY = -Infinity;
 
-  borderTiles.forEach((tile: TileRef) => {
-    const cell = gm.cell(tile);
-    minX = Math.min(minX, cell.x);
-    minY = Math.min(minY, cell.y);
-    maxX = Math.max(maxX, cell.x);
-    maxY = Math.max(maxY, cell.y);
-  });
+  for (const tile of borderTiles) {
+    const x = gm.x(tile);
+    const y = gm.y(tile);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
 
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
@@ -290,10 +291,10 @@ export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
 
 export function createRandomName(
   name: string,
-  playerType: string,
+  playerType: PlayerType,
 ): string | null {
   let randomName: string | null = null;
-  if (playerType === "HUMAN") {
+  if (playerType === PlayerType.Human) {
     const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
     const suffixIndex =
