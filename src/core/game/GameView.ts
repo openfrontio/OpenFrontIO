@@ -686,8 +686,22 @@ export class GameView implements GameMap {
     return this.unitMotionPlans;
   }
 
-  public motionPlannedUnitIds(): number[] {
-    const out: number[] = [];
+  private motionPlannedUnitIdsCache: number[] = [];
+  private motionPlannedUnitIdsDirty = true;
+
+  private markMotionPlannedUnitIdsDirty(): void {
+    this.motionPlannedUnitIdsDirty = true;
+  }
+
+  private rebuildMotionPlannedUnitIdsCacheIfDirty(): void {
+    if (!this.motionPlannedUnitIdsDirty) {
+      return;
+    }
+    this.motionPlannedUnitIdsDirty = false;
+
+    const out = this.motionPlannedUnitIdsCache;
+    out.length = 0;
+
     for (const unitId of this.unitMotionPlans.keys()) {
       out.push(unitId);
     }
@@ -698,7 +712,11 @@ export class GameView implements GameMap {
         if (id !== 0) out.push(id);
       }
     }
-    return out;
+  }
+
+  public motionPlannedUnitIds(): number[] {
+    this.rebuildMotionPlannedUnitIdsCacheIfDirty();
+    return this.motionPlannedUnitIdsCache;
   }
 
   public isCatchingUp(): boolean {
@@ -773,19 +791,24 @@ export class GameView implements GameMap {
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
         this.toDelete.add(unit.id());
-        this.unitMotionPlans.delete(unit.id());
+        if (this.unitMotionPlans.delete(unit.id())) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
         this.clearTrainPlanForUnit(unit.id());
       }
     });
 
     this.advanceMotionPlannedUnits(gu.tick);
+    this.rebuildMotionPlannedUnitIdsCacheIfDirty();
   }
 
   private advanceMotionPlannedUnits(currentTick: Tick): void {
     for (const [unitId, plan] of this.unitMotionPlans) {
       const unit = this._units.get(unitId);
       if (!unit || !unit.isActive()) {
-        this.unitMotionPlans.delete(unitId);
+        if (this.unitMotionPlans.delete(unitId)) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
         continue;
       }
 
@@ -806,7 +829,9 @@ export class GameView implements GameMap {
       // Once a plan is past its final step, `newTile` remains clamped to the last path tile.
       // Drop finished plans to avoid repeatedly marking static units as updated each tick.
       if (dt > 0 && stepIndex >= lastIndex) {
-        this.unitMotionPlans.delete(unitId);
+        if (this.unitMotionPlans.delete(unitId)) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
       }
     }
 
@@ -825,7 +850,9 @@ export class GameView implements GameMap {
       this.trainUnitToEngine.delete(unitId);
       return;
     }
-    this.trainMotionPlans.delete(engineId);
+    if (this.trainMotionPlans.delete(engineId)) {
+      this.markMotionPlannedUnitIdsDirty();
+    }
     this.trainUnitToEngine.delete(engineId);
     for (let i = 0; i < plan.carUnitIds.length; i++) {
       const id = plan.carUnitIds[i] >>> 0;
@@ -950,6 +977,7 @@ export class GameView implements GameMap {
             ticksPerStep: record.ticksPerStep,
             path,
           });
+          this.markMotionPlannedUnitIdsDirty();
           break;
         }
         case "train": {
@@ -989,6 +1017,7 @@ export class GameView implements GameMap {
             usedLen: 0,
             lastAdvancedTick: record.startTick,
           });
+          this.markMotionPlannedUnitIdsDirty();
 
           this.trainUnitToEngine.set(record.engineUnitId, record.engineUnitId);
           for (let i = 0; i < carUnitIds.length; i++) {
