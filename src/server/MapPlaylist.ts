@@ -59,6 +59,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   World: 8,
   Lemnos: 3,
   TwoIslands: 3,
+  Thinmap: 3,
   Test: 10,
   TwoLakes: 6,
   StraitOfHormuz: 4,

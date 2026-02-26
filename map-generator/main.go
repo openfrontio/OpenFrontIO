@@ -23,6 +23,7 @@ var maps = []struct {
 }{
 	{Name: "test"},
 	{Name: "twoislands"},
+	{Name: "thinmap"},
 	// {Name: "africa"},
 	// {Name: "asia"},
 	// {Name: "australia"},

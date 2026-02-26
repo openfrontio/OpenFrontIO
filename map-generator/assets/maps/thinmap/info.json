@@ -1,0 +1,34 @@
+{
+  "name": "thinmap",
+  "nations": [
+    {
+      "coordinates": [5461, 206],
+      "name": "Loner Island"
+    },
+    {
+      "coordinates": [2802, 164],
+      "name": "middle island ig"
+    },
+    {
+      "coordinates": [2338, 158],
+      "name": "fuck you island"
+    },
+    {
+      "coordinates": [1866, 263],
+      "name": "arrowhead island"
+    },
+    {
+      "coordinates": [1538, 158],
+      "name": "bra island"
+    },
+    {
+      "coordinates": [1053, 291],
+      "name": "thongland"
+    },
+    {
+      "coordinates": [236, 58],
+      "name": "State of Palestine",
+      "flag": "ps"
+    }
+  ]
+}
