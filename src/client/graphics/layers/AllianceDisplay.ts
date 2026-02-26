@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, Tick } from "../../../core/game/Game";
 import {
+  AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
@@ -31,16 +32,18 @@ export class AllianceDisplay extends LitElement implements Layer {
   private events: GameEvent[] = [];
 
   // allianceID -> last checked at tick
-  private alliancesCheckedAt = new Map<number, Tick>();
+  private readonly alliancesCheckedAt = new Map<number, Tick>();
   @state() private _isVisible: boolean = false;
   @state() private isHovered: boolean = false;
-  private pendingRemovals: Set<GameEvent> = new Set();
+  private readonly pendingRemovals: Set<GameEvent> = new Set();
 
   createRenderRoot() {
     return this;
   }
 
-  init() {}
+  init() {
+    // no-op
+  }
 
   tick() {
     this.active = true;
@@ -52,7 +55,7 @@ export class AllianceDisplay extends LitElement implements Layer {
     }
 
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || !myPlayer.isAlive()) {
+    if (!myPlayer?.isAlive()) {
       if (this._isVisible) {
         this._isVisible = false;
         needsUpdate = true;
@@ -108,7 +111,9 @@ export class AllianceDisplay extends LitElement implements Layer {
     return false;
   }
 
-  renderLayer(): void {}
+  renderLayer(): void {
+    // no-op
+  }
 
   // ── Alliance update processing ──────────────────────────────────────
 
@@ -116,20 +121,17 @@ export class AllianceDisplay extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     if (!updates) return;
 
-    for (const event of updates[
-      GameUpdateType.AllianceRequest
-    ] as AllianceRequestUpdate[]) {
+    for (const event of updates[GameUpdateType.AllianceRequest]) {
       this.onAllianceRequestEvent(event);
     }
-    for (const event of updates[
-      GameUpdateType.AllianceRequestReply
-    ] as AllianceRequestReplyUpdate[]) {
+    for (const event of updates[GameUpdateType.AllianceRequestReply]) {
       this.onAllianceRequestReplyEvent(event);
     }
-    for (const event of updates[
-      GameUpdateType.BrokeAlliance
-    ] as BrokeAllianceUpdate[]) {
+    for (const event of updates[GameUpdateType.BrokeAlliance]) {
       this.onBrokeAllianceEvent(event);
+    }
+    for (const event of updates[GameUpdateType.AllianceExtension]) {
+      this.onAllianceExtensionEvent(event);
     }
   }
 
@@ -156,7 +158,7 @@ export class AllianceDisplay extends LitElement implements Layer {
 
       this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
 
-      const other = this.game.player(alliance.other) as PlayerView;
+      const other = this.game.player(alliance.other);
       if (!other.isAlive()) continue;
 
       this.addEvent({
@@ -198,7 +200,7 @@ export class AllianceDisplay extends LitElement implements Layer {
 
   private onAllianceRequestEvent(update: AllianceRequestUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.recipientID !== myPlayer.smallID()) {
+    if (update.recipientID !== myPlayer?.smallID()) {
       return;
     }
 
@@ -225,7 +227,7 @@ export class AllianceDisplay extends LitElement implements Layer {
           className: "btn",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceRequestIntentEvent(recipient, requestor),
+              new SendAllianceRequestIntentEvent(requestor, recipient),
             ),
         },
         {
@@ -240,7 +242,7 @@ export class AllianceDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       priority: 0,
       duration: this.game.config().allianceRequestDuration() - 20,
-      shouldDelete: (game) => {
+      shouldDelete: () => {
         return requestor.isAlliedWith(recipient);
       },
       focusID: update.requestorID,
@@ -264,7 +266,6 @@ export class AllianceDisplay extends LitElement implements Layer {
         this.events = this.events.filter((e) => !toRemove.includes(e));
         this.requestUpdate();
       }
-      return;
     }
   }
 
@@ -297,6 +298,13 @@ export class AllianceDisplay extends LitElement implements Layer {
       });
     }
 
+    this.requestUpdate();
+  }
+
+  private onAllianceExtensionEvent(update: AllianceExtensionUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer?.smallID() !== update.playerID) return;
+    this.removeAllianceRenewalEvents(update.allianceID);
     this.requestUpdate();
   }
 
@@ -338,7 +346,7 @@ export class AllianceDisplay extends LitElement implements Layer {
 
   private renderBetrayalDebuffTimer() {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || !myPlayer.isTraitor()) {
+    if (!myPlayer?.isTraitor()) {
       return html``;
     }
 
@@ -414,7 +422,7 @@ export class AllianceDisplay extends LitElement implements Layer {
                           (id) => this.emitGoToPlayerEvent(id),
                           () => {}, // no unit focus in alliance display
                           (e) => {
-                            const idx = this.events.findIndex((ev) => ev === e);
+                            const idx = this.events.indexOf(e);
                             if (idx !== -1) this.removeEvent(idx);
                           },
                           () => this.requestUpdate(),
