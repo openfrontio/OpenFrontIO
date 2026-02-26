@@ -1,3 +1,5 @@
+import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
+
 vi.mock("lit", () => ({
   html: () => {},
   LitElement: class {},
@@ -100,6 +102,72 @@ describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
 
     expect(remaining.length).toBe(1);
     expect(remaining[0].allianceID).toBe(allianceCD);
+  });
+
+  test("onAllianceExtensionEvent removes renewal when playerID matches myPlayer", () => {
+    const display = new EventsDisplay();
+
+    const allianceID = 42;
+    const mySmallID = 7;
+
+    (display as any).game = {
+      myPlayer: () => ({ smallID: () => mySmallID }),
+    };
+    (display as any).requestUpdate = () => {};
+    (display as any).events = [makeRenewal(allianceID, mySmallID)];
+
+    (display as any).onAllianceExtensionEvent({
+      type: GameUpdateType.AllianceExtension,
+      playerID: mySmallID,
+      allianceID,
+    });
+
+    const remaining = (display as any).events;
+    expect(remaining.some((e: any) => e.allianceID === allianceID)).toBe(false);
+  });
+
+  test("onAllianceExtensionEvent keeps renewal when playerID does not match myPlayer", () => {
+    const display = new EventsDisplay();
+
+    const allianceID = 42;
+    const mySmallID = 7;
+    const otherSmallID = 9;
+
+    (display as any).game = {
+      myPlayer: () => ({ smallID: () => mySmallID }),
+    };
+    (display as any).requestUpdate = () => {};
+    (display as any).events = [makeRenewal(allianceID, mySmallID)];
+
+    (display as any).onAllianceExtensionEvent({
+      type: "AllianceExtension",
+      playerID: otherSmallID,
+      allianceID,
+    });
+
+    const remaining = (display as any).events;
+    expect(remaining.some((e: any) => e.allianceID === allianceID)).toBe(true);
+  });
+
+  test("onAllianceExtensionEvent keeps renewal when myPlayer is null", () => {
+    const display = new EventsDisplay();
+
+    const allianceID = 42;
+
+    (display as any).game = {
+      myPlayer: () => null,
+    };
+    (display as any).requestUpdate = () => {};
+    (display as any).events = [makeRenewal(allianceID, 1)];
+
+    (display as any).onAllianceExtensionEvent({
+      type: "AllianceExtension",
+      playerID: 1,
+      allianceID,
+    });
+
+    const remaining = (display as any).events;
+    expect(remaining.some((e: any) => e.allianceID === allianceID)).toBe(true);
   });
 
   test("does not affect non-RENEW_ALLIANCE events", () => {
