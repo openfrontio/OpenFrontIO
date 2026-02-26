@@ -3,6 +3,14 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  GameType,
+  UnitType,
+} from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { hasLinkedAccount } from "./Api";
@@ -176,6 +184,10 @@ export class TerritoryPatternsModal extends BaseModal {
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
               handlePurchase(p, colorPalette)}
+            .onTest=${hasLinkedAccount(this.userMeResponse)
+              ? (p: Pattern, colorPalette: ColorPalette | null) =>
+                  this.startTestGame(p, colorPalette)
+              : undefined}
           ></pattern-button>
         `);
       }
@@ -203,6 +215,94 @@ export class TerritoryPatternsModal extends BaseModal {
             `}
       </div>
     `;
+  }
+
+  private startTestGame(pattern: Pattern, colorPalette: ColorPalette | null) {
+    if (!this.userMeResponse) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("territory_patterns.not_logged_in"),
+            duration: 3000,
+          },
+        }),
+      );
+      return;
+    }
+    const clientID = this.userMeResponse.player.publicId;
+    const gameID = pattern.name;
+
+    const selectedPattern = {
+      name: pattern.name,
+      patternData: pattern.pattern,
+      colorPalette: colorPalette ?? undefined,
+    };
+
+    // Use translation if available, otherwise format the name
+    const translation = translateText(
+      `territory_patterns.pattern.${pattern.name}`,
+    );
+    const displayName = translation.startsWith("territory_patterns.pattern.")
+      ? pattern.name
+          .split("_")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ")
+      : translation;
+
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          clientID: clientID,
+          gameID: gameID,
+          isSkinTest: true,
+          source: "singleplayer",
+          gameStartInfo: {
+            gameID: gameID,
+            players: [
+              {
+                clientID,
+                username: displayName,
+                cosmetics: {
+                  pattern: selectedPattern,
+                },
+              },
+            ],
+            config: {
+              gameMap: GameMapType.Iceland,
+              gameMapSize: GameMapSize.Compact,
+              gameType: GameType.Singleplayer,
+              gameMode: GameMode.FFA,
+              playerTeams: 1,
+              bots: 0,
+              difficulty: Difficulty.Easy,
+              donateGold: false,
+              donateTroops: false,
+              instantBuild: false,
+              randomSpawn: true,
+              disableNations: true,
+              infiniteGold: true,
+              infiniteTroops: true,
+              percentageTilesOwnedToWin: 99,
+              disabledUnits: [
+                UnitType.City,
+                UnitType.Factory,
+                UnitType.Port,
+                UnitType.MissileSilo,
+                UnitType.DefensePost,
+                UnitType.SAMLauncher,
+                UnitType.AtomBomb,
+                UnitType.HydrogenBomb,
+                UnitType.MIRV,
+                UnitType.Warship,
+              ],
+            },
+            lobbyCreatedAt: Date.now(),
+          },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private renderMySkinsButton(): TemplateResult {

@@ -524,6 +524,9 @@ export class DefaultConfig implements Config {
   }
 
   percentageTilesOwnedToWin(): number {
+    if (this._gameConfig.percentageTilesOwnedToWin !== undefined) {
+      return this._gameConfig.percentageTilesOwnedToWin;
+    }
     if (this._gameConfig.gameMode === GameMode.Team) {
       return 95;
     }
@@ -738,7 +741,7 @@ export class DefaultConfig implements Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    return this.infiniteTroops() ? 1_000_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {

@@ -711,6 +711,13 @@
     "join_server": "Join Server",
     "youtube_tutorial": "Need some help?"
   },
+  "skin_test_modal": {
+    "title": "Preview Complete",
+    "rate_skin": "Rate this Skin",
+    "rate_up": "Rate up",
+    "rate_down": "Rate down",
+    "preview_skin": "Preview Skin"
+  },
   "leaderboard": {
     "hide": "Hide",
     "player": "Player",
