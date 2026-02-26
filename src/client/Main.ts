@@ -189,12 +189,6 @@ declare global {
       onPlayerReady: (() => void) | null;
       addUnits: (units: Array<{ type: string }>) => Promise<void>;
       displayUnits: () => void;
-      // Rewarded video ad methods
-      manuallyCreateRewardUi?: (options: {
-        skipConfirmation?: boolean;
-        watchAdId?: string;
-        closeId?: string;
-      }) => Promise<void> | void;
     };
     Bolt: {
       on: (unitType: string, event: string, callback: () => void) => void;
