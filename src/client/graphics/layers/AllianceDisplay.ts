@@ -386,7 +386,7 @@ export class AllianceDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full pointer-events-auto text-white text-sm lg:text-base"
+        class="pointer-events-auto text-white text-sm lg:text-base flex flex-col items-end"
         @mouseenter=${() => {
           this.isHovered = true;
         }}
@@ -401,7 +401,7 @@ export class AllianceDisplay extends LitElement implements Layer {
         ${pinnedEvents.length > 0
           ? html`
               <div
-                class="bg-gray-800/70 sm:rounded-l-lg min-[1200px]:rounded-lg max-h-[20vh] overflow-y-auto shadow-lg backdrop-blur-xs"
+                class="inline-block w-fit max-w-full bg-gray-800/70 sm:rounded-l-lg min-[1200px]:block min-[1200px]:w-full min-[1200px]:rounded-lg max-h-[20vh] overflow-y-auto shadow-lg backdrop-blur-xs"
               >
                 ${pinnedEvents.map(
                   (event) => html`
