@@ -298,27 +298,25 @@ export class DefaultConfig implements Config {
     return 120;
   }
 
-  tradeShipGold(dist: number, numPorts: number): Gold {
+  tradeShipGold(dist: number): Gold {
     return toInt(10000 + 150 * Math.pow(dist, 1.1));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
-    numTradeShips: number,
+    numPlayerPorts: number,
   ): number {
     if (numPlayerPorts <= 3) return 18;
     if (numPlayerPorts <= 5) return 25;
     if (numPlayerPorts <= 8) return 35;
     if (numPlayerPorts <= 10) return 40;
     if (numPlayerPorts <= 12) return 45;
-    return 50;
-  }
 
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
+    return Math.floor((100 * rejectionModifier) / 50);
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -379,7 +377,6 @@ export class DefaultConfig implements Config {
       case UnitType.MIRV:
         return {
           cost: this.costWrapper(() => 35_000_000),
-          territoryBound: false,
         };
         break;
       case UnitType.MIRVWarhead:
