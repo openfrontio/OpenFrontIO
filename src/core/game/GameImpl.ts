@@ -48,7 +48,7 @@ import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
+import { assignTeams, computeClanTeamName } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
 
@@ -211,6 +211,48 @@ export class GameImpl implements Game {
       ...this._nations.map((n) => n.playerInfo),
     ];
     const playerToTeam = assignTeams(allPlayers, this.playerTeams);
+
+    // Only rename numbered teams (8+ team mode), not colored teams
+    const isNumberedTeams = !this.playerTeams.some((t) =>
+      Object.values(ColoredTeams).includes(t as any),
+    );
+    if (isNumberedTeams) {
+      // Build reverse map: team → assigned players
+      const teamToPlayers = new Map<Team, PlayerInfo[]>();
+      for (const [pi, team] of playerToTeam.entries()) {
+        if (team === "kicked") continue;
+        if (!teamToPlayers.has(team)) teamToPlayers.set(team, []);
+        teamToPlayers.get(team)!.push(pi);
+      }
+
+      // Compute candidate names
+      const renameMap = new Map<Team, Team>();
+      for (const [oldTeam, teamPlayers] of teamToPlayers.entries()) {
+        const newName = computeClanTeamName(teamPlayers);
+        if (newName !== null && newName !== oldTeam) {
+          renameMap.set(oldTeam, newName);
+        }
+      }
+
+      // Collision check: remove any renames that produce duplicate names
+      const newNames = Array.from(renameMap.values());
+      for (const [oldTeam, newName] of renameMap.entries()) {
+        if (newNames.filter((n) => n === newName).length > 1) {
+          renameMap.delete(oldTeam);
+        }
+      }
+
+      // Apply renames to playerTeams array (preserves index order for teamSpawnArea)
+      this.playerTeams = this.playerTeams.map((t) => renameMap.get(t) ?? t);
+
+      // Apply renames to playerToTeam
+      for (const [pi, team] of playerToTeam.entries()) {
+        if (team !== "kicked" && renameMap.has(team)) {
+          playerToTeam.set(pi, renameMap.get(team)!);
+        }
+      }
+    }
+
     for (const [playerInfo, team] of playerToTeam.entries()) {
       if (team === "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
