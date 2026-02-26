@@ -1,0 +1,44 @@
+{
+  "map": {
+    "height": 800,
+    "num_land_tiles": 561878,
+    "width": 3000
+  },
+  "map16x": {
+    "height": 200,
+    "num_land_tiles": 33386,
+    "width": 750
+  },
+  "map4x": {
+    "height": 400,
+    "num_land_tiles": 138170,
+    "width": 1500
+  },
+  "name": "Two Islands",
+  "nations": [
+    {
+      "coordinates": [2413, 246],
+      "name": "Eloquala"
+    },
+    {
+      "coordinates": [2631, 455],
+      "name": "Goon Nation"
+    },
+    {
+      "coordinates": [2299, 441],
+      "name": "Mike Literas"
+    },
+    {
+      "coordinates": [2656, 307],
+      "name": "Hugh Janus"
+    },
+    {
+      "coordinates": [474, 275],
+      "name": "Pasta Nation"
+    },
+    {
+      "coordinates": [363, 541],
+      "name": "Dixie Normus"
+    }
+  ]
+}
