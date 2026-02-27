@@ -33,8 +33,10 @@ enum Relationship {
 export class UnitLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private transportShipTrailCanvas: HTMLCanvasElement;
+  private unitTrailCanvas: HTMLCanvasElement;
   private unitTrailContext: CanvasRenderingContext2D;
+  private transportShipTrailCanvas: HTMLCanvasElement;
+  private transportShipTrailContext: CanvasRenderingContext2D;
   private motionTrailCanvas: HTMLCanvasElement;
   private motionTrailContext: CanvasRenderingContext2D;
 
@@ -46,6 +48,20 @@ export class UnitLayer implements Layer {
     number,
     { x: number; y: number; planId: number; onScreen: boolean }
   >();
+
+  private transportShipTrails = new Map<
+    number,
+    {
+      xy: number[];
+      planId: number;
+      lastX: number;
+      lastY: number;
+      lastOnScreen: boolean;
+    }
+  >();
+  private transportShipTrailDirty = false;
+
+  private lastMotionTrailFadeTickFloat: number | null = null;
 
   private theme: Theme;
 
@@ -75,6 +91,16 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
+    // Cleanup trails for nukes that were removed without a final inactive update event.
+    // These trails are stored outside of the normal unit sprite lifecycle.
+    const trailUnits = Array.from(this.unitToTrail.keys());
+    for (const unit of trailUnits) {
+      const current = this.game.unit(unit.id());
+      if (!current || !current.isActive()) {
+        this.clearTrail(unit);
+      }
+    }
+
     const gridMoverUnitIds = new Set<number>();
     for (const id of this.game.motionPlans().keys()) {
       gridMoverUnitIds.add(id);
@@ -258,13 +284,16 @@ export class UnitLayer implements Layer {
     const tickFloat = this.game.ticks() + tickAlpha;
 
     if (this.game.motionPlans().size > 0) {
-      this.fadeMotionTrailCanvas();
+      this.fadeMotionTrailCanvas(tickFloat);
     }
 
     for (const [unitId, plan] of this.game.motionPlans()) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) {
         this.moverTrailLast.delete(unitId);
+        if (this.transportShipTrails.delete(unitId)) {
+          this.transportShipTrailDirty = true;
+        }
         continue;
       }
 
@@ -276,6 +305,46 @@ export class UnitLayer implements Layer {
       const onScreen = this.transformHandler.isOnScreen(
         new Cell(Math.floor(sampled.x), Math.floor(sampled.y)),
       );
+
+      if (unit.type() === UnitType.TransportShip) {
+        const existing = this.transportShipTrails.get(unitId);
+        if (!existing || existing.planId !== plan.planId) {
+          const xy: number[] = onScreen ? [sampled.x, sampled.y] : [];
+          this.transportShipTrails.set(unitId, {
+            xy,
+            planId: plan.planId,
+            lastX: sampled.x,
+            lastY: sampled.y,
+            lastOnScreen: onScreen,
+          });
+          if (onScreen) {
+            this.transportShipTrailDirty = true;
+          }
+        } else {
+          if (
+            onScreen &&
+            (existing.lastX !== sampled.x || existing.lastY !== sampled.y)
+          ) {
+            if (!existing.lastOnScreen && existing.xy.length > 0) {
+              existing.xy.push(Number.NaN, Number.NaN);
+            }
+            existing.xy.push(sampled.x, sampled.y);
+            this.transportShipTrailDirty = true;
+          } else if (onScreen && existing.xy.length === 0) {
+            existing.xy.push(sampled.x, sampled.y);
+            this.transportShipTrailDirty = true;
+          }
+
+          existing.lastX = sampled.x;
+          existing.lastY = sampled.y;
+          existing.lastOnScreen = onScreen;
+        }
+
+        if (onScreen) {
+          moversToDraw.push({ unit, x: sampled.x, y: sampled.y });
+        }
+        continue;
+      }
 
       const last = this.moverTrailLast.get(unitId);
       if (last && last.planId === plan.planId) {
@@ -308,8 +377,18 @@ export class UnitLayer implements Layer {
       }
     }
 
+    // Remove transport-ship trails when the unit is gone (no fade during movement).
+    for (const unitId of this.transportShipTrails.keys()) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive()) {
+        this.transportShipTrails.delete(unitId);
+        this.transportShipTrailDirty = true;
+      }
+    }
+    this.rebuildTransportShipTrailCanvasIfDirty();
+
     context.drawImage(
-      this.transportShipTrailCanvas,
+      this.unitTrailCanvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
       this.game.width(),
@@ -317,6 +396,13 @@ export class UnitLayer implements Layer {
     );
     context.drawImage(
       this.motionTrailCanvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+    context.drawImage(
+      this.transportShipTrailCanvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
       this.game.width(),
@@ -351,10 +437,19 @@ export class UnitLayer implements Layer {
     const context = this.canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
+
+    this.unitTrailCanvas = document.createElement("canvas");
+    const unitTrailContext = this.unitTrailCanvas.getContext("2d");
+    if (unitTrailContext === null) throw new Error("2d context not supported");
+    this.unitTrailContext = unitTrailContext;
+
     this.transportShipTrailCanvas = document.createElement("canvas");
-    const trailContext = this.transportShipTrailCanvas.getContext("2d");
-    if (trailContext === null) throw new Error("2d context not supported");
-    this.unitTrailContext = trailContext;
+    const transportTrailContext =
+      this.transportShipTrailCanvas.getContext("2d");
+    if (transportTrailContext === null)
+      throw new Error("2d context not supported");
+    this.transportShipTrailContext = transportTrailContext;
+
     this.motionTrailCanvas = document.createElement("canvas");
     const motionTrailContext = this.motionTrailCanvas.getContext("2d");
     if (motionTrailContext === null)
@@ -363,6 +458,8 @@ export class UnitLayer implements Layer {
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+    this.unitTrailCanvas.width = this.game.width();
+    this.unitTrailCanvas.height = this.game.height();
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
     this.motionTrailCanvas.width = this.game.width();
@@ -370,6 +467,8 @@ export class UnitLayer implements Layer {
 
     this.gridMoverUnitIds = new Set<number>(this.game.motionPlans().keys());
     this.moverTrailLast.clear();
+    this.lastMotionTrailFadeTickFloat = null;
+    this.transportShipTrailDirty = true;
 
     this.redrawStaticSprites();
 
@@ -416,13 +515,80 @@ export class UnitLayer implements Layer {
     return Math.max(0, Math.min(1, alpha));
   }
 
-  private fadeMotionTrailCanvas(): void {
+  private fadeMotionTrailCanvas(tickFloat: number): void {
+    // Tick-based fade (independent of RAF rate).
+    const fadePerTick = 0.12;
+    if (this.lastMotionTrailFadeTickFloat === null) {
+      this.lastMotionTrailFadeTickFloat = tickFloat;
+      return;
+    }
+
+    const deltaTicks = Math.max(
+      0,
+      tickFloat - this.lastMotionTrailFadeTickFloat,
+    );
+    if (deltaTicks <= 0) {
+      return;
+    }
+    this.lastMotionTrailFadeTickFloat = tickFloat;
+
+    const removeAlpha = 1 - Math.pow(1 - fadePerTick, deltaTicks);
+    if (removeAlpha <= 0) {
+      return;
+    }
+
     const ctx = this.motionTrailContext;
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = "rgba(0,0,0,0.06)";
+    ctx.fillStyle = `rgba(0,0,0,${Math.min(1, removeAlpha)})`;
     ctx.fillRect(0, 0, this.game.width(), this.game.height());
     ctx.restore();
+  }
+
+  private rebuildTransportShipTrailCanvasIfDirty(): void {
+    if (!this.transportShipTrailDirty) {
+      return;
+    }
+    this.transportShipTrailDirty = false;
+
+    const ctx = this.transportShipTrailContext;
+    ctx.clearRect(0, 0, this.game.width(), this.game.height());
+
+    for (const [unitId, trail] of this.transportShipTrails) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive()) {
+        continue;
+      }
+
+      if (trail.xy.length < 4) {
+        continue;
+      }
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 2.0;
+      ctx.strokeStyle = this.motionTrailColor(unit);
+
+      ctx.beginPath();
+      let needMove = true;
+      for (let i = 0; i < trail.xy.length; i += 2) {
+        const x = trail.xy[i];
+        const y = trail.xy[i + 1];
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          needMove = true;
+          continue;
+        }
+        if (needMove) {
+          ctx.moveTo(x, y);
+          needMove = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   private relationshipForAlternateView(unit: UnitView): Relationship {
