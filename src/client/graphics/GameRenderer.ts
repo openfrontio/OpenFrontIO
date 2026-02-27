@@ -483,11 +483,15 @@ export class GameRenderer {
 
     const tickLayerDurations: Record<string, number> = {};
     const layerCounters: Record<string, Record<string, number>> = {};
+    let unitLayerCounters: Record<string, number> | null = null;
 
     for (const layer of this.layers) {
       if (!layer.tick) {
         const counters = layer.getPerfCounters?.();
         if (counters && Object.keys(counters).length > 0) {
+          if (layer instanceof UnitLayer) {
+            unitLayerCounters = counters;
+          }
           const label = layer.constructor?.name ?? "UnknownLayer";
           layerCounters[label] = counters;
         }
@@ -517,12 +521,16 @@ export class GameRenderer {
 
       const counters = layer.getPerfCounters?.();
       if (counters && Object.keys(counters).length > 0) {
+        if (layer instanceof UnitLayer) {
+          unitLayerCounters = counters;
+        }
         const label = layer.constructor?.name ?? "UnknownLayer";
         layerCounters[label] = counters;
       }
     }
 
     this.performanceOverlay.updateLayerCounters(layerCounters);
+    this.performanceOverlay.updateUnitLayerCounters(unitLayerCounters);
 
     if (shouldProfileTick) {
       this.performanceOverlay.updateTickLayerMetrics(tickLayerDurations);
