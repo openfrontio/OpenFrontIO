@@ -37,17 +37,11 @@ export class UnitLayer implements Layer {
   private unitTrailContext: CanvasRenderingContext2D;
   private transportShipTrailCanvas: HTMLCanvasElement;
   private transportShipTrailContext: CanvasRenderingContext2D;
-  private motionTrailCanvas: HTMLCanvasElement;
-  private motionTrailContext: CanvasRenderingContext2D;
 
   // Pixel trails (currently only used for nukes).
   private unitToTrail = new Map<UnitView, TileRef[]>();
 
   private gridMoverUnitIds = new Set<number>();
-  private moverTrailLast = new Map<
-    number,
-    { x: number; y: number; planId: number; onScreen: boolean }
-  >();
 
   private transportShipTrails = new Map<
     number,
@@ -60,8 +54,6 @@ export class UnitLayer implements Layer {
     }
   >();
   private transportShipTrailDirty = false;
-
-  private lastMotionTrailFadeTickFloat: number | null = null;
 
   private theme: Theme;
 
@@ -112,11 +104,6 @@ export class UnitLayer implements Layer {
     );
     if (moverSetChanged) {
       this.gridMoverUnitIds = gridMoverUnitIds;
-      for (const id of this.moverTrailLast.keys()) {
-        if (!gridMoverUnitIds.has(id)) {
-          this.moverTrailLast.delete(id);
-        }
-      }
       this.redrawStaticSprites();
       return;
     }
@@ -283,14 +270,9 @@ export class UnitLayer implements Layer {
     const tickAlpha = this.computeTickAlpha();
     const tickFloat = this.game.ticks() + tickAlpha;
 
-    if (this.game.motionPlans().size > 0) {
-      this.fadeMotionTrailCanvas(tickFloat);
-    }
-
     for (const [unitId, plan] of this.game.motionPlans()) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) {
-        this.moverTrailLast.delete(unitId);
         if (this.transportShipTrails.delete(unitId)) {
           this.transportShipTrailDirty = true;
         }
@@ -346,32 +328,6 @@ export class UnitLayer implements Layer {
         continue;
       }
 
-      const last = this.moverTrailLast.get(unitId);
-      if (last && last.planId === plan.planId) {
-        if (
-          last.onScreen &&
-          onScreen &&
-          (last.x !== sampled.x || last.y !== sampled.y)
-        ) {
-          this.motionTrailContext.save();
-          this.motionTrailContext.lineCap = "round";
-          this.motionTrailContext.lineJoin = "round";
-          this.motionTrailContext.lineWidth = 1.5;
-          this.motionTrailContext.strokeStyle = this.motionTrailColor(unit);
-          this.motionTrailContext.beginPath();
-          this.motionTrailContext.moveTo(last.x, last.y);
-          this.motionTrailContext.lineTo(sampled.x, sampled.y);
-          this.motionTrailContext.stroke();
-          this.motionTrailContext.restore();
-        }
-      }
-      this.moverTrailLast.set(unitId, {
-        x: sampled.x,
-        y: sampled.y,
-        planId: plan.planId,
-        onScreen,
-      });
-
       if (onScreen) {
         moversToDraw.push({ unit, x: sampled.x, y: sampled.y });
       }
@@ -389,13 +345,6 @@ export class UnitLayer implements Layer {
 
     context.drawImage(
       this.unitTrailCanvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
-    context.drawImage(
-      this.motionTrailCanvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
       this.game.width(),
@@ -450,24 +399,14 @@ export class UnitLayer implements Layer {
       throw new Error("2d context not supported");
     this.transportShipTrailContext = transportTrailContext;
 
-    this.motionTrailCanvas = document.createElement("canvas");
-    const motionTrailContext = this.motionTrailCanvas.getContext("2d");
-    if (motionTrailContext === null)
-      throw new Error("2d context not supported");
-    this.motionTrailContext = motionTrailContext;
-
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
     this.unitTrailCanvas.width = this.game.width();
     this.unitTrailCanvas.height = this.game.height();
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
-    this.motionTrailCanvas.width = this.game.width();
-    this.motionTrailCanvas.height = this.game.height();
 
     this.gridMoverUnitIds = new Set<number>(this.game.motionPlans().keys());
-    this.moverTrailLast.clear();
-    this.lastMotionTrailFadeTickFloat = null;
     this.transportShipTrailDirty = true;
 
     this.redrawStaticSprites();
@@ -515,36 +454,6 @@ export class UnitLayer implements Layer {
     return Math.max(0, Math.min(1, alpha));
   }
 
-  private fadeMotionTrailCanvas(tickFloat: number): void {
-    // Tick-based fade (independent of RAF rate).
-    const fadePerTick = 0.12;
-    if (this.lastMotionTrailFadeTickFloat === null) {
-      this.lastMotionTrailFadeTickFloat = tickFloat;
-      return;
-    }
-
-    const deltaTicks = Math.max(
-      0,
-      tickFloat - this.lastMotionTrailFadeTickFloat,
-    );
-    if (deltaTicks <= 0) {
-      return;
-    }
-    this.lastMotionTrailFadeTickFloat = tickFloat;
-
-    const removeAlpha = 1 - Math.pow(1 - fadePerTick, deltaTicks);
-    if (removeAlpha <= 0) {
-      return;
-    }
-
-    const ctx = this.motionTrailContext;
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = `rgba(0,0,0,${Math.min(1, removeAlpha)})`;
-    ctx.fillRect(0, 0, this.game.width(), this.game.height());
-    ctx.restore();
-  }
-
   private rebuildTransportShipTrailCanvasIfDirty(): void {
     if (!this.transportShipTrailDirty) {
       return;
@@ -567,7 +476,7 @@ export class UnitLayer implements Layer {
       ctx.save();
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.lineWidth = 2.0;
+      ctx.lineWidth = 1.0;
       ctx.strokeStyle = this.motionTrailColor(unit);
 
       ctx.beginPath();
