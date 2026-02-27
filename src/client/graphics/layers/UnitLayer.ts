@@ -31,12 +31,30 @@ enum Relationship {
   Enemy,
 }
 
-const UNIT_DRAW_BUDGET_MS = 1;
+const UNIT_DRAW_BUDGET_MS = 2;
 const UNIT_DRAW_SOFT_OVERRUN_MS = 1;
-const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 6;
+const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 60;
 const ONSCREEN_HYSTERESIS_FRAMES = 2;
 const OFFSCREEN_VERIFY_MAX_PER_FRAME = 12;
 const VIEW_PADDING_PX = 12;
+const MOVER_SPATIAL_HASH_CELL_PX = 24;
+const DYNAMIC_MOVER_CANVAS_SCALE = 5;
+const DYNAMIC_MOVER_SUBPIXEL_SNAP = false;
+const SMALL_SHIP_MASK_SIZE = 5;
+const TRANSPORT_SHIP_MASK = [
+  "..B..",
+  ".BTB.",
+  "BTTTB",
+  ".BTB.",
+  "..B..",
+] as const;
+const TRADE_SHIP_MASK = [
+  "..T..",
+  ".TBT.",
+  "TBBBT",
+  ".TBT.",
+  "..T..",
+] as const;
 
 type TransportTrailState = {
   xy: number[];
@@ -51,6 +69,22 @@ type MoverSpriteRect = {
   y: number;
   w: number;
   h: number;
+};
+
+type MoverRenderSample = {
+  unitId: number;
+  unit: UnitView;
+  planId: number;
+  x: number;
+  y: number;
+  renderX: number;
+  renderY: number;
+  rect: MoverSpriteRect;
+};
+
+type MoverSpatialIndex = {
+  cells: Map<string, Set<number>>;
+  unitToCells: Map<number, string[]>;
 };
 
 type MoverRenderState = {
@@ -369,6 +403,8 @@ export class UnitLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    context.save();
+    context.imageSmoothingEnabled = true;
     context.drawImage(
       this.dynamicMoverCanvas,
       -this.game.width() / 2,
@@ -376,6 +412,7 @@ export class UnitLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    context.restore();
 
     let totalOnScreenDebt = 0;
     let onScreenDebtCount = 0;
@@ -417,6 +454,8 @@ export class UnitLayer implements Layer {
   } {
     const frameStartMs = performance.now();
     const drawnIds = new Set<number>();
+    const sampledCache = new Map<number, MoverRenderSample | null>();
+    const spatial = this.buildMoverSpatialHash();
 
     let sampled = 0;
     let drawn = 0;
@@ -430,6 +469,8 @@ export class UnitLayer implements Layer {
       frameStartMs,
       viewBounds,
       Number.MAX_SAFE_INTEGER,
+      sampledCache,
+      spatial,
     );
     sampled += onScreenPass.sampled;
     drawn += onScreenPass.drawn;
@@ -450,6 +491,8 @@ export class UnitLayer implements Layer {
         frameStartMs,
         viewBounds,
         OFFSCREEN_VERIFY_MAX_PER_FRAME,
+        sampledCache,
+        spatial,
       );
       sampled += offscreenPass.sampled;
       drawn += offscreenPass.drawn;
@@ -482,6 +525,8 @@ export class UnitLayer implements Layer {
     frameStartMs: number,
     viewBounds: { left: number; top: number; right: number; bottom: number },
     maxItems: number,
+    sampledCache: Map<number, MoverRenderSample | null>,
+    spatial: MoverSpatialIndex,
   ): {
     sampled: number;
     drawn: number;
@@ -502,13 +547,19 @@ export class UnitLayer implements Layer {
     let drawn = 0;
     let skipped = 0;
     let budgetRemaining = true;
+    const processed = new Set<number>();
+    let scanned = 0;
 
     for (let offset = 0; offset < cap; offset++) {
       if (bucketIds.length === 0) {
         break;
       }
+      scanned++;
       const idx = (startCursor + offset) % bucketIds.length;
       const unitId = bucketIds[idx];
+      if (processed.has(unitId)) {
+        continue;
+      }
 
       const elapsedMs = performance.now() - frameStartMs;
       const canDrawWithinTarget = elapsedMs < UNIT_DRAW_BUDGET_MS;
@@ -534,22 +585,29 @@ export class UnitLayer implements Layer {
         continue;
       }
 
+      const sampledCurrent = this.getMoverSample(
+        unitId,
+        unit,
+        plan.planId,
+        tickFloat,
+        sampledCache,
+      );
       sampled++;
-      const sampledPos = sampleGridSegmentPlan(this.game, plan, tickFloat);
-      if (!sampledPos) {
+      if (!sampledCurrent) {
         skipped++;
         continue;
       }
 
       const onScreen = this.pointInView(
-        sampledPos.x,
-        sampledPos.y,
+        sampledCurrent.x,
+        sampledCurrent.y,
         viewBounds,
         VIEW_PADDING_PX,
       );
 
       if (!onScreen) {
         if (state.lastOnScreen && state.lastSpriteRect) {
+          this.spatialRemove(spatial, unitId, state.lastSpriteRect);
           this.clearMoverRect(state.lastSpriteRect);
           state.lastSpriteRect = null;
           state.lastOnScreen = false;
@@ -559,44 +617,73 @@ export class UnitLayer implements Layer {
           this.updateTransportShipTrail(
             unitId,
             plan.planId,
-            sampledPos.x,
-            sampledPos.y,
+            sampledCurrent.x,
+            sampledCurrent.y,
             false,
           );
         }
         skipped++;
+        processed.add(unitId);
         continue;
       }
 
       this.moveMoverToBucket(unitId, state, "on");
-      if (state.lastSpriteRect) {
-        this.clearMoverRect(state.lastSpriteRect);
-      }
-      const rect = this.drawSpriteAt(
-        unit,
-        sampledPos.x,
-        sampledPos.y,
-        this.dynamicMoverContext,
-        false,
+      let trailHandledInGroup = false;
+      const conflictIds = this.detectMoverConflicts(
+        unitId,
+        state.lastSpriteRect,
+        sampledCurrent.rect,
+        spatial,
       );
-      if (!rect) {
-        skipped++;
-        continue;
+      if (conflictIds.size > 1) {
+        const groupResult = this.redrawConflictGroup(
+          conflictIds,
+          tickFloat,
+          viewBounds,
+          sampledCache,
+          spatial,
+          drawnIds,
+          processed,
+        );
+        sampled += Math.max(0, groupResult.sampled - 1);
+        drawn += groupResult.drawn;
+        skipped += groupResult.skipped;
+        trailHandledInGroup = true;
+      } else {
+        if (state.lastSpriteRect) {
+          this.spatialRemove(spatial, unitId, state.lastSpriteRect);
+          this.clearMoverRect(state.lastSpriteRect);
+        }
+
+        const rect = this.drawSpriteAt(
+          unit,
+          sampledCurrent.renderX,
+          sampledCurrent.renderY,
+          this.dynamicMoverContext,
+          false,
+        );
+        if (!rect) {
+          skipped++;
+          processed.add(unitId);
+          continue;
+        }
+
+        state.lastSpriteRect = rect;
+        state.lastOnScreen = true;
+        state.lastSeenFrame = this.renderFrame;
+        state.skipDebt = 0;
+        drawnIds.add(unitId);
+        drawn++;
+        processed.add(unitId);
+        this.spatialAdd(spatial, unitId, rect);
       }
 
-      state.lastSpriteRect = rect;
-      state.lastOnScreen = true;
-      state.lastSeenFrame = this.renderFrame;
-      state.skipDebt = 0;
-      drawnIds.add(unitId);
-      drawn++;
-
-      if (unit.type() === UnitType.TransportShip) {
+      if (!trailHandledInGroup && unit.type() === UnitType.TransportShip) {
         this.updateTransportShipTrail(
           unitId,
           plan.planId,
-          sampledPos.x,
-          sampledPos.y,
+          sampledCurrent.x,
+          sampledCurrent.y,
           true,
         );
       }
@@ -605,16 +692,364 @@ export class UnitLayer implements Layer {
     if (bucket === "on") {
       this.onScreenCursor =
         bucketIds.length > 0
-          ? (startCursor + Math.max(1, cap)) % bucketIds.length
+          ? (startCursor + Math.max(1, scanned)) % bucketIds.length
           : 0;
     } else {
       this.offScreenCursor =
         bucketIds.length > 0
-          ? (startCursor + Math.max(1, cap)) % bucketIds.length
+          ? (startCursor + Math.max(1, scanned)) % bucketIds.length
           : 0;
     }
 
     return { sampled, drawn, skipped, budgetRemaining };
+  }
+
+  private buildMoverSpatialHash(): MoverSpatialIndex {
+    const spatial: MoverSpatialIndex = {
+      cells: new Map<string, Set<number>>(),
+      unitToCells: new Map<number, string[]>(),
+    };
+
+    for (const [unitId, state] of this.moverState) {
+      if (!state.lastSpriteRect) {
+        continue;
+      }
+      this.spatialAdd(spatial, unitId, state.lastSpriteRect);
+    }
+
+    return spatial;
+  }
+
+  private getMoverSample(
+    unitId: number,
+    unit: UnitView,
+    planId: number,
+    tickFloat: number,
+    sampledCache: Map<number, MoverRenderSample | null>,
+  ): MoverRenderSample | null {
+    if (sampledCache.has(unitId)) {
+      return sampledCache.get(unitId) ?? null;
+    }
+
+    const plan = this.game.motionPlans().get(unitId);
+    if (!plan || plan.planId !== planId) {
+      sampledCache.set(unitId, null);
+      return null;
+    }
+
+    const sampled = sampleGridSegmentPlan(this.game, plan, tickFloat);
+    if (!sampled) {
+      sampledCache.set(unitId, null);
+      return null;
+    }
+
+    const renderX = this.snapDynamicMoverCoord(sampled.x);
+    const renderY = this.snapDynamicMoverCoord(sampled.y);
+    const rect = this.computeSpriteRect(unit, renderX, renderY, false);
+    const result: MoverRenderSample = {
+      unitId,
+      unit,
+      planId,
+      x: sampled.x,
+      y: sampled.y,
+      renderX,
+      renderY,
+      rect,
+    };
+    sampledCache.set(unitId, result);
+    return result;
+  }
+
+  private detectMoverConflicts(
+    unitId: number,
+    oldRect: MoverSpriteRect | null,
+    newRect: MoverSpriteRect,
+    spatial: MoverSpatialIndex,
+  ): Set<number> {
+    const conflictIds = new Set<number>();
+    conflictIds.add(unitId);
+
+    const candidateIds = new Set<number>();
+    this.collectSpatialCandidates(candidateIds, spatial, newRect);
+    if (oldRect) {
+      this.collectSpatialCandidates(candidateIds, spatial, oldRect);
+    }
+
+    for (const candidateId of candidateIds) {
+      if (candidateId === unitId) {
+        continue;
+      }
+      const candidateState = this.moverState.get(candidateId);
+      const candidateRect = candidateState?.lastSpriteRect;
+      if (!candidateRect) {
+        continue;
+      }
+      if (
+        this.rectsOverlap(candidateRect, newRect) ||
+        (oldRect !== null && this.rectsOverlap(candidateRect, oldRect))
+      ) {
+        conflictIds.add(candidateId);
+      }
+    }
+
+    return conflictIds;
+  }
+
+  private redrawConflictGroup(
+    conflictIds: Set<number>,
+    tickFloat: number,
+    viewBounds: { left: number; top: number; right: number; bottom: number },
+    sampledCache: Map<number, MoverRenderSample | null>,
+    spatial: MoverSpatialIndex,
+    drawnIds: Set<number>,
+    processed: Set<number>,
+  ): { sampled: number; drawn: number; skipped: number } {
+    const sampledGroup: MoverRenderSample[] = [];
+    let sampled = 0;
+    let skipped = 0;
+
+    for (const id of conflictIds) {
+      const unit = this.game.unit(id);
+      const plan = this.game.motionPlans().get(id);
+      const state = this.moverState.get(id);
+      if (!unit || !unit.isActive() || !plan || !state) {
+        this.clearMoverState(id);
+        processed.add(id);
+        skipped++;
+        continue;
+      }
+
+      const current = this.getMoverSample(
+        id,
+        unit,
+        plan.planId,
+        tickFloat,
+        sampledCache,
+      );
+      sampled++;
+      if (!current) {
+        processed.add(id);
+        skipped++;
+        continue;
+      }
+
+      const onScreen = this.pointInView(
+        current.x,
+        current.y,
+        viewBounds,
+        VIEW_PADDING_PX,
+      );
+      if (!onScreen) {
+        if (state.lastOnScreen && state.lastSpriteRect) {
+          this.spatialRemove(spatial, id, state.lastSpriteRect);
+          this.clearMoverRect(state.lastSpriteRect);
+          state.lastSpriteRect = null;
+          state.lastOnScreen = false;
+        }
+        this.moveMoverToBucket(id, state, "off");
+        if (unit.type() === UnitType.TransportShip) {
+          this.updateTransportShipTrail(
+            id,
+            plan.planId,
+            current.x,
+            current.y,
+            false,
+          );
+        }
+        processed.add(id);
+        skipped++;
+        continue;
+      }
+
+      this.moveMoverToBucket(id, state, "on");
+      sampledGroup.push(current);
+    }
+
+    if (sampledGroup.length === 0) {
+      return { sampled, drawn: 0, skipped };
+    }
+
+    sampledGroup.sort((a, b) => a.unitId - b.unitId);
+
+    let clearUnion: MoverSpriteRect | null = null;
+    for (const sampledCurrent of sampledGroup) {
+      const state = this.moverState.get(sampledCurrent.unitId);
+      if (!state) {
+        continue;
+      }
+      const oldRect = state.lastSpriteRect;
+      if (oldRect) {
+        this.spatialRemove(spatial, sampledCurrent.unitId, oldRect);
+        clearUnion = this.unionRects(clearUnion, oldRect);
+      }
+      clearUnion = this.unionRects(clearUnion, sampledCurrent.rect);
+    }
+
+    if (clearUnion) {
+      this.clearMoverRect(clearUnion);
+    }
+
+    let drawn = 0;
+    for (const sampledCurrent of sampledGroup) {
+      const state = this.moverState.get(sampledCurrent.unitId);
+      const plan = this.game.motionPlans().get(sampledCurrent.unitId);
+      if (!state || !plan) {
+        skipped++;
+        continue;
+      }
+
+      const rect = this.drawSpriteAt(
+        sampledCurrent.unit,
+        sampledCurrent.renderX,
+        sampledCurrent.renderY,
+        this.dynamicMoverContext,
+        false,
+      );
+      if (!rect) {
+        skipped++;
+        processed.add(sampledCurrent.unitId);
+        continue;
+      }
+
+      state.lastSpriteRect = rect;
+      state.lastOnScreen = true;
+      state.lastSeenFrame = this.renderFrame;
+      state.skipDebt = 0;
+      this.spatialAdd(spatial, sampledCurrent.unitId, rect);
+
+      if (sampledCurrent.unit.type() === UnitType.TransportShip) {
+        this.updateTransportShipTrail(
+          sampledCurrent.unitId,
+          plan.planId,
+          sampledCurrent.x,
+          sampledCurrent.y,
+          true,
+        );
+      }
+
+      drawnIds.add(sampledCurrent.unitId);
+      processed.add(sampledCurrent.unitId);
+      drawn++;
+    }
+
+    return { sampled, drawn, skipped };
+  }
+
+  private snapDynamicMoverCoord(value: number): number {
+    if (!DYNAMIC_MOVER_SUBPIXEL_SNAP || DYNAMIC_MOVER_CANVAS_SCALE <= 0) {
+      return value;
+    }
+    return (
+      Math.round(value * DYNAMIC_MOVER_CANVAS_SCALE) /
+      DYNAMIC_MOVER_CANVAS_SCALE
+    );
+  }
+
+  private spatialAdd(
+    spatial: MoverSpatialIndex,
+    unitId: number,
+    rect: MoverSpriteRect,
+  ): void {
+    const keys = this.rectSpatialKeys(rect);
+    if (keys.length === 0) {
+      spatial.unitToCells.delete(unitId);
+      return;
+    }
+
+    spatial.unitToCells.set(unitId, keys);
+    for (const key of keys) {
+      let cell = spatial.cells.get(key);
+      if (!cell) {
+        cell = new Set<number>();
+        spatial.cells.set(key, cell);
+      }
+      cell.add(unitId);
+    }
+  }
+
+  private spatialRemove(
+    spatial: MoverSpatialIndex,
+    unitId: number,
+    rect?: MoverSpriteRect | null,
+  ): void {
+    let keys = spatial.unitToCells.get(unitId);
+    if (!keys && rect) {
+      keys = this.rectSpatialKeys(rect);
+    }
+    if (!keys) {
+      return;
+    }
+
+    for (const key of keys) {
+      const cell = spatial.cells.get(key);
+      if (!cell) {
+        continue;
+      }
+      cell.delete(unitId);
+      if (cell.size === 0) {
+        spatial.cells.delete(key);
+      }
+    }
+    spatial.unitToCells.delete(unitId);
+  }
+
+  private collectSpatialCandidates(
+    candidateIds: Set<number>,
+    spatial: MoverSpatialIndex,
+    rect: MoverSpriteRect,
+  ): void {
+    const keys = this.rectSpatialKeys(rect);
+    for (const key of keys) {
+      const cell = spatial.cells.get(key);
+      if (!cell) {
+        continue;
+      }
+      for (const id of cell) {
+        candidateIds.add(id);
+      }
+    }
+  }
+
+  private rectSpatialKeys(rect: MoverSpriteRect): string[] {
+    const minCellX = Math.floor(rect.x / MOVER_SPATIAL_HASH_CELL_PX);
+    const maxCellX = Math.floor(
+      (rect.x + Math.max(1, rect.w) - 1) / MOVER_SPATIAL_HASH_CELL_PX,
+    );
+    const minCellY = Math.floor(rect.y / MOVER_SPATIAL_HASH_CELL_PX);
+    const maxCellY = Math.floor(
+      (rect.y + Math.max(1, rect.h) - 1) / MOVER_SPATIAL_HASH_CELL_PX,
+    );
+
+    const keys: string[] = [];
+    for (let cx = minCellX; cx <= maxCellX; cx++) {
+      for (let cy = minCellY; cy <= maxCellY; cy++) {
+        keys.push(`${cx},${cy}`);
+      }
+    }
+    return keys;
+  }
+
+  private rectsOverlap(a: MoverSpriteRect, b: MoverSpriteRect): boolean {
+    return (
+      a.x < b.x + b.w &&
+      a.x + a.w > b.x &&
+      a.y < b.y + b.h &&
+      a.y + a.h > b.y
+    );
+  }
+
+  private unionRects(
+    a: MoverSpriteRect | null,
+    b: MoverSpriteRect,
+  ): MoverSpriteRect {
+    if (a === null) {
+      return { ...b };
+    }
+    const x1 = Math.min(a.x, b.x);
+    const y1 = Math.min(a.y, b.y);
+    const x2 = Math.max(a.x + a.w, b.x + b.w);
+    const y2 = Math.max(a.y + a.h, b.y + b.h);
+    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {
@@ -633,6 +1068,7 @@ export class UnitLayer implements Layer {
     if (dynamicMoverContext === null)
       throw new Error("2d context not supported");
     this.dynamicMoverContext = dynamicMoverContext;
+    this.dynamicMoverContext.imageSmoothingEnabled = false;
 
     this.trailCanvas = document.createElement("canvas");
     const trailContext = this.trailCanvas.getContext("2d");
@@ -641,8 +1077,17 @@ export class UnitLayer implements Layer {
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
-    this.dynamicMoverCanvas.width = this.game.width();
-    this.dynamicMoverCanvas.height = this.game.height();
+    this.dynamicMoverCanvas.width = this.game.width() * DYNAMIC_MOVER_CANVAS_SCALE;
+    this.dynamicMoverCanvas.height =
+      this.game.height() * DYNAMIC_MOVER_CANVAS_SCALE;
+    this.dynamicMoverContext.setTransform(
+      DYNAMIC_MOVER_CANVAS_SCALE,
+      0,
+      0,
+      DYNAMIC_MOVER_CANVAS_SCALE,
+      0,
+      0,
+    );
     this.trailCanvas.width = this.game.width();
     this.trailCanvas.height = this.game.height();
 
@@ -1308,14 +1753,10 @@ export class UnitLayer implements Layer {
     context.clearRect(x, y, 1, 1);
   }
 
-  private drawSpriteAt(
+  private resolveSprite(
     unit: UnitView,
-    x: number,
-    y: number,
-    ctx: CanvasRenderingContext2D = this.context,
-    roundCoords: boolean = true,
     customTerritoryColor?: Colord,
-  ): MoverSpriteRect | null {
+  ): CanvasImageSource {
     let alternateViewColor: Colord | null = null;
 
     if (this.alternateView) {
@@ -1333,13 +1774,56 @@ export class UnitLayer implements Layer {
       }
     }
 
-    const sprite = getColoredSprite(
+    return getColoredSprite(
       unit,
       this.theme,
       alternateViewColor ?? customTerritoryColor,
       alternateViewColor ?? undefined,
     );
+  }
 
+  private computeSpriteRect(
+    unit: UnitView,
+    x: number,
+    y: number,
+    roundCoords: boolean,
+    customTerritoryColor?: Colord,
+  ): MoverSpriteRect {
+    if (this.isSmallMaskShip(unit)) {
+      const { x: outX, y: outY } = this.smallShipTopLeft(x, y, roundCoords);
+      const pad = 1;
+      return {
+        x: outX - pad,
+        y: outY - pad,
+        w: SMALL_SHIP_MASK_SIZE + pad * 2,
+        h: SMALL_SHIP_MASK_SIZE + pad * 2,
+      };
+    }
+
+    const sprite = this.resolveSprite(unit, customTerritoryColor);
+    const width = (sprite as { width: number }).width;
+    const height = (sprite as { height: number }).height;
+    const drawX = x - width / 2;
+    const drawY = y - height / 2;
+    const outX = roundCoords ? Math.round(drawX) : drawX;
+    const outY = roundCoords ? Math.round(drawY) : drawY;
+    const pad = 1;
+    return {
+      x: outX - pad,
+      y: outY - pad,
+      w: width + pad * 2,
+      h: width + pad * 2,
+    };
+  }
+
+  private drawSpriteAt(
+    unit: UnitView,
+    x: number,
+    y: number,
+    ctx: CanvasRenderingContext2D = this.context,
+    roundCoords: boolean = true,
+    customTerritoryColor?: Colord,
+  ): MoverSpriteRect | null {
     if (!unit.isActive()) {
       return null;
     }
@@ -1350,21 +1834,76 @@ export class UnitLayer implements Layer {
       ctx.globalAlpha = 0.5;
     }
 
+    if (this.isSmallMaskShip(unit)) {
+      const mask = this.smallShipMask(unit);
+      const { territory, border } = this.resolveSmallShipMaskColors(
+        unit,
+        customTerritoryColor,
+      );
+      const { x: outX, y: outY } = this.smallShipTopLeft(x, y, roundCoords);
+
+      const centerToken = mask[2][2];
+      const crossColor = centerToken === "T" ? territory : border;
+
+      // Draw the center cross with 2 rectangles instead of 5 single pixels.
+      ctx.fillStyle = crossColor.toRgbString();
+      ctx.fillRect(outX + 1, outY + 2, 3, 1);
+      ctx.fillRect(outX + 2, outY + 1, 1, 3);
+
+      // Draw remaining ring pixels from the mask.
+      for (let row = 0; row < SMALL_SHIP_MASK_SIZE; row++) {
+        const line = mask[row];
+        for (let col = 0; col < SMALL_SHIP_MASK_SIZE; col++) {
+          if (this.isSmallShipCrossCell(col, row)) {
+            continue;
+          }
+          const cellType = line[col];
+          if (cellType === ".") {
+            continue;
+          }
+          ctx.fillStyle =
+            cellType === "T" ? territory.toRgbString() : border.toRgbString();
+          ctx.fillRect(outX + col, outY + row, 1, 1);
+        }
+      }
+
+      ctx.restore();
+
+      return this.computeSpriteRect(
+        unit,
+        x,
+        y,
+        roundCoords,
+        customTerritoryColor,
+      );
+    }
+
+    const sprite = this.resolveSprite(unit, customTerritoryColor) as {
+      width: number;
+      height: number;
+    };
+
     const drawX = x - sprite.width / 2;
     const drawY = y - sprite.height / 2;
     const outX = roundCoords ? Math.round(drawX) : drawX;
     const outY = roundCoords ? Math.round(drawY) : drawY;
-    ctx.drawImage(sprite, outX, outY, sprite.width, sprite.width);
+    ctx.drawImage(
+      sprite as CanvasImageSource,
+      outX,
+      outY,
+      sprite.width,
+      sprite.width,
+    );
 
     ctx.restore();
 
-    const pad = 1;
-    return {
-      x: outX - pad,
-      y: outY - pad,
-      w: sprite.width + pad * 2,
-      h: sprite.width + pad * 2,
-    };
+    return this.computeSpriteRect(
+      unit,
+      x,
+      y,
+      roundCoords,
+      customTerritoryColor,
+    );
   }
 
   private drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
@@ -1376,5 +1915,65 @@ export class UnitLayer implements Layer {
       true,
       customTerritoryColor,
     );
+  }
+
+  private isSmallMaskShip(unit: UnitView): boolean {
+    const type = unit.type();
+    return type === UnitType.TransportShip || type === UnitType.TradeShip;
+  }
+
+  private smallShipMask(unit: UnitView): readonly string[] {
+    return unit.type() === UnitType.TransportShip
+      ? TRANSPORT_SHIP_MASK
+      : TRADE_SHIP_MASK;
+  }
+
+  private smallShipTopLeft(
+    x: number,
+    y: number,
+    roundCoords: boolean,
+  ): { x: number; y: number } {
+    const drawX = x - SMALL_SHIP_MASK_SIZE / 2;
+    const drawY = y - SMALL_SHIP_MASK_SIZE / 2;
+    return {
+      x: roundCoords ? Math.round(drawX) : drawX,
+      y: roundCoords ? Math.round(drawY) : drawY,
+    };
+  }
+
+  private isSmallShipCrossCell(col: number, row: number): boolean {
+    return (
+      (row === 2 && col >= 1 && col <= 3) || (col === 2 && row >= 1 && row <= 3)
+    );
+  }
+
+  private resolveSmallShipMaskColors(
+    unit: UnitView,
+    customTerritoryColor?: Colord,
+  ): { territory: Colord; border: Colord } {
+    if (this.alternateView) {
+      const rel = this.relationshipForAlternateView(unit);
+      switch (rel) {
+        case Relationship.Self:
+          return {
+            territory: this.theme.selfColor(),
+            border: this.theme.selfColor(),
+          };
+        case Relationship.Ally:
+          return {
+            territory: this.theme.allyColor(),
+            border: this.theme.allyColor(),
+          };
+        case Relationship.Enemy:
+          return {
+            territory: this.theme.enemyColor(),
+            border: this.theme.enemyColor(),
+          };
+      }
+    }
+    return {
+      territory: customTerritoryColor ?? unit.owner().territoryColor(),
+      border: unit.owner().borderColor(),
+    };
   }
 }
