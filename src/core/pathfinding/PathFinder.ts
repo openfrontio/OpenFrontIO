@@ -15,7 +15,12 @@ import { ComponentCheckTransformer } from "./transformers/ComponentCheckTransfor
 import { MiniMapTransformer } from "./transformers/MiniMapTransformer";
 import { ShoreCoercingTransformer } from "./transformers/ShoreCoercingTransformer";
 import { SmoothingWaterTransformer } from "./transformers/SmoothingWaterTransformer";
-import { PathResult, PathStatus, SteppingPathFinder } from "./types";
+import {
+  PathResult,
+  PathStatus,
+  SegmentPlan,
+  SteppingPathFinder,
+} from "./types";
 
 /**
  * Pathfinders that work with GameMap - usable in both simulation and UI layers
@@ -57,6 +62,7 @@ export class PathFinding {
     const pf = new AStarWater(miniMap);
 
     return PathFinderBuilder.create(pf)
+      .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
       .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
       .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
       .buildWithStepper(tileStepperConfig(game));
@@ -157,6 +163,11 @@ export class WaterPathFinder implements SteppingPathFinder<TileRef> {
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     this.ensureFresh();
     return this.inner.findPath(from, to);
+  }
+
+  planSegments(from: TileRef | TileRef[], to: TileRef): SegmentPlan | null {
+    this.ensureFresh();
+    return this.inner.planSegments?.(from, to) ?? null;
   }
 
   invalidate(): void {
