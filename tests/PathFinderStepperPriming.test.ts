@@ -3,7 +3,7 @@ import { PathFinderStepper } from "../src/core/pathfinding/PathFinderStepper";
 import { PathStatus } from "../src/core/pathfinding/types";
 
 describe("PathFinderStepper cache priming", () => {
-  it("does not prime next() cache via findPath()", () => {
+  it("primes next() cache via findPath()", () => {
     let calls = 0;
     const finder = {
       findPath(from: number | number[], to: number) {
@@ -29,6 +29,6 @@ describe("PathFinderStepper cache priming", () => {
     if (r1.status === PathStatus.NEXT) {
       expect(r1.node).toBe(to);
     }
-    expect(calls).toBe(2);
+    expect(calls).toBe(1);
   });
 });
