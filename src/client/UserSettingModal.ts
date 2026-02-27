@@ -22,6 +22,7 @@ const isMac =
 
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
+  coordinateGrid: "KeyM",
   buildCity: "Digit1",
   buildFactory: "Digit2",
   buildPort: "Digit3",
@@ -488,6 +489,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey="Space"
         .value=${this.getKeyValue("toggleView")}
         .display=${this.getKeyChar("toggleView")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="coordinateGrid"
+        label=${translateText("user_setting.coordinate_grid_label")}
+        description=${translateText("user_setting.coordinate_grid_desc")}
+        defaultKey=${DefaultKeybinds.coordinateGrid}
+        .value=${this.getKeyValue("coordinateGrid")}
+        .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
