@@ -1,4 +1,3 @@
-import type { GameMap } from "./GameMap";
 import { TileRef } from "./GameMap";
 
 export enum PackedMotionPlanKind {
@@ -286,94 +285,6 @@ export function densePathToKeypointSegments(path: ArrayLike<number>): {
 
   points.push(last);
   segmentSteps.push(runSteps);
-
-  return {
-    points: Uint32Array.from(points),
-    segmentSteps: Uint32Array.from(segmentSteps),
-  };
-}
-
-function canTraverseDda(
-  map: GameMap,
-  from: TileRef,
-  to: TileRef,
-  isTraversable: (t: TileRef) => boolean,
-): boolean {
-  const x0 = map.x(from);
-  const y0 = map.y(from);
-  const x1 = map.x(to);
-  const y1 = map.y(to);
-
-  const dx = x1 - x0;
-  const dy = y1 - y0;
-  const steps = Math.max(Math.abs(dx), Math.abs(dy));
-  if (steps === 0) {
-    return isTraversable(from);
-  }
-
-  for (let t = 0; t <= steps; t++) {
-    const x = Math.round(x0 + (dx * t) / steps);
-    const y = Math.round(y0 + (dy * t) / steps);
-    if (!map.isValidCoord(x, y)) {
-      return false;
-    }
-    const ref = map.ref(x, y);
-    if (!isTraversable(ref)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-export function densePathToLosKeypointSegments(
-  path: readonly TileRef[] | Uint32Array,
-  map: GameMap,
-  isTraversable: (t: TileRef) => boolean,
-): { points: Uint32Array; segmentSteps: Uint32Array } | null {
-  const len = path.length >>> 0;
-  if (len === 0) {
-    return null;
-  }
-
-  const first = (path[0] ?? 0) as TileRef;
-  if (len === 1) {
-    return {
-      points: Uint32Array.from([first >>> 0]),
-      segmentSteps: new Uint32Array(0),
-    };
-  }
-
-  const points: number[] = [first >>> 0];
-  const segmentSteps: number[] = [];
-
-  let i = 0;
-  while (i < len - 1) {
-    let best = i + 1;
-    let lo = i + 1;
-    let hi = len - 1;
-
-    // Binary search for farthest "visible" point along the existing path.
-    while (lo <= hi) {
-      const mid = (lo + hi) >>> 1;
-      const ok = canTraverseDda(
-        map,
-        path[i] as TileRef,
-        path[mid] as TileRef,
-        isTraversable,
-      );
-      if (ok) {
-        best = mid;
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-
-    points.push((path[best] as TileRef) >>> 0);
-    segmentSteps.push(best - i);
-    i = best;
-  }
 
   return {
     points: Uint32Array.from(points),
