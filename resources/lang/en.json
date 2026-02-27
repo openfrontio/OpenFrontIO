@@ -473,6 +473,7 @@
     "title": "Select Language"
   },
   "unit_type": {
+    "boat": "Boat",
     "city": "City",
     "defense_post": "Defense Post",
     "port": "Port",
@@ -552,9 +553,11 @@
     "emoji_menu_modifier_desc": "Hold this key while clicking to open the emoji menu.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
-    "attack_ratio_up_desc": "Increase attack ratio by 10%",
+    "attack_ratio_up_desc": "Increase attack ratio by {amount}%",
     "attack_ratio_down": "Decrease Attack Ratio",
-    "attack_ratio_down_desc": "Decrease attack ratio by 10%",
+    "attack_ratio_down_desc": "Decrease attack ratio by {amount}%",
+    "attack_ratio_increment_label": "Attack Ratio Keybind Increment",
+    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press.",
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
@@ -852,9 +855,18 @@
     "fps": "FPS:",
     "avg_60s": "Avg (60s):",
     "frame": "Frame:",
+    "tps": "TPS:",
+    "tps_avg_60s": "Avg:",
     "tick_exec": "Tick Exec:",
     "tick_delay": "Tick Delay:",
-    "layers_header": "Layers (avg / max, sorted by total time):"
+    "layers_header": "Render Layers",
+    "render_layers_table_header": "avg / max | tick avg",
+    "render_layers_summary": "Last tick: {frames} frames, {ms}ms",
+    "tick_layers_header": "Tick Layers",
+    "tick_layers_table_header": "avg / max",
+    "tick_layers_summary": "Last tick: {count} layers, {ms}ms",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
@@ -874,13 +886,6 @@
     "pattern": {
       "default": "Default"
     },
-    "try_me": "Try me!",
-    "trial_remaining": "remaining",
-    "trial_granted": "Skin trial granted!",
-    "trial_cooldown": "Only one trial per 24 hours. Please try again later.",
-    "trial_login_required": "Must be logged in to trial a skin",
-    "reward_countdown": "Reward in {seconds} seconds...",
-    "steam_wishlist_prompt": "Support OpenFront by adding it to your Steam wishlist",
     "select_skin": "Select Skin",
     "selected": "selected"
   },

@@ -221,7 +221,7 @@ export class JoinLobbyModal extends BaseModal {
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
         })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+        <form @submit=${this.joinLobbyFromInput} class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -255,7 +255,7 @@ export class JoinLobbyModal extends BaseModal {
             <o-button
               title=${translateText("private_lobby.join_lobby")}
               block
-              @click=${this.joinLobbyFromInput}
+              submit
             ></o-button>
           </div>
         </div>
@@ -673,7 +673,8 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private async joinLobbyFromInput(): Promise<void> {
+  private async joinLobbyFromInput(e: SubmitEvent): Promise<void> {
+    e.preventDefault();
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
       this.showMessage(translateText("private_lobby.not_found"), "red");
