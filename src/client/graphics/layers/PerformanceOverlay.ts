@@ -137,6 +137,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private layerCounters: Record<string, Record<string, number>> = {};
 
+  @state()
+  private unitLayerCounters: Record<string, number> | null = null;
+
   // Smoothed per-layer render-per-tick timings (EMA over recent ticks)
   private renderPerTickLayerStats: Map<
     string,
@@ -732,6 +735,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.renderLastTickLayerTotalMs = 0;
     this.renderLastTickLayerDurations = {};
     this.layerCounters = {};
+    this.unitLayerCounters = null;
     this.renderPerTickLayerStats.clear();
     this.renderLayersExpanded = false;
     this.tickLayersExpanded = false;
@@ -907,6 +911,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.layerCounters = counters;
   }
 
+  updateUnitLayerCounters(counters: Record<string, number> | null) {
+    if (!this.isVisible) return;
+    this.unitLayerCounters = counters;
+  }
+
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible) return;
 
@@ -1027,6 +1036,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
         this.tickLayerStats,
       ).map((layer) => ({ ...layer })),
       layerCounters: { ...this.layerCounters },
+      unitLayerCounters: this.unitLayerCounters
+        ? { ...this.unitLayerCounters }
+        : null,
     };
   }
 
@@ -1101,9 +1113,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ? this.uiText.failedCopy
           : this.uiText.copyClipboard;
 
-    const renderLayerBreakdown = this.renderLayersExpanded
     const renderLayerBreakdown =
-      this.renderLayersExpanded || this.layerCounters.UnitLayer
+      this.renderLayersExpanded
         ? PerformanceOverlay.computeLayerBreakdown(this.layerStats)
         : [];
     const tickLayerBreakdown = this.tickLayersExpanded
@@ -1112,7 +1123,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     const renderLayersToShow = renderLayerBreakdown.slice(0, 10);
     const tickLayersToShow = tickLayerBreakdown.slice(0, 10);
-    const unitLayerCounters = this.layerCounters.UnitLayer ?? null;
+    const unitLayerCounters = this.unitLayerCounters;
 
     const maxLayerAvg =
       renderLayersToShow.length > 0
