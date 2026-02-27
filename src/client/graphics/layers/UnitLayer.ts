@@ -1,7 +1,7 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { Cell, UnitType } from "../../../core/game/Game";
+import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
@@ -16,10 +16,6 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { sampleGridSegmentPlan } from "./SegmentMotionSample";
-import {
-  UnitMotionRenderQueue,
-  UnitMotionRenderQueueEntry,
-} from "./UnitMotionRenderQueue";
 import { pruneInactiveTrails } from "./TrailLifecycle";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -35,13 +31,12 @@ enum Relationship {
   Enemy,
 }
 
-const UNIT_DRAW_BUDGET_MS = 3;
+const UNIT_DRAW_BUDGET_MS = 1;
 const UNIT_DRAW_SOFT_OVERRUN_MS = 1;
 const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 6;
-const MOVER_ONSCREEN_BOOST = 1_000_000_000;
-const MOVER_AGE_WEIGHT = 1;
-const MOVER_ERROR_WEIGHT = 2;
-const MOVER_DEBT_WEIGHT = 8;
+const ONSCREEN_HYSTERESIS_FRAMES = 2;
+const OFFSCREEN_VERIFY_MAX_PER_FRAME = 12;
+const VIEW_PADDING_PX = 12;
 
 type TransportTrailState = {
   xy: number[];
@@ -60,13 +55,10 @@ type MoverSpriteRect = {
 
 type MoverRenderState = {
   planId: number;
-  lastRenderedX: number;
-  lastRenderedY: number;
-  lastRenderedAtMs: number;
-  lastErrorPx: number;
   lastSpriteRect: MoverSpriteRect | null;
   lastOnScreen: boolean;
-  queueVersion: number;
+  bucket: "on" | "off";
+  bucketIndex: number;
   skipDebt: number;
   lastSeenFrame: number;
 };
@@ -88,15 +80,21 @@ export class UnitLayer implements Layer {
   private trailDirty = false;
 
   private moverState = new Map<number, MoverRenderState>();
-  private motionQueue = new UnitMotionRenderQueue();
+  private onScreenMoverIds: number[] = [];
+  private offScreenMoverIds: number[] = [];
+  private onScreenCursor = 0;
+  private offScreenCursor = 0;
   private renderFrame = 0;
   private lastPerfCounters: Record<string, number> = {
+    moversTrackedTotal: 0,
     moversSampled: 0,
     moversDrawn: 0,
     moversSkipped: 0,
-    queueSize: 0,
-    budgetUsedMs: 0,
-    avgDebt: 0,
+    drawTimeMs: 0,
+    budgetTargetMs: UNIT_DRAW_BUDGET_MS,
+    budgetSoftOverrunMs: UNIT_DRAW_SOFT_OVERRUN_MS,
+    avgOnScreenDebt: 0,
+    maxOnScreenDebt: 0,
   };
 
   private theme: Theme;
@@ -177,7 +175,6 @@ export class UnitLayer implements Layer {
     if (unitIds.size > 0) {
       this.updateUnitsSprites(Array.from(unitIds));
     }
-
   }
 
   init() {
@@ -315,7 +312,7 @@ export class UnitLayer implements Layer {
     this.renderFrame++;
     const tickAlpha = this.computeTickAlpha();
     const tickFloat = this.game.ticks() + tickAlpha;
-    const nowMs = performance.now();
+    const viewBounds = this.currentViewBounds();
     const activeMoverIds = new Set<number>();
 
     for (const [unitId, plan] of this.game.motionPlans()) {
@@ -327,37 +324,34 @@ export class UnitLayer implements Layer {
       }
       activeMoverIds.add(unitId);
 
-      const onScreenHint = this.transformHandler.isOnScreen(
-        new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
+      const state = this.ensureMoverState(unitId, plan.planId);
+      const maybeOnScreen = this.isPotentiallyOnScreen(
+        plan,
+        state,
+        tickFloat,
+        viewBounds,
       );
-      const state = this.ensureMoverState(unitId, plan.planId, nowMs);
-      state.lastSeenFrame = this.renderFrame;
-
-      if (!onScreenHint && state.lastOnScreen && state.lastSpriteRect) {
-        this.clearMoverRect(state.lastSpriteRect);
-        state.lastOnScreen = false;
-      }
+      this.moveMoverToBucket(unitId, state, maybeOnScreen ? "on" : "off");
 
       if (
-        !onScreenHint &&
-        ((this.renderFrame + unitId) % OFFSCREEN_REFRESH_EVERY_N_FRAMES !== 0) &&
-        state.skipDebt < 2
+        !maybeOnScreen &&
+        state.lastOnScreen &&
+        state.lastSpriteRect &&
+        this.renderFrame - state.lastSeenFrame > ONSCREEN_HYSTERESIS_FRAMES
       ) {
-        continue;
+        this.clearMoverRect(state.lastSpriteRect);
+        state.lastSpriteRect = null;
+        state.lastOnScreen = false;
       }
-
-      const entry: UnitMotionRenderQueueEntry = {
-        unitId,
-        version: (state.queueVersion = (state.queueVersion + 1) >>> 0),
-        priority: this.computeMoverPriority(state, onScreenHint, nowMs),
-        onScreenHint,
-      };
-      this.motionQueue.enqueue(entry);
     }
 
     this.pruneMoverStates(activeMoverIds);
 
-    const moverPerf = this.drawQueuedMovers(tickFloat, activeMoverIds);
+    const moverPerf = this.drawBucketedMovers(
+      tickFloat,
+      activeMoverIds,
+      viewBounds,
+    );
 
     this.rebuildTrailCanvasIfDirty();
 
@@ -383,28 +377,38 @@ export class UnitLayer implements Layer {
       this.game.height(),
     );
 
-    let totalDebt = 0;
-    let debtCount = 0;
-    for (const unitId of activeMoverIds) {
+    let totalOnScreenDebt = 0;
+    let onScreenDebtCount = 0;
+    let maxOnScreenDebt = 0;
+    for (const unitId of this.onScreenMoverIds) {
       const state = this.moverState.get(unitId);
       if (!state) continue;
-      totalDebt += state.skipDebt;
-      debtCount++;
+      totalOnScreenDebt += state.skipDebt;
+      onScreenDebtCount++;
+      if (state.skipDebt > maxOnScreenDebt) {
+        maxOnScreenDebt = state.skipDebt;
+      }
     }
 
     this.lastPerfCounters = {
+      moversTrackedTotal:
+        this.onScreenMoverIds.length + this.offScreenMoverIds.length,
       moversSampled: moverPerf.sampled,
       moversDrawn: moverPerf.drawn,
       moversSkipped: moverPerf.skipped,
-      queueSize: this.motionQueue.size(),
-      budgetUsedMs: moverPerf.budgetUsedMs,
-      avgDebt: debtCount > 0 ? totalDebt / debtCount : 0,
+      drawTimeMs: moverPerf.budgetUsedMs,
+      budgetTargetMs: UNIT_DRAW_BUDGET_MS,
+      budgetSoftOverrunMs: UNIT_DRAW_SOFT_OVERRUN_MS,
+      avgOnScreenDebt:
+        onScreenDebtCount > 0 ? totalOnScreenDebt / onScreenDebtCount : 0,
+      maxOnScreenDebt,
     };
   }
 
-  private drawQueuedMovers(
+  private drawBucketedMovers(
     tickFloat: number,
     activeMoverIds: Set<number>,
+    viewBounds: { left: number; top: number; right: number; bottom: number },
   ): {
     sampled: number;
     drawn: number;
@@ -418,29 +422,114 @@ export class UnitLayer implements Layer {
     let drawn = 0;
     let skipped = 0;
 
-    for (;;) {
-      const entry = this.motionQueue.pollValid((candidate) =>
-        this.isValidQueueEntry(candidate, activeMoverIds),
+    const onScreenPass = this.drawBucketPass(
+      "on",
+      tickFloat,
+      activeMoverIds,
+      drawnIds,
+      frameStartMs,
+      viewBounds,
+      Number.MAX_SAFE_INTEGER,
+    );
+    sampled += onScreenPass.sampled;
+    drawn += onScreenPass.drawn;
+    skipped += onScreenPass.skipped;
+
+    const budgetExceeded = !onScreenPass.budgetRemaining;
+    const shouldVerifyOffscreen =
+      !budgetExceeded &&
+      this.offScreenMoverIds.length > 0 &&
+      this.renderFrame % OFFSCREEN_REFRESH_EVERY_N_FRAMES === 0;
+
+    if (shouldVerifyOffscreen) {
+      const offscreenPass = this.drawBucketPass(
+        "off",
+        tickFloat,
+        activeMoverIds,
+        drawnIds,
+        frameStartMs,
+        viewBounds,
+        OFFSCREEN_VERIFY_MAX_PER_FRAME,
       );
-      if (!entry) {
+      sampled += offscreenPass.sampled;
+      drawn += offscreenPass.drawn;
+      skipped += offscreenPass.skipped;
+    }
+
+    for (const unitId of activeMoverIds) {
+      if (drawnIds.has(unitId)) {
+        continue;
+      }
+      const state = this.moverState.get(unitId);
+      if (state && state.bucket === "on") {
+        state.skipDebt = (state.skipDebt + 1) >>> 0;
+      }
+    }
+
+    return {
+      sampled,
+      drawn,
+      skipped,
+      budgetUsedMs: performance.now() - frameStartMs,
+    };
+  }
+
+  private drawBucketPass(
+    bucket: "on" | "off",
+    tickFloat: number,
+    activeMoverIds: Set<number>,
+    drawnIds: Set<number>,
+    frameStartMs: number,
+    viewBounds: { left: number; top: number; right: number; bottom: number },
+    maxItems: number,
+  ): {
+    sampled: number;
+    drawn: number;
+    skipped: number;
+    budgetRemaining: boolean;
+  } {
+    const bucketIds =
+      bucket === "on" ? this.onScreenMoverIds : this.offScreenMoverIds;
+    if (bucketIds.length === 0 || maxItems <= 0) {
+      return { sampled: 0, drawn: 0, skipped: 0, budgetRemaining: true };
+    }
+
+    const startCursor =
+      bucket === "on" ? this.onScreenCursor : this.offScreenCursor;
+    const cap = Math.min(bucketIds.length, maxItems);
+
+    let sampled = 0;
+    let drawn = 0;
+    let skipped = 0;
+    let budgetRemaining = true;
+
+    for (let offset = 0; offset < cap; offset++) {
+      if (bucketIds.length === 0) {
         break;
       }
+      const idx = (startCursor + offset) % bucketIds.length;
+      const unitId = bucketIds[idx];
 
       const elapsedMs = performance.now() - frameStartMs;
       const canDrawWithinTarget = elapsedMs < UNIT_DRAW_BUDGET_MS;
       const canDrawOnScreenOverrun =
-        entry.onScreenHint &&
+        bucket === "on" &&
         elapsedMs < UNIT_DRAW_BUDGET_MS + UNIT_DRAW_SOFT_OVERRUN_MS;
       if (!canDrawWithinTarget && !canDrawOnScreenOverrun) {
+        budgetRemaining = false;
         skipped++;
         break;
       }
 
-      const unit = this.game.unit(entry.unitId);
-      const plan = this.game.motionPlans().get(entry.unitId);
-      const state = this.moverState.get(entry.unitId);
+      if (!activeMoverIds.has(unitId)) {
+        continue;
+      }
+
+      const unit = this.game.unit(unitId);
+      const plan = this.game.motionPlans().get(unitId);
+      const state = this.moverState.get(unitId);
       if (!unit || !unit.isActive() || !plan || !state) {
-        this.clearMoverState(entry.unitId);
+        this.clearMoverState(unitId);
         skipped++;
         continue;
       }
@@ -452,8 +541,11 @@ export class UnitLayer implements Layer {
         continue;
       }
 
-      const onScreen = this.transformHandler.isOnScreen(
-        new Cell(Math.floor(sampledPos.x), Math.floor(sampledPos.y)),
+      const onScreen = this.pointInView(
+        sampledPos.x,
+        sampledPos.y,
+        viewBounds,
+        VIEW_PADDING_PX,
       );
 
       if (!onScreen) {
@@ -462,9 +554,10 @@ export class UnitLayer implements Layer {
           state.lastSpriteRect = null;
           state.lastOnScreen = false;
         }
+        this.moveMoverToBucket(unitId, state, "off");
         if (unit.type() === UnitType.TransportShip) {
           this.updateTransportShipTrail(
-            entry.unitId,
+            unitId,
             plan.planId,
             sampledPos.x,
             sampledPos.y,
@@ -475,6 +568,7 @@ export class UnitLayer implements Layer {
         continue;
       }
 
+      this.moveMoverToBucket(unitId, state, "on");
       if (state.lastSpriteRect) {
         this.clearMoverRect(state.lastSpriteRect);
       }
@@ -490,23 +584,16 @@ export class UnitLayer implements Layer {
         continue;
       }
 
-      const errorPx = Math.hypot(
-        sampledPos.x - state.lastRenderedX,
-        sampledPos.y - state.lastRenderedY,
-      );
-      state.lastErrorPx = errorPx;
-      state.lastRenderedX = sampledPos.x;
-      state.lastRenderedY = sampledPos.y;
-      state.lastRenderedAtMs = performance.now();
       state.lastSpriteRect = rect;
       state.lastOnScreen = true;
+      state.lastSeenFrame = this.renderFrame;
       state.skipDebt = 0;
-      drawnIds.add(entry.unitId);
+      drawnIds.add(unitId);
       drawn++;
 
       if (unit.type() === UnitType.TransportShip) {
         this.updateTransportShipTrail(
-          entry.unitId,
+          unitId,
           plan.planId,
           sampledPos.x,
           sampledPos.y,
@@ -515,22 +602,19 @@ export class UnitLayer implements Layer {
       }
     }
 
-    for (const unitId of activeMoverIds) {
-      if (drawnIds.has(unitId)) {
-        continue;
-      }
-      const state = this.moverState.get(unitId);
-      if (state) {
-        state.skipDebt = (state.skipDebt + 1) >>> 0;
-      }
+    if (bucket === "on") {
+      this.onScreenCursor =
+        bucketIds.length > 0
+          ? (startCursor + Math.max(1, cap)) % bucketIds.length
+          : 0;
+    } else {
+      this.offScreenCursor =
+        bucketIds.length > 0
+          ? (startCursor + Math.max(1, cap)) % bucketIds.length
+          : 0;
     }
 
-    return {
-      sampled,
-      drawn,
-      skipped,
-      budgetUsedMs: performance.now() - frameStartMs,
-    };
+    return { sampled, drawn, skipped, budgetRemaining };
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {
@@ -564,7 +648,10 @@ export class UnitLayer implements Layer {
 
     this.gridMoverUnitIds = new Set<number>(this.game.motionPlans().keys());
     this.moverState.clear();
-    this.motionQueue.clear();
+    this.onScreenMoverIds = [];
+    this.offScreenMoverIds = [];
+    this.onScreenCursor = 0;
+    this.offScreenCursor = 0;
     this.trailDirty = true;
 
     this.redrawStaticSprites();
@@ -603,26 +690,156 @@ export class UnitLayer implements Layer {
     return this.lastPerfCounters;
   }
 
-  private ensureMoverState(
-    unitId: number,
-    planId: number,
-    nowMs: number,
-  ): MoverRenderState {
+  private currentViewBounds(): {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  } {
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    return {
+      left: topLeft.x,
+      top: topLeft.y,
+      right: bottomRight.x,
+      bottom: bottomRight.y,
+    };
+  }
+
+  private pointInView(
+    x: number,
+    y: number,
+    viewBounds: { left: number; top: number; right: number; bottom: number },
+    pad: number = 0,
+  ): boolean {
+    return (
+      x >= viewBounds.left - pad &&
+      x <= viewBounds.right + pad &&
+      y >= viewBounds.top - pad &&
+      y <= viewBounds.bottom + pad
+    );
+  }
+
+  private isPotentiallyOnScreen(
+    plan: {
+      startTick: number;
+      ticksPerStep: number;
+      points: Uint32Array;
+      segmentSteps: Uint32Array;
+      segCumSteps: Uint32Array;
+    },
+    state: MoverRenderState,
+    tickFloat: number,
+    viewBounds: { left: number; top: number; right: number; bottom: number },
+  ): boolean {
+    if (
+      state.lastOnScreen &&
+      this.renderFrame - state.lastSeenFrame <= ONSCREEN_HYSTERESIS_FRAMES
+    ) {
+      return true;
+    }
+
+    const segment = this.currentSegmentEndpoints(plan, tickFloat);
+    if (!segment) {
+      return false;
+    }
+
+    if (
+      this.pointInView(segment.x0, segment.y0, viewBounds, VIEW_PADDING_PX) ||
+      this.pointInView(segment.x1, segment.y1, viewBounds, VIEW_PADDING_PX)
+    ) {
+      return true;
+    }
+
+    const segLeft = Math.min(segment.x0, segment.x1) - VIEW_PADDING_PX;
+    const segRight = Math.max(segment.x0, segment.x1) + VIEW_PADDING_PX;
+    const segTop = Math.min(segment.y0, segment.y1) - VIEW_PADDING_PX;
+    const segBottom = Math.max(segment.y0, segment.y1) + VIEW_PADDING_PX;
+
+    return !(
+      segRight < viewBounds.left ||
+      segLeft > viewBounds.right ||
+      segBottom < viewBounds.top ||
+      segTop > viewBounds.bottom
+    );
+  }
+
+  private currentSegmentEndpoints(
+    plan: {
+      startTick: number;
+      ticksPerStep: number;
+      points: Uint32Array;
+      segmentSteps: Uint32Array;
+      segCumSteps: Uint32Array;
+    },
+    tickFloat: number,
+  ): { x0: number; y0: number; x1: number; y1: number } | null {
+    const points = plan.points;
+    if (points.length === 0) {
+      return null;
+    }
+    if (points.length === 1 || plan.segmentSteps.length === 0) {
+      const tile = points[0] as TileRef;
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      return { x0: x, y0: y, x1: x, y1: y };
+    }
+
+    const segCum = plan.segCumSteps;
+    const totalSteps = segCum[segCum.length - 1] >>> 0;
+    if (totalSteps === 0) {
+      const tile = points[points.length - 1] as TileRef;
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      return { x0: x, y0: y, x1: x, y1: y };
+    }
+
+    const ticksPerStep = Math.max(1, plan.ticksPerStep);
+    const stepFloat = (tickFloat - plan.startTick) / ticksPerStep;
+    let seg = 0;
+    if (stepFloat >= totalSteps) {
+      seg = Math.max(0, plan.segmentSteps.length - 1);
+    } else if (stepFloat > 0) {
+      let lo = 0;
+      let hi = plan.segmentSteps.length - 1;
+      while (lo <= hi) {
+        const mid = (lo + hi) >>> 1;
+        const start = segCum[mid] >>> 0;
+        const end = segCum[mid + 1] >>> 0;
+        if (stepFloat < start) {
+          hi = mid - 1;
+        } else if (stepFloat >= end) {
+          lo = mid + 1;
+        } else {
+          seg = mid;
+          break;
+        }
+      }
+    }
+
+    const p0 = points[seg] as TileRef;
+    const p1 = points[Math.min(points.length - 1, seg + 1)] as TileRef;
+    return {
+      x0: this.game.x(p0),
+      y0: this.game.y(p0),
+      x1: this.game.x(p1),
+      y1: this.game.y(p1),
+    };
+  }
+
+  private ensureMoverState(unitId: number, planId: number): MoverRenderState {
     const existing = this.moverState.get(unitId);
     if (!existing) {
       const state: MoverRenderState = {
         planId,
-        lastRenderedX: 0,
-        lastRenderedY: 0,
-        lastRenderedAtMs: nowMs,
-        lastErrorPx: 0,
         lastSpriteRect: null,
         lastOnScreen: false,
-        queueVersion: 0,
+        bucket: "off",
+        bucketIndex: -1,
         skipDebt: 0,
-        lastSeenFrame: this.renderFrame,
+        lastSeenFrame: -1,
       };
       this.moverState.set(unitId, state);
+      this.moveMoverToBucket(unitId, state, "off");
       return state;
     }
 
@@ -631,38 +848,14 @@ export class UnitLayer implements Layer {
         this.clearMoverRect(existing.lastSpriteRect);
       }
       existing.planId = planId;
-      existing.lastErrorPx = 0;
       existing.lastOnScreen = false;
       existing.lastSpriteRect = null;
       existing.skipDebt = 0;
+      existing.lastSeenFrame = -1;
+      this.moveMoverToBucket(unitId, existing, "off");
     }
 
     return existing;
-  }
-
-  private computeMoverPriority(
-    state: MoverRenderState,
-    onScreenHint: boolean,
-    nowMs: number,
-  ): number {
-    const ageMs = Math.max(0, nowMs - state.lastRenderedAtMs);
-    return (
-      (onScreenHint ? MOVER_ONSCREEN_BOOST : 0) +
-      ageMs * MOVER_AGE_WEIGHT +
-      state.lastErrorPx * MOVER_ERROR_WEIGHT +
-      state.skipDebt * MOVER_DEBT_WEIGHT
-    );
-  }
-
-  private isValidQueueEntry(
-    entry: UnitMotionRenderQueueEntry,
-    activeMoverIds: Set<number>,
-  ): boolean {
-    if (!activeMoverIds.has(entry.unitId)) {
-      return false;
-    }
-    const state = this.moverState.get(entry.unitId);
-    return state !== undefined && state.queueVersion === entry.version;
   }
 
   private pruneMoverStates(activeMoverIds: Set<number>): void {
@@ -673,6 +866,7 @@ export class UnitLayer implements Layer {
       if (state.lastSpriteRect) {
         this.clearMoverRect(state.lastSpriteRect);
       }
+      this.removeFromBucket(unitId, state);
       this.moverState.delete(unitId);
     }
   }
@@ -682,7 +876,63 @@ export class UnitLayer implements Layer {
     if (state?.lastSpriteRect) {
       this.clearMoverRect(state.lastSpriteRect);
     }
+    if (state) {
+      this.removeFromBucket(unitId, state);
+    }
     this.moverState.delete(unitId);
+  }
+
+  private moveMoverToBucket(
+    unitId: number,
+    state: MoverRenderState,
+    target: "on" | "off",
+  ): void {
+    if (state.bucket === target && state.bucketIndex >= 0) {
+      return;
+    }
+
+    this.removeFromBucket(unitId, state);
+
+    const targetBucket =
+      target === "on" ? this.onScreenMoverIds : this.offScreenMoverIds;
+    state.bucket = target;
+    state.bucketIndex = targetBucket.length;
+    targetBucket.push(unitId);
+  }
+
+  private removeFromBucket(unitId: number, state: MoverRenderState): void {
+    if (state.bucketIndex < 0) {
+      return;
+    }
+
+    const bucketIds =
+      state.bucket === "on" ? this.onScreenMoverIds : this.offScreenMoverIds;
+    const idx = state.bucketIndex;
+    const lastIdx = bucketIds.length - 1;
+    if (idx < 0 || idx > lastIdx) {
+      state.bucketIndex = -1;
+      return;
+    }
+
+    const swappedUnitId = bucketIds[lastIdx];
+    bucketIds[idx] = swappedUnitId;
+    bucketIds.pop();
+
+    if (idx !== lastIdx) {
+      const swappedState = this.moverState.get(swappedUnitId);
+      if (swappedState) {
+        swappedState.bucketIndex = idx;
+      }
+    }
+
+    state.bucketIndex = -1;
+
+    if (state.bucket === "on" && this.onScreenCursor >= bucketIds.length) {
+      this.onScreenCursor = 0;
+    }
+    if (state.bucket === "off" && this.offScreenCursor >= bucketIds.length) {
+      this.offScreenCursor = 0;
+    }
   }
 
   private clearMoverRect(rect: MoverSpriteRect): void {
@@ -1104,13 +1354,7 @@ export class UnitLayer implements Layer {
     const drawY = y - sprite.height / 2;
     const outX = roundCoords ? Math.round(drawX) : drawX;
     const outY = roundCoords ? Math.round(drawY) : drawY;
-    ctx.drawImage(
-      sprite,
-      outX,
-      outY,
-      sprite.width,
-      sprite.width,
-    );
+    ctx.drawImage(sprite, outX, outY, sprite.width, sprite.width);
 
     ctx.restore();
 
