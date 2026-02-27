@@ -58,6 +58,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Svalmel: 8,
   World: 8,
   Lemnos: 3,
+  Passage: 4,
   TwoLakes: 6,
   StraitOfHormuz: 4,
   Surrounded: 4,
