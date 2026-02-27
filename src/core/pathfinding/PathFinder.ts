@@ -57,6 +57,7 @@ export class PathFinding {
     const pf = new AStarWater(miniMap);
 
     return PathFinderBuilder.create(pf)
+      .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
       .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
       .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
       .buildWithStepper(tileStepperConfig(game));

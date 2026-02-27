@@ -111,11 +111,42 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
       });
 
       if (allFailed) {
+        if (!Array.isArray(from)) {
+          this.path = null;
+          this.pathIndex = 0;
+          this.lastTo = to;
+        }
         return null;
       }
     }
 
-    return this.finder.findPath(from, to);
+    const isSingleSource = !Array.isArray(from);
+    if (isSingleSource) {
+      if (this.lastTo === null || !this.config.equals(this.lastTo, to)) {
+        this.path = null;
+        this.pathIndex = 0;
+        this.lastTo = to;
+      }
+    }
+
+    const path = this.finder.findPath(from, to);
+
+    if (isSingleSource) {
+      if (path === null) {
+        this.path = null;
+        this.pathIndex = 0;
+        return null;
+      }
+
+      this.path = path;
+      this.pathIndex = 0;
+      if (path.length > 0 && this.config.equals(path[0], from)) {
+        this.pathIndex = 1;
+      }
+      this.lastTo = to;
+    }
+
+    return path;
   }
 
   planSegments(from: T | T[], to: T): SegmentPlan | null {
@@ -126,7 +157,7 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
     // If called with multi-source, don't try to prime the step cache (next() uses single-source).
     if (Array.isArray(from)) {
       // Still compute a path first so inner transformers can cache their segment plan off findPath().
-      this.finder.findPath(from, to);
+      this.findPath(from, to);
       return this.finder.planSegments(from, to);
     }
 
@@ -148,28 +179,9 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
       };
     }
 
-    if (this.lastTo === null || !this.config.equals(this.lastTo, to)) {
-      this.path = null;
-      this.pathIndex = 0;
-      this.lastTo = to;
-    }
-
-    if (this.path === null) {
-      try {
-        this.path = this.finder.findPath(from, to);
-      } catch (err) {
-        console.error("PathFinder threw an error during findPath", err);
-        return null;
-      }
-
-      if (this.path === null) {
-        return null;
-      }
-
-      this.pathIndex = 0;
-      if (this.path.length > 0 && this.config.equals(this.path[0], from)) {
-        this.pathIndex = 1;
-      }
+    const path = this.findPath(from, to);
+    if (path === null) {
+      return null;
     }
 
     return this.finder.planSegments(from, to);

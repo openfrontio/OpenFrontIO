@@ -8,7 +8,6 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { densePathToLosKeypointSegments } from "../game/MotionPlans";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { distSortUnit } from "../Util";
@@ -115,22 +114,7 @@ export class TradeShipExecution implements Execution {
         if (dst !== this.motionPlanDst) {
           this.motionPlanId++;
           const from = result.node;
-          const segPlan = this.pathFinder.planSegments?.(from, dst) ??
-            (() => {
-              const densePath = this.pathFinder.findPath(from, dst);
-              return densePath
-                ? densePathToLosKeypointSegments(
-                    densePath,
-                    this.mg.map(),
-                    (t) =>
-                      this.mg.isWater(t) ||
-                      (this.mg.isLand(t) && this.mg.isShoreline(t)),
-                  )
-                : null;
-            })() ?? {
-              points: Uint32Array.from([from]),
-              segmentSteps: new Uint32Array(0),
-            };
+          const segPlan = this.safeSegmentPlan(from, dst);
 
           this.mg.recordMotionPlan({
             kind: "grid_segments",
@@ -225,5 +209,24 @@ export class TradeShipExecution implements Execution {
 
   dstPort(): TileRef {
     return this._dstPort.tile();
+  }
+
+  private safeSegmentPlan(from: TileRef, to: TileRef): {
+    points: Uint32Array;
+    segmentSteps: Uint32Array;
+  } {
+    const segPlan = this.pathFinder.planSegments?.(from, to);
+    if (segPlan) {
+      return segPlan;
+    }
+
+    const map = this.mg.map();
+    console.warn(
+      `TradeShipExecution: missing segment plan from (${map.x(from)},${map.y(from)}) to (${map.x(to)},${map.y(to)}); using defensive single-point fallback`,
+    );
+    return {
+      points: Uint32Array.from([from]),
+      segmentSteps: new Uint32Array(0),
+    };
   }
 }
