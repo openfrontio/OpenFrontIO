@@ -20,7 +20,19 @@ export type PathResult<T> =
  */
 export interface PathFinder<T> {
   findPath(from: T | T[], to: T): T[] | null;
+  /**
+   * Optional: returns a sparse keypoint polyline with per-segment step counts.
+   * Only implemented for TileRef-style (number) pathfinders.
+   *
+   * `points.length === segmentSteps.length + 1` when present.
+   */
+  planSegments?(from: T | T[], to: T): SegmentPlan | null;
 }
+
+export type SegmentPlan = {
+  points: Uint32Array;
+  segmentSteps: Uint32Array;
+};
 
 /**
  * SteppingPathFinder - PathFinder with stepping support.
