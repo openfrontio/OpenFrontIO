@@ -610,6 +610,8 @@ type TrainPlanState = {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
+  private _lastUpdateAtMs = performance.now();
+  private _tickDtEmaMs = 100;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -624,7 +626,9 @@ export class GameView implements GameMap {
       planId: number;
       startTick: number;
       ticksPerStep: number;
-      path: Uint32Array;
+      points: Uint32Array;
+      segmentSteps: Uint32Array;
+      segCumSteps: Uint32Array;
     }
   >();
   private trainMotionPlans = new Map<number, TrainPlanState>();
@@ -680,7 +684,9 @@ export class GameView implements GameMap {
       planId: number;
       startTick: number;
       ticksPerStep: number;
-      path: Uint32Array;
+      points: Uint32Array;
+      segmentSteps: Uint32Array;
+      segCumSteps: Uint32Array;
     }
   > {
     return this.unitMotionPlans;
@@ -723,7 +729,24 @@ export class GameView implements GameMap {
     return (this.lastUpdate?.pendingTurns ?? 0) > 1;
   }
 
+  public lastUpdateAtMs(): number {
+    return this._lastUpdateAtMs;
+  }
+
+  public tickDtEmaMs(): number {
+    return this._tickDtEmaMs;
+  }
+
   public update(gu: GameUpdateViewData) {
+    const nowMs = performance.now();
+    const dtMs = nowMs - this._lastUpdateAtMs;
+    if (Number.isFinite(dtMs) && dtMs > 0 && dtMs < 10_000) {
+      // Smooth tick interval estimation to avoid jitter when interpolation.
+      const alpha = 0.12;
+      this._tickDtEmaMs = this._tickDtEmaMs * (1 - alpha) + dtMs * alpha;
+    }
+    this._lastUpdateAtMs = nowMs;
+
     this.toDelete.forEach((id) => this._units.delete(id));
     this.toDelete.clear();
 
@@ -816,9 +839,58 @@ export class GameView implements GameMap {
       const dt = currentTick - plan.startTick;
       const stepIndex =
         dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
-      const lastIndex = plan.path.length - 1;
-      const idx = Math.max(0, Math.min(lastIndex, stepIndex));
-      const newTile = plan.path[idx] as TileRef;
+
+      const points = plan.points;
+      const segmentSteps = plan.segmentSteps;
+      const segCumSteps = plan.segCumSteps;
+      const totalSteps =
+        segCumSteps.length === 0
+          ? 0
+          : segCumSteps[segCumSteps.length - 1] >>> 0;
+      const idx = Math.max(0, Math.min(totalSteps, stepIndex));
+
+      let newTile: TileRef;
+      if (points.length === 0) {
+        newTile = oldTile;
+      } else if (segmentSteps.length === 0 || idx >= totalSteps) {
+        newTile = points[points.length - 1] as TileRef;
+      } else {
+        let seg = 0;
+        let lo = 0;
+        let hi = segmentSteps.length - 1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >>> 1;
+          const start = segCumSteps[mid] >>> 0;
+          const end = segCumSteps[mid + 1] >>> 0;
+          if (idx < start) {
+            hi = mid - 1;
+          } else if (idx >= end) {
+            lo = mid + 1;
+          } else {
+            seg = mid;
+            break;
+          }
+        }
+
+        const localStep = idx - (segCumSteps[seg] >>> 0);
+        const p0 = points[seg] as TileRef;
+        const p1 = points[seg + 1] as TileRef;
+        const x0 = this.x(p0);
+        const y0 = this.y(p0);
+        const x1 = this.x(p1);
+        const y1 = this.y(p1);
+        const steps = segmentSteps[seg] >>> 0;
+        if (steps === 0) {
+          newTile = p0;
+        } else {
+          const dx = x1 - x0;
+          const dy = y1 - y0;
+          newTile = this.ref(
+            Math.round(x0 + (dx * localStep) / steps),
+            Math.round(y0 + (dy * localStep) / steps),
+          );
+        }
+      }
 
       if (newTile !== oldTile) {
         unit.applyDerivedPosition(newTile);
@@ -828,7 +900,7 @@ export class GameView implements GameMap {
 
       // Once a plan is past its final step, `newTile` remains clamped to the last path tile.
       // Drop finished plans to avoid repeatedly marking static units as updated each tick.
-      if (dt > 0 && stepIndex >= lastIndex) {
+      if (dt > 0 && stepIndex >= totalSteps) {
         if (this.unitMotionPlans.delete(unitId)) {
           this.markMotionPlannedUnitIdsDirty();
         }
@@ -957,8 +1029,12 @@ export class GameView implements GameMap {
   private applyMotionPlanRecords(records: readonly MotionPlanRecord[]): void {
     for (const record of records) {
       switch (record.kind) {
-        case "grid": {
-          if (record.ticksPerStep < 1 || record.path.length < 1) {
+        case "grid_segments": {
+          if (
+            record.ticksPerStep < 1 ||
+            record.points.length < 1 ||
+            record.segmentSteps.length !== Math.max(0, record.points.length - 1)
+          ) {
             break;
           }
           const existing = this.unitMotionPlans.get(record.unitId);
@@ -966,16 +1042,28 @@ export class GameView implements GameMap {
             break;
           }
 
-          const path =
-            record.path instanceof Uint32Array
-              ? record.path
-              : Uint32Array.from(record.path);
+          const points =
+            record.points instanceof Uint32Array
+              ? record.points
+              : Uint32Array.from(record.points);
+          const segmentSteps =
+            record.segmentSteps instanceof Uint32Array
+              ? record.segmentSteps
+              : Uint32Array.from(record.segmentSteps);
+
+          const segCumSteps = new Uint32Array(segmentSteps.length + 1);
+          for (let i = 0; i < segmentSteps.length; i++) {
+            segCumSteps[i + 1] =
+              (segCumSteps[i] + (segmentSteps[i] >>> 0)) >>> 0;
+          }
 
           this.unitMotionPlans.set(record.unitId, {
             planId: record.planId,
             startTick: record.startTick,
             ticksPerStep: record.ticksPerStep,
-            path,
+            points,
+            segmentSteps,
+            segCumSteps,
           });
           this.markMotionPlannedUnitIdsDirty();
           break;

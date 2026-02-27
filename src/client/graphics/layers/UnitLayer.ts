@@ -1,7 +1,7 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
+import { Cell, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
@@ -15,6 +15,7 @@ import {
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { sampleGridSegmentPlan } from "./SegmentMotionSample";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
@@ -34,8 +35,17 @@ export class UnitLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private transportShipTrailCanvas: HTMLCanvasElement;
   private unitTrailContext: CanvasRenderingContext2D;
+  private motionTrailCanvas: HTMLCanvasElement;
+  private motionTrailContext: CanvasRenderingContext2D;
 
+  // Pixel trails (currently only used for nukes).
   private unitToTrail = new Map<UnitView, TileRef[]>();
+
+  private gridMoverUnitIds = new Set<number>();
+  private moverTrailLast = new Map<
+    number,
+    { x: number; y: number; planId: number; onScreen: boolean }
+  >();
 
   private theme: Theme;
 
@@ -65,6 +75,26 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
+    const gridMoverUnitIds = new Set<number>();
+    for (const id of this.game.motionPlans().keys()) {
+      gridMoverUnitIds.add(id);
+    }
+
+    const moverSetChanged = !this.setsEqual(
+      gridMoverUnitIds,
+      this.gridMoverUnitIds,
+    );
+    if (moverSetChanged) {
+      this.gridMoverUnitIds = gridMoverUnitIds;
+      for (const id of this.moverTrailLast.keys()) {
+        if (!gridMoverUnitIds.has(id)) {
+          this.moverTrailLast.delete(id);
+        }
+      }
+      this.redrawStaticSprites();
+      return;
+    }
+
     const updatedUnitIds =
       this.game
         .updatesSinceLastTick()
@@ -72,20 +102,22 @@ export class UnitLayer implements Layer {
 
     const motionPlanUnitIds = this.game.motionPlannedUnitIds();
 
-    if (updatedUnitIds.length === 0) {
-      this.updateUnitsSprites(motionPlanUnitIds);
-      return;
+    const unitIds = new Set<number>();
+    for (const id of updatedUnitIds) {
+      if (!gridMoverUnitIds.has(id)) {
+        unitIds.add(id);
+      }
     }
-    if (motionPlanUnitIds.length === 0) {
-      this.updateUnitsSprites(updatedUnitIds);
-      return;
+    for (const id of motionPlanUnitIds) {
+      // Train plans still rely on discrete tick updates; grid movers are rendered smoothly in renderLayer().
+      if (!gridMoverUnitIds.has(id)) {
+        unitIds.add(id);
+      }
     }
 
-    const unitIds = new Set<number>(updatedUnitIds);
-    for (const id of motionPlanUnitIds) {
-      unitIds.add(id);
+    if (unitIds.size > 0) {
+      this.updateUnitsSprites(Array.from(unitIds));
     }
-    this.updateUnitsSprites(Array.from(unitIds));
   }
 
   init() {
@@ -220,8 +252,71 @@ export class UnitLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    const moversToDraw: Array<{ unit: UnitView; x: number; y: number }> = [];
+
+    const tickAlpha = this.computeTickAlpha();
+    const tickFloat = this.game.ticks() + tickAlpha;
+
+    if (this.game.motionPlans().size > 0) {
+      this.fadeMotionTrailCanvas();
+    }
+
+    for (const [unitId, plan] of this.game.motionPlans()) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive()) {
+        this.moverTrailLast.delete(unitId);
+        continue;
+      }
+
+      const sampled = sampleGridSegmentPlan(this.game, plan, tickFloat);
+      if (!sampled) {
+        continue;
+      }
+
+      const onScreen = this.transformHandler.isOnScreen(
+        new Cell(Math.floor(sampled.x), Math.floor(sampled.y)),
+      );
+
+      const last = this.moverTrailLast.get(unitId);
+      if (last && last.planId === plan.planId) {
+        if (
+          last.onScreen &&
+          onScreen &&
+          (last.x !== sampled.x || last.y !== sampled.y)
+        ) {
+          this.motionTrailContext.save();
+          this.motionTrailContext.lineCap = "round";
+          this.motionTrailContext.lineJoin = "round";
+          this.motionTrailContext.lineWidth = 1.5;
+          this.motionTrailContext.strokeStyle = this.motionTrailColor(unit);
+          this.motionTrailContext.beginPath();
+          this.motionTrailContext.moveTo(last.x, last.y);
+          this.motionTrailContext.lineTo(sampled.x, sampled.y);
+          this.motionTrailContext.stroke();
+          this.motionTrailContext.restore();
+        }
+      }
+      this.moverTrailLast.set(unitId, {
+        x: sampled.x,
+        y: sampled.y,
+        planId: plan.planId,
+        onScreen,
+      });
+
+      if (onScreen) {
+        moversToDraw.push({ unit, x: sampled.x, y: sampled.y });
+      }
+    }
+
     context.drawImage(
       this.transportShipTrailCanvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+    context.drawImage(
+      this.motionTrailCanvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
       this.game.width(),
@@ -234,6 +329,16 @@ export class UnitLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+
+    for (const mover of moversToDraw) {
+      this.drawSpriteAt(
+        mover.unit,
+        mover.x - this.game.width() / 2,
+        mover.y - this.game.height() / 2,
+        context,
+        false,
+      );
+    }
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {
@@ -250,13 +355,23 @@ export class UnitLayer implements Layer {
     const trailContext = this.transportShipTrailCanvas.getContext("2d");
     if (trailContext === null) throw new Error("2d context not supported");
     this.unitTrailContext = trailContext;
+    this.motionTrailCanvas = document.createElement("canvas");
+    const motionTrailContext = this.motionTrailCanvas.getContext("2d");
+    if (motionTrailContext === null)
+      throw new Error("2d context not supported");
+    this.motionTrailContext = motionTrailContext;
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
+    this.motionTrailCanvas.width = this.game.width();
+    this.motionTrailCanvas.height = this.game.height();
 
-    this.updateUnitsSprites(this.game.units().map((unit) => unit.id()));
+    this.gridMoverUnitIds = new Set<number>(this.game.motionPlans().keys());
+    this.moverTrailLast.clear();
+
+    this.redrawStaticSprites();
 
     this.unitToTrail.forEach((trail, unit) => {
       for (const t of trail) {
@@ -270,6 +385,76 @@ export class UnitLayer implements Layer {
         );
       }
     });
+  }
+
+  private setsEqual(a: Set<number>, b: Set<number>): boolean {
+    if (a.size !== b.size) {
+      return false;
+    }
+    for (const v of a) {
+      if (!b.has(v)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private redrawStaticSprites(): void {
+    this.context.clearRect(0, 0, this.game.width(), this.game.height());
+    const units = this.game
+      .units()
+      .filter((u) => !this.gridMoverUnitIds.has(u.id()));
+    this.drawUnitsCells(units);
+  }
+
+  private computeTickAlpha(): number {
+    if (this.game.isCatchingUp()) {
+      return 1;
+    }
+    const dt = Math.max(1, this.game.tickDtEmaMs());
+    const alpha = (performance.now() - this.game.lastUpdateAtMs()) / dt;
+    return Math.max(0, Math.min(1, alpha));
+  }
+
+  private fadeMotionTrailCanvas(): void {
+    const ctx = this.motionTrailContext;
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,0.06)";
+    ctx.fillRect(0, 0, this.game.width(), this.game.height());
+    ctx.restore();
+  }
+
+  private relationshipForAlternateView(unit: UnitView): Relationship {
+    let rel = this.relationship(unit);
+    const dstPortId = unit.targetUnitId();
+    if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
+      const target = this.game.unit(dstPortId)?.owner();
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer !== null && target !== undefined) {
+        if (myPlayer === target) {
+          rel = Relationship.Self;
+        } else if (myPlayer.isFriendly(target)) {
+          rel = Relationship.Ally;
+        }
+      }
+    }
+    return rel;
+  }
+
+  private motionTrailColor(unit: UnitView): string {
+    if (this.alternateView) {
+      const rel = this.relationshipForAlternateView(unit);
+      switch (rel) {
+        case Relationship.Self:
+          return this.theme.selfColor().alpha(0.65).toRgbString();
+        case Relationship.Ally:
+          return this.theme.allyColor().alpha(0.65).toRgbString();
+        case Relationship.Enemy:
+          return this.theme.enemyColor().alpha(0.65).toRgbString();
+      }
+    }
+    return unit.owner().territoryColor().alpha(0.55).toRgbString();
   }
 
   private updateUnitsSprites(unitIds: number[]) {
@@ -508,21 +693,7 @@ export class UnitLayer implements Layer {
   }
 
   private handleBoatEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-
-    if (!this.unitToTrail.has(unit)) {
-      this.unitToTrail.set(unit, []);
-    }
-    const trail = this.unitToTrail.get(unit) ?? [];
-    trail.push(unit.lastTile());
-
-    // Paint trail
-    this.drawTrail(trail.slice(-1), unit.owner().territoryColor(), rel);
     this.drawSprite(unit);
-
-    if (!unit.isActive()) {
-      this.clearTrail(unit);
-    }
   }
 
   paintCell(
@@ -560,26 +731,18 @@ export class UnitLayer implements Layer {
     context.clearRect(x, y, 1, 1);
   }
 
-  drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
-    const x = this.game.x(unit.tile());
-    const y = this.game.y(unit.tile());
-
+  private drawSpriteAt(
+    unit: UnitView,
+    x: number,
+    y: number,
+    ctx: CanvasRenderingContext2D = this.context,
+    roundCoords: boolean = true,
+    customTerritoryColor?: Colord,
+  ) {
     let alternateViewColor: Colord | null = null;
 
     if (this.alternateView) {
-      let rel = this.relationship(unit);
-      const dstPortId = unit.targetUnitId();
-      if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
-        const target = this.game.unit(dstPortId)?.owner();
-        const myPlayer = this.game.myPlayer();
-        if (myPlayer !== null && target !== undefined) {
-          if (myPlayer === target) {
-            rel = Relationship.Self;
-          } else if (myPlayer.isFriendly(target)) {
-            rel = Relationship.Ally;
-          }
-        }
-      }
+      const rel = this.relationshipForAlternateView(unit);
       switch (rel) {
         case Relationship.Self:
           alternateViewColor = this.theme.selfColor();
@@ -600,22 +763,37 @@ export class UnitLayer implements Layer {
       alternateViewColor ?? undefined,
     );
 
-    if (unit.isActive()) {
-      const targetable = unit.targetable();
-      if (!targetable) {
-        this.context.save();
-        this.context.globalAlpha = 0.5;
-      }
-      this.context.drawImage(
-        sprite,
-        Math.round(x - sprite.width / 2),
-        Math.round(y - sprite.height / 2),
-        sprite.width,
-        sprite.width,
-      );
-      if (!targetable) {
-        this.context.restore();
-      }
+    if (!unit.isActive()) {
+      return;
     }
+
+    const targetable = unit.targetable();
+    ctx.save();
+    if (!targetable) {
+      ctx.globalAlpha = 0.5;
+    }
+
+    const drawX = x - sprite.width / 2;
+    const drawY = y - sprite.height / 2;
+    ctx.drawImage(
+      sprite,
+      roundCoords ? Math.round(drawX) : drawX,
+      roundCoords ? Math.round(drawY) : drawY,
+      sprite.width,
+      sprite.width,
+    );
+
+    ctx.restore();
+  }
+
+  private drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
+    this.drawSpriteAt(
+      unit,
+      this.game.x(unit.tile()),
+      this.game.y(unit.tile()),
+      this.context,
+      true,
+      customTerritoryColor,
+    );
   }
 }
