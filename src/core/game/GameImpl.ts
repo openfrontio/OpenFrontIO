@@ -213,9 +213,11 @@ export class GameImpl implements Game {
     const playerToTeam = assignTeams(allPlayers, this.playerTeams);
 
     // Only rename numbered teams (8+ team mode), not colored teams
+    const coloredTeamValues = Object.values(ColoredTeams);
     const isNumberedTeams = !this.playerTeams.some((t) =>
-      Object.values(ColoredTeams).includes(t as any),
+      coloredTeamValues.includes(t),
     );
+
     if (isNumberedTeams) {
       // Build reverse map: team → assigned players
       const teamToPlayers = new Map<Team, PlayerInfo[]>();
@@ -234,10 +236,17 @@ export class GameImpl implements Game {
         }
       }
 
-      // Collision check: remove any renames that produce duplicate names
+      // Collision check: remove any renames that collide with existing team
+      // names (excluding the team being renamed) or with another rename.
+      const existingNames = new Set(
+        this.playerTeams.filter((t) => !renameMap.has(t)),
+      );
       const newNames = Array.from(renameMap.values());
       for (const [oldTeam, newName] of renameMap.entries()) {
-        if (newNames.filter((n) => n === newName).length > 1) {
+        if (
+          existingNames.has(newName) ||
+          newNames.filter((n) => n === newName).length > 1
+        ) {
           renameMap.delete(oldTeam);
         }
       }
