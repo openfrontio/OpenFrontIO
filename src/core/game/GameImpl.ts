@@ -236,18 +236,23 @@ export class GameImpl implements Game {
         }
       }
 
-      // Collision check: remove any renames that collide with existing team
-      // names (excluding the team being renamed) or with another rename.
-      const existingNames = new Set(
-        this.playerTeams.filter((t) => !renameMap.has(t)),
-      );
-      const newNames = Array.from(renameMap.values());
-      for (const [oldTeam, newName] of renameMap.entries()) {
-        if (
-          existingNames.has(newName) ||
-          newNames.filter((n) => n === newName).length > 1
-        ) {
-          renameMap.delete(oldTeam);
+      // Collision check: repeatedly remove renames that collide with existing
+      // team names or with each other until no more removals occur.
+      let changed = true;
+      while (changed) {
+        changed = false;
+        const existingNames = new Set(
+          this.playerTeams.filter((t) => !renameMap.has(t)),
+        );
+        const newNames = Array.from(renameMap.values());
+        for (const [oldTeam, newName] of renameMap.entries()) {
+          if (
+            existingNames.has(newName) ||
+            newNames.filter((n) => n === newName).length > 1
+          ) {
+            renameMap.delete(oldTeam);
+            changed = true;
+          }
         }
       }
 
