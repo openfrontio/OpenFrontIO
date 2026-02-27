@@ -1236,16 +1236,22 @@ export class PerformanceOverlay extends LitElement implements Layer {
                   <span>UnitLayer Counters</span>
                 </div>
                 <div class="performance-line">
+                  tracked: ${Number(unitLayerCounters.moversTrackedTotal ?? 0)}
                   sampled: ${Number(unitLayerCounters.moversSampled ?? 0)}
-                  drawn: ${Number(unitLayerCounters.moversDrawn ?? 0)}
-                  skipped: ${Number(unitLayerCounters.moversSkipped ?? 0)}
+                  drawn: ${Number(unitLayerCounters.moversDrawn ?? 0)} skipped:
+                  ${Number(unitLayerCounters.moversSkipped ?? 0)}
                 </div>
                 <div class="performance-line">
-                  queue: ${Number(unitLayerCounters.queueSize ?? 0)}
-                  budget: ${Number(unitLayerCounters.budgetUsedMs ?? 0).toFixed(
-                    2,
-                  )}ms
-                  avgDebt: ${Number(unitLayerCounters.avgDebt ?? 0).toFixed(2)}
+                  draw:
+                  ${Number(unitLayerCounters.drawTimeMs ?? 0).toFixed(2)}ms /
+                  ${Number(unitLayerCounters.budgetTargetMs ?? 0).toFixed(1)}ms
+                  (+${Number(
+                    unitLayerCounters.budgetSoftOverrunMs ?? 0,
+                  ).toFixed(1)}ms
+                  on-screen) avgOnDebt:
+                  ${Number(unitLayerCounters.avgOnScreenDebt ?? 0).toFixed(2)}
+                  maxOnDebt:
+                  ${Number(unitLayerCounters.maxOnScreenDebt ?? 0).toFixed(0)}
                 </div>
               </div>`
             : html``}
