@@ -115,17 +115,22 @@ export class TransportShipExecution implements Execution {
       targetTile: this.dst,
     });
 
-    const densePath = this.pathFinder.findPath(this.src, this.dst);
-    const segPlan = (densePath &&
-      densePathToLosKeypointSegments(
-        densePath,
-        this.mg.map(),
-        (t) =>
-          this.mg.isWater(t) || (this.mg.isLand(t) && this.mg.isShoreline(t)),
-      )) ?? {
-      points: Uint32Array.from([this.src]),
-      segmentSteps: new Uint32Array(0),
-    };
+    const segPlan = this.pathFinder.planSegments?.(this.src, this.dst) ??
+      (() => {
+        const densePath = this.pathFinder.findPath(this.src, this.dst);
+        return densePath
+          ? densePathToLosKeypointSegments(
+              densePath,
+              this.mg.map(),
+              (t) =>
+                this.mg.isWater(t) ||
+                (this.mg.isLand(t) && this.mg.isShoreline(t)),
+            )
+          : null;
+      })() ?? {
+        points: Uint32Array.from([this.src]),
+        segmentSteps: new Uint32Array(0),
+      };
 
     const motionPlan: MotionPlanRecord = {
       kind: "grid_segments",
@@ -281,17 +286,22 @@ export class TransportShipExecution implements Execution {
     if (this.dst !== null && this.dst !== this.motionPlanDst) {
       this.motionPlanId++;
       const from = this.boat.tile();
-      const densePath = this.pathFinder.findPath(from, this.dst);
-      const segPlan = (densePath &&
-        densePathToLosKeypointSegments(
-          densePath,
-          this.mg.map(),
-          (t) =>
-            this.mg.isWater(t) || (this.mg.isLand(t) && this.mg.isShoreline(t)),
-        )) ?? {
-        points: Uint32Array.from([from]),
-        segmentSteps: new Uint32Array(0),
-      };
+      const segPlan = this.pathFinder.planSegments?.(from, this.dst) ??
+        (() => {
+          const densePath = this.pathFinder.findPath(from, this.dst);
+          return densePath
+            ? densePathToLosKeypointSegments(
+                densePath,
+                this.mg.map(),
+                (t) =>
+                  this.mg.isWater(t) ||
+                  (this.mg.isLand(t) && this.mg.isShoreline(t)),
+              )
+            : null;
+        })() ?? {
+          points: Uint32Array.from([from]),
+          segmentSteps: new Uint32Array(0),
+        };
 
       this.mg.recordMotionPlan({
         kind: "grid_segments",

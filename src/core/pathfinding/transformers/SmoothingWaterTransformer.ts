@@ -4,7 +4,7 @@ import {
   AStarWaterBounded,
   SearchBounds,
 } from "../algorithms/AStar.WaterBounded";
-import { PathFinder } from "../types";
+import { PathFinder, SegmentPlan } from "../types";
 
 const ENDPOINT_REFINEMENT_TILES = 50;
 const LOCAL_ASTAR_MAX_AREA = 100 * 100;
@@ -23,6 +23,9 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
   private readonly localAStar: AStarWaterBounded;
   private readonly terrain: Uint8Array;
   private readonly isTraversable: (tile: TileRef) => boolean;
+  private lastPlanFrom: TileRef | TileRef[] | null = null;
+  private lastPlanTo: TileRef | null = null;
+  private lastPlan: SegmentPlan | null = null;
 
   constructor(
     private inner: PathFinder<TileRef>,
@@ -38,14 +41,43 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     const path = this.inner.findPath(from, to);
 
-    return DebugSpan.wrap("smoothingTransformer", () =>
-      path ? this.smooth(path) : null,
-    );
+    if (!path) {
+      this.lastPlanFrom = from;
+      this.lastPlanTo = to;
+      this.lastPlan = null;
+      return null;
+    }
+
+    return DebugSpan.wrap("smoothingTransformer", () => {
+      const { dense, plan } = this.smoothWithPlan(path);
+      this.lastPlanFrom = from;
+      this.lastPlanTo = to;
+      this.lastPlan = plan;
+      return dense;
+    });
   }
 
-  private smooth(path: TileRef[]): TileRef[] {
+  planSegments(from: TileRef | TileRef[], to: TileRef): SegmentPlan | null {
+    if (this.lastPlanFrom === from && this.lastPlanTo === to) {
+      return this.lastPlan;
+    }
+
+    this.findPath(from, to);
+    return this.lastPlan;
+  }
+
+  private smoothWithPlan(path: TileRef[]): {
+    dense: TileRef[];
+    plan: SegmentPlan;
+  } {
     if (path.length <= 2) {
-      return path;
+      const points =
+        path.length === 2
+          ? Uint32Array.from([path[0] >>> 0, path[1] >>> 0])
+          : Uint32Array.from([path[0] >>> 0]);
+      const segmentSteps =
+        path.length === 2 ? Uint32Array.from([1]) : new Uint32Array(0);
+      return { dense: path, plan: { points, segmentSteps } };
     }
 
     // Pass 1: LOS smoothing with binary search
@@ -59,15 +91,29 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
     );
 
     // Pass 3: LOS smoothing again, farther from the shore
-    smoothed = DebugSpan.wrap("smoother:los2", () =>
-      this.losSmooth(smoothed, LOS_MIN_MAGNITUDE_PASS2),
+    const capture = { points: [] as number[], segmentSteps: [] as number[] };
+    const dense = DebugSpan.wrap("smoother:los2", () =>
+      this.losSmooth(smoothed, LOS_MIN_MAGNITUDE_PASS2, capture),
     );
 
-    return smoothed;
+    return {
+      dense,
+      plan: {
+        points: Uint32Array.from(capture.points),
+        segmentSteps: Uint32Array.from(capture.segmentSteps),
+      },
+    };
   }
 
-  private losSmooth(path: TileRef[], minMagnitude: number): TileRef[] {
+  private losSmooth(
+    path: TileRef[],
+    minMagnitude: number,
+    capture?: { points: number[]; segmentSteps: number[] },
+  ): TileRef[] {
     const result: TileRef[] = [path[0]];
+    if (capture) {
+      capture.points.push(path[0] >>> 0);
+    }
     let current = 0;
 
     while (current < path.length - 1) {
@@ -87,14 +133,26 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
       }
 
       // Trace the path to farthest visible point
+      let segSteps = 1;
       if (farthest > current + 1) {
         const trace = this.tracePath(path[current], path[farthest]);
         if (trace) {
+          segSteps = trace.length - 1;
           // Add all intermediate tiles except the last (will be added in next iteration or at end)
           for (let i = 1; i < trace.length - 1; i++) {
             result.push(trace[i]);
           }
         }
+        if (!trace) {
+          segSteps = (farthest - current) >>> 0;
+        }
+      } else if (farthest > current) {
+        segSteps = 1;
+      }
+
+      if (capture) {
+        capture.points.push(path[farthest] >>> 0);
+        capture.segmentSteps.push(segSteps >>> 0);
       }
 
       current = farthest;
