@@ -181,6 +181,7 @@ export class PlayerImpl implements Player {
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
+      spawnTile: this.spawnTile(),
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
       isLobbyCreator: this.isLobbyCreator(),

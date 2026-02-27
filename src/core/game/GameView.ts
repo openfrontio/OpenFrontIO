@@ -563,6 +563,9 @@ export class PlayerView {
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
+  spawnTile(): TileRef | undefined {
+    return this.data.spawnTile;
+  }
   isDisconnected(): boolean {
     return this.data.isDisconnected;
   }

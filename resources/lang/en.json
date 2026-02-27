@@ -490,6 +490,8 @@
     "tab_keybinds": "Keybinds",
     "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
+    "color_blind_label": "Color-blind assist",
+    "color_blind_desc": "Adds visual aid to make spotting teammates during spawn phase easier",
     "emojis_label": "Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
