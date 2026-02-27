@@ -1238,8 +1238,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
                 <div class="performance-line">
                   tracked: ${Number(unitLayerCounters.moversTrackedTotal ?? 0)}
                   sampled: ${Number(unitLayerCounters.moversSampled ?? 0)}
-                  drawn: ${Number(unitLayerCounters.moversDrawn ?? 0)} skipped:
-                  ${Number(unitLayerCounters.moversSkipped ?? 0)}
+                  drawn: ${Number(unitLayerCounters.moversDrawn ?? 0)}
+                  skipped: ${Number(unitLayerCounters.moversSkipped ?? 0)}
                 </div>
                 <div class="performance-line">
                   moverCanvasScale:
@@ -1253,15 +1253,21 @@ export class PerformanceOverlay extends LitElement implements Layer {
                 </div>
                 <div class="performance-line">
                   draw:
-                  ${Number(unitLayerCounters.drawTimeMs ?? 0).toFixed(2)}ms /
-                  ${Number(unitLayerCounters.budgetTargetMs ?? 0).toFixed(1)}ms
-                  (+${Number(
-                    unitLayerCounters.budgetSoftOverrunMs ?? 0,
-                  ).toFixed(1)}ms
-                  on-screen) avgOnDebt:
-                  ${Number(unitLayerCounters.avgOnScreenDebt ?? 0).toFixed(2)}
-                  maxOnDebt:
-                  ${Number(unitLayerCounters.maxOnScreenDebt ?? 0).toFixed(0)}
+                  ${Number(unitLayerCounters.drawTimeMs ?? 0).toFixed(2)}ms
+                </div>
+                <div class="performance-line">
+                  on:
+                  ${Number(unitLayerCounters.onScreenDrawTimeMs ?? 0).toFixed(2)}ms
+                  /
+                  ${Number(unitLayerCounters.onScreenBudgetTargetMs ?? 0).toFixed(1)}ms
+                  off:
+                  ${Number(unitLayerCounters.offScreenVerifyTimeMs ?? 0).toFixed(2)}ms
+                  /
+                  ${Number(unitLayerCounters.offScreenVerifyBudgetMs ?? 0).toFixed(2)}ms
+                </div>
+                <div class="performance-line">
+                  avgOnDebt: ${Number(unitLayerCounters.avgOnScreenDebt ?? 0).toFixed(2)}
+                  maxOnDebt: ${Number(unitLayerCounters.maxOnScreenDebt ?? 0).toFixed(0)}
                 </div>
               </div>`
             : html``}

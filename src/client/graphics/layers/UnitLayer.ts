@@ -36,11 +36,10 @@ enum Relationship {
   Enemy,
 }
 
-const UNIT_DRAW_BUDGET_MS = 2;
-const UNIT_DRAW_SOFT_OVERRUN_MS = 1;
-const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 60;
+const ONSCREEN_DRAW_BUDGET_MS = 2;
+const OFFSCREEN_VERIFY_BUDGET_MS = 0.1;
+const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 30;
 const ONSCREEN_HYSTERESIS_FRAMES = 2;
-const OFFSCREEN_VERIFY_MAX_PER_FRAME = 12;
 const VIEW_PADDING_PX = 12;
 const MOVER_SPATIAL_HASH_CELL_PX = 24;
 const DYNAMIC_MOVER_SCALE_STEPS = [1, 2, 3, 4];
@@ -153,8 +152,10 @@ export class UnitLayer implements Layer {
     moversDrawn: 0,
     moversSkipped: 0,
     drawTimeMs: 0,
-    budgetTargetMs: UNIT_DRAW_BUDGET_MS,
-    budgetSoftOverrunMs: UNIT_DRAW_SOFT_OVERRUN_MS,
+    onScreenDrawTimeMs: 0,
+    offScreenVerifyTimeMs: 0,
+    onScreenBudgetTargetMs: ONSCREEN_DRAW_BUDGET_MS,
+    offScreenVerifyBudgetMs: OFFSCREEN_VERIFY_BUDGET_MS,
     avgOnScreenDebt: 0,
     maxOnScreenDebt: 0,
     moverCanvasScale: 1,
@@ -481,8 +482,10 @@ export class UnitLayer implements Layer {
       moversDrawn: moverPerf.drawn,
       moversSkipped: moverPerf.skipped,
       drawTimeMs: moverPerf.budgetUsedMs,
-      budgetTargetMs: UNIT_DRAW_BUDGET_MS,
-      budgetSoftOverrunMs: UNIT_DRAW_SOFT_OVERRUN_MS,
+      onScreenDrawTimeMs: moverPerf.onScreenBudgetUsedMs,
+      offScreenVerifyTimeMs: moverPerf.offScreenBudgetUsedMs,
+      onScreenBudgetTargetMs: ONSCREEN_DRAW_BUDGET_MS,
+      offScreenVerifyBudgetMs: OFFSCREEN_VERIFY_BUDGET_MS,
       avgOnScreenDebt:
         onScreenDebtCount > 0 ? totalOnScreenDebt / onScreenDebtCount : 0,
       maxOnScreenDebt,
@@ -506,6 +509,8 @@ export class UnitLayer implements Layer {
     drawn: number;
     skipped: number;
     budgetUsedMs: number;
+    onScreenBudgetUsedMs: number;
+    offScreenBudgetUsedMs: number;
   } {
     const frameStartMs = performance.now();
     const drawnIds = new Set<number>();
@@ -521,9 +526,9 @@ export class UnitLayer implements Layer {
       tickFloat,
       activeMoverIds,
       drawnIds,
-      frameStartMs,
+      performance.now(),
+      ONSCREEN_DRAW_BUDGET_MS,
       viewBounds,
-      Number.MAX_SAFE_INTEGER,
       sampledCache,
       spatial,
     );
@@ -531,11 +536,11 @@ export class UnitLayer implements Layer {
     drawn += onScreenPass.drawn;
     skipped += onScreenPass.skipped;
 
-    const budgetExceeded = !onScreenPass.budgetRemaining;
     const shouldVerifyOffscreen =
-      !budgetExceeded &&
       this.offScreenMoverIds.length > 0 &&
       this.renderFrame % OFFSCREEN_REFRESH_EVERY_N_FRAMES === 0;
+
+    let offScreenBudgetUsedMs = 0;
 
     if (shouldVerifyOffscreen) {
       const offscreenPass = this.drawBucketPass(
@@ -543,15 +548,16 @@ export class UnitLayer implements Layer {
         tickFloat,
         activeMoverIds,
         drawnIds,
-        frameStartMs,
+        performance.now(),
+        OFFSCREEN_VERIFY_BUDGET_MS,
         viewBounds,
-        OFFSCREEN_VERIFY_MAX_PER_FRAME,
         sampledCache,
         spatial,
       );
       sampled += offscreenPass.sampled;
       drawn += offscreenPass.drawn;
       skipped += offscreenPass.skipped;
+      offScreenBudgetUsedMs = offscreenPass.budgetUsedMs;
     }
 
     for (const unitId of activeMoverIds) {
@@ -569,6 +575,8 @@ export class UnitLayer implements Layer {
       drawn,
       skipped,
       budgetUsedMs: performance.now() - frameStartMs,
+      onScreenBudgetUsedMs: onScreenPass.budgetUsedMs,
+      offScreenBudgetUsedMs,
     };
   }
 
@@ -577,9 +585,9 @@ export class UnitLayer implements Layer {
     tickFloat: number,
     activeMoverIds: Set<number>,
     drawnIds: Set<number>,
-    frameStartMs: number,
+    passStartMs: number,
+    budgetMs: number,
     viewBounds: { left: number; top: number; right: number; bottom: number },
-    maxItems: number,
     sampledCache: Map<number, MoverRenderSample | null>,
     spatial: MoverSpatialIndex,
   ): {
@@ -587,16 +595,22 @@ export class UnitLayer implements Layer {
     drawn: number;
     skipped: number;
     budgetRemaining: boolean;
+    budgetUsedMs: number;
   } {
     const bucketIds =
       bucket === "on" ? this.onScreenMoverIds : this.offScreenMoverIds;
-    if (bucketIds.length === 0 || maxItems <= 0) {
-      return { sampled: 0, drawn: 0, skipped: 0, budgetRemaining: true };
+    if (bucketIds.length === 0 || budgetMs <= 0) {
+      return {
+        sampled: 0,
+        drawn: 0,
+        skipped: 0,
+        budgetRemaining: true,
+        budgetUsedMs: 0,
+      };
     }
 
     const startCursor =
       bucket === "on" ? this.onScreenCursor : this.offScreenCursor;
-    const cap = Math.min(bucketIds.length, maxItems);
 
     let sampled = 0;
     let drawn = 0;
@@ -605,7 +619,7 @@ export class UnitLayer implements Layer {
     const processed = new Set<number>();
     let scanned = 0;
 
-    for (let offset = 0; offset < cap; offset++) {
+    for (let offset = 0; offset < bucketIds.length; offset++) {
       if (bucketIds.length === 0) {
         break;
       }
@@ -616,12 +630,8 @@ export class UnitLayer implements Layer {
         continue;
       }
 
-      const elapsedMs = performance.now() - frameStartMs;
-      const canDrawWithinTarget = elapsedMs < UNIT_DRAW_BUDGET_MS;
-      const canDrawOnScreenOverrun =
-        bucket === "on" &&
-        elapsedMs < UNIT_DRAW_BUDGET_MS + UNIT_DRAW_SOFT_OVERRUN_MS;
-      if (!canDrawWithinTarget && !canDrawOnScreenOverrun) {
+      const elapsedMs = performance.now() - passStartMs;
+      if (elapsedMs >= budgetMs) {
         budgetRemaining = false;
         skipped++;
         break;
@@ -735,7 +745,13 @@ export class UnitLayer implements Layer {
           : 0;
     }
 
-    return { sampled, drawn, skipped, budgetRemaining };
+    return {
+      sampled,
+      drawn,
+      skipped,
+      budgetRemaining,
+      budgetUsedMs: performance.now() - passStartMs,
+    };
   }
 
   private buildMoverSpatialHash(): MoverSpatialIndex {
