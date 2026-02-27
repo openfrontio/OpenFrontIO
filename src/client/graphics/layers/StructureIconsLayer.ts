@@ -191,7 +191,7 @@ export class StructureIconsLayer implements Layer {
   tick() {
     const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
     if (unitUpdates) {
-      for (let i = 0; i < unitUpdates.length; i++) {
+      for (let i = 0, len = unitUpdates.length; i < len; i++) {
         const unitView = this.game.unit(unitUpdates[i].id);
         if (unitView === undefined) {
           continue;
