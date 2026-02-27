@@ -2,6 +2,7 @@ import {
   PathFinder,
   PathResult,
   PathStatus,
+  SegmentPlan,
   SteppingPathFinder,
 } from "./types";
 
@@ -115,5 +116,62 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
     }
 
     return this.finder.findPath(from, to);
+  }
+
+  planSegments(from: T | T[], to: T): SegmentPlan | null {
+    if (!this.finder.planSegments) {
+      return null;
+    }
+
+    // If called with multi-source, don't try to prime the step cache (next() uses single-source).
+    if (Array.isArray(from)) {
+      // Still compute a path first so inner transformers can cache their segment plan off findPath().
+      this.finder.findPath(from, to);
+      return this.finder.planSegments(from, to);
+    }
+
+    // Mirror next() pre-check behavior.
+    if (this.config.preCheck) {
+      const result = this.config.preCheck(from, to);
+      if (result && result.status === PathStatus.NOT_FOUND) {
+        return null;
+      }
+    }
+
+    if (this.config.equals(from, to)) {
+      if (typeof (from as any) !== "number") {
+        return null;
+      }
+      return {
+        points: Uint32Array.from([from as any]),
+        segmentSteps: new Uint32Array(0),
+      };
+    }
+
+    if (this.lastTo === null || !this.config.equals(this.lastTo, to)) {
+      this.path = null;
+      this.pathIndex = 0;
+      this.lastTo = to;
+    }
+
+    if (this.path === null) {
+      try {
+        this.path = this.finder.findPath(from, to);
+      } catch (err) {
+        console.error("PathFinder threw an error during findPath", err);
+        return null;
+      }
+
+      if (this.path === null) {
+        return null;
+      }
+
+      this.pathIndex = 0;
+      if (this.path.length > 0 && this.config.equals(this.path[0], from)) {
+        this.pathIndex = 1;
+      }
+    }
+
+    return this.finder.planSegments(from, to);
   }
 }

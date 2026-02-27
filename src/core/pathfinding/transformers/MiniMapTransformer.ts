@@ -1,8 +1,12 @@
 import { Cell } from "../../game/Game";
 import { GameMap, TileRef } from "../../game/GameMap";
-import { PathFinder } from "../types";
+import { PathFinder, SegmentPlan } from "../types";
 
 export class MiniMapTransformer implements PathFinder<number> {
+  private lastPlanFrom: TileRef | TileRef[] | null = null;
+  private lastPlanTo: TileRef | null = null;
+  private lastPlan: SegmentPlan | null = null;
+
   constructor(
     private inner: PathFinder<number>,
     private map: GameMap,
@@ -29,6 +33,9 @@ export class MiniMapTransformer implements PathFinder<number> {
     // Search on minimap
     const path = this.inner.findPath(miniFrom, miniTo);
     if (!path || path.length === 0) {
+      this.lastPlanFrom = from;
+      this.lastPlanTo = to;
+      this.lastPlan = null;
       return null;
     }
 
@@ -60,7 +67,73 @@ export class MiniMapTransformer implements PathFinder<number> {
     const cellTo = new Cell(this.map.x(to), this.map.y(to));
     const upscaled = this.fixExtremes(upscaledPath, cellTo, cellFrom);
 
+    const miniPlan = this.inner.planSegments?.(miniFrom, miniTo) ?? null;
+    this.lastPlanFrom = from;
+    this.lastPlanTo = to;
+    this.lastPlan = miniPlan
+      ? this.upscaleSegmentPlan(miniPlan, cellFrom, cellTo)
+      : null;
+
     return upscaled.map((c) => this.map.ref(c.x, c.y));
+  }
+
+  planSegments(from: TileRef | TileRef[], to: TileRef): SegmentPlan | null {
+    if (this.lastPlanFrom === from && this.lastPlanTo === to) {
+      return this.lastPlan;
+    }
+
+    this.findPath(from, to);
+    return this.lastPlan;
+  }
+
+  private upscaleSegmentPlan(
+    plan: SegmentPlan,
+    cellFrom: Cell | undefined,
+    cellTo: Cell,
+    scaleFactor: number = 2,
+  ): SegmentPlan {
+    const dstRef = this.map.ref(cellTo.x, cellTo.y);
+
+    const points: number[] = [];
+    for (let i = 0; i < plan.points.length; i++) {
+      const miniRef = plan.points[i] as unknown as TileRef;
+      const x = this.miniMap.x(miniRef) * scaleFactor;
+      const y = this.miniMap.y(miniRef) * scaleFactor;
+      points.push(this.map.ref(x, y) >>> 0);
+    }
+
+    const steps: number[] = new Array(plan.segmentSteps.length);
+    for (let i = 0; i < plan.segmentSteps.length; i++) {
+      steps[i] = (plan.segmentSteps[i] * scaleFactor) >>> 0;
+    }
+
+    if (cellFrom !== undefined && points.length > 0) {
+      const srcRef = this.map.ref(cellFrom.x, cellFrom.y);
+      if (points[0] !== srcRef >>> 0) {
+        const a = srcRef;
+        const b = points[0] as TileRef;
+        const dx = this.map.x(b) - this.map.x(a);
+        const dy = this.map.y(b) - this.map.y(a);
+        const segSteps = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+        points.unshift(srcRef >>> 0);
+        steps.unshift(segSteps >>> 0);
+      }
+    }
+
+    if (points.length > 0 && points[points.length - 1] !== dstRef >>> 0) {
+      const a = points[points.length - 1] as TileRef;
+      const b = dstRef;
+      const dx = this.map.x(b) - this.map.x(a);
+      const dy = this.map.y(b) - this.map.y(a);
+      const segSteps = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+      points.push(dstRef >>> 0);
+      steps.push(segSteps >>> 0);
+    }
+
+    return {
+      points: Uint32Array.from(points),
+      segmentSteps: Uint32Array.from(steps),
+    };
   }
 
   private upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
