@@ -43,7 +43,11 @@ const ONSCREEN_HYSTERESIS_FRAMES = 2;
 const OFFSCREEN_VERIFY_MAX_PER_FRAME = 12;
 const VIEW_PADDING_PX = 12;
 const MOVER_SPATIAL_HASH_CELL_PX = 24;
-const DYNAMIC_MOVER_CANVAS_SCALE = 5;
+const DYNAMIC_MOVER_SCALE_STEPS = [1, 2, 3, 4];
+const DYNAMIC_MOVER_ZOOM_THRESHOLDS = [1.2, 2.4, 4.8] as const;
+const DYNAMIC_MOVER_ZOOM_HYSTERESIS = 0.2;
+const DYNAMIC_MOVER_SCALE_SETTLE_MS = 160;
+const DYNAMIC_MOVER_SCALE_COOLDOWN_MS = 300;
 const DYNAMIC_MOVER_SUBPIXEL_SNAP = false;
 const SMALL_SHIP_MASK_SIZE = 5;
 const TRANSPORT_SHIP_MASK = [
@@ -136,6 +140,13 @@ export class UnitLayer implements Layer {
   private onScreenCursor = 0;
   private offScreenCursor = 0;
   private renderFrame = 0;
+  private dynamicMoverCanvasScale = 1;
+  private pendingDynamicMoverCanvasScale: number | null = null;
+  private pendingDynamicMoverCanvasScaleSinceMs = 0;
+  private lastDynamicMoverCanvasScaleChangeAtMs = -Infinity;
+  private lastDynamicMoverCanvasRescaleMs = 0;
+  private totalDynamicMoverCanvasRescaleMs = 0;
+  private dynamicMoverCanvasRescaleCount = 0;
   private lastPerfCounters: Record<string, number> = {
     moversTrackedTotal: 0,
     moversSampled: 0,
@@ -146,6 +157,10 @@ export class UnitLayer implements Layer {
     budgetSoftOverrunMs: UNIT_DRAW_SOFT_OVERRUN_MS,
     avgOnScreenDebt: 0,
     maxOnScreenDebt: 0,
+    moverCanvasScale: 1,
+    moverCanvasRescaleLastMs: 0,
+    moverCanvasRescaleAvgMs: 0,
+    moverCanvasRescaleCount: 0,
   };
 
   private theme: Theme;
@@ -361,6 +376,8 @@ export class UnitLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     this.renderFrame++;
+    const nowMs = performance.now();
+    this.maybeUpdateDynamicMoverCanvasScale(nowMs);
     const tickAlpha = this.computeTickAlpha();
     const tickFloat = this.game.ticks() + tickAlpha;
     const viewBounds = this.currentViewBounds();
@@ -469,6 +486,14 @@ export class UnitLayer implements Layer {
       avgOnScreenDebt:
         onScreenDebtCount > 0 ? totalOnScreenDebt / onScreenDebtCount : 0,
       maxOnScreenDebt,
+      moverCanvasScale: this.dynamicMoverCanvasScale,
+      moverCanvasRescaleLastMs: this.lastDynamicMoverCanvasRescaleMs,
+      moverCanvasRescaleAvgMs:
+        this.dynamicMoverCanvasRescaleCount > 0
+          ? this.totalDynamicMoverCanvasRescaleMs /
+            this.dynamicMoverCanvasRescaleCount
+          : 0,
+      moverCanvasRescaleCount: this.dynamicMoverCanvasRescaleCount,
     };
   }
 
@@ -925,12 +950,12 @@ export class UnitLayer implements Layer {
   }
 
   private snapDynamicMoverCoord(value: number): number {
-    if (!DYNAMIC_MOVER_SUBPIXEL_SNAP || DYNAMIC_MOVER_CANVAS_SCALE <= 0) {
+    if (!DYNAMIC_MOVER_SUBPIXEL_SNAP || this.dynamicMoverCanvasScale <= 0) {
       return value;
     }
     return (
-      Math.round(value * DYNAMIC_MOVER_CANVAS_SCALE) /
-      DYNAMIC_MOVER_CANVAS_SCALE
+      Math.round(value * this.dynamicMoverCanvasScale) /
+      this.dynamicMoverCanvasScale
     );
   }
 
@@ -1052,12 +1077,17 @@ export class UnitLayer implements Layer {
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
 
-    this.dynamicMoverCanvas = document.createElement("canvas");
-    const dynamicMoverContext = this.dynamicMoverCanvas.getContext("2d");
-    if (dynamicMoverContext === null)
-      throw new Error("2d context not supported");
-    this.dynamicMoverContext = dynamicMoverContext;
-    this.dynamicMoverContext.imageSmoothingEnabled = false;
+    const initialDynamicScale = this.baseDynamicMoverCanvasScaleForZoom(
+      this.transformHandler.scale,
+    );
+    this.dynamicMoverCanvasScale = initialDynamicScale;
+    this.pendingDynamicMoverCanvasScale = null;
+    this.pendingDynamicMoverCanvasScaleSinceMs = 0;
+    this.lastDynamicMoverCanvasScaleChangeAtMs = performance.now();
+    this.lastDynamicMoverCanvasRescaleMs = 0;
+    this.totalDynamicMoverCanvasRescaleMs = 0;
+    this.dynamicMoverCanvasRescaleCount = 0;
+    this.initializeDynamicMoverCanvas(initialDynamicScale);
 
     this.trailCanvas = document.createElement("canvas");
     const trailContext = this.trailCanvas.getContext("2d");
@@ -1066,17 +1096,6 @@ export class UnitLayer implements Layer {
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
-    this.dynamicMoverCanvas.width = this.game.width() * DYNAMIC_MOVER_CANVAS_SCALE;
-    this.dynamicMoverCanvas.height =
-      this.game.height() * DYNAMIC_MOVER_CANVAS_SCALE;
-    this.dynamicMoverContext.setTransform(
-      DYNAMIC_MOVER_CANVAS_SCALE,
-      0,
-      0,
-      DYNAMIC_MOVER_CANVAS_SCALE,
-      0,
-      0,
-    );
     this.trailCanvas.width = this.game.width();
     this.trailCanvas.height = this.game.height();
 
@@ -1089,6 +1108,127 @@ export class UnitLayer implements Layer {
     this.trailDirty = true;
 
     this.redrawStaticSprites();
+  }
+
+  private baseDynamicMoverCanvasScaleForZoom(zoom: number): number {
+    let idx = 0;
+    while (
+      idx < DYNAMIC_MOVER_ZOOM_THRESHOLDS.length &&
+      zoom >= DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx]
+    ) {
+      idx++;
+    }
+    return DYNAMIC_MOVER_SCALE_STEPS[idx];
+  }
+
+  private dynamicMoverCanvasScaleForZoomWithHysteresis(zoom: number): number {
+    let idx = DYNAMIC_MOVER_SCALE_STEPS.indexOf(this.dynamicMoverCanvasScale);
+    if (idx < 0) {
+      idx = 0;
+    }
+
+    while (
+      idx < DYNAMIC_MOVER_ZOOM_THRESHOLDS.length &&
+      zoom >= DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx] + DYNAMIC_MOVER_ZOOM_HYSTERESIS
+    ) {
+      idx++;
+    }
+
+    while (
+      idx > 0 &&
+      zoom < DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx - 1] - DYNAMIC_MOVER_ZOOM_HYSTERESIS
+    ) {
+      idx--;
+    }
+
+    return DYNAMIC_MOVER_SCALE_STEPS[idx];
+  }
+
+  private maybeUpdateDynamicMoverCanvasScale(nowMs: number): void {
+    const targetScale = this.dynamicMoverCanvasScaleForZoomWithHysteresis(
+      this.transformHandler.scale,
+    );
+    if (targetScale === this.dynamicMoverCanvasScale) {
+      this.pendingDynamicMoverCanvasScale = null;
+      this.pendingDynamicMoverCanvasScaleSinceMs = 0;
+      return;
+    }
+
+    if (
+      nowMs - this.lastDynamicMoverCanvasScaleChangeAtMs <
+      DYNAMIC_MOVER_SCALE_COOLDOWN_MS
+    ) {
+      return;
+    }
+
+    if (this.pendingDynamicMoverCanvasScale !== targetScale) {
+      this.pendingDynamicMoverCanvasScale = targetScale;
+      this.pendingDynamicMoverCanvasScaleSinceMs = nowMs;
+      return;
+    }
+
+    if (
+      nowMs - this.pendingDynamicMoverCanvasScaleSinceMs <
+      DYNAMIC_MOVER_SCALE_SETTLE_MS
+    ) {
+      return;
+    }
+
+    this.lastDynamicMoverCanvasRescaleMs =
+      this.rebuildDynamicMoverCanvas(targetScale);
+    this.totalDynamicMoverCanvasRescaleMs += this.lastDynamicMoverCanvasRescaleMs;
+    this.dynamicMoverCanvasRescaleCount++;
+    this.dynamicMoverCanvasScale = targetScale;
+    this.lastDynamicMoverCanvasScaleChangeAtMs = nowMs;
+    this.pendingDynamicMoverCanvasScale = null;
+    this.pendingDynamicMoverCanvasScaleSinceMs = 0;
+  }
+
+  private initializeDynamicMoverCanvas(scale: number): void {
+    this.dynamicMoverCanvas = document.createElement("canvas");
+    this.dynamicMoverCanvas.width = Math.max(1, this.game.width() * scale);
+    this.dynamicMoverCanvas.height = Math.max(1, this.game.height() * scale);
+    const dynamicMoverContext = this.dynamicMoverCanvas.getContext("2d");
+    if (dynamicMoverContext === null) {
+      throw new Error("2d context not supported");
+    }
+    this.dynamicMoverContext = dynamicMoverContext;
+    this.dynamicMoverContext.imageSmoothingEnabled = false;
+    this.dynamicMoverContext.setTransform(scale, 0, 0, scale, 0, 0);
+  }
+
+  private rebuildDynamicMoverCanvas(targetScale: number): number {
+    const oldCanvas = this.dynamicMoverCanvas;
+    const oldWidth = oldCanvas.width;
+    const oldHeight = oldCanvas.height;
+
+    this.dynamicMoverCanvas = document.createElement("canvas");
+    this.dynamicMoverCanvas.width = Math.max(1, this.game.width() * targetScale);
+    this.dynamicMoverCanvas.height = Math.max(1, this.game.height() * targetScale);
+    const dynamicMoverContext = this.dynamicMoverCanvas.getContext("2d");
+    if (dynamicMoverContext === null) {
+      throw new Error("2d context not supported");
+    }
+    this.dynamicMoverContext = dynamicMoverContext;
+    this.dynamicMoverContext.imageSmoothingEnabled = false;
+
+    const blitStart = performance.now();
+    this.dynamicMoverContext.setTransform(1, 0, 0, 1, 0, 0);
+    this.dynamicMoverContext.drawImage(
+      oldCanvas,
+      0,
+      0,
+      oldWidth,
+      oldHeight,
+      0,
+      0,
+      this.dynamicMoverCanvas.width,
+      this.dynamicMoverCanvas.height,
+    );
+    const blitMs = performance.now() - blitStart;
+
+    this.dynamicMoverContext.setTransform(targetScale, 0, 0, targetScale, 0, 0);
+    return blitMs;
   }
 
   private setsEqual(a: Set<number>, b: Set<number>): boolean {
