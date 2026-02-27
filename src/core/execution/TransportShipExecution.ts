@@ -9,7 +9,10 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { MotionPlanRecord } from "../game/MotionPlans";
+import {
+  densePathToLosKeypointSegments,
+  MotionPlanRecord,
+} from "../game/MotionPlans";
 import { targetTransportTile } from "../game/TransportShipUtils";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
@@ -112,18 +115,26 @@ export class TransportShipExecution implements Execution {
       targetTile: this.dst,
     });
 
-    const fullPath = this.pathFinder.findPath(this.src, this.dst) ?? [this.src];
-    if (fullPath.length === 0 || fullPath[0] !== this.src) {
-      fullPath.unshift(this.src);
-    }
+    const densePath = this.pathFinder.findPath(this.src, this.dst);
+    const segPlan = (densePath &&
+      densePathToLosKeypointSegments(
+        densePath,
+        this.mg.map(),
+        (t) =>
+          this.mg.isWater(t) || (this.mg.isLand(t) && this.mg.isShoreline(t)),
+      )) ?? {
+      points: Uint32Array.from([this.src]),
+      segmentSteps: new Uint32Array(0),
+    };
 
     const motionPlan: MotionPlanRecord = {
-      kind: "grid",
+      kind: "grid_segments",
       unitId: this.boat.id(),
       planId: this.motionPlanId,
       startTick: ticks + this.ticksPerMove,
       ticksPerStep: this.ticksPerMove,
-      path: fullPath,
+      points: segPlan.points,
+      segmentSteps: segPlan.segmentSteps,
     };
     this.mg.recordMotionPlan(motionPlan);
     this.motionPlanDst = this.dst;
@@ -269,20 +280,27 @@ export class TransportShipExecution implements Execution {
 
     if (this.dst !== null && this.dst !== this.motionPlanDst) {
       this.motionPlanId++;
-      const fullPath = this.pathFinder.findPath(this.boat.tile(), this.dst) ?? [
-        this.boat.tile(),
-      ];
-      if (fullPath.length === 0 || fullPath[0] !== this.boat.tile()) {
-        fullPath.unshift(this.boat.tile());
-      }
+      const from = this.boat.tile();
+      const densePath = this.pathFinder.findPath(from, this.dst);
+      const segPlan = (densePath &&
+        densePathToLosKeypointSegments(
+          densePath,
+          this.mg.map(),
+          (t) =>
+            this.mg.isWater(t) || (this.mg.isLand(t) && this.mg.isShoreline(t)),
+        )) ?? {
+        points: Uint32Array.from([from]),
+        segmentSteps: new Uint32Array(0),
+      };
 
       this.mg.recordMotionPlan({
-        kind: "grid",
+        kind: "grid_segments",
         unitId: this.boat.id(),
         planId: this.motionPlanId,
         startTick: ticks + this.ticksPerMove,
         ticksPerStep: this.ticksPerMove,
-        path: fullPath,
+        points: segPlan.points,
+        segmentSteps: segPlan.segmentSteps,
       });
       this.motionPlanDst = this.dst;
     }
