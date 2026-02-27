@@ -1242,6 +1242,16 @@ export class PerformanceOverlay extends LitElement implements Layer {
                   ${Number(unitLayerCounters.moversSkipped ?? 0)}
                 </div>
                 <div class="performance-line">
+                  moverCanvasScale:
+                  ${Number(unitLayerCounters.moverCanvasScale ?? 0).toFixed(0)}
+                  rescale(last/avg/count):
+                  ${Number(unitLayerCounters.moverCanvasRescaleLastMs ?? 0).toFixed(2)}ms
+                  /
+                  ${Number(unitLayerCounters.moverCanvasRescaleAvgMs ?? 0).toFixed(2)}ms
+                  /
+                  ${Number(unitLayerCounters.moverCanvasRescaleCount ?? 0).toFixed(0)}
+                </div>
+                <div class="performance-line">
                   draw:
                   ${Number(unitLayerCounters.drawTimeMs ?? 0).toFixed(2)}ms /
                   ${Number(unitLayerCounters.budgetTargetMs ?? 0).toFixed(1)}ms
