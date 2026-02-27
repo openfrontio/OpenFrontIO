@@ -2,7 +2,7 @@ import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { getClanTag } from "../Util";
+import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -468,7 +468,7 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
-  public readonly clan: string | null;
+  public readonly displayName: string;
 
   constructor(
     public readonly name: string,
@@ -478,8 +478,9 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
+    public readonly clanTag: string | null = null,
   ) {
-    this.clan = getClanTag(name);
+    this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
 }
 
@@ -664,7 +665,6 @@ export interface Player {
   // Either allied or on same team.
   isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
-  clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];

@@ -3,6 +3,7 @@ import { customAlphabet } from "nanoid";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
+  ClientInfo,
   GameConfig,
   GameID,
   GameRecord,
@@ -339,29 +340,114 @@ export function sigmoid(
   return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
 }
 
-// Compute clan from name
-export function getClanTag(name: string): string | null {
-  const clanTag = clanMatch(name);
-  return clanTag ? clanTag[1].toUpperCase() : null;
+export function formatPlayerDisplayName(
+  username: string,
+  clanTag?: string | null,
+): string {
+  return clanTag ? `[${clanTag}] ${username}` : username;
 }
 
-export function getClanTagOriginalCase(name: string): string | null {
-  const clanTag = clanMatch(name);
-  return clanTag ? clanTag[1] : null;
+export function clientInfoListsEqual(
+  a: readonly ClientInfo[] = [],
+  b: readonly ClientInfo[] = [],
+): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i];
+    const right = b[i];
+    if (
+      left.clientID !== right.clientID ||
+      left.username !== right.username ||
+      left.clanTag !== right.clanTag
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function sortedArraysEqual(
+  left: readonly string[] = [],
+  right: readonly string[] = [],
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  for (let i = 0; i < sortedLeft.length; i++) {
+    if (sortedLeft[i] !== sortedRight[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function publicGameModifiersEqual(
+  left: GameConfig["publicGameModifiers"],
+  right: GameConfig["publicGameModifiers"],
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  return (
+    left.isCompact === right.isCompact &&
+    left.isRandomSpawn === right.isRandomSpawn &&
+    left.isCrowded === right.isCrowded &&
+    left.startingGold === right.startingGold
+  );
+}
+
+export function gameConfigsEqual(
+  left: GameConfig | null | undefined,
+  right: GameConfig | null | undefined,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  return (
+    left.gameMap === right.gameMap &&
+    left.difficulty === right.difficulty &&
+    left.donateGold === right.donateGold &&
+    left.donateTroops === right.donateTroops &&
+    left.gameType === right.gameType &&
+    left.gameMode === right.gameMode &&
+    left.rankedType === right.rankedType &&
+    left.gameMapSize === right.gameMapSize &&
+    publicGameModifiersEqual(
+      left.publicGameModifiers,
+      right.publicGameModifiers,
+    ) &&
+    left.disableNations === right.disableNations &&
+    left.bots === right.bots &&
+    left.infiniteGold === right.infiniteGold &&
+    left.infiniteTroops === right.infiniteTroops &&
+    left.instantBuild === right.instantBuild &&
+    left.disableNavMesh === right.disableNavMesh &&
+    left.randomSpawn === right.randomSpawn &&
+    left.maxPlayers === right.maxPlayers &&
+    left.maxTimerValue === right.maxTimerValue &&
+    left.spawnImmunityDuration === right.spawnImmunityDuration &&
+    sortedArraysEqual(left.disabledUnits, right.disabledUnits) &&
+    left.playerTeams === right.playerTeams &&
+    left.goldMultiplier === right.goldMultiplier &&
+    left.startingGold === right.startingGold
+  );
 }
 
 const CLAN_TAG_CHARS = "a-zA-Z0-9";
 
 const CLAN_TAG_INVALID_CHARS = new RegExp(`[^${CLAN_TAG_CHARS}]`, "g");
-const CLAN_TAG_REGEX = new RegExp(`\\[([${CLAN_TAG_CHARS}]{2,5})\\]`);
 
 export function sanitizeClanTag(tag: string): string {
   return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
-}
-
-function clanMatch(name: string): RegExpMatchArray | null {
-  if (!name.includes("[") || !name.includes("]")) {
-    return null;
-  }
-  return name.match(CLAN_TAG_REGEX);
 }

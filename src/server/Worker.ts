@@ -355,9 +355,21 @@ export async function startWorker() {
           return;
         }
 
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        const censored = privilegeRefresher
+          .get()
+          .censor(clientMsg.username, clientMsg.clanTag ?? null);
+
         // Try to reconnect an existing client (e.g., page refresh)
         // If successful, skip all authorization
-        if (gm.rejoinClient(ws, persistentId, clientMsg.gameID)) {
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censored.username,
+            clanTag: censored.clanTag,
+          })
+        ) {
           return;
         }
 
@@ -439,11 +451,6 @@ export async function startWorker() {
           }
         }
 
-        // Censor profane usernames server-side (don't reject, just rename)
-        const censoredUsername = privilegeRefresher
-          .get()
-          .censorUsername(clientMsg.username);
-
         // Create client and add to game
         const client = new Client(
           generateID(),
@@ -452,8 +459,8 @@ export async function startWorker() {
           roles,
           flares,
           ip,
-          censoredUsername,
-          clientMsg.username,
+          censored.username,
+          censored.clanTag,
           ws,
           cosmeticResult.cosmetics,
         );

@@ -56,6 +56,7 @@ export interface LobbyConfig {
   serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
+  playerClanTag: string | null;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -228,6 +229,7 @@ async function createClientGame(
     gameMap,
     clientID,
     lobbyConfig.playerName,
+    lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
   );
@@ -301,6 +303,7 @@ export class ClientGameRunner {
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
+        clanTag: this.lobby.playerClanTag ?? undefined,
         clientID: this.clientID,
         stats: update.allPlayersStats[this.clientID],
       },

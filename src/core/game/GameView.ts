@@ -4,7 +4,7 @@ import { Config } from "../configuration/Config";
 import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
-import { createRandomName } from "../Util";
+import { createRandomName, formatPlayerDisplayName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
@@ -453,7 +453,7 @@ export class PlayerView {
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.data.name;
+      : this.data.displayName;
   }
 
   clientID(): ClientID | null {
@@ -605,21 +605,15 @@ export class GameView implements GameMap {
     private _mapData: TerrainMapData,
     private _myClientID: ClientID,
     private _myUsername: string,
+    private _myClanTag: string | null,
     private _gameID: GameID,
-    private humans: Player[],
+    humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
-    // Replace the local player's username with their own stored username.
-    // This way the user does not know they are being censored.
-    for (const h of this.humans) {
-      if (h.clientID === this._myClientID) {
-        h.username = this._myUsername;
-      }
-    }
     this._cosmetics = new Map(
-      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
+      humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
@@ -659,29 +653,63 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
+    const myDisplayName = formatPlayerDisplayName(
+      this._myUsername,
+      this._myClanTag,
+    );
+    const myPlayerUpdateCandidates: PlayerUpdate[] = [];
+
     gu.updates[GameUpdateType.Player].forEach((pu) => {
+      const isMyPlayerUpdate =
+        pu.clientID === this._myClientID ||
+        this._myPlayer?.id() === pu.id ||
+        (this._myPlayer === null &&
+          pu.playerType === PlayerType.Human &&
+          pu.displayName === myDisplayName);
+
+      if (isMyPlayerUpdate) {
+        myPlayerUpdateCandidates.push(pu);
+      }
+
       this.smallIDToID.set(pu.smallID, pu.id);
-      const player = this._players.get(pu.id);
+      let player = this._players.get(pu.id);
       if (player !== undefined) {
         player.data = pu;
-        player.nameData = gu.playerNameViewData[pu.id];
+        const nextNameData = gu.playerNameViewData[pu.id];
+        if (nextNameData !== undefined) {
+          player.nameData = nextNameData;
+        }
       } else {
-        this._players.set(
-          pu.id,
-          new PlayerView(
-            this,
-            pu,
-            gu.playerNameViewData[pu.id],
-            // First check human by clientID, then check nation by name.
-            this._cosmetics.get(pu.clientID ?? "") ??
-              this._cosmetics.get(pu.name) ??
-              {},
-          ),
+        player = new PlayerView(
+          this,
+          pu,
+          gu.playerNameViewData[pu.id],
+          // First check human by clientID, then check nation by name.
+          this._cosmetics.get(pu.clientID ?? "") ??
+            this._cosmetics.get(pu.name) ??
+            {},
         );
+        this._players.set(pu.id, player);
       }
     });
 
+    if (myPlayerUpdateCandidates.length === 1) {
+      const myUpdate = myPlayerUpdateCandidates[0];
+      myUpdate.name = this._myUsername;
+      myUpdate.displayName = myDisplayName;
+      this._myPlayer = this._players.get(myUpdate.id) ?? null;
+    }
+
     this._myPlayer ??= this.playerByClientID(this._myClientID);
+    if (this._myPlayer === null) {
+      const matches = this.playerViews().filter(
+        (p) =>
+          p.type() === PlayerType.Human && p.data.displayName === myDisplayName,
+      );
+      if (matches.length === 1) {
+        this._myPlayer = matches[0];
+      }
+    }
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;

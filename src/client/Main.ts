@@ -731,6 +731,10 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
+    if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
+      return;
+    }
+
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -752,8 +756,8 @@ class Client {
         serverConfig: config,
         cosmetics: await getPlayerCosmeticsRefs(),
         turnstileToken: await this.getTurnstileToken(lobby),
-        playerName:
-          this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
+        playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
+        playerClanTag: this.usernameInput?.getClanTag() ?? null,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },

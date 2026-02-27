@@ -116,6 +116,7 @@ export class NameLayer implements Layer {
 
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
     const size = this.transformHandler.scale * baseSize;
+    const isMyPlayer = render.player.clientID() === this.game.myClientID();
     const isOnScreen = render.location
       ? this.transformHandler.isOnScreen(render.location)
       : false;
@@ -123,7 +124,7 @@ export class NameLayer implements Layer {
 
     if (
       !this.isVisible ||
-      size < 7 ||
+      (!isMyPlayer && size < 7) ||
       (this.transformHandler.scale > maxZoomScale && size > 100) ||
       !isOnScreen
     ) {
@@ -239,7 +240,7 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "player-name-span";
-    nameSpan.innerHTML = player.name();
+    nameSpan.textContent = player.displayName();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
@@ -335,7 +336,7 @@ export class NameLayer implements Layer {
     nameDiv.style.color = render.fontColor;
     const span = nameDiv.querySelector(".player-name-span");
     if (span) {
-      span.innerHTML = render.player.name();
+      span.textContent = render.player.displayName();
     }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
