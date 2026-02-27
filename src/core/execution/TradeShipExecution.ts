@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { densePathToLosKeypointSegments } from "../game/MotionPlans";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
 import { findClosestBy } from "../Util";
@@ -130,18 +131,27 @@ export class TradeShipExecution implements Execution {
         if (dst !== this.motionPlanDst) {
           this.motionPlanId++;
           const from = result.node;
-          const path = this.pathFinder.findPath(from, dst) ?? [from];
-          if (path.length === 0 || path[0] !== from) {
-            path.unshift(from);
-          }
+          const densePath = this.pathFinder.findPath(from, dst);
+          const segPlan = (densePath &&
+            densePathToLosKeypointSegments(
+              densePath,
+              this.mg.map(),
+              (t) =>
+                this.mg.isWater(t) ||
+                (this.mg.isLand(t) && this.mg.isShoreline(t)),
+            )) ?? {
+            points: Uint32Array.from([from]),
+            segmentSteps: new Uint32Array(0),
+          };
 
           this.mg.recordMotionPlan({
-            kind: "grid",
+            kind: "grid_segments",
             unitId: this.tradeShip.id(),
             planId: this.motionPlanId,
             startTick: ticks + 1,
             ticksPerStep: 1,
-            path,
+            points: segPlan.points,
+            segmentSteps: segPlan.segmentSteps,
           });
           this.motionPlanDst = dst;
         }
