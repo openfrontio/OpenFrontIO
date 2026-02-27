@@ -16,6 +16,11 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { sampleGridSegmentPlan } from "./SegmentMotionSample";
+import {
+  UnitMotionRenderQueue,
+  UnitMotionRenderQueueEntry,
+} from "./UnitMotionRenderQueue";
+import { pruneInactiveTrails } from "./TrailLifecycle";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
@@ -30,30 +35,69 @@ enum Relationship {
   Enemy,
 }
 
+const UNIT_DRAW_BUDGET_MS = 3;
+const UNIT_DRAW_SOFT_OVERRUN_MS = 1;
+const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 6;
+const MOVER_ONSCREEN_BOOST = 1_000_000_000;
+const MOVER_AGE_WEIGHT = 1;
+const MOVER_ERROR_WEIGHT = 2;
+const MOVER_DEBT_WEIGHT = 8;
+
+type TransportTrailState = {
+  xy: number[];
+  planId: number;
+  lastX: number;
+  lastY: number;
+  lastOnScreen: boolean;
+};
+
+type MoverSpriteRect = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+type MoverRenderState = {
+  planId: number;
+  lastRenderedX: number;
+  lastRenderedY: number;
+  lastRenderedAtMs: number;
+  lastErrorPx: number;
+  lastSpriteRect: MoverSpriteRect | null;
+  lastOnScreen: boolean;
+  queueVersion: number;
+  skipDebt: number;
+  lastSeenFrame: number;
+};
+
 export class UnitLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private unitTrailCanvas: HTMLCanvasElement;
-  private unitTrailContext: CanvasRenderingContext2D;
-  private transportShipTrailCanvas: HTMLCanvasElement;
-  private transportShipTrailContext: CanvasRenderingContext2D;
+  private dynamicMoverCanvas: HTMLCanvasElement;
+  private dynamicMoverContext: CanvasRenderingContext2D;
+  private trailCanvas: HTMLCanvasElement;
+  private trailContext: CanvasRenderingContext2D;
 
   // Pixel trails (currently only used for nukes).
-  private unitToTrail = new Map<UnitView, TileRef[]>();
+  private unitToTrail = new Map<number, TileRef[]>();
 
   private gridMoverUnitIds = new Set<number>();
 
-  private transportShipTrails = new Map<
-    number,
-    {
-      xy: number[];
-      planId: number;
-      lastX: number;
-      lastY: number;
-      lastOnScreen: boolean;
-    }
-  >();
-  private transportShipTrailDirty = false;
+  private transportShipTrails = new Map<number, TransportTrailState>();
+  private trailDirty = false;
+
+  private moverState = new Map<number, MoverRenderState>();
+  private motionQueue = new UnitMotionRenderQueue();
+  private renderFrame = 0;
+  private lastPerfCounters: Record<string, number> = {
+    moversSampled: 0,
+    moversDrawn: 0,
+    moversSkipped: 0,
+    queueSize: 0,
+    budgetUsedMs: 0,
+    avgDebt: 0,
+  };
 
   private theme: Theme;
 
@@ -83,14 +127,16 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
-    // Cleanup trails for nukes that were removed without a final inactive update event.
-    // These trails are stored outside of the normal unit sprite lifecycle.
-    const trailUnits = Array.from(this.unitToTrail.keys());
-    for (const unit of trailUnits) {
-      const current = this.game.unit(unit.id());
-      if (!current || !current.isActive()) {
-        this.clearTrail(unit);
-      }
+    const trailPrune = pruneInactiveTrails(
+      this.unitToTrail,
+      this.transportShipTrails,
+      (unitId) => {
+        const current = this.game.unit(unitId);
+        return !!current && current.isActive();
+      },
+    );
+    if (trailPrune.removedNukes > 0 || trailPrune.removedTransport > 0) {
+      this.trailDirty = true;
     }
 
     const gridMoverUnitIds = new Set<number>();
@@ -104,8 +150,8 @@ export class UnitLayer implements Layer {
     );
     if (moverSetChanged) {
       this.gridMoverUnitIds = gridMoverUnitIds;
+      this.pruneMoverStates(gridMoverUnitIds);
       this.redrawStaticSprites();
-      return;
     }
 
     const updatedUnitIds =
@@ -131,6 +177,7 @@ export class UnitLayer implements Layer {
     if (unitIds.size > 0) {
       this.updateUnitsSprites(Array.from(unitIds));
     }
+
   }
 
   init() {
@@ -265,93 +312,57 @@ export class UnitLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    const moversToDraw: Array<{ unit: UnitView; x: number; y: number }> = [];
-
+    this.renderFrame++;
     const tickAlpha = this.computeTickAlpha();
     const tickFloat = this.game.ticks() + tickAlpha;
+    const nowMs = performance.now();
+    const activeMoverIds = new Set<number>();
 
     for (const [unitId, plan] of this.game.motionPlans()) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) {
-        if (this.transportShipTrails.delete(unitId)) {
-          this.transportShipTrailDirty = true;
-        }
+        this.clearMoverState(unitId);
+        if (this.transportShipTrails.delete(unitId)) this.trailDirty = true;
         continue;
       }
+      activeMoverIds.add(unitId);
 
-      const sampled = sampleGridSegmentPlan(this.game, plan, tickFloat);
-      if (!sampled) {
-        continue;
-      }
-
-      const onScreen = this.transformHandler.isOnScreen(
-        new Cell(Math.floor(sampled.x), Math.floor(sampled.y)),
+      const onScreenHint = this.transformHandler.isOnScreen(
+        new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
       );
+      const state = this.ensureMoverState(unitId, plan.planId, nowMs);
+      state.lastSeenFrame = this.renderFrame;
 
-      if (unit.type() === UnitType.TransportShip) {
-        const existing = this.transportShipTrails.get(unitId);
-        if (!existing || existing.planId !== plan.planId) {
-          const xy: number[] = onScreen ? [sampled.x, sampled.y] : [];
-          this.transportShipTrails.set(unitId, {
-            xy,
-            planId: plan.planId,
-            lastX: sampled.x,
-            lastY: sampled.y,
-            lastOnScreen: onScreen,
-          });
-          if (onScreen) {
-            this.transportShipTrailDirty = true;
-          }
-        } else {
-          if (
-            onScreen &&
-            (existing.lastX !== sampled.x || existing.lastY !== sampled.y)
-          ) {
-            if (!existing.lastOnScreen && existing.xy.length > 0) {
-              existing.xy.push(Number.NaN, Number.NaN);
-            }
-            existing.xy.push(sampled.x, sampled.y);
-            this.transportShipTrailDirty = true;
-          } else if (onScreen && existing.xy.length === 0) {
-            existing.xy.push(sampled.x, sampled.y);
-            this.transportShipTrailDirty = true;
-          }
+      if (!onScreenHint && state.lastOnScreen && state.lastSpriteRect) {
+        this.clearMoverRect(state.lastSpriteRect);
+        state.lastOnScreen = false;
+      }
 
-          existing.lastX = sampled.x;
-          existing.lastY = sampled.y;
-          existing.lastOnScreen = onScreen;
-        }
-
-        if (onScreen) {
-          moversToDraw.push({ unit, x: sampled.x, y: sampled.y });
-        }
+      if (
+        !onScreenHint &&
+        ((this.renderFrame + unitId) % OFFSCREEN_REFRESH_EVERY_N_FRAMES !== 0) &&
+        state.skipDebt < 2
+      ) {
         continue;
       }
 
-      if (onScreen) {
-        moversToDraw.push({ unit, x: sampled.x, y: sampled.y });
-      }
+      const entry: UnitMotionRenderQueueEntry = {
+        unitId,
+        version: (state.queueVersion = (state.queueVersion + 1) >>> 0),
+        priority: this.computeMoverPriority(state, onScreenHint, nowMs),
+        onScreenHint,
+      };
+      this.motionQueue.enqueue(entry);
     }
 
-    // Remove transport-ship trails when the unit is gone (no fade during movement).
-    for (const unitId of this.transportShipTrails.keys()) {
-      const unit = this.game.unit(unitId);
-      if (!unit || !unit.isActive()) {
-        this.transportShipTrails.delete(unitId);
-        this.transportShipTrailDirty = true;
-      }
-    }
-    this.rebuildTransportShipTrailCanvasIfDirty();
+    this.pruneMoverStates(activeMoverIds);
+
+    const moverPerf = this.drawQueuedMovers(tickFloat, activeMoverIds);
+
+    this.rebuildTrailCanvasIfDirty();
 
     context.drawImage(
-      this.unitTrailCanvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
-    context.drawImage(
-      this.transportShipTrailCanvas,
+      this.trailCanvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
       this.game.width(),
@@ -364,16 +375,162 @@ export class UnitLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    context.drawImage(
+      this.dynamicMoverCanvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
 
-    for (const mover of moversToDraw) {
-      this.drawSpriteAt(
-        mover.unit,
-        mover.x - this.game.width() / 2,
-        mover.y - this.game.height() / 2,
-        context,
+    let totalDebt = 0;
+    let debtCount = 0;
+    for (const unitId of activeMoverIds) {
+      const state = this.moverState.get(unitId);
+      if (!state) continue;
+      totalDebt += state.skipDebt;
+      debtCount++;
+    }
+
+    this.lastPerfCounters = {
+      moversSampled: moverPerf.sampled,
+      moversDrawn: moverPerf.drawn,
+      moversSkipped: moverPerf.skipped,
+      queueSize: this.motionQueue.size(),
+      budgetUsedMs: moverPerf.budgetUsedMs,
+      avgDebt: debtCount > 0 ? totalDebt / debtCount : 0,
+    };
+  }
+
+  private drawQueuedMovers(
+    tickFloat: number,
+    activeMoverIds: Set<number>,
+  ): {
+    sampled: number;
+    drawn: number;
+    skipped: number;
+    budgetUsedMs: number;
+  } {
+    const frameStartMs = performance.now();
+    const drawnIds = new Set<number>();
+
+    let sampled = 0;
+    let drawn = 0;
+    let skipped = 0;
+
+    for (;;) {
+      const entry = this.motionQueue.pollValid((candidate) =>
+        this.isValidQueueEntry(candidate, activeMoverIds),
+      );
+      if (!entry) {
+        break;
+      }
+
+      const elapsedMs = performance.now() - frameStartMs;
+      const canDrawWithinTarget = elapsedMs < UNIT_DRAW_BUDGET_MS;
+      const canDrawOnScreenOverrun =
+        entry.onScreenHint &&
+        elapsedMs < UNIT_DRAW_BUDGET_MS + UNIT_DRAW_SOFT_OVERRUN_MS;
+      if (!canDrawWithinTarget && !canDrawOnScreenOverrun) {
+        skipped++;
+        break;
+      }
+
+      const unit = this.game.unit(entry.unitId);
+      const plan = this.game.motionPlans().get(entry.unitId);
+      const state = this.moverState.get(entry.unitId);
+      if (!unit || !unit.isActive() || !plan || !state) {
+        this.clearMoverState(entry.unitId);
+        skipped++;
+        continue;
+      }
+
+      sampled++;
+      const sampledPos = sampleGridSegmentPlan(this.game, plan, tickFloat);
+      if (!sampledPos) {
+        skipped++;
+        continue;
+      }
+
+      const onScreen = this.transformHandler.isOnScreen(
+        new Cell(Math.floor(sampledPos.x), Math.floor(sampledPos.y)),
+      );
+
+      if (!onScreen) {
+        if (state.lastOnScreen && state.lastSpriteRect) {
+          this.clearMoverRect(state.lastSpriteRect);
+          state.lastSpriteRect = null;
+          state.lastOnScreen = false;
+        }
+        if (unit.type() === UnitType.TransportShip) {
+          this.updateTransportShipTrail(
+            entry.unitId,
+            plan.planId,
+            sampledPos.x,
+            sampledPos.y,
+            false,
+          );
+        }
+        skipped++;
+        continue;
+      }
+
+      if (state.lastSpriteRect) {
+        this.clearMoverRect(state.lastSpriteRect);
+      }
+      const rect = this.drawSpriteAt(
+        unit,
+        sampledPos.x,
+        sampledPos.y,
+        this.dynamicMoverContext,
         false,
       );
+      if (!rect) {
+        skipped++;
+        continue;
+      }
+
+      const errorPx = Math.hypot(
+        sampledPos.x - state.lastRenderedX,
+        sampledPos.y - state.lastRenderedY,
+      );
+      state.lastErrorPx = errorPx;
+      state.lastRenderedX = sampledPos.x;
+      state.lastRenderedY = sampledPos.y;
+      state.lastRenderedAtMs = performance.now();
+      state.lastSpriteRect = rect;
+      state.lastOnScreen = true;
+      state.skipDebt = 0;
+      drawnIds.add(entry.unitId);
+      drawn++;
+
+      if (unit.type() === UnitType.TransportShip) {
+        this.updateTransportShipTrail(
+          entry.unitId,
+          plan.planId,
+          sampledPos.x,
+          sampledPos.y,
+          true,
+        );
+      }
     }
+
+    for (const unitId of activeMoverIds) {
+      if (drawnIds.has(unitId)) {
+        continue;
+      }
+      const state = this.moverState.get(unitId);
+      if (state) {
+        state.skipDebt = (state.skipDebt + 1) >>> 0;
+      }
+    }
+
+    return {
+      sampled,
+      drawn,
+      skipped,
+      budgetUsedMs: performance.now() - frameStartMs,
+    };
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {
@@ -387,42 +544,30 @@ export class UnitLayer implements Layer {
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
 
-    this.unitTrailCanvas = document.createElement("canvas");
-    const unitTrailContext = this.unitTrailCanvas.getContext("2d");
-    if (unitTrailContext === null) throw new Error("2d context not supported");
-    this.unitTrailContext = unitTrailContext;
-
-    this.transportShipTrailCanvas = document.createElement("canvas");
-    const transportTrailContext =
-      this.transportShipTrailCanvas.getContext("2d");
-    if (transportTrailContext === null)
+    this.dynamicMoverCanvas = document.createElement("canvas");
+    const dynamicMoverContext = this.dynamicMoverCanvas.getContext("2d");
+    if (dynamicMoverContext === null)
       throw new Error("2d context not supported");
-    this.transportShipTrailContext = transportTrailContext;
+    this.dynamicMoverContext = dynamicMoverContext;
+
+    this.trailCanvas = document.createElement("canvas");
+    const trailContext = this.trailCanvas.getContext("2d");
+    if (trailContext === null) throw new Error("2d context not supported");
+    this.trailContext = trailContext;
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
-    this.unitTrailCanvas.width = this.game.width();
-    this.unitTrailCanvas.height = this.game.height();
-    this.transportShipTrailCanvas.width = this.game.width();
-    this.transportShipTrailCanvas.height = this.game.height();
+    this.dynamicMoverCanvas.width = this.game.width();
+    this.dynamicMoverCanvas.height = this.game.height();
+    this.trailCanvas.width = this.game.width();
+    this.trailCanvas.height = this.game.height();
 
     this.gridMoverUnitIds = new Set<number>(this.game.motionPlans().keys());
-    this.transportShipTrailDirty = true;
+    this.moverState.clear();
+    this.motionQueue.clear();
+    this.trailDirty = true;
 
     this.redrawStaticSprites();
-
-    this.unitToTrail.forEach((trail, unit) => {
-      for (const t of trail) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          this.relationship(unit),
-          unit.owner().territoryColor(),
-          150,
-          this.unitTrailContext,
-        );
-      }
-    });
   }
 
   private setsEqual(a: Set<number>, b: Set<number>): boolean {
@@ -454,14 +599,161 @@ export class UnitLayer implements Layer {
     return Math.max(0, Math.min(1, alpha));
   }
 
-  private rebuildTransportShipTrailCanvasIfDirty(): void {
-    if (!this.transportShipTrailDirty) {
+  getPerfCounters(): Record<string, number> {
+    return this.lastPerfCounters;
+  }
+
+  private ensureMoverState(
+    unitId: number,
+    planId: number,
+    nowMs: number,
+  ): MoverRenderState {
+    const existing = this.moverState.get(unitId);
+    if (!existing) {
+      const state: MoverRenderState = {
+        planId,
+        lastRenderedX: 0,
+        lastRenderedY: 0,
+        lastRenderedAtMs: nowMs,
+        lastErrorPx: 0,
+        lastSpriteRect: null,
+        lastOnScreen: false,
+        queueVersion: 0,
+        skipDebt: 0,
+        lastSeenFrame: this.renderFrame,
+      };
+      this.moverState.set(unitId, state);
+      return state;
+    }
+
+    if (existing.planId !== planId) {
+      if (existing.lastSpriteRect) {
+        this.clearMoverRect(existing.lastSpriteRect);
+      }
+      existing.planId = planId;
+      existing.lastErrorPx = 0;
+      existing.lastOnScreen = false;
+      existing.lastSpriteRect = null;
+      existing.skipDebt = 0;
+    }
+
+    return existing;
+  }
+
+  private computeMoverPriority(
+    state: MoverRenderState,
+    onScreenHint: boolean,
+    nowMs: number,
+  ): number {
+    const ageMs = Math.max(0, nowMs - state.lastRenderedAtMs);
+    return (
+      (onScreenHint ? MOVER_ONSCREEN_BOOST : 0) +
+      ageMs * MOVER_AGE_WEIGHT +
+      state.lastErrorPx * MOVER_ERROR_WEIGHT +
+      state.skipDebt * MOVER_DEBT_WEIGHT
+    );
+  }
+
+  private isValidQueueEntry(
+    entry: UnitMotionRenderQueueEntry,
+    activeMoverIds: Set<number>,
+  ): boolean {
+    if (!activeMoverIds.has(entry.unitId)) {
+      return false;
+    }
+    const state = this.moverState.get(entry.unitId);
+    return state !== undefined && state.queueVersion === entry.version;
+  }
+
+  private pruneMoverStates(activeMoverIds: Set<number>): void {
+    for (const [unitId, state] of this.moverState) {
+      if (activeMoverIds.has(unitId)) {
+        continue;
+      }
+      if (state.lastSpriteRect) {
+        this.clearMoverRect(state.lastSpriteRect);
+      }
+      this.moverState.delete(unitId);
+    }
+  }
+
+  private clearMoverState(unitId: number): void {
+    const state = this.moverState.get(unitId);
+    if (state?.lastSpriteRect) {
+      this.clearMoverRect(state.lastSpriteRect);
+    }
+    this.moverState.delete(unitId);
+  }
+
+  private clearMoverRect(rect: MoverSpriteRect): void {
+    this.dynamicMoverContext.clearRect(rect.x, rect.y, rect.w, rect.h);
+  }
+
+  private updateTransportShipTrail(
+    unitId: number,
+    planId: number,
+    x: number,
+    y: number,
+    onScreen: boolean,
+  ): void {
+    const existing = this.transportShipTrails.get(unitId);
+    if (!existing || existing.planId !== planId) {
+      const xy: number[] = onScreen ? [x, y] : [];
+      this.transportShipTrails.set(unitId, {
+        xy,
+        planId,
+        lastX: x,
+        lastY: y,
+        lastOnScreen: onScreen,
+      });
+      if (onScreen) {
+        this.trailDirty = true;
+      }
       return;
     }
-    this.transportShipTrailDirty = false;
 
-    const ctx = this.transportShipTrailContext;
+    if (onScreen && (existing.lastX !== x || existing.lastY !== y)) {
+      if (!existing.lastOnScreen && existing.xy.length > 0) {
+        existing.xy.push(Number.NaN, Number.NaN);
+      }
+      existing.xy.push(x, y);
+      this.trailDirty = true;
+    } else if (onScreen && existing.xy.length === 0) {
+      existing.xy.push(x, y);
+      this.trailDirty = true;
+    }
+
+    existing.lastX = x;
+    existing.lastY = y;
+    existing.lastOnScreen = onScreen;
+  }
+
+  private rebuildTrailCanvasIfDirty(): void {
+    if (!this.trailDirty) {
+      return;
+    }
+    this.trailDirty = false;
+
+    const ctx = this.trailContext;
     ctx.clearRect(0, 0, this.game.width(), this.game.height());
+
+    for (const [unitId, trail] of this.unitToTrail) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive()) {
+        continue;
+      }
+      const rel = this.relationship(unit);
+      for (const tile of trail) {
+        this.paintCell(
+          this.game.x(tile),
+          this.game.y(tile),
+          rel,
+          unit.owner().territoryColor(),
+          150,
+          ctx,
+        );
+      }
+    }
 
     for (const [unitId, trail] of this.transportShipTrails) {
       const unit = this.game.unit(unitId);
@@ -661,55 +953,20 @@ export class UnitLayer implements Layer {
     this.drawSprite(unit);
   }
 
-  private drawTrail(trail: number[], color: Colord, rel: Relationship) {
-    // Paint new trail
-    for (const t of trail) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        color,
-        150,
-        this.unitTrailContext,
-      );
-    }
-  }
-
-  private clearTrail(unit: UnitView) {
-    const trail = this.unitToTrail.get(unit) ?? [];
-    const rel = this.relationship(unit);
-    for (const t of trail) {
-      this.clearCell(this.game.x(t), this.game.y(t), this.unitTrailContext);
-    }
-    this.unitToTrail.delete(unit);
-
-    // Repaint overlapping trails
-    const trailSet = new Set(trail);
-    for (const [other, trail] of this.unitToTrail) {
-      for (const t of trail) {
-        if (trailSet.has(t)) {
-          this.paintCell(
-            this.game.x(t),
-            this.game.y(t),
-            rel,
-            other.owner().territoryColor(),
-            150,
-            this.unitTrailContext,
-          );
-        }
-      }
+  private clearTrail(unitId: number) {
+    if (this.unitToTrail.delete(unitId)) {
+      this.trailDirty = true;
     }
   }
 
   private handleNuke(unit: UnitView) {
-    const rel = this.relationship(unit);
+    const unitId = unit.id();
 
-    if (!this.unitToTrail.has(unit)) {
-      this.unitToTrail.set(unit, []);
+    if (!this.unitToTrail.has(unitId)) {
+      this.unitToTrail.set(unitId, []);
     }
 
-    let newTrailSize = 1;
-    const trail = this.unitToTrail.get(unit) ?? [];
+    const trail = this.unitToTrail.get(unitId) ?? [];
     // It can move faster than 1 pixel, draw a line for the trail or else it will be dotted
     if (trail.length >= 1) {
       const cur = {
@@ -726,19 +983,14 @@ export class UnitLayer implements Layer {
         trail.push(this.game.ref(point.x, point.y));
         point = line.increment();
       }
-      newTrailSize = line.size();
     } else {
       trail.push(unit.lastTile());
     }
 
-    this.drawTrail(
-      trail.slice(-newTrailSize),
-      unit.owner().territoryColor(),
-      rel,
-    );
+    this.trailDirty = true;
     this.drawSprite(unit);
     if (!unit.isActive()) {
-      this.clearTrail(unit);
+      this.clearTrail(unitId);
     }
   }
 
@@ -813,7 +1065,7 @@ export class UnitLayer implements Layer {
     ctx: CanvasRenderingContext2D = this.context,
     roundCoords: boolean = true,
     customTerritoryColor?: Colord,
-  ) {
+  ): MoverSpriteRect | null {
     let alternateViewColor: Colord | null = null;
 
     if (this.alternateView) {
@@ -839,7 +1091,7 @@ export class UnitLayer implements Layer {
     );
 
     if (!unit.isActive()) {
-      return;
+      return null;
     }
 
     const targetable = unit.targetable();
@@ -850,15 +1102,25 @@ export class UnitLayer implements Layer {
 
     const drawX = x - sprite.width / 2;
     const drawY = y - sprite.height / 2;
+    const outX = roundCoords ? Math.round(drawX) : drawX;
+    const outY = roundCoords ? Math.round(drawY) : drawY;
     ctx.drawImage(
       sprite,
-      roundCoords ? Math.round(drawX) : drawX,
-      roundCoords ? Math.round(drawY) : drawY,
+      outX,
+      outY,
       sprite.width,
       sprite.width,
     );
 
     ctx.restore();
+
+    const pad = 1;
+    return {
+      x: outX - pad,
+      y: outY - pad,
+      w: sprite.width + pad * 2,
+      h: sprite.width + pad * 2,
+    };
   }
 
   private drawSprite(unit: UnitView, customTerritoryColor?: Colord) {

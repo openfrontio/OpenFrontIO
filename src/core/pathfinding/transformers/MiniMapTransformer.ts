@@ -130,9 +130,63 @@ export class MiniMapTransformer implements PathFinder<number> {
       steps.push(segSteps >>> 0);
     }
 
+    const compressed = this.compressCollinearSegments(points, steps);
+
     return {
-      points: Uint32Array.from(points),
-      segmentSteps: Uint32Array.from(steps),
+      points: Uint32Array.from(compressed.points),
+      segmentSteps: Uint32Array.from(compressed.segmentSteps),
+    };
+  }
+
+  private compressCollinearSegments(
+    points: number[],
+    segmentSteps: number[],
+  ): { points: number[]; segmentSteps: number[] } {
+    if (points.length <= 2 || segmentSteps.length <= 1) {
+      return { points, segmentSteps };
+    }
+
+    const outPoints: number[] = [points[0] >>> 0];
+    const outSteps: number[] = [];
+
+    let runSteps = segmentSteps[0] >>> 0;
+    let runDir = this.segmentDirection(points[0] as TileRef, points[1] as TileRef);
+
+    for (let i = 1; i < segmentSteps.length; i++) {
+      const segDir = this.segmentDirection(
+        points[i] as TileRef,
+        points[i + 1] as TileRef,
+      );
+
+      if (segDir.dx === runDir.dx && segDir.dy === runDir.dy) {
+        runSteps = (runSteps + (segmentSteps[i] >>> 0)) >>> 0;
+        continue;
+      }
+
+      outPoints.push(points[i] >>> 0);
+      outSteps.push(runSteps >>> 0);
+      runDir = segDir;
+      runSteps = segmentSteps[i] >>> 0;
+    }
+
+    outPoints.push(points[points.length - 1] >>> 0);
+    outSteps.push(runSteps >>> 0);
+
+    return {
+      points: outPoints,
+      segmentSteps: outSteps,
+    };
+  }
+
+  private segmentDirection(
+    from: TileRef,
+    to: TileRef,
+  ): { dx: number; dy: number } {
+    const dx = this.map.x(to) - this.map.x(from);
+    const dy = this.map.y(to) - this.map.y(from);
+    return {
+      dx: Math.sign(dx),
+      dy: Math.sign(dy),
     };
   }
 

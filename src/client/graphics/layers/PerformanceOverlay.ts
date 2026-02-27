@@ -130,6 +130,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private renderLastTickLayerDurations: Record<string, number> = {};
 
+  @state()
+  private layerCounters: Record<string, Record<string, number>> = {};
+
   // Smoothed per-layer render-per-tick timings (EMA over recent ticks)
   private renderPerTickLayerStats: Map<
     string,
@@ -730,6 +733,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.renderLastTickFrameCount = 0;
     this.renderLastTickLayerTotalMs = 0;
     this.renderLastTickLayerDurations = {};
+    this.layerCounters = {};
     this.renderPerTickLayerStats.clear();
     this.renderLayersExpanded = false;
     this.tickLayersExpanded = false;
@@ -900,6 +904,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
     });
   }
 
+  updateLayerCounters(counters: Record<string, Record<string, number>>) {
+    if (!this.isVisible) return;
+    this.layerCounters = counters;
+  }
+
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible) return;
 
@@ -1019,6 +1028,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       tickLayers: PerformanceOverlay.computeLayerBreakdown(
         this.tickLayerStats,
       ).map((layer) => ({ ...layer })),
+      layerCounters: { ...this.layerCounters },
     };
   }
 
@@ -1102,6 +1112,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     const renderLayersToShow = renderLayerBreakdown.slice(0, 10);
     const tickLayersToShow = tickLayerBreakdown.slice(0, 10);
+    const unitLayerCounters = this.layerCounters.UnitLayer ?? null;
 
     const maxLayerAvg =
       renderLayersToShow.length > 0
@@ -1287,6 +1298,25 @@ export class PerformanceOverlay extends LitElement implements Layer {
                         </div>`;
                       })}`
                   : html``}
+              </div>`
+            : html``}
+          ${unitLayerCounters
+            ? html`<div class="layers-section">
+                <div class="performance-line section-header">
+                  <span>UnitLayer Counters</span>
+                </div>
+                <div class="performance-line">
+                  sampled: ${Number(unitLayerCounters.moversSampled ?? 0)}
+                  drawn: ${Number(unitLayerCounters.moversDrawn ?? 0)}
+                  skipped: ${Number(unitLayerCounters.moversSkipped ?? 0)}
+                </div>
+                <div class="performance-line">
+                  queue: ${Number(unitLayerCounters.queueSize ?? 0)}
+                  budget: ${Number(unitLayerCounters.budgetUsedMs ?? 0).toFixed(
+                    2,
+                  )}ms
+                  avgDebt: ${Number(unitLayerCounters.avgDebt ?? 0).toFixed(2)}
+                </div>
               </div>`
             : html``}
         </div>
