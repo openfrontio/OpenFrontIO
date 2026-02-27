@@ -115,18 +115,22 @@ export class TradeShipExecution implements Execution {
         if (dst !== this.motionPlanDst) {
           this.motionPlanId++;
           const from = result.node;
-          const densePath = this.pathFinder.findPath(from, dst);
-          const segPlan = (densePath &&
-            densePathToLosKeypointSegments(
-              densePath,
-              this.mg.map(),
-              (t) =>
-                this.mg.isWater(t) ||
-                (this.mg.isLand(t) && this.mg.isShoreline(t)),
-            )) ?? {
-            points: Uint32Array.from([from]),
-            segmentSteps: new Uint32Array(0),
-          };
+          const segPlan = this.pathFinder.planSegments?.(from, dst) ??
+            (() => {
+              const densePath = this.pathFinder.findPath(from, dst);
+              return densePath
+                ? densePathToLosKeypointSegments(
+                    densePath,
+                    this.mg.map(),
+                    (t) =>
+                      this.mg.isWater(t) ||
+                      (this.mg.isLand(t) && this.mg.isShoreline(t)),
+                  )
+                : null;
+            })() ?? {
+              points: Uint32Array.from([from]),
+              segmentSteps: new Uint32Array(0),
+            };
 
           this.mg.recordMotionPlan({
             kind: "grid_segments",
