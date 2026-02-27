@@ -449,7 +449,7 @@ export class GameImpl implements Game {
 
   recordMotionPlan(record: MotionPlanRecord): void {
     switch (record.kind) {
-      case "grid":
+      case "grid_segments":
         this.planDrivenUnitIds.add(record.unitId);
         break;
       case "train":
