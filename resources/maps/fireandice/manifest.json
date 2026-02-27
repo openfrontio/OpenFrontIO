@@ -1,0 +1,64 @@
+{
+  "map": {
+    "height": 1228,
+    "num_land_tiles": 1027796,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 307,
+    "num_land_tiles": 61167,
+    "width": 512
+  },
+  "map4x": {
+    "height": 614,
+    "num_land_tiles": 252632,
+    "width": 1024
+  },
+  "name": "Fire and Ice",
+  "nations": [
+    {
+      "coordinates": [1383, 31],
+      "name": "Northern Water Tribe"
+    },
+    {
+      "coordinates": [900, 1161],
+      "name": "Southern Water Tribe"
+    },
+    {
+      "coordinates": [530, 945],
+      "name": "Southern Air Nomads"
+    },
+    {
+      "coordinates": [408, 293],
+      "name": "Western Air Nomads"
+    },
+    {
+      "coordinates": [1097, 217],
+      "name": "Northern Air Nomads"
+    },
+    {
+      "coordinates": [1357, 353],
+      "name": "Ba Sing Se"
+    },
+    {
+      "coordinates": [1579, 783],
+      "name": "Eastern Air Nomads"
+    },
+    {
+      "coordinates": [256, 603],
+      "name": "Fire Nation"
+    },
+    {
+      "coordinates": [1243, 606],
+      "name": "Southern Raiders"
+    },
+    {
+      "coordinates": [918, 395],
+      "name": "Gan Jin Tribe"
+    },
+    {
+      "coordinates": [959, 520],
+      "name": "Zhang Tribe"
+    }
+  ]
+}
