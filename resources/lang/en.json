@@ -883,13 +883,6 @@
     "pattern": {
       "default": "Default"
     },
-    "try_me": "Try me!",
-    "trial_remaining": "remaining",
-    "trial_granted": "Skin trial granted!",
-    "trial_cooldown": "Only one trial per 24 hours. Please try again later.",
-    "trial_login_required": "Must be logged in to trial a skin",
-    "reward_countdown": "Reward in {seconds} seconds...",
-    "steam_wishlist_prompt": "Support OpenFront by adding it to your Steam wishlist",
     "select_skin": "Select Skin",
     "selected": "selected"
   },
