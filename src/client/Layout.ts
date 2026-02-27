@@ -1,3 +1,5 @@
+import { Platform } from "./Platform";
+
 export function initLayout() {
   // Wait for play-page component to render before setting up hamburger menu
   customElements.whenDefined("play-page").then(() => {
@@ -6,7 +8,7 @@ export function initLayout() {
     const backdrop = document.getElementById("mobile-menu-backdrop");
 
     // Force sidebar visibility style to ensure it's not hidden by other CSS
-    if (sidebar && window.innerWidth < 768) {
+    if (sidebar && Platform.isMobileWidth) {
       sidebar.style.display = "flex";
     }
 
@@ -59,7 +61,7 @@ export function initLayout() {
     // Close menu when clicking a menu link or button (Mobile only)
     sidebar.addEventListener("click", (e) => {
       // On desktop, we want the menu to stay open unless explicitly toggled
-      if (window.innerWidth >= 768) return;
+      if (!Platform.isMobileWidth) return;
 
       // If the click happened on or inside an anchor/button/menu item, close the menu
       const clickedElement = (e.target as Element).closest
@@ -75,7 +77,7 @@ export function initLayout() {
 
     // Close on Escape (Mobile only)
     document.addEventListener("keydown", (e) => {
-      if (window.innerWidth >= 768) return;
+      if (!Platform.isMobileWidth) return;
       if (e.key === "Escape" && sidebar.classList.contains("open")) {
         closeMenu();
       }
