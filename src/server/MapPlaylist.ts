@@ -88,7 +88,14 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 ];
 
 type ModifierKey = "isRandomSpawn" | "isCompact" | "isCrowded" | "startingGold";
-type WeightedModifier = { key: ModifierKey; weight: number };
+
+// Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
+const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
+  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(7).fill("isCompact"),
+  ...Array<ModifierKey>(1).fill("isCrowded"),
+  ...Array<ModifierKey>(6).fill("startingGold"),
+];
 
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
@@ -204,9 +211,14 @@ export class MapPlaylist {
       if (crowdedMaxPlayers !== undefined) {
         crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
       } else {
-        excludedModifiers.push("isCrowded");
-        ({ isCrowded, startingGold, isCompact, isRandomSpawn } =
-          this.getRandomSpecialGameModifiers(excludedModifiers));
+        // Map doesn't support crowded. Drop it and pick one replacement only
+        // if it was the sole modifier, so the lobby always has at least one.
+        isCrowded = false;
+        if (!isRandomSpawn && !isCompact && startingGold === undefined) {
+          excludedModifiers.push("isCrowded");
+          ({ isRandomSpawn, isCompact, startingGold } =
+            this.getRandomSpecialGameModifiers(excludedModifiers, 1));
+        }
       }
     }
 
@@ -372,42 +384,29 @@ export class MapPlaylist {
 
   private getRandomSpecialGameModifiers(
     excludedModifiers: ModifierKey[] = [],
+    count?: number,
   ): PublicGameModifiers {
-    const baseWeightedModifiers: WeightedModifier[] = [
-      { key: "isRandomSpawn", weight: 4 },
-      { key: "isCompact", weight: 7 },
-      { key: "isCrowded", weight: 1 },
-      { key: "startingGold", weight: 6 },
-    ];
-    const weightedModifiers = baseWeightedModifiers.filter(
-      (modifier) => !excludedModifiers.includes(modifier.key),
-    );
-    const selected = new Set<ModifierKey>();
+    // Roll how many modifiers to pick: 30% → 1, 40% → 2, 20% → 3, 10% → 4
     const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
     const k =
-      modifierCountRoll <= 3
+      count ??
+      (modifierCountRoll <= 3
         ? 1
         : modifierCountRoll <= 7
           ? 2
           : modifierCountRoll <= 9
             ? 3
-            : 4;
+            : 4);
 
-    for (let i = 0; i < k && weightedModifiers.length > 0; i++) {
-      const totalWeight = weightedModifiers.reduce(
-        (sum, modifier) => sum + modifier.weight,
-        0,
-      );
-      let roll = Math.random() * totalWeight;
-      for (let j = 0; j < weightedModifiers.length; j++) {
-        const modifier = weightedModifiers[j];
-        roll -= modifier.weight;
-        if (roll <= 0) {
-          selected.add(modifier.key);
-          weightedModifiers.splice(j, 1);
-          break;
-        }
-      }
+    // Shuffle the pool, then pick the first k unique modifier keys.
+    const pool = SPECIAL_MODIFIER_POOL.filter(
+      (key) => !excludedModifiers.includes(key),
+    ).sort(() => Math.random() - 0.5);
+
+    const selected = new Set<ModifierKey>();
+    for (const key of pool) {
+      if (selected.size >= k) break;
+      selected.add(key);
     }
 
     return {
