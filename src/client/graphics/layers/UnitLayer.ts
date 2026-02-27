@@ -16,6 +16,11 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { sampleGridSegmentPlan } from "./SegmentMotionSample";
+import {
+  SegmentTrailPlanView,
+  stepAtTick,
+  strokeStepInterval,
+} from "./SegmentTrailRaster";
 import { pruneInactiveTrails } from "./TrailLifecycle";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -57,11 +62,23 @@ const TRADE_SHIP_MASK = [
 ] as const;
 
 type TransportTrailState = {
-  xy: number[];
-  planId: number;
-  lastX: number;
-  lastY: number;
+  activePlanId: number;
+  epochs: TransportTrailEpoch[];
   lastOnScreen: boolean;
+};
+
+type TransportTrailEpoch = SegmentTrailPlanView & {
+  planId: number;
+  targetStep: number;
+  drawnStep: number;
+  sealed: boolean;
+};
+
+type ActiveTransportTrailPlan = {
+  unitId: number;
+  unit: UnitView;
+  plan: SegmentTrailPlanView & { planId: number };
+  maybeOnScreen: boolean;
 };
 
 type MoverSpriteRect = {
@@ -348,6 +365,7 @@ export class UnitLayer implements Layer {
     const tickFloat = this.game.ticks() + tickAlpha;
     const viewBounds = this.currentViewBounds();
     const activeMoverIds = new Set<number>();
+    const activeTransportTrailPlans: ActiveTransportTrailPlan[] = [];
 
     for (const [unitId, plan] of this.game.motionPlans()) {
       const unit = this.game.unit(unitId);
@@ -365,6 +383,14 @@ export class UnitLayer implements Layer {
         tickFloat,
         viewBounds,
       );
+      if (unit.type() === UnitType.TransportShip) {
+        activeTransportTrailPlans.push({
+          unitId,
+          unit,
+          plan,
+          maybeOnScreen,
+        });
+      }
       this.moveMoverToBucket(unitId, state, maybeOnScreen ? "on" : "off");
 
       if (
@@ -387,6 +413,10 @@ export class UnitLayer implements Layer {
       viewBounds,
     );
 
+    this.advanceAndDrawTransportTrails(
+      this.game.ticks(),
+      activeTransportTrailPlans,
+    );
     this.rebuildTrailCanvasIfDirty();
 
     context.drawImage(
@@ -613,22 +643,12 @@ export class UnitLayer implements Layer {
           state.lastOnScreen = false;
         }
         this.moveMoverToBucket(unitId, state, "off");
-        if (unit.type() === UnitType.TransportShip) {
-          this.updateTransportShipTrail(
-            unitId,
-            plan.planId,
-            sampledCurrent.x,
-            sampledCurrent.y,
-            false,
-          );
-        }
         skipped++;
         processed.add(unitId);
         continue;
       }
 
       this.moveMoverToBucket(unitId, state, "on");
-      let trailHandledInGroup = false;
       const conflictIds = this.detectMoverConflicts(
         unitId,
         state.lastSpriteRect,
@@ -648,7 +668,6 @@ export class UnitLayer implements Layer {
         sampled += Math.max(0, groupResult.sampled - 1);
         drawn += groupResult.drawn;
         skipped += groupResult.skipped;
-        trailHandledInGroup = true;
       } else {
         if (state.lastSpriteRect) {
           this.spatialRemove(spatial, unitId, state.lastSpriteRect);
@@ -676,16 +695,6 @@ export class UnitLayer implements Layer {
         drawn++;
         processed.add(unitId);
         this.spatialAdd(spatial, unitId, rect);
-      }
-
-      if (!trailHandledInGroup && unit.type() === UnitType.TransportShip) {
-        this.updateTransportShipTrail(
-          unitId,
-          plan.planId,
-          sampledCurrent.x,
-          sampledCurrent.y,
-          true,
-        );
       }
     }
 
@@ -847,15 +856,6 @@ export class UnitLayer implements Layer {
           state.lastOnScreen = false;
         }
         this.moveMoverToBucket(id, state, "off");
-        if (unit.type() === UnitType.TransportShip) {
-          this.updateTransportShipTrail(
-            id,
-            plan.planId,
-            current.x,
-            current.y,
-            false,
-          );
-        }
         processed.add(id);
         skipped++;
         continue;
@@ -892,8 +892,7 @@ export class UnitLayer implements Layer {
     let drawn = 0;
     for (const sampledCurrent of sampledGroup) {
       const state = this.moverState.get(sampledCurrent.unitId);
-      const plan = this.game.motionPlans().get(sampledCurrent.unitId);
-      if (!state || !plan) {
+      if (!state) {
         skipped++;
         continue;
       }
@@ -916,16 +915,6 @@ export class UnitLayer implements Layer {
       state.lastSeenFrame = this.renderFrame;
       state.skipDebt = 0;
       this.spatialAdd(spatial, sampledCurrent.unitId, rect);
-
-      if (sampledCurrent.unit.type() === UnitType.TransportShip) {
-        this.updateTransportShipTrail(
-          sampledCurrent.unitId,
-          plan.planId,
-          sampledCurrent.x,
-          sampledCurrent.y,
-          true,
-        );
-      }
 
       drawnIds.add(sampledCurrent.unitId);
       processed.add(sampledCurrent.unitId);
@@ -1384,43 +1373,112 @@ export class UnitLayer implements Layer {
     this.dynamicMoverContext.clearRect(rect.x, rect.y, rect.w, rect.h);
   }
 
-  private updateTransportShipTrail(
-    unitId: number,
-    planId: number,
-    x: number,
-    y: number,
-    onScreen: boolean,
+  private advanceAndDrawTransportTrails(
+    currentTick: number,
+    activePlans: readonly ActiveTransportTrailPlan[],
   ): void {
-    const existing = this.transportShipTrails.get(unitId);
-    if (!existing || existing.planId !== planId) {
-      const xy: number[] = onScreen ? [x, y] : [];
-      this.transportShipTrails.set(unitId, {
-        xy,
-        planId,
-        lastX: x,
-        lastY: y,
-        lastOnScreen: onScreen,
-      });
+    for (const { unitId, unit, plan, maybeOnScreen } of activePlans) {
+      const state = this.ensureTransportTrailState(unitId, plan, currentTick);
+      const moverState = this.moverState.get(unitId);
+      const onScreen = moverState ? moverState.bucket === "on" : maybeOnScreen;
+
       if (onScreen) {
-        this.trailDirty = true;
+        this.drawPendingTransportTrailEpochs(unit, state);
       }
-      return;
+      state.lastOnScreen = onScreen;
+    }
+  }
+
+  private ensureTransportTrailState(
+    unitId: number,
+    plan: SegmentTrailPlanView & { planId: number },
+    currentTick: number,
+  ): TransportTrailState {
+    let state = this.transportShipTrails.get(unitId);
+    if (!state) {
+      state = {
+        activePlanId: plan.planId,
+        epochs: [],
+        lastOnScreen: false,
+      };
+      this.transportShipTrails.set(unitId, state);
     }
 
-    if (onScreen && (existing.lastX !== x || existing.lastY !== y)) {
-      if (!existing.lastOnScreen && existing.xy.length > 0) {
-        existing.xy.push(Number.NaN, Number.NaN);
+    let activeEpoch = state.epochs[state.epochs.length - 1];
+    if (
+      !activeEpoch ||
+      state.activePlanId !== plan.planId ||
+      activeEpoch.planId !== plan.planId
+    ) {
+      if (activeEpoch && !activeEpoch.sealed) {
+        activeEpoch.targetStep = stepAtTick(activeEpoch, currentTick);
+        if (activeEpoch.drawnStep > activeEpoch.targetStep) {
+          activeEpoch.drawnStep = activeEpoch.targetStep;
+        }
+        activeEpoch.sealed = true;
       }
-      existing.xy.push(x, y);
-      this.trailDirty = true;
-    } else if (onScreen && existing.xy.length === 0) {
-      existing.xy.push(x, y);
-      this.trailDirty = true;
+
+      activeEpoch = this.createTransportTrailEpoch(plan, currentTick);
+      state.epochs.push(activeEpoch);
+      state.activePlanId = plan.planId;
+      return state;
     }
 
-    existing.lastX = x;
-    existing.lastY = y;
-    existing.lastOnScreen = onScreen;
+    activeEpoch.points = plan.points;
+    activeEpoch.segmentSteps = plan.segmentSteps;
+    activeEpoch.segCumSteps = plan.segCumSteps;
+    activeEpoch.startTick = plan.startTick;
+    activeEpoch.ticksPerStep = plan.ticksPerStep;
+    activeEpoch.targetStep = stepAtTick(activeEpoch, currentTick);
+    return state;
+  }
+
+  private createTransportTrailEpoch(
+    plan: SegmentTrailPlanView & { planId: number },
+    currentTick: number,
+  ): TransportTrailEpoch {
+    return {
+      planId: plan.planId,
+      startTick: plan.startTick,
+      ticksPerStep: plan.ticksPerStep,
+      points: plan.points,
+      segmentSteps: plan.segmentSteps,
+      segCumSteps: plan.segCumSteps,
+      targetStep: stepAtTick(plan, currentTick),
+      drawnStep: 0,
+      sealed: false,
+    };
+  }
+
+  private drawPendingTransportTrailEpochs(
+    unit: UnitView,
+    state: TransportTrailState,
+  ): void {
+    const ctx = this.trailContext;
+    const strokeStyle = this.motionTrailColor(unit);
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 1.0;
+    ctx.strokeStyle = strokeStyle;
+
+    for (const epoch of state.epochs) {
+      if (epoch.targetStep <= epoch.drawnStep) {
+        continue;
+      }
+      const drew = strokeStepInterval(
+        ctx,
+        this.game,
+        epoch,
+        epoch.drawnStep,
+        epoch.targetStep,
+      );
+      if (drew) {
+        epoch.drawnStep = epoch.targetStep;
+      }
+    }
+    ctx.restore();
   }
 
   private rebuildTrailCanvasIfDirty(): void {
@@ -1450,13 +1508,9 @@ export class UnitLayer implements Layer {
       }
     }
 
-    for (const [unitId, trail] of this.transportShipTrails) {
+    for (const [unitId, trailState] of this.transportShipTrails) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) {
-        continue;
-      }
-
-      if (trail.xy.length < 4) {
         continue;
       }
 
@@ -1465,24 +1519,12 @@ export class UnitLayer implements Layer {
       ctx.lineJoin = "round";
       ctx.lineWidth = 1.0;
       ctx.strokeStyle = this.motionTrailColor(unit);
-
-      ctx.beginPath();
-      let needMove = true;
-      for (let i = 0; i < trail.xy.length; i += 2) {
-        const x = trail.xy[i];
-        const y = trail.xy[i + 1];
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          needMove = true;
+      for (const epoch of trailState.epochs) {
+        if (epoch.drawnStep <= 0) {
           continue;
         }
-        if (needMove) {
-          ctx.moveTo(x, y);
-          needMove = false;
-        } else {
-          ctx.lineTo(x, y);
-        }
+        strokeStepInterval(ctx, this.game, epoch, 0, epoch.drawnStep);
       }
-      ctx.stroke();
       ctx.restore();
     }
   }
