@@ -114,7 +114,7 @@
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
-    "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation (smart bot), or Bot. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, plus the number of Warships and various buildings the player has.",
+    "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation, or Tribe. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, plus the number of Warships and various buildings the player has.",
     "ui_wilderness": "Wilderness",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
@@ -136,7 +136,7 @@
     "info_trade": "Use \"Stop trading\" to stop giving the player gold and receiving their gold via trade ships. If you both click \"Start trading\" it will start again.",
     "info_ally_panel": "Ally info panel",
     "info_ally_desc": "When you ally with a player, the following new icons become available:",
-    "ally_betray": "Betray your ally, ending the alliance, halting trade, and weakening your defense. Trading between you is paused for 5 minutes (or until you become allies again) and others may stop trading too. And unless the other player was a traitor themselves, you'll be marked a traitor for 30 seconds. During this time an icon will be above your name and you will have a 50% defense debuff. Bots are less likely to ally with you and players will think twice before doing so.",
+    "ally_betray": "Betray your ally, ending the alliance, halting trade, and weakening your defense. Trading between you is paused for 5 minutes (or until you become allies again) and others may stop trading too. And unless the other player was a traitor themselves, you'll be marked a traitor for 30 seconds. During this time an icon will be above your name and you will have a 50% defense debuff. Tribes are less likely to ally with you and players will think twice before doing so.",
     "ally_donate": "Donate some of your troops to your ally. Used when they're low on troops and are being attacked, or when they need that extra power to crush an enemy.",
     "ally_donate_gold": "Donate some of your gold to your ally. Used when they're low on gold and need it for buildings, or when your team member is saving for that MIRV.",
     "build_menu_title": "Build menu",
@@ -183,7 +183,7 @@
     "toggle_achievements": "Toggle achievements",
     "sign_in_for_achievements": "Sign in for achievements",
     "options_title": "Options",
-    "bots": "Bots: ",
+    "bots": "Tribes: ",
     "bots_disabled": "Disabled",
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
@@ -263,7 +263,7 @@
     "conquest_gold": "Conquered player gold",
     "stolen_gold": "Stolen with warships",
     "num_of_conquests_humans": "Player kills",
-    "num_of_conquests_bots": "Bot kills",
+    "num_of_conquests_bots": "Tribe kills",
     "duration": "Duration",
     "survival_time": "Survival time",
     "war": "War",
@@ -394,7 +394,7 @@
     "team_count": "Number of Teams",
     "team_type": "Team Type",
     "options_title": "Options",
-    "bots": "Bots: ",
+    "bots": "Tribes: ",
     "bots_disabled": "Disabled",
     "player_immunity_duration": "PVP immunity duration (minutes)",
     "disable_nations": "Disable Nations",
@@ -434,7 +434,9 @@
     "yellow": "Yellow",
     "orange": "Orange",
     "green": "Green",
-    "bot": "Bot"
+    "bot": "Tribes",
+    "humans": "Humans",
+    "nations": "Nations"
   },
   "game_starting_modal": {
     "title": "Game is Starting...",
@@ -770,7 +772,7 @@
   "player_type": {
     "player": "Player",
     "nation": "Nation",
-    "bot": "Bot"
+    "bot": "Tribe"
   },
   "relation": {
     "hostile": "Hostile",

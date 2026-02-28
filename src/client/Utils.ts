@@ -6,6 +6,7 @@ import {
   MessageType,
   PublicGameModifiers,
   Quads,
+  Team,
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
@@ -393,6 +394,13 @@ export const translateText = (
     return message;
   }
 };
+
+export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+  if (!team) return "";
+  const translationKey = `team_colors.${team.toLowerCase()}`;
+  const translated = translateText(translationKey);
+  return translated === translationKey ? team : translated;
+}
 
 /**
  * Severity colors mapping for message types

@@ -2,9 +2,9 @@ import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode } from "../../../core/game/Game";
+import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { translateText } from "../../Utils";
+import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
@@ -24,7 +24,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   @state()
   private isPlayerTeamLabelVisible = false;
   @state()
-  private playerTeam: string | null = null;
+  private playerTeam: Team | null = null;
   @state()
   private spawnBarVisible = false;
   @state()
@@ -96,13 +96,6 @@ export class GameLeftSidebar extends LitElement implements Layer {
 
   private get isTeamGame(): boolean {
     return this.game?.config().gameConfig().gameMode === GameMode.Team;
-  }
-
-  private getTranslatedPlayerTeamLabel(): string {
-    if (!this.playerTeam) return "";
-    const translationKey = `team_colors.${this.playerTeam.toLowerCase()}`;
-    const translated = translateText(translationKey);
-    return translated === translationKey ? this.playerTeam : translated;
   }
 
   render() {
@@ -179,7 +172,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
                   style="--color: ${this.playerColor.toRgbString()}"
                   class="text-(--color)"
                 >
-                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
+                  &nbsp;${getTranslatedPlayerTeamLabel(this.playerTeam)}
+                  &#10687;
                 </span>
               </div>
             `
