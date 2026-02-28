@@ -8,6 +8,7 @@ import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
+  PlayerBuildableUnitType,
   PlayerID,
   UnitType,
 } from "../../../core/game/Game";
@@ -283,8 +284,8 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
-      .then((actions) => {
+      ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
+      .then((buildables) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];
           this.potentialUpgrade.dotContainer.filters = [];
@@ -295,7 +296,7 @@ export class StructureIconsLayer implements Layer {
 
         if (!this.ghostUnit) return;
 
-        const unit = actions.buildableUnits.find(
+        const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
         const showPrice = this.game.config().userSettings().cursorCostLabel();
@@ -434,7 +435,7 @@ export class StructureIconsLayer implements Layer {
     this.ghostUnit.range?.position.set(localX, localY);
   }
 
-  private createGhostStructure(type: UnitType | null) {
+  private createGhostStructure(type: PlayerBuildableUnitType | null) {
     const player = this.game.myPlayer();
     if (!player) return;
     if (type === null) {

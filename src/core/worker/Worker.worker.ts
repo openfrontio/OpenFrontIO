@@ -8,6 +8,7 @@ import {
   MainThreadMessage,
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
+  PlayerBuildablesResultMessage,
   PlayerProfileResultMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
@@ -116,6 +117,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         } as PlayerActionsResultMessage);
       } catch (error) {
         console.error("Failed to get actions:", error);
+        throw error;
+      }
+      break;
+    case "player_buildables":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const buildables = (await gameRunner).playerBuildables(
+          message.playerID,
+          message.x,
+          message.y,
+          message.units,
+        );
+        sendMessage({
+          type: "player_buildables_result",
+          id: message.id,
+          result: buildables,
+        } as PlayerBuildablesResultMessage);
+      } catch (error) {
+        console.error("Failed to get buildables:", error);
         throw error;
       }
       break;

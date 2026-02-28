@@ -1,7 +1,13 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  BuildableUnit,
+  BuildMenuTypes,
+  Gold,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import {
   GhostStructureChangedEvent,
@@ -22,25 +28,12 @@ import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import defensePostIcon from "/images/ShieldIconWhite.svg?url";
 
-const BUILDABLE_UNITS: UnitType[] = [
-  UnitType.City,
-  UnitType.Factory,
-  UnitType.Port,
-  UnitType.DefensePost,
-  UnitType.MissileSilo,
-  UnitType.SAMLauncher,
-  UnitType.Warship,
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRV,
-];
-
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
-  private playerActions: PlayerActions | null = null;
+  private playerBuildables: BuildableUnit[] | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
   private _cities = 0;
   private _warships = 0;
@@ -50,7 +43,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private _defensePost = 0;
   private _samLauncher = 0;
   private allDisabled = false;
-  private _hoveredUnit: UnitType | null = null;
+  private _hoveredUnit: PlayerBuildableUnitType | null = null;
 
   createRenderRoot() {
     return this;
@@ -68,12 +61,12 @@ export class UnitDisplay extends LitElement implements Layer {
       }
     }
 
-    this.allDisabled = BUILDABLE_UNITS.every((u) => config.isUnitDisabled(u));
+    this.allDisabled = BuildMenuTypes.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
   }
 
   private cost(item: UnitType): Gold {
-    for (const bu of this.playerActions?.buildableUnits ?? []) {
+    for (const bu of this.playerBuildables ?? []) {
       if (bu.type === item) {
         return bu.cost;
       }
@@ -104,10 +97,10 @@ export class UnitDisplay extends LitElement implements Layer {
 
   tick() {
     const player = this.game?.myPlayer();
-    player?.actions(undefined, BUILDABLE_UNITS).then((actions) => {
-      this.playerActions = actions;
-    });
     if (!player) return;
+    player.buildables(undefined, BuildMenuTypes).then((buildables) => {
+      this.playerBuildables = buildables;
+    });
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);
@@ -221,7 +214,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private renderUnitItem(
     icon: string,
     number: number | null,
-    unitType: UnitType,
+    unitType: PlayerBuildableUnitType,
     structureKey: string,
     hotkey: string,
   ) {

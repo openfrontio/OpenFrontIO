@@ -6,6 +6,7 @@ import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   Attack,
+  BuildableUnit,
   Cell,
   Game,
   GameUpdates,
@@ -13,6 +14,7 @@ import {
   Player,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -189,18 +191,30 @@ export class GameRunner {
     return Math.max(0, this.turns.length - this.currTurn);
   }
 
+  public playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[] {
+    const player = this.game.player(playerID);
+    const tile =
+      x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
+    return player.buildableUnits(tile, units);
+  }
+
   public playerActions(
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
-      canAttack: tile !== null && units === undefined && player.canAttack(tile),
-      buildableUnits: player.buildableUnits(tile, units),
+      canAttack: tile !== null && player.canAttack(tile),
+      buildableUnits: units === null ? [] : player.buildableUnits(tile, units),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
       canEmbargoAll: player.canEmbargoAll(),
     } as PlayerActions;

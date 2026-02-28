@@ -1,11 +1,12 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
+  BuildMenuTypes,
   Gold,
-  PlayerActions,
+  PlayerBuildableUnitType,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -37,7 +38,7 @@ import samlauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import shieldIcon from "/images/ShieldIconWhite.svg?url";
 
 export interface BuildItemDisplay {
-  unitType: UnitType;
+  unitType: PlayerBuildableUnitType;
   icon: string;
   description?: string;
   key?: string;
@@ -127,7 +128,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   public uiState: UIState;
   private clickedTile: TileRef;
-  public playerActions: PlayerActions | null = null;
+  public playerBuildables: BuildableUnit[] | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
@@ -358,12 +359,10 @@ export class BuildMenu extends LitElement implements Layer {
   private _hidden = true;
 
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
-    if (this.game?.myPlayer() === null || this.playerActions === null) {
+    if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
     }
-    const unit = this.playerActions.buildableUnits.filter(
-      (u) => u.type === item.unitType,
-    );
+    const unit = this.playerBuildables.filter((u) => u.type === item.unitType);
     if (unit.length === 0) {
       return false;
     }
@@ -371,7 +370,7 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   public cost(item: BuildItemDisplay): Gold {
-    for (const bu of this.playerActions?.buildableUnits ?? []) {
+    for (const bu of this.playerBuildables ?? []) {
       if (bu.type === item.unitType) {
         return bu.cost;
       }
@@ -419,7 +418,7 @@ export class BuildMenu extends LitElement implements Layer {
           (row) => html`
             <div class="build-row">
               ${row.map((item) => {
-                const buildableUnit = this.playerActions?.buildableUnits.find(
+                const buildableUnit = this.playerBuildables?.find(
                   (bu) => bu.type === item.unitType,
                 );
                 if (buildableUnit === undefined) {
@@ -492,9 +491,9 @@ export class BuildMenu extends LitElement implements Layer {
   private refresh() {
     this.game
       .myPlayer()
-      ?.actions(this.clickedTile)
-      .then((actions) => {
-        this.playerActions = actions;
+      ?.buildables(this.clickedTile, BuildMenuTypes)
+      .then((buildables) => {
+        this.playerBuildables = buildables;
         this.requestUpdate();
       });
 

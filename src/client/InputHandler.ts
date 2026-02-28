@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitType } from "../core/game/Game";
+import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
@@ -86,7 +86,7 @@ export class ToggleStructureEvent implements GameEvent {
 }
 
 export class GhostStructureChangedEvent implements GameEvent {
-  constructor(public readonly ghostStructure: UnitType | null) {}
+  constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
 
 export class SwapRocketDirectionEvent implements GameEvent {
@@ -594,7 +594,7 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: UnitType | null) {
+  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
   }

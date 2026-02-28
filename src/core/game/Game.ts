@@ -268,20 +268,70 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
+export const nukeTypes = [
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRVWarhead,
+  UnitType.MIRV,
+] as const satisfies readonly UnitType[];
+
+const _buildableAttackTypesList = [
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.Warship,
+] as const satisfies readonly UnitType[];
+
+export const BuildableAttackTypes = _buildableAttackTypesList;
+
+const _buildableAttackTypesSet: ReadonlySet<UnitType> = new Set(
+  _buildableAttackTypesList,
+);
+
+export function isBuildableAttackType(type: UnitType): boolean {
+  return _buildableAttackTypesSet.has(type);
+}
+
+const _structureTypesList = [
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
-]);
+] as const satisfies readonly UnitType[];
 
-export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+const _structureTypesSet: ReadonlySet<UnitType> = new Set(_structureTypesList);
+
+export const StructureTypes = _structureTypesList;
 
 export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
+  return _structureTypesSet.has(type);
 }
+
+const _buildMenuTypesList = [
+  ..._structureTypesList,
+  ..._buildableAttackTypesList,
+] as const satisfies readonly UnitType[];
+
+export const BuildMenuTypes = _buildMenuTypesList;
+
+const _playerBuildableTypesList = [
+  ..._buildMenuTypesList,
+  UnitType.TransportShip,
+] as const satisfies readonly UnitType[];
+
+const _playerBuildableTypesSet: ReadonlySet<UnitType> = new Set(
+  _playerBuildableTypesList,
+);
+
+export const PlayerBuildableTypes = _playerBuildableTypesList;
+
+export function isPlayerBuildableType(type: UnitType): boolean {
+  return _playerBuildableTypesSet.has(type);
+}
+
+export type PlayerBuildableUnitType = (typeof PlayerBuildableTypes)[number];
 
 export interface OwnerComp {
   owner: Player;
@@ -351,13 +401,6 @@ export interface UnitParamsMap {
 export type UnitParams<T extends UnitType> = UnitParamsMap[T];
 
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
-
-export const nukeTypes = [
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRVWarhead,
-  UnitType.MIRV,
-] as UnitType[];
 
 export enum Relation {
   Hostile = 0,
@@ -637,8 +680,15 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
-  canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
+  buildableUnits(
+    tile: TileRef | null,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[];
+  canBuild(
+    type: UnitType,
+    targetTile: TileRef,
+    validTiles?: TileRef[] | null,
+  ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
@@ -864,7 +914,7 @@ export interface BuildableUnit {
   canBuild: TileRef | false;
   // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
   canUpgrade: number | false;
-  type: UnitType;
+  type: PlayerBuildableUnitType;
   cost: Gold;
   overlappingRailroads: number[];
   ghostRailPaths: TileRef[][];
