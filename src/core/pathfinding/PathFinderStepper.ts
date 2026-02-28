@@ -150,26 +150,24 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
   }
 
   planSegments(from: T | T[], to: T): SegmentPlan | null {
-    if (!this.finder.planSegments) {
-      return null;
-    }
-
-    // If called with multi-source, don't try to prime the step cache (next() uses single-source).
-    if (Array.isArray(from)) {
-      // Still compute a path first so inner transformers can cache their segment plan off findPath().
-      this.findPath(from, to);
-      return this.finder.planSegments(from, to);
-    }
-
-    // Mirror next() pre-check behavior.
     if (this.config.preCheck) {
-      const result = this.config.preCheck(from, to);
-      if (result && result.status === PathStatus.NOT_FOUND) {
-        return null;
+      if (Array.isArray(from)) {
+        const allFailed = from.every((f) => {
+          const result = this.config.preCheck!(f, to);
+          return result?.status === PathStatus.NOT_FOUND;
+        });
+        if (allFailed) {
+          return null;
+        }
+      } else {
+        const result = this.config.preCheck(from, to);
+        if (result?.status === PathStatus.NOT_FOUND) {
+          return null;
+        }
       }
     }
 
-    if (this.config.equals(from, to)) {
+    if (!Array.isArray(from) && this.config.equals(from, to)) {
       if (typeof (from as any) !== "number") {
         return null;
       }
@@ -179,11 +177,158 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
       };
     }
 
+    if (Array.isArray(from)) {
+      const path = this.findPath(from, to);
+      if (path === null) {
+        return null;
+      }
+      return this.compressDenseTilePath(path);
+    }
+
+    const cachedDense = this.cachedDenseSuffix(from, to);
+    if (cachedDense !== null) {
+      return this.compressDenseTilePath(cachedDense);
+    }
+
     const path = this.findPath(from, to);
     if (path === null) {
       return null;
     }
 
-    return this.finder.planSegments(from, to);
+    return this.compressDenseTilePath(
+      this.normalizeSingleSourceDensePath(from, path),
+    );
+  }
+
+  private cachedDenseSuffix(from: T, to: T): T[] | null {
+    if (
+      this.path === null ||
+      this.lastTo === null ||
+      !this.config.equals(this.lastTo, to)
+    ) {
+      return null;
+    }
+
+    if (this.pathIndex <= 0) {
+      return null;
+    }
+
+    const expectedPos = this.path[this.pathIndex - 1];
+    if (!this.config.equals(from, expectedPos)) {
+      return null;
+    }
+
+    return this.path.slice(this.pathIndex - 1);
+  }
+
+  private normalizeSingleSourceDensePath(from: T, path: T[]): T[] {
+    if (path.length === 0) {
+      return [from];
+    }
+    if (this.config.equals(path[0], from)) {
+      return path;
+    }
+    return [from, ...path];
+  }
+
+  private compressDenseTilePath(path: ArrayLike<T>): SegmentPlan | null {
+    const count = path.length >>> 0;
+    if (count === 0) {
+      return null;
+    }
+
+    const first = path[0];
+    if (typeof first !== "number") {
+      return null;
+    }
+
+    let segmentCount = 0;
+    let pointCount = 1;
+    let prev = first as number;
+    let hasRun = false;
+    let runDelta = 0;
+
+    for (let i = 1; i < count; i++) {
+      const node = path[i];
+      if (typeof node !== "number") {
+        return null;
+      }
+
+      const cur = node as number;
+      const delta = cur - prev;
+      prev = cur;
+      if (delta === 0) {
+        continue;
+      }
+
+      if (!hasRun) {
+        hasRun = true;
+        runDelta = delta;
+        segmentCount = 1;
+        pointCount = 2;
+        continue;
+      }
+
+      if (delta !== runDelta) {
+        runDelta = delta;
+        segmentCount++;
+        pointCount++;
+      }
+    }
+
+    if (segmentCount === 0) {
+      return {
+        points: Uint32Array.from([(first as number) >>> 0]),
+        segmentSteps: new Uint32Array(0),
+      };
+    }
+
+    const points = new Uint32Array(pointCount);
+    const segmentSteps = new Uint32Array(segmentCount);
+    points[0] = (first as number) >>> 0;
+
+    let seg = 0;
+    let steps = 0;
+    runDelta = 0;
+    prev = first as number;
+
+    for (let i = 1; i < count; i++) {
+      const cur = path[i] as number;
+      const delta = cur - prev;
+      if (delta === 0) {
+        prev = cur;
+        continue;
+      }
+
+      if (steps === 0) {
+        runDelta = delta;
+        steps = 1;
+        prev = cur;
+        continue;
+      }
+
+      if (delta === runDelta) {
+        steps++;
+        prev = cur;
+        continue;
+      }
+
+      const runEnd = path[i - 1];
+      if (typeof runEnd !== "number") {
+        return null;
+      }
+      segmentSteps[seg] = steps >>> 0;
+      points[seg + 1] = runEnd >>> 0;
+      seg++;
+
+      runDelta = delta;
+      steps = 1;
+      prev = cur;
+    }
+
+    segmentSteps[seg] = steps >>> 0;
+    points[seg + 1] = prev >>> 0;
+
+    return { points, segmentSteps };
   }
 }
