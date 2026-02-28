@@ -1,5 +1,8 @@
 import { ColoredTeams, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { assignTeams } from "../src/core/game/TeamAssignment";
+import {
+  assignTeams,
+  computeClanTeamName,
+} from "../src/core/game/TeamAssignment";
 
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];
 
@@ -162,5 +165,71 @@ describe("assignTeams", () => {
     expect(result.get(players[11])).toEqual(ColoredTeams.Green);
     expect(result.get(players[12])).toEqual(ColoredTeams.Purple);
     expect(result.get(players[13])).toEqual(ColoredTeams.Orange);
+  });
+});
+
+describe("computeClanTeamName", () => {
+  const human = (id: string, clan?: string): PlayerInfo => {
+    const name = clan ? `[${clan}]Player${id}` : `Player${id}`;
+    return new PlayerInfo(name, PlayerType.Human, null, id);
+  };
+
+  const bot = (id: string): PlayerInfo =>
+    new PlayerInfo(`Bot${id}`, PlayerType.Bot, null, id);
+
+  it("returns clan tag when all humans share the same clan", () => {
+    const players = [human("1", "ALPHA"), human("2", "ALPHA")];
+    expect(computeClanTeamName(players)).toBe("ALPHA");
+  });
+
+  it("returns majority clan tag when one clan has more than 50% of humans", () => {
+    const players = [
+      human("1", "ALPHA"),
+      human("2", "ALPHA"),
+      human("3", "ALPHA"),
+      human("4", "BETA"),
+    ];
+    expect(computeClanTeamName(players)).toBe("ALPHA");
+  });
+
+  it("returns coalition name when top two clans together cover all humans", () => {
+    const players = [human("1", "ALPHA"), human("2", "BETA")];
+    expect(computeClanTeamName(players)).toBe("ALPHA / BETA");
+  });
+
+  it("returns majority tag when majority clan exists despite untagged players", () => {
+    const players = [
+      human("1", "ALPHA"),
+      human("2", "ALPHA"),
+      human("3", "ALPHA"),
+      human("4"),
+    ];
+    expect(computeClanTeamName(players)).toBe("ALPHA");
+  });
+
+  it("returns coalition name when two clans together cover the majority of humans", () => {
+    const players = [
+      human("1", "ALPHA"),
+      human("2", "ALPHA"),
+      human("3", "BETA"),
+      human("4", "BETA"),
+      human("5"),
+    ];
+    expect(computeClanTeamName(players)).toBe("ALPHA / BETA");
+  });
+
+  it("returns null when no players have clan tags", () => {
+    const players = [human("1"), human("2"), human("3")];
+    expect(computeClanTeamName(players)).toBeNull();
+  });
+
+  it("returns null when all players are bots", () => {
+    const players = [bot("1"), bot("2")];
+    expect(computeClanTeamName(players)).toBeNull();
+  });
+
+  it("ignores bots when computing clan name", () => {
+    const players = [human("1", "ALPHA"), bot("2")];
+    expect(computeClanTeamName(players)).toBe("ALPHA");
   });
 });

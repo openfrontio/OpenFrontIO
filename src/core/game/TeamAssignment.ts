@@ -102,3 +102,35 @@ export function assignTeamsLobbyPreview(
 export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
   return Math.ceil(numPlayers / numTeams);
 }
+
+export function computeClanTeamName(players: PlayerInfo[]): string | null {
+  const humans = players.filter((p) => p.playerType === PlayerType.Human);
+  if (humans.length === 0) return null;
+
+  const clanCounts = new Map<string, number>();
+  for (const player of humans) {
+    if (player.clan !== null) {
+      clanCounts.set(player.clan, (clanCounts.get(player.clan) ?? 0) + 1);
+    }
+  }
+  if (clanCounts.size === 0) return null;
+
+  const sorted = Array.from(clanCounts.entries()).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+  const [topTag, topCount] = sorted[0];
+  const total = humans.length;
+
+  // Unanimous or majority
+  if (topCount / total > 0.5) return topTag;
+
+  // Coalition: top two clans cover the majority of humans
+  if (sorted.length >= 2) {
+    const [secondTag, secondCount] = sorted[1];
+    if ((topCount + secondCount) / total > 0.5) {
+      return `${topTag} / ${secondTag}`;
+    }
+  }
+
+  return null;
+}
