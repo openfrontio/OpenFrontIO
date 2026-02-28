@@ -22,6 +22,7 @@ const log = logger.child({});
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
 const frequency: Partial<Record<GameMapName, number>> = {
+  Quadrants: 100,
   Africa: 7,
   Asia: 6,
   Australia: 4,

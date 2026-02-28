@@ -81,6 +81,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  Quadrants = "Quadrants",
   GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
