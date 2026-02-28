@@ -1,4 +1,5 @@
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { TeamScoreBreakdown } from "./CompetitiveScoring";
 import {
   EmojiMessage,
   GameUpdates,
@@ -264,6 +265,7 @@ export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   winner: Winner;
+  competitiveScores?: TeamScoreBreakdown[];
 }
 
 export interface HashUpdate {

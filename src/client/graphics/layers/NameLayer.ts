@@ -10,6 +10,7 @@ import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import {
   computeAllianceClipPath,
   createAllianceProgressIcon,
+  getCrownTeam,
   getFirstPlacePlayer,
   getPlayerIcons,
   PlayerIconId,
@@ -45,6 +46,7 @@ export class NameLayer implements Layer {
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private crownTeam: string | null = null;
 
   constructor(
     private game: GameView,
@@ -140,6 +142,9 @@ export class NameLayer implements Layer {
   public tick() {
     // Precompute the first-place player for performance
     this.firstPlace = getFirstPlacePlayer(this.game);
+    this.crownTeam = this.game.config().gameConfig().competitiveScoring
+      ? getCrownTeam(this.game)
+      : null;
 
     for (const player of this.game.playerViews()) {
       if (player.isAlive()) {
@@ -373,6 +378,7 @@ export class NameLayer implements Layer {
       player: render.player,
       includeAllianceIcon: true,
       firstPlace: this.firstPlace,
+      crownTeam: this.crownTeam,
     });
 
     // Build a set of desired icon IDs

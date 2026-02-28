@@ -73,6 +73,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
+  @state() private competitiveScoring: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
@@ -293,6 +294,11 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.compact_map",
                     checked: this.compactMap,
                   },
+                  {
+                    labelKey: "host_modal.competitive_scoring",
+                    checked: this.competitiveScoring,
+                    hidden: this.gameMode !== GameMode.Team,
+                  },
                 ],
                 inputCards,
               },
@@ -449,6 +455,7 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+    this.competitiveScoring = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -527,6 +534,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "host_modal.competitive_scoring":
+        this.competitiveScoring = checked;
+        this.putGameConfig();
         break;
       default:
         break;
@@ -771,6 +782,7 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
+            competitiveScoring: this.competitiveScoring || undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

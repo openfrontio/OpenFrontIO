@@ -24,7 +24,11 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
-import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
+import {
+  getCrownTeam,
+  getFirstPlacePlayer,
+  getPlayerIcons,
+} from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
@@ -252,12 +256,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderPlayerNameIcons(player: PlayerView) {
     const firstPlace = getFirstPlacePlayer(this.game);
+    const crownTeam = this.game.config().gameConfig().competitiveScoring
+      ? getCrownTeam(this.game)
+      : null;
     const icons = getPlayerIcons({
       game: this.game,
       player,
       // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
       includeAllianceIcon: false,
       firstPlace,
+      crownTeam,
     });
 
     if (icons.length === 0) {

@@ -157,6 +157,9 @@ export class GameServer {
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
     }
+    if (gameConfig.competitiveScoring !== undefined) {
+      this.gameConfig.competitiveScoring = gameConfig.competitiveScoring;
+    }
   }
 
   private isKicked(clientID: ClientID): boolean {

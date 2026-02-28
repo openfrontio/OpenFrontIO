@@ -1,4 +1,4 @@
-import { AllPlayers, nukeTypes } from "../../core/game/Game";
+import { AllPlayers, ColoredTeams, nukeTypes } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import allianceIconFaded from "/images/AllianceIconFaded.svg?url";
@@ -45,6 +45,8 @@ export interface PlayerIconParams {
   includeAllianceIcon: boolean;
   /** Player currently in first place, used for the crown icon */
   firstPlace: PlayerView | null;
+  /** In competitive mode, the team currently holding the crown (all members get crown icon) */
+  crownTeam?: string | null;
 }
 
 export function getFirstPlacePlayer(game: GameView): PlayerView | null {
@@ -55,10 +57,32 @@ export function getFirstPlacePlayer(game: GameView): PlayerView | null {
   return sorted.length > 0 ? sorted[0] : null;
 }
 
+/** Returns the team with the most total tiles, or null if no team leads. */
+export function getCrownTeam(game: GameView): string | null {
+  const teamToTiles = new Map<string, number>();
+  for (const player of game.playerViews()) {
+    const team = player.team();
+    if (team === null || team === ColoredTeams.Bot) continue;
+    teamToTiles.set(
+      team,
+      (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
+    );
+  }
+  let maxTiles = 0;
+  let crownTeam: string | null = null;
+  for (const [team, tiles] of teamToTiles) {
+    if (tiles > maxTiles) {
+      maxTiles = tiles;
+      crownTeam = team;
+    }
+  }
+  return crownTeam;
+}
+
 export function getPlayerIcons(
   params: PlayerIconParams,
 ): PlayerIconDescriptor[] {
-  const { game, player, includeAllianceIcon, firstPlace } = params;
+  const { game, player, includeAllianceIcon, firstPlace, crownTeam } = params;
 
   const myPlayer = game.myPlayer();
   const userSettings = game.config().userSettings();
@@ -67,9 +91,18 @@ export function getPlayerIcons(
 
   const icons: PlayerIconDescriptor[] = [];
 
-  // Crown icon for first place
-  if (player === firstPlace) {
+  // Crown icon: in competitive mode, all members of the crown team get it;
+  // otherwise only the individual first-place player.
+  if (
+    crownTeam !== null &&
+    crownTeam !== undefined &&
+    player.team() === crownTeam
+  ) {
     icons.push({ id: "crown", kind: "image", src: crownIcon });
+  } else if (crownTeam === null || crownTeam === undefined) {
+    if (player === firstPlace) {
+      icons.push({ id: "crown", kind: "image", src: crownIcon });
+    }
   }
 
   // Traitor icon

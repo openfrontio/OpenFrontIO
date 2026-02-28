@@ -4,6 +4,7 @@ import {
   Difficulty,
   Execution,
   Game,
+  GameMode,
   MessageType,
   Player,
   PlayerID,
@@ -115,6 +116,26 @@ export class AttackExecution implements Execution {
       this.addNeighbors(this.sourceTile);
     } else {
       this.refreshToConquer();
+    }
+
+    // CrownBreakPoint: 25% troop bonus when attacking the crown-holding team
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.Team &&
+      this.target.isPlayer()
+    ) {
+      const targetPlayer = this.target as Player;
+      const targetTeam = targetPlayer.team();
+      const crownTeam = this.mg.crownTeam();
+      const attackerTeam = this._owner.team();
+      if (
+        targetTeam !== null &&
+        crownTeam !== null &&
+        targetTeam === crownTeam &&
+        attackerTeam !== crownTeam
+      ) {
+        const bonus = Math.floor(this.attack.troops() * 0.25);
+        this.attack.setTroops(this.attack.troops() + bonus);
+      }
     }
 
     // Record stats
