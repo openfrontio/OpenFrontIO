@@ -176,4 +176,119 @@ describe("PathFinderStepper", () => {
       expect((result2 as { node: Pos }).node).toEqual({ x: 3, y: 0 });
     });
   });
+
+  describe("planSegments", () => {
+    it("compresses dense paths into delta runs", () => {
+      const path = [10, 11, 12, 13, 23, 33, 43];
+      const stepper = new PathFinderStepper<number>({
+        findPath: () => path.slice(),
+      });
+
+      const plan = stepper.planSegments(10, 43);
+
+      expect(plan).not.toBeNull();
+      if (!plan) return;
+      expect(Array.from(plan.points)).toEqual([10, 13, 43]);
+      expect(Array.from(plan.segmentSteps)).toEqual([3, 3]);
+    });
+
+    it("reuses cached suffix after next() without an extra findPath call", () => {
+      let calls = 0;
+      const path = [1, 2, 3, 4, 14, 24];
+      const stepper = new PathFinderStepper<number>({
+        findPath: () => {
+          calls++;
+          return path.slice();
+        },
+      });
+
+      const r1 = stepper.next(1, 24);
+      expect(r1.status).toBe(PathStatus.NEXT);
+      const r2 = stepper.next(2, 24);
+      expect(r2.status).toBe(PathStatus.NEXT);
+      expect(calls).toBe(1);
+
+      const plan = stepper.planSegments(3, 24);
+
+      expect(plan).not.toBeNull();
+      if (!plan) return;
+      expect(calls).toBe(1);
+      expect(Array.from(plan.points)).toEqual([3, 4, 24]);
+      expect(Array.from(plan.segmentSteps)).toEqual([1, 2]);
+    });
+
+    it("prepends source when the returned dense path omits it", () => {
+      const stepper = new PathFinderStepper<number>({
+        findPath: () => [11, 12, 22],
+      });
+
+      const plan = stepper.planSegments(10, 22);
+
+      expect(plan).not.toBeNull();
+      if (!plan) return;
+      expect(Array.from(plan.points)).toEqual([10, 12, 22]);
+      expect(Array.from(plan.segmentSteps)).toEqual([2, 1]);
+    });
+
+    it("skips zero-delta nodes while preserving run counts", () => {
+      const stepper = new PathFinderStepper<number>({
+        findPath: () => [10, 10, 11, 12, 22, 22, 32, 31],
+      });
+
+      const plan = stepper.planSegments(10, 31);
+
+      expect(plan).not.toBeNull();
+      if (!plan) return;
+      expect(Array.from(plan.points)).toEqual([10, 12, 32, 31]);
+      expect(Array.from(plan.segmentSteps)).toEqual([2, 2, 1]);
+    });
+
+    it("returns a single-point plan when from equals to", () => {
+      let calls = 0;
+      const stepper = new PathFinderStepper<number>({
+        findPath: () => {
+          calls++;
+          return [5];
+        },
+      });
+
+      const plan = stepper.planSegments(5, 5);
+
+      expect(plan).not.toBeNull();
+      if (!plan) return;
+      expect(calls).toBe(0);
+      expect(Array.from(plan.points)).toEqual([5]);
+      expect(plan.segmentSteps.length).toBe(0);
+    });
+
+    it("returns null when no path exists", () => {
+      const stepper = new PathFinderStepper<number>({
+        findPath: () => null,
+      });
+
+      const plan = stepper.planSegments(1, 99);
+      expect(plan).toBeNull();
+    });
+
+    it("supports multi-source by compressing the returned dense path once", () => {
+      let calls = 0;
+      const stepper = new PathFinderStepper<number>({
+        findPath: (from) => {
+          calls++;
+          if (!Array.isArray(from)) {
+            return null;
+          }
+          return [from[1], from[1] + 1, from[1] + 2];
+        },
+      });
+
+      const plan = stepper.planSegments([10, 20], 22);
+
+      expect(plan).not.toBeNull();
+      if (!plan) return;
+      expect(calls).toBe(1);
+      expect(Array.from(plan.points)).toEqual([20, 22]);
+      expect(Array.from(plan.segmentSteps)).toEqual([2]);
+    });
+  });
 });
