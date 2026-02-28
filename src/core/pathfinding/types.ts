@@ -4,14 +4,12 @@
  */
 
 export enum PathStatus {
-  NEXT,
-  PENDING,
-  COMPLETE,
-  NOT_FOUND,
+  NEXT = 0,
+  COMPLETE = 2,
+  NOT_FOUND = 3,
 }
 
 export type PathResult<T> =
-  | { status: PathStatus.PENDING }
   | { status: PathStatus.NEXT; node: T }
   | { status: PathStatus.COMPLETE; node: T }
   | { status: PathStatus.NOT_FOUND };

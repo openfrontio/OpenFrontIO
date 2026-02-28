@@ -19,6 +19,8 @@ export class TradeShipExecution implements Execution {
   private wasCaptured = false;
   private pathFinder: SteppingPathFinder<TileRef>;
   private tilesTraveled = 0;
+  private motionPlanId = 1;
+  private motionPlanDst: TileRef | null = null;
 
   constructor(
     private origOwner: Player,
@@ -93,6 +95,8 @@ export class TradeShipExecution implements Execution {
       } else {
         this._dstPort = ports[0];
         this.tradeShip.setTargetUnit(this._dstPort);
+        // Plan-driven units don't emit per-tick unit updates, so force a sync for the new target.
+        this.tradeShip.touch();
       }
     }
 
@@ -102,14 +106,29 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    const result = this.pathFinder.next(curTile, this._dstPort.tile());
+    const dst = this._dstPort.tile();
+    const result = this.pathFinder.next(curTile, dst);
 
     switch (result.status) {
-      case PathStatus.PENDING:
-        // Fire unit event to rerender.
-        this.tradeShip.move(curTile);
-        break;
       case PathStatus.NEXT:
+        if (dst !== this.motionPlanDst) {
+          this.motionPlanId++;
+          const from = result.node;
+          const path = this.pathFinder.findPath(from, dst) ?? [from];
+          if (path.length === 0 || path[0] !== from) {
+            path.unshift(from);
+          }
+
+          this.mg.recordMotionPlan({
+            kind: "grid",
+            unitId: this.tradeShip.id(),
+            planId: this.motionPlanId,
+            startTick: ticks + 1,
+            ticksPerStep: 1,
+            path,
+          });
+          this.motionPlanDst = dst;
+        }
         // Update safeFromPirates status
         if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
           this.tradeShip.setSafeFromPirates();
@@ -119,14 +138,14 @@ export class TradeShipExecution implements Execution {
         break;
       case PathStatus.COMPLETE:
         this.complete();
-        break;
+        return;
       case PathStatus.NOT_FOUND:
         console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
         this.active = false;
-        break;
+        return;
     }
   }
 
