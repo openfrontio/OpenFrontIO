@@ -318,50 +318,65 @@ export function formatDebugTranslation(
   return `${key}::${serializedParams}`;
 }
 
+const EMPTY_TRANSLATION_PARAMS: Record<string, string | number> = {};
+
+function getCachedLangSelector(): LangSelector | null {
+  const self = translateText as any;
+  const cached = self.langSelector as LangSelector | null | undefined;
+  if (cached && cached.isConnected) return cached;
+
+  const found = document.querySelector("lang-selector") as LangSelector | null;
+  self.langSelector = found ?? null;
+  return found;
+}
+
 export const translateText = (
   key: string,
-  params: Record<string, string | number> = {},
+  params?: Record<string, string | number>,
 ): string => {
   const self = translateText as any;
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
 
-  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  const langSelector = getCachedLangSelector();
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
   }
 
+  const resolvedParams = params ?? EMPTY_TRANSLATION_PARAMS;
+
   if (langSelector.currentLang === "debug") {
-    return formatDebugTranslation(key, params);
+    return formatDebugTranslation(key, resolvedParams);
   }
 
-  if (
-    !langSelector.translations ||
-    Object.keys(langSelector.translations).length === 0
-  ) {
-    return key;
-  }
+  const translations = langSelector.translations;
+  const defaultTranslations = langSelector.defaultTranslations;
+  if (!translations && !defaultTranslations) return key;
 
   if (self.lastLang !== langSelector.currentLang) {
     self.formatterCache.clear();
     self.lastLang = langSelector.currentLang;
   }
 
-  let message = langSelector.translations[key];
+  let message = translations?.[key];
+  const hasPrimaryTranslation = message !== undefined;
 
-  if (!message && langSelector.defaultTranslations) {
-    const defaultTranslations = langSelector.defaultTranslations;
-    if (defaultTranslations && defaultTranslations[key]) {
-      message = defaultTranslations[key];
-    }
+  message ??= defaultTranslations?.[key];
+
+  if (message === undefined) return key;
+
+  // Fast path: no params and no ICU placeholders.
+  if (
+    resolvedParams === EMPTY_TRANSLATION_PARAMS &&
+    message.indexOf("{") === -1
+  ) {
+    return message;
   }
-
-  if (!message) return key;
 
   try {
     const locale =
-      !langSelector.translations[key] && langSelector.currentLang !== "en"
+      !hasPrimaryTranslation && langSelector.currentLang !== "en"
         ? "en"
         : langSelector.currentLang;
     const cacheKey = `${key}:${locale}:${message}`;
@@ -372,7 +387,7 @@ export const translateText = (
       self.formatterCache.set(cacheKey, formatter);
     }
 
-    return formatter.format(params) as string;
+    return formatter.format(resolvedParams) as string;
   } catch (e) {
     console.warn("ICU format error", e);
     return message;
