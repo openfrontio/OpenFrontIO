@@ -34,6 +34,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { MotionPlanRecord, unpackMotionPlans } from "./MotionPlans";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
@@ -81,6 +82,17 @@ export class UnitView {
     this.lastPos.push(data.pos);
     this._wasUpdated = true;
     this.data = data;
+  }
+
+  applyDerivedPosition(pos: TileRef) {
+    const prev = this.data.pos;
+    this.lastPos.push(pos);
+    this._wasUpdated = true;
+    this.data = {
+      ...this.data,
+      lastPos: prev,
+      pos,
+    };
   }
 
   id(): number {
@@ -582,6 +594,20 @@ export class PlayerView {
   }
 }
 
+type TrainPlanState = {
+  planId: number;
+  startTick: number;
+  speed: number;
+  spacing: number;
+  carUnitIds: Uint32Array;
+  path: Uint32Array;
+  cursor: number;
+  usedTilesBuf: Uint32Array;
+  usedHead: number;
+  usedLen: number;
+  lastAdvancedTick: Tick;
+};
+
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
   private smallIDToID = new Map<number, PlayerID>();
@@ -592,6 +618,17 @@ export class GameView implements GameMap {
   private _myPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
+  private unitMotionPlans = new Map<
+    number,
+    {
+      planId: number;
+      startTick: number;
+      ticksPerStep: number;
+      path: Uint32Array;
+    }
+  >();
+  private trainMotionPlans = new Map<number, TrainPlanState>();
+  private trainUnitToEngine = new Map<number, number>();
 
   private toDelete = new Set<number>();
 
@@ -637,6 +674,51 @@ export class GameView implements GameMap {
     return this.lastUpdate?.updates ?? null;
   }
 
+  public motionPlans(): ReadonlyMap<
+    number,
+    {
+      planId: number;
+      startTick: number;
+      ticksPerStep: number;
+      path: Uint32Array;
+    }
+  > {
+    return this.unitMotionPlans;
+  }
+
+  private motionPlannedUnitIdsCache: number[] = [];
+  private motionPlannedUnitIdsDirty = true;
+
+  private markMotionPlannedUnitIdsDirty(): void {
+    this.motionPlannedUnitIdsDirty = true;
+  }
+
+  private rebuildMotionPlannedUnitIdsCacheIfDirty(): void {
+    if (!this.motionPlannedUnitIdsDirty) {
+      return;
+    }
+    this.motionPlannedUnitIdsDirty = false;
+
+    const out = this.motionPlannedUnitIdsCache;
+    out.length = 0;
+
+    for (const unitId of this.unitMotionPlans.keys()) {
+      out.push(unitId);
+    }
+    for (const [engineId, plan] of this.trainMotionPlans) {
+      out.push(engineId);
+      for (let i = 0; i < plan.carUnitIds.length; i++) {
+        const id = plan.carUnitIds[i] >>> 0;
+        if (id !== 0) out.push(id);
+      }
+    }
+  }
+
+  public motionPlannedUnitIds(): number[] {
+    this.rebuildMotionPlannedUnitIdsCacheIfDirty();
+    return this.motionPlannedUnitIdsCache;
+  }
+
   public isCatchingUp(): boolean {
     return (this.lastUpdate?.pendingTurns ?? 0) > 1;
   }
@@ -654,6 +736,11 @@ export class GameView implements GameMap {
       const state = packed[i + 1];
       this.updateTile(tile, state);
       this.updatedTiles.push(tile);
+    }
+
+    if (gu.packedMotionPlans) {
+      const records = unpackMotionPlans(gu.packedMotionPlans);
+      this.applyMotionPlanRecords(records);
     }
 
     if (gu.updates === null) {
@@ -704,8 +791,244 @@ export class GameView implements GameMap {
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
         this.toDelete.add(unit.id());
+        if (this.unitMotionPlans.delete(unit.id())) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
+        this.clearTrainPlanForUnit(unit.id());
       }
     });
+
+    this.advanceMotionPlannedUnits(gu.tick);
+    this.rebuildMotionPlannedUnitIdsCacheIfDirty();
+  }
+
+  private advanceMotionPlannedUnits(currentTick: Tick): void {
+    for (const [unitId, plan] of this.unitMotionPlans) {
+      const unit = this._units.get(unitId);
+      if (!unit || !unit.isActive()) {
+        if (this.unitMotionPlans.delete(unitId)) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
+        continue;
+      }
+
+      const oldTile = unit.tile();
+      const dt = currentTick - plan.startTick;
+      const stepIndex =
+        dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
+      const lastIndex = plan.path.length - 1;
+      const idx = Math.max(0, Math.min(lastIndex, stepIndex));
+      const newTile = plan.path[idx] as TileRef;
+
+      if (newTile !== oldTile) {
+        unit.applyDerivedPosition(newTile);
+        this.unitGrid.updateUnitCell(unit);
+        continue;
+      }
+
+      // Once a plan is past its final step, `newTile` remains clamped to the last path tile.
+      // Drop finished plans to avoid repeatedly marking static units as updated each tick.
+      if (dt > 0 && stepIndex >= lastIndex) {
+        if (this.unitMotionPlans.delete(unitId)) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
+      }
+    }
+
+    this.advanceTrainMotionPlannedUnits(currentTick);
+  }
+
+  private clearTrainPlanForUnit(unitId: number): void {
+    const engineId =
+      this.trainUnitToEngine.get(unitId) ??
+      (this.trainMotionPlans.has(unitId) ? unitId : null);
+    if (engineId === null) {
+      return;
+    }
+    const plan = this.trainMotionPlans.get(engineId);
+    if (!plan) {
+      this.trainUnitToEngine.delete(unitId);
+      return;
+    }
+    if (this.trainMotionPlans.delete(engineId)) {
+      this.markMotionPlannedUnitIdsDirty();
+    }
+    this.trainUnitToEngine.delete(engineId);
+    for (let i = 0; i < plan.carUnitIds.length; i++) {
+      const id = plan.carUnitIds[i] >>> 0;
+      if (id !== 0) this.trainUnitToEngine.delete(id);
+    }
+  }
+
+  private advanceTrainMotionPlannedUnits(currentTick: Tick): void {
+    const staleEngineIds: number[] = [];
+    for (const [engineId, plan] of this.trainMotionPlans) {
+      const engine = this._units.get(engineId);
+      if (!engine || !engine.isActive()) {
+        staleEngineIds.push(engineId);
+        continue;
+      }
+
+      const steps = currentTick - plan.lastAdvancedTick;
+      if (steps <= 0) {
+        continue;
+      }
+
+      const path = plan.path;
+      const lastIndex = path.length - 1;
+      const cap = plan.usedTilesBuf.length;
+
+      const pushUsed = (tile: TileRef) => {
+        if (cap === 0) return;
+        if (plan.usedLen < cap) {
+          const idx = (plan.usedHead + plan.usedLen) % cap;
+          plan.usedTilesBuf[idx] = tile >>> 0;
+          plan.usedLen++;
+        } else {
+          plan.usedTilesBuf[plan.usedHead] = tile >>> 0;
+          plan.usedHead = (plan.usedHead + 1) % cap;
+          plan.usedLen = cap;
+        }
+      };
+
+      const usedGet = (index: number): TileRef | null => {
+        if (index < 0 || index >= plan.usedLen || cap === 0) return null;
+        const idx = (plan.usedHead + index) % cap;
+        return plan.usedTilesBuf[idx] as TileRef;
+      };
+
+      let didMove = false;
+      for (let step = 0; step < steps; step++) {
+        const cursor = plan.cursor;
+        if (cursor >= lastIndex) {
+          break;
+        }
+        for (let i = 0; i < plan.speed && cursor + i < path.length; i++) {
+          pushUsed(path[cursor + i] as TileRef);
+        }
+
+        plan.cursor = Math.min(lastIndex, cursor + plan.speed);
+
+        for (let i = plan.carUnitIds.length - 1; i >= 0; --i) {
+          const carId = plan.carUnitIds[i] >>> 0;
+          if (carId === 0) continue;
+          const car = this._units.get(carId);
+          if (!car || !car.isActive()) {
+            continue;
+          }
+          const carTileIndex = (i + 1) * plan.spacing + 2;
+          const tile = usedGet(carTileIndex);
+          if (tile !== null) {
+            const oldTile = car.tile();
+            if (tile !== oldTile) {
+              car.applyDerivedPosition(tile);
+              this.unitGrid.updateUnitCell(car);
+              didMove = true;
+            }
+          }
+        }
+
+        const newEngineTile = path[plan.cursor] as TileRef;
+        const oldEngineTile = engine.tile();
+        if (newEngineTile !== oldEngineTile) {
+          engine.applyDerivedPosition(newEngineTile);
+          this.unitGrid.updateUnitCell(engine);
+          didMove = true;
+        }
+      }
+
+      plan.lastAdvancedTick = currentTick;
+
+      // Preserve the final-step redraw (plan remains for the tick where motion ends),
+      // then clear once the train has settled and no longer moves.
+      // Note: trains are currently deleted at the end of TrainExecution, and the ensuing
+      // `Unit` update (isActive=false) also clears any associated motion plan records.
+      // This expiry is defensive to avoid keeping stale plans around if that behavior changes.
+      if (!didMove && plan.cursor >= lastIndex) {
+        staleEngineIds.push(engineId);
+      }
+    }
+
+    for (const engineId of staleEngineIds) {
+      this.clearTrainPlanForUnit(engineId);
+    }
+  }
+
+  private applyMotionPlanRecords(records: readonly MotionPlanRecord[]): void {
+    for (const record of records) {
+      switch (record.kind) {
+        case "grid": {
+          if (record.ticksPerStep < 1 || record.path.length < 1) {
+            break;
+          }
+          const existing = this.unitMotionPlans.get(record.unitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+
+          const path =
+            record.path instanceof Uint32Array
+              ? record.path
+              : Uint32Array.from(record.path);
+
+          this.unitMotionPlans.set(record.unitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            ticksPerStep: record.ticksPerStep,
+            path,
+          });
+          this.markMotionPlannedUnitIdsDirty();
+          break;
+        }
+        case "train": {
+          if (record.speed < 1 || record.path.length < 1) {
+            break;
+          }
+          const existing = this.trainMotionPlans.get(record.engineUnitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+          if (existing) {
+            this.clearTrainPlanForUnit(record.engineUnitId);
+          }
+
+          const carUnitIds =
+            record.carUnitIds instanceof Uint32Array
+              ? record.carUnitIds
+              : Uint32Array.from(record.carUnitIds);
+          const path =
+            record.path instanceof Uint32Array
+              ? record.path
+              : Uint32Array.from(record.path);
+
+          const usedCap = carUnitIds.length * record.spacing + 3;
+          const usedTilesBuf = new Uint32Array(Math.max(0, usedCap));
+
+          this.trainMotionPlans.set(record.engineUnitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            speed: record.speed,
+            spacing: record.spacing,
+            carUnitIds,
+            path,
+            cursor: 0,
+            usedTilesBuf,
+            usedHead: 0,
+            usedLen: 0,
+            lastAdvancedTick: record.startTick,
+          });
+          this.markMotionPlannedUnitIdsDirty();
+
+          this.trainUnitToEngine.set(record.engineUnitId, record.engineUnitId);
+          for (let i = 0; i < carUnitIds.length; i++) {
+            const carId = carUnitIds[i] >>> 0;
+            if (carId !== 0)
+              this.trainUnitToEngine.set(carId, record.engineUnitId);
+          }
+          break;
+        }
+      }
+    }
   }
 
   recentlyUpdatedTiles(): TileRef[] {
