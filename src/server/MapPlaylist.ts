@@ -64,6 +64,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   DidierFrance: 1,
   Didier: 1,
   AmazonRiver: 3,
+  BeringStrait: 4,
   Sierpinski: 10,
   TheBox: 3,
   Yenisei: 6,
