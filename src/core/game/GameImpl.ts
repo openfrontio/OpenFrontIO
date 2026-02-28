@@ -43,6 +43,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -95,6 +96,8 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
+  private motionPlanRecords: MotionPlanRecord[] = [];
+  private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
 
   private playerTeams: Team[] = [];
@@ -441,6 +444,46 @@ export class GameImpl implements Game {
       packed[i] = pairs[i];
     }
     pairs.length = 0;
+    return packed;
+  }
+
+  recordMotionPlan(record: MotionPlanRecord): void {
+    switch (record.kind) {
+      case "grid":
+        this.planDrivenUnitIds.add(record.unitId);
+        break;
+      case "train":
+        this.planDrivenUnitIds.add(record.engineUnitId);
+        for (const unitId of record.carUnitIds) {
+          this.planDrivenUnitIds.add(unitId);
+        }
+        break;
+    }
+    this.motionPlanRecords.push(record);
+  }
+
+  private isUnitPlanDriven(unitId: number): boolean {
+    return this.planDrivenUnitIds.has(unitId);
+  }
+
+  maybeAddUnitUpdate(unit: Unit): void {
+    if (!this.isUnitPlanDriven(unit.id())) {
+      this.addUpdate(unit.toUpdate());
+    }
+  }
+
+  onUnitMoved(unit: Unit): void {
+    this.updateUnitTile(unit);
+    this.maybeAddUnitUpdate(unit);
+  }
+
+  drainPackedMotionPlans(): Uint32Array | null {
+    const records = this.motionPlanRecords;
+    if (records.length === 0) {
+      return null;
+    }
+    const packed = packMotionPlans(records);
+    records.length = 0;
     return packed;
   }
 
@@ -887,6 +930,7 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
