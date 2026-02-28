@@ -629,6 +629,7 @@ export class GameView implements GameMap {
       points: Uint32Array;
       segmentSteps: Uint32Array;
       segCumSteps: Uint32Array;
+      lastSegIdx: number;
     }
   >();
   private trainMotionPlans = new Map<number, TrainPlanState>();
@@ -687,6 +688,7 @@ export class GameView implements GameMap {
       points: Uint32Array;
       segmentSteps: Uint32Array;
       segCumSteps: Uint32Array;
+      lastSegIdx: number;
     }
   > {
     return this.unitMotionPlans;
@@ -855,22 +857,35 @@ export class GameView implements GameMap {
       } else if (segmentSteps.length === 0 || idx >= totalSteps) {
         newTile = points[points.length - 1] as TileRef;
       } else {
-        let seg = 0;
-        let lo = 0;
-        let hi = segmentSteps.length - 1;
-        while (lo <= hi) {
-          const mid = (lo + hi) >>> 1;
-          const start = segCumSteps[mid] >>> 0;
-          const end = segCumSteps[mid + 1] >>> 0;
-          if (idx < start) {
-            hi = mid - 1;
-          } else if (idx >= end) {
-            lo = mid + 1;
-          } else {
-            seg = mid;
-            break;
+        const segmentCount = segmentSteps.length;
+        let seg = plan.lastSegIdx >>> 0;
+        if (seg >= segmentCount) {
+          seg = segmentCount - 1;
+        }
+
+        const currentStart = segCumSteps[seg] >>> 0;
+        if (idx < currentStart) {
+          let lo = 0;
+          let hi = segmentCount - 1;
+          while (lo <= hi) {
+            const mid = (lo + hi) >>> 1;
+            const start = segCumSteps[mid] >>> 0;
+            const end = segCumSteps[mid + 1] >>> 0;
+            if (idx < start) {
+              hi = mid - 1;
+            } else if (idx >= end) {
+              lo = mid + 1;
+            } else {
+              seg = mid;
+              break;
+            }
+          }
+        } else {
+          while (seg + 1 < segmentCount && idx >= (segCumSteps[seg + 1] >>> 0)) {
+            seg++;
           }
         }
+        plan.lastSegIdx = seg;
 
         const localStep = idx - (segCumSteps[seg] >>> 0);
         const p0 = points[seg] as TileRef;
@@ -1064,6 +1079,7 @@ export class GameView implements GameMap {
             points,
             segmentSteps,
             segCumSteps,
+            lastSegIdx: 0,
           });
           this.markMotionPlannedUnitIdsDirty();
           break;
