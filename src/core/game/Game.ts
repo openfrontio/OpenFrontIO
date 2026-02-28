@@ -119,6 +119,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
   TwoLakes = "Two Lakes",
@@ -137,7 +138,7 @@ export type GameMapName = keyof typeof GameMapType;
 
 /** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
 export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver;
+  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -193,6 +194,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Svalmel,
     GameMapType.Surrounded,
     GameMapType.TradersDream,
+    GameMapType.Passage,
   ],
   arcade: [
     GameMapType.TheBox,
