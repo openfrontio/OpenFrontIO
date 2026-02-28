@@ -190,9 +190,6 @@ export class WarshipExecution implements Execution {
         case PathStatus.NEXT:
           this.warship.move(result.node);
           break;
-        case PathStatus.PENDING:
-          this.warship.touch();
-          break;
         case PathStatus.NOT_FOUND: {
           console.log(`path not found to target`);
           break;
@@ -221,9 +218,6 @@ export class WarshipExecution implements Execution {
       case PathStatus.NEXT:
         this.warship.move(result.node);
         break;
-      case PathStatus.PENDING:
-        this.warship.touch();
-        return;
       case PathStatus.NOT_FOUND: {
         console.log(`path not found to target`);
         break;

@@ -268,16 +268,20 @@
       class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
     >
       <div
-        class="order-2 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
+        class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
       >
-        <attacks-display></attacks-display>
-        <control-panel></control-panel>
+        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
+        <control-panel class="order-4 sm:order-none w-full"></control-panel>
       </div>
       <div
-        class="order-1 sm:order-none w-full sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
+        class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
       >
-        <chat-display></chat-display>
-        <events-display></events-display>
+        <chat-display
+          class="order-1 sm:order-none w-full sm:w-auto"
+        ></chat-display>
+        <events-display
+          class="order-3 sm:order-none w-full sm:w-auto"
+        ></events-display>
       </div>
     </div>
 

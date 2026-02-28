@@ -10,6 +10,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
@@ -51,6 +52,15 @@ export const isDifficulty = (value: unknown): value is Difficulty =>
   isEnumValue(Difficulty, value);
 
 export type Team = string;
+
+export interface SpawnArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type TeamGameSpawnAreas = Record<string, SpawnArea[]>;
 
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
@@ -753,6 +763,7 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
   alliances(): MutableAlliance[];
@@ -767,6 +778,8 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
+  recordMotionPlan(record: MotionPlanRecord): void;
+  drainPackedMotionPlans(): Uint32Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
