@@ -684,10 +684,10 @@ export class UnitLayer implements Layer {
       }
 
       this.moveMoverToBucket(unitId, state, "on");
-      const conflictIds = this.detectMoverConflicts(
-        unitId,
-        state.lastSpriteRect,
-        sampledCurrent.rect,
+      const conflictIds = this.detectMoverConflictGroup(
+        sampledCurrent,
+        tickFloat,
+        sampledCache,
         spatial,
       );
       if (conflictIds.size > 1) {
@@ -810,39 +810,110 @@ export class UnitLayer implements Layer {
     return result;
   }
 
-  private detectMoverConflicts(
-    unitId: number,
-    oldRect: MoverSpriteRect | null,
-    newRect: MoverSpriteRect,
+  private detectMoverConflictGroup(
+    seedSample: MoverRenderSample,
+    tickFloat: number,
+    sampledCache: Map<number, MoverRenderSample | null>,
     spatial: MoverSpatialIndex,
   ): Set<number> {
+    // Build a transitive overlap component starting from the triggering mover.
+    // This avoids partial redraws in chain-overlap situations (A overlaps B, B overlaps C).
     const conflictIds = new Set<number>();
-    conflictIds.add(unitId);
+    const queue: number[] = [seedSample.unitId];
+    conflictIds.add(seedSample.unitId);
+    sampledCache.set(seedSample.unitId, seedSample);
 
-    const candidateIds = new Set<number>();
-    this.collectSpatialCandidates(candidateIds, spatial, newRect);
-    if (oldRect) {
-      this.collectSpatialCandidates(candidateIds, spatial, oldRect);
-    }
-
-    for (const candidateId of candidateIds) {
-      if (candidateId === unitId) {
+    while (queue.length > 0) {
+      const currentId = queue.pop() as number;
+      const currentState = this.moverState.get(currentId);
+      if (!currentState) {
         continue;
       }
-      const candidateState = this.moverState.get(candidateId);
-      const candidateRect = candidateState?.lastSpriteRect;
-      if (!candidateRect) {
+
+      const currentRects: MoverSpriteRect[] = [];
+      if (currentState.lastSpriteRect) {
+        currentRects.push(currentState.lastSpriteRect);
+      }
+
+      const currentSample =
+        currentId === seedSample.unitId
+          ? seedSample
+          : this.getConflictSample(currentId, tickFloat, sampledCache);
+      if (currentSample) {
+        currentRects.push(currentSample.rect);
+      }
+      if (currentRects.length === 0) {
         continue;
       }
-      if (
-        this.rectsOverlap(candidateRect, newRect) ||
-        (oldRect !== null && this.rectsOverlap(candidateRect, oldRect))
-      ) {
-        conflictIds.add(candidateId);
+
+      const candidateIds = new Set<number>();
+      for (const rect of currentRects) {
+        this.collectSpatialCandidates(candidateIds, spatial, rect);
+      }
+
+      for (const candidateId of candidateIds) {
+        if (conflictIds.has(candidateId) || candidateId === currentId) {
+          continue;
+        }
+
+        const candidateState = this.moverState.get(candidateId);
+        if (!candidateState?.lastSpriteRect) {
+          continue;
+        }
+
+        const candidateRects: MoverSpriteRect[] = [candidateState.lastSpriteRect];
+        const candidateSample = this.getConflictSample(
+          candidateId,
+          tickFloat,
+          sampledCache,
+        );
+        if (candidateSample) {
+          candidateRects.push(candidateSample.rect);
+        }
+
+        if (this.anyRectsOverlap(currentRects, candidateRects)) {
+          // Candidate is connected to the component; expand BFS.
+          conflictIds.add(candidateId);
+          queue.push(candidateId);
+        }
       }
     }
 
     return conflictIds;
+  }
+
+  private getConflictSample(
+    unitId: number,
+    tickFloat: number,
+    sampledCache: Map<number, MoverRenderSample | null>,
+  ): MoverRenderSample | null {
+    if (sampledCache.has(unitId)) {
+      return sampledCache.get(unitId) ?? null;
+    }
+
+    const unit = this.game.unit(unitId);
+    const plan = this.game.motionPlans().get(unitId);
+    const state = this.moverState.get(unitId);
+    if (!unit || !unit.isActive() || !plan || !state) {
+      sampledCache.set(unitId, null);
+      return null;
+    }
+
+    return this.getMoverSample(unitId, unit, plan.planId, tickFloat, sampledCache);
+  }
+
+  private anyRectsOverlap(
+    aRects: readonly MoverSpriteRect[],
+    bRects: readonly MoverSpriteRect[],
+  ): boolean {
+    for (const aRect of aRects) {
+      for (const bRect of bRects) {
+        if (this.rectsOverlap(aRect, bRect)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private redrawConflictGroup(
@@ -912,7 +983,6 @@ export class UnitLayer implements Layer {
 
     sampledGroup.sort((a, b) => a.unitId - b.unitId);
 
-    let clearUnion: MoverSpriteRect | null = null;
     for (const sampledCurrent of sampledGroup) {
       const state = this.moverState.get(sampledCurrent.unitId);
       if (!state) {
@@ -921,13 +991,10 @@ export class UnitLayer implements Layer {
       const oldRect = state.lastSpriteRect;
       if (oldRect) {
         this.spatialRemove(spatial, sampledCurrent.unitId, oldRect);
-        clearUnion = this.unionRects(clearUnion, oldRect);
+        // Clear each old rect individually instead of clearing one union rect.
+        // This reduces overclear artifacts in crowded neighborhoods.
+        this.clearMoverRect(oldRect);
       }
-      clearUnion = this.unionRects(clearUnion, sampledCurrent.rect);
-    }
-
-    if (clearUnion) {
-      this.clearMoverRect(clearUnion);
     }
 
     let drawn = 0;
@@ -1066,20 +1133,6 @@ export class UnitLayer implements Layer {
       a.y < b.y + b.h &&
       a.y + a.h > b.y
     );
-  }
-
-  private unionRects(
-    a: MoverSpriteRect | null,
-    b: MoverSpriteRect,
-  ): MoverSpriteRect {
-    if (a === null) {
-      return { ...b };
-    }
-    const x1 = Math.min(a.x, b.x);
-    const y1 = Math.min(a.y, b.y);
-    const x2 = Math.max(a.x + a.w, b.x + b.w);
-    const y2 = Math.max(a.y + a.h, b.y + b.h);
-    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {
