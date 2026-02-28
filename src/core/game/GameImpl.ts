@@ -266,8 +266,55 @@ export class GameImpl implements Game {
     this.recordTileUpdate(tile);
   }
 
-  units(...types: UnitType[]): Unit[] {
-    return Array.from(this._players.values()).flatMap((p) => p.units(...types));
+  units(): Unit[];
+  units(type: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType, type2: UnitType): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(
+    a?: UnitType | readonly UnitType[],
+    b?: UnitType,
+    c?: UnitType,
+  ): Unit[] {
+    const out: Unit[] = [];
+
+    if (a === undefined) {
+      for (const p of this._players.values()) {
+        const units = p.units();
+        for (const u of units) out.push(u);
+      }
+      return out;
+    }
+
+    if (Array.isArray(a)) {
+      for (const p of this._players.values()) {
+        const units = p.units(a);
+        for (const u of units) out.push(u);
+      }
+      return out;
+    }
+
+    if (b === undefined) {
+      for (const p of this._players.values()) {
+        const units = p.units(a);
+        for (const u of units) out.push(u);
+      }
+      return out;
+    }
+
+    if (c === undefined) {
+      for (const p of this._players.values()) {
+        const units = p.units(a, b);
+        for (const u of units) out.push(u);
+      }
+      return out;
+    }
+
+    for (const p of this._players.values()) {
+      const units = p.units(a, b, c);
+      for (const u of units) out.push(u);
+    }
+    return out;
   }
 
   unitCount(type: UnitType): number {

@@ -356,7 +356,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(...StructureTypes).length / tilesOwned
+      ? this.player.units(StructureTypes).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 

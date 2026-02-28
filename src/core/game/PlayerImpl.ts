@@ -214,15 +214,77 @@ export class PlayerImpl implements Player {
     return this.playerInfo.clan;
   }
 
-  units(...types: UnitType[]): Unit[] {
-    const len = types.length;
-    if (len === 0) {
+  units(): Unit[];
+  units(type: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType, type2: UnitType): Unit[];
+  units(types: readonly UnitType[]): Unit[];
+  units(
+    a?: UnitType | readonly UnitType[],
+    b?: UnitType,
+    c?: UnitType,
+  ): Unit[] {
+    if (a === undefined) {
       return this._units;
     }
 
+    if (Array.isArray(a)) {
+      const types = a;
+      const len = types.length;
+      if (len === 0) return this._units;
+
+      // Fast paths for common small arity calls to avoid Set allocation.
+      if (len === 1) {
+        const t0 = types[0]!;
+        const out: Unit[] = [];
+        for (const u of this._units) {
+          if (u.type() === t0) out.push(u);
+        }
+        return out;
+      }
+
+      if (len === 2) {
+        const t0 = types[0]!;
+        const t1 = types[1]!;
+        if (t0 === t1) {
+          const out: Unit[] = [];
+          for (const u of this._units) {
+            if (u.type() === t0) out.push(u);
+          }
+          return out;
+        }
+        const out: Unit[] = [];
+        for (const u of this._units) {
+          const t = u.type();
+          if (t === t0 || t === t1) out.push(u);
+        }
+        return out;
+      }
+
+      if (len === 3) {
+        const t0 = types[0]!;
+        const t1 = types[1]!;
+        const t2 = types[2]!;
+        // Keep semantics identical for duplicates in types by using direct comparisons.
+        const out: Unit[] = [];
+        for (const u of this._units) {
+          const t = u.type();
+          if (t === t0 || t === t1 || t === t2) out.push(u);
+        }
+        return out;
+      }
+
+      const ts = new Set(types);
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        if (ts.has(u.type())) out.push(u);
+      }
+      return out;
+    }
+
     // Fast paths for common small arity calls to avoid Set allocation.
-    if (len === 1) {
-      const t0 = types[0]!;
+    if (b === undefined) {
+      const t0 = a;
       const out: Unit[] = [];
       for (const u of this._units) {
         if (u.type() === t0) out.push(u);
@@ -230,9 +292,9 @@ export class PlayerImpl implements Player {
       return out;
     }
 
-    if (len === 2) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
+    if (c === undefined) {
+      const t0 = a;
+      const t1 = b;
       if (t0 === t1) {
         const out: Unit[] = [];
         for (const u of this._units) {
@@ -248,23 +310,14 @@ export class PlayerImpl implements Player {
       return out;
     }
 
-    if (len === 3) {
-      const t0 = types[0]!;
-      const t1 = types[1]!;
-      const t2 = types[2]!;
-      // Keep semantics identical for duplicates in types by using direct comparisons.
-      const out: Unit[] = [];
-      for (const u of this._units) {
-        const t = u.type();
-        if (t === t0 || t === t1 || t === t2) out.push(u);
-      }
-      return out;
-    }
-
-    const ts = new Set(types);
+    // Keep semantics identical for duplicates in types by using direct comparisons.
+    const t0 = a;
+    const t1 = b;
+    const t2 = c;
     const out: Unit[] = [];
     for (const u of this._units) {
-      if (ts.has(u.type())) out.push(u);
+      const t = u.type();
+      if (t === t0 || t === t1 || t === t2) out.push(u);
     }
     return out;
   }

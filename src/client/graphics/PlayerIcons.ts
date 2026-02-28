@@ -134,7 +134,7 @@ export function getPlayerIcons(
   }
 
   // Nuke icon (different color depending on whether the local player is the target)
-  const nukesSentByOtherPlayer = game.units(...nukeTypes).filter((unit) => {
+  const nukesSentByOtherPlayer = game.units(nukeTypes).filter((unit) => {
     const isSendingNuke = player.id() === unit.owner().id();
     const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
     return isSendingNuke && notMyPlayer && unit.isActive();

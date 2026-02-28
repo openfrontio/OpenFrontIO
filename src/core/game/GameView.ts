@@ -431,10 +431,30 @@ export class PlayerView {
     return this.game.worker.attackAveragePosition(playerID, attackID);
   }
 
-  units(...types: UnitType[]): UnitView[] {
-    return this.game
-      .units(...types)
-      .filter((u) => u.owner().smallID() === this.smallID());
+  units(): UnitView[];
+  units(type: UnitType): UnitView[];
+  units(type0: UnitType, type1: UnitType): UnitView[];
+  units(type0: UnitType, type1: UnitType, type2: UnitType): UnitView[];
+  units(types: readonly UnitType[]): UnitView[];
+  units(
+    a?: UnitType | readonly UnitType[],
+    b?: UnitType,
+    c?: UnitType,
+  ): UnitView[] {
+    let units: UnitView[];
+    if (a === undefined) {
+      units = this.game.units();
+    } else if (Array.isArray(a)) {
+      units = this.game.units(a);
+    } else if (b === undefined) {
+      units = this.game.units(a);
+    } else if (c === undefined) {
+      units = this.game.units(a, b);
+    } else {
+      units = this.game.units(a, b, c);
+    }
+
+    return units.filter((u) => u.owner().smallID() === this.smallID());
   }
 
   nameLocation(): NameViewData {
@@ -838,13 +858,73 @@ export class GameView implements GameMap {
   config(): Config {
     return this._config;
   }
-  units(...types: UnitType[]): UnitView[] {
-    if (types.length === 0) {
-      return Array.from(this._units.values()).filter((u) => u.isActive());
+  units(): UnitView[];
+  units(type: UnitType): UnitView[];
+  units(type0: UnitType, type1: UnitType): UnitView[];
+  units(type0: UnitType, type1: UnitType, type2: UnitType): UnitView[];
+  units(types: readonly UnitType[]): UnitView[];
+  units(
+    a?: UnitType | readonly UnitType[],
+    b?: UnitType,
+    c?: UnitType,
+  ): UnitView[] {
+    if (a === undefined) {
+      const out: UnitView[] = [];
+      for (const u of this._units.values()) {
+        if (u.isActive()) out.push(u);
+      }
+      return out;
     }
-    return Array.from(this._units.values()).filter(
-      (u) => u.isActive() && types.includes(u.type()),
-    );
+
+    if (Array.isArray(a)) {
+      const types = a;
+      const len = types.length;
+      if (len === 0) return this.units();
+
+      if (len === 1) return this.units(types[0]!);
+      if (len === 2) return this.units(types[0]!, types[1]!);
+      if (len === 3) return this.units(types[0]!, types[1]!, types[2]!);
+
+      const out: UnitView[] = [];
+      for (const u of this._units.values()) {
+        if (!u.isActive()) continue;
+        if (types.includes(u.type())) out.push(u);
+      }
+      return out;
+    }
+
+    if (b === undefined) {
+      const t0 = a;
+      const out: UnitView[] = [];
+      for (const u of this._units.values()) {
+        if (!u.isActive()) continue;
+        if (u.type() === t0) out.push(u);
+      }
+      return out;
+    }
+
+    if (c === undefined) {
+      const t0 = a;
+      const t1 = b;
+      const out: UnitView[] = [];
+      for (const u of this._units.values()) {
+        if (!u.isActive()) continue;
+        const t = u.type();
+        if (t === t0 || t === t1) out.push(u);
+      }
+      return out;
+    }
+
+    const t0 = a;
+    const t1 = b;
+    const t2 = c;
+    const out: UnitView[] = [];
+    for (const u of this._units.values()) {
+      if (!u.isActive()) continue;
+      const t = u.type();
+      if (t === t0 || t === t1 || t === t2) out.push(u);
+    }
+    return out;
   }
   unit(id: number): UnitView | undefined {
     return this._units.get(id);
