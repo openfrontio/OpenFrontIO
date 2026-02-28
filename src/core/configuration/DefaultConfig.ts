@@ -20,7 +20,7 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
-import { assertNever, sigmoid, simpleHash, within } from "../Util";
+import { assertNever, sigmoid, simpleHash, toInt, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
@@ -299,28 +299,24 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number): Gold {
-    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
-    const debuff = this.tradeShipShortRangeDebuff();
-    const baseGold =
-      50_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
-    const multiplier = this.goldMultiplier();
-    return BigInt(Math.floor(baseGold * multiplier));
+    return toInt(10000 + 150 * Math.pow(dist, 1.1));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
-    numTradeShips: number,
+    numPlayerPorts: number,
   ): number {
-    const decayRate = Math.LN2 / 50;
-
-    // Approaches 0 as numTradeShips increase
-    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 200);
+    if (numPlayerPorts <= 3) return 18;
+    if (numPlayerPorts <= 5) return 25;
+    if (numPlayerPorts <= 8) return 35;
+    if (numPlayerPorts <= 10) return 40;
+    if (numPlayerPorts <= 12) return 45;
 
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
+    return Math.floor((100 * rejectionModifier) / 50);
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -379,13 +375,8 @@ export class DefaultConfig implements Config {
         };
         break;
       case UnitType.MIRV:
-        info = {
-          cost: (game: Game, player: Player) => {
-            if (player.type() === PlayerType.Human && this.infiniteGold()) {
-              return 0n;
-            }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
-          },
+        return {
+          cost: this.costWrapper(() => 35_000_000),
         };
         break;
       case UnitType.MIRVWarhead:
