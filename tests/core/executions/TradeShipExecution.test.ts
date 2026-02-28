@@ -74,9 +74,11 @@ describe("TradeShipExecution", () => {
     tradeShip = {
       isActive: vi.fn(() => true),
       owner: vi.fn(() => origOwner),
+      id: vi.fn(() => 123),
       move: vi.fn(),
       setTargetUnit: vi.fn(),
       setSafeFromPirates: vi.fn(),
+      touch: vi.fn(),
       delete: vi.fn(),
       tile: vi.fn(() => 2001),
     } as any;
@@ -85,6 +87,7 @@ describe("TradeShipExecution", () => {
     tradeShipExecution.init(game, 0);
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.NEXT, node: 2001 })),
+      findPath: vi.fn((from: number) => [from]),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
   });
@@ -116,6 +119,7 @@ describe("TradeShipExecution", () => {
   it("should complete trade and award gold", () => {
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 2001 })),
+      findPath: vi.fn((from: number) => [from]),
     } as any;
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);
