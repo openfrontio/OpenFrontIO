@@ -358,7 +358,7 @@ export async function startWorker() {
         // Try to reconnect an existing client (e.g., page refresh)
         // If successful, skip all authorization (but pass updated username
         // so players can rename in the pre-game lobby)
-        const censoredRejoinUsername = privilegeRefresher
+        const censoredUsername = privilegeRefresher
           .get()
           .censorUsername(clientMsg.username);
         if (
@@ -367,7 +367,7 @@ export async function startWorker() {
             persistentId,
             clientMsg.gameID,
             0,
-            censoredRejoinUsername,
+            censoredUsername,
           )
         ) {
           return;
@@ -450,11 +450,6 @@ export async function startWorker() {
               });
           }
         }
-
-        // Censor profane usernames server-side (don't reject, just rename)
-        const censoredUsername = privilegeRefresher
-          .get()
-          .censorUsername(clientMsg.username);
 
         // Create client and add to game
         const client = new Client(
