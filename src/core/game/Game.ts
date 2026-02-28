@@ -3,6 +3,7 @@ import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
+import { TeamScoreBreakdown } from "./CompetitiveScoring";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -777,7 +778,11 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  setWinner(
+    winner: Player | Team,
+    allPlayersStats: AllPlayersStats,
+    competitiveScores?: TeamScoreBreakdown[],
+  ): void;
   getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;
@@ -847,6 +852,19 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+
+  // Crown tracking (team-based)
+  crownTeam(): Team | null;
+  teamCrownTicks(team: Team): number;
+  addCrownTick(team: Team, amount: number): void;
+
+  // Peak tile tracking (team-based)
+  teamPeakTiles(team: Team): number;
+  updateTeamPeakTiles(team: Team, currentTiles: number): void;
+
+  // Elimination tracking (team-based)
+  teamEliminationOrder(): Team[];
+  recordTeamElimination(team: Team): void;
 }
 
 export interface PlayerActions {

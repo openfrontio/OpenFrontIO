@@ -11,6 +11,7 @@ import { ATTACK_INDEX_SENT } from "../StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { TeamScoreBreakdown } from "./CompetitiveScoring";
 import {
   Alliance,
   AllianceRequest,
@@ -106,6 +107,9 @@ export class GameImpl implements Game {
 
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
+  private _teamCrownTicks: Map<Team, number> = new Map();
+  private _teamPeakTiles: Map<Team, number> = new Map();
+  private _teamEliminationOrder: Team[] = [];
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
@@ -763,12 +767,17 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+  setWinner(
+    winner: Player | Team,
+    allPlayersStats: AllPlayersStats,
+    competitiveScores?: TeamScoreBreakdown[],
+  ): void {
     this._winner = winner;
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: this.makeWinner(winner),
       allPlayersStats,
+      competitiveScores,
     });
   }
 
@@ -1200,6 +1209,59 @@ export class GameImpl implements Game {
       conqueredId: conquered.id(),
       gold,
     });
+  }
+
+  crownTeam(): Team | null {
+    const teamToTiles = new Map<Team, number>();
+    for (const player of this.players()) {
+      const team = player.team();
+      if (team === null || team === ColoredTeams.Bot) continue;
+      teamToTiles.set(
+        team,
+        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
+      );
+    }
+    let maxTiles = 0;
+    let crown: Team | null = null;
+    for (const [team, tiles] of teamToTiles) {
+      if (tiles > maxTiles) {
+        maxTiles = tiles;
+        crown = team;
+      }
+    }
+    return crown;
+  }
+
+  teamCrownTicks(team: Team): number {
+    return this._teamCrownTicks.get(team) ?? 0;
+  }
+
+  addCrownTick(team: Team, amount: number): void {
+    this._teamCrownTicks.set(
+      team,
+      (this._teamCrownTicks.get(team) ?? 0) + amount,
+    );
+  }
+
+  teamPeakTiles(team: Team): number {
+    return this._teamPeakTiles.get(team) ?? 0;
+  }
+
+  updateTeamPeakTiles(team: Team, currentTiles: number): void {
+    const prev = this._teamPeakTiles.get(team) ?? 0;
+    if (currentTiles > prev) {
+      this._teamPeakTiles.set(team, currentTiles);
+    }
+  }
+
+  teamEliminationOrder(): Team[] {
+    return this._teamEliminationOrder;
+  }
+
+  recordTeamElimination(team: Team): void {
+    if (!this._teamEliminationOrder.includes(team)) {
+      this._teamEliminationOrder.push(team);
+    }
   }
 }
 

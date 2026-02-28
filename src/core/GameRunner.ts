@@ -2,6 +2,7 @@ import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
+import { TeamMetricsExecution } from "./execution/TeamMetricsExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -103,6 +104,7 @@ export class GameRunner {
     if (this.game.config().spawnNations()) {
       this.game.addExecution(...this.execManager.nationExecutions());
     }
+    this.game.addExecution(new TeamMetricsExecution());
     this.game.addExecution(new WinCheckExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(

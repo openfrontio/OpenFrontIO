@@ -8,6 +8,7 @@ import {
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
+import { TeamScoreBreakdown } from "../../../core/game/CompetitiveScoring";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
@@ -44,6 +45,9 @@ export class WinModal extends LitElement implements Layer {
   @state()
   private patternContent: TemplateResult | null = null;
 
+  @state()
+  private competitiveScores: TeamScoreBreakdown[] | null = null;
+
   private _title: string;
 
   private rand = Math.random();
@@ -67,7 +71,9 @@ export class WinModal extends LitElement implements Layer {
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
           ${this._title || ""}
         </h2>
-        ${this.innerHtml()}
+        ${this.competitiveScores
+          ? this.renderCompetitiveScores()
+          : this.innerHtml()}
         <div
           class="${this.showButtons
             ? "flex justify-between gap-2.5"
@@ -98,6 +104,49 @@ export class WinModal extends LitElement implements Layer {
               : translateText("win_modal.spectate")}
           </button>
         </div>
+      </div>
+    `;
+  }
+
+  private renderCompetitiveScores() {
+    if (!this.competitiveScores) return html``;
+    return html`
+      <div class="mb-4 bg-black/30 p-3 rounded-sm overflow-x-auto">
+        <h3 class="text-lg font-semibold text-white mb-2 text-center">
+          Competitive Scores
+        </h3>
+        <table class="w-full text-sm text-center">
+          <thead>
+            <tr class="text-slate-300 border-b border-slate-600">
+              <th class="py-1.5 px-1">#</th>
+              <th class="py-1.5 px-1 text-left">Team</th>
+              <th class="py-1.5 px-1">Tiles</th>
+              <th class="py-1.5 px-1">Crown</th>
+              <th class="py-1.5 px-1">Place</th>
+              <th class="py-1.5 px-1 font-bold">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${this.competitiveScores.map(
+              (s, i) => html`
+                <tr
+                  class="${s.team === this.game.myPlayer()?.team()
+                    ? "bg-blue-500/20 font-bold"
+                    : ""} border-b border-slate-700"
+                >
+                  <td class="py-1.5 px-1">${i + 1}</td>
+                  <td class="py-1.5 px-1 text-left">${s.team}</td>
+                  <td class="py-1.5 px-1">${s.maxTilesPoints}</td>
+                  <td class="py-1.5 px-1">${s.crownTimePoints}</td>
+                  <td class="py-1.5 px-1">${s.placementPoints}</td>
+                  <td class="py-1.5 px-1 font-bold text-yellow-300">
+                    ${s.totalScore}
+                  </td>
+                </tr>
+              `,
+            )}
+          </tbody>
+        </table>
       </div>
     `;
   }
@@ -298,6 +347,9 @@ export class WinModal extends LitElement implements Layer {
         // ...
       } else if (wu.winner[0] === "team") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
+        if (wu.competitiveScores) {
+          this.competitiveScores = wu.competitiveScores;
+        }
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
