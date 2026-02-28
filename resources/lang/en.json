@@ -855,6 +855,7 @@
     "tps": "TPS:",
     "tps_avg_60s": "Avg:",
     "tick_exec": "Tick Exec:",
+    "max_label": "max:",
     "tick_delay": "Tick Delay:",
     "layers_header": "Render Layers",
     "render_layers_table_header": "avg / max | tick avg",
