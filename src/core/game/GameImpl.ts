@@ -51,6 +51,7 @@ import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -95,6 +96,8 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
+  private motionPlanRecords: MotionPlanRecord[] = [];
+  private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
 
   private playerTeams: Team[] = [];
@@ -246,6 +249,12 @@ export class GameImpl implements Game {
   }
 
   addUpdate(update: GameUpdate) {
+    if (update.type === GameUpdateType.Unit) {
+      const unitUpdate = update as any as { id: number; isActive: boolean };
+      if (unitUpdate.isActive === false) {
+        this.planDrivenUnitIds.delete(unitUpdate.id);
+      }
+    }
     (this.updates[update.type] as GameUpdate[]).push(update);
   }
 
@@ -441,6 +450,36 @@ export class GameImpl implements Game {
       packed[i] = pairs[i];
     }
     pairs.length = 0;
+    return packed;
+  }
+
+  recordMotionPlan(record: MotionPlanRecord): void {
+    switch (record.kind) {
+      case "grid":
+      case "parabola":
+        this.planDrivenUnitIds.add(record.unitId);
+        break;
+      case "clear":
+        this.planDrivenUnitIds.delete(record.unitId);
+        break;
+      case "reset_all":
+        this.planDrivenUnitIds.clear();
+        break;
+    }
+    this.motionPlanRecords.push(record);
+  }
+
+  isUnitPlanDriven(unitId: number): boolean {
+    return this.planDrivenUnitIds.has(unitId);
+  }
+
+  drainPackedMotionPlans(): Uint32Array | null {
+    const records = this.motionPlanRecords;
+    if (records.length === 0) {
+      return null;
+    }
+    const packed = packMotionPlans(records);
+    records.length = 0;
     return packed;
   }
 
