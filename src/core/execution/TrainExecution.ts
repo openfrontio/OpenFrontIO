@@ -7,6 +7,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MotionPlanRecord } from "../game/MotionPlans";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
@@ -63,6 +64,36 @@ export class TrainExecution implements Execution {
       return;
     }
     this.train = this.createTrainUnits(spawn);
+
+    const carUnitIds = this.cars.map((c) => c.id());
+    const pathTiles: TileRef[] = [];
+    for (let i = 0; i + 1 < this.stations.length; i++) {
+      const segment = getOrientedRailroad(
+        this.stations[i],
+        this.stations[i + 1],
+      );
+      if (!segment) {
+        this.active = false;
+        return;
+      }
+      pathTiles.push(...segment.getTiles());
+    }
+    const startTile = this.train.tile();
+    if (pathTiles.length === 0 || pathTiles[0] !== startTile) {
+      pathTiles.unshift(startTile);
+    }
+
+    const plan: MotionPlanRecord = {
+      kind: "train",
+      engineUnitId: this.train.id(),
+      carUnitIds,
+      planId: 1,
+      startTick: ticks + 1,
+      speed: this.speed,
+      spacing: this.spacing,
+      path: pathTiles,
+    };
+    this.mg.recordMotionPlan(plan);
   }
 
   tick(ticks: number): void {

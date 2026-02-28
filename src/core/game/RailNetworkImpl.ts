@@ -228,6 +228,67 @@ export class RailNetworkImpl implements RailNetwork {
     );
   }
 
+  private canSnapToExistingRailway(tile: TileRef): boolean {
+    return this.railGrid.query(tile, this.stationRadius).size > 0;
+  }
+
+  computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
+    // Factories already show their radius, so we'll exclude from ghost rails
+    // in order not to clutter the interface too much.
+    if (![UnitType.City, UnitType.Port].includes(unitType)) {
+      return [];
+    }
+
+    if (this.canSnapToExistingRailway(tile)) {
+      return [];
+    }
+
+    const maxRange = this.game.config().trainStationMaxRange();
+    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
+    const maxPathSize = this.game.config().railroadMaxSize();
+
+    // Cannot connect if outside the max range of a factory
+    if (!this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)) {
+      return [];
+    }
+
+    const neighbors = this.game.nearbyUnits(tile, maxRange, [
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+    ]);
+    neighbors.sort((a, b) => a.distSquared - b.distSquared);
+
+    const paths: TileRef[][] = [];
+    const connectedStations: TrainStation[] = [];
+    for (const neighbor of neighbors) {
+      // Limit to the closest 5 stations to avoid running too many pathfinding calls.
+      if (paths.length >= 5) break;
+      if (neighbor.distSquared <= minRangeSquared) continue;
+
+      const neighborStation = this._stationManager.findStation(neighbor.unit);
+      if (!neighborStation) continue;
+
+      const alreadyReachable = connectedStations.some(
+        (s) =>
+          this.distanceFrom(
+            neighborStation,
+            s,
+            this.maxConnectionDistance - 1,
+          ) !== -1,
+      );
+      if (alreadyReachable) continue;
+
+      const path = this.pathService.findTilePath(tile, neighborStation.tile());
+      if (path.length > 0 && path.length < maxPathSize) {
+        paths.push(path);
+        connectedStations.push(neighborStation);
+      }
+    }
+
+    return paths;
+  }
+
   private connectToNearbyStations(station: TrainStation) {
     const neighbors = this.game.nearbyUnits(
       station.tile(),

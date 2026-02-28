@@ -15,7 +15,6 @@ import {
   getPlayerCosmetics,
   handlePurchase,
   patternRelationship,
-  TEMP_FLARE_OFFSET,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -81,7 +80,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       ${modalHeader({
         title: translateText("territory_patterns.title"),
-        onBack: this.close,
+        onBack: () => this.close(),
         ariaLabel: translateText("common.back"),
         rightContent: !hasLinkedAccount(this.userMeResponse)
           ? html`<div class="flex items-center">
@@ -124,7 +123,7 @@ export class TerritoryPatternsModal extends BaseModal {
         ? [...(pattern.colorPalettes ?? []), null]
         : [null];
       for (const colorPalette of colorPalettes) {
-        let rel: string | number = "owned";
+        let rel = "owned";
         if (pattern) {
           rel = patternRelationship(
             pattern,
@@ -136,9 +135,8 @@ export class TerritoryPatternsModal extends BaseModal {
         if (rel === "blocked") {
           continue;
         }
-        const isTrial = typeof rel === "number";
         if (this.showOnlyOwned) {
-          if (rel !== "owned" && !isTrial) continue;
+          if (rel !== "owned") continue;
         } else {
           // Store mode: hide owned items
           if (rel === "owned") continue;
@@ -158,20 +156,7 @@ export class TerritoryPatternsModal extends BaseModal {
             .colorPalette=${this.cosmetics?.colorPalettes?.[
               colorPalette?.name ?? ""
             ] ?? null}
-            .requiresPurchase=${rel === "purchasable" ||
-            rel === "purchasable_no_trial"}
-            .allowTrial=${rel === "purchasable"}
-            .hasLinkedAccount=${hasLinkedAccount(this.userMeResponse)}
-            .trialCooldown=${this.userMeResponse !== false &&
-            this.userMeResponse.player.tempFlaresCooldown}
-            .trialTimeRemaining=${isTrial
-              ? Math.max(
-                  0,
-                  Math.floor(
-                    ((rel as number) - TEMP_FLARE_OFFSET - Date.now()) / 1000,
-                  ),
-                )
-              : 0}
+            .requiresPurchase=${rel === "purchasable"}
             .selected=${isSelected}
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
@@ -220,11 +205,15 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private renderNotLoggedInWarning(): TemplateResult {
-    return html`<div
-      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30"
+    return html`<button
+      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 cursor-pointer hover:bg-red-500/30"
+      @click=${() => {
+        this.close();
+        window.showPage?.("page-account");
+      }}
     >
       ${translateText("territory_patterns.not_logged_in")}
-    </div>`;
+    </button>`;
   }
 
   private renderColorSwatchGrid(): TemplateResult {
@@ -259,11 +248,7 @@ export class TerritoryPatternsModal extends BaseModal {
     if (!this.isActive && !this.inline) return html``;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
           ${this.activeTab === "patterns"

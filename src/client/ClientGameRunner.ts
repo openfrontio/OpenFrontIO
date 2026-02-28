@@ -385,15 +385,6 @@ export class ClientGameRunner {
       }
     });
 
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
-
     const onconnect = () => {
       console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);
@@ -558,12 +549,11 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       } else if (this.canAutoBoat(actions, tile)) {
@@ -655,9 +645,13 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) !== false) {
-        this.sendBoatAttackIntent(tile);
+      if (this.canBoatAttack(actions) === false) {
+        console.warn(
+          "Boat attack triggered but can't send Transport Ship to tile",
+        );
+        return;
       }
+      this.sendBoatAttackIntent(tile);
     });
   }
 
@@ -674,12 +668,11 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       }
@@ -707,11 +700,7 @@ export class ClientGameRunner {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
     );
-    if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
-      return false;
-    }
-    return bu.canBuild;
+    return bu?.canBuild ?? false;
   }
 
   private sendBoatAttackIntent(tile: TileRef) {

@@ -30,11 +30,7 @@ export class TroubleshootingModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full select-text flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           titleContent: html` <div
             class="w-full flex flex-col sm:flex-row justify-between gap-2"
@@ -56,7 +52,7 @@ export class TroubleshootingModal extends BaseModal {
               ${translateText("common.copy")}
             </button>
           </div>`,
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         ${this.loading

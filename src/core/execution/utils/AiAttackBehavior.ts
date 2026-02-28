@@ -608,7 +608,8 @@ export class AiAttackBehavior {
       })
       .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
 
-    // Try players in order of distance until we find one reachable by boat
+    // Try players in order of distance until we find reachable candidates
+    const reachablePlayers: Player[] = [];
     for (const entry of sortedPlayers) {
       const closest = closestTwoTiles(
         this.game,
@@ -622,11 +623,20 @@ export class AiAttackBehavior {
       if (closest === null) continue;
 
       if (canBuildTransportShip(this.game, this.player, closest.y)) {
-        return entry.player;
+        reachablePlayers.push(entry.player);
+        // We only need up to 2 reachable candidates
+        if (reachablePlayers.length >= 2) break;
       }
     }
 
-    return null;
+    if (reachablePlayers.length === 0) return null;
+
+    // 33% chance to pick the second-nearest player if available
+    if (reachablePlayers.length >= 2 && this.random.chance(3)) {
+      return reachablePlayers[1];
+    }
+
+    return reachablePlayers[0];
   }
 
   private getPlayerCenter(player: Player) {

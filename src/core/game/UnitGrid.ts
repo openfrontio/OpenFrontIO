@@ -140,29 +140,63 @@ export class UnitGrid {
     includeUnderConstruction: boolean = false,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
+    const gm = this.gm;
+    const x = gm.x(tile);
+    const y = gm.y(tile);
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
       tile,
       searchRange,
     );
     const rangeSquared = searchRange * searchRange;
-    const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
+
+    // `Array.isArray` does not reliably narrow `readonly T[]` in TS, so use a
+    // cheap runtime check that narrows correctly for our string-backed UnitType.
+    if (typeof types !== "string") {
+      for (let cy = startGridY; cy <= endGridY; cy++) {
+        for (let cx = startGridX; cx <= endGridX; cx++) {
+          const cell = this.grid[cy][cx];
+          for (const type of types) {
+            const unitSet = cell.get(type);
+            if (unitSet === undefined) continue;
+            for (const unit of unitSet) {
+              if (!unit.isActive()) continue;
+              // Exclude units under construction by default (e.g., defense posts being built)
+              // But include them for spacing checks
+              if (!includeUnderConstruction && unit.isUnderConstruction())
+                continue;
+              const unitTile = unit.tile();
+              const dx = gm.x(unitTile) - x;
+              const dy = gm.y(unitTile) - y;
+              const distSquared = dx * dx + dy * dy;
+              if (distSquared > rangeSquared) continue;
+              const value = { unit, distSquared };
+              if (predicate !== undefined && !predicate(value)) continue;
+              nearby.push(value);
+            }
+          }
+        }
+      }
+      return nearby;
+    }
+
+    const type = types;
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
-        for (const type of typeSet) {
-          const unitSet = this.grid[cy][cx].get(type);
-          if (unitSet === undefined) continue;
-          for (const unit of unitSet) {
-            if (!unit.isActive()) continue;
-            // Exclude units under construction by default (e.g., defense posts being built)
-            // But include them for spacing checks
-            if (!includeUnderConstruction && unit.isUnderConstruction())
-              continue;
-            const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared > rangeSquared) continue;
-            const value = { unit, distSquared };
-            if (predicate !== undefined && !predicate(value)) continue;
-            nearby.push(value);
-          }
+        const unitSet = this.grid[cy][cx].get(type);
+        if (unitSet === undefined) continue;
+        for (const unit of unitSet) {
+          if (!unit.isActive()) continue;
+          // Exclude units under construction by default (e.g., defense posts being built)
+          // But include them for spacing checks
+          if (!includeUnderConstruction && unit.isUnderConstruction()) continue;
+          const unitTile = unit.tile();
+          const dx = gm.x(unitTile) - x;
+          const dy = gm.y(unitTile) - y;
+          const distSquared = dx * dx + dy * dy;
+          if (distSquared > rangeSquared) continue;
+          const value = { unit, distSquared };
+          if (predicate !== undefined && !predicate(value)) continue;
+          nearby.push(value);
         }
       }
     }

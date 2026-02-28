@@ -50,6 +50,10 @@ export class SAMMissileExecution implements Execution {
       this.target.owner() === this.SAMMissile.owner() ||
       !nukesWhitelist.includes(this.target.type())
     ) {
+      // Clear the flag so other SAMs can re-target this nuke
+      if (this.target.isActive()) {
+        this.target.setTargetedBySAM(false);
+      }
       this.SAMMissile.delete(false);
       this.active = false;
       return;

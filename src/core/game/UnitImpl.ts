@@ -159,12 +159,11 @@ export class UnitImpl implements Unit {
     }
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.updateUnitTile(this);
-    this.mg.addUpdate(this.toUpdate());
+    this.mg.onUnitMoved(this);
   }
 
   setTroops(troops: number): void {
-    this._troops = troops;
+    this._troops = Math.max(0, troops);
   }
   troops(): number {
     return this._troops;
@@ -336,7 +335,10 @@ export class UnitImpl implements Unit {
     if (this.type() !== UnitType.TransportShip) {
       throw new Error(`Cannot retreat ${this.type()}`);
     }
-    this._retreating = true;
+    if (!this._retreating) {
+      this._retreating = true;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
   isUnderConstruction(): boolean {

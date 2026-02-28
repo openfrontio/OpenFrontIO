@@ -1,8 +1,8 @@
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
+  SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -22,13 +22,6 @@ export class PlayerActionHandler {
     private eventBus: EventBus,
     private uiState: UIState,
   ) {}
-
-  async getPlayerActions(
-    player: PlayerView,
-    tile: TileRef,
-  ): Promise<PlayerActions> {
-    return await player.actions(tile);
-  }
 
   handleAttack(player: PlayerView, targetId: string | null) {
     this.eventBus.emit(
@@ -61,6 +54,10 @@ export class PlayerActionHandler {
 
   handleAllianceRequest(player: PlayerView, recipient: PlayerView) {
     this.eventBus.emit(new SendAllianceRequestIntentEvent(player, recipient));
+  }
+
+  handleExtendAlliance(recipient: PlayerView) {
+    this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
   }
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {

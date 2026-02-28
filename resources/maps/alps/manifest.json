@@ -1,0 +1,60 @@
+{
+  "map": {
+    "height": 1836,
+    "num_land_tiles": 3672000,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 459,
+    "num_land_tiles": 229500,
+    "width": 500
+  },
+  "map4x": {
+    "height": 918,
+    "num_land_tiles": 918000,
+    "width": 1000
+  },
+  "name": "Alps",
+  "nations": [
+    {
+      "coordinates": [740, 620],
+      "flag": "fr",
+      "name": "Savoy"
+    },
+    {
+      "coordinates": [980, 580],
+      "flag": "ch",
+      "name": "Switzerland"
+    },
+    {
+      "coordinates": [1220, 560],
+      "flag": "at",
+      "name": "Tyrol"
+    },
+    {
+      "coordinates": [980, 820],
+      "flag": "it",
+      "name": "Lombardy"
+    },
+    {
+      "coordinates": [1180, 820],
+      "flag": "venice",
+      "name": "Veneto"
+    },
+    {
+      "coordinates": [1320, 690],
+      "flag": "de",
+      "name": "Bavaria"
+    },
+    {
+      "coordinates": [1450, 820],
+      "flag": "si",
+      "name": "Slovenia"
+    },
+    {
+      "coordinates": [1100, 650],
+      "flag": "li",
+      "name": "Liechtenstein"
+    }
+  ]
+}

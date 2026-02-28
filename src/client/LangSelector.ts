@@ -218,7 +218,7 @@ export class LangSelector extends LitElement {
       "help-modal",
       "settings-modal",
       "username-input",
-      "public-lobby",
+      "game-mode-selector",
       "user-setting",
       "o-modal",
       "o-button",

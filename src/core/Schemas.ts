@@ -159,7 +159,7 @@ export const GameInfoSchema = z.object({
 export const PublicGameInfoSchema = z.object({
   gameID: z.string(),
   numClients: z.number(),
-  startsAt: z.number(),
+  startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
 });
