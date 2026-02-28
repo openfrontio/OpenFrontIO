@@ -1,0 +1,60 @@
+{
+  "name": "Nile Delta",
+  "nations": [
+    {
+      "coordinates": [305, 414],
+      "name": "Alexandria",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [1146, 303],
+      "name": "Damietta",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [1100, 348],
+      "name": "Faraskur",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [1050, 423],
+      "name": "Sheremsah",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [954, 492],
+      "name": "El Senbellawein",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [920, 963],
+      "name": "Aga",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [915, 547],
+      "name": "Mit Ghamr",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [888, 1012],
+      "name": "Cairo",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [895, 1108],
+      "name": "Heliopolis",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [895, 663],
+      "name": "Memphis",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [993, 579],
+      "name": "El Mansoura",
+      "flag": "eg"
+    }
+  ]
+}
