@@ -62,8 +62,6 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
-    flareExpiration: z.record(z.string(), z.number()).optional(),
-    tempFlaresCooldown: z.boolean(),
     achievements: z
       .array(
         z.object({
