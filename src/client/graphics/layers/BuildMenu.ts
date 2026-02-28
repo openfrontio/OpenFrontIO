@@ -362,11 +362,8 @@ export class BuildMenu extends LitElement implements Layer {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
     }
-    const unit = this.playerBuildables.filter((u) => u.type === item.unitType);
-    if (unit.length === 0) {
-      return false;
-    }
-    return unit[0].canBuild !== false || unit[0].canUpgrade !== false;
+    const unit = this.playerBuildables.find((u) => u.type === item.unitType);
+    return unit ? unit.canBuild !== false || unit.canUpgrade !== false : false;
   }
 
   public cost(item: BuildItemDisplay): Gold {
