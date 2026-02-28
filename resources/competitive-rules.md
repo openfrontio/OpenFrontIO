@@ -20,7 +20,9 @@ Each match awards up to **100 points** per team, split across three categories:
 | Crown Time      | 30         | How long your team held the most territory |
 | Final Placement | 10         | How long your team survived                |
 
-The team with the most total points wins the match in competitive scoring.
+The team with the most total points finishes **#1 on the competitive scoreboard**.
+
+The actual game winner is still determined by normal game win conditions (territory threshold / timer), so the match winner and competitive #1 can differ.
 
 ---
 
@@ -44,7 +46,10 @@ Teams are ranked by their crown ratio, and points are awarded by rank.
 
 ### 3. Final Placement (10 points)
 
-This is the order in which teams are eliminated. The last team standing gets the best placement. If your team is wiped out first, you get the worst placement.
+This is based on elimination order.
+
+- Teams that are eliminated earlier place lower.
+- If multiple teams are still alive when the game ends, those surviving teams are ordered by their **current tile count at game end** (higher tiles = better placement).
 
 Only the top 5 teams receive placement points.
 
@@ -105,8 +110,9 @@ If two or more teams have the same value in a category (e.g., identical peak til
 ## How the Crown Works
 
 - The crown is assigned to the **team** with the highest total tile count (not individual players).
+- Bot team does not count toward competitive crown/score metrics.
 - **All members** of the crowned team display the crown icon, making the leading team highly visible.
-- The crown updates in real time as territory changes hands.
+- The crown updates throughout the match as territory changes hands.
 - Crown time only counts during active gameplay (not during spawn phase).
 
 ---
@@ -117,9 +123,11 @@ If two or more teams have the same value in a category (e.g., identical peak til
 
 The **Team Stats panel** has three views you can cycle through:
 
-1. **Control** — Current tile %, gold, max troops, crown time
+1. **Control** — Current tile %, gold, max troops
 2. **Units** — Launchers, SAMs, warships, cities
 3. **Competitive** — Current tile %, peak tile %, crown time
+
+In the current UI, crown time is shown in the **Competitive** view.
 
 ### At Match End
 
