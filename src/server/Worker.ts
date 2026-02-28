@@ -356,8 +356,20 @@ export async function startWorker() {
         }
 
         // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization
-        if (gm.rejoinClient(ws, persistentId, clientMsg.gameID)) {
+        // If successful, skip all authorization (but pass updated username
+        // so players can rename in the pre-game lobby)
+        const censoredRejoinUsername = privilegeRefresher
+          .get()
+          .censorUsername(clientMsg.username);
+        if (
+          gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            0,
+            censoredRejoinUsername,
+          )
+        ) {
           return;
         }
 

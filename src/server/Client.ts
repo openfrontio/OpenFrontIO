@@ -17,7 +17,7 @@ export class Client {
     public readonly roles: string[] | undefined,
     public readonly flares: string[] | undefined,
     public readonly ip: string,
-    public readonly username: string,
+    public username: string,
     public readonly uncensoredUsername: string,
     public ws: WebSocket,
     public readonly cosmetics: PlayerCosmetics | undefined,
