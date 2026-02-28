@@ -397,6 +397,7 @@ export const QuickChatIntentSchema = z.object({
   recipient: ID,
   quickChatKey: QuickChatKeySchema,
   target: ID.optional(),
+  target2: ID.optional(),
 });
 
 export const MarkDisconnectedIntentSchema = z.object({
