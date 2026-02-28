@@ -226,6 +226,7 @@ export const GameConfigSchema = z.object({
   disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
+  useRandomMap: z.boolean().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(), // In minutes
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
