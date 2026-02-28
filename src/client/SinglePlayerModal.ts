@@ -51,6 +51,10 @@ const DEFAULT_OPTIONS = {
   teamCount: 2 as TeamCountConfig,
   goldMultiplier: false,
   goldMultiplierValue: undefined as number | undefined,
+  portGoldMultiplier: false,
+  portGoldMultiplierValue: undefined as number | undefined,
+  factoryGoldMultiplier: false,
+  factoryGoldMultiplierValue: undefined as number | undefined,
   startingGold: false,
   startingGoldValue: undefined as number | undefined,
   disabledUnits: [] as UnitType[],
@@ -80,6 +84,14 @@ export class SinglePlayerModal extends BaseModal {
   @state() private goldMultiplier: boolean = DEFAULT_OPTIONS.goldMultiplier;
   @state() private goldMultiplierValue: number | undefined =
     DEFAULT_OPTIONS.goldMultiplierValue;
+  @state() private portGoldMultiplier: boolean =
+    DEFAULT_OPTIONS.portGoldMultiplier;
+  @state() private portGoldMultiplierValue: number | undefined =
+    DEFAULT_OPTIONS.portGoldMultiplierValue;
+  @state() private factoryGoldMultiplier: boolean =
+    DEFAULT_OPTIONS.factoryGoldMultiplier;
+  @state() private factoryGoldMultiplierValue: number | undefined =
+    DEFAULT_OPTIONS.factoryGoldMultiplierValue;
   @state() private startingGold: boolean = DEFAULT_OPTIONS.startingGold;
   @state() private startingGoldValue: number | undefined =
     DEFAULT_OPTIONS.startingGoldValue;
@@ -199,6 +211,42 @@ export class SinglePlayerModal extends BaseModal {
         .onToggle=${this.handleGoldMultiplierToggle}
         .onChange=${this.handleGoldMultiplierValueChanges}
         .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.port_gold_multiplier"}
+        .checked=${this.portGoldMultiplier}
+        .inputId=${"port-gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.portGoldMultiplierValue}
+        .inputAriaLabel=${translateText("single_modal.port_gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "single_modal.port_gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${1}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handlePortGoldMultiplierToggle}
+        .onChange=${this.handlePortGoldMultiplierValueChanges}
+        .onKeyDown=${this.handlePortGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.factory_gold_multiplier"}
+        .checked=${this.factoryGoldMultiplier}
+        .inputId=${"factory-gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.factoryGoldMultiplierValue}
+        .inputAriaLabel=${translateText("single_modal.factory_gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "single_modal.factory_gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${1}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleFactoryGoldMultiplierToggle}
+        .onChange=${this.handleFactoryGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleFactoryGoldMultiplierValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
         .labelKey=${"single_modal.starting_gold"}
@@ -376,6 +424,8 @@ export class SinglePlayerModal extends BaseModal {
       this.randomSpawn !== DEFAULT_OPTIONS.randomSpawn ||
       this.gameMode !== DEFAULT_OPTIONS.gameMode ||
       this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
+      this.portGoldMultiplier !== DEFAULT_OPTIONS.portGoldMultiplier ||
+      this.factoryGoldMultiplier !== DEFAULT_OPTIONS.factoryGoldMultiplier ||
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disabledUnits.length > 0
     );
@@ -400,6 +450,11 @@ export class SinglePlayerModal extends BaseModal {
     this.disabledUnits = [...DEFAULT_OPTIONS.disabledUnits];
     this.goldMultiplier = DEFAULT_OPTIONS.goldMultiplier;
     this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
+    this.portGoldMultiplier = DEFAULT_OPTIONS.portGoldMultiplier;
+    this.portGoldMultiplierValue = DEFAULT_OPTIONS.portGoldMultiplierValue;
+    this.factoryGoldMultiplier = DEFAULT_OPTIONS.factoryGoldMultiplier;
+    this.factoryGoldMultiplierValue =
+      DEFAULT_OPTIONS.factoryGoldMultiplierValue;
     this.startingGold = DEFAULT_OPTIONS.startingGold;
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
   }
@@ -512,6 +567,22 @@ export class SinglePlayerModal extends BaseModal {
     this.goldMultiplierValue = toOptionalNumber(value);
   };
 
+  private handlePortGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.portGoldMultiplier = checked;
+    this.portGoldMultiplierValue = toOptionalNumber(value);
+  };
+
+  private handleFactoryGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.factoryGoldMultiplier = checked;
+    this.factoryGoldMultiplierValue = toOptionalNumber(value);
+  };
+
   private handleStartingGoldToggle = (
     checked: boolean,
     value: number | string | undefined,
@@ -548,6 +619,14 @@ export class SinglePlayerModal extends BaseModal {
     preventDisallowedKeys(e, ["+", "-", "e", "E"]);
   };
 
+  private handlePortGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
+
+  private handleFactoryGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
+
   private handleGoldMultiplierValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
@@ -557,6 +636,30 @@ export class SinglePlayerModal extends BaseModal {
       input.value = "";
     } else {
       this.goldMultiplierValue = value;
+    }
+  };
+
+  private handlePortGoldMultiplierValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
+
+    if (value === undefined) {
+      this.portGoldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.portGoldMultiplierValue = value;
+    }
+  };
+
+  private handleFactoryGoldMultiplierValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
+
+    if (value === undefined) {
+      this.factoryGoldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.factoryGoldMultiplierValue = value;
     }
   };
 
@@ -667,6 +770,12 @@ export class SinglePlayerModal extends BaseModal {
                   }),
               ...(this.goldMultiplier && this.goldMultiplierValue
                 ? { goldMultiplier: this.goldMultiplierValue }
+                : {}),
+              ...(this.portGoldMultiplier && this.portGoldMultiplierValue
+                ? { portGoldMultiplier: this.portGoldMultiplierValue }
+                : {}),
+              ...(this.factoryGoldMultiplier && this.factoryGoldMultiplierValue
+                ? { factoryGoldMultiplier: this.factoryGoldMultiplierValue }
                 : {}),
               ...(this.startingGold && this.startingGoldValue !== undefined
                 ? { startingGold: this.startingGoldValue }

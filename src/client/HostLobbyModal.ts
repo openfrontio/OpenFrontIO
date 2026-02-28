@@ -67,6 +67,10 @@ export class HostLobbyModal extends BaseModal {
   @state() private compactMap: boolean = false;
   @state() private goldMultiplier: boolean = false;
   @state() private goldMultiplierValue: number | undefined = undefined;
+  @state() private portGoldMultiplier: boolean = false;
+  @state() private portGoldMultiplierValue: number | undefined = undefined;
+  @state() private factoryGoldMultiplier: boolean = false;
+  @state() private factoryGoldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private lobbyId = "";
@@ -188,6 +192,42 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleGoldMultiplierToggle}
         .onChange=${this.handleGoldMultiplierValueChanges}
         .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.port_gold_multiplier"}
+        .checked=${this.portGoldMultiplier}
+        .inputId=${"port-gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.portGoldMultiplierValue}
+        .inputAriaLabel=${translateText("host_modal.port_gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "host_modal.port_gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${1}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handlePortGoldMultiplierToggle}
+        .onChange=${this.handlePortGoldMultiplierValueChanges}
+        .onKeyDown=${this.handlePortGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.factory_gold_multiplier"}
+        .checked=${this.factoryGoldMultiplier}
+        .inputId=${"factory-gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.factoryGoldMultiplierValue}
+        .inputAriaLabel=${translateText("host_modal.factory_gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "host_modal.factory_gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${1}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleFactoryGoldMultiplierToggle}
+        .onChange=${this.handleFactoryGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleFactoryGoldMultiplierValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
         .labelKey=${"single_modal.starting_gold"}
@@ -447,6 +487,10 @@ export class HostLobbyModal extends BaseModal {
     this.nationCount = 0;
     this.goldMultiplier = false;
     this.goldMultiplierValue = undefined;
+    this.portGoldMultiplier = false;
+    this.portGoldMultiplierValue = undefined;
+    this.factoryGoldMultiplier = false;
+    this.factoryGoldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
 
@@ -599,6 +643,24 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handlePortGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.portGoldMultiplier = checked;
+    this.portGoldMultiplierValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleFactoryGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.factoryGoldMultiplier = checked;
+    this.factoryGoldMultiplierValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
   private handleStartingGoldToggle = (
     checked: boolean,
     value: number | string | undefined,
@@ -626,6 +688,14 @@ export class HostLobbyModal extends BaseModal {
     preventDisallowedKeys(e, ["+", "-", "e", "E"]);
   };
 
+  private handlePortGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
+
+  private handleFactoryGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
+
   private handleGoldMultiplierValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
@@ -635,6 +705,32 @@ export class HostLobbyModal extends BaseModal {
       input.value = "";
     } else {
       this.goldMultiplierValue = value;
+    }
+    this.putGameConfig();
+  };
+
+  private handlePortGoldMultiplierValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
+
+    if (value === undefined) {
+      this.portGoldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.portGoldMultiplierValue = value;
+    }
+    this.putGameConfig();
+  };
+
+  private handleFactoryGoldMultiplierValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
+
+    if (value === undefined) {
+      this.factoryGoldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.factoryGoldMultiplierValue = value;
     }
     this.putGameConfig();
   };
@@ -768,6 +864,14 @@ export class HostLobbyModal extends BaseModal {
             goldMultiplier:
               this.goldMultiplier === true
                 ? this.goldMultiplierValue
+                : undefined,
+            portGoldMultiplier:
+              this.portGoldMultiplier === true
+                ? this.portGoldMultiplierValue
+                : undefined,
+            factoryGoldMultiplier:
+              this.factoryGoldMultiplier === true
+                ? this.factoryGoldMultiplierValue
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,

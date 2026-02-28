@@ -231,6 +231,8 @@ export const GameConfigSchema = z.object({
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
+  portGoldMultiplier: z.number().min(0.1).max(1000).optional(),
+  factoryGoldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
 });
 
