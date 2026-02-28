@@ -626,6 +626,8 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private onAllianceExtensionEvent(update: AllianceExtensionUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || myPlayer.smallID() !== update.playerID) return;
     this.removeAllianceRenewalEvents(update.allianceID);
     this.requestUpdate();
   }
