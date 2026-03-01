@@ -104,7 +104,7 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
   ...Array<ModifierKey>(8).fill("startingGold"),
-  ...Array<ModifierKey>(2).fill("startingGoldHigh"),
+  ...Array<ModifierKey>(1).fill("startingGoldHigh"),
 ];
 
 // Modifiers that cannot be active at the same time.
@@ -199,7 +199,12 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: startingGold ? 30 * 10 : 5 * 10,
+      spawnImmunityDuration:
+        playerTeams === HumansVsNations
+          ? 5 * 10
+          : startingGold
+            ? 30 * 10
+            : 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -236,6 +241,7 @@ export class MapPlaylist {
       excludedModifiers.push("isHardNations");
     } else if (playerTeams === HumansVsNations) {
       excludedModifiers.push("isHardNations");
+      excludedModifiers.push("startingGoldHigh"); // Nations are disabled if that modifier is active
       hardNationsFromIndependentRoll =
         Math.random() < HARD_NATIONS_HVN_PROBABILITY;
       poolCountReduction = hardNationsFromIndependentRoll ? 1 : 0;
@@ -278,6 +284,20 @@ export class MapPlaylist {
         (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
     );
 
+    const disableNations =
+      (mode === GameMode.Team && playerTeams !== HumansVsNations) ||
+      // Nations don't have PVP immunity, so 25M starting gold wouldn't work well with them
+      (startingGold !== undefined && startingGold >= 25_000_000);
+
+    const spawnImmunityDuration =
+      playerTeams === HumansVsNations
+        ? 5 * 10 // Nations can't get more than 5 seconds of spawn immunity, so always set to 5 seconds to avoid confusion via PVP immunity HeadsUpMessage
+        : startingGold !== undefined && startingGold >= 25_000_000
+          ? 150 * 10
+          : startingGold
+            ? 30 * 10
+            : 5 * 10;
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
@@ -299,11 +319,11 @@ export class MapPlaylist {
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: isRandomSpawn,
-      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      disableNations,
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: startingGold ? 30 * 10 : 5 * 10,
+      spawnImmunityDuration,
       disabledUnits: [],
     } satisfies GameConfig;
   }
