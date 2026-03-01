@@ -1,0 +1,40 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 810000,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 50176,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 202500,
+    "width": 500
+  },
+  "name": "Achiran",
+  "nations": [
+    {
+      "coordinates": [250, 250],
+      "flag": "de",
+      "name": "first quadrant"
+    },
+    {
+      "coordinates": [750, 250],
+      "flag": "de",
+      "name": "second quadrant"
+    },
+    {
+      "coordinates": [250, 750],
+      "flag": "ie",
+      "name": "third quadrant"
+    },
+    {
+      "coordinates": [750, 750],
+      "flag": "de",
+      "name": "fourth quadrant"
+    }
+  ]
+}
