@@ -143,13 +143,15 @@ export class WinCheckExecution implements Execution {
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
     ) {
-      if (max[0] === ColoredTeams.Bot) return;
+      // Pick the top non-Bot team as the winner.
+      const winner = sorted.find((t) => t[0] !== ColoredTeams.Bot);
+      if (winner === undefined) return;
 
       const scores = this.mg.config().gameConfig().competitiveScoring
         ? this.computeScores(teamToTiles, numTilesWithoutFallout)
         : undefined;
-      this.mg.setWinner(max[0], this.mg.stats().stats(), scores);
-      console.log(`${max[0]} has won the game`);
+      this.mg.setWinner(winner[0], this.mg.stats().stats(), scores);
+      console.log(`${winner[0]} has won the game`);
       this.active = false;
     }
   }
