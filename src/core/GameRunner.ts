@@ -174,12 +174,20 @@ export class GameRunner {
     const packedTileUpdates = this.game.drainPackedTileUpdates();
     const packedMotionPlans = this.game.drainPackedMotionPlans();
 
+    // Build per-team crown ticks for competitive mode
+    const crownTicks = this.game.allTeamCrownTicks();
+    const teamCrownTicks: Record<string, number> | undefined =
+      crownTicks.size > 0
+        ? Object.fromEntries(crownTicks.entries())
+        : undefined;
+
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
       ...(packedMotionPlans ? { packedMotionPlans } : {}),
       updates: updates,
       playerNameViewData: this.playerViewData,
+      teamCrownTicks,
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
     });

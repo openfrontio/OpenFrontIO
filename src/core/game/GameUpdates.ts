@@ -33,6 +33,8 @@ export interface GameUpdateViewData {
    */
   packedMotionPlans?: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
+  /** Per-team crown ticks from the server (authoritative). */
+  teamCrownTicks?: Record<string, number>;
   tickExecutionDuration?: number;
   pendingTurns?: number;
 }

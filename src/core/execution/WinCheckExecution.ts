@@ -109,7 +109,7 @@ export class WinCheckExecution implements Execution {
   checkWinnerTeam(): void {
     if (this.mg === null) throw new Error("Not initialized");
     const teamToTiles = new Map<Team, number>();
-    for (const player of this.mg.players()) {
+    for (const player of this.mg.allPlayers()) {
       const team = player.team();
       // Sanity check, team should not be null here
       if (team === null) continue;
@@ -167,10 +167,39 @@ export class WinCheckExecution implements Execution {
       (a, b) => (teamToTiles.get(b) ?? 0) - (teamToTiles.get(a) ?? 0),
     );
 
+    // Normalize crown seconds: non-crown teams get floor(ticks/10),
+    // crown holder gets the remainder so the sum matches the game timer.
+    const elapsedSeconds = Math.floor(Math.max(0, totalGameTicks) / 10);
+    let crownHolder: Team | null = null;
+    let maxTiles = 0;
+    for (const [team, tiles] of teamToTiles) {
+      if (team !== ColoredTeams.Bot && tiles > maxTiles) {
+        maxTiles = tiles;
+        crownHolder = team;
+      }
+    }
+    const allCrownTicks = this.mg!.allTeamCrownTicks();
+    const teamCrownSeconds = new Map<Team, number>();
+    let othersSum = 0;
+    for (const team of allTeams) {
+      const ticks = allCrownTicks.get(team) ?? 0;
+      if (team !== crownHolder) {
+        const secs = Math.floor(ticks / 10);
+        teamCrownSeconds.set(team, secs);
+        othersSum += secs;
+      }
+    }
+    if (crownHolder !== null) {
+      teamCrownSeconds.set(
+        crownHolder,
+        Math.max(0, elapsedSeconds - othersSum),
+      );
+    }
+
     const metrics: TeamRawMetrics[] = allTeams.map((team) => {
       const peakTiles = this.mg!.teamPeakTiles(team);
       const peakTilePercentage = (peakTiles / numTilesWithoutFallout) * 100;
-      const crownTicks = this.mg!.teamCrownTicks(team);
+      const crownTicks = allCrownTicks.get(team) ?? 0;
       const crownRatio = totalGameTicks > 0 ? crownTicks / totalGameTicks : 0;
 
       const elimIndex = eliminationOrder.indexOf(team);
@@ -185,7 +214,14 @@ export class WinCheckExecution implements Execution {
         placementRank = elimIndex + 1;
       }
 
-      return { team, peakTilePercentage, crownRatio, placementRank };
+      const crownTimeSeconds = teamCrownSeconds.get(team) ?? 0;
+      return {
+        team,
+        peakTilePercentage,
+        crownRatio,
+        crownTimeSeconds,
+        placementRank,
+      };
     });
 
     return computeCompetitiveScores(metrics);

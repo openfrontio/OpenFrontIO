@@ -108,6 +108,43 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
+  private formatTime(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m${String(s).padStart(2, "0")}s`;
+  }
+
+  private _tooltip: HTMLDivElement | null = null;
+
+  private _showTooltip(e: MouseEvent, text: string) {
+    if (!this._tooltip) {
+      this._tooltip = document.createElement("div");
+      this._tooltip.className =
+        "fixed bg-black text-white text-xs rounded px-2 py-1.5 z-[99999] max-w-[250px] pointer-events-none";
+      document.body.appendChild(this._tooltip);
+    }
+    this._tooltip.textContent = text;
+    this._tooltip.style.display = "block";
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    this._tooltip.style.left = `${rect.left + rect.width / 2 - 125}px`;
+    this._tooltip.style.top = `${rect.top - this._tooltip.offsetHeight - 4}px`;
+  }
+
+  private _hideTooltip() {
+    if (this._tooltip) {
+      this._tooltip.style.display = "none";
+    }
+  }
+
+  private renderInfoIcon(tooltip: string) {
+    return html`<span
+      class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-600 text-slate-300 text-[10px] font-bold leading-none cursor-help shrink-0 ml-0.5"
+      @mouseenter=${(e: MouseEvent) => this._showTooltip(e, tooltip)}
+      @mouseleave=${() => this._hideTooltip()}
+      >?</span
+    >`;
+  }
+
   private renderCompetitiveScores() {
     if (!this.competitiveScores) return html``;
     return html`
@@ -120,9 +157,24 @@ export class WinModal extends LitElement implements Layer {
             <tr class="text-slate-300 border-b border-slate-600">
               <th class="py-1.5 px-1">#</th>
               <th class="py-1.5 px-1 text-left">Team</th>
-              <th class="py-1.5 px-1">Tiles</th>
-              <th class="py-1.5 px-1">Crown</th>
-              <th class="py-1.5 px-1">Place</th>
+              <th class="py-1.5 px-1">
+                Tiles
+                ${this.renderInfoIcon(
+                  "Points for peak territory % (1st: 60, 2nd: 54, 3rd: 48...)",
+                )}
+              </th>
+              <th class="py-1.5 px-1">
+                Crown
+                ${this.renderInfoIcon(
+                  "Points for time holding the most territory (1st: 30, 2nd: 27, 3rd: 24...)",
+                )}
+              </th>
+              <th class="py-1.5 px-1">
+                Place
+                ${this.renderInfoIcon(
+                  "Points for survival placement (1st: 10, 2nd: 8, 3rd: 6...)",
+                )}
+              </th>
               <th class="py-1.5 px-1 font-bold">Total</th>
             </tr>
           </thead>
@@ -136,9 +188,24 @@ export class WinModal extends LitElement implements Layer {
                 >
                   <td class="py-1.5 px-1">${i + 1}</td>
                   <td class="py-1.5 px-1 text-left">${s.team}</td>
-                  <td class="py-1.5 px-1">${s.maxTilesPoints}</td>
-                  <td class="py-1.5 px-1">${s.crownTimePoints}</td>
-                  <td class="py-1.5 px-1">${s.placementPoints}</td>
+                  <td class="py-1.5 px-1">
+                    ${s.maxTilesPoints}
+                    ${this.renderInfoIcon(
+                      `${s.team} ranked #${s.maxTilesRank} in peak territory (${s.peakTilePercentage.toFixed(1)}%)`,
+                    )}
+                  </td>
+                  <td class="py-1.5 px-1">
+                    ${s.crownTimePoints}
+                    ${this.renderInfoIcon(
+                      `${s.team} ranked #${s.crownTimeRank} in crown time (${this.formatTime(s.crownTimeSeconds)})`,
+                    )}
+                  </td>
+                  <td class="py-1.5 px-1">
+                    ${s.placementPoints}
+                    ${this.renderInfoIcon(
+                      `${s.team} placed #${s.placementRank} in survival`,
+                    )}
+                  </td>
                   <td class="py-1.5 px-1 font-bold text-yellow-300">
                     ${s.totalScore}
                   </td>

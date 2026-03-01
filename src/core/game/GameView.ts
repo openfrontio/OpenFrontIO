@@ -674,6 +674,11 @@ export class GameView implements GameMap {
     return this.lastUpdate?.updates ?? null;
   }
 
+  /** Per-team crown ticks from the server (authoritative). */
+  public teamCrownTicks(): Record<string, number> | undefined {
+    return this.lastUpdate?.teamCrownTicks;
+  }
+
   public motionPlans(): ReadonlyMap<
     number,
     {

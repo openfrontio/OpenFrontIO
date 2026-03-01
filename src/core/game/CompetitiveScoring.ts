@@ -4,6 +4,7 @@ export interface TeamRawMetrics {
   team: Team;
   peakTilePercentage: number;
   crownRatio: number;
+  crownTimeSeconds: number;
   placementRank: number;
 }
 
@@ -11,8 +12,10 @@ export interface TeamScoreBreakdown {
   team: Team;
   maxTilesRank: number;
   maxTilesPoints: number;
+  peakTilePercentage: number;
   crownTimeRank: number;
   crownTimePoints: number;
+  crownTimeSeconds: number;
   placementRank: number;
   placementPoints: number;
   totalScore: number;
@@ -74,8 +77,10 @@ export function computeCompetitiveScores(
         team: m.team,
         maxTilesRank,
         maxTilesPoints,
+        peakTilePercentage: m.peakTilePercentage,
         crownTimeRank,
         crownTimePoints,
+        crownTimeSeconds: m.crownTimeSeconds,
         placementRank,
         placementPoints,
         totalScore: maxTilesPoints + crownTimePoints + placementPoints,

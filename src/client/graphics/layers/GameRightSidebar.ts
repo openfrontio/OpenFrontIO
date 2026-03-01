@@ -51,7 +51,6 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this._isVisible = true;
-    this.game.inSpawnPhase();
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -64,7 +63,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
-      this.requestUpdate();
+      this.updateTimer();
     });
 
     this.requestUpdate();
@@ -75,25 +74,24 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   tick() {
-    // Timer logic
-    // Check if the player is the lobby creator
     if (!this.isLobbyCreator && this.game.myPlayer()?.isLobbyCreator()) {
       this.isLobbyCreator = true;
       this.requestUpdate();
     }
 
+    if (this.hasWinner) return;
+
+    this.updateTimer();
+  }
+
+  private updateTimer() {
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
-    const ticks = this.game.ticks();
-    const gameTicks = Math.max(0, ticks - spawnPhaseTurns);
-    const elapsedSeconds = Math.floor(gameTicks / 10); // 10 ticks per second
+    const gameTicks = Math.max(0, this.game.ticks() - spawnPhaseTurns);
+    const elapsedSeconds = Math.floor(gameTicks / 10);
 
     if (this.game.inSpawnPhase()) {
       this.timer = maxTimerValue !== undefined ? maxTimerValue * 60 : 0;
-      return;
-    }
-
-    if (this.hasWinner) {
       return;
     }
 

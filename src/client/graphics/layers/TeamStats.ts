@@ -7,8 +7,8 @@ import {
   Team,
   UnitType,
 } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { SendWinnerEvent } from "../../Transport";
 import {
   formatPercentage,
   renderNumber,
@@ -17,7 +17,8 @@ import {
 } from "../../Utils";
 import { Layer } from "./Layer";
 
-function formatCrownTime(seconds: number): string {
+function formatCrownTime(ticks: number): string {
+  const seconds = Math.floor(ticks / 10);
   if (seconds <= 0) return "0:00";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -38,7 +39,7 @@ interface TeamEntry {
   totalWarShips: string;
   totalCities: string;
   totalScoreSort: number;
-  crownSeconds: number;
+  crownTicks: number;
   players: PlayerView[];
 }
 
@@ -52,20 +53,30 @@ export class TeamStats extends LitElement implements Layer {
   private _shownOnInit = false;
   private viewMode: ViewMode = "control";
   private _myTeam: Team | null = null;
-  /** Crown time in game ticks accumulated per team (client-side tracking). */
-  private _crownTicks: Map<Team, number> = new Map();
   /** Peak tile count per team (client-side tracking). */
   private _peakTiles: Map<Team, number> = new Map();
-  /** Last game tick we processed metrics for. */
-  private _lastMetricsTick: number = 0;
   /** Whether the game has ended (win detected). */
   private _gameOver: boolean = false;
+  /** Frozen current % per team at game end. */
+  private _frozenCurrentPercent: Map<Team, number> = new Map();
+  /** Frozen peak % per team at game end. */
+  private _frozenPeakPercent: Map<Team, number> = new Map();
+  /** Game tick when game ended (for freezing elapsed time). */
+  private _endTick: number | null = null;
+  /** All teams we've ever seen (so eliminated teams still appear). */
+  private _knownTeams: Set<Team> = new Set();
 
   createRenderRoot() {
     return this; // use light DOM for Tailwind
   }
 
-  init() {}
+  init() {
+    this.eventBus.on(SendWinnerEvent, () => {
+      this._gameOver = true;
+      this._endTick = this.game.ticks();
+      this.freezeScores();
+    });
+  }
 
   getTickIntervalMs() {
     return 100;
@@ -76,7 +87,10 @@ export class TeamStats extends LitElement implements Layer {
 
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
       this._shownOnInit = true;
-      this._lastMetricsTick = this.game.ticks();
+      if (this.game.config().gameConfig().competitiveScoring) {
+        this.viewMode = "competitive";
+        this.visible = true;
+      }
       this.updateTeamStats();
     }
 
@@ -91,90 +105,39 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   private trackMetrics() {
-    const currentTick = this.game.ticks();
-    const tickDelta = currentTick - this._lastMetricsTick;
-    this._lastMetricsTick = currentTick;
-    if (tickDelta <= 0) return;
-
-    const players = this.game.playerViews();
     const teamToTiles = new Map<Team, number>();
-    for (const player of players) {
+    for (const player of this.game.playerViews()) {
       const team = player.team();
       if (team === null || team === ColoredTeams.Bot) continue;
+      this._knownTeams.add(team);
       teamToTiles.set(
         team,
         (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
       );
     }
-
-    const hasWinUpdate = this.hasWinUpdate();
-    const winConditionMet = this.isTeamWinConditionMet(
-      teamToTiles,
-      currentTick,
-    );
-
-    // Fallback for missed WinUpdate polling: stop immediately once we detect
-    // the board already satisfies the team win condition.
-    if (!hasWinUpdate && winConditionMet) {
-      this._gameOver = true;
-      return;
-    }
-
-    // Track peak tiles
     for (const [team, tiles] of teamToTiles) {
       const prev = this._peakTiles.get(team) ?? 0;
       if (tiles > prev) {
         this._peakTiles.set(team, tiles);
       }
     }
-
-    // Track crown time (in game ticks)
-    let maxTiles = 0;
-    let crownTeam: Team | null = null;
-    for (const [team, tiles] of teamToTiles) {
-      if (tiles > maxTiles) {
-        maxTiles = tiles;
-        crownTeam = team;
-      }
-    }
-    if (crownTeam !== null && maxTiles > 0) {
-      this._crownTicks.set(
-        crownTeam,
-        (this._crownTicks.get(crownTeam) ?? 0) + tickDelta,
-      );
-    }
-
-    if (hasWinUpdate || winConditionMet) {
-      this._gameOver = true;
-    }
   }
 
-  private hasWinUpdate(): boolean {
-    const updates = this.game.updatesSinceLastTick();
-    const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
-    return winUpdates.length > 0;
-  }
-
-  private isTeamWinConditionMet(
-    teamToTiles: Map<Team, number>,
-    currentTick: number,
-  ): boolean {
+  private freezeScores() {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
-    if (numTilesWithoutFallout <= 0 || teamToTiles.size === 0) return false;
-
-    const maxTiles = Math.max(...Array.from(teamToTiles.values()));
-    const percentage = (maxTiles / numTilesWithoutFallout) * 100;
-    const territoryWin =
-      percentage > this.game.config().percentageTilesOwnedToWin();
-
-    const maxTimer = this.game.config().gameConfig().maxTimerValue;
-    const timeElapsedSeconds =
-      (currentTick - this.game.config().numSpawnPhaseTurns()) / 10;
-    const timerWin =
-      maxTimer !== undefined && timeElapsedSeconds - maxTimer * 60 >= 0;
-
-    return territoryWin || timerWin;
+    for (const player of this.game.playerViews()) {
+      const team = player.team();
+      if (team === null || team === ColoredTeams.Bot) continue;
+      this._frozenCurrentPercent.set(
+        team,
+        (this._frozenCurrentPercent.get(team) ?? 0) +
+          player.numTilesOwned() / numTilesWithoutFallout,
+      );
+    }
+    for (const [team, peakTiles] of this._peakTiles) {
+      this._frozenPeakPercent.set(team, peakTiles / numTilesWithoutFallout);
+    }
   }
 
   private updateTeamStats() {
@@ -193,8 +156,53 @@ export class TeamStats extends LitElement implements Layer {
       grouped[team].push(player);
     }
 
+    // In competitive view, ensure eliminated teams still appear
+    if (this.viewMode === "competitive") {
+      for (const team of this._knownTeams) {
+        if (!(team in grouped)) {
+          grouped[team] = [];
+        }
+      }
+    }
+
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
+
+    // Read per-team crown ticks from the server (authoritative source).
+    // Normalize so displayed seconds sum to the sidebar elapsed seconds.
+    const currentTick = this._endTick ?? this.game.ticks();
+    const elapsedGameTicks = Math.max(
+      0,
+      currentTick - this.game.config().numSpawnPhaseTurns(),
+    );
+    const elapsedSeconds = Math.floor(elapsedGameTicks / 10);
+    const serverCrownTicks = this.game.teamCrownTicks() ?? {};
+    // Crown holder = team with most tiles (same logic as WinCheckExecution)
+    let crownHolder: string | null = null;
+    let maxTilesNow = 0;
+    for (const [team, players] of Object.entries(grouped)) {
+      const teamTotal = players.reduce((sum, p) => sum + p.numTilesOwned(), 0);
+      if (teamTotal > maxTilesNow) {
+        maxTilesNow = teamTotal;
+        crownHolder = team;
+      }
+    }
+    // Non-holder teams get floor(ticks/10), holder gets remainder
+    const normalizedCrownTicks = new Map<string, number>();
+    let othersSeconds = 0;
+    for (const [team, ticks] of Object.entries(serverCrownTicks)) {
+      if (team !== crownHolder) {
+        const secs = Math.floor(ticks / 10);
+        normalizedCrownTicks.set(team, secs * 10);
+        othersSeconds += secs;
+      }
+    }
+    if (crownHolder !== null) {
+      normalizedCrownTicks.set(
+        crownHolder,
+        Math.max(0, elapsedSeconds - othersSeconds) * 10,
+      );
+    }
 
     this.teams = Object.entries(grouped)
       .map(([teamStr, teamPlayers]) => {
@@ -218,9 +226,14 @@ export class TeamStats extends LitElement implements Layer {
           }
         }
 
-        const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
-        const peakTiles = this._peakTiles.get(teamStr) ?? 0;
-        const peakPercent = peakTiles / numTilesWithoutFallout;
+        const totalScorePercent = this._gameOver
+          ? (this._frozenCurrentPercent.get(teamStr) ??
+            totalScoreSort / numTilesWithoutFallout)
+          : totalScoreSort / numTilesWithoutFallout;
+        const rawPeakPercent = this._gameOver
+          ? (this._frozenPeakPercent.get(teamStr) ?? 0)
+          : (this._peakTiles.get(teamStr) ?? 0) / numTilesWithoutFallout;
+        const peakPercent = Math.max(rawPeakPercent, totalScorePercent);
 
         return {
           teamName: teamStr,
@@ -231,7 +244,7 @@ export class TeamStats extends LitElement implements Layer {
           totalGold: renderNumber(totalGold),
           totalMaxTroops: renderTroops(totalMaxTroops),
           players: teamPlayers,
-          crownSeconds: Math.floor((this._crownTicks.get(teamStr) ?? 0) / 10),
+          crownTicks: normalizedCrownTicks.get(teamStr) ?? 0,
 
           totalLaunchers: renderNumber(totalLaunchers),
           totalSAMs: renderNumber(totalSAMs),
@@ -272,7 +285,7 @@ export class TeamStats extends LitElement implements Layer {
     const cell = (text: string, title?: string) => html`
       <div
         class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-        title=${title ?? ""}
+        title="${title ?? ""}"
       >
         ${text}
       </div>
@@ -296,14 +309,10 @@ export class TeamStats extends LitElement implements Layer {
         `;
       case "competitive":
         return html`
-          ${cell(translateText("leaderboard.team"))} ${cell("Current %")}
-          ${cell("Peak %")}
-          <div
-            class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-            title="Crown time (time holding most territory)"
-          >
-            👑
-          </div>
+          ${cell(translateText("leaderboard.team"))}
+          ${cell("Current %", "Percentage of land currently controlled")}
+          ${cell("Peak %", "Highest percentage of land ever controlled")}
+          ${cell("👑", "Total time spent holding the most territory")}
         `;
     }
   }
@@ -333,7 +342,7 @@ export class TeamStats extends LitElement implements Layer {
         return html`
           <div class="${rowClass}">
             ${td(team.teamName)} ${td(team.totalScoreStr)}
-            ${td(team.peakScoreStr)} ${td(formatCrownTime(team.crownSeconds))}
+            ${td(team.peakScoreStr)} ${td(formatCrownTime(team.crownTicks))}
           </div>
         `;
     }

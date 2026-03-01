@@ -1276,8 +1276,8 @@ export class GameImpl implements Game {
     return crown;
   }
 
-  teamCrownTicks(team: Team): number {
-    return this._teamCrownTicks.get(team) ?? 0;
+  allTeamCrownTicks(): ReadonlyMap<Team, number> {
+    return this._teamCrownTicks;
   }
 
   addCrownTick(team: Team, amount: number): void {

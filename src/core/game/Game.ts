@@ -862,7 +862,7 @@ export interface Game extends GameMap {
 
   // Crown tracking (team-based)
   crownTeam(): Team | null;
-  teamCrownTicks(team: Team): number;
+  allTeamCrownTicks(): ReadonlyMap<Team, number>;
   addCrownTick(team: Team, amount: number): void;
 
   // Peak tile tracking (team-based)
