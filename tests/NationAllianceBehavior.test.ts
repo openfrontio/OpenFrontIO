@@ -97,8 +97,9 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     return mockRequest;
   }
 
-  test("should reject alliance during spawn phase", () => {
-    const request = setupAllianceRequest({ createdAtTick: 0 });
+  test("should reject alliance created on first post-spawn tick", () => {
+    const cutoff = game.config().numSpawnPhaseTurns() + 1;
+    const request = setupAllianceRequest({ createdAtTick: cutoff });
 
     allianceBehavior.handleAllianceRequests();
 
