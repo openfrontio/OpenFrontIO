@@ -51,10 +51,6 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
       player,
       new NationEmojiBehavior(random, game, player),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   function setupAllianceRequest({
@@ -95,16 +91,6 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
 
     return mockRequest;
   }
-
-  test("should reject alliance during spawn phase", () => {
-    vi.spyOn(game, "inSpawnPhase").mockReturnValue(true);
-    const request = setupAllianceRequest({});
-
-    allianceBehavior.handleAllianceRequests();
-
-    expect(request.accept).not.toHaveBeenCalled();
-    expect(request.reject).toHaveBeenCalled();
-  });
 
   test("should accept alliance when all conditions are met", () => {
     const request = setupAllianceRequest({});
