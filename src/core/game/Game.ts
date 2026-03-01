@@ -236,6 +236,7 @@ export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
   isCrowded: boolean;
+  isHardNations: boolean;
   startingGold?: number;
 }
 

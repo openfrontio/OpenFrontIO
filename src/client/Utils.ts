@@ -139,6 +139,12 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.crowded",
     });
   }
+  if (modifiers.isHardNations) {
+    result.push({
+      labelKey: "host_modal.hard_nations",
+      badgeKey: "public_game_modifier.hard_nations",
+    });
+  }
   if (modifiers.startingGold) {
     result.push({
       labelKey: "host_modal.starting_gold",

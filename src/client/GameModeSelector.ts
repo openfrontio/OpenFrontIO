@@ -289,6 +289,7 @@ export class GameModeSelector extends LitElement {
       mods.isRandomSpawn && translateText("public_game_modifier.random_spawn"),
       mods.isCompact && translateText("public_game_modifier.compact_map"),
       mods.isCrowded && translateText("public_game_modifier.crowded"),
+      mods.isHardNations && translateText("public_game_modifier.hard_nations"),
       mods.startingGold && translateText("public_game_modifier.starting_gold"),
     ].filter((x): x is string => !!x);
   }
