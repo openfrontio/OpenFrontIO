@@ -777,9 +777,9 @@ export class DefaultConfig implements Config {
   troopIncreaseRate(player: Player): number {
     const max = this.maxTroops(player);
 
-    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    const ratio = 1 - player.population() / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -805,18 +805,31 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    return Math.min(player.population() + toAdd, max) - player.population();
   }
 
   goldAdditionRate(player: Player): Gold {
     const multiplier = this.goldMultiplier();
-    let baseRate: bigint;
+    let baseRate = 0.045 * player.workers() ** 0.7;
     if (player.type() === PlayerType.Bot) {
-      baseRate = 50n;
-    } else {
-      baseRate = 100n;
+      baseRate *= 0.6;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    return BigInt(Math.floor(baseRate * multiplier));
+  }
+
+  troopAdjustmentRate(player: Player): number {
+    const maxDiff = this.maxTroops(player) / 1000;
+    const target = player.population() * player.targetTroopRatio();
+    const diff = target - player.troops();
+    if (Math.abs(diff) < maxDiff) {
+      return diff;
+    }
+    const adjustment = maxDiff * Math.sign(diff);
+    // Can ramp down troops much faster.
+    if (adjustment < 0) {
+      return adjustment * 5;
+    }
+    return adjustment;
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

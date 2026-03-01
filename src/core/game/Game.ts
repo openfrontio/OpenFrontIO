@@ -627,7 +627,13 @@ export interface Player {
   gold(): Gold;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
+  population(): number;
+  workers(): number;
   troops(): number;
+  targetTroopRatio(): number;
+  addWorkers(toAdd: number): void;
+  removeWorkers(toRemove: number): void;
+  setTargetTroopRatio(target: number): void;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;

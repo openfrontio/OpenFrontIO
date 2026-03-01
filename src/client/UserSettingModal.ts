@@ -362,6 +362,16 @@ export class UserSettingModal extends BaseModal {
     }
   }
 
+  private sliderTroopRatio(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value === "number") {
+      const ratio = value / 100;
+      localStorage.setItem("settings.troopRatio", ratio.toString());
+    } else {
+      console.warn("Slider event missing detail.value", e);
+    }
+  }
+
   private changeAttackRatioIncrement(
     e: CustomEvent<{ value: number | string }>,
   ) {
@@ -913,6 +923,16 @@ export class UserSettingModal extends BaseModal {
         .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
         100}
         @change=${this.sliderAttackRatio}
+      ></setting-slider>
+
+      <setting-slider
+        label="${translateText("user_setting.troop_ratio_label")}"
+        description="${translateText("user_setting.troop_ratio_desc")}"
+        min="1"
+        max="100"
+        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
+        100}
+        @change=${this.sliderTroopRatio}
       ></setting-slider>
 
       <!-- ⚔️ Attack Ratio Increment -->

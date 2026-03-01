@@ -5,6 +5,7 @@ import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
+import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
@@ -29,7 +30,19 @@ export class ControlPanel extends LitElement implements Layer {
   private troopRate: number;
 
   @state()
+  private targetTroopRatio = 0.95;
+
+  @state()
+  private currentTroopRatio = 0.95;
+
+  @state()
+  private _population: number;
+
+  @state()
   private _troops: number;
+
+  @state()
+  private _workers: number;
 
   @state()
   private _isVisible = false;
@@ -46,6 +59,7 @@ export class ControlPanel extends LitElement implements Layer {
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
+  private initTroopRatio = false;
 
   getTickIntervalMs() {
     return 100;
@@ -55,6 +69,11 @@ export class ControlPanel extends LitElement implements Layer {
     this.attackRatio = Number(
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
+    this.targetTroopRatio = Number(
+      localStorage.getItem("settings.troopRatio") ?? "0.95",
+    );
+    this.currentTroopRatio = this.targetTroopRatio;
+    this.initTroopRatio = true;
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
@@ -78,6 +97,13 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
+    if (this.initTroopRatio) {
+      this.eventBus.emit(
+        new SendSetTargetTroopRatioEvent(this.targetTroopRatio),
+      );
+      this.initTroopRatio = false;
+    }
+
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
@@ -92,11 +118,14 @@ export class ControlPanel extends LitElement implements Layer {
 
     this._maxTroops = this.game.config().maxTroops(player);
     this._gold = player.gold();
+    this._population = player.population();
     this._troops = player.troops();
+    this._workers = player.workers();
     this._attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
+    this.currentTroopRatio = this._troops / Math.max(this._population, 1);
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
     this.requestUpdate();
   }
@@ -191,6 +220,13 @@ export class ControlPanel extends LitElement implements Layer {
     const value = Number((e.target as HTMLInputElement).value);
     this.attackRatio = value / 100;
     this.onAttackRatioChange(this.attackRatio);
+  }
+
+  private handleTroopRatioSliderInput(e: Event) {
+    const value = Number((e.target as HTMLInputElement).value);
+    this.targetTroopRatio = value / 100;
+    localStorage.setItem("settings.troopRatio", this.targetTroopRatio.toString());
+    this.eventBus.emit(new SendSetTargetTroopRatioEvent(this.targetTroopRatio));
   }
 
   private renderTroopBar() {
@@ -342,6 +378,16 @@ export class ControlPanel extends LitElement implements Layer {
               </div>
             `
           : ""}
+        <div class="mt-2 flex items-center justify-between text-[11px] text-white/80" translate="no">
+          <span>
+            ${renderTroops(this._troops)} troops | ${renderTroops(this._workers)}
+            workers
+          </span>
+          <span>
+            ${(this.currentTroopRatio * 100).toFixed(0)}% live /
+            ${(this.targetTroopRatio * 100).toFixed(0)}% target
+          </span>
+        </div>
         <!-- Attack ratio bar (desktop, always visible) -->
         <div class="hidden lg:block mt-2">
           <div
@@ -372,6 +418,26 @@ export class ControlPanel extends LitElement implements Layer {
             .value=${String(Math.round(this.attackRatio * 100))}
             @input=${(e: Event) => this.handleRatioSliderInput(e)}
             class="w-full h-2 accent-red-500 cursor-pointer"
+          />
+        </div>
+        <div class="mt-2">
+          <div
+            class="flex items-center justify-between text-xs lg:text-sm font-bold mb-1 text-white"
+            translate="no"
+          >
+            <span>Troop/Gold Ratio</span>
+            <span>
+              ${(this.targetTroopRatio * 100).toFixed(0)}%
+              (${renderTroops(this._population * this.targetTroopRatio)} troops)
+            </span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            .value=${String(Math.round(this.targetTroopRatio * 100))}
+            @input=${(e: Event) => this.handleTroopRatioSliderInput(e)}
+            class="w-full h-2 accent-blue-500 cursor-pointer"
           />
         </div>
       </div>

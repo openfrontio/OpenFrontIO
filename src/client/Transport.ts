@@ -145,6 +145,10 @@ export class CancelBoatIntentEvent implements GameEvent {
   constructor(public readonly unitID: number) {}
 }
 
+export class SendSetTargetTroopRatioEvent implements GameEvent {
+  constructor(public readonly ratio: number) {}
+}
+
 export class SendWinnerEvent implements GameEvent {
   constructor(
     public readonly winner: Winner,
@@ -234,6 +238,9 @@ export class Transport {
     );
     this.eventBus.on(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),
+    );
+    this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
+      this.onSendSetTargetTroopRatioEvent(e),
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
@@ -549,6 +556,13 @@ export class Transport {
     this.sendIntent({
       type: "embargo_all",
       action: event.action,
+    });
+  }
+
+  private onSendSetTargetTroopRatioEvent(event: SendSetTargetTroopRatioEvent) {
+    this.sendIntent({
+      type: "troop_ratio",
+      ratio: event.ratio,
     });
   }
 
