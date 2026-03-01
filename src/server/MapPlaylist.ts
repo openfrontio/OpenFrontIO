@@ -273,7 +273,11 @@ export class MapPlaylist {
         ) {
           excludedModifiers.push("isCrowded");
           ({ isRandomSpawn, isCompact, startingGold } =
-            this.getRandomSpecialGameModifiers(excludedModifiers, 1));
+            this.getRandomSpecialGameModifiers(
+              excludedModifiers,
+              1,
+              poolCountReduction,
+            ));
         }
       }
     }
