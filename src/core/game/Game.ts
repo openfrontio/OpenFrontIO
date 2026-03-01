@@ -10,6 +10,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
@@ -127,6 +128,8 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  BosphorusStraits = "Bosphorus Straits",
+  BeringStrait = "Bering Strait",
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
@@ -178,6 +181,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.BosphorusStraits,
+    GameMapType.BeringStrait,
     GameMapType.Yenisei,
     GameMapType.Hawaii,
     GameMapType.Alps,
@@ -777,6 +782,8 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
+  recordMotionPlan(record: MotionPlanRecord): void;
+  drainPackedMotionPlans(): Uint32Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
