@@ -8,6 +8,11 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import {
+  computeTeamTiles,
+  findCrownTeam,
+  normalizeCrownSeconds,
+} from "../../../core/game/TeamUtils";
 import { SendWinnerEvent } from "../../Transport";
 import {
   formatPercentage,
@@ -98,15 +103,9 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   private trackMetrics() {
-    const teamToTiles = new Map<Team, number>();
-    for (const player of this.game.playerViews()) {
-      const team = player.team();
-      if (team === null || team === ColoredTeams.Bot) continue;
+    const teamToTiles = computeTeamTiles(this.game.playerViews());
+    for (const team of teamToTiles.keys()) {
       this._knownTeams.add(team);
-      teamToTiles.set(
-        team,
-        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-      );
     }
     for (const [team, tiles] of teamToTiles) {
       const prev = this._peakTiles.get(team) ?? 0;
@@ -119,14 +118,9 @@ export class TeamStats extends LitElement implements Layer {
   private freezeScores() {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
-    for (const player of this.game.playerViews()) {
-      const team = player.team();
-      if (team === null || team === ColoredTeams.Bot) continue;
-      this._frozenCurrentPercent.set(
-        team,
-        (this._frozenCurrentPercent.get(team) ?? 0) +
-          player.numTilesOwned() / numTilesWithoutFallout,
-      );
+    const teamToTiles = computeTeamTiles(this.game.playerViews());
+    for (const [team, tiles] of teamToTiles) {
+      this._frozenCurrentPercent.set(team, tiles / numTilesWithoutFallout);
     }
     for (const [team, peakTiles] of this._peakTiles) {
       this._frozenPeakPercent.set(team, peakTiles / numTilesWithoutFallout);
@@ -174,32 +168,19 @@ export class TeamStats extends LitElement implements Layer {
         ? Math.min(Math.floor(elapsedGameTicks / 10), maxTimerValue * 60)
         : Math.floor(elapsedGameTicks / 10);
     const serverCrownTicks = this.game.teamCrownTicks() ?? {};
-    // Crown holder = team with most tiles (same logic as WinCheckExecution)
-    let crownHolder: string | null = null;
-    let maxTilesNow = 0;
-    for (const [team, players] of Object.entries(grouped)) {
-      const teamTotal = players.reduce((sum, p) => sum + p.numTilesOwned(), 0);
-      if (teamTotal > maxTilesNow) {
-        maxTilesNow = teamTotal;
-        crownHolder = team;
-      }
-    }
-    // Non-holder teams get floor(ticks/10), holder gets remainder
-    const normalizedCrownTicks = new Map<string, number>();
-    let othersSeconds = 0;
-    for (const [team, ticks] of Object.entries(serverCrownTicks)) {
-      if (team !== crownHolder) {
-        const secs = Math.floor(ticks / 10);
-        normalizedCrownTicks.set(team, secs * 10);
-        othersSeconds += secs;
-      }
-    }
-    if (crownHolder !== null) {
-      normalizedCrownTicks.set(
-        crownHolder,
-        Math.max(0, elapsedSeconds - othersSeconds) * 10,
-      );
-    }
+    const allTeamKeys = Object.keys(grouped);
+    const crownHolder = findCrownTeam(
+      computeTeamTiles(this.game.playerViews()),
+    );
+    const serverTicksMap = new Map<Team, number>(
+      Object.entries(serverCrownTicks),
+    );
+    const crownSecondsMap = normalizeCrownSeconds(
+      allTeamKeys,
+      serverTicksMap,
+      crownHolder,
+      elapsedSeconds,
+    );
 
     this.teams = Object.entries(grouped)
       .map(([teamStr, teamPlayers]) => {
@@ -245,7 +226,7 @@ export class TeamStats extends LitElement implements Layer {
             this._gameOver && this.game.competitiveScores()
               ? (this.game.competitiveScores()!.find((s) => s.team === teamStr)
                   ?.crownTimeSeconds ?? 0)
-              : Math.floor((normalizedCrownTicks.get(teamStr) ?? 0) / 10),
+              : (crownSecondsMap.get(teamStr) ?? 0),
 
           totalLaunchers: renderNumber(totalLaunchers),
           totalSAMs: renderNumber(totalSAMs),

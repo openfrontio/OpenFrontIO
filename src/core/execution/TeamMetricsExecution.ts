@@ -1,4 +1,5 @@
-import { ColoredTeams, Execution, Game, GameMode, Team } from "../game/Game";
+import { Execution, Game, GameMode } from "../game/Game";
+import { computeTeamTiles, findCrownTeam } from "../game/TeamUtils";
 
 /**
  * Tracks team-level competitive metrics every 10 ticks:
@@ -30,30 +31,13 @@ export class TeamMetricsExecution implements Execution {
       if (elapsedSeconds >= maxTimerValue * 60) return;
     }
 
-    const teamToTiles = new Map<Team, number>();
-    for (const player of this.mg.players()) {
-      const team = player.team();
-      if (team === null || team === ColoredTeams.Bot) continue;
-      teamToTiles.set(
-        team,
-        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-      );
-    }
+    const teamToTiles = computeTeamTiles(this.mg.players());
 
-    // Track peak tiles for each team
     for (const [team, tiles] of teamToTiles) {
       this.mg.updateTeamPeakTiles(team, tiles);
     }
 
-    // Track crown (team with most tiles)
-    let maxTiles = 0;
-    let crownTeam: Team | null = null;
-    for (const [team, tiles] of teamToTiles) {
-      if (tiles > maxTiles) {
-        maxTiles = tiles;
-        crownTeam = team;
-      }
-    }
+    const crownTeam = findCrownTeam(teamToTiles);
     if (crownTeam !== null) {
       this.mg.addCrownTick(crownTeam, 10);
     }

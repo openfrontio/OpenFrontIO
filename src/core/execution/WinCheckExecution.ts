@@ -13,6 +13,11 @@ import {
   RankedType,
   Team,
 } from "../game/Game";
+import {
+  computeTeamTiles,
+  findCrownTeam,
+  normalizeCrownSeconds,
+} from "../game/TeamUtils";
 
 export class WinEvent implements GameEvent {
   constructor(public readonly winner: Player) {}
@@ -148,7 +153,7 @@ export class WinCheckExecution implements Execution {
       if (winner === undefined) return;
 
       const scores = this.mg.config().gameConfig().competitiveScoring
-        ? this.computeScores(teamToTiles, numTilesWithoutFallout)
+        ? this.computeScores(this.mg, teamToTiles, numTilesWithoutFallout)
         : undefined;
       this.mg.setWinner(winner[0], this.mg.stats().stats(), scores);
       console.log(`${winner[0]} has won the game`);
@@ -157,17 +162,15 @@ export class WinCheckExecution implements Execution {
   }
 
   private computeScores(
+    mg: Game,
     teamToTiles: Map<Team, number>,
     numTilesWithoutFallout: number,
   ) {
-    if (this.mg === null) return undefined;
-
-    const eliminationOrder = this.mg.teamEliminationOrder();
+    const eliminationOrder = mg.teamEliminationOrder();
     const allTeams = Array.from(teamToTiles.keys()).filter(
       (t) => t !== ColoredTeams.Bot,
     );
-    const totalGameTicks =
-      this.mg.ticks() - this.mg.config().numSpawnPhaseTurns();
+    const totalGameTicks = mg.ticks() - mg.config().numSpawnPhaseTurns();
 
     // Rank surviving teams by current tiles (more tiles = better placement)
     const survivingTeams = allTeams.filter(
@@ -177,37 +180,19 @@ export class WinCheckExecution implements Execution {
       (a, b) => (teamToTiles.get(b) ?? 0) - (teamToTiles.get(a) ?? 0),
     );
 
-    // Normalize crown seconds: non-crown teams get floor(ticks/10),
-    // crown holder gets the remainder so the sum matches the game timer.
+    const nonBotTiles = computeTeamTiles(mg.allPlayers());
+    const crownHolder = findCrownTeam(nonBotTiles);
     const elapsedSeconds = Math.floor(Math.max(0, totalGameTicks) / 10);
-    let crownHolder: Team | null = null;
-    let maxTiles = 0;
-    for (const [team, tiles] of teamToTiles) {
-      if (team !== ColoredTeams.Bot && tiles > maxTiles) {
-        maxTiles = tiles;
-        crownHolder = team;
-      }
-    }
-    const allCrownTicks = this.mg!.allTeamCrownTicks();
-    const teamCrownSeconds = new Map<Team, number>();
-    let othersSum = 0;
-    for (const team of allTeams) {
-      const ticks = allCrownTicks.get(team) ?? 0;
-      if (team !== crownHolder) {
-        const secs = Math.floor(ticks / 10);
-        teamCrownSeconds.set(team, secs);
-        othersSum += secs;
-      }
-    }
-    if (crownHolder !== null) {
-      teamCrownSeconds.set(
-        crownHolder,
-        Math.max(0, elapsedSeconds - othersSum),
-      );
-    }
+    const allCrownTicks = mg.allTeamCrownTicks();
+    const teamCrownSeconds = normalizeCrownSeconds(
+      allTeams,
+      allCrownTicks,
+      crownHolder,
+      elapsedSeconds,
+    );
 
     const metrics: TeamRawMetrics[] = allTeams.map((team) => {
-      const peakTiles = this.mg!.teamPeakTiles(team);
+      const peakTiles = mg.teamPeakTiles(team);
       const peakTilePercentage = (peakTiles / numTilesWithoutFallout) * 100;
       const crownTicks = allCrownTicks.get(team) ?? 0;
       const crownRatio = totalGameTicks > 0 ? crownTicks / totalGameTicks : 0;

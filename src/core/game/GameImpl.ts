@@ -51,6 +51,7 @@ import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
+import { computeTeamTiles, findCrownTeam } from "./TeamUtils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
 
@@ -1256,28 +1257,11 @@ export class GameImpl implements Game {
   }
 
   crownTeam(): Team | null {
-    const teamToTiles = new Map<Team, number>();
-    for (const player of this.players()) {
-      const team = player.team();
-      if (team === null || team === ColoredTeams.Bot) continue;
-      teamToTiles.set(
-        team,
-        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-      );
-    }
-    let maxTiles = 0;
-    let crown: Team | null = null;
-    for (const [team, tiles] of teamToTiles) {
-      if (tiles > maxTiles) {
-        maxTiles = tiles;
-        crown = team;
-      }
-    }
-    return crown;
+    return findCrownTeam(computeTeamTiles(this.players()));
   }
 
   allTeamCrownTicks(): ReadonlyMap<Team, number> {
-    return new Map(this._teamCrownTicks);
+    return this._teamCrownTicks;
   }
 
   addCrownTick(team: Team, amount: number): void {

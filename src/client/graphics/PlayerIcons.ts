@@ -1,5 +1,6 @@
-import { AllPlayers, ColoredTeams, nukeTypes } from "../../core/game/Game";
+import { AllPlayers, nukeTypes } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
+import { computeTeamTiles, findCrownTeam } from "../../core/game/TeamUtils";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import allianceIconFaded from "/images/AllianceIconFaded.svg?url";
 import allianceRequestBlackIcon from "/images/AllianceRequestBlackIcon.svg?url";
@@ -59,24 +60,7 @@ export function getFirstPlacePlayer(game: GameView): PlayerView | null {
 
 /** Returns the team with the most total tiles, or null if no team leads. */
 export function getCrownTeam(game: GameView): string | null {
-  const teamToTiles = new Map<string, number>();
-  for (const player of game.playerViews()) {
-    const team = player.team();
-    if (team === null || team === ColoredTeams.Bot) continue;
-    teamToTiles.set(
-      team,
-      (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-    );
-  }
-  let maxTiles = 0;
-  let crownTeam: string | null = null;
-  for (const [team, tiles] of teamToTiles) {
-    if (tiles > maxTiles) {
-      maxTiles = tiles;
-      crownTeam = team;
-    }
-  }
-  return crownTeam;
+  return findCrownTeam(computeTeamTiles(game.playerViews()));
 }
 
 export function getPlayerIcons(

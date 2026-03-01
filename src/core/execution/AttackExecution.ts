@@ -121,6 +121,7 @@ export class AttackExecution implements Execution {
 
     // CrownBreakPoint: 25% troop bonus when attacking the crown-holding team
     if (
+      this.mg.config().gameConfig().competitiveScoring &&
       this.mg.config().gameConfig().gameMode === GameMode.Team &&
       this.target.isPlayer()
     ) {
