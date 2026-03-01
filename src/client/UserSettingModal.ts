@@ -353,6 +353,14 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private toggleStopTradeAllForTeamGames(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.setStopTradingAllAtStartForTeamGames(enabled);
+    this.requestUpdate();
+  }
+
   private sliderAttackRatio(e: CustomEvent<{ value: number }>) {
     const value = e.detail?.value;
     if (typeof value === "number") {
@@ -877,6 +885,14 @@ export class UserSettingModal extends BaseModal {
         id="left-click-toggle"
         .checked=${this.userSettings.leftClickOpensMenu()}
         @change=${this.toggleLeftClickOpensMenu}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.team_stop_trade_all_label")}"
+        description="${translateText("user_setting.team_stop_trade_all_desc")}"
+        id="team-stop-trade-all-toggle"
+        .checked=${this.userSettings.stopTradingAllAtStartForTeamGames()}
+        @change=${this.toggleStopTradeAllForTeamGames}
       ></setting-toggle>
 
       <!-- 🙈 Anonymous Names -->

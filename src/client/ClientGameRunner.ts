@@ -13,7 +13,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameMode, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -42,6 +42,7 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
+  SendEmbargoAllIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -248,6 +249,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    userSettings,
   );
 }
 
@@ -264,6 +266,9 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+  private startTradeEmbargoAtTick: number | null = null;
+  private startTradeEmbargoApplied = false;
+  private startTradeModeInitialized = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -274,6 +279,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private userSettings: UserSettings,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -370,6 +376,15 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      if (
+        this.startTradeEmbargoAtTick !== null &&
+        !this.startTradeEmbargoApplied &&
+        this.gameView.ticks() >= this.startTradeEmbargoAtTick
+      ) {
+        this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
+        this.startTradeEmbargoApplied = true;
+        this.startTradeEmbargoAtTick = null;
+      }
       this.renderer.tick();
 
       // Emit tick metrics event for performance overlay
@@ -393,6 +408,19 @@ export class ClientGameRunner {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
+        if (!this.startTradeModeInitialized) {
+          this.startTradeModeInitialized = true;
+          const isTeamGame =
+            this.gameView.config().gameConfig().gameMode === GameMode.Team;
+          if (
+            isTeamGame &&
+            this.userSettings.stopTradingAllAtStartForTeamGames()
+          ) {
+            this.startTradeEmbargoAtTick =
+              this.gameView.ticks() +
+              this.gameView.config().embargoAllCooldown();
+          }
+        }
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -516,6 +544,9 @@ export class ClientGameRunner {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
     }
+    this.startTradeEmbargoAtTick = null;
+    this.startTradeEmbargoApplied = false;
+    this.startTradeModeInitialized = false;
   }
 
   private inputEvent(event: MouseUpEvent) {

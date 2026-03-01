@@ -511,6 +511,8 @@
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "left_click_menu": "Left Click Menu",
+    "team_stop_trade_all_label": "Stop Trading with All (Team Games Only)",
+    "team_stop_trade_all_desc": "If enabled, team games automatically use \"Stop Trading with All\" at game start.",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
