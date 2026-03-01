@@ -154,6 +154,7 @@ export class MapPlaylist {
 
     // Check if compact map would leave every team with at least 2 players
     if (
+      isCompact &&
       mode === GameMode.Team &&
       !(await this.supportsCompactMapForTeams(map, playerTeams!))
     ) {
