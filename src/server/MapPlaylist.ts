@@ -471,7 +471,7 @@ export class MapPlaylist {
     // Roll how many modifiers to pick: 30% → 1, 40% → 2, 20% → 3, 10% → 4
     const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
     const k = Math.max(
-      1,
+      0,
       (count ??
         (modifierCountRoll <= 3
           ? 1
