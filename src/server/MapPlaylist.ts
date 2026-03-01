@@ -110,6 +110,7 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
 // Modifiers that cannot be active at the same time.
 const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold", "startingGoldHigh"],
+  ["isHardNations", "startingGoldHigh"],
 ];
 
 // Probability of hard nations modifier in HumansVsNations games.
@@ -253,7 +254,7 @@ export class MapPlaylist {
       poolCountReduction,
     );
     let { isCrowded, startingGold, isCompact, isRandomSpawn } = poolResult;
-    const isHardNations =
+    let isHardNations =
       hardNationsFromIndependentRoll ?? poolResult.isHardNations;
 
     let crowdedMaxPlayers: number | undefined;
@@ -272,12 +273,14 @@ export class MapPlaylist {
           startingGold === undefined
         ) {
           excludedModifiers.push("isCrowded");
-          ({ isRandomSpawn, isCompact, startingGold } =
-            this.getRandomSpecialGameModifiers(
-              excludedModifiers,
-              1,
-              poolCountReduction,
-            ));
+          const fallback = this.getRandomSpecialGameModifiers(
+            excludedModifiers,
+            1,
+            poolCountReduction,
+          );
+          ({ isRandomSpawn, isCompact, startingGold } = fallback);
+          isHardNations =
+            hardNationsFromIndependentRoll ?? fallback.isHardNations;
         }
       }
     }
