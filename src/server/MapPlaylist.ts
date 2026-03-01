@@ -201,12 +201,10 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration:
-        playerTeams === HumansVsNations
-          ? 5 * 10
-          : startingGold
-            ? 30 * 10
-            : 5 * 10,
+      spawnImmunityDuration: this.getSpawnImmunityDuration(
+        playerTeams,
+        startingGold,
+      ),
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -297,15 +295,6 @@ export class MapPlaylist {
       // Nations don't have PVP immunity, so 25M starting gold wouldn't work well with them
       (startingGold !== undefined && startingGold >= 25_000_000);
 
-    const spawnImmunityDuration =
-      playerTeams === HumansVsNations
-        ? 5 * 10 // Nations can't get more than 5 seconds of spawn immunity, so always set to 5 seconds to avoid confusion via PVP immunity HeadsUpMessage
-        : startingGold !== undefined && startingGold >= 25_000_000
-          ? 150 * 10
-          : startingGold
-            ? 30 * 10
-            : 5 * 10;
-
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
@@ -331,7 +320,10 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration,
+      spawnImmunityDuration: this.getSpawnImmunityDuration(
+        playerTeams,
+        startingGold,
+      ),
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -549,6 +541,24 @@ export class MapPlaylist {
       default:
         return Math.floor(adjustedPlayerCount / playerTeams);
     }
+  }
+
+  /**
+   * Centralised spawn-immunity duration logic.
+   * - HumansVsNations: always 5s (nations can't benefit from longer PVP immunity)
+   * - 25M starting gold: 2:30 (extra time to compensate for high gold)
+   * - 5M starting gold: 30s
+   * - Default: 5s
+   */
+  private getSpawnImmunityDuration(
+    playerTeams?: TeamCountConfig,
+    startingGold?: number,
+  ): number {
+    if (playerTeams === HumansVsNations) return 5 * 10;
+    if (startingGold !== undefined && startingGold >= 25_000_000)
+      return 150 * 10;
+    if (startingGold) return 30 * 10;
+    return 5 * 10;
   }
 
   private async getCrowdedMaxPlayers(
