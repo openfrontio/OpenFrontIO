@@ -109,6 +109,8 @@ export interface ModifierInfo {
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
+  /** Parameters to pass to translateText for the badge key */
+  badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
 }
@@ -149,6 +151,9 @@ export function getActiveModifiers(
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
+      badgeParams: {
+        amount: Math.round(modifiers.startingGold / 1_000_000),
+      },
       value: modifiers.startingGold,
     });
   }
@@ -161,7 +166,9 @@ export function getActiveModifiers(
 export function getModifierLabels(
   modifiers: PublicGameModifiers | undefined,
 ): string[] {
-  return getActiveModifiers(modifiers).map((m) => translateText(m.badgeKey));
+  return getActiveModifiers(modifiers).map((m) =>
+    translateText(m.badgeKey, m.badgeParams),
+  );
 }
 
 export function renderDuration(totalSeconds: number): string {

@@ -94,15 +94,22 @@ type ModifierKey =
   | "isCompact"
   | "isCrowded"
   | "isHardNations"
-  | "startingGold";
+  | "startingGold"
+  | "startingGoldHigh";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(4).fill("isRandomSpawn"),
-  ...Array<ModifierKey>(7).fill("isCompact"),
+  ...Array<ModifierKey>(8).fill("isCompact"),
   ...Array<ModifierKey>(1).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
-  ...Array<ModifierKey>(6).fill("startingGold"),
+  ...Array<ModifierKey>(8).fill("startingGold"),
+  ...Array<ModifierKey>(2).fill("startingGoldHigh"),
+];
+
+// Modifiers that cannot be active at the same time.
+const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
+  ["startingGold", "startingGoldHigh"],
 ];
 
 // Probability of hard nations modifier in HumansVsNations games.
@@ -459,7 +466,12 @@ export class MapPlaylist {
     const selected = new Set<ModifierKey>();
     for (const key of pool) {
       if (selected.size >= k) break;
-      selected.add(key);
+      // Skip if a mutually exclusive modifier is already selected
+      const blocked = MUTUALLY_EXCLUSIVE_MODIFIERS.some(
+        ([a, b]) =>
+          (key === a && selected.has(b)) || (key === b && selected.has(a)),
+      );
+      if (!blocked) selected.add(key);
     }
 
     return {
@@ -467,7 +479,11 @@ export class MapPlaylist {
       isCompact: selected.has("isCompact"),
       isCrowded: selected.has("isCrowded"),
       isHardNations: selected.has("isHardNations"),
-      startingGold: selected.has("startingGold") ? 5_000_000 : undefined,
+      startingGold: selected.has("startingGoldHigh")
+        ? 25_000_000
+        : selected.has("startingGold")
+          ? 5_000_000
+          : undefined,
     };
   }
 

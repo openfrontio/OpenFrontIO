@@ -290,7 +290,10 @@ export class GameModeSelector extends LitElement {
       mods.isCompact && translateText("public_game_modifier.compact_map"),
       mods.isCrowded && translateText("public_game_modifier.crowded"),
       mods.isHardNations && translateText("public_game_modifier.hard_nations"),
-      mods.startingGold && translateText("public_game_modifier.starting_gold"),
+      mods.startingGold &&
+        translateText("public_game_modifier.starting_gold", {
+          amount: Math.round(mods.startingGold / 1_000_000),
+        }),
     ].filter((x): x is string => !!x);
   }
 
