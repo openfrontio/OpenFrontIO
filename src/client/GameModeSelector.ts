@@ -5,7 +5,6 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
-  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -16,7 +15,12 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { getMapName, renderDuration, translateText } from "./Utils";
+import {
+  getMapName,
+  getModifierLabels,
+  renderDuration,
+  translateText,
+} from "./Utils";
 
 const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
 
@@ -198,7 +202,7 @@ export class GameModeSelector extends LitElement {
 
     const mapName = getMapName(lobby.gameConfig?.gameMap);
 
-    const modifierLabels = this.getModifierLabels(
+    const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
     // Sort by length for visual consistency (shorter labels first)
@@ -281,20 +285,6 @@ export class GameModeSelector extends LitElement {
         composed: true,
       }),
     );
-  }
-
-  private getModifierLabels(mods: PublicGameModifiers | undefined): string[] {
-    if (!mods) return [];
-    return [
-      mods.isRandomSpawn && translateText("public_game_modifier.random_spawn"),
-      mods.isCompact && translateText("public_game_modifier.compact_map"),
-      mods.isCrowded && translateText("public_game_modifier.crowded"),
-      mods.isHardNations && translateText("public_game_modifier.hard_nations"),
-      mods.startingGold &&
-        translateText("public_game_modifier.starting_gold", {
-          amount: Math.round(mods.startingGold / 1_000_000),
-        }),
-    ].filter((x): x is string => !!x);
   }
 
   private getLobbyTitle(lobby: PublicGameInfo): string {

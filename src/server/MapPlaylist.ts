@@ -538,11 +538,11 @@ export class MapPlaylist {
   ): number {
     switch (playerTeams) {
       case Duos:
-        return 2; // fixed team size
+        return Math.min(2, adjustedPlayerCount);
       case Trios:
-        return 3; // fixed team size
+        return Math.min(3, adjustedPlayerCount);
       case Quads:
-        return 4; // fixed team size
+        return Math.min(4, adjustedPlayerCount);
       case HumansVsNations:
         return adjustedPlayerCount; // adjustedPlayerCount is the human count
       default:
