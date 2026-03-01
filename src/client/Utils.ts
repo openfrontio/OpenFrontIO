@@ -158,6 +158,17 @@ export function getModifierLabels(
   return getActiveModifiers(modifiers).map((m) => translateText(m.badgeKey));
 }
 
+export function secondsToHms(d: number): string {
+  const pad = (n: number) => (n < 10 ? `0${n}` : n);
+  const h = Math.floor(d / 3600);
+  const m = Math.floor((d % 3600) / 60);
+  const s = Math.floor((d % 3600) % 60);
+  if (h !== 0) {
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+  return `${pad(m)}:${pad(s)}`;
+}
+
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
   const minutes = Math.floor(totalSeconds / 60);

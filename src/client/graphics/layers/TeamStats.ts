@@ -13,17 +13,10 @@ import {
   formatPercentage,
   renderNumber,
   renderTroops,
+  secondsToHms,
   translateText,
 } from "../../Utils";
 import { Layer } from "./Layer";
-
-function formatCrownTime(ticks: number): string {
-  const seconds = Math.floor(ticks / 10);
-  if (seconds <= 0) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 type ViewMode = "control" | "units" | "competitive";
 
@@ -342,7 +335,8 @@ export class TeamStats extends LitElement implements Layer {
         return html`
           <div class="${rowClass}">
             ${td(team.teamName)} ${td(team.totalScoreStr)}
-            ${td(team.peakScoreStr)} ${td(formatCrownTime(team.crownTicks))}
+            ${td(team.peakScoreStr)}
+            ${td(secondsToHms(Math.floor(team.crownTicks / 10)))}
           </div>
         `;
     }

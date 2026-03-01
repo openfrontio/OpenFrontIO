@@ -5,7 +5,7 @@ import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { secondsToHms, translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -111,20 +111,6 @@ export class GameRightSidebar extends LitElement implements Layer {
     }
   }
 
-  private secondsToHms = (d: number): string => {
-    const pad = (n: number) => (n < 10 ? `0${n}` : n);
-
-    const h = Math.floor(d / 3600);
-    const m = Math.floor((d % 3600) / 60);
-    const s = Math.floor((d % 3600) % 60);
-
-    if (h !== 0) {
-      return `${pad(h)}:${pad(m)}:${pad(s)}`;
-    } else {
-      return `${pad(m)}:${pad(s)}`;
-    }
-  };
-
   private toggleReplayPanel(): void {
     this._isReplayVisible = !this._isReplayVisible;
     this.eventBus.emit(
@@ -179,7 +165,7 @@ export class GameRightSidebar extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <!-- In-game time -->
-        <div class=${timerColor}>${this.secondsToHms(this.timer)}</div>
+        <div class=${timerColor}>${secondsToHms(this.timer)}</div>
 
         <!-- Buttons -->
         ${this.maybeRenderReplayButtons()}

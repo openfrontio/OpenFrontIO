@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import {
   getGamesPlayed,
   isInIframe,
+  secondsToHms,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
@@ -108,12 +109,6 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  private formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}m${String(s).padStart(2, "0")}s`;
-  }
-
   private _tooltip: HTMLDivElement | null = null;
 
   private _showTooltip(e: MouseEvent, text: string) {
@@ -197,7 +192,7 @@ export class WinModal extends LitElement implements Layer {
                   <td class="py-1.5 px-1">
                     ${s.crownTimePoints}
                     ${this.renderInfoIcon(
-                      `${s.team} ranked #${s.crownTimeRank} in crown time (${this.formatTime(s.crownTimeSeconds)})`,
+                      `${s.team} ranked #${s.crownTimeRank} in crown time (${secondsToHms(s.crownTimeSeconds)})`,
                     )}
                   </td>
                   <td class="py-1.5 px-1">
