@@ -76,6 +76,11 @@ export class NationAllianceBehavior {
     otherPlayer: Player,
     isResponse: boolean,
   ): boolean {
+    // Reject alliance requests during the spawn phase
+    if (this.game.inSpawnPhase()) {
+      return false;
+    }
+
     // Easy (dumb) nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
     if (this.isConfused()) {
       return this.random.chance(2);
