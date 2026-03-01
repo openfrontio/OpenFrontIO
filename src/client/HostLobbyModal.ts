@@ -782,7 +782,7 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
-            competitiveScoring: this.competitiveScoring || undefined,
+            competitiveScoring: this.competitiveScoring ? true : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

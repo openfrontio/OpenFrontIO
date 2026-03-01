@@ -726,7 +726,8 @@
     "warships": "Warships",
     "cities": "Cities",
     "show_control": "Show Control",
-    "show_units": "Show Units"
+    "show_units": "Show Units",
+    "show_competitive": "Show Competitive"
   },
   "events_display": {
     "events": "Events",

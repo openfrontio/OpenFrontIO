@@ -28,6 +28,8 @@ export class WinCheckExecution implements Execution {
 
   init(mg: Game, ticks: number) {
     this.mg = mg;
+    // Seed alive teams so eliminations on the very first tick are detected.
+    this.knownAliveTeams = this.computeAliveTeams();
   }
 
   tick(ticks: number) {
@@ -46,17 +48,23 @@ export class WinCheckExecution implements Execution {
     }
   }
 
-  private trackTeamEliminations(): void {
-    if (this.mg === null) return;
-
-    const currentAlive = new Set<Team>();
+  private computeAliveTeams(): Set<Team> {
+    const alive = new Set<Team>();
+    if (this.mg === null) return alive;
     for (const player of this.mg.players()) {
       const team = player.team();
       if (team === null || team === ColoredTeams.Bot) continue;
       if (player.numTilesOwned() > 0) {
-        currentAlive.add(team);
+        alive.add(team);
       }
     }
+    return alive;
+  }
+
+  private trackTeamEliminations(): void {
+    if (this.mg === null) return;
+
+    const currentAlive = this.computeAliveTeams();
 
     // Record teams that just died
     for (const team of this.knownAliveTeams) {

@@ -269,7 +269,7 @@ export class TeamStats extends LitElement implements Layer {
       case "control":
         return translateText("leaderboard.show_units");
       case "units":
-        return "Show Competitive";
+        return translateText("leaderboard.show_competitive");
       case "competitive":
         return translateText("leaderboard.show_control");
     }

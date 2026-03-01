@@ -18,6 +18,7 @@ import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
+const CROWN_ATTACK_BONUS = 0.25;
 export class AttackExecution implements Execution {
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
@@ -133,7 +134,7 @@ export class AttackExecution implements Execution {
         targetTeam === crownTeam &&
         attackerTeam !== crownTeam
       ) {
-        const bonus = Math.floor(this.attack.troops() * 0.25);
+        const bonus = Math.floor(this.attack.troops() * CROWN_ATTACK_BONUS);
         this.attack.setTroops(this.attack.troops() + bonus);
       }
     }

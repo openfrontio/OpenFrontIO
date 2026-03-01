@@ -93,13 +93,9 @@ export function getPlayerIcons(
 
   // Crown icon: in competitive mode, all members of the crown team get it;
   // otherwise only the individual first-place player.
-  if (
-    crownTeam !== null &&
-    crownTeam !== undefined &&
-    player.team() === crownTeam
-  ) {
+  if (crownTeam !== null && player.team() === crownTeam) {
     icons.push({ id: "crown", kind: "image", src: crownIcon });
-  } else if (crownTeam === null || crownTeam === undefined) {
+  } else if (crownTeam === null) {
     if (player === firstPlace) {
       icons.push({ id: "crown", kind: "image", src: crownIcon });
     }

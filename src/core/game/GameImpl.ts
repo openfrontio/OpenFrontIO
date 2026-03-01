@@ -1277,7 +1277,7 @@ export class GameImpl implements Game {
   }
 
   allTeamCrownTicks(): ReadonlyMap<Team, number> {
-    return this._teamCrownTicks;
+    return new Map(this._teamCrownTicks);
   }
 
   addCrownTick(team: Team, amount: number): void {
@@ -1299,7 +1299,7 @@ export class GameImpl implements Game {
   }
 
   teamEliminationOrder(): Team[] {
-    return this._teamEliminationOrder;
+    return [...this._teamEliminationOrder];
   }
 
   recordTeamElimination(team: Team): void {
