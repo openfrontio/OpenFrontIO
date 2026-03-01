@@ -89,6 +89,8 @@ export class GhostStructureChangedEvent implements GameEvent {
   constructor(public readonly ghostStructure: UnitType | null) {}
 }
 
+export class ConfirmGhostStructureEvent implements GameEvent {}
+
 export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
 }
@@ -337,6 +339,14 @@ export class InputHandler {
       }
 
       if (
+        (e.code === "Enter" || e.code === "NumpadEnter") &&
+        this.uiState.ghostStructure !== null
+      ) {
+        e.preventDefault();
+        this.eventBus.emit(new ConfirmGhostStructureEvent());
+      }
+
+      if (
         [
           this.keybinds.moveUp,
           this.keybinds.moveDown,
@@ -407,52 +417,52 @@ export class InputHandler {
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (e.code === this.keybinds.buildCity) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildCity)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.City);
       }
 
-      if (e.code === this.keybinds.buildFactory) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildFactory)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.Factory);
       }
 
-      if (e.code === this.keybinds.buildPort) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildPort)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.Port);
       }
 
-      if (e.code === this.keybinds.buildDefensePost) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildDefensePost)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.DefensePost);
       }
 
-      if (e.code === this.keybinds.buildMissileSilo) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildMissileSilo)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.MissileSilo);
       }
 
-      if (e.code === this.keybinds.buildSamLauncher) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildSamLauncher)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.SAMLauncher);
       }
 
-      if (e.code === this.keybinds.buildAtomBomb) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildAtomBomb)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.AtomBomb);
       }
 
-      if (e.code === this.keybinds.buildHydrogenBomb) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildHydrogenBomb)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.HydrogenBomb);
       }
 
-      if (e.code === this.keybinds.buildWarship) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildWarship)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.Warship);
       }
 
-      if (e.code === this.keybinds.buildMIRV) {
+      if (this.buildKeybindMatches(e.code, this.keybinds.buildMIRV)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.MIRV);
       }
@@ -611,6 +621,29 @@ export class InputHandler {
   private setGhostStructure(ghostStructure: UnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
+  }
+
+  private digitFromKeyCode(code: string): string | null {
+    if (
+      code?.length === 6 &&
+      code.startsWith("Digit") &&
+      /^[0-9]$/.test(code[5])
+    )
+      return code[5];
+    if (
+      code?.length === 7 &&
+      code.startsWith("Numpad") &&
+      /^[0-9]$/.test(code[6])
+    )
+      return code[6];
+    return null;
+  }
+
+  private buildKeybindMatches(code: string, keybindValue: string): boolean {
+    if (code === keybindValue) return true;
+    const digit = this.digitFromKeyCode(code);
+    const bindDigit = this.digitFromKeyCode(keybindValue);
+    return digit !== null && bindDigit !== null && digit === bindDigit;
   }
 
   private getPinchDistance(): number {

@@ -15,6 +15,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  ConfirmGhostStructureEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
@@ -170,6 +171,9 @@ export class StructureIconsLayer implements Layer {
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
     this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+    this.eventBus.on(ConfirmGhostStructureEvent, () =>
+      this.confirmGhostStructure(),
+    );
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
@@ -380,6 +384,10 @@ export class StructureIconsLayer implements Layer {
         4,
       )
       .fill({ color: 0x000000, alpha: 0.65 });
+  }
+
+  private confirmGhostStructure() {
+    this.createStructure(new MouseUpEvent(this.mousePos.x, this.mousePos.y));
   }
 
   private createStructure(e: MouseUpEvent) {

@@ -1,5 +1,10 @@
-import { AutoUpgradeEvent, InputHandler } from "../src/client/InputHandler";
+import {
+  AutoUpgradeEvent,
+  ConfirmGhostStructureEvent,
+  InputHandler,
+} from "../src/client/InputHandler";
 import { EventBus } from "../src/core/EventBus";
+import { UnitType } from "../src/core/game/Game";
 
 class MockPointerEvent {
   button: number;
@@ -460,6 +465,102 @@ describe("InputHandler AutoUpgrade", () => {
       // default remains when parsing fails
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
       spy.mockRestore();
+    });
+  });
+
+  describe("Enter key confirm ghost structure", () => {
+    let uiState: {
+      attackRatio: number;
+      ghostStructure: UnitType | null;
+      overlappingRailroads: number[];
+      ghostRailPaths: any[];
+      rocketDirectionUp: boolean;
+    };
+
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+      uiState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      };
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+    });
+
+    test("emits ConfirmGhostStructureEvent on Enter when ghost structure is set", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      uiState.ghostStructure = UnitType.City;
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Enter" }));
+
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.any(ConfirmGhostStructureEvent),
+      );
+    });
+
+    test("emits ConfirmGhostStructureEvent on NumpadEnter when ghost structure is set", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      uiState.ghostStructure = UnitType.Factory;
+
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "NumpadEnter" }),
+      );
+
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.any(ConfirmGhostStructureEvent),
+      );
+    });
+
+    test("does not emit ConfirmGhostStructureEvent on Enter when no ghost structure", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      expect(uiState.ghostStructure).toBeNull();
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Enter" }));
+
+      const confirmCalls = mockEmit.mock.calls.filter(
+        (call) => call[0] instanceof ConfirmGhostStructureEvent,
+      );
+      expect(confirmCalls).toHaveLength(0);
+    });
+  });
+
+  describe("Numpad number keys for build keybinds", () => {
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+      inputHandler.destroy();
+      const uiState = {
+        attackRatio: 20,
+        ghostStructure: null as UnitType | null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [] as number[],
+        ghostRailPaths: [] as any[],
+      };
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+    });
+
+    test("Numpad1 sets ghost structure to City when buildCity is Digit1", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad1", key: "1" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+
+    test("Numpad5 sets ghost structure to MissileSilo when buildMissileSilo is Digit5", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad5", key: "5" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MissileSilo);
+    });
+
+    test("Numpad0 sets ghost structure to MIRV when buildMIRV is Digit0", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad0", key: "0" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
     });
   });
 });
