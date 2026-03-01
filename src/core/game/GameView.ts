@@ -6,6 +6,7 @@ import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
+import { TeamScoreBreakdown } from "./CompetitiveScoring";
 import {
   Cell,
   EmojiMessage,
@@ -33,6 +34,7 @@ import {
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
+  WinUpdate,
 } from "./GameUpdates";
 import { MotionPlanRecord, unpackMotionPlans } from "./MotionPlans";
 import { TerrainMapData } from "./TerrainMapLoader";
@@ -631,6 +633,7 @@ export class GameView implements GameMap {
   private trainUnitToEngine = new Map<number, number>();
 
   private toDelete = new Set<number>();
+  private _competitiveScores: TeamScoreBreakdown[] | null = null;
 
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
 
@@ -677,6 +680,11 @@ export class GameView implements GameMap {
   /** Per-team crown ticks from the server (authoritative). */
   public teamCrownTicks(): Record<string, number> | undefined {
     return this.lastUpdate?.teamCrownTicks;
+  }
+
+  /** Competitive scores set once at game end (authoritative). */
+  public competitiveScores(): TeamScoreBreakdown[] | null {
+    return this._competitiveScores;
   }
 
   public motionPlans(): ReadonlyMap<
@@ -802,6 +810,17 @@ export class GameView implements GameMap {
         this.clearTrainPlanForUnit(unit.id());
       }
     });
+
+    // Capture competitive scores from WinUpdate (once)
+    if (this._competitiveScores === null && gu.updates) {
+      const winUpdates = gu.updates[GameUpdateType.Win] as WinUpdate[];
+      for (const wu of winUpdates) {
+        if (wu.competitiveScores) {
+          this._competitiveScores = wu.competitiveScores;
+          break;
+        }
+      }
+    }
 
     this.advanceMotionPlannedUnits(gu.tick);
     this.rebuildMotionPlannedUnitIdsCacheIfDirty();

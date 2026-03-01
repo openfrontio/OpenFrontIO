@@ -9,7 +9,6 @@ import {
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { TeamScoreBreakdown } from "../../../core/game/CompetitiveScoring";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
@@ -46,8 +45,9 @@ export class WinModal extends LitElement implements Layer {
   @state()
   private patternContent: TemplateResult | null = null;
 
-  @state()
-  private competitiveScores: TeamScoreBreakdown[] | null = null;
+  private get competitiveScores() {
+    return this.game.competitiveScores();
+  }
 
   private _title: string;
 
@@ -409,9 +409,6 @@ export class WinModal extends LitElement implements Layer {
         // ...
       } else if (wu.winner[0] === "team") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
-        if (wu.competitiveScores) {
-          this.competitiveScores = wu.competitiveScores;
-        }
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;

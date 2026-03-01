@@ -22,6 +22,14 @@ export class TeamMetricsExecution implements Execution {
     if (ticks % 10 !== 0) return;
     if (this.mg === null) throw new Error("Not initialized");
 
+    // Stop tracking after the game timer expires.
+    const maxTimerValue = this.mg.config().gameConfig().maxTimerValue;
+    if (maxTimerValue !== undefined) {
+      const elapsedSeconds =
+        (ticks - this.mg.config().numSpawnPhaseTurns()) / 10;
+      if (elapsedSeconds >= maxTimerValue * 60) return;
+    }
+
     const teamToTiles = new Map<Team, number>();
     for (const player of this.mg.players()) {
       const team = player.team();

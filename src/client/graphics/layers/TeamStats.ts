@@ -32,7 +32,7 @@ interface TeamEntry {
   totalWarShips: string;
   totalCities: string;
   totalScoreSort: number;
-  crownTicks: number;
+  crownSeconds: number;
   players: PlayerView[];
 }
 
@@ -168,7 +168,11 @@ export class TeamStats extends LitElement implements Layer {
       0,
       currentTick - this.game.config().numSpawnPhaseTurns(),
     );
-    const elapsedSeconds = Math.floor(elapsedGameTicks / 10);
+    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
+    const elapsedSeconds =
+      maxTimerValue !== undefined
+        ? Math.min(Math.floor(elapsedGameTicks / 10), maxTimerValue * 60)
+        : Math.floor(elapsedGameTicks / 10);
     const serverCrownTicks = this.game.teamCrownTicks() ?? {};
     // Crown holder = team with most tiles (same logic as WinCheckExecution)
     let crownHolder: string | null = null;
@@ -237,7 +241,11 @@ export class TeamStats extends LitElement implements Layer {
           totalGold: renderNumber(totalGold),
           totalMaxTroops: renderTroops(totalMaxTroops),
           players: teamPlayers,
-          crownTicks: normalizedCrownTicks.get(teamStr) ?? 0,
+          crownSeconds:
+            this._gameOver && this.game.competitiveScores()
+              ? (this.game.competitiveScores()!.find((s) => s.team === teamStr)
+                  ?.crownTimeSeconds ?? 0)
+              : Math.floor((normalizedCrownTicks.get(teamStr) ?? 0) / 10),
 
           totalLaunchers: renderNumber(totalLaunchers),
           totalSAMs: renderNumber(totalSAMs),
@@ -335,8 +343,7 @@ export class TeamStats extends LitElement implements Layer {
         return html`
           <div class="${rowClass}">
             ${td(team.teamName)} ${td(team.totalScoreStr)}
-            ${td(team.peakScoreStr)}
-            ${td(secondsToHms(Math.floor(team.crownTicks / 10)))}
+            ${td(team.peakScoreStr)} ${td(secondsToHms(team.crownSeconds))}
           </div>
         `;
     }
