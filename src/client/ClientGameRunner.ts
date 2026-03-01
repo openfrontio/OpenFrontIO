@@ -414,6 +414,7 @@ export class ClientGameRunner {
             this.gameView.config().gameConfig().gameMode === GameMode.Team;
           if (
             isTeamGame &&
+            !this.gameView.config().isReplay() &&
             this.userSettings.stopTradingAllAtStartForTeamGames()
           ) {
             this.startTradeEmbargoAtTick =
