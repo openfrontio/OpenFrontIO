@@ -9,6 +9,7 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
+  ModifierTarget,
   UnitType,
 } from "../core/game/Game";
 import {
@@ -69,6 +70,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
+  @state() private modifierTarget: ModifierTarget = ModifierTarget.All;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -311,6 +313,41 @@ export class HostLobbyModal extends BaseModal {
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
+          ${this.infiniteGold || this.infiniteTroops || this.instantBuild
+            ? html`
+                <div class="mt-6 space-y-2">
+                  <h3
+                    class="text-sm font-bold text-white/70 uppercase tracking-wider"
+                  >
+                    ${translateText("host_modal.modifier_target_title")}
+                  </h3>
+                  <div class="flex gap-2">
+                    ${Object.values(ModifierTarget).map(
+                      (target) => html`
+                        <button
+                          class="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${this
+                            .modifierTarget === target
+                            ? "bg-blue-600 text-white"
+                            : "bg-white/10 text-white/70 hover:bg-white/20"}"
+                          @click=${() =>
+                            this.handleModifierTargetChange(target)}
+                        >
+                          ${translateText(
+                            target === ModifierTarget.All
+                              ? "host_modal.modifier_target_all"
+                              : "host_modal.modifier_target_host",
+                          )}
+                        </button>
+                      `,
+                    )}
+                  </div>
+                  <p class="text-xs text-white/50">
+                    ${translateText("host_modal.modifier_target_description")}
+                  </p>
+                </div>
+              `
+            : ""}
+
           <lobby-player-view
             class="mt-10"
             .gameMode=${this.gameMode}
@@ -449,6 +486,7 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+    this.modifierTarget = ModifierTarget.All;
 
     this.leaveLobbyOnClose = true;
   }
@@ -569,6 +607,11 @@ export class HostLobbyModal extends BaseModal {
 
   private handleInstantBuildChange = (val: boolean) => {
     this.instantBuild = val;
+    this.putGameConfig();
+  };
+
+  private handleModifierTargetChange = (target: ModifierTarget) => {
+    this.modifierTarget = target;
     this.putGameConfig();
   };
 
@@ -771,6 +814,7 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
+            modifierTarget: this.modifierTarget,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
