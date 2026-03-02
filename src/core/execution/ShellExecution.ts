@@ -74,18 +74,7 @@ export class ShellExecution implements Execution {
 
     const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;
-    const rawDamage = Math.round((baseDamage / 250) * damageMultiplier);
-
-    if (this.target.type() !== UnitType.TransportShip) {
-      return rawDamage;
-    }
-
-    // Heavier troop transports are harder to sink, with diminishing returns.
-    // ~1 troop => x1.27 resistance, ~1k => x3.7, ~100k => x5.5.
-    const troops = Math.max(1, this.target.troops());
-    const resistanceMultiplier = 1 + Math.log10(troops + 1) * 0.9;
-
-    return Math.max(1, Math.round(rawDamage / resistanceMultiplier));
+    return Math.round((baseDamage / 250) * damageMultiplier);
   }
 
   private applyFixedTroopLossOnTransport(): boolean {
@@ -99,7 +88,7 @@ export class ShellExecution implements Execution {
     }
 
     // Fixed troop loss per shell hit (not percentage based).
-    const fixedLossPerHit = 70000;
+    const fixedLossPerHit = 80000;
     const nextTroops = Math.max(0, currentTroops - fixedLossPerHit);
     this.target.setTroops(nextTroops);
     this.target.touch();
