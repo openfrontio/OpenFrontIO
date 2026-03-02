@@ -3,6 +3,7 @@ import { JWK } from "jose";
 import {
   Game,
   Gold,
+  ModifierTarget,
   Player,
   PlayerInfo,
   Team,
@@ -80,6 +81,8 @@ export interface Config {
   playerTeams(): TeamCountConfig;
   goldMultiplier(): number;
   startingGold(playerInfo: PlayerInfo): Gold;
+  modifierTarget(): ModifierTarget;
+  shouldApplyModifier(player: Player | PlayerView): boolean;
 
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;
