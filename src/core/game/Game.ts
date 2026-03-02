@@ -234,6 +234,11 @@ export enum GameMapSize {
   Normal = "Normal",
 }
 
+export enum ModifierTarget {
+  All = "All",
+  HostOnly = "Host Only",
+}
+
 export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
