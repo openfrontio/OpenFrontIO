@@ -321,6 +321,7 @@ export class HostLobbyModal extends BaseModal {
             .nationCount=${this.nationCount}
             .disableNations=${this.disableNations}
             .isCompactMap=${this.compactMap}
+            .isRandomMap=${this.useRandomMap}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-player-view>
         </div>
@@ -771,6 +772,7 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
+            useRandomMap: this.useRandomMap,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

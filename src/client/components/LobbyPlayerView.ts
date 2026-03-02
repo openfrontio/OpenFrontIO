@@ -38,6 +38,7 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) disableNations: boolean = false;
   @property({ type: Boolean }) isCompactMap: boolean = false;
+  @property({ type: Boolean }) isRandomMap: boolean = false;
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
@@ -52,7 +53,8 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("teamCount") ||
       changedProperties.has("nationCount") ||
       changedProperties.has("disableNations") ||
-      changedProperties.has("isCompactMap")
+      changedProperties.has("isCompactMap") ||
+      changedProperties.has("isRandomMap")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
@@ -72,10 +74,10 @@ export class LobbyTeamView extends LitElement {
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
-            ${this.getEffectiveNationCount()}
-            ${this.getEffectiveNationCount() === 1
-              ? translateText("host_modal.nation_player")
-              : translateText("host_modal.nation_players")}
+            ${this.isRandomMap ? "?" : this.getEffectiveNationCount()}
+            ${this.isRandomMap || this.getEffectiveNationCount() !== 1
+              ? translateText("host_modal.nation_players")
+              : translateText("host_modal.nation_player")}
           </div>
         </div>
         <div
@@ -183,15 +185,19 @@ export class LobbyTeamView extends LitElement {
 
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
     const effectiveNationCount = this.getEffectiveNationCount();
-    const displayCount =
-      preview.team === ColoredTeams.Nations
-        ? effectiveNationCount
-        : preview.players.length;
+    const isNationsTeam = preview.team === ColoredTeams.Nations;
 
-    const maxTeamSize =
-      preview.team === ColoredTeams.Nations
-        ? effectiveNationCount
-        : this.teamMaxSize;
+    const displayCount = isNationsTeam
+      ? this.isRandomMap
+        ? "?"
+        : effectiveNationCount
+      : preview.players.length;
+
+    const maxTeamSize = isNationsTeam
+      ? this.isRandomMap
+        ? "?"
+        : effectiveNationCount
+      : this.teamMaxSize;
 
     return html`
       <div class="bg-gray-800 border border-gray-700 rounded-xl flex flex-col">
