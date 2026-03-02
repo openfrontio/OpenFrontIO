@@ -89,6 +89,7 @@
     "table_key": "Key",
     "table_action": "Action",
     "action_alt_view": "Alternate view (terrain/countries)",
+    "action_coordinate_grid": "Toggle coordinate grid overlay",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
     "action_emote": "Open emote menu",
@@ -327,9 +328,12 @@
     "didier": "Didier",
     "didierfrance": "Didier (France)",
     "amazonriver": "Amazon River",
+    "bosphorusstraits": "Bosphorus Straits",
+    "beringstrait": "Bering Strait",
     "tradersdream": "Traders Dream",
     "hawaii": "Hawaii",
-    "alps": "Alps"
+    "alps": "Alps",
+    "niledelta": "Nile Delta"
   },
   "map_categories": {
     "featured": "Featured",
@@ -424,7 +428,8 @@
     "teams_Quads": "Quads (teams of 4)",
     "teams_Humans Vs Nations": "Humans vs Nations",
     "starting_gold": "Starting gold",
-    "crowded": "Crowded modifier"
+    "crowded": "Crowded modifier",
+    "hard_nations": "Hard Nations"
   },
   "team_colors": {
     "red": "Red",
@@ -466,7 +471,8 @@
     "random_spawn": "Random Spawn",
     "compact_map": "Compact Map",
     "crowded": "Crowded",
-    "starting_gold": "5M Starting Gold"
+    "hard_nations": "Hard Nations",
+    "starting_gold": "{amount}M Starting Gold"
   },
   "select_lang": {
     "title": "Select Language"
@@ -512,6 +518,8 @@
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
+    "coordinate_grid_label": "Coordinate Grid",
+    "coordinate_grid_desc": "Toggle the alphanumeric grid overlay",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
@@ -855,6 +863,7 @@
     "tps": "TPS:",
     "tps_avg_60s": "Avg:",
     "tick_exec": "Tick Exec:",
+    "max_label": "max:",
     "tick_delay": "Tick Delay:",
     "layers_header": "Render Layers",
     "render_layers_table_header": "avg / max | tick avg",
