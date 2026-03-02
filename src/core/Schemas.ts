@@ -215,6 +215,7 @@ export const GameConfigSchema = z.object({
       isCompact: z.boolean(),
       isRandomSpawn: z.boolean(),
       isCrowded: z.boolean(),
+      isHardNations: z.boolean(),
       startingGold: z.number().int().min(0).optional(),
     })
     .optional(),

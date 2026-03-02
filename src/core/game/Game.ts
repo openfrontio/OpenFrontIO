@@ -10,6 +10,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
@@ -51,6 +52,15 @@ export const isDifficulty = (value: unknown): value is Difficulty =>
   isEnumValue(Difficulty, value);
 
 export type Team = string;
+
+export interface SpawnArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type TeamGameSpawnAreas = Record<string, SpawnArea[]>;
 
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
@@ -118,10 +128,13 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  BosphorusStraits = "Bosphorus Straits",
+  BeringStrait = "Bering Strait",
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
   Alps = "Alps",
+  NileDelta = "Nile Delta",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -169,9 +182,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.BosphorusStraits,
+    GameMapType.BeringStrait,
     GameMapType.Yenisei,
     GameMapType.Hawaii,
     GameMapType.Alps,
+    GameMapType.NileDelta,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -222,6 +238,7 @@ export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
   isCrowded: boolean;
+  isHardNations: boolean;
   startingGold?: number;
 }
 
@@ -753,6 +770,7 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
   alliances(): MutableAlliance[];
@@ -767,6 +785,8 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
+  recordMotionPlan(record: MotionPlanRecord): void;
+  drainPackedMotionPlans(): Uint32Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;

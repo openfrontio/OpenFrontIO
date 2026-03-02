@@ -31,7 +31,9 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
+  SpawnArea,
   Team,
+  TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
   Trios,
@@ -41,6 +43,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -56,9 +59,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    teamGameSpawnAreas,
+  );
 }
 
 export type CellString = string;
@@ -84,9 +96,11 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
+  private motionPlanRecords: MotionPlanRecord[] = [];
+  private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
+  private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -97,6 +111,7 @@ export class GameImpl implements Game {
   private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
+  private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -105,9 +120,11 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    teamGameSpawnAreas?: TeamGameSpawnAreas,
   ) {
     const constructorStart = performance.now();
 
+    this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -427,6 +444,46 @@ export class GameImpl implements Game {
       packed[i] = pairs[i];
     }
     pairs.length = 0;
+    return packed;
+  }
+
+  recordMotionPlan(record: MotionPlanRecord): void {
+    switch (record.kind) {
+      case "grid":
+        this.planDrivenUnitIds.add(record.unitId);
+        break;
+      case "train":
+        this.planDrivenUnitIds.add(record.engineUnitId);
+        for (const unitId of record.carUnitIds) {
+          this.planDrivenUnitIds.add(unitId);
+        }
+        break;
+    }
+    this.motionPlanRecords.push(record);
+  }
+
+  private isUnitPlanDriven(unitId: number): boolean {
+    return this.planDrivenUnitIds.has(unitId);
+  }
+
+  maybeAddUnitUpdate(unit: Unit): void {
+    if (!this.isUnitPlanDriven(unit.id())) {
+      this.addUpdate(unit.toUpdate());
+    }
+  }
+
+  onUnitMoved(unit: Unit): void {
+    this.updateUnitTile(unit);
+    this.maybeAddUnitUpdate(unit);
+  }
+
+  drainPackedMotionPlans(): Uint32Array | null {
+    const records = this.motionPlanRecords;
+    if (records.length === 0) {
+      return null;
+    }
+    const packed = packMotionPlans(records);
+    records.length = 0;
     return packed;
   }
 
@@ -791,6 +848,22 @@ export class GameImpl implements Game {
     return [this.botTeam, ...this.playerTeams];
   }
 
+  teamSpawnArea(team: Team): SpawnArea | undefined {
+    if (!this._teamGameSpawnAreas) {
+      return undefined;
+    }
+    const numTeams = this.playerTeams.length;
+    const areas = this._teamGameSpawnAreas[String(numTeams)];
+    if (!areas) {
+      return undefined;
+    }
+    const teamIndex = this.playerTeams.indexOf(team);
+    if (teamIndex < 0 || teamIndex >= areas.length) {
+      return undefined;
+    }
+    return areas[teamIndex];
+  }
+
   displayMessage(
     message: string,
     type: MessageType,
@@ -859,6 +932,7 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }

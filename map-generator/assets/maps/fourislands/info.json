@@ -21,5 +21,17 @@
       "flag": "",
       "name": "Myrkwind"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      { "x": 0, "y": 0, "width": 750, "height": 1500 },
+      { "x": 750, "y": 0, "width": 750, "height": 1500 }
+    ],
+    "4": [
+      { "x": 0, "y": 0, "width": 750, "height": 750 },
+      { "x": 750, "y": 0, "width": 750, "height": 750 },
+      { "x": 0, "y": 750, "width": 750, "height": 750 },
+      { "x": 750, "y": 750, "width": 750, "height": 750 }
+    ]
+  }
 }
