@@ -89,42 +89,32 @@ export class GameModeSelector extends LitElement {
     const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
-      <div class="hidden lg:flex lg:flex-col lg:gap-4 w-full">
-        <div class="flex gap-4 h-80">
-          <div class="flex-[2] min-w-0">
-            ${this.renderOptionalLobbyCard(ffa, "h-full")}
-          </div>
-          <div class="flex flex-col gap-4 flex-1 min-w-0">
-            ${this.renderOptionalLobbyCard(teams, "flex-1 min-h-0")}
-            ${this.renderOptionalLobbyCard(special, "flex-1 min-h-0", true)}
-          </div>
+      <div
+        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto pb-4 lg:pb-0"
+      >
+        <div class="grid grid-cols-2 gap-2 h-20 lg:hidden">
+          ${this.renderActionCards([
+            ["main.solo", this.openSinglePlayerModal],
+            ["mode_selector.ranked_title", this.openRankedMenu],
+          ])}
         </div>
+        ${this.renderOptionalLobbyCard(ffa, "h-40 lg:h-80 lg:row-span-2")}
+        ${this.renderOptionalLobbyCard(teams, "h-40 lg:h-[9.5rem]")}
+        ${this.renderOptionalLobbyCard(special, "h-40 lg:h-[9.5rem]", true)}
         <button
           @click=${this.openSinglePlayerModal}
-          class="w-full h-14 rounded-xl bg-blue-600 border-0 transition-transform hover:scale-[1.01] hover:bg-blue-500 active:scale-[0.99] text-lg font-bold text-white uppercase tracking-wider cursor-pointer"
+          class="hidden lg:flex lg:col-span-2 items-center justify-center w-full h-14 rounded-xl bg-blue-600 border-0 transition-transform hover:scale-[1.01] hover:bg-blue-500 active:scale-[0.99] text-lg font-bold text-white uppercase tracking-wider cursor-pointer"
         >
           ${translateText("main.solo")}
         </button>
-        <div class="grid grid-cols-3 gap-3 h-12">
+        <div class="hidden lg:grid lg:grid-cols-3 lg:col-span-2 gap-3 h-12">
           ${this.renderActionCards([
             ["mode_selector.ranked_title", this.openRankedMenu],
             ["main.create", this.openHostLobby],
             ["main.join", this.openJoinLobby],
           ])}
         </div>
-      </div>
-
-      <div class="lg:hidden grid grid-cols-1 gap-4 w-[70%] mx-auto pb-4">
-        <div class="grid grid-cols-2 gap-2 h-20">
-          ${this.renderActionCards([
-            ["main.solo", this.openSinglePlayerModal],
-            ["mode_selector.ranked_title", this.openRankedMenu],
-          ])}
-        </div>
-        ${this.renderOptionalLobbyCard(ffa, "h-40")}
-        ${this.renderOptionalLobbyCard(teams, "h-40")}
-        ${this.renderOptionalLobbyCard(special, "h-40", true)}
-        <div class="grid grid-cols-2 gap-2 h-20">
+        <div class="grid grid-cols-2 gap-2 h-20 lg:hidden">
           ${this.renderActionCards([
             ["main.create", this.openHostLobby],
             ["main.join", this.openJoinLobby],
