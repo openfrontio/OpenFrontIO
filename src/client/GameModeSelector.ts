@@ -275,7 +275,11 @@ export class GameModeSelector extends LitElement {
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
-        // Sort by length for visual consistency (shorter labels first)
+
+      /**
+   * Validates username input and shows error message if invalid.
+   * Returns true if valid, false otherwise.
+   */
 
     if (modifierLabels.length > 1) {
       modifierLabels.sort((a, b) => a.length - b.length);
