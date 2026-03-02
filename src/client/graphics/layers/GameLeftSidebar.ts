@@ -4,6 +4,7 @@ import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { Platform } from "../../Platform";
 import { translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
@@ -51,7 +52,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
       this.isPlayerTeamLabelVisible = true;
     }
     // Make it visible by default on large screens
-    if (window.innerWidth >= 1024) {
+    if (Platform.isDesktopWidth) {
       // lg breakpoint
       this._shownOnInit = true;
     }
