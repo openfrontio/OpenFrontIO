@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 type NavigatorOverride = {
   userAgent: string;
   userAgentData?: { platform?: string };
+  maxTouchPoints?: number;
 };
 
 const setInnerWidth = (value: number) => {
@@ -16,11 +17,13 @@ const setInnerWidth = (value: number) => {
 const loadPlatform = async ({
   userAgent,
   userAgentData,
+  maxTouchPoints,
 }: NavigatorOverride) => {
   vi.resetModules();
   vi.stubGlobal("navigator", {
     userAgent,
     userAgentData,
+    maxTouchPoints,
   });
   const { Platform } = await import("../../src/client/Platform");
   return Platform;
@@ -52,6 +55,18 @@ describe("Platform", () => {
     expect(platform.os).toBe("macOS");
     expect(platform.isMac).toBe(true);
     expect(platform.isIOS).toBe(false);
+  });
+
+  it("detects iOS for iPad desktop-mode user agents with touch support", async () => {
+    const platform = await loadPlatform({
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+      maxTouchPoints: 5,
+    });
+
+    expect(platform.os).toBe("iOS");
+    expect(platform.isIOS).toBe(true);
+    expect(platform.isMac).toBe(false);
   });
 
   it("uses userAgentData platform when available", async () => {
