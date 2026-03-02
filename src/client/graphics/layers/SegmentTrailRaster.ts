@@ -13,18 +13,17 @@ export type SegmentTrailPlanView = {
   segCumSteps: Uint32Array;
 };
 
-export function totalTrailSteps(plan: {
-  segCumSteps: Uint32Array;
-}): number {
+function pixelCenter(value: number): number {
+  return value + 0.5;
+}
+
+export function totalTrailSteps(plan: { segCumSteps: Uint32Array }): number {
   return plan.segCumSteps.length === 0
     ? 0
     : plan.segCumSteps[plan.segCumSteps.length - 1] >>> 0;
 }
 
-export function stepAtTick(
-  plan: SegmentTrailPlanView,
-  tick: number,
-): number {
+export function stepAtTick(plan: SegmentTrailPlanView, tick: number): number {
   const total = totalTrailSteps(plan);
   if (total <= 0) {
     return 0;
@@ -47,9 +46,7 @@ export function locateSegment(
     return 0;
   }
   const total =
-    segCumSteps.length === 0
-      ? 0
-      : segCumSteps[segCumSteps.length - 1] >>> 0;
+    segCumSteps.length === 0 ? 0 : segCumSteps[segCumSteps.length - 1] >>> 0;
   if (total <= 0) {
     return 0;
   }
@@ -147,23 +144,33 @@ export function strokeStepInterval(
   const toSeg = locateSegment(plan.segCumSteps, segmentCount, to);
 
   ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
+  ctx.moveTo(pixelCenter(start.x), pixelCenter(start.y));
 
   if (fromSeg === toSeg) {
-    ctx.lineTo(end.x, end.y);
+    ctx.lineTo(pixelCenter(end.x), pixelCenter(end.y));
     ctx.stroke();
     return true;
   }
 
-  const fromBoundaryRef = plan.points[Math.min(plan.points.length - 1, fromSeg + 1)] as TileRef;
-  ctx.lineTo(game.x(fromBoundaryRef), game.y(fromBoundaryRef));
+  const fromBoundaryRef = plan.points[
+    Math.min(plan.points.length - 1, fromSeg + 1)
+  ] as TileRef;
+  ctx.lineTo(
+    pixelCenter(game.x(fromBoundaryRef)),
+    pixelCenter(game.y(fromBoundaryRef)),
+  );
 
   for (let seg = fromSeg + 1; seg < toSeg; seg++) {
-    const boundaryRef = plan.points[Math.min(plan.points.length - 1, seg + 1)] as TileRef;
-    ctx.lineTo(game.x(boundaryRef), game.y(boundaryRef));
+    const boundaryRef = plan.points[
+      Math.min(plan.points.length - 1, seg + 1)
+    ] as TileRef;
+    ctx.lineTo(
+      pixelCenter(game.x(boundaryRef)),
+      pixelCenter(game.y(boundaryRef)),
+    );
   }
 
-  ctx.lineTo(end.x, end.y);
+  ctx.lineTo(pixelCenter(end.x), pixelCenter(end.y));
   ctx.stroke();
   return true;
 }
