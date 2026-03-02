@@ -6,6 +6,7 @@ import {
   GameMode,
   GameType,
   Gold,
+  ModifierTarget,
   Player,
   PlayerInfo,
   PlayerType,
@@ -258,6 +259,15 @@ export class DefaultConfig implements Config {
   goldMultiplier(): number {
     return this._gameConfig.goldMultiplier ?? 1;
   }
+  modifierTarget(): ModifierTarget {
+    return this._gameConfig.modifierTarget ?? ModifierTarget.All;
+  }
+  shouldApplyModifier(player: Player | PlayerView): boolean {
+    const target = this.modifierTarget();
+    if (target === ModifierTarget.All) return true;
+    if (target === ModifierTarget.HostOnly) return player.isLobbyCreator();
+    return true;
+  }
   startingGold(playerInfo: PlayerInfo): Gold {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 0n;
@@ -364,7 +374,7 @@ export class DefaultConfig implements Config {
             UnitType.Port,
             UnitType.Factory,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          constructionDuration: 2 * 10,
           upgradable: true,
         };
         break;
@@ -381,7 +391,11 @@ export class DefaultConfig implements Config {
       case UnitType.MIRV:
         info = {
           cost: (game: Game, player: Player) => {
-            if (player.type() === PlayerType.Human && this.infiniteGold()) {
+            if (
+              player.type() === PlayerType.Human &&
+              this.infiniteGold() &&
+              this.shouldApplyModifier(player)
+            ) {
               return 0n;
             }
             return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
@@ -401,7 +415,7 @@ export class DefaultConfig implements Config {
       case UnitType.MissileSilo:
         info = {
           cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
-          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          constructionDuration: 10 * 10,
           upgradable: true,
         };
         break;
@@ -411,7 +425,7 @@ export class DefaultConfig implements Config {
             (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
             UnitType.DefensePost,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          constructionDuration: 5 * 10,
         };
         break;
       case UnitType.SAMLauncher:
@@ -421,7 +435,7 @@ export class DefaultConfig implements Config {
               Math.min(3_000_000, (numUnits + 1) * 1_500_000),
             UnitType.SAMLauncher,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
+          constructionDuration: 30 * 10,
           upgradable: true,
         };
         break;
@@ -432,7 +446,7 @@ export class DefaultConfig implements Config {
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.City,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          constructionDuration: 2 * 10,
           upgradable: true,
         };
         break;
@@ -444,7 +458,7 @@ export class DefaultConfig implements Config {
             UnitType.Factory,
             UnitType.Port,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          constructionDuration: 2 * 10,
           upgradable: true,
         };
         break;
@@ -466,7 +480,11 @@ export class DefaultConfig implements Config {
     ...types: UnitType[]
   ): (g: Game, p: Player) => bigint {
     return (game: Game, player: Player) => {
-      if (player.type() === PlayerType.Human && this.infiniteGold()) {
+      if (
+        player.type() === PlayerType.Human &&
+        this.infiniteGold() &&
+        this.shouldApplyModifier(player)
+      ) {
         return 0n;
       }
       const numUnits = types.reduce(
@@ -738,12 +756,16 @@ export class DefaultConfig implements Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    const shouldApply =
+      this.modifierTarget() === ModifierTarget.All || playerInfo.isLobbyCreator;
+    return this.infiniteTroops() && shouldApply ? 1_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
-      player.type() === PlayerType.Human && this.infiniteTroops()
+      player.type() === PlayerType.Human &&
+      this.infiniteTroops() &&
+      this.shouldApplyModifier(player)
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
