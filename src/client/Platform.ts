@@ -13,9 +13,9 @@ export const Platform = (() => {
 
     const ua = navigator.userAgent;
     if (/windows nt/i.test(ua)) return "Windows";
+    if (/iphone|ipad|ipod/i.test(ua)) return "iOS";
     if (/mac os x/i.test(ua)) return "macOS";
     if (/android/i.test(ua)) return "Android";
-    if (/iphone|ipad|ipod/i.test(ua)) return "iOS";
     if (/linux/i.test(ua)) return "Linux";
     return "Unknown";
   };
