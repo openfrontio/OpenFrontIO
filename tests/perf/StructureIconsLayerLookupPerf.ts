@@ -44,12 +44,12 @@ const results: string[] = [];
 
 new Benchmark.Suite()
   .add("StructureIconsLayer BEFORE (array O(n) lookup/delete)", () => {
-    const localRenders = [...rendersArray];
+    const localRenders = rendersArray.map((render) => ({ ...render }));
 
     for (const unitId of activeLookupIds) {
       const render = localRenders.find((entry) => entry.unitId === unitId);
       if (render) {
-        render.level += 1;
+        render.level = render.level + 1;
       }
     }
 
@@ -58,7 +58,7 @@ new Benchmark.Suite()
         (entry) => entry.unitId === canUpgradeId && entry.ownerId === myOwnerId,
       );
       if (potentialUpgrade) {
-        potentialUpgrade.level += 1;
+        potentialUpgrade.level = potentialUpgrade.level + 1;
       }
     }
 
@@ -70,19 +70,22 @@ new Benchmark.Suite()
     }
   })
   .add("StructureIconsLayer AFTER (unit-id map O(1) lookup/delete)", () => {
-    const localRenders = new Map<number, StructureRenderSample>(rendersMap);
+    const localRenders = new Map<number, StructureRenderSample>();
+    for (const [unitId, render] of rendersMap) {
+      localRenders.set(unitId, { ...render });
+    }
 
     for (const unitId of activeLookupIds) {
       const render = localRenders.get(unitId);
       if (render) {
-        render.level += 1;
+        render.level = render.level + 1;
       }
     }
 
     for (const canUpgradeId of canUpgradeIds) {
       const potentialUpgrade = localRenders.get(canUpgradeId);
       if (potentialUpgrade && potentialUpgrade.ownerId === myOwnerId) {
-        potentialUpgrade.level += 1;
+        potentialUpgrade.level = potentialUpgrade.level + 1;
       }
     }
 
