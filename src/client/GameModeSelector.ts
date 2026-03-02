@@ -37,10 +37,6 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
-  /**
-   * Validates username input and shows error message if invalid.
-   * Returns true if valid, false otherwise.
-   */
   private validateUsername(): boolean {
     const usernameInput = document.querySelector("username-input") as any;
     if (usernameInput?.isValid?.() === false) {
@@ -89,20 +85,88 @@ export class GameModeSelector extends LitElement {
     const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
-      <div
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto pb-4 lg:pb-0"
-      >
-        ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
-        ${teams
-          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+      <div class="hidden lg:flex lg:flex-col lg:gap-4 w-full">
+        <div class="flex gap-4 h-80">
+          <div class="flex-[2] min-w-0">
+            ${ffa
+              ? this.renderLobbyCard(
+                  ffa,
+                  this.getLobbyTitle(ffa),
+                  "h-full",
+                )
+              : nothing}
+          </div>
+          <div class="flex flex-col gap-4 flex-1 min-w-0">
+            ${teams
+              ? this.renderLobbyCard(
+                  teams,
+                  this.getLobbyTitle(teams),
+                  "h-full",
+                )
+              : nothing}
+            ${special
+              ? this.renderSpecialLobbyCard(special, "h-full")
+              : nothing}
+          </div>
+        </div>
+        <button
+          @click=${this.openSinglePlayerModal}
+          class="w-full h-14 rounded-xl bg-blue-600 border-0 transition-transform hover:scale-[1.01] hover:bg-blue-500 active:scale-[0.99] text-lg font-bold text-white uppercase tracking-wider cursor-pointer"
+        >
+          ${translateText("main.solo")}
+        </button>
+        <div class="grid grid-cols-3 gap-3 h-12">
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("main.create"),
+            this.openHostLobby,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("main.join"),
+            this.openJoinLobby,
+          )}
+        </div>
+      </div>
+
+      <div class="lg:hidden grid grid-cols-1 gap-4 w-[70%] mx-auto pb-4">
+        <div class="grid grid-cols-2 gap-2 h-20">
+          ${this.renderSmallActionCard(
+            translateText("main.solo"),
+            this.openSinglePlayerModal,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+          )}
+        </div>
+        ${ffa
+          ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa), "h-40")
           : nothing}
-        ${special ? this.renderSpecialLobbyCard(special) : nothing}
-        ${this.renderQuickActionsSection()}
+        ${teams
+          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams), "h-40")
+          : nothing}
+        ${special ? this.renderSpecialLobbyCard(special, "h-40") : nothing}
+        <div class="grid grid-cols-2 gap-2 h-20">
+          ${this.renderSmallActionCard(
+            translateText("main.create"),
+            this.openHostLobby,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("main.join"),
+            this.openJoinLobby,
+          )}
+        </div>
       </div>
     `;
   }
 
-  private renderSpecialLobbyCard(lobby: PublicGameInfo) {
+  private renderSpecialLobbyCard(
+    lobby: PublicGameInfo,
+    heightClass?: string,
+  ) {
     const subtitle = this.getLobbyTitle(lobby);
     const mainTitle = translateText("mode_selector.special_title");
     const titleContent = subtitle
@@ -113,7 +177,7 @@ export class GameModeSelector extends LitElement {
           </span>
         `
       : mainTitle;
-    return this.renderLobbyCard(lobby, titleContent);
+    return this.renderLobbyCard(lobby, titleContent, heightClass);
   }
 
   private renderQuickActionsSection() {
@@ -179,6 +243,7 @@ export class GameModeSelector extends LitElement {
   private renderLobbyCard(
     lobby: PublicGameInfo,
     titleContent: string | TemplateResult,
+    heightClass: string = "h-40 lg:h-56",
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
     const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
@@ -205,7 +270,7 @@ export class GameModeSelector extends LitElement {
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
-    // Sort by length for visual consistency (shorter labels first)
+
     if (modifierLabels.length > 1) {
       modifierLabels.sort((a, b) => a.length - b.length);
     }
@@ -213,7 +278,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-40 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
+        class="group flex flex-col w-full ${heightClass} text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
       >
         <div class="relative flex-1 overflow-hidden ${CARD_BG}">
           ${mapImageSrc
@@ -363,7 +428,6 @@ export class GameModeSelector extends LitElement {
           }
       }
     }
-
     return "";
   }
 }
