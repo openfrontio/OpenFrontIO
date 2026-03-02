@@ -54,8 +54,7 @@ export const Platform = (() => {
     return false;
   };
 
-  // Specific strict platforms based on current ad-hoc regex in the project
-  const isMac = isBrowser && /Mac/.test(navigator.userAgent);
+  const isMac = currentOS === "macOS";
 
   return {
     os: currentOS,
