@@ -349,7 +349,7 @@ export class DefaultConfig implements Config {
       case UnitType.Shell:
         info = {
           cost: () => 0n,
-          damage: 30,
+          damage: 250,
         };
         break;
       case UnitType.SAMMissile:
