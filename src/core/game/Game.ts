@@ -135,6 +135,7 @@ export enum GameMapType {
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
   Alps = "Alps",
+  NileDelta = "Nile Delta",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -187,6 +188,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Yenisei,
     GameMapType.Hawaii,
     GameMapType.Alps,
+    GameMapType.NileDelta,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -238,6 +240,7 @@ export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
   isCrowded: boolean;
+  isHardNations: boolean;
   startingGold?: number;
 }
 

@@ -333,7 +333,8 @@
     "beringstrait": "Bering Strait",
     "tradersdream": "Traders Dream",
     "hawaii": "Hawaii",
-    "alps": "Alps"
+    "alps": "Alps",
+    "niledelta": "Nile Delta"
   },
   "map_categories": {
     "featured": "Featured",
@@ -428,7 +429,8 @@
     "teams_Quads": "Quads (teams of 4)",
     "teams_Humans Vs Nations": "Humans vs Nations",
     "starting_gold": "Starting gold",
-    "crowded": "Crowded modifier"
+    "crowded": "Crowded modifier",
+    "hard_nations": "Hard Nations"
   },
   "team_colors": {
     "red": "Red",
@@ -470,7 +472,8 @@
     "random_spawn": "Random Spawn",
     "compact_map": "Compact Map",
     "crowded": "Crowded",
-    "starting_gold": "5M Starting Gold"
+    "hard_nations": "Hard Nations",
+    "starting_gold": "{amount}M Starting Gold"
   },
   "select_lang": {
     "title": "Select Language"
@@ -861,6 +864,7 @@
     "tps": "TPS:",
     "tps_avg_60s": "Avg:",
     "tick_exec": "Tick Exec:",
+    "max_label": "max:",
     "tick_delay": "Tick Delay:",
     "layers_header": "Render Layers",
     "render_layers_table_header": "avg / max | tick avg",

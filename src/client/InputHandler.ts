@@ -3,6 +3,7 @@ import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
+import { Platform } from "./Platform";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -202,7 +203,7 @@ export class InputHandler {
     }
 
     // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
+    const isMac = Platform.isMac;
 
     this.keybinds = {
       toggleView: "Space",
