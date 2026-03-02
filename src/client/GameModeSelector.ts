@@ -37,6 +37,11 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
+    /**
+   * Validates username input and shows error message if invalid.
+   * Returns true if valid, false otherwise.
+   */
+
   private validateUsername(): boolean {
     const usernameInput = document.querySelector("username-input") as any;
     if (usernameInput?.isValid?.() === false) {
@@ -270,6 +275,7 @@ export class GameModeSelector extends LitElement {
     const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
+        // Sort by length for visual consistency (shorter labels first)
 
     if (modifierLabels.length > 1) {
       modifierLabels.sort((a, b) => a.length - b.length);
