@@ -18,10 +18,10 @@
     "svg": "bd"
   },
   {
-    "en": "Catalan",
+    "code": "ca",
     "native": "Català",
-    "svg": "catalonia",
-    "lang_code": "ca"
+    "en": "Catalan",
+    "svg": "catalonia"
   },
   {
     "code": "cs",
@@ -66,10 +66,10 @@
     "svg": "es"
   },
   {
-    "en": "Estonian",
+    "code": "et",
     "native": "Eesti keel",
-    "svg": "estonia",
-    "lang_code": "et"
+    "en": "Estonian",
+    "svg": "estonia"
   },
   {
     "code": "fa",
