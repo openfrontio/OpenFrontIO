@@ -51,6 +51,10 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
       player,
       new NationEmojiBehavior(random, game, player),
     );
+
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
   });
 
   function setupAllianceRequest({
@@ -59,6 +63,7 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     numTilesPlayer = 10,
     numTilesRequestor = 10,
     alliancesCount = 0,
+    createdAtTick = game.ticks() + 1,
   } = {}) {
     if (isTraitor) requestor.markTraitor();
 
@@ -82,7 +87,7 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     const mockRequest = {
       requestor: () => requestor,
       recipient: () => player,
-      createdAt: () => 0 as unknown as Tick,
+      createdAt: () => createdAtTick as unknown as Tick,
       accept: vi.fn(),
       reject: vi.fn(),
     } as unknown as AllianceRequest;
@@ -91,6 +96,16 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
 
     return mockRequest;
   }
+
+  test("should reject alliance created on first post-spawn tick", () => {
+    const cutoff = game.config().numSpawnPhaseTurns() + 1;
+    const request = setupAllianceRequest({ createdAtTick: cutoff });
+
+    allianceBehavior.handleAllianceRequests();
+
+    expect(request.accept).not.toHaveBeenCalled();
+    expect(request.reject).toHaveBeenCalled();
+  });
 
   test("should accept alliance when all conditions are met", () => {
     const request = setupAllianceRequest({});

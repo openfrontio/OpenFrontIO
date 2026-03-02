@@ -42,6 +42,7 @@ export class HelpModal extends BaseModal {
     const isMac = /Mac/.test(navigator.userAgent);
     return {
       toggleView: "Space",
+      coordinateGrid: "KeyM",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -263,6 +264,14 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_alt_view")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.coordinateGrid)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_coordinate_grid")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
