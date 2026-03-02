@@ -239,7 +239,7 @@ export class LocalServer {
       {
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
-        clanTag: this.lobbyConfig.playerClanTag ?? undefined,
+        clanTag: this.lobbyConfig.playerClanTag ?? null,
         clientID: this.clientID!,
         stats: this.allPlayersStats[this.clientID!],
         cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,

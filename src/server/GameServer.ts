@@ -618,7 +618,7 @@ export class GameServer {
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? undefined,
+        clanTag: c.clanTag ?? null,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -830,7 +830,7 @@ export class GameServer {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? undefined,
+        clanTag: c.clanTag ?? null,
         clientID: c.clientID,
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,

@@ -303,7 +303,7 @@ export class ClientGameRunner {
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
-        clanTag: this.lobby.playerClanTag ?? undefined,
+        clanTag: this.lobby.playerClanTag ?? null,
         clientID: this.clientID,
         stats: update.allPlayersStats[this.clientID],
       },

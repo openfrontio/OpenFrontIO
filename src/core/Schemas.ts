@@ -180,7 +180,7 @@ export class LobbyInfoEvent implements GameEvent {
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
-  clanTag?: string;
+  clanTag: string | null;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -281,7 +281,7 @@ export const UsernameSchema = z
 export const ClanTagSchema = z
   .string()
   .regex(/^[a-zA-Z0-9]{2,5}$/)
-  .optional();
+  .nullable();
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(

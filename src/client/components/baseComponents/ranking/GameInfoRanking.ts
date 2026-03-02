@@ -27,7 +27,7 @@ export enum RankType {
 export interface PlayerInfo {
   id: string;
   username: string;
-  clanTag?: string;
+  clanTag: string | null;
   killedAt?: number;
   gold: bigint[];
   conquests: bigint[];
