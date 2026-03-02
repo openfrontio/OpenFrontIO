@@ -290,14 +290,15 @@ export class UnitLayer implements Layer {
       .filter((unitView) => isSpriteReady(unitView))
       .forEach((unitView) => {
         const sprite = getColoredSprite(unitView, this.theme);
-        const clearsize = sprite.width + 1;
         const lastX = this.game.x(unitView.lastTile());
         const lastY = this.game.y(unitView.lastTile());
+        const clearX = Math.round(lastX - sprite.width / 2);
+        const clearY = Math.round(lastY - sprite.height / 2);
         this.context.clearRect(
-          lastX - clearsize / 2,
-          lastY - clearsize / 2,
-          clearsize,
-          clearsize,
+          clearX - 1,
+          clearY - 1,
+          sprite.width + 2,
+          sprite.height + 2,
         );
       });
   }
