@@ -37,7 +37,7 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
-    /**
+   /**
    * Validates username input and shows error message if invalid.
    * Returns true if valid, false otherwise.
    */
@@ -106,11 +106,11 @@ export class GameModeSelector extends LitElement {
               ? this.renderLobbyCard(
                   teams,
                   this.getLobbyTitle(teams),
-                  "h-full",
+                  "flex-1 min-h-0",
                 )
               : nothing}
             ${special
-              ? this.renderSpecialLobbyCard(special, "h-full")
+              ? this.renderSpecialLobbyCard(special, "flex-1 min-h-0")
               : nothing}
           </div>
         </div>
