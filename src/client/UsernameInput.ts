@@ -188,9 +188,6 @@ export class UsernameInput extends LitElement {
         },
       }),
     );
-    document
-      .getElementById("username-validation-error")
-      ?.classList.remove("hidden");
   }
 
   public validateOrShowError(): boolean {
