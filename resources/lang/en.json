@@ -429,7 +429,11 @@
     "teams_Humans Vs Nations": "Humans vs Nations",
     "starting_gold": "Starting gold",
     "crowded": "Crowded modifier",
-    "hard_nations": "Hard Nations"
+    "hard_nations": "Hard Nations",
+    "modifier_target_title": "Modifier applies to",
+    "modifier_target_all": "All Players",
+    "modifier_target_host": "Host Only",
+    "modifier_target_description": "Choose who the cheat modifiers (infinite gold, infinite troops, instant build) apply to."
   },
   "team_colors": {
     "red": "Red",
