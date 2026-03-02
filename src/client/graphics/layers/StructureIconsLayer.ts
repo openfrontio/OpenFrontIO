@@ -91,6 +91,7 @@ export class StructureIconsLayer implements Layer {
     [UnitType.SAMLauncher, { visible: true }],
   ]);
   private lastGhostQueryAt: number;
+  private fallbackGhostType: UnitType | null = null;
   potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
@@ -114,49 +115,57 @@ export class StructureIconsLayer implements Layer {
     } catch (error) {
       console.error("Failed to load bitmap font:", error);
     }
-    const renderer = new PIXI.WebGLRenderer();
-    this.pixicanvas = document.createElement("canvas");
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
 
-    this.iconsStage = new PIXI.Container();
-    this.iconsStage.position.set(0, 0);
-    this.iconsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    try {
+      const renderer = new PIXI.WebGLRenderer();
+      this.pixicanvas = document.createElement("canvas");
+      this.pixicanvas.width = window.innerWidth;
+      this.pixicanvas.height = window.innerHeight;
 
-    this.ghostStage = new PIXI.Container();
-    this.ghostStage.position.set(0, 0);
-    this.ghostStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+      this.iconsStage = new PIXI.Container();
+      this.iconsStage.position.set(0, 0);
+      this.iconsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    this.levelsStage = new PIXI.Container();
-    this.levelsStage.position.set(0, 0);
-    this.levelsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+      this.ghostStage = new PIXI.Container();
+      this.ghostStage.position.set(0, 0);
+      this.ghostStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    this.dotsStage = new PIXI.Container();
-    this.dotsStage.position.set(0, 0);
-    this.dotsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+      this.levelsStage = new PIXI.Container();
+      this.levelsStage.position.set(0, 0);
+      this.levelsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    this.rootStage.addChild(
-      this.dotsStage,
-      this.iconsStage,
-      this.levelsStage,
-      this.ghostStage,
-    );
-    this.rootStage.position.set(0, 0);
-    this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+      this.dotsStage = new PIXI.Container();
+      this.dotsStage.position.set(0, 0);
+      this.dotsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    await renderer.init({
-      canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
-      antialias: false,
-      clearBeforeRender: true,
-      backgroundAlpha: 0,
-      backgroundColor: 0x00000000,
-    });
+      this.rootStage.addChild(
+        this.dotsStage,
+        this.iconsStage,
+        this.levelsStage,
+        this.ghostStage,
+      );
+      this.rootStage.position.set(0, 0);
+      this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    this.renderer = renderer;
-    this.rendererInitialized = true;
+      await renderer.init({
+        canvas: this.pixicanvas,
+        resolution: 1,
+        width: this.pixicanvas.width,
+        height: this.pixicanvas.height,
+        antialias: false,
+        clearBeforeRender: true,
+        backgroundAlpha: 0,
+        backgroundColor: 0x00000000,
+      });
+
+      this.renderer = renderer;
+      this.rendererInitialized = true;
+    } catch (error) {
+      console.warn(
+        "WebGL renderer failed to initialize. Building will work but structure icons and ghost cursor will not render.",
+        error,
+      );
+    }
   }
 
   shouldTransform(): boolean {
@@ -207,6 +216,7 @@ export class StructureIconsLayer implements Layer {
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
     if (!this.renderer || !this.rendererInitialized) {
+      this.renderLayerFallback();
       return;
     }
 
@@ -237,6 +247,14 @@ export class StructureIconsLayer implements Layer {
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
     this.renderer.render(this.rootStage);
     mainContext.drawImage(this.renderer.canvas, 0, 0);
+  }
+
+  renderLayerFallback() {
+    if (this.uiState.ghostStructure === null) {
+      this.fallbackGhostType = null;
+    } else {
+      this.fallbackGhostType = this.uiState.ghostStructure;
+    }
   }
 
   renderGhost() {
@@ -383,7 +401,12 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createStructure(e: MouseUpEvent) {
-    if (!this.ghostUnit) return;
+    if (!this.ghostUnit) {
+      if (this.fallbackGhostType !== null) {
+        this.buildWithoutGhost(e, this.fallbackGhostType);
+      }
+      return;
+    }
     if (
       this.ghostUnit.buildableUnit.canBuild === false &&
       this.ghostUnit.buildableUnit.canUpgrade === false
@@ -418,6 +441,29 @@ export class StructureIconsLayer implements Layer {
       );
     }
     this.removeGhostStructure();
+  }
+
+  private buildWithoutGhost(e: MouseUpEvent, unitType: UnitType) {
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return;
+    const x = e.x - rect.left;
+    const y = e.y - rect.top;
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return;
+    const rocketDirectionUp =
+      unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+        ? this.uiState.rocketDirectionUp
+        : undefined;
+    this.eventBus.emit(
+      new BuildUnitIntentEvent(
+        unitType,
+        this.game.ref(tile.x, tile.y),
+        rocketDirectionUp,
+      ),
+    );
+    this.fallbackGhostType = null;
+    this.uiState.ghostStructure = null;
+    this.eventBus.emit(new GhostStructureChangedEvent(null));
   }
 
   private moveGhost(e: MouseMoveEvent) {
