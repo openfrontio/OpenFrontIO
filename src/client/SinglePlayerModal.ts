@@ -618,9 +618,6 @@ export class SinglePlayerModal extends BaseModal {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
-    if (!usernameInput) {
-      console.warn("Username input element not found");
-    }
 
     await crazyGamesSDK.requestMidgameAd();
 
