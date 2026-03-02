@@ -93,11 +93,7 @@ export class GameModeSelector extends LitElement {
         <div class="flex gap-4 h-80">
           <div class="flex-[2] min-w-0">
             ${ffa
-              ? this.renderLobbyCard(
-                  ffa,
-                  this.getLobbyTitle(ffa),
-                  "h-full",
-                )
+              ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa), "h-full")
               : nothing}
           </div>
           <div class="flex flex-col gap-4 flex-1 min-w-0">
@@ -167,10 +163,7 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private renderSpecialLobbyCard(
-    lobby: PublicGameInfo,
-    heightClass?: string,
-  ) {
+  private renderSpecialLobbyCard(lobby: PublicGameInfo, heightClass?: string) {
     const subtitle = this.getLobbyTitle(lobby);
     const mainTitle = translateText("mode_selector.special_title");
     const titleContent = subtitle
@@ -301,7 +294,9 @@ export class GameModeSelector extends LitElement {
                   ${modifierLabels.map(
                     (label) =>
                       html`<span
-                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
+                        class="${modifierLabels.length > 2
+                          ? "px-1 py-px text-[7px]"
+                          : "px-2 py-0.5 text-[10px]"} rounded font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
                         >${label}</span
                       >`,
                   )}
