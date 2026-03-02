@@ -611,7 +611,7 @@ export class UnitLayer implements Layer {
         Math.round(x - sprite.width / 2),
         Math.round(y - sprite.height / 2),
         sprite.width,
-        sprite.width,
+        sprite.height,
       );
       if (!targetable) {
         this.context.restore();
