@@ -633,7 +633,8 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getCurrentUsername(),
+                username: usernameInput.getUsername(),
+                clanTag: usernameInput.getClanTag() ?? undefined,
                 cosmetics: await getPlayerCosmetics(),
               },
             ],

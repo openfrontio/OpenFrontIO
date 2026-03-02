@@ -51,7 +51,7 @@ describe("Ranking class", () => {
         players: [
           {
             clientID: "p1",
-            username: "[X] Alice",
+            username: "Alice",
             clanTag: "X",
             cosmetics: { flag: "USA" },
             stats: {

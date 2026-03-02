@@ -2,15 +2,19 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { v4 as uuidv4 } from "uuid";
 import { translateText } from "../client/Utils";
-import { getClanTagOriginalCase, sanitizeClanTag } from "../core/Util";
+import { sanitizeClanTag } from "../core/Util";
 import {
+  MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
+  MIN_CLAN_TAG_LENGTH,
   MIN_USERNAME_LENGTH,
+  validateClanTag,
   validateUsername,
 } from "../core/validations/username";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 
 const usernameKey: string = "username";
+const clanTagKey: string = "clanTag";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
@@ -27,46 +31,44 @@ export class UsernameInput extends LitElement {
     return this;
   }
 
-  public getCurrentUsername(): string {
-    return this.constructFullUsername();
+  public getUsername(): string {
+    return this.baseUsername.trim();
   }
 
-  private constructFullUsername(): string {
-    if (this.clanTag.length >= 2) {
-      return `[${this.clanTag}] ${this.baseUsername}`;
-    }
-    return this.baseUsername;
+  public getClanTag(): string | null {
+    return this.clanTag.length >= MIN_CLAN_TAG_LENGTH &&
+      this.clanTag.length <= MAX_CLAN_TAG_LENGTH
+      ? this.clanTag
+      : null;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    const stored = this.getUsername();
-    this.parseAndSetUsername(stored);
+    this.loadStoredUsername();
     crazyGamesSDK.getUsername().then((username) => {
       if (username) {
-        this.parseAndSetUsername(username ?? genAnonUsername());
-        this.requestUpdate();
+        this.baseUsername = username;
+        this.validateAndStore();
       }
     });
     crazyGamesSDK.addAuthListener((user) => {
       if (user) {
-        this.parseAndSetUsername(user?.username);
+        this.baseUsername = user.username;
+        this.validateAndStore();
       }
-      this.requestUpdate();
     });
   }
 
-  private parseAndSetUsername(fullUsername: string) {
-    const tag = getClanTagOriginalCase(fullUsername);
-    if (tag) {
-      this.clanTag = tag.toUpperCase();
-      this.baseUsername = fullUsername.replace(`[${tag}]`, "").trim();
+  private loadStoredUsername() {
+    const storedUsername = localStorage.getItem(usernameKey);
+    if (storedUsername) {
+      this.clanTag = localStorage.getItem(clanTagKey) ?? "";
+      this.baseUsername = storedUsername;
+      this.validateAndStore();
     } else {
-      this.clanTag = "";
-      this.baseUsername = fullUsername;
+      this.baseUsername = genAnonUsername();
+      this.validateAndStore();
     }
-
-    this.validateAndStore();
   }
 
   render() {
@@ -77,7 +79,8 @@ export class UsernameInput extends LitElement {
           .value=${this.clanTag}
           @input=${this.handleClanTagChange}
           placeholder="${translateText("username.tag")}"
-          maxlength="5"
+          minlength="${MIN_CLAN_TAG_LENGTH}"
+          maxlength="${MAX_CLAN_TAG_LENGTH}"
           class="w-[6rem] text-xl font-bold text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
         />
         <input
@@ -85,6 +88,7 @@ export class UsernameInput extends LitElement {
           .value=${this.baseUsername}
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
+          minlength="${MIN_USERNAME_LENGTH}"
           maxlength="${MAX_USERNAME_LENGTH}"
           class="flex-1 min-w-0 border-0 text-2xl font-bold text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
@@ -147,58 +151,53 @@ export class UsernameInput extends LitElement {
   }
 
   private validateAndStore() {
-    // Prevent empty username even if clan tag is present
-    const trimmedBase = this.baseUsername.trim();
-    if (!trimmedBase || trimmedBase.length < MIN_USERNAME_LENGTH) {
+    const trimmedBase = this.getUsername();
+
+    const clanTagResult = validateClanTag(this.clanTag);
+    if (!clanTagResult.isValid) {
       this._isValid = false;
-      this.validationError = translateText("username.too_short", {
-        min: MIN_USERNAME_LENGTH,
-      });
+      this.validationError = clanTagResult.error ?? "";
       return;
     }
 
-    // Validate clan tag if present
-    if (this.clanTag.length > 0 && this.clanTag.length < 2) {
-      this._isValid = false;
-      this.validationError = translateText("username.tag_too_short");
-      return;
-    }
-
-    const full = this.constructFullUsername();
-    const trimmedFull = full.trim();
-
-    const result = validateUsername(trimmedFull);
+    const result = validateUsername(trimmedBase);
     this._isValid = result.isValid;
     if (result.isValid) {
-      this.storeUsername(trimmedFull);
+      localStorage.setItem(usernameKey, trimmedBase);
+      localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
       this.validationError = "";
     } else {
       this.validationError = result.error ?? "";
     }
   }
 
-  private getUsername(): string {
-    const storedUsername = localStorage.getItem(usernameKey);
-    if (storedUsername) {
-      return storedUsername;
-    }
-    return this.generateNewUsername();
-  }
-
-  private storeUsername(username: string) {
-    if (username) {
-      localStorage.setItem(usernameKey, username);
-    }
-  }
-
-  private generateNewUsername(): string {
-    const newUsername = genAnonUsername();
-    this.storeUsername(newUsername);
-    return newUsername;
-  }
-
   public isValid(): boolean {
     return this._isValid;
+  }
+
+  public showValidationFeedback(): void {
+    const message =
+      this.validationError || translateText("username.invalid_chars");
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message,
+          color: "red",
+          duration: 2500,
+        },
+      }),
+    );
+    document
+      .getElementById("username-validation-error")
+      ?.classList.remove("hidden");
+  }
+
+  public validateOrShowError(): boolean {
+    if (this.isValid()) {
+      return true;
+    }
+    this.showValidationFeedback();
+    return false;
   }
 }
 

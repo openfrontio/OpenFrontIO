@@ -23,7 +23,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord, getClanTag } from "../core/Util";
+import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
@@ -255,15 +255,13 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // Only the WebSocket is updated — username, cosmetics, etc. are preserved
-  // from the original join to maintain consistency throughout the game session.
-  // Exception: in the pre-game lobby, the username is updated so players can
-  // rename between leaving and rejoining.
+  // WebSocket is always updated. Optional identity updates are applied only
+  // before the game has started.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
-    newUsername?: string,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -283,13 +281,12 @@ export class GameServer {
       (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
+    if (identityUpdate && !this.hasStarted()) {
+      client.username = identityUpdate.username;
+      client.clanTag = identityUpdate.clanTag;
+    }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
-
-    // Allow username updates in the pre-game lobby
-    if (!this._hasStarted && newUsername !== undefined) {
-      client.username = newUsername;
-    }
 
     client.ws = ws;
     this.addListeners(client);
@@ -621,6 +618,7 @@ export class GameServer {
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
+        clanTag: c.clanTag ?? undefined,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -832,6 +830,7 @@ export class GameServer {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
+        clanTag: c.clanTag ?? undefined,
         clientID: c.clientID,
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
@@ -942,11 +941,11 @@ export class GameServer {
         return {
           clientID: player.clientID,
           username: player.username,
+          clanTag: player.clanTag,
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
-          clanTag: getClanTag(player.username) ?? undefined,
         } satisfies PlayerRecord;
       },
     );
