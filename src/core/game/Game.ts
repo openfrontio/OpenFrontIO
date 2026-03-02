@@ -127,6 +127,7 @@ export enum GameMapType {
   Surrounded = "Surrounded",
   Didier = "Didier",
   DidierFrance = "Didier France",
+  Dyslexdria = " World ",
   AmazonRiver = "Amazon River",
   BosphorusStraits = "Bosphorus Straits",
   BeringStrait = "Bering Strait",
@@ -200,6 +201,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Svalmel,
     GameMapType.Surrounded,
     GameMapType.TradersDream,
+    GameMapType.Dyslexdria,
   ],
   arcade: [
     GameMapType.TheBox,
