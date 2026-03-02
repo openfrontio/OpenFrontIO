@@ -66,7 +66,13 @@ export class ConstructionExecution implements Execution {
         spawnTile,
         {},
       );
-      const duration = info.constructionDuration ?? 0;
+      let duration = info.constructionDuration ?? 0;
+      const shouldInstantBuild =
+        this.mg.config().instantBuild() &&
+        this.mg.config().shouldApplyModifier(this.player);
+      if (shouldInstantBuild) {
+        duration = 0;
+      }
       if (duration > 0) {
         this.structure.setUnderConstruction(true);
         this.ticksUntilComplete = duration;
