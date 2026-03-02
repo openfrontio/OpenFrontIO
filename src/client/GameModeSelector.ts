@@ -89,50 +89,37 @@ export class GameModeSelector extends LitElement {
     const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
-      <div class="hidden lg:flex lg:flex-col lg:gap-4 w-full">
-        <div class="flex gap-4 h-80">
-          <div class="flex-[2] min-w-0">
-            ${ffa
-              ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa), "h-full")
-              : nothing}
-          </div>
-          <div class="flex flex-col gap-4 flex-1 min-w-0">
-            ${teams
-              ? this.renderLobbyCard(
-                  teams,
-                  this.getLobbyTitle(teams),
-                  "flex-1 min-h-0",
-                )
-              : nothing}
-            ${special
-              ? this.renderSpecialLobbyCard(special, "flex-1 min-h-0")
-              : nothing}
-          </div>
-        </div>
-        <button
-          @click=${this.openSinglePlayerModal}
-          class="w-full h-14 rounded-xl bg-blue-600 border-0 transition-transform hover:scale-[1.01] hover:bg-blue-500 active:scale-[0.99] text-lg font-bold text-white uppercase tracking-wider cursor-pointer"
-        >
-          ${translateText("main.solo")}
-        </button>
-        <div class="grid grid-cols-3 gap-3 h-12">
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.create"),
-            this.openHostLobby,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("main.join"),
-            this.openJoinLobby,
-          )}
-        </div>
+      <div
+        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto pb-4 lg:pb-0"
+      >
+        ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
+        ${teams
+          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+          : nothing}
+        ${special ? this.renderSpecialLobbyCard(special) : nothing}
+        ${this.renderQuickActionsSection()}
       </div>
+    `;
+  }
 
-      <div class="lg:hidden grid grid-cols-1 gap-4 w-[70%] mx-auto pb-4">
-        <div class="grid grid-cols-2 gap-2 h-20">
+  private renderSpecialLobbyCard(lobby: PublicGameInfo) {
+    const subtitle = this.getLobbyTitle(lobby);
+    const mainTitle = translateText("mode_selector.special_title");
+    const titleContent = subtitle
+      ? html`
+          <span class="block">${mainTitle}</span>
+          <span class="block text-[10px] leading-tight text-white/70">
+            ${subtitle}
+          </span>
+        `
+      : mainTitle;
+    return this.renderLobbyCard(lobby, titleContent);
+  }
+
+  private renderQuickActionsSection() {
+    return html`
+      <div class="contents lg:flex lg:flex-col lg:gap-2 lg:h-56">
+        <div class="max-lg:order-first grid grid-cols-2 gap-2 h-20 lg:flex-1">
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
@@ -142,14 +129,7 @@ export class GameModeSelector extends LitElement {
             this.openRankedMenu,
           )}
         </div>
-        ${ffa
-          ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa), "h-40")
-          : nothing}
-        ${teams
-          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams), "h-40")
-          : nothing}
-        ${special ? this.renderSpecialLobbyCard(special, "h-40") : nothing}
-        <div class="grid grid-cols-2 gap-2 h-20">
+        <div class="grid grid-cols-2 gap-2 h-20 lg:flex-1">
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
@@ -161,20 +141,6 @@ export class GameModeSelector extends LitElement {
         </div>
       </div>
     `;
-  }
-
-  private renderSpecialLobbyCard(lobby: PublicGameInfo, heightClass?: string) {
-    const subtitle = this.getLobbyTitle(lobby);
-    const mainTitle = translateText("mode_selector.special_title");
-    const titleContent = subtitle
-      ? html`
-          <span class="block">${mainTitle}</span>
-          <span class="block text-[10px] leading-tight text-white/70">
-            ${subtitle}
-          </span>
-        `
-      : mainTitle;
-    return this.renderLobbyCard(lobby, titleContent, heightClass);
   }
 
   private openRankedMenu = () => {
@@ -213,7 +179,6 @@ export class GameModeSelector extends LitElement {
   private renderLobbyCard(
     lobby: PublicGameInfo,
     titleContent: string | TemplateResult,
-    heightClass: string = "h-40 lg:h-56",
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
     const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
@@ -248,7 +213,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full ${heightClass} text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
+        class="group flex flex-col w-full h-40 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
       >
         <div class="relative flex-1 overflow-hidden ${CARD_BG}">
           ${mapImageSrc
@@ -263,13 +228,11 @@ export class GameModeSelector extends LitElement {
             class="absolute inset-x-2 bottom-2 flex items-end justify-between gap-2"
           >
             ${modifierLabels.length > 0
-              ? html`<div class="flex flex-wrap items-end gap-1">
+              ? html`<div class="flex flex-col items-start gap-1">
                   ${modifierLabels.map(
                     (label) =>
                       html`<span
-                        class="${modifierLabels.length > 2
-                          ? "px-1 py-px text-[7px]"
-                          : "px-2 py-0.5 text-[10px]"} rounded font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
+                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
                         >${label}</span
                       >`,
                   )}
