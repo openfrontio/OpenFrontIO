@@ -258,6 +258,12 @@ export class DefaultConfig implements Config {
   goldMultiplier(): number {
     return this._gameConfig.goldMultiplier ?? 1;
   }
+  portGoldMultiplier(): number {
+    return this._gameConfig.portGoldMultiplier ?? 1;
+  }
+  factoryGoldMultiplier(): number {
+    return this._gameConfig.factoryGoldMultiplier ?? 1;
+  }
   startingGold(playerInfo: PlayerInfo): Gold {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 0n;
@@ -271,7 +277,7 @@ export class DefaultConfig implements Config {
     return (numPlayerFactories + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplier() * this.factoryGoldMultiplier();
     let baseGold: bigint;
     switch (rel) {
       case "ally":
@@ -303,7 +309,7 @@ export class DefaultConfig implements Config {
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
       50_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplier() * this.portGoldMultiplier();
     return BigInt(Math.floor(baseGold * multiplier));
   }
 

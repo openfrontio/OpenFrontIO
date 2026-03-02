@@ -154,6 +154,12 @@ export class GameServer {
     if (gameConfig.goldMultiplier !== undefined) {
       this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
     }
+    if (gameConfig.portGoldMultiplier !== undefined) {
+      this.gameConfig.portGoldMultiplier = gameConfig.portGoldMultiplier;
+    }
+    if (gameConfig.factoryGoldMultiplier !== undefined) {
+      this.gameConfig.factoryGoldMultiplier = gameConfig.factoryGoldMultiplier;
+    }
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
     }
