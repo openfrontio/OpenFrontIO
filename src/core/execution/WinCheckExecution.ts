@@ -20,8 +20,8 @@ export class WinCheckExecution implements Execution {
   private mg: Game | null = null;
 
   // Hard time limit (in seconds) to force a winner before the server's
-  // maxGameDuration hard kill.
-  private static readonly HARD_TIME_LIMIT_SECONDS = 1 * 60;
+  // maxGameDuration hard kill. 170mins (10 mins before 3hrs)
+  private static readonly HARD_TIME_LIMIT_SECONDS = 170 * 60;
 
   constructor() {}
 
