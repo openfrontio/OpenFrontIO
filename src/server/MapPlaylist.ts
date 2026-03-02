@@ -133,7 +133,7 @@ export class MapPlaylist {
     const map = this.getNextMap(type);
 
     const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+      mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
     const modifiers = this.getRandomPublicGameModifiers(playerTeams);
     const { startingGold } = modifiers;
@@ -214,7 +214,7 @@ export class MapPlaylist {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
     const map = this.getNextMap("special");
     const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+      mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
     const excludedModifiers: ModifierKey[] = [];
 
@@ -424,14 +424,27 @@ export class MapPlaylist {
       if (type !== "special" && ARCADE_MAPS.has(map)) {
         return;
       }
-      for (let i = 0; i < (frequency[key] ?? 0); i++) {
+      let freq = frequency[key] ?? 0;
+      // Double frequency for Baikal and FourIslands in team games
+      if (type === "team" && (key === "Baikal" || key === "FourIslands")) {
+        freq *= 2;
+      }
+      for (let i = 0; i < freq; i++) {
         maps.push(map);
       }
     });
     return maps;
   }
 
-  private getTeamCount(): TeamCountConfig {
+  private getTeamCount(map: GameMapType): TeamCountConfig {
+    // Override team count for specific maps (75% chance)
+    if (map === GameMapType.Baikal && Math.random() < 0.75) {
+      return 2;
+    }
+    if (map === GameMapType.FourIslands && Math.random() < 0.75) {
+      return 4;
+    }
+
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
     const roll = Math.random() * totalWeight;
 
