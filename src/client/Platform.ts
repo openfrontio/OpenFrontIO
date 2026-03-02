@@ -2,13 +2,37 @@ export const Platform = (() => {
   const isBrowser =
     typeof window !== "undefined" && typeof navigator !== "undefined";
 
+  const normalizePlatform = (platform: string): string => {
+    const normalized = platform.toLowerCase();
+    if (normalized.includes("windows")) return "Windows";
+    if (
+      normalized.includes("iphone") ||
+      normalized.includes("ipad") ||
+      normalized.includes("ipod") ||
+      normalized.includes("ios")
+    ) {
+      return "iOS";
+    }
+    if (
+      normalized.includes("mac") ||
+      normalized.includes("macintosh") ||
+      normalized.includes("macos")
+    ) {
+      return "macOS";
+    }
+    if (normalized.includes("android")) return "Android";
+    if (normalized.includes("chrome os")) return "Linux";
+    if (normalized.includes("linux")) return "Linux";
+    return "Unknown";
+  };
+
   // OS Extraction
   const extractOS = (): string => {
     if (!isBrowser) return "Unknown";
 
     const uaData = (navigator as any).userAgentData;
     if (uaData?.platform) {
-      return uaData.platform;
+      return normalizePlatform(uaData.platform);
     }
 
     const ua = navigator.userAgent;

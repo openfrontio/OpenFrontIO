@@ -80,6 +80,36 @@ describe("Platform", () => {
     expect(platform.isAndroid).toBe(true);
   });
 
+  it("normalizes non-canonical userAgentData platform values", async () => {
+    const macPlatform = await loadPlatform({
+      userAgent: "Mozilla/5.0",
+      userAgentData: { platform: "Macintosh" },
+    });
+
+    expect(macPlatform.os).toBe("macOS");
+    expect(macPlatform.isMac).toBe(true);
+
+    const chromeOsPlatform = await loadPlatform({
+      userAgent: "Mozilla/5.0",
+      userAgentData: { platform: "Chrome OS" },
+    });
+
+    expect(chromeOsPlatform.os).toBe("Linux");
+    expect(chromeOsPlatform.isLinux).toBe(true);
+
+    const unknownPlatform = await loadPlatform({
+      userAgent: "Mozilla/5.0",
+      userAgentData: { platform: "PlayStation" },
+    });
+
+    expect(unknownPlatform.os).toBe("Unknown");
+    expect(unknownPlatform.isMac).toBe(false);
+    expect(unknownPlatform.isWindows).toBe(false);
+    expect(unknownPlatform.isIOS).toBe(false);
+    expect(unknownPlatform.isAndroid).toBe(false);
+    expect(unknownPlatform.isLinux).toBe(false);
+  });
+
   it("reports viewport breakpoint helpers from window.innerWidth", async () => {
     const platform = await loadPlatform({
       userAgent:
