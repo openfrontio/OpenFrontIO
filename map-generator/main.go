@@ -75,14 +75,13 @@ var maps = []struct {
 	{Name: "tradersdream"},
 	{Name: "hawaii"},
 	{Name: "niledelta"},
+  {Name: "arctic"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},
 	{Name: "plains", IsTest: true},
 	{Name: "giantworldmap", IsTest: true},
 	{Name: "world", IsTest: true},
-  {Name: "arctic", IsTest: true},
-
 }
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
