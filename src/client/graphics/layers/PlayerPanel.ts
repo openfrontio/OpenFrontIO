@@ -340,22 +340,19 @@ export class PlayerPanel extends LitElement implements Layer {
       case PlayerType.Nation:
         return {
           labelKey: "player_type.nation",
-          aria: "Nation player",
           classes: "border-indigo-400/25 bg-indigo-500/10 text-indigo-200",
           icon: "🏛️",
         };
       case PlayerType.Bot:
         return {
           labelKey: "player_type.bot",
-          aria: "Bot",
           classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
-          icon: "🤖",
+          icon: "⚔️",
         };
       case PlayerType.Human:
       default:
         return {
           labelKey: "player_type.player",
-          aria: "Human player",
           classes: "border-zinc-400/20 bg-zinc-500/5 text-zinc-300",
           icon: "👤",
         };
@@ -517,7 +514,7 @@ export class PlayerPanel extends LitElement implements Layer {
           ? html`<span
               class=${`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold ${chip.classes}`}
               role="status"
-              aria-label=${chip.aria}
+              aria-label=${translateText(chip.labelKey)}
               title=${translateText(chip.labelKey)}
             >
               <span aria-hidden="true" class="leading-none">${chip.icon}</span>
