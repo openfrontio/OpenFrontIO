@@ -36,7 +36,7 @@ enum Relationship {
   Enemy,
 }
 
-const ONSCREEN_DRAW_BUDGET_MS = 2;
+const ONSCREEN_DRAW_BUDGET_MS = 4;
 const OFFSCREEN_VERIFY_BUDGET_MS = 0.1;
 const OFFSCREEN_REFRESH_EVERY_N_FRAMES = 30;
 const ONSCREEN_HYSTERESIS_FRAMES = 2;
@@ -47,6 +47,7 @@ const DYNAMIC_MOVER_ZOOM_THRESHOLDS = [1.2, 2.4, 4.8] as const;
 const DYNAMIC_MOVER_ZOOM_HYSTERESIS = 0.2;
 const DYNAMIC_MOVER_SCALE_SETTLE_MS = 160;
 const DYNAMIC_MOVER_SCALE_COOLDOWN_MS = 300;
+const DYNAMIC_MOVER_WORLD_COORD_SNAP = true;
 const DYNAMIC_MOVER_SUBPIXEL_SNAP = false;
 const SMALL_SHIP_MASK_SIZE = 5;
 const TRANSPORT_SHIP_MASK = [
@@ -56,13 +57,7 @@ const TRANSPORT_SHIP_MASK = [
   ".BTB.",
   "..B..",
 ] as const;
-const TRADE_SHIP_MASK = [
-  "..T..",
-  ".TBT.",
-  "TBBBT",
-  ".TBT.",
-  "..T..",
-] as const;
+const TRADE_SHIP_MASK = ["..T..", ".TBT.", "TBBBT", ".TBT.", "..T.."] as const;
 
 type TransportTrailState = {
   activePlanId: number;
@@ -793,8 +788,13 @@ export class UnitLayer implements Layer {
       return null;
     }
 
-    const renderX = this.snapDynamicMoverCoord(sampled.x);
-    const renderY = this.snapDynamicMoverCoord(sampled.y);
+    const renderX = this.pixelCenterCoord(
+      this.snapDynamicMoverCoord(sampled.x),
+    );
+    const renderY = this.pixelCenterCoord(
+      this.snapDynamicMoverCoord(sampled.y),
+    );
+
     const rect = this.computeSpriteRect(unit, renderX, renderY, false);
     const result: MoverRenderSample = {
       unitId,
@@ -861,7 +861,9 @@ export class UnitLayer implements Layer {
           continue;
         }
 
-        const candidateRects: MoverSpriteRect[] = [candidateState.lastSpriteRect];
+        const candidateRects: MoverSpriteRect[] = [
+          candidateState.lastSpriteRect,
+        ];
         const candidateSample = this.getConflictSample(
           candidateId,
           tickFloat,
@@ -899,7 +901,13 @@ export class UnitLayer implements Layer {
       return null;
     }
 
-    return this.getMoverSample(unitId, unit, plan.planId, tickFloat, sampledCache);
+    return this.getMoverSample(
+      unitId,
+      unit,
+      plan.planId,
+      tickFloat,
+      sampledCache,
+    );
   }
 
   private anyRectsOverlap(
@@ -1042,6 +1050,13 @@ export class UnitLayer implements Layer {
     );
   }
 
+  private pixelCenterCoord(value: number): number {
+    if (!DYNAMIC_MOVER_WORLD_COORD_SNAP) {
+      return value;
+    }
+    return Math.round(value) + 0.5;
+  }
+
   private spatialAdd(
     spatial: MoverSpatialIndex,
     unitId: number,
@@ -1128,10 +1143,7 @@ export class UnitLayer implements Layer {
 
   private rectsOverlap(a: MoverSpriteRect, b: MoverSpriteRect): boolean {
     return (
-      a.x < b.x + b.w &&
-      a.x + a.w > b.x &&
-      a.y < b.y + b.h &&
-      a.y + a.h > b.y
+      a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
     );
   }
 
@@ -1205,7 +1217,8 @@ export class UnitLayer implements Layer {
 
     while (
       idx > 0 &&
-      zoom < DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx - 1] - DYNAMIC_MOVER_ZOOM_HYSTERESIS
+      zoom <
+        DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx - 1] - DYNAMIC_MOVER_ZOOM_HYSTERESIS
     ) {
       idx--;
     }
@@ -1245,7 +1258,8 @@ export class UnitLayer implements Layer {
 
     this.lastDynamicMoverCanvasRescaleMs =
       this.rebuildDynamicMoverCanvas(targetScale);
-    this.totalDynamicMoverCanvasRescaleMs += this.lastDynamicMoverCanvasRescaleMs;
+    this.totalDynamicMoverCanvasRescaleMs +=
+      this.lastDynamicMoverCanvasRescaleMs;
     this.dynamicMoverCanvasRescaleCount++;
     this.dynamicMoverCanvasScale = targetScale;
     this.lastDynamicMoverCanvasScaleChangeAtMs = nowMs;
@@ -1272,8 +1286,14 @@ export class UnitLayer implements Layer {
     const oldHeight = oldCanvas.height;
 
     this.dynamicMoverCanvas = document.createElement("canvas");
-    this.dynamicMoverCanvas.width = Math.max(1, this.game.width() * targetScale);
-    this.dynamicMoverCanvas.height = Math.max(1, this.game.height() * targetScale);
+    this.dynamicMoverCanvas.width = Math.max(
+      1,
+      this.game.width() * targetScale,
+    );
+    this.dynamicMoverCanvas.height = Math.max(
+      1,
+      this.game.height() * targetScale,
+    );
     const dynamicMoverContext = this.dynamicMoverCanvas.getContext("2d");
     if (dynamicMoverContext === null) {
       throw new Error("2d context not supported");
