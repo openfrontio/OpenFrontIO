@@ -10,6 +10,7 @@ import {
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
+import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
@@ -463,21 +464,11 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌘"; // Command key
-  } else {
-    return "Ctrl";
-  }
+  return Platform.isMac ? "⌘" : "Ctrl";
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌥"; // Option key
-  } else {
-    return "Alt";
-  }
+  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {
