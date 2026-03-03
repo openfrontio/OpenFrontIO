@@ -37,7 +37,8 @@ export class TeamStats extends LitElement implements Layer {
   private _myTeam: Team | null = null;
 
   @state()
-  private _sortKey: "tiles" | "gold" | "maxtroops" = "tiles";
+  @state()
+  private _sortKey: "tiles" | "gold" | "maxtroops" | "launchers" | "sams" | "warships" | "cities" = "tiles";
 
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
@@ -65,7 +66,7 @@ export class TeamStats extends LitElement implements Layer {
     this.updateTeamStats();
   }
 
-  private setSort(key: "tiles" | "gold" | "maxtroops") {
+  private setSort(key: "tiles" | "gold" | "maxtroops" | "launchers" | "sams" | "warships" | "cities") {
     if (this._sortKey === key) {
       this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -138,16 +139,17 @@ export class TeamStats extends LitElement implements Layer {
 
         switch (this._sortKey) {
           case "gold":
-            // Converting back to numbers for comparison like Leaderboard.ts
-            return compare(
-              parseFloat(a.totalGold.replace(/,/g, "")),
-              parseFloat(b.totalGold.replace(/,/g, "")),
-            );
+            return compare(parseFloat(a.totalGold.replace(/,/g, "")), parseFloat(b.totalGold.replace(/,/g, "")));
           case "maxtroops":
-            return compare(
-              parseFloat(a.totalMaxTroops.replace(/,/g, "")),
-              parseFloat(b.totalMaxTroops.replace(/,/g, "")),
-            );
+            return compare(parseFloat(a.totalMaxTroops.replace(/,/g, "")), parseFloat(b.totalMaxTroops.replace(/,/g, "")));
+          case "launchers":
+            return compare(parseFloat(a.totalLaunchers.replace(/,/g, "")), parseFloat(b.totalLaunchers.replace(/,/g, "")));
+          case "sams":
+            return compare(parseFloat(a.totalSAMs.replace(/,/g, "")), parseFloat(b.totalSAMs.replace(/,/g, "")));
+          case "warships":
+            return compare(parseFloat(a.totalWarShips.replace(/,/g, "")), parseFloat(b.totalWarShips.replace(/,/g, "")));
+          case "cities":
+            return compare(parseFloat(a.totalCities.replace(/,/g, "")), parseFloat(b.totalCities.replace(/,/g, "")));
           default:
             return compare(a.totalScoreSort, b.totalScoreSort);
         }
@@ -173,7 +175,7 @@ export class TeamStats extends LitElement implements Layer {
         <div
           class="grid w-full"
           style="grid-template-columns: ${this.showUnits 
-            ? "minmax(50px, 70px) repeat(4, minmax(50px, 90px))" 
+            ? "minmax(50px, 70px) minmax(60px, 120px) minmax(60px, 80px) minmax(60px, 110px) minmax(60px, 90px)" 
             : "minmax(50px, 70px) minmax(60px, 100px) minmax(60px, 100px) minmax(60px, 120px)"};"
         >
           <!-- Header -->
@@ -185,23 +187,47 @@ export class TeamStats extends LitElement implements Layer {
               ? html`
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    @click=${() => this.setSort("launchers")}
                   >
                     ${translateText("leaderboard.launchers")}
+                    ${this._sortKey === "launchers"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    @click=${() => this.setSort("sams")}
                   >
                     ${translateText("leaderboard.sams")}
+                    ${this._sortKey === "sams"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    @click=${() => this.setSort("warships")}
                   >
                     ${translateText("leaderboard.warships")}
+                    ${this._sortKey === "warships"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                  @click=${() => this.setSort("cities")}
                   >
                     ${translateText("leaderboard.cities")}
+                    ${this._sortKey === "cities"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                 `
               : html`
