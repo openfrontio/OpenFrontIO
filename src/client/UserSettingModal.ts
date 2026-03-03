@@ -11,14 +11,14 @@ import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import "./FlagInputModal";
+import { Platform } from "./Platform";
 
 interface FlagInputModalElement extends HTMLElement {
   open(): void;
   returnTo?: string;
 }
 
-const isMac =
-  typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
+const isMac = Platform.isMac;
 
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
