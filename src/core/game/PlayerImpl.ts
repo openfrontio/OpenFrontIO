@@ -1101,15 +1101,19 @@ export class PlayerImpl implements Player {
         canBuild = this.canSpawnUnitType(u, tile, validTiles);
       }
 
+      const buildNew = canBuild !== false && canUpgrade === false;
+
       result[i] = {
         type: u,
         canBuild,
         canUpgrade,
         cost,
-        overlappingRailroads:
-          canBuild !== false ? rail.overlappingRailroads(canBuild) : [],
-        ghostRailPaths:
-          canBuild !== false ? rail.computeGhostRailPaths(u, canBuild) : [],
+        overlappingRailroads: buildNew
+          ? rail.overlappingRailroads(canBuild as TileRef)
+          : [],
+        ghostRailPaths: buildNew
+          ? rail.computeGhostRailPaths(u, canBuild as TileRef)
+          : [],
       };
     }
 
