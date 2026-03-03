@@ -82,6 +82,70 @@ fi
 chown -R openfront:openfront /home/openfront
 echo "Set proper ownership for openfront's home directory"
 
+# Set up Traefik reverse proxy
+echo "🔀 Setting up Traefik..."
+
+# Create the shared Docker network used by Traefik and app containers
+if docker network ls --format '{{.Name}}' | grep -q '^web$'; then
+    echo "Docker network 'web' already exists"
+else
+    docker network create web
+    echo "Created Docker network 'web'"
+fi
+
+TRAEFIK_CONFIG_DIR="/home/openfront/traefik"
+mkdir -p "$TRAEFIK_CONFIG_DIR"
+
+# No [api] block — dashboard is disabled for production.
+# To access it for debugging, SSH tunnel: ssh -L 8080:localhost:8080 user@server
+cat > "$TRAEFIK_CONFIG_DIR/traefik.toml" << 'EOF'
+[log]
+  level = "INFO"
+
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+
+[providers]
+  [providers.docker]
+    endpoint = "unix:///var/run/docker.sock"
+    exposedByDefault = false   # Only route containers with traefik.enable=true
+    network = "web"
+    watch = true
+EOF
+
+cat > "$TRAEFIK_CONFIG_DIR/compose.yaml" << 'EOF'
+networks:
+  web:
+    # External so blue/green containers can join independently.
+    external: true
+
+services:
+  traefik:
+    image: traefik:v3.4
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /home/openfront/traefik/traefik.toml:/etc/traefik/traefik.toml:ro
+    networks:
+      - web
+EOF
+
+chown -R openfront:openfront "$TRAEFIK_CONFIG_DIR"
+
+docker compose -f "$TRAEFIK_CONFIG_DIR/compose.yaml" pull
+docker compose -f "$TRAEFIK_CONFIG_DIR/compose.yaml" up -d
+
+if docker ps | grep -q traefik; then
+    echo "✅ Traefik started successfully!"
+else
+    echo "❌ Failed to start Traefik. Check logs with: docker logs traefik"
+    exit 1
+fi
+
 # Create directory for OpenTelemetry configuration
 echo "📊 Setting up Node Exporter and OpenTelemetry Collector..."
 OTEL_CONFIG_DIR="/home/openfront/otel"
@@ -176,10 +240,12 @@ echo "🎉 SETUP COMPLETE!"
 echo "====================================================="
 echo "The openfront user has been set up and has Docker permissions."
 echo "UDP buffer sizes have been configured for optimal QUIC/WebSocket performance."
+echo "Traefik reverse proxy is running (HTTP :80)."
 echo "Node Exporter is collecting system metrics."
 echo "OpenTelemetry Collector is forwarding metrics to your endpoint."
 echo ""
 echo "📝 Configuration:"
-echo "   - Config Directory: $OTEL_CONFIG_DIR"
+echo "   - Traefik Config: $TRAEFIK_CONFIG_DIR"
+echo "   - OTEL Config Directory: $OTEL_CONFIG_DIR"
 echo "   - OpenTelemetry Endpoint: $OTEL_EXPORTER_OTLP_ENDPOINT"
 echo "====================================================="
