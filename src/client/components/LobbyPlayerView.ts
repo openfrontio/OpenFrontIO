@@ -177,15 +177,14 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
-    const effectiveNationCount = this.nationCount;
     const displayCount =
       preview.team === ColoredTeams.Nations
-        ? effectiveNationCount
+        ? this.nationCount
         : preview.players.length;
 
     const maxTeamSize =
       preview.team === ColoredTeams.Nations
-        ? effectiveNationCount
+        ? this.nationCount
         : this.teamMaxSize;
 
     const teamLabel = getTranslatedPlayerTeamLabel(preview.team);
