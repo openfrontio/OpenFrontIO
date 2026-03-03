@@ -76,6 +76,26 @@ export function getBotsForCompactMap(
   return bots;
 }
 
+export function getNationsForCompactMap(
+  nations: number,
+  defaultNationCount: number,
+  compactMapEnabled: boolean,
+): number {
+  const compactCount = Math.max(0, Math.floor(defaultNationCount * 0.25));
+  if (compactMapEnabled) {
+    // Only reduce if at the full default
+    if (nations === defaultNationCount) {
+      return compactCount;
+    }
+    return nations;
+  }
+  // Restoring from compact: if at the compact default, go back to full default
+  if (nations === compactCount) {
+    return defaultNationCount;
+  }
+  return nations;
+}
+
 export function getRandomMapType(): GameMapType {
   const maps = Object.values(GameMapType);
   const randIdx = Math.floor(Math.random() * maps.length);

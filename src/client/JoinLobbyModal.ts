@@ -19,12 +19,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import {
-  GameMapSize,
-  GameMode,
-  GameType,
-  HumansVsNations,
-} from "../core/game/Game";
+import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -134,11 +129,8 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .nationCount=${this.nationCount}
-                        .disableNations=${this.gameConfig?.disableNations ??
-                        false}
-                        .isCompactMap=${this.gameConfig?.gameMapSize ===
-                        GameMapSize.Compact}
+                        .nationCount=${this.gameConfig?.nations ??
+                        this.nationCount}
                       ></lobby-player-view>
                     `
                   : ""}

@@ -219,7 +219,7 @@ export const GameConfigSchema = z.object({
       startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
-  disableNations: z.boolean(),
+  nations: z.number().int().min(0).max(400).optional(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),

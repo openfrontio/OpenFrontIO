@@ -13,7 +13,6 @@ import {
   Team,
   Trios,
 } from "../../core/game/Game";
-import { getCompactMapNationCount } from "../../core/game/NationCreation";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
@@ -36,8 +35,6 @@ export class LobbyTeamView extends LitElement {
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
-  @property({ type: Boolean }) disableNations: boolean = false;
-  @property({ type: Boolean }) isCompactMap: boolean = false;
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
@@ -50,9 +47,7 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
-      changedProperties.has("nationCount") ||
-      changedProperties.has("disableNations") ||
-      changedProperties.has("isCompactMap")
+      changedProperties.has("nationCount")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
@@ -355,13 +350,10 @@ export class LobbyTeamView extends LitElement {
    * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
    */
   private getEffectiveNationCount(): number {
-    if (this.disableNations) {
-      return 0;
-    }
     if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
       return this.clients.length;
     }
-    return getCompactMapNationCount(this.nationCount, this.isCompactMap);
+    return this.nationCount;
   }
 
   private displayUsername(client: ClientInfo): string {

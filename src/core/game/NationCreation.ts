@@ -13,9 +13,13 @@ import {
 import { Nation as ManifestNation } from "./TerrainMapLoader";
 
 /**
- * Creates the nations array for a game, handling HumansVsNations mode specially.
- * In HumansVsNations mode, the number of nations matches the number of human players to ensure fair gameplay.
- * For compact maps, only 25% of the nations are used.
+ * Creates the nations array for a game.
+ * If config.nations is set (singleplayer/private with custom count), uses that exact count,
+ * generating additional nations with random names if needed.
+ * If config.nations is undefined:
+ *   - Public HumansVsNations: matches nation count to human player count
+ *   - Public compact maps: uses 25% of manifest nations
+ *   - Otherwise: uses all manifest nations
  */
 export function createNationsForGame(
   gameStart: GameStartInfo,
@@ -23,10 +27,6 @@ export function createNationsForGame(
   numHumans: number,
   random: PseudoRandom,
 ): Nation[] {
-  if (gameStart.config.disableNations) {
-    return [];
-  }
-
   const toNation = (n: ManifestNation): Nation =>
     new Nation(
       new Cell(n.coordinates[0], n.coordinates[1]),
@@ -39,38 +39,59 @@ export function createNationsForGame(
     gameStart.config.gameMode === GameMode.Team &&
     gameStart.config.playerTeams === HumansVsNations;
 
-  // For compact maps, use only 25% of nations (minimum 1)
-  let effectiveNations = manifestNations;
-  if (isCompactMap && !isHumansVsNations) {
-    const targetCount = getCompactMapNationCount(manifestNations.length, true);
-    const shuffled = random.shuffleArray(manifestNations);
-    effectiveNations = shuffled.slice(0, targetCount);
+  // If nations count is explicitly set in config, use that
+  const configNations = gameStart.config.nations;
+  if (configNations !== undefined) {
+    if (configNations === 0) {
+      return [];
+    }
+    return createRandomNations(
+      configNations,
+      manifestNations,
+      toNation,
+      random,
+    );
   }
 
-  // For non-HumansVsNations modes, simply use the effective nations
-  if (!isHumansVsNations) {
-    return effectiveNations.map(toNation);
+  if (gameStart.config.gameType === GameType.Public) {
+    // For HvN, balance nation count to match human count
+    if (isHumansVsNations) {
+      return createRandomNations(numHumans, manifestNations, toNation, random);
+    }
+
+    // For compact maps, use only 25% of nations (minimum 1)
+    if (isCompactMap) {
+      const targetCount = getCompactMapNationCount(
+        manifestNations.length,
+        true,
+      );
+      const shuffled = random.shuffleArray(manifestNations);
+      const slicedNations = shuffled.slice(0, targetCount);
+      return slicedNations.map(toNation);
+    }
   }
 
-  // HumansVsNations mode: balance nation count to match human count
-  const isSingleplayer = gameStart.config.gameType === GameType.Singleplayer;
-  const targetNationCount = isSingleplayer ? 1 : numHumans;
+  return manifestNations.map(toNation);
+}
 
-  if (targetNationCount === 0) {
-    return [];
+/**
+ * Creates the requested number of nations from manifest data.
+ * If more nations are needed than available in the manifest, generates additional ones with random names.
+ */
+function createRandomNations(
+  targetCount: number,
+  manifestNations: ManifestNation[],
+  toNation: (n: ManifestNation) => Nation,
+  random: PseudoRandom,
+): Nation[] {
+  const shuffled = random.shuffleArray(manifestNations);
+  if (targetCount <= manifestNations.length) {
+    return shuffled.slice(0, targetCount).map(toNation);
   }
-
-  // If we have enough manifest nations, use a subset
-  if (manifestNations.length >= targetNationCount) {
-    // Shuffle manifest nations to add variety
-    const shuffled = random.shuffleArray(manifestNations);
-    return shuffled.slice(0, targetNationCount).map(toNation);
-  }
-
-  // If we need more nations than defined in manifest, create additional ones
-  const nations: Nation[] = manifestNations.map(toNation);
+  // Need more nations than defined in manifest, create additional ones
+  const nations: Nation[] = shuffled.map(toNation);
   const usedNames = new Set(nations.map((n) => n.playerInfo.name));
-  const additionalCount = targetNationCount - manifestNations.length;
+  const additionalCount = targetCount - manifestNations.length;
   for (let i = 0; i < additionalCount; i++) {
     const name = generateUniqueNationName(random, usedNames);
     usedNames.add(name);
@@ -81,7 +102,6 @@ export function createNationsForGame(
       ),
     );
   }
-
   return nations;
 }
 

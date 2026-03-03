@@ -27,7 +27,7 @@ describe("Ranking class", () => {
     gameType: GameType.Public,
     gameMode: GameMode.FFA,
     gameMapSize: GameMapSize.Normal,
-    disableNations: true,
+    nations: 0,
     bots: 0,
     infiniteGold: false,
     infiniteTroops: false,
