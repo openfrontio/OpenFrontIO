@@ -1,11 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
-  BuildableAttackTypes,
-  isBuildableAttackType,
+  BuildableAttacks,
   PlayerActions,
   PlayerBuildableUnitType,
-  StructureTypes,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -393,9 +392,9 @@ function getAllEnabledUnits(
   };
 
   if (myPlayer) {
-    StructureTypes.forEach(addIfEnabled);
+    Structures.types.forEach(addIfEnabled);
   } else {
-    BuildableAttackTypes.forEach(addIfEnabled);
+    BuildableAttacks.types.forEach(addIfEnabled);
   }
 
   return units;
@@ -416,8 +415,8 @@ function createMenuElements(
       (item) =>
         unitTypes.has(item.unitType) &&
         (filterType === "attack"
-          ? isBuildableAttackType(item.unitType)
-          : !isBuildableAttackType(item.unitType)),
+          ? BuildableAttacks.has(item.unitType)
+          : !BuildableAttacks.has(item.unitType)),
     )
     .map((item: BuildItemDisplay) => {
       const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);

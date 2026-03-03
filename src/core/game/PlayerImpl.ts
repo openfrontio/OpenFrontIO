@@ -23,18 +23,17 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
-  isStructureType,
   MessageType,
   MutableAlliance,
   Player,
-  PlayerBuildableTypes,
+  PlayerBuildable,
   PlayerBuildableUnitType,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
   PlayerType,
   Relation,
-  StructureTypes,
+  Structures,
   Team,
   TerraNullius,
   Tick,
@@ -1067,7 +1066,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    units: readonly PlayerBuildableUnitType[] = PlayerBuildableTypes,
+    units: readonly PlayerBuildableUnitType[] = PlayerBuildable.types,
   ): BuildableUnit[] {
     const mg = this.mg;
     const config = mg.config();
@@ -1075,7 +1074,7 @@ export class PlayerImpl implements Player {
     const inSpawnPhase = mg.inSpawnPhase();
 
     const validTiles =
-      tile !== null && units.some((u) => isStructureType(u))
+      tile !== null && units.some((u) => Structures.has(u))
         ? this.validStructureSpawnTiles(tile)
         : [];
 
@@ -1189,7 +1188,7 @@ export class PlayerImpl implements Player {
       const wouldHitTeammate = this.mg.anyUnitNearby(
         tile,
         magnitude.outer,
-        StructureTypes,
+        Structures.types,
         (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
       );
       if (wouldHitTeammate) {
@@ -1272,7 +1271,7 @@ export class PlayerImpl implements Player {
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      StructureTypes,
+      Structures.types,
       undefined,
       true,
     );

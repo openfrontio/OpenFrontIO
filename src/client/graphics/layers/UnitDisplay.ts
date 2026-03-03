@@ -3,7 +3,7 @@ import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
-  BuildMenuTypes,
+  BuildMenus,
   Gold,
   PlayerBuildableUnitType,
   UnitType,
@@ -61,7 +61,7 @@ export class UnitDisplay extends LitElement implements Layer {
       }
     }
 
-    this.allDisabled = BuildMenuTypes.every((u) => config.isUnitDisabled(u));
+    this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
   }
 
@@ -98,7 +98,7 @@ export class UnitDisplay extends LitElement implements Layer {
   tick() {
     const player = this.game?.myPlayer();
     if (!player) return;
-    player.buildables(undefined, BuildMenuTypes).then((buildables) => {
+    player.buildables(undefined, BuildMenus.types).then((buildables) => {
       this.playerBuildables = buildables;
     });
     this._cities = player.totalUnitLevels(UnitType.City);

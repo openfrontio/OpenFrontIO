@@ -243,6 +243,15 @@ export interface UnitInfo {
   upgradable?: boolean;
 }
 
+function unitTypeGroup<T extends readonly UnitType[]>(types: T) {
+  return {
+    types,
+    has(type: UnitType): type is T[number] {
+      return (types as readonly UnitType[]).includes(type);
+    },
+  };
+}
+
 export enum UnitType {
   TransportShip = "Transport",
   Warship = "Warship",
@@ -268,70 +277,40 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
-export const nukeTypes = [
+export const Nukes = unitTypeGroup([
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
-] as const satisfies readonly UnitType[];
+] as const);
 
-const _buildableAttackTypesList = [
+export const BuildableAttacks = unitTypeGroup([
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
   UnitType.MIRV,
   UnitType.Warship,
-] as const satisfies readonly UnitType[];
+] as const);
 
-export const BuildableAttackTypes = _buildableAttackTypesList;
-
-const _buildableAttackTypesSet: ReadonlySet<UnitType> = new Set(
-  _buildableAttackTypesList,
-);
-
-export function isBuildableAttackType(type: UnitType): boolean {
-  return _buildableAttackTypesSet.has(type);
-}
-
-const _structureTypesList = [
+export const Structures = unitTypeGroup([
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
-] as const satisfies readonly UnitType[];
+] as const);
 
-const _structureTypesSet: ReadonlySet<UnitType> = new Set(_structureTypesList);
+export const BuildMenus = unitTypeGroup([
+  ...Structures.types,
+  ...BuildableAttacks.types,
+] as const);
 
-export const StructureTypes = _structureTypesList;
-
-export function isStructureType(type: UnitType): boolean {
-  return _structureTypesSet.has(type);
-}
-
-const _buildMenuTypesList = [
-  ..._structureTypesList,
-  ..._buildableAttackTypesList,
-] as const satisfies readonly UnitType[];
-
-export const BuildMenuTypes = _buildMenuTypesList;
-
-const _playerBuildableTypesList = [
-  ..._buildMenuTypesList,
+export const PlayerBuildable = unitTypeGroup([
+  ...BuildMenus.types,
   UnitType.TransportShip,
-] as const satisfies readonly UnitType[];
+] as const);
 
-const _playerBuildableTypesSet: ReadonlySet<UnitType> = new Set(
-  _playerBuildableTypesList,
-);
-
-export const PlayerBuildableTypes = _playerBuildableTypesList;
-
-export function isPlayerBuildableType(type: UnitType): boolean {
-  return _playerBuildableTypesSet.has(type);
-}
-
-export type PlayerBuildableUnitType = (typeof PlayerBuildableTypes)[number];
+export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
 
 export interface OwnerComp {
   owner: Player;
