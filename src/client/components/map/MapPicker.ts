@@ -93,7 +93,7 @@ export class MapPicker extends LitElement {
 
   private renderFeaturedMaps() {
     let featuredMapList = featuredMaps;
-    if (!featuredMapList.includes(this.selectedMap)) {
+    if (!this.useRandomMap && !featuredMapList.includes(this.selectedMap)) {
       featuredMapList = [this.selectedMap, ...featuredMaps];
     }
     return html`<div class="w-full">

@@ -199,7 +199,10 @@ export class MapPlaylist {
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: isRandomSpawn,
-      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      nations:
+        mode === GameMode.Team && playerTeams !== HumansVsNations
+          ? "disabled"
+          : "default",
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
@@ -292,10 +295,12 @@ export class MapPlaylist {
         (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
     );
 
-    const disableNations =
+    const nations: GameConfig["nations"] =
       (mode === GameMode.Team && playerTeams !== HumansVsNations) ||
       // Nations don't have PVP immunity, so 25M starting gold wouldn't work well with them
-      (startingGold !== undefined && startingGold >= 25_000_000);
+      (startingGold !== undefined && startingGold >= 25_000_000)
+        ? "disabled"
+        : "default";
 
     return {
       donateGold: mode === GameMode.Team,
@@ -318,7 +323,7 @@ export class MapPlaylist {
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: isRandomSpawn,
-      disableNations,
+      nations,
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
@@ -353,7 +358,7 @@ export class MapPlaylist {
       maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
       randomSpawn: false,
-      disableNations: true,
+      nations: "disabled",
       gameMode: GameMode.FFA,
       bots: isCompact ? 100 : 400,
       spawnImmunityDuration: 30 * 10,
