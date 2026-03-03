@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GoToPlayerEvent } from "./Leaderboard";
 import {
   formatPercentage,
   renderNumber,
@@ -158,6 +159,18 @@ export class TeamStats extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private handleTeamClick(team: TeamEntry) {
+    if (this.eventBus === null || team.players.length === 0) return;
+
+    // Identify the player with the most tiles
+    const strongestPlayer = [...team.players]
+      .filter((p) => p.isAlive())
+      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0];
+
+    if (strongestPlayer) {
+      this.eventBus.emit(new GoToPlayerEvent(strongestPlayer));
+    }
+  }
   renderLayer(context: CanvasRenderingContext2D) {}
 
   shouldTransform(): boolean {
@@ -275,6 +288,7 @@ export class TeamStats extends LitElement implements Layer {
                     class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
                       ? "font-bold"
                       : ""}"
+                    @click=${() => this.handleTeamClick(team)}
                   >
                     <div class="py-1.5 border-b border-slate-500">
                       ${team.teamName}
@@ -298,6 +312,7 @@ export class TeamStats extends LitElement implements Layer {
                     class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
                       ? "font-bold"
                       : ""}"
+                    @click=${() => this.handleTeamClick(team)}
                   >
                     <div class="py-1.5 border-b border-slate-500">
                       ${team.teamName}
