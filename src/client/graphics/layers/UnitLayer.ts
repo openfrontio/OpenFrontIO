@@ -65,11 +65,27 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
-    const unitIds = this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
+    const updatedUnitIds =
+      this.game
+        .updatesSinceLastTick()
+        ?.[GameUpdateType.Unit]?.map((unit) => unit.id) ?? [];
 
-    this.updateUnitsSprites(unitIds ?? []);
+    const motionPlanUnitIds = this.game.motionPlannedUnitIds();
+
+    if (updatedUnitIds.length === 0) {
+      this.updateUnitsSprites(motionPlanUnitIds);
+      return;
+    }
+    if (motionPlanUnitIds.length === 0) {
+      this.updateUnitsSprites(updatedUnitIds);
+      return;
+    }
+
+    const unitIds = new Set<number>(updatedUnitIds);
+    for (const id of motionPlanUnitIds) {
+      unitIds.add(id);
+    }
+    this.updateUnitsSprites(Array.from(unitIds));
   }
 
   init() {
@@ -274,14 +290,15 @@ export class UnitLayer implements Layer {
       .filter((unitView) => isSpriteReady(unitView))
       .forEach((unitView) => {
         const sprite = getColoredSprite(unitView, this.theme);
-        const clearsize = sprite.width + 1;
         const lastX = this.game.x(unitView.lastTile());
         const lastY = this.game.y(unitView.lastTile());
+        const clearX = Math.round(lastX - sprite.width / 2);
+        const clearY = Math.round(lastY - sprite.height / 2);
         this.context.clearRect(
-          lastX - clearsize / 2,
-          lastY - clearsize / 2,
-          clearsize,
-          clearsize,
+          clearX - 1,
+          clearY - 1,
+          sprite.width + 2,
+          sprite.height + 2,
         );
       });
   }
@@ -595,7 +612,7 @@ export class UnitLayer implements Layer {
         Math.round(x - sprite.width / 2),
         Math.round(y - sprite.height / 2),
         sprite.width,
-        sprite.width,
+        sprite.height,
       );
       if (!targetable) {
         this.context.restore();

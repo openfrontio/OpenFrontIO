@@ -19,6 +19,7 @@ import {
   patternRelationship,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { Platform } from "../../Platform";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -186,8 +187,7 @@ export class WinModal extends LitElement implements Layer {
 
     // Shuffle the array and take patterns based on screen size
     const shuffled = [...purchasablePatterns].sort(() => Math.random() - 0.5);
-    const isMobile = window.innerWidth < 768; // md breakpoint
-    const maxPatterns = isMobile ? 1 : 3;
+    const maxPatterns = Platform.isMobileWidth ? 1 : 3;
     const selectedPatterns = shuffled.slice(
       0,
       Math.min(maxPatterns, shuffled.length),
@@ -201,7 +201,6 @@ export class WinModal extends LitElement implements Layer {
               .pattern=${pattern}
               .colorPalette=${colorPalette}
               .requiresPurchase=${true}
-              .allowTrial=${false}
               .onSelect=${(p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
                 handlePurchase(p, colorPalette)}
