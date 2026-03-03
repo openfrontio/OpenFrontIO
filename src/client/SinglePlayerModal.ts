@@ -628,11 +628,6 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
-    // If random map is selected, choose a random map now
-    if (this.useRandomMap) {
-      this.selectedMap = getRandomMapType();
-    }
-
     console.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
@@ -717,10 +712,7 @@ export class SinglePlayerModal extends BaseModal {
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      if (this.selectedMap === currentMap) {
-        this.defaultNationCount = 0;
-        this.nations = 0;
-      }
+      // Leave existing values unchanged so the UI stays consistent
     }
   }
 }

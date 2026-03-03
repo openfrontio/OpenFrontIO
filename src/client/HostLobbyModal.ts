@@ -78,8 +78,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
-  // Add a new timer for debouncing bot changes
+  // Timers for debouncing slider changes
   private botsUpdateTimer: number | null = null;
+  private nationsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
@@ -711,7 +712,14 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.nations = value;
-    this.putGameConfig();
+
+    if (this.nationsUpdateTimer !== null) {
+      clearTimeout(this.nationsUpdateTimer);
+    }
+    this.nationsUpdateTimer = window.setTimeout(() => {
+      this.putGameConfig();
+      this.nationsUpdateTimer = null;
+    }, 300);
   };
 
   private async handleGameModeSelection(value: GameMode) {
@@ -830,11 +838,7 @@ export class HostLobbyModal extends BaseModal {
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      // Only update if the map hasn't changed
-      if (this.selectedMap === currentMap) {
-        this.defaultNationCount = 0;
-        this.nations = 0;
-      }
+      // Leave existing values unchanged so the UI stays consistent
     }
   }
 }
