@@ -47,7 +47,7 @@ const DYNAMIC_MOVER_ZOOM_THRESHOLDS = [1.2, 2.4, 4.8] as const;
 const DYNAMIC_MOVER_ZOOM_HYSTERESIS = 0.2;
 const DYNAMIC_MOVER_SCALE_SETTLE_MS = 160;
 const DYNAMIC_MOVER_SCALE_COOLDOWN_MS = 300;
-const DYNAMIC_MOVER_WORLD_COORD_SNAP = true;
+const DYNAMIC_MOVER_WORLD_COORD_SNAP = false;
 const DYNAMIC_MOVER_SUBPIXEL_SNAP = false;
 const SMALL_SHIP_MASK_SIZE = 5;
 const TRANSPORT_SHIP_MASK = [
@@ -1052,7 +1052,7 @@ export class UnitLayer implements Layer {
 
   private pixelCenterCoord(value: number): number {
     if (!DYNAMIC_MOVER_WORLD_COORD_SNAP) {
-      return value;
+      return value + 0.5;
     }
     return Math.round(value) + 0.5;
   }
