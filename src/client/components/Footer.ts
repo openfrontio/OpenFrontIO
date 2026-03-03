@@ -22,7 +22,8 @@ export class Footer extends LitElement {
             <img
               src="/icons/github-mark-white.svg"
               data-i18n-alt="news.github_link"
-              class="h-7 w-7 object-contain"
+              class="h-7 w-7 object-contain pointer-events-none"
+              draggable="false"
             />
           </a>
           <a
@@ -32,7 +33,7 @@ export class Footer extends LitElement {
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
           >
             <svg
-              class="h-7 w-7 object-contain"
+              class="h-7 w-7 object-contain pointer-events-none"
               viewBox="0 0 24 24"
               fill="white"
               xmlns="http://www.w3.org/2000/svg"
@@ -49,7 +50,7 @@ export class Footer extends LitElement {
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
           >
             <svg
-              class="h-7 w-7 object-contain"
+              class="h-7 w-7 object-contain pointer-events-none"
               viewBox="0 0 24 24"
               fill="white"
             >
@@ -67,7 +68,8 @@ export class Footer extends LitElement {
             <img
               src="/icons/wiki-logo.svg"
               data-i18n-alt="main.wiki"
-              class="h-7 w-7 object-contain"
+              class="h-7 w-7 object-contain pointer-events-none"
+              draggable="false"
             />
           </a>
         </div>
