@@ -43,6 +43,19 @@ import bitmapFont from "/fonts/round_6x6_modified.xml?url";
 
 extend([a11yPlugin]);
 
+const FILTER_OUTLINE_RED = new OutlineFilter({
+  thickness: 2,
+  color: "rgba(255, 0, 0, 1)",
+});
+const FILTER_OUTLINE_GREEN = new OutlineFilter({
+  thickness: 2,
+  color: "rgba(0, 255, 0, 1)",
+});
+const FILTER_OUTLINE_WHITE = new OutlineFilter({
+  thickness: 2,
+  color: "rgb(255, 255, 255)",
+});
+
 class StructureRenderInfo {
   public isOnScreen: boolean = false;
   constructor(
@@ -321,9 +334,7 @@ export class StructureIconsLayer implements Layer {
             canUpgrade: false,
           });
           this.updateGhostPrice(0, showPrice);
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
+          this.ghostUnit.container.filters = [FILTER_OUTLINE_RED];
           return;
         }
 
@@ -344,19 +355,15 @@ export class StructureIconsLayer implements Layer {
           }
           if (this.potentialUpgrade) {
             this.potentialUpgrade.iconContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+              FILTER_OUTLINE_GREEN,
             ];
-            this.potentialUpgrade.dotContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
-            ];
+            this.potentialUpgrade.dotContainer.filters = [FILTER_OUTLINE_GREEN];
           }
           // No overlapping when a structure is upgradable
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
+          this.ghostUnit.container.filters = [FILTER_OUTLINE_RED];
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else {
@@ -628,12 +635,8 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && this.hasHiddenStructure) {
-        render.iconContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
-        render.dotContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
+        render.iconContainer.filters = [FILTER_OUTLINE_WHITE];
+        render.dotContainer.filters = [FILTER_OUTLINE_WHITE];
       } else {
         render.iconContainer.filters = [];
         render.dotContainer.filters = [];
