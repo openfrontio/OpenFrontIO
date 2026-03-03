@@ -744,18 +744,13 @@ export class GameView implements GameMap {
       this._myUsername,
       this._myClanTag,
     );
-    const myPlayerUpdateCandidates: PlayerUpdate[] = [];
 
     gu.updates[GameUpdateType.Player].forEach((pu) => {
-      const isMyPlayerUpdate =
-        pu.clientID === this._myClientID ||
-        this._myPlayer?.id() === pu.id ||
-        (this._myPlayer === null &&
-          pu.playerType === PlayerType.Human &&
-          pu.displayName === myDisplayName);
-
-      if (isMyPlayerUpdate) {
-        myPlayerUpdateCandidates.push(pu);
+      // Replace the local player's name/displayName with their own stored values.
+      // This way the user does not know they are being censored.
+      if (pu.clientID === this._myClientID) {
+        pu.name = this._myUsername;
+        pu.displayName = myDisplayName;
       }
 
       this.smallIDToID.set(pu.smallID, pu.id);
@@ -780,23 +775,7 @@ export class GameView implements GameMap {
       }
     });
 
-    if (myPlayerUpdateCandidates.length === 1) {
-      const myUpdate = myPlayerUpdateCandidates[0];
-      myUpdate.name = this._myUsername;
-      myUpdate.displayName = myDisplayName;
-      this._myPlayer = this._players.get(myUpdate.id) ?? null;
-    }
-
     this._myPlayer ??= this.playerByClientID(this._myClientID);
-    if (this._myPlayer === null) {
-      const matches = this.playerViews().filter(
-        (p) =>
-          p.type() === PlayerType.Human && p.data.displayName === myDisplayName,
-      );
-      if (matches.length === 1) {
-        this._myPlayer = matches[0];
-      }
-    }
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
