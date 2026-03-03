@@ -3,7 +3,6 @@ import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { GoToPlayerEvent } from "./Leaderboard";
 import {
   formatPercentage,
   renderNumber,
@@ -11,17 +10,24 @@ import {
   translateText,
 } from "../../Utils";
 import { Layer } from "./Layer";
+import { GoToPlayerEvent } from "./Leaderboard";
 
 interface TeamEntry {
   teamName: string;
   isMyTeam: boolean;
   totalScoreStr: string;
   totalGold: string;
+  totalGoldRaw: bigint;
   totalMaxTroops: string;
+  totalMaxTroopsRaw: number;
   totalSAMs: string;
+  totalSAMsRaw: number;
   totalLaunchers: string;
+  totalLaunchersRaw: number;
   totalWarShips: string;
+  totalWarShipsRaw: number;
   totalCities: string;
+  totalCitiesRaw: number;
   totalScoreSort: number;
   players: PlayerView[];
 }
@@ -39,7 +45,14 @@ export class TeamStats extends LitElement implements Layer {
 
   @state()
   @state()
-  private _sortKey: "tiles" | "gold" | "maxtroops" | "launchers" | "sams" | "warships" | "cities" = "tiles";
+  private _sortKey:
+    | "tiles"
+    | "gold"
+    | "maxtroops"
+    | "launchers"
+    | "sams"
+    | "warships"
+    | "cities" = "tiles";
 
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
@@ -67,7 +80,16 @@ export class TeamStats extends LitElement implements Layer {
     this.updateTeamStats();
   }
 
-  private setSort(key: "tiles" | "gold" | "maxtroops" | "launchers" | "sams" | "warships" | "cities") {
+  private setSort(
+    key:
+      | "tiles"
+      | "gold"
+      | "maxtroops"
+      | "launchers"
+      | "sams"
+      | "warships"
+      | "cities",
+  ) {
     if (this._sortKey === key) {
       this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -129,13 +151,19 @@ export class TeamStats extends LitElement implements Layer {
           totalScoreStr: formatPercentage(totalScorePercent),
           totalScoreSort,
           totalGold: renderNumber(totalGold),
+          totalGoldRaw: totalGold,
           totalMaxTroops: renderTroops(totalMaxTroops),
+          totalMaxTroopsRaw: totalMaxTroops,
           players: teamPlayers,
 
           totalLaunchers: renderNumber(totalLaunchers),
+          totalLaunchersRaw: totalLaunchers,
           totalSAMs: renderNumber(totalSAMs),
+          totalSAMsRaw: totalSAMs,
           totalWarShips: renderNumber(totalWarShips),
+          totalWarShipsRaw: totalWarShips,
           totalCities: renderNumber(totalCities),
+          totalCitiesRaw: totalCities,
         };
       })
       .sort((a, b) => {
@@ -144,17 +172,26 @@ export class TeamStats extends LitElement implements Layer {
 
         switch (this._sortKey) {
           case "gold":
-            return compare(parseFloat(a.totalGold.replace(/,/g, "")), parseFloat(b.totalGold.replace(/,/g, "")));
+            return compare(Number(a.totalGoldRaw), Number(b.totalGoldRaw));
           case "maxtroops":
-            return compare(parseFloat(a.totalMaxTroops.replace(/,/g, "")), parseFloat(b.totalMaxTroops.replace(/,/g, "")));
+            return compare(
+              Number(a.totalMaxTroopsRaw),
+              Number(b.totalMaxTroopsRaw),
+            );
           case "launchers":
-            return compare(parseFloat(a.totalLaunchers.replace(/,/g, "")), parseFloat(b.totalLaunchers.replace(/,/g, "")));
+            return compare(
+              Number(a.totalLaunchersRaw),
+              Number(b.totalLaunchersRaw),
+            );
           case "sams":
-            return compare(parseFloat(a.totalSAMs.replace(/,/g, "")), parseFloat(b.totalSAMs.replace(/,/g, "")));
+            return compare(Number(a.totalSAMsRaw), Number(b.totalSAMsRaw));
           case "warships":
-            return compare(parseFloat(a.totalWarShips.replace(/,/g, "")), parseFloat(b.totalWarShips.replace(/,/g, "")));
+            return compare(
+              Number(a.totalWarShipsRaw),
+              Number(b.totalWarShipsRaw),
+            );
           case "cities":
-            return compare(parseFloat(a.totalCities.replace(/,/g, "")), parseFloat(b.totalCities.replace(/,/g, "")));
+            return compare(Number(a.totalCitiesRaw), Number(b.totalCitiesRaw));
           default:
             return compare(a.totalScoreSort, b.totalScoreSort);
         }
@@ -191,8 +228,8 @@ export class TeamStats extends LitElement implements Layer {
       >
         <div
           class="grid w-full"
-          style="grid-template-columns: ${this.showUnits 
-            ? "minmax(50px, 70px) minmax(60px, 120px) minmax(60px, 80px) minmax(60px, 110px) minmax(60px, 90px)" 
+          style="grid-template-columns: ${this.showUnits
+            ? "minmax(50px, 70px) minmax(60px, 120px) minmax(60px, 80px) minmax(60px, 110px) minmax(60px, 90px)"
             : "minmax(50px, 70px) minmax(60px, 100px) minmax(60px, 100px) minmax(60px, 120px)"};"
         >
           <!-- Header -->
@@ -237,7 +274,7 @@ export class TeamStats extends LitElement implements Layer {
                   </div>
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
-                  @click=${() => this.setSort("cities")}
+                    @click=${() => this.setSort("cities")}
                   >
                     ${translateText("leaderboard.cities")}
                     ${this._sortKey === "cities"
