@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -36,6 +36,12 @@ export class TeamStats extends LitElement implements Layer {
   private showUnits = false;
   private _myTeam: Team | null = null;
 
+  @state()
+  private _sortKey: "tiles" | "gold" | "maxtroops" = "tiles";
+
+  @state()
+  private _sortOrder: "asc" | "desc" = "desc";
+
   createRenderRoot() {
     return this; // use light DOM for Tailwind
   }
@@ -56,6 +62,16 @@ export class TeamStats extends LitElement implements Layer {
 
     if (!this.visible) return;
 
+    this.updateTeamStats();
+  }
+
+  private setSort(key: "tiles" | "gold" | "maxtroops") {
+    if (this._sortKey === key) {
+      this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
+    } else {
+      this._sortKey = key;
+      this._sortOrder = "desc";
+    }
     this.updateTeamStats();
   }
 
@@ -120,7 +136,26 @@ export class TeamStats extends LitElement implements Layer {
           totalCities: renderNumber(totalCities),
         };
       })
-      .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
+      .sort((a, b) => {
+        const compare = (v1: number, v2: number) =>
+          this._sortOrder === "asc" ? v1 - v2 : v2 - v1;
+
+        switch (this._sortKey) {
+          case "gold":
+            // Converting back to numbers for comparison like Leaderboard.ts
+            return compare(
+              parseFloat(a.totalGold.replace(/,/g, "")),
+              parseFloat(b.totalGold.replace(/,/g, "")),
+            );
+          case "maxtroops":
+            return compare(
+              parseFloat(a.totalMaxTroops.replace(/,/g, "")),
+              parseFloat(b.totalMaxTroops.replace(/,/g, "")),
+            );
+          default:
+            return compare(a.totalScoreSort, b.totalScoreSort);
+        }
+      });
 
     this.requestUpdate();
   }
@@ -140,8 +175,10 @@ export class TeamStats extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="grid w-full grid-cols-[repeat(var(--cols),1fr)]"
-          style="--cols:${this.showUnits ? 5 : 4};"
+          class="grid w-full"
+          style="grid-template-columns: ${this.showUnits 
+            ? "minmax(50px, 70px) repeat(4, minmax(50px, 90px))" 
+            : "minmax(50px, 70px) minmax(60px, 100px) minmax(60px, 100px) minmax(60px, 120px)"};"
         >
           <!-- Header -->
           <div class="contents font-bold bg-slate-700/60">
@@ -174,18 +211,36 @@ export class TeamStats extends LitElement implements Layer {
               : html`
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    @click=${() => this.setSort("tiles")}
                   >
                     ${translateText("leaderboard.owned")}
+                    ${this._sortKey === "tiles"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    @click=${() => this.setSort("gold")}
                   >
                     ${translateText("leaderboard.gold")}
+                    ${this._sortKey === "gold"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    @click=${() => this.setSort("maxtroops")}
                   >
                     ${translateText("leaderboard.maxtroops")}
+                    ${this._sortKey === "maxtroops"
+                      ? this._sortOrder === "asc"
+                        ? "⬆️"
+                        : "⬇️"
+                      : ""}
                   </div>
                 `}
           </div>
