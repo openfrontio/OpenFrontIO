@@ -18,8 +18,6 @@ import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
-import { translateText } from "../Utils";
-import { createRandomName } from "../../core/Util";
 import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {
