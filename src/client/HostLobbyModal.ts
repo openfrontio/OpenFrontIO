@@ -419,6 +419,10 @@ export class HostLobbyModal extends BaseModal {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
     }
+    if (this.nationsUpdateTimer !== null) {
+      clearTimeout(this.nationsUpdateTimer);
+      this.nationsUpdateTimer = null;
+    }
 
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
