@@ -79,8 +79,10 @@ export class StructureIconsLayer implements Layer {
   private readonly theme: Theme;
   private renderer: PIXI.Renderer | null = null;
   private rendererInitialized: boolean = false;
-  private renders: StructureRenderInfo[] = [];
-  private readonly seenUnits: Set<UnitView> = new Set();
+  private readonly rendersByUnitId: Map<number, StructureRenderInfo> =
+    new Map();
+  private readonly seenUnitIds: Set<number> = new Set();
+  private readonly connectedAllySmallIds: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
   private factory: SpriteFactory;
@@ -89,6 +91,8 @@ export class StructureIconsLayer implements Layer {
     { visible: boolean }
   > = new Map(Structures.types.map((type) => [type, { visible: true }]));
   private lastGhostQueryAt: number;
+  private visibilityStateDirty = true;
+  private hasHiddenStructure = false;
   potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
@@ -183,18 +187,22 @@ export class StructureIconsLayer implements Layer {
   }
 
   tick() {
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
-      ?.forEach((unitView) => {
-        if (unitView === undefined) return;
+    const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
+    if (unitUpdates) {
+      for (let i = 0, len = unitUpdates.length; i < len; i++) {
+        const unitView = this.game.unit(unitUpdates[i].id);
+        if (unitView === undefined) {
+          continue;
+        }
 
+        const unitId = unitView.id();
         if (unitView.isActive()) {
           this.handleActiveUnit(unitView);
-        } else if (this.seenUnits.has(unitView)) {
+        } else if (this.seenUnitIds.has(unitId)) {
           this.handleInactiveUnit(unitView);
         }
-      });
+      }
+    }
     this.renderSprites =
       this.game.config().userSettings()?.structureSprites() ?? true;
   }
@@ -222,7 +230,7 @@ export class StructureIconsLayer implements Layer {
     this.renderGhost();
 
     if (this.transformHandler.hasChanged()) {
-      for (const render of this.renders) {
+      for (const render of this.rendersByUnitId.values()) {
         this.computeNewLocation(render);
       }
     }
@@ -267,13 +275,21 @@ export class StructureIconsLayer implements Layer {
       (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
     ) {
       // Only check connected allies - nuking disconnected allies doesn't cause a traitor debuff
-      const allies = myPlayer.allies().filter((a) => !a.isDisconnected());
-      if (allies.length > 0) {
+      this.connectedAllySmallIds.clear();
+      const allies = myPlayer.allies();
+      for (let i = 0; i < allies.length; i++) {
+        const ally = allies[i];
+        if (!ally.isDisconnected()) {
+          this.connectedAllySmallIds.add(ally.smallID());
+        }
+      }
+
+      if (this.connectedAllySmallIds.size > 0) {
         targetingAlly = wouldNukeBreakAlliance({
           game: this.game,
           targetTile: tileRef,
           magnitude: this.game.config().nukeMagnitudes(nukeType),
-          allySmallIds: new Set(allies.map((a) => a.smallID())),
+          allySmallIds: this.connectedAllySmallIds,
           threshold: this.game.config().nukeAllianceBreakThreshold(),
         });
       }
@@ -316,11 +332,14 @@ export class StructureIconsLayer implements Layer {
         this.updateGhostRange(targetLevel, targetingAlly);
 
         if (unit.canUpgrade) {
-          this.potentialUpgrade = this.renders.find(
-            (r) =>
-              r.unit.id() === unit.canUpgrade &&
-              r.unit.owner().id() === this.game.myPlayer()?.id(),
-          );
+          this.potentialUpgrade = this.rendersByUnitId.get(unit.canUpgrade);
+          if (
+            this.potentialUpgrade &&
+            this.potentialUpgrade.unit.owner().id() !==
+              this.game.myPlayer()?.id()
+          ) {
+            this.potentialUpgrade = undefined;
+          }
           if (this.potentialUpgrade) {
             this.potentialUpgrade.iconContainer.filters = [
               new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
@@ -546,19 +565,36 @@ export class StructureIconsLayer implements Layer {
         toggleStructureType?.indexOf(structureType) !== -1 ||
         toggleStructureType === null;
     }
-    for (const render of this.renders) {
+    this.visibilityStateDirty = true;
+    for (const render of this.rendersByUnitId.values()) {
       this.modifyVisibility(render);
     }
+  }
+
+  private refreshVisibilityStateCache() {
+    if (!this.visibilityStateDirty) {
+      return;
+    }
+
+    this.hasHiddenStructure = false;
+    for (const infos of this.structures.values()) {
+      if (infos.visible === false) {
+        this.hasHiddenStructure = true;
+        break;
+      }
+    }
+
+    this.visibilityStateDirty = false;
   }
 
   private findRenderByUnit(
     unitView: UnitView,
   ): StructureRenderInfo | undefined {
-    return this.renders.find((render) => render.unit.id() === unitView.id());
+    return this.rendersByUnitId.get(unitView.id());
   }
 
   private handleActiveUnit(unitView: UnitView) {
-    if (this.seenUnits.has(unitView)) {
+    if (this.seenUnitIds.has(unitView.id())) {
       const render = this.findRenderByUnit(unitView);
       if (render) {
         this.checkForConstructionState(render, unitView);
@@ -574,6 +610,10 @@ export class StructureIconsLayer implements Layer {
   }
 
   private handleInactiveUnit(unitView: UnitView) {
+    if (!this.seenUnitIds.has(unitView.id())) {
+      return;
+    }
+
     const render = this.findRenderByUnit(unitView);
     if (render) {
       this.deleteStructure(render);
@@ -581,20 +621,15 @@ export class StructureIconsLayer implements Layer {
   }
 
   private modifyVisibility(render: StructureRenderInfo) {
+    this.refreshVisibilityStateCache();
+
     const structureType = render.unit.type() as PlayerBuildableUnitType;
     const structureInfos = this.structures.get(structureType);
 
-    let focusStructure = false;
-    for (const infos of this.structures.values()) {
-      if (infos.visible === false) {
-        focusStructure = true;
-        break;
-      }
-    }
     if (structureInfos) {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
-      if (structureInfos.visible && focusStructure) {
+      if (structureInfos.visible && this.hasHiddenStructure) {
         render.iconContainer.filters = [
           new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
         ];
@@ -716,7 +751,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private addNewStructure(unitView: UnitView) {
-    this.seenUnits.add(unitView);
+    this.seenUnitIds.add(unitView.id());
     const render = new StructureRenderInfo(
       unitView,
       unitView.owner().id(),
@@ -726,7 +761,7 @@ export class StructureIconsLayer implements Layer {
       unitView.level(),
       unitView.isUnderConstruction(),
     );
-    this.renders.push(render);
+    this.rendersByUnitId.set(unitView.id(), render);
     this.computeNewLocation(render);
     this.modifyVisibility(render);
   }
@@ -756,7 +791,11 @@ export class StructureIconsLayer implements Layer {
     render.iconContainer?.destroy();
     render.levelContainer?.destroy();
     render.dotContainer?.destroy();
-    this.renders = this.renders.filter((r) => r.unit !== render.unit);
-    this.seenUnits.delete(render.unit);
+    const unitId = render.unit.id();
+    this.rendersByUnitId.delete(unitId);
+    this.seenUnitIds.delete(unitId);
+    if (this.potentialUpgrade?.unit.id() === unitId) {
+      this.potentialUpgrade = undefined;
+    }
   }
 }

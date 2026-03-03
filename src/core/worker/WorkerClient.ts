@@ -46,6 +46,13 @@ export class WorkerClient {
           this.gameUpdateCallback(message.gameUpdate);
         }
         break;
+      case "game_update_batch":
+        if (this.gameUpdateCallback && message.gameUpdates) {
+          for (const gu of message.gameUpdates) {
+            this.gameUpdateCallback(gu);
+          }
+        }
+        break;
 
       case "initialized":
       default:
@@ -101,12 +108,6 @@ export class WorkerClient {
     this.worker.postMessage({
       type: "turn",
       turn,
-    });
-  }
-
-  sendHeartbeat() {
-    this.worker.postMessage({
-      type: "heartbeat",
     });
   }
 

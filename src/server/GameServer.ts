@@ -257,10 +257,13 @@ export class GameServer {
   // Attempt to reconnect a client by persistentID. Returns true if successful.
   // Only the WebSocket is updated — username, cosmetics, etc. are preserved
   // from the original join to maintain consistency throughout the game session.
+  // Exception: in the pre-game lobby, the username is updated so players can
+  // rename between leaving and rejoining.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
+    newUsername?: string,
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -282,6 +285,11 @@ export class GameServer {
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
+
+    // Allow username updates in the pre-game lobby
+    if (!this._hasStarted && newUsername !== undefined) {
+      client.username = newUsername;
+    }
 
     client.ws = ws;
     this.addListeners(client);

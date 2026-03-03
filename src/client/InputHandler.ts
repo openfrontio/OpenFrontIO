@@ -3,6 +3,7 @@ import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
+import { Platform } from "./Platform";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -131,6 +132,10 @@ export class AutoUpgradeEvent implements GameEvent {
   ) {}
 }
 
+export class ToggleCoordinateGridEvent implements GameEvent {
+  constructor(public readonly enabled: boolean) {}
+}
+
 export class TickMetricsEvent implements GameEvent {
   constructor(
     public readonly tickExecutionDuration?: number,
@@ -156,6 +161,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
+  private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
@@ -199,10 +205,11 @@ export class InputHandler {
     }
 
     // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
+    const isMac = Platform.isMac;
 
     this.keybinds = {
       toggleView: "Space",
+      coordinateGrid: "KeyM",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -316,6 +323,14 @@ export class InputHandler {
           this.alternateView = true;
           this.eventBus.emit(new AlternateViewEvent(true));
         }
+      }
+
+      if (e.code === this.keybinds.coordinateGrid && !e.repeat) {
+        e.preventDefault();
+        this.coordinateGridEnabled = !this.coordinateGridEnabled;
+        this.eventBus.emit(
+          new ToggleCoordinateGridEvent(this.coordinateGridEnabled),
+        );
       }
 
       if (e.code === "Escape") {

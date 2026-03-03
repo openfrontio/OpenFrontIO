@@ -120,6 +120,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
   TwoLakes = "Two Lakes",
@@ -128,17 +129,20 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  BosphorusStraits = "Bosphorus Straits",
+  BeringStrait = "Bering Strait",
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
   Alps = "Alps",
+  NileDelta = "Nile Delta",
 }
 
 export type GameMapName = keyof typeof GameMapType;
 
 /** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
 export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver;
+  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -179,9 +183,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.BosphorusStraits,
+    GameMapType.BeringStrait,
     GameMapType.Yenisei,
     GameMapType.Hawaii,
     GameMapType.Alps,
+    GameMapType.NileDelta,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -194,6 +201,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Svalmel,
     GameMapType.Surrounded,
     GameMapType.TradersDream,
+    GameMapType.Passage,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -232,6 +240,7 @@ export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
   isCrowded: boolean;
+  isHardNations: boolean;
   startingGold?: number;
 }
 
