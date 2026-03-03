@@ -13,7 +13,6 @@ import {
   Team,
   Trios,
 } from "../../core/game/Game";
-import { getCompactMapNationCount } from "../../core/game/NationCreation";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
@@ -36,8 +35,6 @@ export class LobbyTeamView extends LitElement {
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
-  @property({ type: Boolean }) disableNations: boolean = false;
-  @property({ type: Boolean }) isCompactMap: boolean = false;
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
@@ -50,9 +47,7 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
-      changedProperties.has("nationCount") ||
-      changedProperties.has("disableNations") ||
-      changedProperties.has("isCompactMap")
+      changedProperties.has("nationCount")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
@@ -72,8 +67,8 @@ export class LobbyTeamView extends LitElement {
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
-            ${this.getEffectiveNationCount()}
-            ${this.getEffectiveNationCount() === 1
+            ${this.nationCount}
+            ${this.nationCount === 1
               ? translateText("host_modal.nation_player")
               : translateText("host_modal.nation_players")}
           </div>
@@ -182,7 +177,7 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
-    const effectiveNationCount = this.getEffectiveNationCount();
+    const effectiveNationCount = this.nationCount;
     const displayCount =
       preview.team === ColoredTeams.Nations
         ? effectiveNationCount
@@ -251,7 +246,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length + this.getEffectiveNationCount();
+    const playerCount = this.clients.length + this.nationCount;
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -322,7 +317,7 @@ export class LobbyTeamView extends LitElement {
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
-      this.getEffectiveNationCount(),
+      this.nationCount,
     );
     const buckets = new Map<Team, ClientInfo[]>();
     for (const t of teams) buckets.set(t, []);
@@ -346,31 +341,13 @@ export class LobbyTeamView extends LitElement {
       // Fallback: divide players across teams; guard against 0 and empty lobbies
       this.teamMaxSize = Math.max(
         1,
-        Math.ceil(
-          (this.clients.length + this.getEffectiveNationCount()) / teams.length,
-        ),
+        Math.ceil((this.clients.length + this.nationCount) / teams.length),
       );
     }
     this.teamPreview = teams.map((t) => ({
       team: t,
       players: buckets.get(t) ?? [],
     }));
-  }
-
-  /**
-   * Returns the effective nation count for display purposes.
-   * In HumansVsNations mode, this equals the number of human players.
-   * For compact maps, only 25% of nations are used.
-   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
-   */
-  private getEffectiveNationCount(): number {
-    if (this.disableNations) {
-      return 0;
-    }
-    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
-      return this.clients.length;
-    }
-    return getCompactMapNationCount(this.nationCount, this.isCompactMap);
   }
 
   private getClientDisplayName(client: ClientInfo): string {
