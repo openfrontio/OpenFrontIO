@@ -263,7 +263,7 @@ export async function setupFromPath(
       gameMode: GameMode.FFA,
       gameType: GameType.Singleplayer,
       difficulty: Difficulty.Medium,
-      nations: undefined,
+      nations: "default",
       donateGold: false,
       donateTroops: false,
       bots: 0,

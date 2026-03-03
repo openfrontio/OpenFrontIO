@@ -112,9 +112,7 @@ export class GameServer {
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    // Use "in" instead of !== undefined because undefined is a valid
-    // value for nations (meaning "use map default").
-    if ("nations" in gameConfig) {
+    if (gameConfig.nations !== undefined) {
       this.gameConfig.nations = gameConfig.nations;
     }
     if (gameConfig.bots !== undefined) {

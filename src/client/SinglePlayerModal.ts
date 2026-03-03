@@ -31,6 +31,7 @@ import {
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
+  sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
 
@@ -676,10 +677,10 @@ export class SinglePlayerModal extends BaseModal {
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
-              nations:
-                this.nations !== this.defaultNationCount
-                  ? this.nations
-                  : undefined,
+              nations: sliderToNationsConfig(
+                this.nations,
+                this.defaultNationCount,
+              ),
               ...(this.goldMultiplier && this.goldMultiplierValue
                 ? { goldMultiplier: this.goldMultiplierValue }
                 : {}),

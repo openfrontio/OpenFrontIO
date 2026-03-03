@@ -1,4 +1,31 @@
 import { GameMapType, UnitType } from "../../core/game/Game";
+import { GameConfig } from "../../core/Schemas";
+
+/**
+ * Maps a slider value (0-400) to the nations config value.
+ * 0 → "disabled", value === defaultNationCount → "default", otherwise → number.
+ */
+export function sliderToNationsConfig(
+  sliderValue: number,
+  defaultNationCount: number,
+): GameConfig["nations"] {
+  if (sliderValue === 0) return "disabled";
+  if (sliderValue === defaultNationCount) return "default";
+  return sliderValue;
+}
+
+/**
+ * Maps a nations config value to a slider-friendly number.
+ * "disabled" → 0, "default" → defaultNationCount, number → number.
+ */
+export function nationsConfigToSlider(
+  nations: GameConfig["nations"],
+  defaultNationCount: number,
+): number {
+  if (nations === "disabled") return 0;
+  if (nations === "default") return defaultNationCount;
+  return nations;
+}
 
 export function toOptionalNumber(
   value: number | string | undefined,

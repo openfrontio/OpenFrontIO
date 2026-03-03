@@ -29,6 +29,7 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -129,8 +130,10 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .nationCount=${this.gameConfig?.nations ??
-                        this.nationCount}
+                        .nationCount=${nationsConfigToSlider(
+                          this.gameConfig?.nations ?? "default",
+                          this.nationCount,
+                        )}
                       ></lobby-player-view>
                     `
                   : ""}

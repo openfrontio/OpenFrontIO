@@ -38,6 +38,7 @@ import {
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
+  sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
 
@@ -771,10 +772,10 @@ export class HostLobbyModal extends BaseModal {
               ? spawnImmunityTicks
               : undefined,
             playerTeams: this.teamCount,
-            nations:
-              this.nations !== this.defaultNationCount
-                ? this.nations
-                : undefined,
+            nations: sliderToNationsConfig(
+              this.nations,
+              this.defaultNationCount,
+            ),
             maxTimerValue:
               this.maxTimer === true ? this.maxTimerValue : undefined,
             goldMultiplier:

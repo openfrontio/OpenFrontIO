@@ -14,9 +14,10 @@ import { Nation as ManifestNation } from "./TerrainMapLoader";
 
 /**
  * Creates the nations array for a game.
- * If config.nations is set (singleplayer/private with custom count), uses that exact count,
+ * If config.nations is a number (custom count), uses that exact count,
  * generating additional nations with random names if needed.
- * If config.nations is undefined:
+ * If config.nations is "disabled", returns no nations.
+ * If config.nations is "default":
  *   - Public HumansVsNations: matches nation count to human player count
  *   - Public compact maps: uses 25% of manifest nations
  *   - Otherwise: uses all manifest nations
@@ -39,12 +40,12 @@ export function createNationsForGame(
     gameStart.config.gameMode === GameMode.Team &&
     gameStart.config.playerTeams === HumansVsNations;
 
-  // If nations count is explicitly set in config, use that
   const configNations = gameStart.config.nations;
-  if (configNations !== undefined) {
-    if (configNations === 0) {
-      return [];
-    }
+  if (configNations === "disabled") {
+    return [];
+  }
+  // If nations count is explicitly set, use that exact count
+  if (typeof configNations === "number") {
     return createRandomNations(
       configNations,
       manifestNations,

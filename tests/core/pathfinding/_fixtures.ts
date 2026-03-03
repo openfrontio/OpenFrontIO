@@ -11,6 +11,7 @@ import {
 import { createGame as createGameImpl } from "../../../src/core/game/GameImpl";
 import { GameMapImpl } from "../../../src/core/game/GameMap";
 import { UserSettings } from "../../../src/core/game/UserSettings";
+import { GameConfig } from "../../../src/core/Schemas";
 import { TestConfig } from "../../util/TestConfig";
 import { TestServerConfig } from "../../util/TestServerConfig";
 
@@ -131,13 +132,13 @@ export function createGame(data: TestMapData): Game {
   );
 
   const serverConfig = new TestServerConfig();
-  const gameConfig = {
+  const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
-    nations: undefined,
+    nations: "default",
     donateGold: false,
     donateTroops: false,
     bots: 0,
