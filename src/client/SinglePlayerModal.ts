@@ -711,7 +711,9 @@ export class SinglePlayerModal extends BaseModal {
       // Only update if the map hasn't changed
       if (this.selectedMap === currentMap) {
         this.defaultNationCount = manifest.nations.length;
-        this.nations = manifest.nations.length;
+        this.nations = this.compactMap
+          ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
+          : manifest.nations.length;
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);
