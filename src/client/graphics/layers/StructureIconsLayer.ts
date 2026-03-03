@@ -10,6 +10,7 @@ import {
   Cell,
   PlayerBuildableUnitType,
   PlayerID,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -83,14 +84,10 @@ export class StructureIconsLayer implements Layer {
   private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
   private factory: SpriteFactory;
-  private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
-    [UnitType.City, { visible: true }],
-    [UnitType.Factory, { visible: true }],
-    [UnitType.DefensePost, { visible: true }],
-    [UnitType.Port, { visible: true }],
-    [UnitType.MissileSilo, { visible: true }],
-    [UnitType.SAMLauncher, { visible: true }],
-  ]);
+  private readonly structures: Map<
+    PlayerBuildableUnitType,
+    { visible: boolean }
+  > = new Map(Structures.types.map((type) => [type, { visible: true }]));
   private lastGhostQueryAt: number;
   potentialUpgrade: StructureRenderInfo | undefined;
 
@@ -541,7 +538,9 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
-  private toggleStructures(toggleStructureType: UnitType[] | null): void {
+  private toggleStructures(
+    toggleStructureType: PlayerBuildableUnitType[] | null,
+  ): void {
     for (const [structureType, infos] of this.structures) {
       infos.visible =
         toggleStructureType?.indexOf(structureType) !== -1 ||
@@ -567,7 +566,9 @@ export class StructureIconsLayer implements Layer {
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
-    } else if (this.structures.has(unitView.type())) {
+    } else if (
+      this.structures.has(unitView.type() as PlayerBuildableUnitType)
+    ) {
       this.addNewStructure(unitView);
     }
   }
@@ -580,7 +581,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private modifyVisibility(render: StructureRenderInfo) {
-    const structureType = render.unit.type();
+    const structureType = render.unit.type() as PlayerBuildableUnitType;
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;

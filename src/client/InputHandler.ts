@@ -82,7 +82,9 @@ export class RefreshGraphicsEvent implements GameEvent {}
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
-  constructor(public readonly structureTypes: UnitType[] | null) {}
+  constructor(
+    public readonly structureTypes: PlayerBuildableUnitType[] | null,
+  ) {}
 }
 
 export class GhostStructureChangedEvent implements GameEvent {
