@@ -8,7 +8,6 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
-  HumansVsNations,
   UnitType,
 } from "../core/game/Game";
 import {
@@ -33,11 +32,13 @@ import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   getBotsForCompactMap,
+  getNationsForCompactMap,
   getRandomMapType,
   getUpdatedDisabledUnits,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
+  sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
 
@@ -45,7 +46,8 @@ import {
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
-  @state() private disableNations = false;
+  @state() private nations: number = 0;
+  @state() private defaultNationCount: number = 0;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
@@ -75,11 +77,11 @@ export class HostLobbyModal extends BaseModal {
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
-  @state() private nationCount: number = 0;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
-  // Add a new timer for debouncing bot changes
+  // Timers for debouncing slider changes
   private botsUpdateTimer: number | null = null;
+  private nationsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
@@ -242,7 +244,7 @@ export class HostLobbyModal extends BaseModal {
               },
               difficulty: {
                 selected: this.selectedDifficulty,
-                disabled: this.disableNations,
+                disabled: this.nations === 0,
               },
               gameMode: {
                 selected: this.gameMode,
@@ -257,14 +259,13 @@ export class HostLobbyModal extends BaseModal {
                   labelKey: "host_modal.bots",
                   disabledKey: "host_modal.bots_disabled",
                 },
+                nations: {
+                  value: this.nations,
+                  defaultValue: this.defaultNationCount,
+                  labelKey: "host_modal.nations",
+                  disabledKey: "host_modal.nations_disabled",
+                },
                 toggles: [
-                  {
-                    labelKey: "host_modal.disable_nations",
-                    checked: this.disableNations,
-                    hidden:
-                      this.gameMode === GameMode.Team &&
-                      this.teamCount === HumansVsNations,
-                  },
                   {
                     labelKey: "host_modal.instant_build",
                     checked: this.instantBuild,
@@ -307,6 +308,7 @@ export class HostLobbyModal extends BaseModal {
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
+            @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
@@ -318,9 +320,7 @@ export class HostLobbyModal extends BaseModal {
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
             .currentClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
-            .nationCount=${this.nationCount}
-            .disableNations=${this.disableNations}
-            .isCompactMap=${this.compactMap}
+            .nationCount=${this.nations}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-player-view>
         </div>
@@ -420,11 +420,16 @@ export class HostLobbyModal extends BaseModal {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
     }
+    if (this.nationsUpdateTimer !== null) {
+      clearTimeout(this.nationsUpdateTimer);
+      this.nationsUpdateTimer = null;
+    }
 
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
     this.selectedDifficulty = Difficulty.Easy;
-    this.disableNations = false;
+    this.nations = 0;
+    this.defaultNationCount = 0;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
     this.bots = 400;
@@ -444,7 +449,6 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyId = "";
     this.clients = [];
     this.lobbyCreatorClientID = "";
-    this.nationCount = 0;
     this.goldMultiplier = false;
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
@@ -504,9 +508,6 @@ export class HostLobbyModal extends BaseModal {
     const { labelKey, checked } = customEvent.detail;
 
     switch (labelKey) {
-      case "host_modal.disable_nations":
-        void this.handleDisableNationsChange(checked);
-        break;
       case "host_modal.instant_build":
         this.handleInstantBuildChange(checked);
         break;
@@ -677,6 +678,11 @@ export class HostLobbyModal extends BaseModal {
   private handleCompactMapChange = (val: boolean) => {
     this.compactMap = val;
     this.bots = getBotsForCompactMap(this.bots, val);
+    this.nations = getNationsForCompactMap(
+      this.nations,
+      this.defaultNationCount,
+      val,
+    );
     this.putGameConfig();
   };
 
@@ -704,10 +710,21 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
-  private handleDisableNationsChange = async (val: boolean) => {
-    this.disableNations = val;
-    console.log(`updating disable nations to ${this.disableNations}`);
-    this.putGameConfig();
+  private handleNationsChange = (e: Event) => {
+    const customEvent = e as CustomEvent<{ value: number }>;
+    const value = customEvent.detail.value;
+    if (isNaN(value) || value < 0 || value > 400) {
+      return;
+    }
+    this.nations = value;
+
+    if (this.nationsUpdateTimer !== null) {
+      clearTimeout(this.nationsUpdateTimer);
+    }
+    this.nationsUpdateTimer = window.setTimeout(() => {
+      this.putGameConfig();
+      this.nationsUpdateTimer = null;
+    }, 300);
   };
 
   private async handleGameModeSelection(value: GameMode) {
@@ -755,14 +772,10 @@ export class HostLobbyModal extends BaseModal {
               ? spawnImmunityTicks
               : undefined,
             playerTeams: this.teamCount,
-            ...(this.gameMode === GameMode.Team &&
-            this.teamCount === HumansVsNations
-              ? {
-                  disableNations: false,
-                }
-              : {
-                  disableNations: this.disableNations,
-                }),
+            nations: sliderToNationsConfig(
+              this.nations,
+              this.defaultNationCount,
+            ),
             maxTimerValue:
               this.maxTimer === true ? this.maxTimerValue : undefined,
             goldMultiplier:
@@ -823,14 +836,14 @@ export class HostLobbyModal extends BaseModal {
       const manifest = await mapData.manifest();
       // Only update if the map hasn't changed
       if (this.selectedMap === currentMap) {
-        this.nationCount = manifest.nations.length;
+        this.defaultNationCount = manifest.nations.length;
+        this.nations = this.compactMap
+          ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
+          : manifest.nations.length;
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      // Only update if the map hasn't changed
-      if (this.selectedMap === currentMap) {
-        this.nationCount = 0;
-      }
+      // Leave existing values unchanged so the UI stays consistent
     }
   }
 }
