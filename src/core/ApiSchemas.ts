@@ -43,7 +43,7 @@ export const DiscordUserSchema = z.object({
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
 const SingleplayerMapAchievementSchema = z.object({
-  mapName: z.enum(GameMapType),
+  mapName: z.string(),
   difficulty: z.enum(Difficulty),
 });
 
