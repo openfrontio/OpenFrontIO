@@ -17,11 +17,7 @@ import { getCompactMapNationCount } from "../../core/game/NationCreation";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
-import {
-  clientInfoListsEqual,
-  createRandomName,
-  formatPlayerDisplayName,
-} from "../../core/Util";
+import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
 import { translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -32,12 +28,7 @@ export interface TeamPreviewData {
 @customElement("lobby-player-view")
 export class LobbyTeamView extends LitElement {
   @property({ type: String }) gameMode: GameMode = GameMode.FFA;
-  @property({
-    type: Array,
-    hasChanged: (value: ClientInfo[], oldValue: ClientInfo[] | undefined) =>
-      !clientInfoListsEqual(value, oldValue),
-  })
-  clients: ClientInfo[] = [];
+  @property({ type: Array }) clients: ClientInfo[] = [];
   @state() private teamPreview: TeamPreviewData[] = [];
   @state() private teamMaxSize: number = 0;
   @property({ type: String }) lobbyCreatorClientID: string = "";

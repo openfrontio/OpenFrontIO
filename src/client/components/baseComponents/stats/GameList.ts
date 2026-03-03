@@ -20,7 +20,7 @@ export class GameList extends LitElement {
     this.expandedGameId = this.expandedGameId === gameId ? null : gameId;
   }
 
-  private showRanking(game: PlayerGame) {
+  private showRanking(gameId: string) {
     const gameInfoModal = document.querySelector(
       "game-info-modal",
     ) as GameInfoModal;
@@ -28,7 +28,7 @@ export class GameList extends LitElement {
     if (!gameInfoModal) {
       console.warn("Game info modal element not found");
     } else {
-      gameInfoModal.loadGame(game.gameId, game.clientId ?? null);
+      gameInfoModal.loadGame(gameId);
       gameInfoModal.open();
     }
   }
@@ -93,7 +93,7 @@ export class GameList extends LitElement {
                   </button>
                   <button
                     class="text-xs font-bold text-gray-300 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/5"
-                    @click=${() => this.showRanking(game)}
+                    @click=${() => this.showRanking(game.gameId)}
                   >
                     ${translateText("game_list.ranking")}
                   </button>
