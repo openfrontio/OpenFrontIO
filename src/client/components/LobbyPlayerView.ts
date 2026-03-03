@@ -67,8 +67,8 @@ export class LobbyTeamView extends LitElement {
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
-            ${this.getEffectiveNationCount()}
-            ${this.getEffectiveNationCount() === 1
+            ${this.nationCount}
+            ${this.nationCount === 1
               ? translateText("host_modal.nation_player")
               : translateText("host_modal.nation_players")}
           </div>
@@ -177,15 +177,14 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
-    const effectiveNationCount = this.getEffectiveNationCount();
     const displayCount =
       preview.team === ColoredTeams.Nations
-        ? effectiveNationCount
+        ? this.nationCount
         : preview.players.length;
 
     const maxTeamSize =
       preview.team === ColoredTeams.Nations
-        ? effectiveNationCount
+        ? this.nationCount
         : this.teamMaxSize;
 
     return html`
@@ -244,7 +243,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length + this.getEffectiveNationCount();
+    const playerCount = this.clients.length + this.nationCount;
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -308,7 +307,7 @@ export class LobbyTeamView extends LitElement {
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
-      this.getEffectiveNationCount(),
+      this.nationCount,
     );
     const buckets = new Map<Team, ClientInfo[]>();
     for (const t of teams) buckets.set(t, []);
@@ -332,28 +331,13 @@ export class LobbyTeamView extends LitElement {
       // Fallback: divide players across teams; guard against 0 and empty lobbies
       this.teamMaxSize = Math.max(
         1,
-        Math.ceil(
-          (this.clients.length + this.getEffectiveNationCount()) / teams.length,
-        ),
+        Math.ceil((this.clients.length + this.nationCount) / teams.length),
       );
     }
     this.teamPreview = teams.map((t) => ({
       team: t,
       players: buckets.get(t) ?? [],
     }));
-  }
-
-  /**
-   * Returns the effective nation count for display purposes.
-   * In HumansVsNations mode, this equals the number of human players.
-   * For compact maps, only 25% of nations are used.
-   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
-   */
-  private getEffectiveNationCount(): number {
-    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
-      return this.clients.length;
-    }
-    return this.nationCount;
   }
 
   private displayUsername(client: ClientInfo): string {
