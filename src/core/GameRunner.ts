@@ -66,6 +66,7 @@ export async function createGameRunner(
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    gameMap.teamGameSpawnAreas,
   );
 
   const gr = new GameRunner(
@@ -169,10 +170,12 @@ export class GameRunner {
     }
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
+    const packedMotionPlans = this.game.drainPackedMotionPlans();
 
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
+      ...(packedMotionPlans ? { packedMotionPlans } : {}),
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,

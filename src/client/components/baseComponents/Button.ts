@@ -12,6 +12,7 @@ export class OButton extends LitElement {
   @property({ type: Boolean }) blockDesktop = false;
   @property({ type: Boolean }) disable = false;
   @property({ type: Boolean }) fill = false;
+  @property({ type: Boolean }) submit = false;
   private static readonly BASE_CLASS =
     "bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all duration-300 transform hover:-translate-y-px outline-none border border-transparent text-center text-base lg:text-lg whitespace-normal break-words leading-tight overflow-hidden relative";
 
@@ -38,6 +39,7 @@ export class OButton extends LitElement {
       <button
         class=${classMap(this.getButtonClasses())}
         ?disabled=${this.disable}
+        type=${this.submit ? "submit" : "button"}
       >
         <span class="block min-w-0">
           ${this.translationKey === ""

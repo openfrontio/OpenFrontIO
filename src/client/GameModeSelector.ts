@@ -5,7 +5,6 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
-  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -16,7 +15,12 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { getMapName, renderDuration, translateText } from "./Utils";
+import {
+  getMapName,
+  getModifierLabels,
+  renderDuration,
+  translateText,
+} from "./Utils";
 
 const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
 
@@ -85,14 +89,23 @@ export class GameModeSelector extends LitElement {
     const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
-      <div
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
-      >
-        ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
-        ${teams
-          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-          : nothing}
-        ${special ? this.renderSpecialLobbyCard(special) : nothing}
+      <div class="flex flex-col gap-4 w-[84%] lg:w-full mx-auto pb-4 lg:pb-0">
+        <div class="order-first lg:order-none h-14 lg:hidden">
+          ${this.renderSoloButton()}
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-[3fr_2fr] lg:grid-rows-2 gap-4 lg:h-[28rem]"
+        >
+          ${ffa
+            ? html`<div class="lg:row-span-2">
+                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+              </div>`
+            : nothing}
+          ${teams
+            ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+            : nothing}
+          ${special ? this.renderSpecialLobbyCard(special) : nothing}
+        </div>
         ${this.renderQuickActionsSection()}
       </div>
     `;
@@ -112,20 +125,27 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, titleContent);
   }
 
+  private renderSoloButton() {
+    const title = translateText("main.solo");
+    return html`
+      <button
+        @click=${this.openSinglePlayerModal}
+        class="flex items-center justify-center w-full h-full rounded-xl bg-blue-600 border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
+      >
+        ${title}
+      </button>
+    `;
+  }
+
   private renderQuickActionsSection() {
     return html`
-      <div class="contents lg:flex lg:flex-col lg:gap-2 lg:h-56">
-        <div class="max-lg:order-first grid grid-cols-2 gap-2 h-20 lg:flex-1">
-          ${this.renderSmallActionCard(
-            translateText("main.solo"),
-            this.openSinglePlayerModal,
-          )}
+      <div class="flex flex-col gap-2">
+        <div class="h-14 hidden lg:block">${this.renderSoloButton()}</div>
+        <div class="grid grid-cols-3 gap-2 h-14">
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
           )}
-        </div>
-        <div class="grid grid-cols-2 gap-2 h-20 lg:flex-1">
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
@@ -178,14 +198,27 @@ export class GameModeSelector extends LitElement {
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
     const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
-    const timeRemaining = Math.max(
-      0,
-      Math.floor((lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000),
-    );
-    const timeDisplay = renderDuration(timeRemaining);
+    const timeRemaining = lobby.startsAt
+      ? Math.max(
+          0,
+          Math.floor(
+            (lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000,
+          ),
+        )
+      : undefined;
+
+    let timeDisplay: string = "";
+    if (timeRemaining === undefined) {
+      timeDisplay = "-s";
+    } else if (timeRemaining > 0) {
+      timeDisplay = renderDuration(timeRemaining);
+    } else {
+      timeDisplay = translateText("public_lobby.starting_game");
+    }
+
     const mapName = getMapName(lobby.gameConfig?.gameMap);
 
-    const modifierLabels = this.getModifierLabels(
+    const modifierLabels = getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
     // Sort by length for visual consistency (shorter labels first)
@@ -196,7 +229,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-40 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
+        class="group flex flex-col w-full h-44 lg:h-full text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
       >
         <div class="relative flex-1 overflow-hidden ${CARD_BG}">
           ${mapImageSrc
@@ -222,15 +255,10 @@ export class GameModeSelector extends LitElement {
                 </div>`
               : html`<div></div>`}
             <div class="shrink-0">
-              ${timeRemaining > 0
-                ? html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
-                    >${timeDisplay}</span
-                  >`
-                : html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded"
-                    >${translateText("public_lobby.starting_game")}</span
-                  >`}
+              <span
+                class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
+                >${timeDisplay}</span
+              >
             </div>
           </div>
         </div>
@@ -273,16 +301,6 @@ export class GameModeSelector extends LitElement {
         composed: true,
       }),
     );
-  }
-
-  private getModifierLabels(mods: PublicGameModifiers | undefined): string[] {
-    if (!mods) return [];
-    return [
-      mods.isRandomSpawn && translateText("public_game_modifier.random_spawn"),
-      mods.isCompact && translateText("public_game_modifier.compact_map"),
-      mods.isCrowded && translateText("public_game_modifier.crowded"),
-      mods.startingGold && translateText("public_game_modifier.starting_gold"),
-    ].filter((x): x is string => !!x);
   }
 
   private getLobbyTitle(lobby: PublicGameInfo): string {

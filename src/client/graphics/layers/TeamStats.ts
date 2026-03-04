@@ -69,14 +69,18 @@ export class TeamStats extends LitElement implements Layer {
     }
 
     for (const player of players) {
-      const team = player.team();
-      if (team === null) continue;
-      grouped[team] ??= [];
-      grouped[team].push(player);
+      const rawTeam = player.team();
+      if (rawTeam === null) continue;
+      grouped[rawTeam] ??= [];
+      grouped[rawTeam].push(player);
     }
 
     this.teams = Object.entries(grouped)
-      .map(([teamStr, teamPlayers]) => {
+      .map(([rawTeam, teamPlayers]) => {
+        const key = `team_colors.${rawTeam.toLowerCase()}`;
+        const translated = translateText(key);
+        const teamName = translated !== key ? translated : rawTeam;
+
         let totalGold = 0n;
         let totalMaxTroops = 0;
         let totalScoreSort = 0;
@@ -102,8 +106,8 @@ export class TeamStats extends LitElement implements Layer {
         const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
 
         return {
-          teamName: teamStr,
-          isMyTeam: teamStr === this._myTeam,
+          teamName,
+          isMyTeam: rawTeam === this._myTeam,
           totalScoreStr: formatPercentage(totalScorePercent),
           totalScoreSort,
           totalGold: renderNumber(totalGold),

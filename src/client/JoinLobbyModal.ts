@@ -19,12 +19,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import {
-  GameMapSize,
-  GameMode,
-  GameType,
-  HumansVsNations,
-} from "../core/game/Game";
+import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -34,6 +29,7 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -134,11 +130,10 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .nationCount=${this.nationCount}
-                        .disableNations=${this.gameConfig?.disableNations ??
-                        false}
-                        .isCompactMap=${this.gameConfig?.gameMapSize ===
-                        GameMapSize.Compact}
+                        .nationCount=${nationsConfigToSlider(
+                          this.gameConfig?.nations ?? "default",
+                          this.nationCount,
+                        )}
                       ></lobby-player-view>
                     `
                   : ""}
@@ -221,7 +216,7 @@ export class JoinLobbyModal extends BaseModal {
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
         })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+        <form @submit=${this.joinLobbyFromInput} class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -255,7 +250,7 @@ export class JoinLobbyModal extends BaseModal {
             <o-button
               title=${translateText("private_lobby.join_lobby")}
               block
-              @click=${this.joinLobbyFromInput}
+              submit
             ></o-button>
           </div>
         </div>
@@ -673,7 +668,8 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private async joinLobbyFromInput(): Promise<void> {
+  private async joinLobbyFromInput(e: SubmitEvent): Promise<void> {
+    e.preventDefault();
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
       this.showMessage(translateText("private_lobby.not_found"), "red");

@@ -1,4 +1,10 @@
 {
   "name": "Baikal (Nuke Wars)",
-  "nations": []
+  "nations": [],
+  "teamGameSpawnAreas": {
+    "2": [
+      { "x": 0, "y": 0, "width": 1330, "height": 1564 },
+      { "x": 1430, "y": 0, "width": 1070, "height": 1564 }
+    ]
+  }
 }

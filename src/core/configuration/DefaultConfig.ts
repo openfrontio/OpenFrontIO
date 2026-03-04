@@ -119,7 +119,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 100;
   }
   gameCreationRate(): number {
-    return 60 * 1000;
+    return 2 * 60 * 1000;
   }
 
   workerIndex(gameID: GameID): number {
@@ -224,7 +224,7 @@ export class DefaultConfig implements Config {
   }
 
   spawnNations(): boolean {
-    return !this._gameConfig.disableNations;
+    return this._gameConfig.nations !== "disabled";
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
@@ -530,6 +530,9 @@ export class DefaultConfig implements Config {
     return 80;
   }
   boatMaxNumber(): number {
+    if (this.isUnitDisabled(UnitType.TransportShip)) {
+      return 0;
+    }
     return 3;
   }
   numSpawnPhaseTurns(): number {
