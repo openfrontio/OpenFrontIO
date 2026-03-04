@@ -153,6 +153,14 @@ export class NationExecution implements Execution {
         return;
       }
 
+      // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
+      if (this.nation.spawnCell === undefined) {
+        this.mg.addExecution(
+          new SpawnExecution(this.gameID, this.nation.playerInfo),
+        );
+        return;
+      }
+
       // If team spawn areas are configured and the nation's spawn cell
       // is outside its team's area, spawn randomly within the area instead.
       const team = this.player.team();
