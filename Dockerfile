@@ -5,10 +5,11 @@ WORKDIR /usr/src/app
 # Build stage - install ALL dependencies and build
 FROM base AS build
 ENV HUSKY=0
-# Copy package files first for better caching
-COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+# Copy package files first for better caching (pnpm reads version from packageManager in package.json)
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    corepack enable \
+    && pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy only what's needed for build
 COPY tsconfig.json ./
@@ -21,15 +22,16 @@ COPY src ./src
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
-RUN npm run build-prod
+RUN pnpm run build-prod
 
 # Production dependencies stage - separate from build
 FROM base AS prod-deps
 ENV HUSKY=0
-ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+ENV PNPM_IGNORE_SCRIPTS=1
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    corepack enable \
+    && pnpm install --frozen-lockfile --ignore-scripts --prod
 
 # Final production image
 FROM base

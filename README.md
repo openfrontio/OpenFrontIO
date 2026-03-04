@@ -124,7 +124,7 @@ pnpm run dev:prod
 - **Lint code**:
 
   ```bash
-  npm run lint
+  pnpm run lint
   ```
 
 - **Lint and fix code**:

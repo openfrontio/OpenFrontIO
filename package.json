@@ -13,7 +13,7 @@
     "docs:map-generator": "cd map-generator && go doc -cmd -u -all",
     "tunnel": "pnpm run build-prod && pnpm run start:server",
     "test": "vitest run && vitest run tests/server",
-    "perf": "npx tsx tests/perf/run-all.ts",
+    "perf": "pnpm exec tsx tests/perf/run-all.ts",
     "test:coverage": "vitest run --coverage",
     "format": "prettier --ignore-unknown --write .",
     "format:map-generator": "cd map-generator && go fmt .",
