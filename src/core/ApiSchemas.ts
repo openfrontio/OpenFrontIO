@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMode, GameType } from "./game/Game";
+import { Difficulty, GameMode, GameType, RankedType } from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
