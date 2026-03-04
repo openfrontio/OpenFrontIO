@@ -70,7 +70,7 @@ export class SAMMissileExecution implements Execution {
       this.target.owner() === this.SAMMissile.owner() ||
       !nukesWhitelist.includes(this.target.type())
     ) {
-      // If the nuke is still active but we're aborting (e.g. SAM destroyed), allow re-targeting
+      // Clear the flag so other SAMs can re-target this nuke
       if (this.target.isActive()) {
         this.target.setTargetedBySAM(false);
       }
