@@ -74,6 +74,9 @@ RUN chmod +x /usr/local/bin/startup.sh
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY package*.json ./
 
+# Enable Corepack so pnpm is available for supervisord (command=pnpm run start:server)
+RUN corepack enable
+
 # Copy built artifacts from build stage
 COPY --from=build /usr/src/app/static ./static
 
