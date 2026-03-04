@@ -229,7 +229,7 @@ exporters:
   otlphttp:
     endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
     headers:
-      Authorization: "${OTEL_AUTH_HEADER}"
+      Authorization: "Basic ${OTEL_AUTH_HEADER}"
     tls:
       insecure: true  # Set to false in production with proper certs
 
