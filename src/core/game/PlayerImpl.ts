@@ -1000,15 +1000,18 @@ export class PlayerImpl implements Player {
     type: UnitType,
     targetTile: TileRef,
   ): Unit | false {
-    const range = this.mg.config().structureMinDist();
     const closest = findClosestBy(
-      this.mg.nearbyUnits(targetTile, range, type, undefined, true),
+      this.mg.nearbyUnits(
+        targetTile,
+        this.mg.config().structureMinDist(),
+        type,
+        undefined,
+        true,
+      ),
       (entry) => entry.distSquared,
     );
 
-    return closest === null
-      ? false
-      : closest.unit;
+    return closest?.unit ?? false;
   }
 
   private canBuildUnitType(
