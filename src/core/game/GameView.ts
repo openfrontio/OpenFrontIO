@@ -7,6 +7,7 @@ import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
+  BuildableUnit,
   Cell,
   EmojiMessage,
   GameUpdates,
@@ -14,6 +15,7 @@ import {
   NameViewData,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
   PlayerType,
@@ -415,8 +417,23 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef, units?: UnitType[]): Promise<PlayerActions> {
+  async actions(
+    tile?: TileRef,
+    units?: readonly PlayerBuildableUnitType[] | null,
+  ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
+      this.id(),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
+      units,
+    );
+  }
+
+  async buildables(
+    tile?: TileRef,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
+    return this.game.worker.playerBuildables(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),

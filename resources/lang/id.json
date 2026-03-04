@@ -7,6 +7,8 @@
   },
   "common": {
     "close": "Keluar",
+    "copy": "Salin",
+    "paste": "Tempel",
     "back": "Kembali",
     "available": "Tersedia",
     "preset_max": "Maks",
@@ -20,44 +22,70 @@
     "target_dead_note": "Anda tidak dapat mengirim sumber daya ke pemain yang telah tereliminasi.",
     "none": "Tidak Satupun",
     "copied": "Tersalin",
-    "click_to_copy": "Klik untuk salin"
+    "click_to_copy": "Klik untuk salin",
+    "enabled": "Diaktifkan"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Discord",
     "login_discord": "Masuk dengan Discord",
     "sign_in": "Masuk",
     "discord_avatar_alt": "Avatar profil Discord",
     "user_avatar_alt": "Avatar {username}",
-    "checking_login": "Memeriksa login...",
-    "logged_in": "Berhasil masuk!",
-    "log_out": "Keluar",
     "create": "Buat Lobi",
     "join": "Bergabung ke Lobi",
-    "solo": "Sendiri",
-    "instructions": "Petunjuk",
+    "solo": "Solo",
     "game_info": "Informasi Permainan",
     "wiki": "Wiki",
     "privacy_policy": "Kebijakan Privasi",
     "terms_of_service": "Ketentuan Layanan",
     "copyright": "© OpenFront™ dan para kontributor",
-    "reddit": "Reddit",
     "play": "Main",
     "news": "Berita",
     "store": "Toko",
+    "store_new_badge": "BARU",
     "settings": "Pengaturan",
-    "keys": "Tombol",
-    "stats": "Statistik",
+    "leaderboard": "Papan Peringkat",
     "account": "Akun",
     "help": "Bantuan",
     "menu": "Menu",
-    "pick_pattern": "Pilih pola!"
+    "troubleshooting": "Penyelesaian masalah",
+    "go_to_troubleshooting": "Pergi ke halaman penyelesaian masalah kami"
   },
   "news": {
     "github_link": "di GitHub",
     "title": "Catatan Rilis"
   },
+  "troubleshooting": {
+    "title": "Penyelesaian masalah",
+    "environment": "Lingkungan",
+    "rendering": "Rendering",
+    "power": "Daya",
+    "browser": "Peramban",
+    "platform": "Platform",
+    "copied_to_clipboard": "Informasinya sudah disalin ke clipboard! Silakan bagikan di Discord kami jika Anda membutuhkan bantuan.",
+    "os": "OS",
+    "device_pixel_ratio": "Rasio Piksel Perangkat",
+    "chromium_tip": "OpenFront berjalan paling baik pada browser berbasis Chromium.",
+    "hardware_acceleration_tip": "Pastikan akselerasi perangkat keras diaktifkan di pengaturan browser Anda untuk performa optimal.",
+    "renderer": "Renderer",
+    "max_texture_size": "Maks Ukuran Tekstur",
+    "high_precision_shaders": "Shader Presisi Tinggi",
+    "gpu": "GPU",
+    "unavailable": "Tidak tersedia",
+    "gpu_tip": "Pastikan bahwa ini adalah GPU khusus, jika tersedia.",
+    "battery": "Baterai",
+    "charging": "Pengisian daya",
+    "battery_level": "Level Baterai",
+    "power_saving_tip": "Pastikan peramban Anda tidak dalam mode hemat daya.",
+    "yes": "Ya",
+    "no": "Tidak",
+    "unknown": "Tidak Diketahui",
+    "software_rendering": "Rendering perangkat lunak",
+    "canvas_2d_no_gpu": "Canvas 2D (tanpa GPU)"
+  },
   "help_modal": {
+    "video_tutorial": "Video Panduan",
+    "video_tutorial_title": "Panduan OpenFront.io",
     "hotkeys": "Tombol pintas",
     "table_key": "Kunci",
     "table_action": "Tindakan",
@@ -77,7 +105,6 @@
     "ui_leaderboard_desc": "Menampilkan pemain teratas dalam permainan beserta nama mereka, persentase wilayah yang dikuasai, jumlah emas, dan pasukan. Opsi Tampilkan Semua akan menampilkan seluruh pemain dalam permainan. Jika tidak ingin melihat papan peringkat, klik Sembunyikan.",
     "ui_control": "Panel kendali",
     "ui_control_desc": "Panel kontrol berisi elemen berikut:",
-    "ui_pop": "Populasi - Jumlah unit yang kamu miliki, batas populasi maksimum, serta laju pertambahannya.",
     "ui_gold": "Emas - Jumlah emas yang kamu miliki dan laju perolehannya.",
     "ui_attack_ratio": "Rasio Serangan - Jumlah pasukan yang akan digunakan saat kamu menyerang. Kamu dapat menyesuaikan rasio serangan menggunakan penggeser. Memiliki pasukan penyerang lebih banyak daripada pasukan bertahan akan mengurangi jumlah pasukan yang hilang saat menyerang, sedangkan jumlah pasukan yang lebih sedikit akan meningkatkan kerusakan yang diterima pasukan penyerang. Efek ini tidak berlaku di atas rasio 2:1.",
     "ui_events": "Panel Event",
@@ -97,12 +124,10 @@
     "radial_title": "Menu Radial",
     "radial_desc": "Klik kanan (atau sentuhan di perangkat seluler) akan membuka Menu Radial. Klik kanan di luar menu untuk menutupnya. Dari menu ini kamu dapat:",
     "radial_build": "Buka menu Pembangunan.",
-    "radial_attack": "Buka menu Serangan.",
     "radial_info": "Buka menu informasi.",
     "radial_boat": "Kirim Kapal (kapal pengangkut) untuk menyerang lokasi yang dipilih. Hanya tersedia jika kamu memiliki akses ke perairan.",
     "radial_donate_troops": "Donasikan pasukan kepada sekutu sesuai dengan persentase pada penggeser rasio serangan yang sedang kamu gunakan pada menu radial tersebut.",
     "radial_donate_gold": "Membuka menu penggeser donasi emas sehingga kamu dapat dengan cepat mengirim emas kepada sekutu.",
-    "radial_close": "Tutup menu.",
     "info_title": "Menu Informasi",
     "info_enemy_desc": "Berisi informasi seperti nama pemain yang dipilih, jumlah emas, pasukan, status berhenti berdagang dengan kamu, nuklir yang dikirim ke arahmu, serta apakah pemain tersebut adalah pengkhianat.\nStatus Berhenti Berdagang berarti kamu tidak akan menerima emas dari pemain tersebut dan mereka juga tidak akan mengirimkan emas kepadamu melalui kapal dagang. Status ini dapat terjadi secara manual (jika pemain menekan tombol “Hentikan Perdagangan”, yang akan berlangsung sampai kalian berdua menekan “Mulai Perdagangan”) atau secara otomatis (jika kamu mengkhianati aliansi, yang akan berlangsung sampai kalian kembali menjadi sekutu atau setelah 5 menit).\nStatus Pengkhianat akan menampilkan “Ya” selama 30 detik ketika pemain tersebut mengkhianati dan menyerang pemain yang sebelumnya berada dalam aliansi dengannya.\nIkon-ikon di bawah ini mewakili interaksi berikut:",
     "info_chat": "Kirim pesan Obrolan Cepat ke pemain. Pilih Kategori, Frasa, dan jika frasa berisi [P1], pilih nama pemain untuk menggantikannya. Lalu tekan Kirim.",
@@ -141,6 +166,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "Bom paling kuat di dalam permainan. Akan terpecah menjadi bom-bom yang lebih kecil dan mencakup area wilayah yang sangat luas. Hanya memberikan kerusakan kepada pemain yang pertama kali kamu klik saat membangunnya.\nSenjata ini muncul dari Silo Rudal terdekat dan akan mendarat di area yang pertama kali kamu klik saat membangunnya.",
     "player_icons": "Ikon Pemain",
+    "troubleshooting_desc": "Jika Anda mengalami masalah performa, crash, atau masalah lain saat memainkan OpenFront, silakan kunjungi halaman Penyelesaian Masalah kami untuk mendapatkan bantuan dalam mendiagnosis dan memperbaiki masalah umum:",
     "icon_desc": "Berikut beberapa ikon yang akan kamu temui di dalam permainan beserta artinya:",
     "icon_crown": "Mahkota – Peringkat 1. Pemain teratas di papan peringkat.",
     "icon_traitor": "Perisai Retak – Pengkhianat. Pemain ini menyerang sekutu.",
@@ -149,18 +175,17 @@
     "icon_request": "Amplop – Permintaan Aliansi. Pemain ini mengirim permintaan aliansi kepadamu.",
     "info_enemy_panel": "Panel Info Musuh",
     "exit_confirmation": "Apakah yakin keluar dari game?",
-    "bomb_direction": "Arah busur bom atom/hidrogen"
+    "bomb_direction": "Arah busur bom atom/hidrogen",
+    "icon_alt_player_leaderboard": "Ikon Papan Peringkat Pemain",
+    "icon_alt_team_leaderboard": "Ikon Papan Peringkat Tim"
   },
   "single_modal": {
-    "title": "Sendiri",
     "random_spawn": "Kemunculan acak",
-    "allow_alliances": "Perbolehkan Aliansi",
     "toggle_achievements": "Tampilkan / Sembunyikan pencapaian",
     "sign_in_for_achievements": "Masuk untuk melihat pencapaian",
     "options_title": "Opsi",
     "bots": "Bot: ",
     "bots_disabled": "Dinonaktifkan",
-    "nations": "Bangsa-bangsa: ",
     "disable_nations": "Nonaktifkan negara",
     "instant_build": "Bangun instan",
     "infinite_gold": "Emas tak terbatas",
@@ -169,9 +194,13 @@
     "max_timer": "Lama permainan (menit)",
     "max_timer_placeholder": "Menit",
     "max_timer_invalid": "Silakan masukkan nilai pengatur waktu maksimum yang valid (1-120 menit)",
-    "disable_nukes": "Nonaktifkan Senjata Nuklir",
     "enables_title": "Aktifkan Pengaturan",
-    "start": "Mulai Permainan"
+    "start": "Mulai Permainan",
+    "options_changed_no_achievements": "Pengaturan khusus – pencapaian dinonaktifkan",
+    "gold_multiplier": "Pengganda emas",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "Emas awal",
+    "starting_gold_placeholder": "5000000"
   },
   "token_login_modal": {
     "title": "Sedang masuk...",
@@ -194,17 +223,22 @@
     "not_found": "Tidak Ditemukan",
     "clear_session": "Hapus Sesi",
     "failed_to_send_recovery_email": "Gagal mengirim pemulihan email",
-    "enter_email_address": "Silahkan masukan alamat email"
+    "enter_email_address": "Silahkan masukan alamat email",
+    "personal_player_id": "ID Pemain Pribadi:"
   },
-  "stats_modal": {
-    "title": "Statistik",
-    "clan_stats": "Statistik Klan",
-    "loading": "Loading...",
-    "error": "Error saat memuat statistik klan",
-    "no_stats": "Tidak ada klan yang tersedia",
+  "leaderboard_modal": {
+    "title": "Papan Peringkat",
+    "ranked_tab": "Pertandingan Peringkat 1v1",
+    "clans_tab": "Klan",
+    "refresh_time": "Diperbarui setiap 1 jam",
+    "loading": "Memuat...",
+    "error": "Kesalahan memuat leaderboard",
+    "no_stats": "Statistik tidak tersedia",
     "no_data_yet": "Data belum tersedia",
     "clan": "Klan",
+    "player": "Pemain",
     "games": "Permainan",
+    "elo": "ELO",
     "win_score": "Skor Kemenangan",
     "win_score_tooltip": "Kemenangan dihitung berdasarkan bobot partisipasi klan dan tingkat kesulitan pertandingan",
     "loss_score": "Skor Kekalahan",
@@ -212,7 +246,8 @@
     "win_loss_ratio": "Menang/Kalah",
     "ratio": "Rasio",
     "rank": "Peringkat",
-    "try_again": "Coba Lagi"
+    "try_again": "Coba lagi",
+    "your_ranking": "Peringkat Anda"
   },
   "game_info_modal": {
     "title": "Informasi Permainan",
@@ -224,9 +259,12 @@
     "total_gold": "Total",
     "all_gold": "Semua emas",
     "trade": "Perdagangan",
+    "train_trade": "Kereta",
+    "naval_trade": "Kapal Dagang",
     "conquest_gold": "Emas pemain yang ditaklukan",
     "stolen_gold": "Dicuri oleh Kapal Perang",
-    "num_of_conquests": "Jumlah pemain yang ditaklukan",
+    "num_of_conquests_humans": "Pemain membunuh",
+    "num_of_conquests_bots": "Bot membunuh",
     "duration": "Durasi",
     "survival_time": "Menit Bertahan",
     "war": "Perang",
@@ -239,6 +277,8 @@
   },
   "map": {
     "map": "Peta",
+    "featured": "Unggulan",
+    "all": "Semua",
     "world": "Dunia",
     "giantworldmap": "Map Dunia Besar",
     "europe": "Eropa",
@@ -281,14 +321,18 @@
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
     "sierpinski": "Sierpinski",
+    "thebox": "Kotak",
     "twolakes": "Dua Danau",
     "straitofhormuz": "Selat Hormuz",
     "surrounded": "Surrourded",
     "didier": "Didier",
     "didierfrance": "Didier (Prancis)",
-    "amazonriver": "Sungai Amazon"
+    "amazonriver": "Sungai Amazon",
+    "tradersdream": "Mimpi para Pedagang",
+    "hawaii": "Hawaii"
   },
   "map_categories": {
+    "featured": "Unggulan",
     "continental": "Kontinental",
     "regional": "Regional",
     "fantasy": "Lain",
@@ -302,10 +346,7 @@
   "private_lobby": {
     "title": "Gabung Lobi Privat",
     "enter_id": "Masukan ID Lobi",
-    "player": "Pemain",
-    "players": "Pemain",
     "join_lobby": "Bergabung ke Lobi",
-    "checking": "Memeriksa Lobi...",
     "not_found": "Lobi tidak ditemukan. Mohon periksa ID dan coba lagi.",
     "error": "Beberapa kesalahan terjadi. Silakan coba lagi atau hubungi dukungan.",
     "joined_waiting": "Berhasil gabung ke lobi! Menunggu untuk penyelenggara untuk memulai...",
@@ -313,18 +354,22 @@
     "disabled_units": "Nonaktfikan Units"
   },
   "public_lobby": {
+    "title": "Menunggu permainan untuk dimulai...",
     "join": "Gabung ke permainan selanjutnya",
-    "waiting": "Pemain menunggu",
     "teams_Duos": "{team_count} tim berisi 2 pemain (Berdua)",
     "teams_Trios": "{team_count} tim berisi 3 pemain (Bertiga)",
     "teams_Quads": "{team_count} tim berisi 4 pemain (Berempat)",
     "waiting_for_players": "Menunggu pemain",
+    "connecting": "Menghubungkan ke lobi...",
+    "starting_in": "Dimulai dalam {time}",
     "starting_game": "Memulai permainan…",
     "teams_hvn": "Pemain vs Negara",
     "teams_hvn_detailed": "{num} Pemain vs {num} Negara",
     "teams": "{num} tim",
     "players_per_team": "dari {num}",
-    "started": "Dimulai"
+    "started": "Dimulai",
+    "status": "Status",
+    "join_timeout": "Anda tidak masuk ke dalam permainan tepat waktu."
   },
   "matchmaking_modal": {
     "title": "Pertandingan 1v1 Ranked (ALPHA)",
@@ -353,7 +398,6 @@
     "bots": "Bot: ",
     "bots_disabled": "Nonaktif",
     "player_immunity_duration": "Durasi imunitas PVP (menit)",
-    "nations": "Bangsa-bangsa: ",
     "disable_nations": "Nonaktifkan Negara",
     "max_timer": "Lama permainan (menit)",
     "mins_placeholder": "Menit",
@@ -379,7 +423,9 @@
     "teams_Duos": "Berdua (tim yang terdiri dari 2 orang)",
     "teams_Trios": "Bertiga (tim yang terdiri dari 3 orang)",
     "teams_Quads": "Berempat (tim yang teridri dari 4 orang)",
-    "teams_Humans Vs Nations": "Pemain vs Negara"
+    "teams_Humans Vs Nations": "Pemain vs Negara",
+    "starting_gold": "Emas awal",
+    "crowded": "Pengubah yang ramai"
   },
   "team_colors": {
     "red": "Merah",
@@ -409,7 +455,9 @@
   },
   "public_game_modifier": {
     "random_spawn": "Kemunculan Acak",
-    "compact_map": "Peta Kecil"
+    "compact_map": "Peta Kecil",
+    "crowded": "Ramai",
+    "starting_gold": "Emas awal 5 Juta"
   },
   "select_lang": {
     "title": "Pilih Bahasa"
@@ -644,19 +692,15 @@
     "exit": "Keluar Game",
     "keep": "Terus Main",
     "spectate": "Menonton",
+    "requeue": "Main lagi",
     "wishlist": "Wishlist di Steam!",
-    "ofm_winter": "Turnamen Musim Dingin OpenFront Masters!",
-    "ofm_winter_description": "Ikuti turnamen kompetitif dan bersaing melawan pemain terbaik",
-    "join_tournament": "Ikut Turnamen",
     "join_discord": "Gabung Komunitas Discord Kami!",
     "discord_description": "Terhubung dengan pemain lain, temukan fitur baru, dan menangkan hadiah!",
     "join_server": "Bergabung dengan Server",
     "youtube_tutorial": "Butuh bantuan?"
   },
   "leaderboard": {
-    "title": "Papan Peringkat",
     "hide": "Sembunyikan",
-    "rank": "Peringkat",
     "player": "Pemain",
     "team": "Tim",
     "owned": "Dimiliki",
@@ -669,36 +713,14 @@
     "show_control": "Tampilkan Kontrol",
     "show_units": "Tampilkan Unit"
   },
-  "player_info_overlay": {
-    "type": "Jenis",
-    "bot": "Bot",
-    "nation": "Bangsa",
-    "player": "Pemain",
-    "team": "Tim",
-    "alliance_timeout": "Aliansi berakhir dalam",
-    "troops": "Pasukan",
-    "maxtroops": "Maksimal pasukan",
-    "a_troops": "Pasukan menyerang",
-    "gold": "Emas",
-    "ports": "Pelabuhan-Pelabuhan",
-    "cities": "Kota-kota",
-    "factories": "Pabrik-pabrik",
-    "missile_launchers": "Peluncur rudal",
-    "sams": "SAM",
-    "warships": "Kapal Perang",
-    "health": "Kesehatan",
-    "attitude": "Sikap",
-    "levels": "Tingkat",
-    "wilderness_title": "Alam Liar",
-    "irradiated_wilderness_title": "Hutan Belantara yang Terkena Radiasi"
-  },
   "events_display": {
+    "events": "Acara",
     "retreating": "mundur",
-    "retaliate": "Membalas",
-    "boat": "Perahu",
     "alliance_request_status": "{name} {status} permintaan aliansi Anda",
-    "alliance_accepted": "diterima",
+    "alliance_accepted": "menerima",
     "alliance_rejected": "ditolak",
+    "alliance_nukes_destroyed_outgoing": "{count, plural,other {# nuklir yang diluncurkan menuju {name} dihancurkan karena aliansi}}",
+    "alliance_nukes_destroyed_incoming": "{count, plural,other {# nuklir yang diluncurkan oleh {name} dihancurkan karena aliansi}}",
     "duration_second": "1 detik",
     "betrayal_description": "Kamu memutus aliansi dengan {name}, menjadikanmu PENGKHIANAT ({malusPercent}% pengurangan pertahanan selama {durationText})",
     "duration_seconds_plural": "{seconds} detik",
@@ -720,6 +742,8 @@
     "attack_cancelled_retreat": "Penyerangan dibatalkan, {troops} pasukan terbunuh saat mundur",
     "received_gold_from_captured_ship": "Menerima {gold} emas dari kapal yang di tawan dari {name}",
     "received_gold_from_trade": "Menerima {gold} emas dari perdagangan dengan {name}",
+    "received_gold_from_conquest": "Menaklukan {name}, mendapatkan {gold} emas",
+    "conquered_no_gold": "Menaklukan {name} (tidak main, tidak ada emas yang diberikan)",
     "missile_intercepted": "Rudal dicegat {unit}",
     "mirv_warheads_intercepted": "{count, plural, one {{count} hulu ledak MIRV berhasil dicegat} other {{count} hulu ledak MIRV berhasil dicegat}}",
     "sent_troops_to_player": "Mengirim {troops} pasukan ke {name}",
@@ -730,15 +754,6 @@
     "captured_enemy_unit": "Menangkap {unit} dari {name}",
     "unit_destroyed": "{unit} Anda dihancurkan",
     "no_boats_available": "Tidak ada kapal yang tersedia, maksmial {max}"
-  },
-  "unit_info_modal": {
-    "structure_info": "Informasi Struktur",
-    "unit_type_unknown": "Tidak Diketahui",
-    "close": "Keluar",
-    "cooldown": "Cooldown",
-    "type": "Jenis",
-    "upgrade": "Tingkatkan",
-    "level": "Tingkat"
   },
   "player_type": {
     "player": "Pemain",
@@ -752,11 +767,6 @@
     "friendly": "Ramah",
     "default": "Default"
   },
-  "control_panel": {
-    "gold": "Emas",
-    "troops": "Pasukan",
-    "attack_ratio": "Rasio Serangan"
-  },
   "player_panel": {
     "gold": "Emas",
     "troops": "Pasukan",
@@ -766,30 +776,33 @@
     "active": "Aktif",
     "stopped": "Berhenti",
     "alliance_time_remaining": "Aliansi Berakhir Dalam",
-    "embargo": "Berhenti berdangan dengan Anda",
-    "nuke": "Nuklir dikirim oleh mereka kepada Anda",
     "start_trade": "Mulai Berdagang",
     "stop_trade": "Stop Berdagang",
     "stop_trade_all": "Stop Berdagang degnan Semuanya",
     "start_trade_all": "Mulai Berdagang dengan Semuanya",
     "alliances": "Aliansi",
-    "flag": "Bendera",
     "chat": "Chat",
     "target": "Sasaran",
     "break_alliance": "Rusak Aliansi",
-    "alliance": "Aliansi",
     "send_alliance": "Kirim Proposal Aliansi",
     "send_troops": "Kirim Pasukan",
     "send_gold": "Kirim Emas",
     "emotes": "Emoji",
+    "moderation": "Moderasi",
+    "kick": "Keluarkan pemain",
+    "kicked": "Sudah dikeluarkan",
+    "kick_confirm": "Keluarkan {name}?\n\nDia tidak dapat bergabung kembali dalam permainan ini.",
     "arc_up": "Lengkungan ke Atas",
     "arc_down": "Lengkungan ke Bawah",
     "flip_rocket_trajectory": "Balikkan lintasan roket"
   },
+  "kick_reason": {
+    "duplicate_session": "Dikeluarkan dari permainan (kamu mungkin bermain di tab yang lain)",
+    "lobby_creator": "Dikeluarkan oleh pembuat lobi"
+  },
   "send_troops_modal": {
     "title_with_name": "Kirim Pasukan ke {name}",
     "available_tooltip": "Pasukan Anda yang tersedia saat ini",
-    "min_keep": "Minimal yang ditinggalkan",
     "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Penggeser pasukan",
     "capacity_note": "Penerima hanya dapat menerima {amount} saat ini."
@@ -835,7 +848,9 @@
     "choose_spawn": "Pilih lokasi awal",
     "random_spawn": "Kemunculan acak diaktifkan. Memilih lokasi awal untuk Anda...",
     "singleplayer_game_paused": "Permainan dijeda",
-    "multiplayer_game_paused": "Permainan di tunda oleh Pembuat Lobi"
+    "multiplayer_game_paused": "Permainan di tunda oleh Pembuat Lobi",
+    "pvp_immunity_active": "Imunitas PVP aktif selama {seconds} detik",
+    "catching_up": "Menyusul..."
   },
   "territory_patterns": {
     "title": "Tampilan",
@@ -844,13 +859,16 @@
     "show_only_owned": "Skin Saya",
     "all_owned": "Semua skin sudah dimiliki! Silakan periksa kembali nanti untuk item baru.",
     "not_logged_in": "Belum masuk",
-    "blocked": {
-      "login": "Anda harus login untuk mengakses skin ini.",
-      "purchase": "Beli skin ini untuk membukanya."
-    },
     "pattern": {
       "default": "Default"
     },
+    "try_me": "Coba aku!",
+    "trial_remaining": "tersisa",
+    "trial_granted": "Skin trial didapatkan!",
+    "trial_cooldown": "Hanya satu trial dalam 24 jam. Mohon coba lagi nanti.",
+    "trial_login_required": "Harus masuk untuk mencoba skin",
+    "reward_countdown": "Hadiah dalam {seconds} detik...",
+    "steam_wishlist_prompt": "Dukung OpenFront dengan cara menambahkannya di wishlist Steam Anda",
     "select_skin": "Pilih Skin",
     "selected": "dipilih"
   },
@@ -858,15 +876,6 @@
     "title": "Pilih Bendera",
     "button_title": "Pilih bendera!",
     "search_flag": "Cari..."
-  },
-  "spawn_ad": {
-    "loading": "Memuat iklan..."
-  },
-  "auth": {
-    "login_required": "Masuk dibutuhkan untuk mengakses website ini.",
-    "redirecting": "Anda sedang diarahkan...",
-    "not_authorized": "Anda tidak punya izin untuk mengakses website ini.",
-    "contact_admin": "Jika Anda yakin melihat pesan ini karena kesalahan, silakan hubungi administrator situs web."
   },
   "radial_menu": {
     "delete_unit_title": "Hapus Unit",
@@ -926,7 +935,6 @@
     "replay": "Tayangan ulang",
     "details": "Detail",
     "ranking": "Peringkat",
-    "started": "Dimulai",
     "map": "Peta",
     "difficulty": "Tingkat Kesulitan",
     "type": "Jenis"
@@ -934,7 +942,7 @@
   "player_stats_tree": {
     "public": "Publik",
     "private": "Tertutup",
-    "singleplayer": "Sendiri",
+    "solo": "Solo",
     "mode": "Mode",
     "stats_wins": "Jumlah Kemenangan",
     "stats_losses": "Jumlah Kehilangan",

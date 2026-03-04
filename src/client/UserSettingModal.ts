@@ -11,17 +11,18 @@ import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import "./FlagInputModal";
+import { Platform } from "./Platform";
 
 interface FlagInputModalElement extends HTMLElement {
   open(): void;
   returnTo?: string;
 }
 
-const isMac =
-  typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
+const isMac = Platform.isMac;
 
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
+  coordinateGrid: "KeyM",
   buildCity: "Digit1",
   buildFactory: "Digit2",
   buildPort: "Digit3",
@@ -488,6 +489,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey="Space"
         .value=${this.getKeyValue("toggleView")}
         .display=${this.getKeyChar("toggleView")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="coordinateGrid"
+        label=${translateText("user_setting.coordinate_grid_label")}
+        description=${translateText("user_setting.coordinate_grid_desc")}
+        defaultKey=${DefaultKeybinds.coordinateGrid}
+        .value=${this.getKeyValue("coordinateGrid")}
+        .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
