@@ -5,8 +5,8 @@
       "type": "node",
       "request": "launch",
       "name": "Debug Jest Tests",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run-script", "test"],
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "test"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     },

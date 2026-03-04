@@ -42,7 +42,7 @@ For license history, see [LICENSING.md](LICENSING.md).
 
 ## 📋 Prerequisites
 
-- [npm](https://www.npmjs.com/) (v10.9.2 or higher)
+- [pnpm](https://pnpm.io/) (v10 or higher; [Corepack](https://nodejs.org/api/corepack.html) recommended)
 - A modern web browser (Chrome, Firefox, Edge, etc.)
 
 ## 🚀 Installation
@@ -57,10 +57,12 @@ For license history, see [LICENSING.md](LICENSING.md).
 2. **Install dependencies**
 
    ```bash
-   npm run inst
+   pnpm run inst
    ```
 
-   Do NOT use `npm install` nor `npm i` but instead use our `npm run inst`. It runs the safer `npm ci --ignore-scripts` to install dependencies exactly according to the versions in `package-lock.json` and doesn't run scripts. This can prevent being hit by a supply chain attack.
+   Do NOT use `pnpm add` for full installs; use `pnpm run inst`. It runs `pnpm install --frozen-lockfile --ignore-scripts` so dependencies match `pnpm-lock.yaml` and no lifecycle scripts run, reducing supply-chain risk.
+
+   **Install times** (clean install, this repo): `pnpm install --frozen-lockfile --ignore-scripts` ~16s vs `npm ci --ignore-scripts` ~22s.
 
 ## 🎮 Running the Game
 
@@ -69,7 +71,7 @@ For license history, see [LICENSING.md](LICENSING.md).
 Run both the client and server in development mode with live reloading:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 This will:
@@ -83,7 +85,7 @@ This will:
 To run just the client with hot reloading:
 
 ```bash
-npm run start:client
+pnpm run start:client
 ```
 
 ### Server Only
@@ -91,7 +93,7 @@ npm run start:client
 To run just the server with development settings:
 
 ```bash
-npm run start:server-dev
+pnpm run start:server-dev
 ```
 
 ### Connecting to staging or production backends
@@ -104,13 +106,13 @@ Sometimes it's useful to connect to production servers when replaying a game, te
 To connect to staging api servers:
 
 ```bash
-npm run dev:staging
+pnpm run dev:staging
 ```
 
 To connect to production api servers:
 
 ```bash
-npm run dev:prod
+pnpm run dev:prod
 ```
 
 ## 🛠️ Development Tools
@@ -118,7 +120,7 @@ npm run dev:prod
 - **Format code**:
 
   ```bash
-  npm run format
+  pnpm run format
   ```
 
 - **Lint code**:
@@ -130,12 +132,12 @@ npm run dev:prod
 - **Lint and fix code**:
 
   ```bash
-  npm run lint:fix
+  pnpm run lint:fix
   ```
 
 - **Testing**
   ```bash
-  npm test
+  pnpm test
   ```
 
 ## 🏗️ Project Structure
