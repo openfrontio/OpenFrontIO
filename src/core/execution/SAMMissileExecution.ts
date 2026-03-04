@@ -39,6 +39,26 @@ export class SAMMissileExecution implements Execution {
       {},
     );
     if (!this.SAMMissile.isActive()) {
+      // Interceptor was destroyed (e.g. by nuke blast) — allow SAMs to re-target this nuke
+      if (this.target.isActive()) {
+        this.target.setTargetedBySAM(false);
+        // Notify defender their interceptor was destroyed
+        this.mg.displayMessage(
+          "events_display.interceptor_destroyed",
+          MessageType.SAM_MISS,
+          this._owner.id(),
+          undefined,
+          { unit: this.target.type() },
+        );
+        // Notify attacker their nuke survived interception
+        this.mg.displayMessage(
+          "events_display.interceptor_destroyed_attacker",
+          MessageType.SAM_MISS,
+          this.target.owner().id(),
+          undefined,
+          { unit: this.target.type() },
+        );
+      }
       this.active = false;
       return;
     }
@@ -50,7 +70,7 @@ export class SAMMissileExecution implements Execution {
       this.target.owner() === this.SAMMissile.owner() ||
       !nukesWhitelist.includes(this.target.type())
     ) {
-      // Clear the flag so other SAMs can re-target this nuke
+      // If the nuke is still active but we're aborting (e.g. SAM destroyed), allow re-targeting
       if (this.target.isActive()) {
         this.target.setTargetedBySAM(false);
       }
