@@ -193,7 +193,7 @@ export class GameModeSelector extends LitElement {
 
     let timeDisplay: string = "";
     if (timeRemaining === undefined) {
-      timeDisplay = "-s";
+      timeDisplay = "";
     } else if (timeRemaining > 0) {
       timeDisplay = renderDuration(timeRemaining);
     } else {
@@ -238,12 +238,14 @@ export class GameModeSelector extends LitElement {
                   )}
                 </div>`
               : html`<div></div>`}
-            <div class="shrink-0">
-              <span
-                class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
-                >${timeDisplay}</span
-              >
-            </div>
+            ${timeDisplay
+              ? html`<div class="shrink-0">
+                  <span
+                    class="text-[10px] font-bold normal-case tracking-widest bg-blue-600 px-2 py-0.5 rounded"
+                    >${timeDisplay}</span
+                  >
+                </div>`
+              : null}
           </div>
         </div>
         <div class="flex items-center justify-between px-3 py-2">
