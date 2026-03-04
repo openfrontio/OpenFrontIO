@@ -44,7 +44,6 @@ export class TeamStats extends LitElement implements Layer {
   private _myTeam: Team | null = null;
 
   @state()
-  @state()
   private _sortKey:
     | "tiles"
     | "gold"
@@ -78,6 +77,13 @@ export class TeamStats extends LitElement implements Layer {
     if (!this.visible) return;
 
     this.updateTeamStats();
+  }
+
+  private _handleKeyDown(e: KeyboardEvent, callback: () => void) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      callback();
+    }
   }
 
   private setSort(
@@ -169,10 +175,15 @@ export class TeamStats extends LitElement implements Layer {
       .sort((a, b) => {
         const compare = (v1: number, v2: number) =>
           this._sortOrder === "asc" ? v1 - v2 : v2 - v1;
+        const compareBigInt = (v1: bigint, v2: bigint) => {
+          if (v1 === v2) return 0;
+          const less = v1 < v2;
+          return this._sortOrder === "asc" ? (less ? -1 : 1) : less ? 1 : -1;
+        };
 
         switch (this._sortKey) {
           case "gold":
-            return compare(Number(a.totalGoldRaw), Number(b.totalGoldRaw));
+            return compareBigInt(a.totalGoldRaw, b.totalGoldRaw);
           case "maxtroops":
             return compare(
               Number(a.totalMaxTroopsRaw),
@@ -232,7 +243,6 @@ export class TeamStats extends LitElement implements Layer {
             ? "minmax(50px, 70px) minmax(60px, 120px) minmax(60px, 80px) minmax(60px, 110px) minmax(60px, 90px)"
             : "minmax(50px, 70px) minmax(60px, 100px) minmax(60px, 100px) minmax(60px, 120px)"};"
         >
-          <!-- Header -->
           <div class="contents font-bold bg-slate-700/60">
             <div class="p-1.5 md:p-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
@@ -240,8 +250,11 @@ export class TeamStats extends LitElement implements Layer {
             ${this.showUnits
               ? html`
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("launchers")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("launchers"))}
                   >
                     ${translateText("leaderboard.launchers")}
                     ${this._sortKey === "launchers"
@@ -251,8 +264,11 @@ export class TeamStats extends LitElement implements Layer {
                       : ""}
                   </div>
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("sams")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("sams"))}
                   >
                     ${translateText("leaderboard.sams")}
                     ${this._sortKey === "sams"
@@ -262,8 +278,11 @@ export class TeamStats extends LitElement implements Layer {
                       : ""}
                   </div>
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("warships")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("warships"))}
                   >
                     ${translateText("leaderboard.warships")}
                     ${this._sortKey === "warships"
@@ -273,8 +292,11 @@ export class TeamStats extends LitElement implements Layer {
                       : ""}
                   </div>
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("cities")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("cities"))}
                   >
                     ${translateText("leaderboard.cities")}
                     ${this._sortKey === "cities"
@@ -286,8 +308,11 @@ export class TeamStats extends LitElement implements Layer {
                 `
               : html`
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("tiles")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("tiles"))}
                   >
                     ${translateText("leaderboard.owned")}
                     ${this._sortKey === "tiles"
@@ -297,8 +322,11 @@ export class TeamStats extends LitElement implements Layer {
                       : ""}
                   </div>
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("gold")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("gold"))}
                   >
                     ${translateText("leaderboard.gold")}
                     ${this._sortKey === "gold"
@@ -308,8 +336,11 @@ export class TeamStats extends LitElement implements Layer {
                       : ""}
                   </div>
                   <div
-                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500 cursor-pointer focus:bg-slate-600 outline-none"
+                    role="button"
+                    tabindex="0"
                     @click=${() => this.setSort("maxtroops")}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.setSort("maxtroops"))}
                   >
                     ${translateText("leaderboard.maxtroops")}
                     ${this._sortKey === "maxtroops"
@@ -321,50 +352,51 @@ export class TeamStats extends LitElement implements Layer {
                 `}
           </div>
 
-          <!-- Data rows -->
           ${this.teams.map((team) =>
             this.showUnits
               ? html`
-                  <div
-                    class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
-                      ? "font-bold"
-                      : ""}"
+                  <div 
+                    class="contents" 
+                    role="link" 
+                    tabindex="0"
                     @click=${() => this.handleTeamClick(team)}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.handleTeamClick(team))}
                   >
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer ${team.isMyTeam ? "font-bold" : ""}">
                       ${team.teamName}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalLaunchers}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalSAMs}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalWarShips}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalCities}
                     </div>
                   </div>
                 `
               : html`
-                  <div
-                    class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
-                      ? "font-bold"
-                      : ""}"
+                  <div 
+                    class="contents"
+                    role="link" 
+                    tabindex="0"
                     @click=${() => this.handleTeamClick(team)}
+                    @keydown=${(e: KeyboardEvent) => this._handleKeyDown(e, () => this.handleTeamClick(team))}
                   >
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer ${team.isMyTeam ? "font-bold" : ""}">
                       ${team.teamName}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalScoreStr}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalGold}
                     </div>
-                    <div class="py-1.5 border-b border-slate-500">
+                    <div class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer">
                       ${team.totalMaxTroops}
                     </div>
                   </div>
