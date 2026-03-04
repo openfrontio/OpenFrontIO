@@ -60,9 +60,7 @@ For license history, see [LICENSING.md](LICENSING.md).
    pnpm run inst
    ```
 
-   Do NOT use `pnpm add` for full installs; use `pnpm run inst`. It runs `pnpm install --frozen-lockfile --ignore-scripts` so dependencies match `pnpm-lock.yaml` and no lifecycle scripts run, reducing supply-chain risk.
-
-   **Install times** (clean install, this repo): `pnpm install --frozen-lockfile --ignore-scripts` ~16s vs `npm ci --ignore-scripts` ~22s.
+   Do NOT use `pnpm install` for full installs; use `pnpm run inst`. It runs `pnpm install --frozen-lockfile --ignore-scripts` so dependencies match `pnpm-lock.yaml` and no lifecycle scripts run, reducing supply-chain risk.
 
 ## 🎮 Running the Game
 

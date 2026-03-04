@@ -13,7 +13,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -548,7 +548,7 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile).then((actions) => {
+    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -556,7 +556,7 @@ export class ClientGameRunner {
             this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canAutoBoat(actions, tile)) {
+      } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -591,7 +591,7 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer!.actions(clickedTile, Structures.types).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -644,15 +644,17 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) === false) {
-        console.warn(
-          "Boat attack triggered but can't send Transport Ship to tile",
-        );
-        return;
-      }
-      this.sendBoatAttackIntent(tile);
-    });
+    this.myPlayer
+      .buildables(tile, [UnitType.TransportShip])
+      .then((buildables) => {
+        if (this.canBoatAttack(buildables) !== false) {
+          this.sendBoatAttackIntent(tile);
+        } else {
+          console.warn(
+            "Boat attack triggered but can't send Transport Ship to tile",
+          );
+        }
+      });
   }
 
   private doGroundAttackUnderCursor(): void {
@@ -667,7 +669,7 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
+    this.myPlayer.actions(tile, null).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -696,10 +698,8 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions): false | TileRef {
-    const bu = actions.buildableUnits.find(
-      (bu) => bu.type === UnitType.TransportShip,
-    );
+  private canBoatAttack(buildables: BuildableUnit[]): false | TileRef {
+    const bu = buildables.find((bu) => bu.type === UnitType.TransportShip);
     return bu?.canBuild ?? false;
   }
 
@@ -714,10 +714,10 @@ export class ClientGameRunner {
     );
   }
 
-  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
+  private canAutoBoat(buildables: BuildableUnit[], tile: TileRef): boolean {
     if (!this.gameView.isLand(tile)) return false;
 
-    const canBuild = this.canBoatAttack(actions);
+    const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
     // TODO: Global enable flag

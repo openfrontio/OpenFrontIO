@@ -6,10 +6,12 @@ import {
   MessageType,
   PublicGameModifiers,
   Quads,
+  Team,
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
+import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
@@ -109,6 +111,8 @@ export interface ModifierInfo {
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
+  /** Parameters to pass to translateText for the badge key */
+  badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
 }
@@ -139,10 +143,19 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.crowded",
     });
   }
+  if (modifiers.isHardNations) {
+    result.push({
+      labelKey: "host_modal.hard_nations",
+      badgeKey: "public_game_modifier.hard_nations",
+    });
+  }
   if (modifiers.startingGold) {
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
+      badgeParams: {
+        amount: Math.round(modifiers.startingGold / 1_000_000),
+      },
       value: modifiers.startingGold,
     });
   }
@@ -155,7 +168,9 @@ export function getActiveModifiers(
 export function getModifierLabels(
   modifiers: PublicGameModifiers | undefined,
 ): string[] {
-  return getActiveModifiers(modifiers).map((m) => translateText(m.badgeKey));
+  return getActiveModifiers(modifiers).map((m) =>
+    translateText(m.badgeKey, m.badgeParams),
+  );
 }
 
 export function renderDuration(totalSeconds: number): string {
@@ -394,6 +409,13 @@ export const translateText = (
   }
 };
 
+export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+  if (!team) return "";
+  const translationKey = `team_colors.${team.toLowerCase()}`;
+  const translated = translateText(translationKey);
+  return translated === translationKey ? team : translated;
+}
+
 /**
  * Severity colors mapping for message types
  */
@@ -450,21 +472,11 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌘"; // Command key
-  } else {
-    return "Ctrl";
-  }
+  return Platform.isMac ? "⌘" : "Ctrl";
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌥"; // Option key
-  } else {
-    return "Alt";
-  }
+  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

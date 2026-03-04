@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
+import { ref } from "lit/directives/ref.js";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -19,6 +19,7 @@ import {
   TouchEvent,
 } from "../../InputHandler";
 import {
+  getTranslatedPlayerTeamLabel,
   renderDuration,
   renderNumber,
   renderTroops,
@@ -266,14 +267,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`<span class="flex items-center gap-1 ml-1 shrink-0">
       ${icons.map((icon) =>
-      icon.kind === "emoji" && icon.text
-        ? html`<span class="text-sm shrink-0" translate="no"
+        icon.kind === "emoji" && icon.text
+          ? html`<span class="text-sm shrink-0" translate="no"
               >${icon.text}</span
             >`
-        : icon.kind === "image" && icon.src
-          ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
-          : html``,
-    )}
+          : icon.kind === "image" && icon.src
+            ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
+            : html``,
+      )}
     </span>`;
   }
 
@@ -314,6 +315,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         playerType = translateText("player_type.player");
         break;
     }
+    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
       <div class="flex items-start gap-2 lg:gap-3 p-1.5 lg:p-2">
@@ -334,46 +336,46 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="flex flex-col justify-between self-stretch">
           <div
             class="flex items-center gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
-      player,
-      myPlayer,
-      isFriendly ?? false,
-    )}"
+              player,
+              myPlayer,
+              isFriendly ?? false,
+            )}"
           >
             ${player.cosmetics.flag
-        ? player.cosmetics.flag!.startsWith("!")
-          ? html`<div
+              ? player.cosmetics.flag!.startsWith("!")
+                ? html`<div
                     class="h-6 aspect-3/4 player-flag"
                     ${ref((el) => {
-            if (el instanceof HTMLElement) {
-              requestAnimationFrame(() => {
-                renderPlayerFlag(player.cosmetics.flag!, el);
-              });
-            }
-          })}
+                      if (el instanceof HTMLElement) {
+                        requestAnimationFrame(() => {
+                          renderPlayerFlag(player.cosmetics.flag!, el);
+                        });
+                      }
+                    })}
                   ></div>`
-          : html`<img
+                : html`<img
                     class="h-6 aspect-3/4"
                     src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                   />`
-        : html``}
+              : html``}
             <span>${player.name()}</span>
-            ${player.team() !== null && player.type() !== PlayerType.Bot
-        ? html`<div class="flex flex-col leading-tight">
+            ${playerTeam !== "" && player.type() !== PlayerType.Bot
+              ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
                     >${playerType}</span
                   >
                   <span class="text-xs font-normal text-gray-400"
                     >[<span
                       style="color: ${this.game
-            .config()
-            .theme()
-            .teamColor(player.team()!)
-            .toHex()}"
-                      >${player.team()}</span
+                        .config()
+                        .theme()
+                        .teamColor(player.team()!)
+                        .toHex()}"
+                      >${playerTeam}</span
                     >]</span
                   >
                 </div>`
-        : html`<span class="text-gray-400 text-xs font-normal"
+              : html`<span class="text-gray-400 text-xs font-normal"
                   >${playerType}</span
                 >`}
             ${this.renderPlayerNameIcons(player)} ${allianceHtml ?? ""}
@@ -383,15 +385,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
             ${this.displayUnitCount(player, UnitType.Port, portIcon)}
             ${this.displayUnitCount(
-          player,
-          UnitType.MissileSilo,
-          missileSiloIcon,
-        )}
+              player,
+              UnitType.MissileSilo,
+              missileSiloIcon,
+            )}
             ${this.displayUnitCount(
-          player,
-          UnitType.SAMLauncher,
-          samLauncherIcon,
-        )}
+              player,
+              UnitType.SAMLauncher,
+              samLauncherIcon,
+            )}
             ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
           </div>
         </div>
@@ -420,17 +422,17 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       >
         <div class="h-full flex">
           ${greenPercent > 0
-        ? html`<div
+            ? html`<div
                 class="h-full bg-green-500 transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
-        : ""}
+            : ""}
           ${orangePercent > 0
-        ? html`<div
+            ? html`<div
                 class="h-full bg-orange-400 transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
-        : ""}
+            : ""}
         </div>
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
@@ -469,15 +471,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
           ${unit.hasHealth()
-        ? html` <div class="text-sm">Health: ${unit.health()}</div> `
-        : ""}
+            ? html` <div class="text-sm">Health: ${unit.health()}</div> `
+            : ""}
           ${unit.type() === UnitType.TransportShip
-        ? html`
+            ? html`
                 <div class="text-sm">
                   Troops: ${renderTroops(unit.troops())}
                 </div>
               `
-        : ""}
+            : ""}
         </div>
       </div>
     `;

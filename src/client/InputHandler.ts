@@ -1,8 +1,9 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitType } from "../core/game/Game";
+import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
+import { Platform } from "./Platform";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -82,11 +83,13 @@ export class RefreshGraphicsEvent implements GameEvent {}
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
-  constructor(public readonly structureTypes: UnitType[] | null) {}
+  constructor(
+    public readonly structureTypes: PlayerBuildableUnitType[] | null,
+  ) {}
 }
 
 export class GhostStructureChangedEvent implements GameEvent {
-  constructor(public readonly ghostStructure: UnitType | null) {}
+  constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
 
 export class SwapRocketDirectionEvent implements GameEvent {
@@ -202,7 +205,7 @@ export class InputHandler {
     }
 
     // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
+    const isMac = Platform.isMac;
 
     this.keybinds = {
       toggleView: "Space",
@@ -608,7 +611,7 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: UnitType | null) {
+  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
   }

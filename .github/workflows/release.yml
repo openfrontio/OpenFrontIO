@@ -105,13 +105,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -125,11 +125,11 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod falk1 "${IMAGE_ID}" beta
+          ./deploy.sh prod falk2 "${IMAGE_ID}" beta
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: beta.${{ vars.DOMAIN }}
@@ -156,13 +156,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -176,11 +176,11 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod falk1 "${IMAGE_ID}" blue
+          ./deploy.sh prod falk2 "${IMAGE_ID}" blue
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: blue.${{ vars.DOMAIN }}
@@ -207,13 +207,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -227,11 +227,11 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod falk1 "${IMAGE_ID}" green
+          ./deploy.sh prod falk2 "${IMAGE_ID}" green
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: green.${{ vars.DOMAIN }}

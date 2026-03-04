@@ -121,7 +121,8 @@ export class FlagInput extends LitElement {
     } else {
       const img = document.createElement("img");
       img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
-      img.className = "w-full h-full object-cover drop-shadow";
+      img.className = "w-full h-full object-cover pointer-events-none";
+      img.draggable = false;
       img.onerror = () => {
         if (!img.src.endsWith("/flags/xx.svg")) {
           img.src = "/flags/xx.svg";

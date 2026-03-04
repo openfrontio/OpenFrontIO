@@ -169,7 +169,8 @@ export function renderPatternPreview(
   return html`<img
     src="${generatePreviewDataUrl(pattern, width, height)}"
     alt="Pattern preview"
-    class="w-full h-full object-contain [image-rendering:pixelated]"
+    class="w-full h-full object-contain [image-rendering:pixelated] pointer-events-none"
+    draggable="false"
   />`;
 }
 

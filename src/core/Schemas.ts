@@ -215,10 +215,16 @@ export const GameConfigSchema = z.object({
       isCompact: z.boolean(),
       isRandomSpawn: z.boolean(),
       isCrowded: z.boolean(),
+      isHardNations: z.boolean(),
       startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
-  disableNations: z.boolean(),
+  nations: z
+    .number()
+    .int()
+    .min(1)
+    .max(400)
+    .or(z.enum(["default", "disabled"])),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
