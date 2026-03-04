@@ -201,8 +201,8 @@
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
-    "starting_gold": "Starting gold",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold": "Starting Gold (Millions)",
+    "starting_gold_placeholder": "5"
   },
   "token_login_modal": {
     "title": "Logging in...",
