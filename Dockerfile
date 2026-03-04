@@ -27,7 +27,6 @@ RUN pnpm run build-prod
 # Production dependencies stage - separate from build
 FROM base AS prod-deps
 ENV HUSKY=0
-ENV PNPM_IGNORE_SCRIPTS=1
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack enable \
@@ -72,7 +71,7 @@ RUN chmod +x /usr/local/bin/startup.sh
 
 # Copy production node_modules from prod-deps stage (cached separately from build)
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Enable Corepack so pnpm is available for supervisord (command=pnpm run start:server)
 RUN corepack enable
