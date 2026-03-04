@@ -89,6 +89,8 @@
     "hotkeys": "Hotkeys",
     "table_key": "Key",
     "table_action": "Action",
+    "action_esc": "Closes menu. Cancels unit build preview.",
+    "action_enter": "Confirms input. Confirms unit build preview.",
     "action_alt_view": "Alternate view (terrain/countries)",
     "action_coordinate_grid": "Toggle coordinate grid overlay",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
