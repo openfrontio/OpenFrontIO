@@ -140,11 +140,6 @@ export enum GameMapType {
 
 export type GameMapName = keyof typeof GameMapType;
 
-/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
-export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
-}
-
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
