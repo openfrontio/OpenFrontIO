@@ -54,6 +54,10 @@ Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/
 [Niledelta 33](https://commons.wikimedia.org/wiki/File:Niledelta_33.svg) by John187
 Licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
+### Arctic Map
+[Arctic SDI Geoportal Services](https://geoportal.arctic-sdi.org/)
+Public Domain (https://arctic-sdi.org/service-level-statement-arctic-sdi-central-services/)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
