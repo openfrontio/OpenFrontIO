@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import { Cluster } from "../../game/TrainStation";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
@@ -56,7 +57,7 @@ function getStructureRatios(
     },
     [UnitType.SAMLauncher]: {
       ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
-      perceivedCostIncreasePerOwned: 1,
+      perceivedCostIncreasePerOwned: 0.5,
     },
     [UnitType.MissileSilo]: {
       ratioPerCity: 0.2,
@@ -84,6 +85,12 @@ const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
 export class NationStructureBehavior {
+  private reachableStationsCache: Array<{
+    tile: TileRef;
+    cluster: Cluster | null;
+    weight: number;
+  }> | null = null;
+
   constructor(
     private random: PseudoRandom,
     private game: Game,
@@ -91,6 +98,7 @@ export class NationStructureBehavior {
   ) {}
 
   handleStructures(): boolean {
+    this.reachableStationsCache = null;
     const config = this.game.config();
     const citiesDisabled = config.isUnitDisabled(UnitType.City);
     const cityCount = citiesDisabled
@@ -173,7 +181,8 @@ export class NationStructureBehavior {
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
-    const { difficulty } = this.game.config().gameConfig();
+    const gameConfig = this.game.config();
+    const { difficulty } = gameConfig.gameConfig();
     const ratios = getStructureRatios(difficulty);
     const config = ratios[type];
     if (config === undefined) {
@@ -186,7 +195,7 @@ export class NationStructureBehavior {
     if (
       type === UnitType.Factory &&
       hasCoastalTiles &&
-      !this.game.config().isUnitDisabled(UnitType.Port)
+      !gameConfig.isUnitDisabled(UnitType.Port)
     ) {
       ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
     }
@@ -219,6 +228,7 @@ export class NationStructureBehavior {
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
+    const game = this.game;
     const perceivedCost = this.getPerceivedCost(type);
     if (this.player.gold() < perceivedCost) {
       return false;
@@ -228,7 +238,7 @@ export class NationStructureBehavior {
     const structures = this.player.units(type);
     if (
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
-      type !== UnitType.DefensePost
+      game.config().unitInfo(type).upgradable
     ) {
       if (this.maybeUpgradeStructure(structures)) {
         return true;
@@ -249,7 +259,7 @@ export class NationStructureBehavior {
     if (canBuild === false) {
       return false;
     }
-    this.game.addExecution(new ConstructionExecution(this.player, type, tile));
+    game.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
   }
 
@@ -330,10 +340,8 @@ export class NationStructureBehavior {
       return false;
     }
     const structureToUpgrade = this.findBestStructureToUpgrade(structures);
-    if (
-      structureToUpgrade !== null &&
-      this.player.canUpgradeUnit(structureToUpgrade)
-    ) {
+    if (structureToUpgrade !== null) {
+      //canUpgradeUnit already checked in findBestStructureToUpgrade and again in UpgradeStructureExecution
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
       );
@@ -346,12 +354,10 @@ export class NationStructureBehavior {
    * Calculates total structure density across player's territory.
    */
   private getTotalStructureDensity(): number {
-    let totalStructures = 0;
-    for (const type of StructureTypes) {
-      totalStructures += this.player.units(type).length; // ignoring levels
-    }
     const tilesOwned = this.player.numTilesOwned();
-    return tilesOwned > 0 ? totalStructures / tilesOwned : 0;
+    return tilesOwned > 0
+      ? this.player.units(...StructureTypes).length / tilesOwned
+      : 0; //ignoring levels for structures
   }
 
   /**
@@ -359,6 +365,7 @@ export class NationStructureBehavior {
    * In 50% of cases, picks the second or third best to add variety.
    */
   private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
+    const game = this.game;
     if (structures.length === 0) {
       return null;
     }
@@ -370,7 +377,7 @@ export class NationStructureBehavior {
     }
 
     // Based on difficulty, chance to just pick a random structure
-    const { difficulty } = this.game.config().gameConfig();
+    const { difficulty } = game.config().gameConfig();
     let randomChance: number;
     switch (difficulty) {
       case Difficulty.Easy:
@@ -403,9 +410,9 @@ export class NationStructureBehavior {
 
       // Check if protected by any SAM, using per-SAM level-based range
       for (const sam of samLaunchers) {
-        const samRange = this.game.config().samRange(sam.level());
+        const samRange = game.config().samRange(sam.level());
         const samRangeSquared = samRange * samRange;
-        const distSquared = this.game.euclideanDistSquared(
+        const distSquared = game.euclideanDistSquared(
           structure.tile(),
           sam.tile(),
         );
@@ -491,9 +498,11 @@ export class NationStructureBehavior {
   ): ((tile: TileRef) => number) | null {
     switch (type) {
       case UnitType.City:
-      case UnitType.Factory:
+        return this.cityValue();
       case UnitType.MissileSilo:
-        return this.interiorStructureValue(type);
+        return this.missileSiloValue();
+      case UnitType.Factory:
+        return this.factoryValue();
       case UnitType.Port:
         return this.portValue();
       case UnitType.DefensePost:
@@ -506,13 +515,13 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Value function for interior structures (City, Factory, MissileSilo).
+   * Value function for MissileSilo.
    * Prefers high elevation, distance from border, and spacing from same-type structures.
    */
-  private interiorStructureValue(type: UnitType): (tile: TileRef) => number {
+  private missileSiloValue(): (tile: TileRef) => number {
     const game = this.game;
     const borderTiles = this.player.borderTiles();
-    const otherUnits = this.player.units(type);
+    const otherUnits = this.player.units(UnitType.MissileSilo);
     const { borderSpacing, structureSpacing } = this.spacingConstants();
 
     return (tile) => {
@@ -555,6 +564,287 @@ export class NationStructureBehavior {
       otherTiles.delete(tile);
       const [, closestOtherDist] = closestTile(game, otherTiles, tile);
       w += Math.min(closestOtherDist, structureSpacing);
+
+      return w;
+    };
+  }
+
+  /**
+   * Value function for factories.
+   * Prefers high elevation, spacing from other factories, and distance from border.
+   * Based on difficulty, scores connectivity by the number of distinct rail
+   * clusters within train-station range, weighted by trade gold:
+   * ally (1.0) > team/neutral (~0.71) > self (~0.29).
+   * Embargoed and bot neighbors are excluded. Per cluster, the best reachable
+   * trade relationship determines the weight.
+   */
+  private factoryValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const player = this.player;
+    const borderTiles = this.player.borderTiles();
+    const otherUnits = player.units(UnitType.Factory);
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+    const stationRange = game.config().trainStationMaxRange();
+    const stationRangeSquared = stationRange * stationRange;
+    const { difficulty } = game.config().gameConfig();
+    const useConnectionScore = this.shouldUseConnectivityScore(difficulty);
+
+    const reachableStations = useConnectionScore
+      ? this.getOrBuildReachableStations()
+      : [];
+    const minRangeSquared = game.config().trainStationMinRange() ** 2;
+
+    // Cross-type spacing: prefer to be away from cities.
+    const cityTiles: Set<TileRef> = new Set(
+      player.units(UnitType.City).map((u) => u.tile()),
+    );
+
+    return (tile) => {
+      let w = 0;
+
+      // Prefer higher elevations
+      w += game.magnitude(tile);
+
+      // Prefer to be away from the border
+      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      w += Math.min(closestBorderDist, borderSpacing);
+
+      // Prefer to be away from other factories
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
+      if (closestOther !== null) {
+        const d = game.manhattanDist(closestOther.x, tile);
+        w += Math.min(d, stationRange);
+      }
+
+      // Prefer to be away from cities (cross-type spacing)
+      const closestCity = closestTwoTiles(game, cityTiles, [tile]);
+      if (closestCity !== null) {
+        const d = game.manhattanDist(closestCity.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+
+      if (!useConnectionScore) {
+        return w;
+      }
+
+      w +=
+        this.computeConnectivityScore(
+          tile,
+          reachableStations,
+          minRangeSquared,
+          stationRangeSquared,
+        ) * structureSpacing;
+
+      return w;
+    };
+  }
+
+  /**
+   * Given the game difficulty, decide if we should use connectivity scoring
+   * to determine the best placement for factories and cities.
+   */
+  private shouldUseConnectivityScore(difficulty: Difficulty): boolean {
+    let randomChance: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        randomChance = 0;
+        break;
+      case Difficulty.Medium:
+        randomChance = 60;
+        break;
+      case Difficulty.Hard:
+        randomChance = 75;
+        break;
+      case Difficulty.Impossible:
+        randomChance = 100;
+        break;
+      default:
+        assertNever(difficulty);
+    }
+
+    return this.random.nextInt(0, 100) < randomChance;
+  }
+
+  private getOrBuildReachableStations(): Array<{
+    tile: TileRef;
+    cluster: Cluster | null;
+    weight: number;
+  }> {
+    this.reachableStationsCache ??= this.buildReachableStations();
+    return this.reachableStationsCache;
+  }
+
+  /**
+   * Precomputes trade-weighted station entries for connectivity scoring.
+   * Iterates all stations once (O(total_stations)) to build a unit→cluster map,
+   * then collects own and non-embargoed non-bot neighbor structures with a
+   * normalized weight derived from config.trainGold().
+   */
+  private buildReachableStations(): Array<{
+    tile: TileRef;
+    cluster: Cluster | null;
+    weight: number;
+  }> {
+    const game = this.game;
+    const player = this.player;
+
+    // Build unit → cluster lookup in one O(total_stations) pass.
+    const stationManager = game.railNetwork().stationManager();
+    const unitToCluster = new Map<Unit, Cluster | null>();
+    for (const station of stationManager.getAll()) {
+      unitToCluster.set(station.unit, station.getCluster());
+    }
+
+    const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
+    const result: Array<{
+      tile: TileRef;
+      cluster: Cluster | null;
+      weight: number;
+    }> = [];
+
+    // Own structures — weighted by "self" trade gold.
+    const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
+    for (const unit of player.units(
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+    )) {
+      if (unitToCluster.has(unit)) {
+        result.push({
+          tile: unit.tile(),
+          cluster: unitToCluster.get(unit)!,
+          weight: selfWeight,
+        });
+      }
+    }
+
+    // Neighbor structures — all non-embargoed non-bot neighbors.
+    for (const neighbor of player.neighbors()) {
+      if (!neighbor.isPlayer()) continue;
+      if (neighbor.type() === PlayerType.Bot) continue;
+      if (!player.canTrade(neighbor)) continue;
+      const relType = player.isOnSameTeam(neighbor)
+        ? "team"
+        : player.isAlliedWith(neighbor)
+          ? "ally"
+          : "other";
+      const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
+      for (const unit of neighbor.units(
+        UnitType.City,
+        UnitType.Port,
+        UnitType.Factory,
+      )) {
+        if (unitToCluster.has(unit)) {
+          result.push({
+            tile: unit.tile(),
+            cluster: unitToCluster.get(unit)!,
+            weight,
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Returns the summed cluster-deduplicated connectivity weight for a candidate
+   * tile. Stations outside [minRangeSquared, stationRangeSquared] are ignored.
+   * Per cluster the max weight of any station in range is taken; isolated
+   * stations (no cluster) contribute their individual weights.
+   */
+  private computeConnectivityScore(
+    tile: TileRef,
+    reachableStations: Array<{
+      tile: TileRef;
+      cluster: Cluster | null;
+      weight: number;
+    }>,
+    minRangeSquared: number,
+    stationRangeSquared: number,
+  ): number {
+    const clustersInRange = new Map<Cluster, number>();
+    let isolatedWeight = 0;
+    for (const { tile: stationTile, cluster, weight } of reachableStations) {
+      const dist = this.game.euclideanDistSquared(tile, stationTile);
+      if (dist < minRangeSquared || dist > stationRangeSquared) continue;
+      if (cluster !== null) {
+        clustersInRange.set(
+          cluster,
+          Math.max(clustersInRange.get(cluster) ?? 0, weight),
+        );
+      } else {
+        isolatedWeight += weight;
+      }
+    }
+    let score = isolatedWeight;
+    for (const cw of clustersInRange.values()) score += cw;
+    return score;
+  }
+
+  /**
+   * Value function for cities.
+   * Inherits interior placement criteria (elevation, border distance, spacing)
+   * and adds cluster-connectivity scoring so cities prefer positions that extend
+   * or bridge the existing rail network. Connectivity is difficulty-gated.
+   */
+  private cityValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const player = this.player;
+    const borderTiles = player.borderTiles();
+    const otherUnits = player.units(UnitType.City);
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+    const stationRange = game.config().trainStationMaxRange();
+    const stationRangeSquared = stationRange * stationRange;
+    const { difficulty } = game.config().gameConfig();
+    const useConnectionScore = this.shouldUseConnectivityScore(difficulty);
+
+    const reachableStations = useConnectionScore
+      ? this.getOrBuildReachableStations()
+      : [];
+    const minRangeSquared = game.config().trainStationMinRange() ** 2;
+
+    // Cross-type spacing: prefer to be away from factories.
+    const factoryTiles: Set<TileRef> = new Set(
+      player.units(UnitType.Factory).map((u) => u.tile()),
+    );
+
+    return (tile) => {
+      let w = 0;
+
+      w += game.magnitude(tile);
+
+      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      w += Math.min(closestBorderDist, borderSpacing);
+
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
+      if (closestOther !== null) {
+        const d = game.manhattanDist(closestOther.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+
+      // Prefer to be away from factories (cross-type spacing)
+      const closestFactory = closestTwoTiles(game, factoryTiles, [tile]);
+      if (closestFactory !== null) {
+        const d = game.manhattanDist(closestFactory.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+
+      if (!useConnectionScore) {
+        return w;
+      }
+
+      w +=
+        this.computeConnectivityScore(
+          tile,
+          reachableStations,
+          minRangeSquared,
+          stationRangeSquared,
+        ) * structureSpacing;
 
       return w;
     };

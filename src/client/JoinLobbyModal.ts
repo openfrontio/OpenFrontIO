@@ -3,7 +3,7 @@ import { customElement, property, query, state } from "lit/decorators.js";
 import {
   getActiveModifiers,
   getGameModeLabel,
-  normaliseMapKey,
+  getMapName,
   renderDuration,
   renderNumber,
   translateText,
@@ -16,14 +16,10 @@ import {
   GameInfo,
   GameRecordSchema,
   LobbyInfoEvent,
+  PublicGameInfo,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import {
-  GameMapSize,
-  GameMode,
-  GameType,
-  HumansVsNations,
-} from "../core/game/Game";
+import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -33,6 +29,7 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -96,9 +93,7 @@ export class JoinLobbyModal extends BaseModal {
       ? (this.lobbyCreatorClientID ?? "")
       : "";
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("public_lobby.title"),
           onBack: () => this.closeAndLeave(),
@@ -135,11 +130,10 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .nationCount=${this.nationCount}
-                        .disableNations=${this.gameConfig?.disableNations ??
-                        false}
-                        .isCompactMap=${this.gameConfig?.gameMapSize ===
-                        GameMapSize.Compact}
+                        .nationCount=${nationsConfigToSlider(
+                          this.gameConfig?.nations ?? "default",
+                          this.nationCount,
+                        )}
                       ></lobby-player-view>
                     `
                   : ""}
@@ -149,7 +143,7 @@ export class JoinLobbyModal extends BaseModal {
         ${this.isPrivateLobby()
           ? html`
               <div
-                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
+                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <button
                   class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
@@ -161,7 +155,7 @@ export class JoinLobbyModal extends BaseModal {
             `
           : html`
               <div
-                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
+                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <div
                   class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
@@ -216,15 +210,13 @@ export class JoinLobbyModal extends BaseModal {
 
   private renderJoinForm() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("private_lobby.title"),
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
         })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+        <form @submit=${this.joinLobbyFromInput} class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -258,7 +250,7 @@ export class JoinLobbyModal extends BaseModal {
             <o-button
               title=${translateText("private_lobby.join_lobby")}
               block
-              @click=${this.joinLobbyFromInput}
+              submit
             ></o-button>
           </div>
         </div>
@@ -280,15 +272,12 @@ export class JoinLobbyModal extends BaseModal {
     `;
   }
 
-  public open(lobbyId: string = "", isPublic: boolean = false) {
+  public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
     super.open();
     if (lobbyId) {
-      this.startTrackingLobby(lobbyId);
-      // If opened with lobbyInfo (public lobby case), auto-join the lobby
-      if (isPublic) {
-        this.joinPublicLobby(lobbyId);
-      } else {
-        // If opened with lobbyId but no lobbyInfo (URL join case), check if active and join
+      this.startTrackingLobby(lobbyId, lobbyInfo);
+      // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
+      if (!lobbyInfo) {
         this.handleUrlJoin(lobbyId);
       }
     }
@@ -326,21 +315,10 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private joinPublicLobby(lobbyId: string) {
-    // Dispatch join-lobby event to actually connect to the lobby
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: lobbyId,
-          source: "public",
-        } as JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
+  private startTrackingLobby(
+    lobbyId: string,
+    lobbyInfo?: GameInfo | PublicGameInfo,
+  ) {
     this.currentLobbyId = lobbyId;
     // clientID will be assigned by server via lobby_info message
     this.currentClientID = "";
@@ -355,7 +333,7 @@ export class JoinLobbyModal extends BaseModal {
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
       // Only stop showing spinner when we have player info
-      if (lobbyInfo.clients) {
+      if ("clients" in lobbyInfo && lobbyInfo.clients) {
         this.isConnecting = false;
       }
     }
@@ -436,7 +414,7 @@ export class JoinLobbyModal extends BaseModal {
     if (!this.gameConfig) return html``;
 
     const c = this.gameConfig;
-    const mapName = translateText("map." + normaliseMapKey(c.gameMap));
+    const mapName = getMapName(c.gameMap);
     const modeName = getGameModeLabel(c);
     const modifiers = getActiveModifiers(c.publicGameModifiers);
 
@@ -530,8 +508,8 @@ export class JoinLobbyModal extends BaseModal {
 
   // --- Lobby event handling ---
 
-  private updateFromLobby(lobby: GameInfo) {
-    this.players = lobby.clients ?? [];
+  private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
+    this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
     this.lobbyStartAt = lobby.startsAt ?? null;
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
@@ -542,7 +520,10 @@ export class JoinLobbyModal extends BaseModal {
       }
     }
 
-    this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? null;
+    this.lobbyCreatorClientID =
+      "lobbyCreatorClientID" in lobby
+        ? (lobby.lobbyCreatorClientID ?? null)
+        : null;
   }
 
   private startLobbyUpdates() {
@@ -687,7 +668,8 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private async joinLobbyFromInput(): Promise<void> {
+  private async joinLobbyFromInput(e: SubmitEvent): Promise<void> {
+    e.preventDefault();
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
       this.showMessage(translateText("private_lobby.not_found"), "red");

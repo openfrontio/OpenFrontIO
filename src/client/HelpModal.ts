@@ -4,6 +4,7 @@ import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
@@ -39,9 +40,10 @@ export class HelpModal extends BaseModal {
       console.warn("Invalid keybinds JSON:", e);
     }
 
-    const isMac = /Mac/.test(navigator.userAgent);
+    const isMac = Platform.isMac;
     return {
       toggleView: "Space",
+      coordinateGrid: "KeyM",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -99,14 +101,10 @@ export class HelpModal extends BaseModal {
     const keybinds = this.keybinds;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("main.help"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 
@@ -267,6 +265,14 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_alt_view")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.coordinateGrid)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_coordinate_grid")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">

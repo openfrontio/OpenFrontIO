@@ -152,6 +152,35 @@ export class NationExecution implements Execution {
       if (this.spawnQueuedAtTick !== null) {
         return;
       }
+      
+      // If team spawn areas are configured and the nation's spawn cell
+      // is outside its team's area, spawn randomly within the area instead.
+      const team = this.player.team();
+      if (team !== null) {
+        const area = this.mg.teamSpawnArea(team);
+        if (area !== undefined) {
+          const cell = this.nation.spawnCell;
+          const inArea =
+            cell.x >= area.x &&
+            cell.x < area.x + area.width &&
+            cell.y >= area.y &&
+            cell.y < area.y + area.height;
+          if (!inArea) {
+            this.mg.addExecution(
+              new SpawnExecution(this.gameID, this.nation.playerInfo),
+            );
+            return;
+          }
+        }
+      }
+
+      // Select a tile near the position defined in the map manifest
+      const rl = this.randomSpawnLand();
+
+      if (rl === null) {
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        return;
+      }
       if (this.queueSpawnExecution()) {
         this.spawnQueuedAtTick = ticks;
       }

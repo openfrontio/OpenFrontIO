@@ -48,9 +48,9 @@ export class SettingSlider extends LitElement {
 
     return html`
       <div
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 ${rainbowClass}"
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3 sm:gap-4 ${rainbowClass}"
       >
-        <div class="flex flex-col flex-1 min-w-0 mr-4">
+        <div class="flex flex-col flex-1 min-w-0 sm:mr-4">
           <label class="text-white font-bold text-base block mb-1"
             >${this.label}</label
           >
@@ -59,21 +59,28 @@ export class SettingSlider extends LitElement {
           </div>
         </div>
 
-        <div class="flex flex-col items-end gap-2 shrink-0 w-[200px]">
-          <span class="text-white font-bold text-sm">${this.value}%</span>
-          <input
-            type="range"
-            class="w-full appearance-none h-2 bg-transparent rounded outline-none 
+        <div
+          class="flex flex-col items-start sm:items-end gap-2 shrink-0 w-full sm:w-[200px]"
+        >
+          <div class="flex items-center gap-2 w-full">
+            <input
+              type="range"
+              class="flex-1 w-auto appearance-none h-2 bg-transparent rounded outline-none 
               [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded [&::-webkit-slider-runnable-track]:bg-[image:linear-gradient(to_right,#3b82f6_0%,#3b82f6_var(--fill),rgba(255,255,255,0.1)_var(--fill),rgba(255,255,255,0.1)_100%)]
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-webkit-slider-thumb]:transition-all active:[&::-webkit-slider-thumb]:scale-110 active:[&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]
               [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded [&::-moz-range-track]:bg-white/10
               [&::-moz-range-progress]:h-2 [&::-moz-range-progress]:rounded [&::-moz-range-progress]:bg-blue-500
               [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-moz-range-thumb]:transition-all active:[&::-moz-range-thumb]:scale-110 active:[&::-moz-range-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]"
-            min=${this.min}
-            max=${this.max}
-            .value=${String(this.value)}
-            @input=${this.handleInput}
-          />
+              min=${this.min}
+              max=${this.max}
+              .value=${String(this.value)}
+              @input=${this.handleInput}
+            />
+            <span
+              class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
+              >${this.value}%</span
+            >
+          </div>
         </div>
       </div>
     `;

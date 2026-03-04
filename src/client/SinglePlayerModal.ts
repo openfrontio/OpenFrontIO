@@ -8,7 +8,6 @@ import {
   GameMapType,
   GameMode,
   GameType,
-  HumansVsNations,
   UnitType,
 } from "../core/game/Game";
 import { TeamCountConfig } from "../core/Schemas";
@@ -26,18 +25,21 @@ import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
+  getNationsForCompactMap,
   getRandomMapType,
   getUpdatedDisabledUnits,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
+  sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
+
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
   selectedDifficulty: Difficulty.Easy,
-  disableNations: false,
   bots: 400,
   infiniteGold: false,
   infiniteTroops: false,
@@ -61,7 +63,8 @@ export class SinglePlayerModal extends BaseModal {
   @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
   @state() private selectedDifficulty: Difficulty =
     DEFAULT_OPTIONS.selectedDifficulty;
-  @state() private disableNations: boolean = DEFAULT_OPTIONS.disableNations;
+  @state() private nations: number = 0;
+  @state() private defaultNationCount: number = 0;
   @state() private bots: number = DEFAULT_OPTIONS.bots;
   @state() private infiniteGold: boolean = DEFAULT_OPTIONS.infiniteGold;
   @state() private infiniteTroops: boolean = DEFAULT_OPTIONS.infiniteTroops;
@@ -88,12 +91,15 @@ export class SinglePlayerModal extends BaseModal {
     ...DEFAULT_OPTIONS.disabledUnits,
   ];
 
+  private mapLoader = terrainMapFileLoader;
+
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener(
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    void this.loadNationCount();
   }
 
   disconnectedCallback() {
@@ -119,11 +125,15 @@ export class SinglePlayerModal extends BaseModal {
     if (crazyGamesSDK.isOnCrazyGames()) {
       return html``;
     }
-    return html`<div
-      class="px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 whitespace-nowrap shrink-0"
+    return html`<button
+      class="px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 whitespace-nowrap shrink-0 cursor-pointer hover:bg-yellow-500/30"
+      @click=${() => {
+        this.close();
+        window.showPage?.("page-account");
+      }}
     >
       ${translateText("single_modal.sign_in_for_achievements")}
-    </div>`;
+    </button>`;
   }
 
   private applyAchievements(userMe: UserMeResponse | false) {
@@ -217,13 +227,11 @@ export class SinglePlayerModal extends BaseModal {
     ];
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("main.solo") || "Solo",
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
           rightContent: hasLinkedAccount(this.userMeResponse)
             ? html`<button
@@ -263,7 +271,7 @@ export class SinglePlayerModal extends BaseModal {
               },
               difficulty: {
                 selected: this.selectedDifficulty,
-                disabled: this.disableNations,
+                disabled: this.nations === 0,
               },
               gameMode: {
                 selected: this.gameMode,
@@ -278,14 +286,13 @@ export class SinglePlayerModal extends BaseModal {
                   labelKey: "single_modal.bots",
                   disabledKey: "single_modal.bots_disabled",
                 },
+                nations: {
+                  value: this.nations,
+                  defaultValue: this.defaultNationCount,
+                  labelKey: "single_modal.nations",
+                  disabledKey: "single_modal.nations_disabled",
+                },
                 toggles: [
-                  {
-                    labelKey: "single_modal.disable_nations",
-                    checked: this.disableNations,
-                    hidden:
-                      this.gameMode === GameMode.Team &&
-                      this.teamCount === HumansVsNations,
-                  },
                   {
                     labelKey: "single_modal.instant_build",
                     checked: this.instantBuild,
@@ -320,6 +327,7 @@ export class SinglePlayerModal extends BaseModal {
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
+            @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
@@ -364,7 +372,7 @@ export class SinglePlayerModal extends BaseModal {
   // Check if any options other than map and difficulty have been changed from defaults
   private hasOptionsChanged(): boolean {
     return (
-      this.disableNations !== DEFAULT_OPTIONS.disableNations ||
+      this.nations !== this.defaultNationCount ||
       this.bots !== DEFAULT_OPTIONS.bots ||
       this.infiniteGold !== DEFAULT_OPTIONS.infiniteGold ||
       this.infiniteTroops !== DEFAULT_OPTIONS.infiniteTroops ||
@@ -385,8 +393,9 @@ export class SinglePlayerModal extends BaseModal {
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
     this.useRandomMap = DEFAULT_OPTIONS.useRandomMap;
-    this.disableNations = DEFAULT_OPTIONS.disableNations;
     this.bots = DEFAULT_OPTIONS.bots;
+    this.nations = 0;
+    this.defaultNationCount = 0;
     this.infiniteGold = DEFAULT_OPTIONS.infiniteGold;
     this.infiniteTroops = DEFAULT_OPTIONS.infiniteTroops;
     this.compactMap = DEFAULT_OPTIONS.compactMap;
@@ -402,8 +411,14 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
   }
 
+  protected onOpen(): void {
+    void this.loadNationCount();
+  }
+
   private handleSelectRandomMap() {
     this.useRandomMap = true;
+    this.selectedMap = getRandomMapType();
+    void this.loadNationCount();
   }
 
   private handleConfigRandomMapSelected = () => {
@@ -413,6 +428,7 @@ export class SinglePlayerModal extends BaseModal {
   private handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
     this.useRandomMap = false;
+    void this.loadNationCount();
   }
 
   private handleConfigMapSelected = (e: Event) => {
@@ -442,6 +458,11 @@ export class SinglePlayerModal extends BaseModal {
   private handleCompactMapChange(val: boolean) {
     this.compactMap = val;
     this.bots = getBotsForCompactMap(this.bots, val);
+    this.nations = getNationsForCompactMap(
+      this.nations,
+      this.defaultNationCount,
+      val,
+    );
   }
 
   private handleConfigOptionToggleChanged = (e: Event) => {
@@ -452,9 +473,6 @@ export class SinglePlayerModal extends BaseModal {
     const { labelKey, checked } = customEvent.detail;
 
     switch (labelKey) {
-      case "single_modal.disable_nations":
-        this.disableNations = checked;
-        break;
       case "single_modal.instant_build":
         this.instantBuild = checked;
         break;
@@ -492,6 +510,15 @@ export class SinglePlayerModal extends BaseModal {
       return;
     }
     this.bots = value;
+  };
+
+  private handleNationsChange = (e: Event) => {
+    const customEvent = e as CustomEvent<{ value: number }>;
+    const value = customEvent.detail.value;
+    if (isNaN(value) || value < 0 || value > 400) {
+      return;
+    }
+    this.nations = value;
   };
 
   private handleMaxTimerToggle = (
@@ -602,11 +629,6 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
-    // If random map is selected, choose a random map now
-    if (this.useRandomMap) {
-      this.selectedMap = getRandomMapType();
-    }
-
     console.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
@@ -655,14 +677,10 @@ export class SinglePlayerModal extends BaseModal {
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
-              ...(this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
-                ? {
-                    disableNations: false,
-                  }
-                : {
-                    disableNations: this.disableNations,
-                  }),
+              nations: sliderToNationsConfig(
+                this.nations,
+                this.defaultNationCount,
+              ),
               ...(this.goldMultiplier && this.goldMultiplierValue
                 ? { goldMultiplier: this.goldMultiplierValue }
                 : {}),
@@ -679,5 +697,23 @@ export class SinglePlayerModal extends BaseModal {
       }),
     );
     this.close();
+  }
+
+  private async loadNationCount() {
+    const currentMap = this.selectedMap;
+    try {
+      const mapData = this.mapLoader.getMapData(currentMap);
+      const manifest = await mapData.manifest();
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.defaultNationCount = manifest.nations.length;
+        this.nations = this.compactMap
+          ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
+          : manifest.nations.length;
+      }
+    } catch (error) {
+      console.warn("Failed to load nation count", error);
+      // Leave existing values unchanged so the UI stays consistent
+    }
   }
 }

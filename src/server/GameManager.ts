@@ -46,10 +46,11 @@ export class GameManager {
     persistentID: string,
     gameID: GameID,
     lastTurn: number = 0,
+    newUsername?: string,
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn);
+    return game.rejoinClient(ws, persistentID, lastTurn, newUsername);
   }
 
   createGame(
@@ -71,7 +72,7 @@ export class GameManager {
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
         difficulty: Difficulty.Medium,
-        disableNations: false,
+        nations: "default",
         infiniteGold: false,
         infiniteTroops: false,
         maxTimerValue: undefined,

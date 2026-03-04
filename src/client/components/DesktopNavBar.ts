@@ -1,15 +1,10 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { getCosmeticsHash } from "../Cosmetics";
-import { getGamesPlayed } from "../Utils";
-
-const HELP_SEEN_KEY = "helpSeen";
-const STORE_SEEN_HASH_KEY = "storeSeenHash";
+import { customElement } from "lit/decorators.js";
+import { NavNotificationsController } from "./NavNotificationsController";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
-  @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
-  @state() private _hasNewCosmetics = false;
+  private _notifications = new NavNotificationsController(this);
 
   createRenderRoot() {
     return this;
@@ -19,19 +14,13 @@ export class DesktopNavBar extends LitElement {
     super.connectedCallback();
     window.addEventListener("showPage", this._onShowPage);
 
-    const current = (window as any).currentPageId;
+    const current = window.currentPageId;
     if (current) {
       // Wait for render
       this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
     }
-
-    // Check if cosmetics have changed
-    getCosmeticsHash().then((hash: string | null) => {
-      const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
-      this._hasNewCosmetics = hash !== null && hash !== seenHash;
-    });
   }
 
   disconnectedCallback() {
@@ -54,34 +43,13 @@ export class DesktopNavBar extends LitElement {
     });
   }
 
-  private showHelpDot(): boolean {
-    // Only show one dot at a time to prevent
-    // overwhelming users.
-    return getGamesPlayed() < 10 && !this._helpSeen;
-  }
-
-  private showStoreDot(): boolean {
-    return this._hasNewCosmetics && !this.showHelpDot();
-  }
-
-  private onHelpClick = () => {
-    localStorage.setItem(HELP_SEEN_KEY, "true");
-    this._helpSeen = true;
-  };
-
-  private onStoreClick = () => {
-    this._hasNewCosmetics = false;
-    getCosmeticsHash().then((hash: string | null) => {
-      if (hash !== null) {
-        localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
-      }
-    });
-  };
-
   render() {
+    window.currentPageId ??= "page-play";
+    const currentPage = window.currentPageId;
+
     return html`
       <nav
-        class="hidden lg:flex w-full bg-slate-950/70 backdrop-blur-md border-b border-white/10 items-center justify-center gap-8 py-4 shrink-0 transition-opacity z-50 relative"
+        class="hidden lg:flex w-full bg-slate-900 items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8 text-[#2563eb]">
@@ -89,7 +57,7 @@ export class DesktopNavBar extends LitElement {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 1364 259"
               fill="currentColor"
-              class="h-full w-auto drop-shadow-[0_0_10px_rgba(37,99,235,0.4)]"
+              class="h-full w-auto"
             >
               <path
                 d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
@@ -131,25 +99,44 @@ export class DesktopNavBar extends LitElement {
             class="l-header__highlightText text-center"
           ></div>
         </div>
-        <!-- Desktop Navigation Menu Items -->
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="nav-menu-item ${currentPage === "page-play"
+            ? "active"
+            : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-play"
           data-i18n="main.play"
         ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-news"
-          data-i18n="main.news"
-        ></button>
+        <!-- Desktop Navigation Menu Items -->
+        <div class="relative">
+          <button
+            class="nav-menu-item ${currentPage === "page-news"
+              ? "active"
+              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-news"
+            data-i18n="main.news"
+            @click=${this._notifications.onNewsClick}
+          ></button>
+          ${this._notifications.showNewsDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <div class="relative no-crazygames">
           <button
-            class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            class="nav-menu-item ${currentPage === "page-item-store"
+              ? "active"
+              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-item-store"
             data-i18n="main.store"
-            @click=${this.onStoreClick}
+            @click=${this._notifications.onStoreClick}
           ></button>
-          ${this.showStoreDot()
+          ${this._notifications.showStoreDot()
             ? html`
                 <span
                   class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
@@ -175,9 +162,9 @@ export class DesktopNavBar extends LitElement {
             class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-help"
             data-i18n="main.help"
-            @click=${this.onHelpClick}
+            @click=${this._notifications.onHelpClick}
           ></button>
-          ${this.showHelpDot()
+          ${this._notifications.showHelpDot()
             ? html`
                 <span
                   class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"

@@ -19,6 +19,7 @@ import {
   patternRelationship,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { Platform } from "../../Platform";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -61,7 +62,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175 animate-fadeIn"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175"
           : "hidden"}"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
@@ -99,23 +100,6 @@ export class WinModal extends LitElement implements Layer {
           </button>
         </div>
       </div>
-
-      <style>
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -48%);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      </style>
     `;
   }
 
@@ -203,8 +187,7 @@ export class WinModal extends LitElement implements Layer {
 
     // Shuffle the array and take patterns based on screen size
     const shuffled = [...purchasablePatterns].sort(() => Math.random() - 0.5);
-    const isMobile = window.innerWidth < 768; // md breakpoint
-    const maxPatterns = isMobile ? 1 : 3;
+    const maxPatterns = Platform.isMobileWidth ? 1 : 3;
     const selectedPatterns = shuffled.slice(
       0,
       Math.min(maxPatterns, shuffled.length),
@@ -218,7 +201,6 @@ export class WinModal extends LitElement implements Layer {
               .pattern=${pattern}
               .colorPalette=${colorPalette}
               .requiresPurchase=${true}
-              .allowTrial=${false}
               .onSelect=${(p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
                 handlePurchase(p, colorPalette)}

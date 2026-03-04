@@ -119,18 +119,41 @@ export function listNukeBreakAlliance(
 
   // Also check if any allied structures would be destroyed
   game
-    .nearbyUnits(targetTile, magnitude.outer, [...StructureTypes])
+    .nearbyUnits(targetTile, magnitude.outer, StructureTypes)
     .forEach(({ unit }) =>
       playersToBreakAllianceWith.add(unit.owner().smallID()),
     );
 
   return playersToBreakAllianceWith;
 }
+export function getSpawnTiles(
+  gm: GameMap,
+  tile: TileRef,
+  requireAllValid: true,
+): TileRef[] | null;
+export function getSpawnTiles(
+  gm: GameMap,
+  tile: TileRef,
+  requireAllValid?: false,
+): TileRef[];
+export function getSpawnTiles(
+  gm: GameMap,
+  tile: TileRef,
+  requireAllValid = false,
+): TileRef[] | null {
+  const spawnTiles = Array.from(gm.bfs(tile, euclDistFN(tile, 4, true)));
 
-export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
-  return Array.from(gm.bfs(tile, euclDistFN(tile, 4, true))).filter(
-    (t) => !gm.hasOwner(t) && gm.isLand(t),
-  );
+  const isInvalid = (t: TileRef) => gm.hasOwner(t) || !gm.isLand(t);
+
+  if (!requireAllValid) {
+    return spawnTiles.filter((t) => !isInvalid(t));
+  }
+
+  if (spawnTiles.some(isInvalid)) {
+    return null;
+  }
+
+  return spawnTiles;
 }
 
 export function closestTile(

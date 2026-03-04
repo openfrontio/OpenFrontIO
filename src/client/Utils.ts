@@ -6,15 +6,22 @@ import {
   MessageType,
   PublicGameModifiers,
   Quads,
+  Team,
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
+import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
 export function normaliseMapKey(mapName: string): string {
   return mapName.toLowerCase().replace(/[\s.]+/g, "");
+}
+
+export function getMapName(mapName: string | undefined): string | null {
+  if (!mapName) return null;
+  return translateText(`map.${normaliseMapKey(mapName)}`);
 }
 
 /**
@@ -104,6 +111,8 @@ export interface ModifierInfo {
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
+  /** Parameters to pass to translateText for the badge key */
+  badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
 }
@@ -134,10 +143,19 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.crowded",
     });
   }
+  if (modifiers.isHardNations) {
+    result.push({
+      labelKey: "host_modal.hard_nations",
+      badgeKey: "public_game_modifier.hard_nations",
+    });
+  }
   if (modifiers.startingGold) {
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
+      badgeParams: {
+        amount: Math.round(modifiers.startingGold / 1_000_000),
+      },
       value: modifiers.startingGold,
     });
   }
@@ -150,7 +168,9 @@ export function getActiveModifiers(
 export function getModifierLabels(
   modifiers: PublicGameModifiers | undefined,
 ): string[] {
-  return getActiveModifiers(modifiers).map((m) => translateText(m.badgeKey));
+  return getActiveModifiers(modifiers).map((m) =>
+    translateText(m.badgeKey, m.badgeParams),
+  );
 }
 
 export function renderDuration(totalSeconds: number): string {
@@ -313,50 +333,65 @@ export function formatDebugTranslation(
   return `${key}::${serializedParams}`;
 }
 
+const EMPTY_TRANSLATION_PARAMS: Record<string, string | number> = {};
+
+function getCachedLangSelector(): LangSelector | null {
+  const self = translateText as any;
+  const cached = self.langSelector as LangSelector | null | undefined;
+  if (cached && cached.isConnected) return cached;
+
+  const found = document.querySelector("lang-selector") as LangSelector | null;
+  self.langSelector = found ?? null;
+  return found;
+}
+
 export const translateText = (
   key: string,
-  params: Record<string, string | number> = {},
+  params?: Record<string, string | number>,
 ): string => {
   const self = translateText as any;
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
 
-  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  const langSelector = getCachedLangSelector();
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
   }
 
+  const resolvedParams = params ?? EMPTY_TRANSLATION_PARAMS;
+
   if (langSelector.currentLang === "debug") {
-    return formatDebugTranslation(key, params);
+    return formatDebugTranslation(key, resolvedParams);
   }
 
-  if (
-    !langSelector.translations ||
-    Object.keys(langSelector.translations).length === 0
-  ) {
-    return key;
-  }
+  const translations = langSelector.translations;
+  const defaultTranslations = langSelector.defaultTranslations;
+  if (!translations && !defaultTranslations) return key;
 
   if (self.lastLang !== langSelector.currentLang) {
     self.formatterCache.clear();
     self.lastLang = langSelector.currentLang;
   }
 
-  let message = langSelector.translations[key];
+  let message = translations?.[key];
+  const hasPrimaryTranslation = message !== undefined;
 
-  if (!message && langSelector.defaultTranslations) {
-    const defaultTranslations = langSelector.defaultTranslations;
-    if (defaultTranslations && defaultTranslations[key]) {
-      message = defaultTranslations[key];
-    }
+  message ??= defaultTranslations?.[key];
+
+  if (message === undefined) return key;
+
+  // Fast path: no params and no ICU placeholders.
+  if (
+    resolvedParams === EMPTY_TRANSLATION_PARAMS &&
+    message.indexOf("{") === -1
+  ) {
+    return message;
   }
-
-  if (!message) return key;
 
   try {
     const locale =
-      !langSelector.translations[key] && langSelector.currentLang !== "en"
+      !hasPrimaryTranslation && langSelector.currentLang !== "en"
         ? "en"
         : langSelector.currentLang;
     const cacheKey = `${key}:${locale}:${message}`;
@@ -367,12 +402,19 @@ export const translateText = (
       self.formatterCache.set(cacheKey, formatter);
     }
 
-    return formatter.format(params) as string;
+    return formatter.format(resolvedParams) as string;
   } catch (e) {
     console.warn("ICU format error", e);
     return message;
   }
 };
+
+export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+  if (!team) return "";
+  const translationKey = `team_colors.${team.toLowerCase()}`;
+  const translated = translateText(translationKey);
+  return translated === translationKey ? team : translated;
+}
 
 /**
  * Severity colors mapping for message types
@@ -430,21 +472,11 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌘"; // Command key
-  } else {
-    return "Ctrl";
-  }
+  return Platform.isMac ? "⌘" : "Ctrl";
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌥"; // Option key
-  } else {
-    return "Alt";
-  }
+  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

@@ -32,7 +32,9 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
+  SpawnArea,
   Team,
+  TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
   Trios,
@@ -40,8 +42,9 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -57,9 +60,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    teamGameSpawnAreas,
+  );
 }
 
 export type CellString = string;
@@ -87,9 +99,12 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
+  private tileUpdatePairs: number[] = [];
+  private motionPlanRecords: MotionPlanRecord[] = [];
+  private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
+  private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -100,6 +115,7 @@ export class GameImpl implements Game {
   private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
+  private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -108,9 +124,11 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    teamGameSpawnAreas?: TeamGameSpawnAreas,
   ) {
     const constructorStart = performance.now();
 
+    this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -252,10 +270,7 @@ export class GameImpl implements Game {
       return;
     }
     this._map.setFallout(tile, value);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -431,6 +446,7 @@ export class GameImpl implements Game {
     this.updateSingleplayerStartTick();
 
     this.updates = createGameUpdatesMap();
+    this.tileUpdatePairs.length = 0;
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
@@ -471,6 +487,60 @@ export class GameImpl implements Game {
 
     this._ticks++;
     return this.updates;
+  }
+
+  private recordTileUpdate(tile: TileRef): void {
+    this.tileUpdatePairs.push(tile, this._map.tileState(tile));
+  }
+
+  drainPackedTileUpdates(): Uint32Array {
+    const pairs = this.tileUpdatePairs;
+    const packed = new Uint32Array(pairs.length);
+    for (let i = 0; i < pairs.length; i++) {
+      packed[i] = pairs[i];
+    }
+    pairs.length = 0;
+    return packed;
+  }
+
+  recordMotionPlan(record: MotionPlanRecord): void {
+    switch (record.kind) {
+      case "grid":
+        this.planDrivenUnitIds.add(record.unitId);
+        break;
+      case "train":
+        this.planDrivenUnitIds.add(record.engineUnitId);
+        for (const unitId of record.carUnitIds) {
+          this.planDrivenUnitIds.add(unitId);
+        }
+        break;
+    }
+    this.motionPlanRecords.push(record);
+  }
+
+  private isUnitPlanDriven(unitId: number): boolean {
+    return this.planDrivenUnitIds.has(unitId);
+  }
+
+  maybeAddUnitUpdate(unit: Unit): void {
+    if (!this.isUnitPlanDriven(unit.id())) {
+      this.addUpdate(unit.toUpdate());
+    }
+  }
+
+  onUnitMoved(unit: Unit): void {
+    this.updateUnitTile(unit);
+    this.maybeAddUnitUpdate(unit);
+  }
+
+  drainPackedMotionPlans(): Uint32Array | null {
+    const records = this.motionPlanRecords;
+    if (records.length === 0) {
+      return null;
+    }
+    const packed = packMotionPlans(records);
+    records.length = 0;
+    return packed;
   }
 
   private hash(): number {
@@ -644,10 +714,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   relinquish(tile: TileRef) {
@@ -665,10 +732,7 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   private updateBorders(tile: TileRef) {
@@ -873,6 +937,22 @@ export class GameImpl implements Game {
     return [this.botTeam, ...this.playerTeams];
   }
 
+  teamSpawnArea(team: Team): SpawnArea | undefined {
+    if (!this._teamGameSpawnAreas) {
+      return undefined;
+    }
+    const numTeams = this.playerTeams.length;
+    const areas = this._teamGameSpawnAreas[String(numTeams)];
+    if (!areas) {
+      return undefined;
+    }
+    const teamIndex = this.playerTeams.indexOf(team);
+    if (teamIndex < 0 || teamIndex >= areas.length) {
+      return undefined;
+    }
+    return areas[teamIndex];
+  }
+
   displayMessage(
     message: string,
     type: MessageType,
@@ -939,6 +1019,7 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
@@ -984,7 +1065,7 @@ export class GameImpl implements Game {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }> {
@@ -1106,11 +1187,11 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): void {
+    this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

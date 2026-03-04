@@ -180,7 +180,7 @@ export class GameInfoModal extends LitElement {
     try {
       const mapType = gameMap as GameMapType;
       const data = terrainMapFileLoader.getMapData(mapType);
-      this.mapImage = await data.webpPath();
+      this.mapImage = data.webpPath;
     } catch (error) {
       console.error("Failed to load map image:", error);
     }

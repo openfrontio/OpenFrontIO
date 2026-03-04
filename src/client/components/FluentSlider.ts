@@ -14,6 +14,8 @@ export class FluentSlider extends LitElement {
   @property({ type: Number }) step = 1;
   @property({ type: String }) labelKey = "";
   @property({ type: String }) disabledKey = "";
+  @property({ type: Number }) defaultValue: number | undefined = undefined;
+  @property({ type: String }) defaultLabelKey = "";
 
   @state() private isEditing = false;
 
@@ -131,7 +133,14 @@ export class FluentSlider extends LitElement {
               >
                 ${this.value === 0 && this.disabledKey
                   ? translateText(this.disabledKey)
-                  : this.value}
+                  : this.defaultValue !== undefined &&
+                      this.value === this.defaultValue &&
+                      this.defaultLabelKey
+                    ? html`${this.value}
+                        <span class="text-white/40 uppercase"
+                          >(${translateText(this.defaultLabelKey)})</span
+                        >`
+                    : this.value}
               </span>`}
         </div>
       </div>
