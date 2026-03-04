@@ -152,7 +152,7 @@ export class NationExecution implements Execution {
       if (this.spawnQueuedAtTick !== null) {
         return;
       }
-      
+
       // If team spawn areas are configured and the nation's spawn cell
       // is outside its team's area, spawn randomly within the area instead.
       const team = this.player.team();
