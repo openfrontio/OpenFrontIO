@@ -718,6 +718,8 @@
     "unit_voluntarily_deleted": "Unité volontairement supprimée",
     "betrayal_debuff_ends": "{time} secondes restantes jusqu'à la fin du malus de trahison",
     "attack_cancelled_retreat": "Attaque annulée, {troops} soldats ont été tués pendant la retraite",
+    "received_gold_from_conquest": "{gold} ors reçu en conquérant {name}",
+    "conquered_no_gold": "{name} a été conquis, mais il n'y avait aucun or à récupérer",
     "received_gold_from_captured_ship": "{gold} ors reçu pour la capture d'un navire de {name}",
     "received_gold_from_trade": "{gold} ors reçu pour le commerce avec {name}",
     "missile_intercepted": "Le missile a intercepté {unit}",

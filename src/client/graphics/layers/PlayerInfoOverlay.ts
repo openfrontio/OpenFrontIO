@@ -13,11 +13,7 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import {
-  ContextMenuEvent,
-  MouseMoveEvent,
-  TouchEvent,
-} from "../../InputHandler";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import {
   renderDuration,
   renderNumber,
@@ -26,10 +22,9 @@ import {
 } from "../../Utils";
 import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
-import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
-import { SpawnBarVisibleEvent } from "./SpawnTimer";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
@@ -38,7 +33,7 @@ import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
-import soldierIcon from "/images/SoldierIcon.svg?url";
+import swordIcon from "/images/SwordIcon.svg?url";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -71,6 +66,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public transform!: TransformHandler;
 
+  @property({ type: Object })
+  public uiState!: UIState;
+
   @state()
   private player: PlayerView | null = null;
 
@@ -81,20 +79,25 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
+  private isWilderness: boolean = false;
+
+  @state()
+  private isIrradiatedWilderness: boolean = false;
+
+  @state()
   private _isInfoVisible: boolean = false;
 
   @state()
-  private spawnBarVisible = false;
+  private hoverScreenX: number = 0;
+
   @state()
-  private immunityBarVisible = false;
+  private hoverScreenY: number = 0;
 
   private _isActive = false;
 
-  private get barOffset(): number {
-    return (this.spawnBarVisible ? 7 : 0) + (this.immunityBarVisible ? 7 : 0);
-  }
-
   private lastMouseUpdate = 0;
+
+  private showDetails = true;
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -103,18 +106,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
     );
-    this.eventBus.on(TouchEvent, (e: TouchEvent) => this.maybeShow(e.x, e.y));
     this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
-    this.eventBus.on(SpawnBarVisibleEvent, (e) => {
-      this.spawnBarVisible = e.visible;
-    });
-    this.eventBus.on(ImmunityBarVisibleEvent, (e) => {
-      this.immunityBarVisible = e.visible;
-    });
     this._isActive = true;
   }
 
   private onMouseEvent(event: MouseMoveEvent) {
+    this.hoverScreenX = event.x;
+    this.hoverScreenY = event.y;
+
     const now = Date.now();
     if (now - this.lastMouseUpdate < 100) {
       return;
@@ -127,9 +126,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.setVisible(false);
     this.unit = null;
     this.player = null;
+    this.isWilderness = false;
+    this.isIrradiatedWilderness = false;
   }
 
   public maybeShow(x: number, y: number) {
+    this.hoverScreenX = x;
+    this.hoverScreenY = y;
     this.hide();
     const worldCoord = this.transform.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
@@ -146,6 +149,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
+      this.setVisible(true);
+    } else if (owner && !owner.isPlayer() && this.game.isLand(tile)) {
+      if (this.game.hasFallout(tile)) {
+        this.isIrradiatedWilderness = true;
+      } else {
+        this.isWilderness = true;
+      }
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
@@ -175,24 +185,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   setVisible(visible: boolean) {
     this._isInfoVisible = visible;
     this.requestUpdate();
-  }
-
-  private getPlayerNameColor(
-    player: PlayerView,
-    myPlayer: PlayerView | null | undefined,
-    isFriendly: boolean,
-  ): string {
-    if (isFriendly) return "text-green-500";
-    if (
-      myPlayer &&
-      myPlayer !== player &&
-      player.type() === PlayerType.Nation
-    ) {
-      const relation =
-        this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
-      return this.getRelationClass(relation);
-    }
-    return "text-white";
   }
 
   private getRelationClass(relation: Relation): string {
@@ -225,17 +217,28 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
-  private displayUnitCount(player: PlayerView, type: UnitType, icon: string) {
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    icon: string,
+    description: string,
+  ) {
     return !this.game.config().isUnitDisabled(type)
       ? html`<div
-          class="flex items-center justify-center gap-0.5 lg:gap-1 p-0.5 lg:p-1 border rounded-md border-gray-500 text-[10px] lg:text-xs w-9 lg:w-12 h-6 lg:h-7"
+          class="flex p-1 w-[calc(50%-0.13rem)] border rounded-md border-gray-500
+                         items-center gap-2 text-sm"
           translate="no"
         >
           <img
             src=${icon}
-            class="w-3 h-3 lg:w-4 lg:h-4 object-contain shrink-0"
+            width="20"
+            height="20"
+            alt="${translateText(description)}"
+            class="align-middle"
           />
-          <span>${player.totalUnitLevels(type)}</span>
+          <span class="w-full text-right p-1"
+            >${player.totalUnitLevels(type)}</span
+          >
         </div>`
       : "";
   }
@@ -281,7 +284,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
     const isAllied = myPlayer?.isAlliedWith(player);
-    let allianceHtml: TemplateResult | null = null;
+    let relationHtml: TemplateResult | null = null;
     const maxTroops = this.game.config().maxTroops(player);
     const attackingTroops = player
       .outgoingAttacks()
@@ -289,17 +292,34 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       .reduce((a, b) => a + b, 0);
     const totalTroops = player.troops();
 
+    if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
+      const relation =
+        this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
+      const relationClass = this.getRelationClass(relation);
+      const relationName = this.getRelationName(relation);
+
+      relationHtml = html`
+        <span class="ml-auto mr-0 ${relationClass}">${relationName}</span>
+      `;
+    }
+
     if (isAllied) {
       const alliance = myPlayer
         ?.alliances()
         .find((alliance) => alliance.other === player.id());
       if (alliance !== undefined) {
-        allianceHtml = html` <div
-          class="flex items-center ml-auto mr-0 gap-1 text-sm font-bold leading-tight"
+        relationHtml = html` <span
+          class="flex gap-2 ml-auto mr-0 text-sm font-bold"
         >
-          <img src=${allianceIcon} width="20" height="20" />
+          <img
+            src=${allianceIcon}
+            alt=${translateText("player_info_overlay.alliance_timeout")}
+            width="20"
+            height="20"
+            class="align-middle"
+          />
           ${this.allianceExpirationText(alliance)}
-        </div>`;
+        </span>`;
       }
     }
     let playerType = "";
@@ -316,85 +336,128 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
 
     return html`
-      <div class="flex items-start gap-2 lg:gap-3 p-1.5 lg:p-2">
-        <!-- Left: Gold & Troop bar -->
-        <div class="flex flex-col gap-1 shrink-0 w-28">
-          <div
-            class="flex items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-28 lg:gap-1"
-            translate="no"
-          >
-            <img src=${goldCoinIcon} width="13" height="13" />
-            <span class="px-0.5">${renderNumber(player.gold())}</span>
-          </div>
-          <div class="w-28" translate="no">
-            ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
-          </div>
-        </div>
-        <!-- Right: Player identity + Units below -->
-        <div class="flex flex-col justify-between self-stretch">
-          <div
-            class="flex items-center gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
-              player,
-              myPlayer,
-              isFriendly ?? false,
-            )}"
-          >
-            ${player.cosmetics.flag
-              ? player.cosmetics.flag!.startsWith("!")
-                ? html`<div
-                    class="h-6 aspect-3/4 player-flag"
-                    ${ref((el) => {
-                      if (el instanceof HTMLElement) {
-                        requestAnimationFrame(() => {
-                          renderPlayerFlag(player.cosmetics.flag!, el);
-                        });
-                      }
-                    })}
-                  ></div>`
-                : html`<img
-                    class="h-6 aspect-3/4"
-                    src=${"/flags/" + player.cosmetics.flag! + ".svg"}
-                  />`
-              : html``}
-            <span>${player.name()}</span>
-            ${player.team() !== null && player.type() !== PlayerType.Bot
-              ? html`<div class="flex flex-col leading-tight">
-                  <span class="text-gray-400 text-xs font-normal"
-                    >${playerType}</span
-                  >
-                  <span class="text-xs font-normal text-gray-400"
-                    >[<span
-                      style="color: ${this.game
-                        .config()
-                        .theme()
-                        .teamColor(player.team()!)
-                        .toHex()}"
-                      >${player.team()}</span
-                    >]</span
-                  >
-                </div>`
-              : html`<span class="text-gray-400 text-xs font-normal"
-                  >${playerType}</span
-                >`}
-            ${this.renderPlayerNameIcons(player)} ${allianceHtml ?? ""}
-          </div>
-          <div class="flex gap-0.5 lg:gap-1 items-center mt-1">
-            ${this.displayUnitCount(player, UnitType.City, cityIcon)}
-            ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
-            ${this.displayUnitCount(player, UnitType.Port, portIcon)}
-            ${this.displayUnitCount(
-              player,
-              UnitType.MissileSilo,
-              missileSiloIcon,
-            )}
-            ${this.displayUnitCount(
-              player,
-              UnitType.SAMLauncher,
-              samLauncherIcon,
-            )}
-            ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
-          </div>
-        </div>
+      <div class="p-2">
+        <button
+          class="items-center text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
+            ? "text-green-500"
+            : "text-white"}"
+          @click=${() => {
+            this.showDetails = !this.showDetails;
+            this.requestUpdate?.();
+          }}
+        >
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
+              ? html`<div
+                  class="h-8 mr-1 aspect-3/4 player-flag"
+                  ${ref((el) => {
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.cosmetics.flag!, el);
+                      });
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-3/4"
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                />`
+            : html``}
+          <span>${player.name()}</span>
+          ${this.renderPlayerNameIcons(player)}
+        </button>
+
+        <!-- Collapsible section -->
+        ${this.showDetails
+          ? html`
+              ${player.team() !== null
+                ? html`<div class="text-sm">
+                    ${translateText("player_info_overlay.team")}:
+                    ${player.team()}
+                  </div>`
+                : ""}
+              <div class="flex text-sm">${playerType} ${relationHtml}</div>
+              ${player.troops() >= 1
+                ? html`<div class="flex gap-2 text-sm" translate="no">
+                    ${translateText("player_info_overlay.troops")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(player.troops())}
+                    </span>
+                  </div>`
+                : ""}
+              ${maxTroops >= 1
+                ? html`<div class="flex gap-2 text-sm" translate="no">
+                    ${translateText("player_info_overlay.maxtroops")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(maxTroops)}
+                    </span>
+                  </div>`
+                : ""}
+              ${attackingTroops >= 1
+                ? html`<div class="flex gap-2 text-sm" translate="no">
+                    ${translateText("player_info_overlay.a_troops")}
+                    <span class="ml-auto mr-0 text-red-400 font-bold">
+                      ${renderTroops(attackingTroops)}
+                    </span>
+                  </div>`
+                : ""}
+              ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
+              <div
+                class="flex p-1 mb-1 mt-1 w-full border rounded-md border-yellow-400
+                          font-bold text-yellow-400 text-sm"
+                translate="no"
+              >
+                <img
+                  src=${goldCoinIcon}
+                  alt=${translateText("player_info_overlay.gold")}
+                  width="15"
+                  height="15"
+                  class="align-middle"
+                />
+                <span class="w-full text-center"
+                  >${renderNumber(player.gold())}</span
+                >
+              </div>
+              <div class="flex flex-wrap max-w-3xl gap-1">
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.City,
+                  cityIcon,
+                  "player_info_overlay.cities",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Factory,
+                  factoryIcon,
+                  "player_info_overlay.factories",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Port,
+                  portIcon,
+                  "player_info_overlay.ports",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.MissileSilo,
+                  missileSiloIcon,
+                  "player_info_overlay.missile_launchers",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.SAMLauncher,
+                  samLauncherIcon,
+                  "player_info_overlay.sams",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Warship,
+                  warshipIcon,
+                  "player_info_overlay.warships",
+                )}
+              </div>
+            `
+          : ""}
       </div>
     `;
   }
@@ -413,44 +476,195 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       0,
       Math.min(100 - greenPercent, orangePercentRaw),
     );
+    const primaryFillColor = this.troopFillColor(totalTroops, base);
 
     return html`
       <div
-        class="w-full mt-1 lg:mt-2 h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full mt-2 mb-2 h-5 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden"
       >
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-green-500 transition-[width] duration-200"
-                style="width: ${greenPercent}%;"
+                class="h-full transition-[width] duration-200"
+                style="width: ${greenPercent}%; background-color: ${primaryFillColor};"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-orange-400 transition-[width] duration-200"
+                class="h-full bg-[#7d807b] transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
         </div>
+      </div>
+    `;
+  }
+
+  private predictedTroopIncreaseRate(troops: number, maxTroops: number): number {
+    if (maxTroops <= 0) return 0;
+    const t = Math.max(0, Math.min(maxTroops, troops));
+    let toAdd = 10 + Math.pow(t, 0.73) / 4;
+    toAdd *= 1 - t / maxTroops;
+    return Math.max(0, Math.min(toAdd, maxTroops - t));
+  }
+
+  private getOptimalRegenPoint(maxTroops: number): number {
+    if (maxTroops <= 1) {
+      return 0;
+    }
+
+    let lo = 0;
+    let hi = maxTroops;
+    for (let i = 0; i < 45; i++) {
+      const m1 = lo + (hi - lo) / 3;
+      const m2 = hi - (hi - lo) / 3;
+      const f1 = this.predictedTroopIncreaseRate(m1, maxTroops);
+      const f2 = this.predictedTroopIncreaseRate(m2, maxTroops);
+      if (f1 < f2) {
+        lo = m1;
+      } else {
+        hi = m2;
+      }
+    }
+
+    return (lo + hi) / 2;
+  }
+
+  private lerpColor(
+    from: [number, number, number],
+    to: [number, number, number],
+    t: number,
+  ): string {
+    const p = Math.max(0, Math.min(1, t));
+    const r = Math.round(from[0] + (to[0] - from[0]) * p);
+    const g = Math.round(from[1] + (to[1] - from[1]) * p);
+    const b = Math.round(from[2] + (to[2] - from[2]) * p);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  private troopFillColor(troops: number, maxTroops: number): string {
+    const optimalTroops = this.getOptimalRegenPoint(maxTroops);
+    const t = Math.max(0, Math.min(maxTroops, troops));
+
+    if (t <= optimalTroops) {
+      const ratio = optimalTroops <= 0 ? 0 : t / optimalTroops;
+      return this.lerpColor([185, 28, 28], [34, 197, 94], ratio);
+    }
+
+    const tail = Math.max(1, maxTroops - optimalTroops);
+    const ratio = (t - optimalTroops) / tail;
+    return this.lerpColor([34, 197, 94], [37, 99, 235], ratio);
+  }
+
+  private isDesktopViewport(): boolean {
+    return typeof window !== "undefined" && window.innerWidth >= 1024;
+  }
+
+  private canShowAttackPreview(player: PlayerView): boolean {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || !myPlayer.isAlive()) return false;
+    if (myPlayer.id() === player.id()) return false;
+    if (myPlayer.isFriendly(player)) return false;
+    return true;
+  }
+
+  private predictedOutgoingAttackTroops(): number {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return 0;
+    const ratio = this.uiState?.attackRatio ?? 0;
+    return Math.max(0, Math.floor(myPlayer.troops() * ratio));
+  }
+
+  private myCurrentTroopPercent(): number {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return 0;
+
+    const myMaxTroops = this.game.config().maxTroops(myPlayer);
+    if (myMaxTroops <= 0) return 0;
+
+    const ratio = (myPlayer.troops() / myMaxTroops) * 100;
+    return Math.max(0, Math.min(100, ratio));
+  }
+
+  private isMiniHoverOverlayEnabled(): boolean {
+    if (typeof document === "undefined") return true;
+    return !document.body.classList.contains("mini-hover-overlay-disabled");
+  }
+
+  private compactOverlayStyle(): string {
+    if (typeof window === "undefined") {
+      return `left: ${this.hoverScreenX}px; top: ${this.hoverScreenY}px;`;
+    }
+
+    const margin = 8;
+    const overlayWidth = Math.min(230, Math.max(210, window.innerWidth - 16));
+    const x = Math.min(
+      Math.max(margin, this.hoverScreenX + 16),
+      Math.max(margin, window.innerWidth - overlayWidth - margin),
+    );
+    const y = Math.min(
+      Math.max(margin, this.hoverScreenY - 102),
+      Math.max(margin, window.innerHeight - 130),
+    );
+
+    return `left: ${Math.round(x)}px; top: ${Math.round(y)}px;`;
+  }
+
+  private renderCompactHoverPlayerInfo(player: PlayerView) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer && myPlayer.id() === player.id()) {
+      return html``;
+    }
+
+    const totalTroops = player.troops();
+    const maxTroops = this.game.config().maxTroops(player);
+    const attackingTroops = player
+      .outgoingAttacks()
+      .map((a) => a.troops)
+      .reduce((a, b) => a + b, 0);
+    const attackPreviewEnabled = this.canShowAttackPreview(player);
+    const previewTroops = this.predictedOutgoingAttackTroops();
+    const myTroopPercent = this.myCurrentTroopPercent();
+
+    return html`
+      <div
+        class="fixed z-[70] pointer-events-none flex flex-col gap-1.5 w-[230px] max-w-[calc(100vw-1rem)]"
+        style="${this.compactOverlayStyle()}"
+      >
         <div
-          class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
+          class="inline-flex items-center gap-2 self-start rounded-md border border-white/20 bg-black/82 backdrop-blur-xs px-2 py-1 text-xs text-white shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
           translate="no"
         >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(totalTroops)}</span
-          >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(maxTroops)}</span
-          >
+          <span class="font-semibold">${renderTroops(totalTroops)}</span>
+          <span class="text-white/60">/ ${renderTroops(maxTroops)}</span>
+          ${attackingTroops > 0
+            ? html`<span
+                class="inline-flex items-center gap-1 rounded-sm bg-red-900/35 border border-red-500/40 px-1.5 py-0.5 text-red-400"
+              >
+                <img
+                  src=${swordIcon}
+                  class="h-3.5 w-3.5"
+                  style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
+                />
+                <span>${renderTroops(attackingTroops)}</span>
+              </span>`
+            : ""}
         </div>
-        <img
-          src=${soldierIcon}
-          alt=""
-          aria-hidden="true"
-          width="14"
-          height="14"
-          class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] pointer-events-none"
-        />
+
+        ${attackPreviewEnabled && previewTroops > 0
+          ? html`<div
+              class="self-start inline-flex items-center gap-1 rounded-md border border-blue-300/70 bg-black/88 backdrop-blur-xs px-2 py-1 text-blue-400 text-xs font-bold shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
+              translate="no"
+            >
+              <img
+                src=${swordIcon}
+                class="h-3.5 w-3.5"
+                style="filter: brightness(0) saturate(100%) invert(72%) sepia(56%) saturate(3204%) hue-rotate(176deg) brightness(99%) contrast(101%)"
+              />
+              <span>${renderTroops(previewTroops)}</span>
+              <span class="text-blue-200/90">(${myTroopPercent.toFixed(0)}%)</span>
+            </div>`
+          : ""}
       </div>
     `;
   }
@@ -469,12 +683,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
           ${unit.hasHealth()
-            ? html` <div class="text-sm">Health: ${unit.health()}</div> `
+            ? html`
+                <div class="text-sm">
+                  ${translateText("player_info_overlay.health")}:
+                  ${unit.health()}
+                </div>
+              `
             : ""}
           ${unit.type() === UnitType.TransportShip
             ? html`
                 <div class="text-sm">
-                  Troops: ${renderTroops(unit.troops())}
+                  ${translateText("player_info_overlay.troops")}:
+                  ${renderTroops(unit.troops())}
                 </div>
               `
             : ""}
@@ -488,24 +708,46 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       return html``;
     }
 
+    const myPlayer = this.game.myPlayer();
+    const showCompactHoverOverlay =
+      this._isInfoVisible &&
+      this.player !== null &&
+      this.unit === null &&
+      !this.isWilderness &&
+      !this.isIrradiatedWilderness &&
+      this.isDesktopViewport() &&
+      this.isMiniHoverOverlayEnabled() &&
+      myPlayer !== null &&
+      this.player.id() !== myPlayer.id();
+
     const containerClasses = this._isInfoVisible
       ? "opacity-100 visible"
       : "opacity-0 invisible pointer-events-none";
 
     return html`
       <div
-        class="fixed top-0 min-[1200px]:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
-        style="margin-top: ${this.barOffset}px;"
-        @click=${() => this.hide()}
+        class="block lg:flex fixed top-37.5 right-4 w-full z-50 flex-col max-w-45"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-xs shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
+          ${this.isWilderness || this.isIrradiatedWilderness
+            ? html`<div class="p-2 font-bold">
+                ${translateText(
+                  this.isIrradiatedWilderness
+                    ? "player_info_overlay.irradiated_wilderness_title"
+                    : "player_info_overlay.wilderness_title",
+                )}
+              </div>`
+            : ""}
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
+      ${showCompactHoverOverlay
+        ? this.renderCompactHoverPlayerInfo(this.player!)
+        : ""}
     `;
   }
 

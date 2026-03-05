@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, query, state, property } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
@@ -9,6 +9,7 @@ import {
   MessageCategory,
   MessageType,
   Tick,
+  UnitType,
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
@@ -63,10 +64,20 @@ interface GameEvent {
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
   allianceID?: number;
+  unitType?: string;
+  messageKey?: string;
 }
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Layer {
+  @property({ type: String })
+mode:
+  | "all"
+  | "trades"
+  | "alerts"
+  | "social"
+  | "right"
+  | "alliance_requests" = "all";
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
@@ -89,17 +100,139 @@ export class EventsDisplay extends LitElement implements Layer {
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
   ]);
+private applyModeFilters() {
+  // true = caché ; false = affiché
+  const hideAll = () => {
+    this.eventsFilters.set(MessageCategory.ATTACK, true);
+    this.eventsFilters.set(MessageCategory.NUKE, true);
+    this.eventsFilters.set(MessageCategory.TRADE, true);
+    this.eventsFilters.set(MessageCategory.ALLIANCE, true);
+    this.eventsFilters.set(MessageCategory.CHAT, true);
+  };
 
+  const show = (cat: MessageCategory) => {
+    this.eventsFilters.set(cat, false);
+  };
+
+  if (this.mode === "all") {
+    // tout afficher
+    this.eventsFilters.set(MessageCategory.ATTACK, false);
+    this.eventsFilters.set(MessageCategory.NUKE, false);
+    this.eventsFilters.set(MessageCategory.TRADE, false);
+    this.eventsFilters.set(MessageCategory.ALLIANCE, false);
+    this.eventsFilters.set(MessageCategory.CHAT, false);
+    this.requestUpdate();
+    return;
+  }
+
+  hideAll();
+
+  if (this.mode === "trades") {
+    show(MessageCategory.TRADE);
+  } else if (this.mode === "alerts") {
+    show(MessageCategory.ATTACK);
+    show(MessageCategory.NUKE);
+  } else if (this.mode === "social") {
+    show(MessageCategory.ALLIANCE);
+    show(MessageCategory.CHAT);
+  } else if (this.mode === "right") {
+    show(MessageCategory.ATTACK);
+    show(MessageCategory.NUKE);
+    show(MessageCategory.ALLIANCE);
+    show(MessageCategory.CHAT);
+  } else if (this.mode === "alliance_requests") {
+    show(MessageCategory.ALLIANCE);
+  }
+
+  this.requestUpdate();
+}
+  private isCategoryAllowedInMode(category: MessageCategory): boolean {
+    if (this.mode === "all") return true;
+    if (this.mode === "trades") return category === MessageCategory.TRADE;
+    if (this.mode === "alerts") {
+      return (
+        category === MessageCategory.ATTACK || category === MessageCategory.NUKE
+      );
+    }
+    if (this.mode === "social") {
+      return (
+        category === MessageCategory.ALLIANCE || category === MessageCategory.CHAT
+      );
+    }
+    if (this.mode === "right") {
+      return (
+        category === MessageCategory.ATTACK ||
+        category === MessageCategory.NUKE ||
+        category === MessageCategory.ALLIANCE ||
+        category === MessageCategory.CHAT
+      );
+    }
+    if (this.mode === "alliance_requests") {
+      return category === MessageCategory.ALLIANCE;
+    }
+    return false;
+  }
+
+  private getEventCategory(event: GameEvent): MessageCategory {
+    const isTradeShipCapture =
+      event.unitType === UnitType.TradeShip ||
+      event.messageKey === "events_display.received_gold_from_captured_ship";
+    if (isTradeShipCapture) {
+      return MessageCategory.TRADE;
+    }
+    return getMessageCategory(event.type);
+  }
+
+  private shouldHideEventForMode(event: GameEvent): boolean {
+    if (this.mode === "alliance_requests") {
+      return (
+        event.type !== MessageType.ALLIANCE_REQUEST &&
+        event.type !== MessageType.RENEW_ALLIANCE
+      );
+    }
+
+    if (this.mode === "right") {
+      if (
+        event.type === MessageType.ALLIANCE_REQUEST ||
+        event.type === MessageType.RENEW_ALLIANCE
+      ) {
+        return true;
+      }
+    }
+
+    if (this.mode === "trades") {
+      return event.type === MessageType.SENT_TROOPS_TO_PLAYER;
+    }
+
+    if (this.mode !== "alerts" && this.mode !== "right") return false;
+    if (
+      event.type !== MessageType.CAPTURED_ENEMY_UNIT &&
+      event.type !== MessageType.UNIT_CAPTURED_BY_ENEMY
+    ) {
+      return false;
+    }
+
+    return (
+      event.unitType === UnitType.City ||
+      event.unitType === UnitType.Factory ||
+      event.unitType === UnitType.Port
+    );
+  }
   @query(".events-container")
   private _eventsContainer?: HTMLDivElement;
   private _shouldScrollToBottom = true;
 
   updated(changed: Map<string, unknown>) {
-    super.updated(changed);
-    if (this._eventsContainer && this._shouldScrollToBottom) {
-      this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
-    }
+  super.updated(changed);
+
+  if (changed.has("mode")) {
+    this.applyModeFilters();
   }
+
+  if (this._eventsContainer && this._shouldScrollToBottom) {
+    this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
+  }
+}
 
   private renderButton(options: {
     content: any; // Can be string, TemplateResult, or other renderable content
@@ -135,6 +268,9 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private renderToggleButton(src: string, category: MessageCategory) {
+    if (!this.isCategoryAllowedInMode(category)) {
+      return html``;
+    }
     // Adding the literal for the default size ensures tailwind will generate the class
     const toggleButtonSizeMap = { default: "h-5" };
     return this.renderButton({
@@ -159,6 +295,9 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private toggleEventFilter(filterName: MessageCategory) {
+    if (!this.isCategoryAllowedInMode(filterName)) {
+      return;
+    }
     const currentState = this.eventsFilters.get(filterName) ?? false;
     this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
@@ -304,7 +443,7 @@ export class EventsDisplay extends LitElement implements Layer {
           },
           {
             text: translateText("events_display.ignore"),
-            className: "btn-info",
+            className: "btn-danger",
             action: () => {},
           },
         ],
@@ -397,6 +536,9 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+      unitType:
+        typeof event.params?.unit === "string" ? String(event.params.unit) : "",
+      messageKey: event.message,
     });
   }
 
@@ -479,7 +621,7 @@ export class EventsDisplay extends LitElement implements Layer {
         },
         {
           text: translateText("events_display.reject_alliance"),
-          className: "btn-info",
+          className: "btn-danger",
           action: () =>
             this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor)),
         },
@@ -776,8 +918,14 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
 
     const filteredEvents = this.events.filter((event) => {
-      const category = getMessageCategory(event.type);
-      return !this.eventsFilters.get(category);
+      const category = this.getEventCategory(event);
+      if (this.eventsFilters.get(category)) {
+        return false;
+      }
+      if (this.shouldHideEventForMode(event)) {
+        return false;
+      }
+      return true;
     });
 
     filteredEvents.sort((a, b) => {
@@ -789,13 +937,72 @@ export class EventsDisplay extends LitElement implements Layer {
       return bPrior - aPrior;
     });
 
+    if (this.mode === "alliance_requests") {
+      const actionableEvents = filteredEvents.filter(
+        (event) =>
+          (event.type === MessageType.ALLIANCE_REQUEST ||
+            event.type === MessageType.RENEW_ALLIANCE) &&
+          (event.buttons?.length ?? 0) > 0,
+      );
+
+      if (actionableEvents.length === 0) {
+        return html``;
+      }
+
+      return html`
+        ${styles}
+        <div class="w-full bg-gray-900/75 backdrop-blur-sm rounded-lg p-2 pointer-events-auto border border-white/10">
+          <div class="text-[11px] uppercase tracking-wide text-gray-300 mb-1">
+            Alliance Requests
+          </div>
+          <div class="flex flex-col gap-2">
+            ${actionableEvents.map(
+              (event) => html`
+                <div class="text-xs text-white">
+                  ${this.getEventDescription(event)}
+                  <div class="flex flex-wrap gap-1.5 mt-1">
+                    ${event.buttons?.map(
+                      (btn) => html`
+                        <button
+                          class="inline-block px-3 py-1 text-white rounded-sm text-xs cursor-pointer transition-colors duration-300
+                            ${btn.className.includes("btn-danger")
+                              ? "bg-red-600 hover:bg-red-700"
+                              : btn.className.includes("btn-gray")
+                                ? "bg-gray-500 hover:bg-gray-600"
+                                : "bg-green-600 hover:bg-green-700"}"
+                          @click=${() => {
+                            btn.action();
+                            if (!btn.preventClose) {
+                              const originalIndex = this.events.findIndex(
+                                (e) => e === event,
+                              );
+                              if (originalIndex !== -1) {
+                                this.removeEvent(originalIndex);
+                              }
+                            }
+                            this.requestUpdate();
+                          }}
+                        >
+                          ${btn.text}
+                        </button>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `,
+            )}
+          </div>
+        </div>
+      `;
+    }
+
     return html`
       ${styles}
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
             <div
-              class="relative w-fit min-[1200px]:bottom-4 min-[1200px]:right-4 z-50"
+              class="relative w-fit z-50"
             >
               ${this.renderButton({
                 content: html`
@@ -818,47 +1025,62 @@ export class EventsDisplay extends LitElement implements Layer {
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full min-[1200px]:bottom-4 min-[1200px]:right-4 z-50 min-[1200px]:w-96 backdrop-blur-sm"
+              class="relative w-full z-50 backdrop-blur-sm"
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg sm:rounded-tl-lg"
+                class="${this.mode === "trades"
+                  ? "w-full p-1.5 lg:p-2 bg-slate-900/45"
+                  : this.mode === "right"
+                    ? "w-full p-1.5 lg:p-2 bg-gray-800/70"
+                    : "w-full p-2 lg:p-3 bg-gray-800/70"} min-[1200px]:rounded-t-lg sm:rounded-tl-lg"
               >
                 <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
-                    ${this.renderToggleButton(
-                      swordIcon,
-                      MessageCategory.ATTACK,
-                    )}
-                    ${this.renderToggleButton(nukeIcon, MessageCategory.NUKE)}
-                    ${this.renderToggleButton(
-                      donateGoldIcon,
-                      MessageCategory.TRADE,
-                    )}
-                    ${this.renderToggleButton(
-                      allianceIcon,
-                      MessageCategory.ALLIANCE,
-                    )}
-                    ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
+                    ${this.mode === "trades"
+                      ? html`<span
+                          class="text-white text-xs lg:text-sm font-semibold tracking-wide uppercase"
+                          >Trade Information</span
+                        >`
+                      : this.mode === "alliance_requests"
+                        ? html`<span
+                            class="text-white text-xs lg:text-sm font-semibold tracking-wide uppercase"
+                            >Alliance Requests</span
+                          >`
+                      : html`
+                          ${this.renderToggleButton(
+                            swordIcon,
+                            MessageCategory.ATTACK,
+                          )}
+                          ${this.renderToggleButton(
+                            nukeIcon,
+                            MessageCategory.NUKE,
+                          )}
+                          ${this.renderToggleButton(
+                            donateGoldIcon,
+                            MessageCategory.TRADE,
+                          )}
+                          ${this.renderToggleButton(
+                            allianceIcon,
+                            MessageCategory.ALLIANCE,
+                          )}
+                          ${this.renderToggleButton(
+                            chatIcon,
+                            MessageCategory.CHAT,
+                          )}
+                        `}
                   </div>
                   <div class="flex items-center gap-3">
-                    ${this.latestGoldAmount !== null
+                    ${this.mode === "trades" && this.latestGoldAmount !== null
                       ? html`<span
-                          class="text-green-400 font-semibold transition-all duration-300 ${this
-                            .goldAmountAnimating
-                            ? "animate-pulse scale-110"
-                            : "scale-100"}"
-                          style="animation: ${this.goldAmountAnimating
-                            ? "goldBounce 0.6s ease-out"
-                            : "none"}"
+                          class="text-gray-300 text-xs lg:text-sm font-medium"
                           >+${renderNumber(this.latestGoldAmount)}</span
                         >`
                       : ""}
                     ${this.renderButton({
                       content: translateText("leaderboard.hide"),
                       onClick: this.toggleHidden,
-                      className:
-                        "text-white cursor-pointer pointer-events-auto",
+                      className: `text-white cursor-pointer pointer-events-auto ${this.mode === "right" ? "text-xs" : ""}`,
                     })}
                   </div>
                 </div>
@@ -866,7 +1088,11 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
+                class="${this.mode === "trades"
+                  ? "bg-slate-900/45 max-h-[7rem]"
+                  : this.mode === "right"
+                    ? "bg-gray-800/70 max-h-[27vh]"
+                    : "bg-gray-800/70 max-h-[30vh]"} overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
               >
                 <div>
                   <table
@@ -910,8 +1136,10 @@ export class EventsDisplay extends LitElement implements Layer {
                                         (btn) => html`
                                           <button
                                             class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
-                            ${btn.className.includes("btn-info")
-                                              ? "bg-blue-500 hover:bg-blue-600"
+                            ${btn.className.includes("btn-danger")
+                                              ? "bg-red-600 hover:bg-red-700"
+                                              : btn.className.includes("btn-info")
+                                                ? "bg-blue-500 hover:bg-blue-600"
                                               : btn.className.includes(
                                                     "btn-gray",
                                                   )
@@ -944,10 +1172,11 @@ export class EventsDisplay extends LitElement implements Layer {
                           </tr>
                         `,
                       )}
-                      <!--- Betrayal debuff timer row -->
+                      <!-- Betrayal debuff timer row (shown only in alerts panel) -->
                       ${(() => {
                         const myPlayer = this.game.myPlayer();
                         return (
+                          (this.mode === "alerts" || this.mode === "right") &&
                           myPlayer &&
                           myPlayer.isTraitor() &&
                           myPlayer.getTraitorRemainingTicks() > 0
@@ -967,6 +1196,7 @@ export class EventsDisplay extends LitElement implements Layer {
                       !(() => {
                         const myPlayer = this.game.myPlayer();
                         return (
+                          (this.mode === "alerts" || this.mode === "right") &&
                           myPlayer &&
                           myPlayer.isTraitor() &&
                           myPlayer.getTraitorRemainingTicks() > 0

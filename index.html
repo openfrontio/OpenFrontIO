@@ -34,6 +34,50 @@
         min-height: 100%;
         min-height: -webkit-fill-available;
       }
+
+      /* Alternate in-game layout: control panel on the left + single events chat on the right */
+      body.layout-classic #layout-trades-panel,
+      body.layout-classic #layout-alliance-requests-wrap {
+        display: none;
+      }
+
+      body.layout-classic #layout-control-container,
+      body.layout-classic #layout-attacks-container {
+        left: 1rem;
+        right: auto;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      body.layout-classic #layout-control-container {
+        width: min(350px, calc(100vw - 2rem));
+      }
+
+      body.layout-classic:not(.control-panel-style-classic) #layout-control-container {
+        width: min(700px, calc(100vw - 2rem));
+      }
+
+      body.layout-classic #layout-attacks-container {
+        width: min(540px, calc(100vw - 2rem));
+        bottom: 7rem;
+      }
+
+      body.layout-classic.control-panel-style-classic #layout-attacks-container {
+        bottom: 9.5rem;
+      }
+
+      body.layout-classic #layout-control-container > unit-display {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%) scale(1.15);
+        transform-origin: bottom center;
+        bottom: 0.75rem;
+        width: min(540px, calc(100vw - 2rem));
+        pointer-events: auto;
+        z-index: 50;
+      }
     </style>
 
     <!-- SEO -->
@@ -125,7 +169,7 @@
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-0 bg-cover bg-center opacity-50 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        class="absolute inset-0 bg-cover bg-center opacity-70 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
         style="
           background-image: url(&quot;/resources/images/background.webp&quot;);
         "
@@ -263,15 +307,40 @@
 
     <!-- Game components -->
     <div id="app"></div>
+    <!-- Alerts -->
+<!-- Trades (bas-gauche) -->
+<div id="layout-trades-panel" class="fixed left-4 bottom-4 z-50 w-[300px] pointer-events-none">
+  <events-display id="events-trades" mode="trades" class="w-full pointer-events-auto"></events-display>
+</div>
 
+<!-- Colonne droite: demandes d'alliance au-dessus, chat unique en dessous -->
+<div id="layout-right-column" class="fixed right-4 bottom-4 z-50 w-[340px] pointer-events-none flex flex-col gap-2.5">
+  <div id="layout-alliance-requests-wrap" class="w-full pointer-events-none">
+    <events-display id="events-alliance-requests" mode="alliance_requests" class="w-full pointer-events-auto"></events-display>
+  </div>
+  <events-display id="events-right" mode="right" class="w-full pointer-events-auto"></events-display>
+</div>
+      
     <div
       class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
     >
       <div
         class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
       >
-        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
-        <control-panel class="order-4 sm:order-none w-full"></control-panel>
+<!-- Bottom-left: attacks -->
+<div id="layout-attacks-container" class="fixed left-0 right-0 bottom-33 mx-auto z-[55] w-full max-w-[420px] lg:max-w-[540px] px-2 pointer-events-none">
+  <attacks-display class="w-full pointer-events-auto"></attacks-display>
+</div>
+
+<!-- Bottom-center: control panel -->
+<div id="layout-control-container" class="fixed left-0 right-0 bottom-4 mx-auto min-[1200px]:bottom-4 z-50 w-full max-w-[420px] lg:max-w-[540px] px-2 pointer-events-none">
+  <control-panel class="w-full pointer-events-auto"></control-panel>
+  <unit-display class="w-full pointer-events-auto"></unit-display>
+</div>
+
+<!-- Bottom-right: events / notifications -->
+<div class="fixed right-0 bottom-0 min-[1200px]:right-4 min-[1200px]:bottom-4 z-50 pointer-events-none">
+</div>
       </div>
       <div
         class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
@@ -279,9 +348,6 @@
         <chat-display
           class="order-1 sm:order-none w-full sm:w-auto"
         ></chat-display>
-        <events-display
-          class="order-3 sm:order-none w-full sm:w-auto"
-        ></events-display>
       </div>
     </div>
 
@@ -290,7 +356,6 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
-    <unit-display></unit-display>
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
     >
@@ -310,11 +375,149 @@
     <game-left-sidebar></game-left-sidebar>
     <performance-overlay></performance-overlay>
     <player-info-overlay></player-info-overlay>
-    <leader-board></leader-board>
+    <leader-board class="fixed top-4 left-4 z-50 w-[340px] pointer-events-auto"></leader-board>
     <team-stats></team-stats>
     <heads-up-message></heads-up-message>
+    <div
+      class="hidden in-[.in-game]:flex fixed top-4 right-[13.5rem] z-[1200] pointer-events-auto gap-2"
+    >
+      <button
+        id="layout-switch-button"
+        class="px-3 py-1.5 rounded-md bg-gray-900/80 border border-white/20 text-white text-xs lg:text-sm hover:bg-gray-800/90 transition-colors"
+      >
+        Layout: Split
+      </button>
+      <button
+        id="mini-hover-toggle-button"
+        class="px-3 py-1.5 rounded-md bg-gray-900/80 border border-white/20 text-white text-xs lg:text-sm hover:bg-gray-800/90 transition-colors"
+      >
+        Mini Hover: On
+      </button>
+      <button
+        id="control-panel-style-button"
+        class="px-3 py-1.5 rounded-md bg-gray-900/80 border border-white/20 text-white text-xs lg:text-sm hover:bg-gray-800/90 transition-colors"
+      >
+        Panel: Split
+      </button>
+    </div>
 
     <!-- Scripts -->
+    <script>
+      (function () {
+        const STORAGE_KEY = "settings.ingameLayout";
+        const MINI_HOVER_STORAGE_KEY = "settings.miniHoverOverlay";
+        const CONTROL_PANEL_STYLE_STORAGE_KEY = "settings.controlPanelStyle";
+        const SPLIT = "split";
+        const CLASSIC = "classic";
+        const MINI_HOVER_ENABLED = "enabled";
+        const MINI_HOVER_DISABLED = "disabled";
+        const CONTROL_PANEL_STYLE_SPLIT = "split";
+        const CONTROL_PANEL_STYLE_CLASSIC = "classic";
+
+        function applyMiniHoverOverlay(enabled) {
+          document.body.classList.toggle("mini-hover-overlay-disabled", !enabled);
+          const toggleBtn = document.getElementById("mini-hover-toggle-button");
+          if (toggleBtn) {
+            toggleBtn.textContent = enabled
+              ? "Mini Hover: On"
+              : "Mini Hover: Off";
+          }
+        }
+
+        function applyControlPanelStyle(style) {
+          const useClassic = style === CONTROL_PANEL_STYLE_CLASSIC;
+          document.body.classList.toggle(
+            "control-panel-style-classic",
+            useClassic,
+          );
+          const btn = document.getElementById("control-panel-style-button");
+          if (btn) {
+            btn.textContent = useClassic ? "Panel: Classic" : "Panel: Split";
+          }
+        }
+
+        function applyLayout(layout) {
+          const isClassic = layout === CLASSIC;
+          document.body.classList.toggle("layout-classic", isClassic);
+
+          const rightEvents = document.getElementById("events-right");
+          if (rightEvents) {
+            rightEvents.setAttribute("mode", isClassic ? "all" : "right");
+          }
+
+          const btn = document.getElementById("layout-switch-button");
+          if (btn) {
+            btn.textContent = isClassic
+              ? "Layout: Classic"
+              : "Layout: Split";
+          }
+        }
+
+        const savedLayout = localStorage.getItem(STORAGE_KEY);
+        const initialLayout = savedLayout === CLASSIC ? CLASSIC : SPLIT;
+        applyLayout(initialLayout);
+
+        const savedControlPanelStyle = localStorage.getItem(
+          CONTROL_PANEL_STYLE_STORAGE_KEY,
+        );
+        const initialControlPanelStyle =
+          savedControlPanelStyle === CONTROL_PANEL_STYLE_CLASSIC ||
+          savedControlPanelStyle === CONTROL_PANEL_STYLE_SPLIT
+            ? savedControlPanelStyle
+            : initialLayout === CLASSIC
+              ? CONTROL_PANEL_STYLE_CLASSIC
+              : CONTROL_PANEL_STYLE_SPLIT;
+        applyControlPanelStyle(initialControlPanelStyle);
+
+        const savedMiniHover = localStorage.getItem(MINI_HOVER_STORAGE_KEY);
+        const initialMiniHoverEnabled = savedMiniHover !== MINI_HOVER_DISABLED;
+        applyMiniHoverOverlay(initialMiniHoverEnabled);
+
+        const switchButton = document.getElementById("layout-switch-button");
+        if (switchButton) {
+          switchButton.addEventListener("click", function () {
+            const nowClassic = document.body.classList.contains("layout-classic");
+            const nextLayout = nowClassic ? SPLIT : CLASSIC;
+            localStorage.setItem(STORAGE_KEY, nextLayout);
+            applyLayout(nextLayout);
+          });
+        }
+
+        const miniHoverButton = document.getElementById(
+          "mini-hover-toggle-button",
+        );
+        if (miniHoverButton) {
+          miniHoverButton.addEventListener("click", function () {
+            const enabled = !document.body.classList.contains(
+              "mini-hover-overlay-disabled",
+            );
+            const nextEnabled = !enabled;
+            localStorage.setItem(
+              MINI_HOVER_STORAGE_KEY,
+              nextEnabled ? MINI_HOVER_ENABLED : MINI_HOVER_DISABLED,
+            );
+            applyMiniHoverOverlay(nextEnabled);
+          });
+        }
+
+        const controlPanelStyleButton = document.getElementById(
+          "control-panel-style-button",
+        );
+        if (controlPanelStyleButton) {
+          controlPanelStyleButton.addEventListener("click", function () {
+            const isClassic = document.body.classList.contains(
+              "control-panel-style-classic",
+            );
+            const nextStyle = isClassic
+              ? CONTROL_PANEL_STYLE_SPLIT
+              : CONTROL_PANEL_STYLE_CLASSIC;
+            localStorage.setItem(CONTROL_PANEL_STYLE_STORAGE_KEY, nextStyle);
+            applyControlPanelStyle(nextStyle);
+          });
+        }
+      })();
+    </script>
+
     <script>
       // Remove preload class after everything is loaded
       window.addEventListener("load", function () {

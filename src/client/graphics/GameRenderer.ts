@@ -117,15 +117,20 @@ export function createRenderer(
   controlPanel.uiState = uiState;
   controlPanel.game = game;
 
-  const eventsDisplay = document.querySelector(
-    "events-display",
-  ) as EventsDisplay;
-  if (!(eventsDisplay instanceof EventsDisplay)) {
-    console.error("events display not found");
-  }
-  eventsDisplay.eventBus = eventBus;
-  eventsDisplay.game = game;
-  eventsDisplay.uiState = uiState;
+  const eventsDisplays = Array.from(
+  document.querySelectorAll("events-display"),
+) as EventsDisplay[];
+
+if (eventsDisplays.length === 0) {
+  console.error("No events-display elements found");
+}
+
+for (const ed of eventsDisplays) {
+  if (!(ed instanceof EventsDisplay)) continue;
+  ed.eventBus = eventBus;
+  ed.game = game;
+  ed.uiState = uiState;
+}
 
   const attacksDisplay = document.querySelector(
     "attacks-display",
@@ -153,6 +158,7 @@ export function createRenderer(
   playerInfo.eventBus = eventBus;
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
+  playerInfo.uiState = uiState;
 
   const winModal = document.querySelector("win-modal") as WinModal;
   if (!(winModal instanceof WinModal)) {
@@ -291,7 +297,7 @@ export function createRenderer(
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
-    eventsDisplay,
+    ...eventsDisplays,
     attacksDisplay,
     chatDisplay,
     buildMenu,
