@@ -1,0 +1,37 @@
+syntax = "proto3";
+package openfront.events;
+
+enum HazardCategory {
+  HAZARD_UNKNOWN = 0;
+  HAZARD_EARTHQUAKE = 1;
+  HAZARD_SEVERE_STORM = 2;
+  HAZARD_WILDFIRE = 3;
+  HAZARD_GEOPOLITICAL_CONFLICT = 4;
+  HAZARD_CYBER_ATTACK = 5;
+  HAZARD_ECONOMIC_SANCTION = 6;
+  HAZARD_CIVIL_UNREST = 7;
+}
+
+message WorldHazardEvent {
+  string event_hash = 1;
+  uint32 center_x = 2;
+  uint32 center_y = 3;
+  float severity = 4;
+  float radius = 5;
+  uint64 tick_applied = 6;
+  HazardCategory category = 7;
+}
+
+message TickEventBatch {
+  uint64 game_tick = 1;
+  repeated WorldHazardEvent events = 2;
+}
+
+message SubscribeRequest {
+  string server_id = 1;
+  uint64 current_tick = 2;
+}
+
+service WorldMonitorStreamer {
+  rpc SubscribeToWorldEvents (SubscribeRequest) returns (stream TickEventBatch);
+}
