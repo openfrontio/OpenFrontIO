@@ -85,9 +85,9 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 5, weight: 10 },
   { config: 6, weight: 10 },
   { config: 7, weight: 10 },
-  { config: -2, weight: 1000 }, // 2 players per team
-  { config: -3, weight: 1000 }, // 3 players per team
-  { config: -4, weight: 1000 }, // 4 players per team
+  { config: -2, weight: 5 }, // 2 players per team
+  { config: -3, weight: 7.5 }, // 3 players per team
+  { config: -4, weight: 7.5 }, // 4 players per team
   { config: HumansVsNations, weight: 20 },
 ];
 
