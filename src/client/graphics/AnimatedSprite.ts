@@ -1,22 +1,27 @@
 export class AnimatedSprite {
   private frameHeight: number;
+  private frameWidth: number;
   private currentFrame: number = 0;
   private elapsedTime: number = 0;
   private active: boolean = true;
 
   constructor(
     private image: CanvasImageSource,
-    private frameWidth: number,
     private frameCount: number,
     private frameDuration: number, // in milliseconds
     private looping: boolean = false,
     private originX: number,
     private originY: number,
   ) {
-    if ("height" in image) {
+    if ("height" in image && "width" in image) {
       this.frameHeight = (image as HTMLImageElement | HTMLCanvasElement).height;
+      this.frameWidth = Math.floor(
+        (image as HTMLImageElement | HTMLCanvasElement).width / frameCount,
+      );
     } else {
-      throw new Error("Image source must have a 'height' property.");
+      throw new Error(
+        "Image source must have 'width' and 'height' properties.",
+      );
     }
   }
 
