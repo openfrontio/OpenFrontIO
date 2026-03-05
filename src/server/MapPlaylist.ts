@@ -136,6 +136,7 @@ export class MapPlaylist {
     team: [],
   };
 
+  // Create the default public game config (from your GameManager)
   public async gameConfig(type: PublicGameType): Promise<GameConfig> {
     if (type === "special") {
       return this.getSpecialConfig();
@@ -591,6 +592,9 @@ export class MapPlaylist {
     return 5 * 10;
   }
 
+  // Crowded modifier: if the map's biggest player count (first number of
+  // calculateMapPlayerCounts) is 60 or lower (small maps), set player count
+  // to 125 (or 60 if compact map is also enabled)
   private async getCrowdedMaxPlayers(
     map: GameMapType,
     isCompact: boolean,
