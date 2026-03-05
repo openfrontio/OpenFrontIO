@@ -464,7 +464,6 @@
     "teams": "Teams"
   },
   "mode_selector": {
-    "special_title": "Special Mix",
     "teams_title": "Teams",
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",

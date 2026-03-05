@@ -94,17 +94,17 @@ export class GameModeSelector extends LitElement {
           ${this.renderSoloButton()}
         </div>
         <div
-          class="grid grid-cols-1 lg:grid-cols-[3fr_2fr] lg:grid-rows-2 gap-4 lg:h-[28rem]"
+          class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] lg:grid-rows-2 gap-4 lg:h-[22rem]"
         >
-          ${ffa
+          ${special
             ? html`<div class="lg:row-span-2">
-                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                ${this.renderSpecialLobbyCard(special)}
               </div>`
             : nothing}
+          ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
           ${teams
             ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
             : nothing}
-          ${special ? this.renderSpecialLobbyCard(special) : nothing}
         </div>
         ${this.renderQuickActionsSection()}
       </div>
@@ -112,17 +112,8 @@ export class GameModeSelector extends LitElement {
   }
 
   private renderSpecialLobbyCard(lobby: PublicGameInfo) {
-    const subtitle = this.getLobbyTitle(lobby);
-    const mainTitle = translateText("mode_selector.special_title");
-    const titleContent = subtitle
-      ? html`
-          <span class="block">${mainTitle}</span>
-          <span class="block text-[10px] leading-tight text-white/70">
-            ${subtitle}
-          </span>
-        `
-      : mainTitle;
-    return this.renderLobbyCard(lobby, titleContent);
+    const title = this.getLobbyTitle(lobby);
+    return this.renderLobbyCard(lobby, title);
   }
 
   private renderSoloButton() {
@@ -143,12 +134,12 @@ export class GameModeSelector extends LitElement {
         <div class="h-14 hidden lg:block">${this.renderSoloButton()}</div>
         <div class="grid grid-cols-3 gap-2 h-14">
           ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-          )}
-          ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
