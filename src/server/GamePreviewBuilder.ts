@@ -170,7 +170,7 @@ export function buildPreview(
   // Format team mode display
   if (mode === "Team" && playerTeams) {
     if (typeof playerTeams === "string") {
-      mode = playerTeams; // e.g., "Quads"
+      mode = playerTeams; // legacy string team configs
     } else if (typeof playerTeams === "number") {
       mode = teamBreakdownLabel ?? `${playerTeams} Teams`;
     }

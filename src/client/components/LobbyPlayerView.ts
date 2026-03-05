@@ -4,14 +4,11 @@ import { repeat } from "lit/directives/repeat.js";
 import { PastelTheme } from "../../core/configuration/PastelTheme";
 import {
   ColoredTeams,
-  Duos,
   GameMode,
   HumansVsNations,
   PlayerInfo,
   PlayerType,
-  Quads,
   Team,
-  Trios,
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
@@ -252,14 +249,13 @@ export class LobbyTeamView extends LitElement {
       return [ColoredTeams.Humans, ColoredTeams.Nations];
     }
 
-    let numTeams: number;
-    if (typeof config === "number") {
-      numTeams = Math.max(2, config);
-    } else {
-      const divisor =
-        config === Duos ? 2 : config === Trios ? 3 : config === Quads ? 4 : 2;
-      numTeams = Math.max(2, Math.ceil(playerCount / divisor));
-    }
+    // Negative = players per team, resolve to team count
+    const numTeams =
+      typeof config === "number"
+        ? config < 0
+          ? Math.max(2, Math.floor(playerCount / Math.abs(config)))
+          : Math.max(2, config)
+        : 2;
 
     if (numTeams < 8) {
       const ordered: Team[] = [
@@ -322,20 +318,11 @@ export class LobbyTeamView extends LitElement {
       if (client) bucket.push(client);
     }
 
-    // Compute per-team capacity safely and align with common team sizes
-    if (this.teamCount === Duos) {
-      this.teamMaxSize = 2;
-    } else if (this.teamCount === Trios) {
-      this.teamMaxSize = 3;
-    } else if (this.teamCount === Quads) {
-      this.teamMaxSize = 4;
-    } else {
-      // Fallback: divide players across teams; guard against 0 and empty lobbies
-      this.teamMaxSize = Math.max(
-        1,
-        Math.ceil((this.clients.length + this.nationCount) / teams.length),
-      );
-    }
+    // Compute per-team capacity: divide players across teams
+    this.teamMaxSize = Math.max(
+      1,
+      Math.ceil((this.clients.length + this.nationCount) / teams.length),
+    );
     this.teamPreview = teams.map((t) => ({
       team: t,
       players: buckets.get(t) ?? [],

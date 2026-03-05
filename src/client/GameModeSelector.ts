@@ -1,13 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  HumansVsNations,
-  Quads,
-  Trios,
-} from "../core/game/Game";
+import { GameMapType, GameMode, HumansVsNations } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -310,15 +303,31 @@ export class GameModeSelector extends LitElement {
     }
 
     if (config?.gameMode === GameMode.Team) {
-      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
-      const formatTeamsOf = (
-        teamCount: number | undefined,
-        playersPerTeam: number | undefined,
-        label?: string,
-      ) => {
-        if (!teamCount)
-          return label ?? translateText("mode_selector.teams_title");
-        const baseTitle = playersPerTeam
+      if (config.playerTeams === HumansVsNations) {
+        const humanSlots = config.maxPlayers ?? lobby.numClients;
+        return humanSlots
+          ? translateText("public_lobby.teams_hvn_detailed", {
+              num: String(humanSlots),
+            })
+          : translateText("public_lobby.teams_hvn");
+      }
+
+      if (typeof config.playerTeams === "number") {
+        const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
+        // Negative = players per team, resolve to team count
+        const teamCount =
+          config.playerTeams < 0 && totalPlayers
+            ? Math.max(
+                2,
+                Math.floor(totalPlayers / Math.abs(config.playerTeams)),
+              )
+            : config.playerTeams;
+        const playersPerTeam =
+          totalPlayers && teamCount > 0
+            ? Math.floor(totalPlayers / teamCount)
+            : undefined;
+        if (!teamCount) return translateText("mode_selector.teams_title");
+        return playersPerTeam
           ? translateText("mode_selector.teams_of", {
               teamCount: String(teamCount),
               playersPerTeam: String(playersPerTeam),
@@ -326,57 +335,6 @@ export class GameModeSelector extends LitElement {
           : translateText("mode_selector.teams_count", {
               teamCount: String(teamCount),
             });
-        return `${baseTitle}${label ? ` (${label})` : ""}`;
-      };
-
-      switch (config.playerTeams) {
-        case Duos: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 2)
-            : undefined;
-          return teamCount
-            ? translateText("public_lobby.teams_Duos", {
-                team_count: String(teamCount),
-              })
-            : formatTeamsOf(undefined, 2);
-        }
-        case Trios: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 3)
-            : undefined;
-          return teamCount
-            ? translateText("public_lobby.teams_Trios", {
-                team_count: String(teamCount),
-              })
-            : formatTeamsOf(undefined, 3);
-        }
-        case Quads: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 4)
-            : undefined;
-          return teamCount
-            ? translateText("public_lobby.teams_Quads", {
-                team_count: String(teamCount),
-              })
-            : formatTeamsOf(undefined, 4);
-        }
-        case HumansVsNations: {
-          const humanSlots = config.maxPlayers ?? lobby.numClients;
-          return humanSlots
-            ? translateText("public_lobby.teams_hvn_detailed", {
-                num: String(humanSlots),
-              })
-            : translateText("public_lobby.teams_hvn");
-        }
-        default:
-          if (typeof config.playerTeams === "number") {
-            const teamCount = config.playerTeams;
-            const playersPerTeam =
-              totalPlayers && teamCount > 0
-                ? Math.floor(totalPlayers / teamCount)
-                : undefined;
-            return formatTeamsOf(teamCount, playersPerTeam);
-          }
       }
     }
 

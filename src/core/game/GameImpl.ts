@@ -16,7 +16,6 @@ import {
   AllianceRequest,
   Cell,
   ColoredTeams,
-  Duos,
   EmojiMessage,
   Execution,
   Game,
@@ -30,13 +29,11 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerType,
-  Quads,
   SpawnArea,
   Team,
   TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
-  Trios,
   Unit,
   UnitInfo,
   UnitType,
@@ -152,30 +149,25 @@ export class GameImpl implements Game {
   }
 
   private populateTeams() {
-    let numPlayerTeams = this._config.playerTeams();
+    const rawTeams = this._config.playerTeams();
 
     // HumansVsNations mode always has exactly 2 teams
-    if (numPlayerTeams === HumansVsNations) {
+    if (rawTeams === HumansVsNations) {
       this.playerTeams = [ColoredTeams.Humans, ColoredTeams.Nations];
       return;
     }
 
-    if (typeof numPlayerTeams !== "number") {
-      const players = this._humans.length + this._nations.length;
-      switch (numPlayerTeams) {
-        case Duos:
-          numPlayerTeams = Math.ceil(players / 2);
-          break;
-        case Trios:
-          numPlayerTeams = Math.ceil(players / 3);
-          break;
-        case Quads:
-          numPlayerTeams = Math.ceil(players / 4);
-          break;
-        default:
-          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
-      }
+    if (typeof rawTeams !== "number") {
+      throw new Error(`Unknown TeamCountConfig ${rawTeams}`);
     }
+
+    // Negative = players per team, resolve to team count
+    const totalPlayers = this._humans.length + this._nations.length;
+    const numPlayerTeams =
+      rawTeams < 0
+        ? Math.max(2, Math.floor(totalPlayers / Math.abs(rawTeams)))
+        : rawTeams;
+
     if (numPlayerTeams < 2) {
       throw new Error(`Too few teams: ${numPlayerTeams}`);
     } else if (numPlayerTeams < 8) {

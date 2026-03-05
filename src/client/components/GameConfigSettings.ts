@@ -9,12 +9,9 @@ import {
 import { customElement, property } from "lit/decorators.js";
 import {
   Difficulty,
-  Duos,
   GameMapType,
   GameMode,
   HumansVsNations,
-  Quads,
-  Trios,
   UnitType,
 } from "../../core/game/Game";
 import { TeamCountConfig } from "../../core/Schemas";
@@ -48,9 +45,9 @@ const TEAM_COUNT_OPTIONS: TeamCountConfig[] = [
   5,
   6,
   7,
-  Quads,
-  Trios,
-  Duos,
+  -2, // 2 players per team
+  -3, // 3 players per team
+  -4, // 4 players per team
   HumansVsNations,
 ];
 
@@ -399,11 +396,13 @@ export class GameConfigSettings extends LitElement {
                         @click=${() => this.handleTeamCountSelect(o)}
                       >
                         <span class="${CARD_LABEL_CLASS} text-white">
-                          ${typeof o === "string"
-                            ? o === HumansVsNations
-                              ? translateText("public_lobby.teams_hvn")
-                              : translateText(`host_modal.teams_${o}`)
-                            : translateText("public_lobby.teams", { num: o })}
+                          ${o === HumansVsNations
+                            ? translateText("public_lobby.teams_hvn")
+                            : typeof o === "number" && o < 0
+                              ? translateText("public_lobby.per_team", {
+                                  num: Math.abs(o),
+                                })
+                              : translateText("public_lobby.teams", { num: o })}
                         </span>
                       </button>
                     `;

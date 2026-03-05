@@ -261,7 +261,7 @@ export class TerritoryLayer implements Layer {
       maxRad,
       radius,
       baseColor, // Always draw white static semi-transparent ring
-      teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
+      teamColor, // Pass the breathing ring color. White for FFA. Transparent team color for TEAM games.
     );
 
     // Draw breathing rings for teammates in team games (helps colorblind players identify teammates)

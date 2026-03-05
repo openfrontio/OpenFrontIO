@@ -1,6 +1,5 @@
 import {
   Difficulty,
-  Duos,
   GameMapName,
   GameMapSize,
   GameMapType,
@@ -8,9 +7,7 @@ import {
   GameType,
   HumansVsNations,
   PublicGameModifiers,
-  Quads,
   RankedType,
-  Trios,
   mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
@@ -78,6 +75,9 @@ const frequency: Partial<Record<GameMapName, number>> = {
   NileDelta: 4,
 };
 
+// Team config weights. Positive numbers = fixed team count, negative = players
+// per team (resolved to a team count after maxPlayers is known, e.g. -2 with
+// 20 players = 10 teams). HumansVsNations is the special humans-vs-AI mode.
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
   { config: 3, weight: 10 },
@@ -85,9 +85,9 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 5, weight: 10 },
   { config: 6, weight: 10 },
   { config: 7, weight: 10 },
-  { config: Duos, weight: 5 },
-  { config: Trios, weight: 7.5 },
-  { config: Quads, weight: 7.5 },
+  { config: -2, weight: 1000 }, // 2 players per team
+  { config: -3, weight: 1000 }, // 3 players per team
+  { config: -4, weight: 1000 }, // 4 players per team
   { config: HumansVsNations, weight: 20 },
 ];
 
@@ -118,6 +118,17 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
 // Probability of hard nations modifier in HumansVsNations games.
 const HARD_NATIONS_HVN_PROBABILITY = 0.2; // 20%
 
+// Resolve pre-resolution team config: negative numbers mean "players per team"
+// and get converted to a team count using maxPlayers.
+function resolveTeamConfig(
+  config: TeamCountConfig,
+  maxPlayers: number,
+): TeamCountConfig {
+  return typeof config === "number" && config < 0
+    ? Math.max(2, Math.floor(maxPlayers / Math.abs(config)))
+    : config;
+}
+
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
     ffa: [],
@@ -133,24 +144,28 @@ export class MapPlaylist {
     const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
     const map = this.getNextMap(type);
 
-    const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount(map) : undefined;
+    const teamPick =
+      mode === GameMode.Team ? this.selectTeamConfig(map) : undefined;
 
-    const modifiers = this.getRandomPublicGameModifiers(playerTeams);
+    const modifiers = this.getRandomPublicGameModifiers(teamPick);
     const { startingGold } = modifiers;
     let { isCompact, isRandomSpawn, isCrowded, isHardNations } = modifiers;
 
-    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
+    // Team-size modes should not get random spawn (defeats the purpose)
     if (
-      playerTeams === Duos ||
-      playerTeams === Trios ||
-      playerTeams === Quads
+      teamPick !== undefined &&
+      typeof teamPick === "number" &&
+      teamPick < 0
     ) {
       isRandomSpawn = false;
     }
 
     // Hard nations modifier only applies when nations are present
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    if (
+      mode === GameMode.Team &&
+      teamPick !== undefined &&
+      teamPick !== HumansVsNations
+    ) {
       isHardNations = false;
     }
 
@@ -158,31 +173,37 @@ export class MapPlaylist {
     if (
       isCompact &&
       mode === GameMode.Team &&
-      !(await this.supportsCompactMapForTeams(map, playerTeams!))
+      !(await this.supportsCompactMapForTeams(map, teamPick!))
     ) {
       isCompact = false;
     }
 
-    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to 125 (or 60 if compact map is also enabled)
+    // Crowded modifier
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
       if (crowdedMaxPlayers === undefined) {
         isCrowded = false;
       } else {
-        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, teamPick);
       }
     }
 
-    // Create the default public game config (from your GameManager)
+    const maxPlayers =
+      crowdedMaxPlayers ??
+      (await this.lobbyMaxPlayers(map, mode, teamPick, isCompact));
+
+    // Resolve to final TeamCountConfig
+    const playerTeams =
+      teamPick !== undefined
+        ? resolveTeamConfig(teamPick, maxPlayers)
+        : undefined;
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers:
-        crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+      maxPlayers,
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
@@ -217,22 +238,23 @@ export class MapPlaylist {
   private async getSpecialConfig(): Promise<GameConfig> {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
     const map = this.getNextMap("special");
-    const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount(map) : undefined;
+    const teamPick =
+      mode === GameMode.Team ? this.selectTeamConfig(map) : undefined;
 
     const excludedModifiers: ModifierKey[] = [];
 
     const supportsCompact =
       mode !== GameMode.Team ||
-      (await this.supportsCompactMapForTeams(map, playerTeams!));
+      (await this.supportsCompactMapForTeams(map, teamPick!));
     if (!supportsCompact) {
       excludedModifiers.push("isCompact");
     }
 
+    // Team-size modes should not get random spawn
     if (
-      playerTeams === Duos ||
-      playerTeams === Trios ||
-      playerTeams === Quads
+      teamPick !== undefined &&
+      typeof teamPick === "number" &&
+      teamPick < 0
     ) {
       excludedModifiers.push("isRandomSpawn");
     }
@@ -242,11 +264,15 @@ export class MapPlaylist {
     // For FFA: stays in the pool for normal ticket-based selection.
     let hardNationsFromIndependentRoll: boolean | undefined;
     let poolCountReduction = 0;
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    if (
+      mode === GameMode.Team &&
+      teamPick !== undefined &&
+      teamPick !== HumansVsNations
+    ) {
       excludedModifiers.push("isHardNations");
-    } else if (playerTeams === HumansVsNations) {
+    } else if (teamPick !== undefined && teamPick === HumansVsNations) {
       excludedModifiers.push("isHardNations");
-      excludedModifiers.push("startingGoldHigh"); // Nations are disabled if that modifier is active
+      excludedModifiers.push("startingGoldHigh");
       hardNationsFromIndependentRoll =
         Math.random() < HARD_NATIONS_HVN_PROBABILITY;
       poolCountReduction = hardNationsFromIndependentRoll ? 1 : 0;
@@ -265,7 +291,7 @@ export class MapPlaylist {
     if (isCrowded) {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
       if (crowdedMaxPlayers !== undefined) {
-        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, teamPick);
       } else {
         // Map doesn't support crowded. Drop it and pick one replacement only
         // if it was the sole modifier, so the lobby always has at least one.
@@ -292,8 +318,14 @@ export class MapPlaylist {
     const maxPlayers = Math.max(
       2,
       crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+        (await this.lobbyMaxPlayers(map, mode, teamPick, isCompact)),
     );
+
+    // Resolve to final TeamCountConfig
+    const playerTeams =
+      teamPick !== undefined
+        ? resolveTeamConfig(teamPick, maxPlayers)
+        : undefined;
 
     const nations: GameConfig["nations"] =
       (mode === GameMode.Team && playerTeams !== HumansVsNations) ||
@@ -442,14 +474,10 @@ export class MapPlaylist {
     return maps;
   }
 
-  private getTeamCount(map: GameMapType): TeamCountConfig {
+  private selectTeamConfig(map: GameMapType): TeamCountConfig {
     // Override team count for specific maps (75% chance)
-    if (map === GameMapType.Baikal && Math.random() < 0.75) {
-      return 2;
-    }
-    if (map === GameMapType.FourIslands && Math.random() < 0.75) {
-      return 4;
-    }
+    if (map === GameMapType.Baikal && Math.random() < 0.75) return 2;
+    if (map === GameMapType.FourIslands && Math.random() < 0.75) return 4;
 
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
     const roll = Math.random() * totalWeight;
@@ -457,15 +485,13 @@ export class MapPlaylist {
     let cumulativeWeight = 0;
     for (const { config, weight } of TEAM_WEIGHTS) {
       cumulativeWeight += weight;
-      if (roll < cumulativeWeight) {
-        return config;
-      }
+      if (roll < cumulativeWeight) return config;
     }
-    return TEAM_WEIGHTS[0].config;
+    return 2;
   }
 
   private getRandomPublicGameModifiers(
-    playerTeams?: TeamCountConfig,
+    teamPick?: TeamCountConfig,
   ): PublicGameModifiers {
     return {
       isRandomSpawn: Math.random() < 0.05, // 5% chance
@@ -473,7 +499,7 @@ export class MapPlaylist {
       isCrowded: Math.random() < 0.05, // 5% chance
       startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
       isHardNations:
-        playerTeams === HumansVsNations
+        teamPick !== undefined && teamPick === HumansVsNations
           ? Math.random() < HARD_NATIONS_HVN_PROBABILITY
           : Math.random() < 0.025, // 2.5% chance
     };
@@ -531,8 +557,9 @@ export class MapPlaylist {
   // using the worst-case player tier (smallest) from lobbyMaxPlayers.
   private async supportsCompactMapForTeams(
     map: GameMapType,
-    playerTeams: TeamCountConfig,
+    teamPick: TeamCountConfig,
   ): Promise<boolean> {
+    if (teamPick === HumansVsNations) return true; // single human team
     const landTiles = await getMapLandTiles(map);
     const [l, , s] = this.calculateMapPlayerCounts(landTiles);
     // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
@@ -540,27 +567,10 @@ export class MapPlaylist {
     // Apply compact 75% player reduction
     p = Math.max(3, Math.floor(p * 0.25));
     // Apply team adjustment
-    p = this.adjustForTeams(p, playerTeams);
+    p = this.adjustForTeams(p, teamPick);
+    const teams = resolveTeamConfig(teamPick, p);
     // Check at least 2 players per team
-    return this.playersPerTeam(p, playerTeams) >= 2;
-  }
-
-  private playersPerTeam(
-    adjustedPlayerCount: number,
-    playerTeams: TeamCountConfig,
-  ): number {
-    switch (playerTeams) {
-      case Duos:
-        return Math.min(2, adjustedPlayerCount);
-      case Trios:
-        return Math.min(3, adjustedPlayerCount);
-      case Quads:
-        return Math.min(4, adjustedPlayerCount);
-      case HumansVsNations:
-        return adjustedPlayerCount; // adjustedPlayerCount is the human count
-      default:
-        return Math.floor(adjustedPlayerCount / playerTeams);
-    }
+    return typeof teams === "number" && Math.floor(p / teams) >= 2;
   }
 
   /**
@@ -596,7 +606,7 @@ export class MapPlaylist {
   private async lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: TeamCountConfig | undefined,
+    teamPick: TeamCountConfig | undefined,
     isCompactMap?: boolean,
   ): Promise<number> {
     const landTiles = await getMapLandTiles(map);
@@ -608,34 +618,21 @@ export class MapPlaylist {
     if (isCompactMap) {
       p = Math.max(3, Math.floor(p * 0.25));
     }
-    return this.adjustForTeams(p, numPlayerTeams);
+    return this.adjustForTeams(p, teamPick);
   }
 
   private adjustForTeams(
     playerCount: number,
-    numPlayerTeams: TeamCountConfig | undefined,
+    teamPick: TeamCountConfig | undefined,
   ): number {
-    if (numPlayerTeams === undefined) return playerCount;
-    let p = playerCount;
-    switch (numPlayerTeams) {
-      case Duos:
-        p -= p % 2;
-        break;
-      case Trios:
-        p -= p % 3;
-        break;
-      case Quads:
-        p -= p % 4;
-        break;
-      case HumansVsNations:
-        // Half the slots are for humans, the other half will get filled with nations
-        p = Math.floor(p / 2);
-        break;
-      default:
-        p -= p % numPlayerTeams;
-        break;
+    if (teamPick === undefined) return playerCount;
+    if (teamPick === HumansVsNations) {
+      // Half the slots are for humans, the other half will get filled with nations
+      return Math.floor(playerCount / 2);
     }
-    return p;
+    // For both team-size (negative) and team-count (positive), round down to divisible
+    const divisor = Math.abs(teamPick);
+    return playerCount - (playerCount % divisor);
   }
 
   /**

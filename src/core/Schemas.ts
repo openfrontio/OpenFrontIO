@@ -10,15 +10,12 @@ import type { GameEvent } from "./EventBus";
 import {
   AllPlayers,
   Difficulty,
-  Duos,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
   HumansVsNations,
-  Quads,
   RankedType,
-  Trios,
   UnitType,
 } from "./game/Game";
 import { PlayerStatsSchema } from "./StatsSchemas";
@@ -192,13 +189,16 @@ export enum LogSeverity {
 // Utility types
 //
 
-const TeamCountConfigSchema = z.union([
-  z.number(),
-  z.literal(Duos),
-  z.literal(Trios),
-  z.literal(Quads),
-  z.literal(HumansVsNations),
-]);
+const TeamCountConfigSchema = z.preprocess(
+  (val) => {
+    // Migrate legacy string team-size configs to numeric fallback
+    if (val === "Duos") return 2;
+    if (val === "Trios") return 3;
+    if (val === "Quads") return 4;
+    return val;
+  },
+  z.union([z.number(), z.literal(HumansVsNations)]),
+);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const GameConfigSchema = z.object({
