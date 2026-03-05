@@ -14,22 +14,6 @@
     "num_land_tiles": 409832,
     "width": 914
   },
-  "mapInfoState": {
-    "colorMappings": [],
-    "cropData": {
-      "cropHeight": 0,
-      "cropWidth": 0,
-      "cropX": 0,
-      "cropY": 0,
-      "isCropped": false,
-      "originalHeight": 0,
-      "originalWidth": 0
-    },
-    "height": 1830,
-    "originalHeight": 1830,
-    "originalWidth": 1830,
-    "width": 1830
-  },
   "name": "arctic_circle",
   "nations": [
     {
