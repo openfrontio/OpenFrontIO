@@ -57,8 +57,7 @@ Licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 ### Arctic Map
 
 [Arctic SDI Geoportal Services](https://geoportal.arctic-sdi.org/)
-Public Domain (https://arctic-sdi.org/service-level-statement-arctic-sdi-central-services/)
-
+Public Domain — [Service Level Statement](https://arctic-sdi.org/service-level-statement-arctic-sdi-central-services/)
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
