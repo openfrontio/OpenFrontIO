@@ -100,11 +100,14 @@ export class PlayPage extends LitElement {
         </div>
 
         <div
-          class="w-full pb-4 lg:pb-0 flex flex-col gap-0 lg:grid lg:grid-cols-[2fr_1fr] lg:gap-4"
+          class="w-full pb-4 lg:pb-0 flex flex-col gap-4 lg:grid lg:grid-cols-[2fr_1fr] lg:gap-4"
         >
           <!-- Mobile: spacer for fixed top bar -->
-          <div class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)]"></div>
+          <div
+            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2"
+          ></div>
 
+          <!-- Username: left col -->
           <div
             class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
           >
@@ -121,6 +124,7 @@ export class PlayPage extends LitElement {
             </div>
           </div>
 
+          <!-- Flag + skin: right col -->
           <div class="hidden lg:flex h-[60px] gap-2">
             <flag-input
               id="flag-input-desktop"
@@ -133,9 +137,10 @@ export class PlayPage extends LitElement {
               class="flex-1 h-full"
             ></pattern-input>
           </div>
-        </div>
 
-        <game-mode-selector></game-mode-selector>
+          <!-- Game mode selector: spans both cols -->
+          <game-mode-selector class="lg:col-span-2"></game-mode-selector>
+        </div>
       </div>
     `;
   }
