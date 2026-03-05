@@ -13,7 +13,9 @@ export class BotSpawner {
     private gs: Game,
     private gameID: GameID,
   ) {
-    this.random = new PseudoRandom(simpleHash(gameID));
+    // Use a different seed than createGameRunner (which uses simpleHash(gameID))
+    // to avoid bot IDs colliding with nation/human IDs from the same PRNG sequence.
+    this.random = new PseudoRandom(simpleHash(gameID) + 2);
   }
 
   spawnBots(numBots: number): SpawnExecution[] {
