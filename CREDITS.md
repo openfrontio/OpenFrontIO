@@ -55,6 +55,7 @@ Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/
 Licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
 ### Arctic Map
+
 [Arctic SDI Geoportal Services](https://geoportal.arctic-sdi.org/)
 Public Domain (https://arctic-sdi.org/service-level-statement-arctic-sdi-central-services/)
 
