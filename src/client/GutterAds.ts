@@ -121,7 +121,7 @@ export class GutterAds extends LitElement {
       <!-- Left Gutter Ad -->
       <div
         class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center"
-        style="left: calc(50% - 10cm - 208px); top: calc(50% + 10px);"
+        style="left: calc(50% - 10.5cm - 208px); top: calc(50% + 10px);"
       >
         <div
           id="${this.leftContainerId}"
@@ -132,7 +132,7 @@ export class GutterAds extends LitElement {
       <!-- Right Gutter Ad -->
       <div
         class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center"
-        style="left: calc(50% + 10cm + 48px); top: calc(50% + 10px);"
+        style="left: calc(50% + 10.5cm + 48px); top: calc(50% + 10px);"
       >
         <div
           id="${this.rightContainerId}"

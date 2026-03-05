@@ -104,7 +104,7 @@ export class PlayPage extends LitElement {
         >
           <!-- Mobile: spacer for fixed top bar -->
           <div
-            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2"
+            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2 -mb-4"
           ></div>
 
           <!-- Username: left col -->
@@ -124,23 +124,22 @@ export class PlayPage extends LitElement {
             </div>
           </div>
 
-          <!-- Flag + skin: right col -->
+          <!-- Skin + flag: right col -->
           <div class="hidden lg:flex h-[60px] gap-2">
-            <flag-input
-              id="flag-input-desktop"
-              show-select-label
-              class="flex-1 h-full"
-            ></flag-input>
             <pattern-input
               id="pattern-input-desktop"
               show-select-label
               class="flex-1 h-full"
             ></pattern-input>
+            <flag-input
+              id="flag-input-desktop"
+              show-select-label
+              class="flex-1 h-full"
+            ></flag-input>
           </div>
-
-          <!-- Game mode selector: spans both cols -->
-          <game-mode-selector class="lg:col-span-2"></game-mode-selector>
         </div>
+
+        <game-mode-selector></game-mode-selector>
       </div>
     `;
   }

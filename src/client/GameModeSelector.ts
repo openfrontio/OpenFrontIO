@@ -30,7 +30,7 @@ export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   @state() private mapAspectRatios: Map<GameMapType, number> = new Map();
   private serverTimeOffset: number = 0;
-  private defaultLobbyTime: string = "-";
+  private defaultLobbyTime: number = 0;
 
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
@@ -65,7 +65,7 @@ export class GameModeSelector extends LitElement {
     super.connectedCallback();
     this.lobbySocket.start();
     getServerConfigFromClient().then((config) => {
-      this.defaultLobbyTime = (config.gameCreationRate() / 1000).toString();
+      this.defaultLobbyTime = config.gameCreationRate() / 1000;
     });
   }
 
@@ -92,6 +92,9 @@ export class GameModeSelector extends LitElement {
     for (const game of allGames) {
       const mapType = game.gameConfig?.gameMap as GameMapType;
       if (mapType && !this.mapAspectRatios.has(mapType)) {
+        // New Map reference triggers Lit reactivity; placeholder ratio 1 lets
+        // has() guard against duplicate in-flight fetches.
+        this.mapAspectRatios = new Map(this.mapAspectRatios).set(mapType, 1);
         terrainMapFileLoader
           .getMapData(mapType)
           .manifest()
@@ -103,7 +106,9 @@ export class GameModeSelector extends LitElement {
               );
             }
           })
-          .catch(() => {});
+          .catch((e) =>
+            console.error(`Failed to load manifest for ${mapType}`, e),
+          );
       }
     }
   }
@@ -123,15 +128,37 @@ export class GameModeSelector extends LitElement {
             "bg-sky-600",
           )}
         </div>
+        <!-- Create/ranked/join: mobile only, below solo -->
+        <div class="sm:hidden grid grid-cols-3 gap-4 h-14">
+          ${this.renderSmallActionCard(
+            translateText("main.create"),
+            this.openHostLobby,
+            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          )}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          )}
+          ${this.renderSmallActionCard(
+            translateText("main.join"),
+            this.openJoinLobby,
+            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          )}
+        </div>
         <!-- Game cards grid -->
         <div
           class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
         >
-          <!-- Left col: main card -->
+          <!-- Left col: main card (desktop only) -->
           ${special
-            ? html`${this.renderSpecialLobbyCard(special)}`
+            ? html`<div class="hidden sm:block">
+                ${this.renderSpecialLobbyCard(special)}
+              </div>`
             : ffa
-              ? html`${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}`
+              ? html`<div class="hidden sm:block">
+                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                </div>`
               : nothing}
 
           <!-- Right col: FFA + teams (desktop only) -->
@@ -148,11 +175,9 @@ export class GameModeSelector extends LitElement {
               : nothing}
           </div>
 
-          <!-- Mobile: teams, ffa, special inline -->
+          <!-- Mobile: special, ffa, teams inline -->
           <div class="sm:hidden">
-            ${teams
-              ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-              : nothing}
+            ${special ? this.renderSpecialLobbyCard(special) : nothing}
           </div>
           <div class="sm:hidden">
             ${ffa
@@ -160,7 +185,9 @@ export class GameModeSelector extends LitElement {
               : nothing}
           </div>
           <div class="sm:hidden">
-            ${special ? this.renderSpecialLobbyCard(special) : nothing}
+            ${teams
+              ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+              : nothing}
           </div>
         </div>
 
@@ -172,22 +199,22 @@ export class GameModeSelector extends LitElement {
             "bg-sky-600",
           )}
         </div>
-        <!-- Bottom row: create + ranked + join -->
-        <div class="grid grid-cols-3 gap-4 h-14">
+        <!-- Bottom row: create + ranked + join (desktop only) -->
+        <div class="hidden sm:grid grid-cols-3 gap-4 h-14">
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-zinc-700",
+            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
-            "bg-indigo-700",
+            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-zinc-700",
+            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
           )}
         </div>
       </div>
@@ -242,6 +269,8 @@ export class GameModeSelector extends LitElement {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
     const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
     const aspectRatio = this.mapAspectRatios.get(mapType);
+    // Use object-contain for extreme aspect ratios (e.g. Amazon River ~20:1) so
+    // the full map is visible instead of being cropped by object-cover.
     const useContain =
       aspectRatio !== undefined && (aspectRatio > 4 || aspectRatio < 0.25);
     const timeRemaining = lobby.startsAt
@@ -256,7 +285,7 @@ export class GameModeSelector extends LitElement {
     let timeDisplay: string = "";
     let timeDisplayUppercase = false;
     if (timeRemaining === undefined) {
-      timeDisplay = this.defaultLobbyTime + "s";
+      timeDisplay = renderDuration(this.defaultLobbyTime);
     } else if (timeRemaining > 0) {
       timeDisplay = renderDuration(timeRemaining);
     } else {
@@ -277,18 +306,25 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-[#1a3f6f]"
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+        style="background-color: color-mix(in oklab, var(--frenchBlue) 75%, black)"
       >
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
-              draggable="false"
-              class="absolute inset-0 w-full h-full ${useContain
-                ? "object-contain"
-                : "object-cover object-center scale-[1.05]"} pointer-events-none [image-rendering:pixelated]"
-            />`
-          : null}
+        <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
+        <div
+          class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"
+        >
+          ${mapImageSrc
+            ? html`<img
+                src="${mapImageSrc}"
+                alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
+                draggable="false"
+                class="absolute inset-0 w-full h-full ${useContain
+                  ? "object-contain"
+                  : "object-cover object-center scale-[1.05]"} [image-rendering:auto]"
+              />`
+            : null}
+        </div>
+        <!-- Top row: modifiers + timer -->
         <div
           class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
         >
@@ -297,7 +333,7 @@ export class GameModeSelector extends LitElement {
                 ${modifierLabels.map(
                   (label) =>
                     html`<span
-                      class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
+                      class="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-widest bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
                       >${label}</span
                     >`,
                 )}
@@ -312,30 +348,18 @@ export class GameModeSelector extends LitElement {
             >
           </div>
         </div>
+        <!-- Bottom bar: map name + mode, with player count floating above -->
         <div
-          class="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 bg-black/55 backdrop-blur-sm"
+          class="absolute bottom-0 left-0 right-0 flex flex-col px-3 py-2 bg-black/55 backdrop-blur-sm rounded-b-2xl"
+          style="overflow: visible;"
         >
-          <div class="flex flex-col gap-0.5 min-w-0">
-            ${mapName
-              ? html`<p
-                  class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight"
-                >
-                  ${mapName}
-                </p>`
-              : ""}
-            <h3
-              class="text-xs text-white/70 uppercase tracking-wider text-left"
-            >
-              ${titleContent}
-            </h3>
-          </div>
           <span
-            class="flex items-center gap-1 text-xs font-bold uppercase tracking-widest shrink-0 ml-2"
+            class="absolute bottom-full right-2 mb-1 flex items-center gap-1 text-xs font-bold tracking-widest bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded"
           >
             ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-3 w-3 inline-block"
+              class="h-4 w-4 inline-block"
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -344,6 +368,16 @@ export class GameModeSelector extends LitElement {
               ></path>
             </svg>
           </span>
+          ${mapName
+            ? html`<p
+                class="text-sm sm:text-base font-bold uppercase tracking-wider text-left leading-tight"
+              >
+                ${mapName}
+              </p>`
+            : ""}
+          <h3 class="text-xs text-white/70 uppercase tracking-wider text-left">
+            ${titleContent}
+          </h3>
         </div>
       </button>
     `;
