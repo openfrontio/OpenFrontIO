@@ -17,6 +17,7 @@ export class SAMMissileExecution implements Execution {
   private SAMMissile: Unit | undefined;
   private mg: Game;
   private speed: number = 0;
+  private refireDelayRemaining: number | null = null;
 
   constructor(
     private spawn: TileRef,
@@ -39,8 +40,13 @@ export class SAMMissileExecution implements Execution {
       {},
     );
     if (!this.SAMMissile.isActive()) {
-      // Interceptor was destroyed (e.g. by nuke blast) — allow SAMs to re-target this nuke
+      // Interceptor was destroyed (e.g. by nuke blast) — allow SAMs to re-target this nuke after delay
       if (this.target.isActive()) {
+        this.refireDelayRemaining ??= this.mg.config().samRefireDelayTicks();
+        if (this.refireDelayRemaining > 0) {
+          this.refireDelayRemaining--;
+          return;
+        }
         this.target.setTargetedBySAM(false);
         // Notify defender their interceptor was destroyed
         this.mg.displayMessage(

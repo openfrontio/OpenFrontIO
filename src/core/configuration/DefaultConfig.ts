@@ -203,6 +203,11 @@ export class DefaultConfig implements Config {
   SAMCooldown(): number {
     return 75;
   }
+  samRefireDelayTicks(): number {
+    // Beta testing: adjust this constant to tune the delay before a SAM can
+    // refire at a nuke whose interceptor was destroyed. 0 = instant refire.
+    return 5;
+  }
   SiloCooldown(): number {
     return 75;
   }
