@@ -78,6 +78,7 @@ export class PlayerImpl implements Player {
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
+  private blockedPlayersSet = new Set<PlayerID>();
 
   public _borderTiles: Set<TileRef> = new Set();
 
@@ -185,6 +186,8 @@ export class PlayerImpl implements Player {
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
       isLobbyCreator: this.isLobbyCreator(),
+      canEmbargoAll: this.canEmbargoAll(),
+      blockedPlayers: Array.from(this.blockedPlayersSet.values()),
     };
   }
 
@@ -476,8 +479,55 @@ export class PlayerImpl implements Player {
     };
   }
 
+  blockPlayer(other: Player): void {
+    if (other === this) return;
+    if (this.blockedPlayersSet.has(other.id())) {
+      return;
+    }
+    this.blockedPlayersSet.add(other.id());
+
+    const alliance = this.allianceWith(other);
+    if (alliance) {
+      this.breakAlliance(alliance);
+    }
+
+    for (const req of this.incomingAllianceRequests()) {
+      if (req.requestor() === other) {
+        req.reject();
+      }
+    }
+
+    for (const req of this.outgoingAllianceRequests()) {
+      if (req.recipient() === other) {
+        req.reject();
+      }
+    }
+  }
+
+  unblockPlayer(other: Player): void {
+    if (other === this) return;
+    this.blockedPlayersSet.delete(other.id());
+  }
+
+  hasBlocked(other: Player): boolean {
+    if (other === this) return false;
+    return this.blockedPlayersSet.has(other.id());
+  }
+
+  isBlockedBy(other: Player): boolean {
+    if (other === this) return false;
+    return other.hasBlocked(this);
+  }
+
+  blockedPlayers(): ReadonlySet<PlayerID> {
+    return this.blockedPlayersSet;
+  }
+
   canSendAllianceRequest(other: Player): boolean {
     if (other === this) {
+      return false;
+    }
+    if (this.hasBlocked(other) || this.isBlockedBy(other)) {
       return false;
     }
     if (this.isDisconnected() || other.isDisconnected()) {
@@ -675,6 +725,12 @@ export class PlayerImpl implements Player {
     if (recipient === this) {
       return false;
     }
+    if (recipient !== AllPlayers && this.hasBlocked(recipient)) {
+      return false;
+    }
+    if (recipient !== AllPlayers && recipient.hasBlocked(this)) {
+      return false;
+    }
     const recipientID =
       recipient === AllPlayers ? AllPlayers : recipient.smallID();
     const prevMsgs = this.outgoingEmojis_.filter(
@@ -695,7 +751,9 @@ export class PlayerImpl implements Player {
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
-      !this.isFriendly(recipient)
+      !this.isFriendly(recipient) ||
+      this.hasBlocked(recipient) ||
+      recipient.hasBlocked(this)
     ) {
       return false;
     }
@@ -722,7 +780,9 @@ export class PlayerImpl implements Player {
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
-      !this.isFriendly(recipient)
+      !this.isFriendly(recipient) ||
+      this.hasBlocked(recipient) ||
+      recipient.hasBlocked(this)
     ) {
       return false;
     }

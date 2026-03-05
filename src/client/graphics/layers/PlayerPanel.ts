@@ -11,6 +11,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
@@ -21,6 +22,7 @@ import {
 } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
+  SendBlockPlayerIntentEvent,
   SendBreakAllianceIntentEvent,
   SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
@@ -258,6 +260,34 @@ export class PlayerPanel extends LitElement implements Layer {
   ) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
+    this.hide();
+  }
+
+  private handleBlockPlayerClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    const userSettings = new UserSettings();
+    userSettings.blockPlayer(other.displayName());
+    this.eventBus.emit(
+      new SendBlockPlayerIntentEvent(String(other.id()), "block"),
+    );
+    this.hide();
+  }
+
+  private handleUnblockPlayerClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    const userSettings = new UserSettings();
+    userSettings.unblockPlayer(other.displayName());
+    this.eventBus.emit(
+      new SendBlockPlayerIntentEvent(String(other.id()), "unblock"),
+    );
     this.hide();
   }
 
@@ -811,6 +841,27 @@ export class PlayerPanel extends LitElement implements Layer {
                       label: translateText("player_panel.send_alliance"),
                       type: "indigo",
                     })
+                  : ""}
+                ${other.type() === PlayerType.Human
+                  ? this.actions?.interaction?.isBlocked
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleUnblockPlayerClick(e, my, other),
+                        icon: startTradingIcon,
+                        iconAlt: "Unblock",
+                        title: translateText("player_panel.unblock"),
+                        label: translateText("player_panel.unblock"),
+                        type: "green",
+                      })
+                    : actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleBlockPlayerClick(e, my, other),
+                        icon: stopTradingIcon,
+                        iconAlt: "Block",
+                        title: translateText("player_panel.block"),
+                        label: translateText("player_panel.block"),
+                        type: "red",
+                      })
                   : ""}
               </div>
             `}

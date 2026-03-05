@@ -596,6 +596,14 @@ export class PlayerView {
     return this.data.isDisconnected;
   }
 
+  hasBlocked(other: PlayerView): boolean {
+    return this.data.blockedPlayers?.includes(other.id()) ?? false;
+  }
+
+  isBlockedBy(other: PlayerView): boolean {
+    return other.hasBlocked(this);
+  }
+
   lastDeleteUnitTick(): Tick {
     return this.data.lastDeleteUnitTick;
   }

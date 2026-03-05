@@ -144,6 +144,46 @@ export class UserSettings {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
   }
 
+  blockedPlayers(): string[] {
+    try {
+      const raw = localStorage.getItem("blocked-players");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed)
+        ? parsed.filter((name): name is string => typeof name === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  isPlayerBlocked(name: string): boolean {
+    if (!name) return false;
+    return this.blockedPlayers().includes(name);
+  }
+
+  blockPlayer(name: string): void {
+    if (!name) return;
+    const current = new Set(this.blockedPlayers());
+    current.add(name);
+    localStorage.setItem(
+      "blocked-players",
+      JSON.stringify(Array.from(current.values())),
+    );
+    this.emitChange("blocked-players", current.size);
+  }
+
+  unblockPlayer(name: string): void {
+    if (!name) return;
+    const current = new Set(this.blockedPlayers());
+    current.delete(name);
+    localStorage.setItem(
+      "blocked-players",
+      JSON.stringify(Array.from(current.values())),
+    );
+    this.emitChange("blocked-players", current.size);
+  }
+
   toggleDarkMode() {
     this.set("settings.darkMode", !this.darkMode());
     if (this.darkMode()) {

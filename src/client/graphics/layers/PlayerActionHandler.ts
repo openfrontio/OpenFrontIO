@@ -5,6 +5,7 @@ import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
+  SendBlockPlayerIntentEvent,
   SendBoatAttackIntentEvent,
   SendBreakAllianceIntentEvent,
   SendDeleteUnitIntentEvent,
@@ -92,5 +93,11 @@ export class PlayerActionHandler {
 
   handleDeleteUnit(unitId: number) {
     this.eventBus.emit(new SendDeleteUnitIntentEvent(unitId));
+  }
+
+  handleBlockPlayer(recipient: PlayerView, action: "block" | "unblock") {
+    this.eventBus.emit(
+      new SendBlockPlayerIntentEvent(String(recipient.id()), action),
+    );
   }
 }

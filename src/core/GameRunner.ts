@@ -230,7 +230,9 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        isBlocked: player.hasBlocked(other),
         allianceInfo: player.allianceInfo(other) ?? undefined,
+        blockedPlayers: Array.from(player.blockedPlayers().values()),
       };
     }
 

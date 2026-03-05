@@ -188,6 +188,8 @@ export interface PlayerUpdate {
   betrayals: number;
   lastDeleteUnitTick: Tick;
   isLobbyCreator: boolean;
+  canEmbargoAll: boolean;
+  blockedPlayers: string[];
 }
 
 export interface AllianceView {

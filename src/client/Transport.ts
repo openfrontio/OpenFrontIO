@@ -165,6 +165,13 @@ export class MoveWarshipIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendBlockPlayerIntentEvent implements GameEvent {
+  constructor(
+    public readonly targetID: string,
+    public readonly action: "block" | "unblock",
+  ) {}
+}
+
 export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
@@ -253,6 +260,10 @@ export class Transport {
 
     this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
       this.onSendDeleteUnitIntent(e),
+    );
+
+    this.eventBus.on(SendBlockPlayerIntentEvent, (e) =>
+      this.onSendBlockPlayerIntent(e),
     );
 
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
@@ -626,6 +637,14 @@ export class Transport {
     this.sendIntent({
       type: "delete_unit",
       unitId: event.unitId,
+    });
+  }
+
+  private onSendBlockPlayerIntent(event: SendBlockPlayerIntentEvent) {
+    this.sendIntent({
+      type: "block",
+      targetID: event.targetID,
+      action: event.action,
     });
   }
 
