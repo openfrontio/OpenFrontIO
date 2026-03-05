@@ -541,8 +541,11 @@ export class MapPlaylist {
     p = Math.max(3, Math.floor(p * 0.25));
     // Apply team adjustment
     p = this.adjustForTeams(p, playerTeams);
-    // Check at least 2 players per team
-    return this.playersPerTeam(p, playerTeams) >= 2;
+    // Check at least 2 players per team AND at least 2 teams
+    return (
+      this.playersPerTeam(p, playerTeams) >= 2 &&
+      this.numberOfTeams(p, playerTeams) >= 2
+    );
   }
 
   private playersPerTeam(
@@ -560,6 +563,24 @@ export class MapPlaylist {
         return adjustedPlayerCount; // adjustedPlayerCount is the human count
       default:
         return Math.floor(adjustedPlayerCount / playerTeams);
+    }
+  }
+
+  private numberOfTeams(
+    adjustedPlayerCount: number,
+    playerTeams: TeamCountConfig,
+  ): number {
+    switch (playerTeams) {
+      case Duos:
+        return Math.floor(adjustedPlayerCount / 2);
+      case Trios:
+        return Math.floor(adjustedPlayerCount / 3);
+      case Quads:
+        return Math.floor(adjustedPlayerCount / 4);
+      case HumansVsNations:
+        return 2; // always 2 teams
+      default:
+        return playerTeams; // numeric value IS the team count
     }
   }
 
