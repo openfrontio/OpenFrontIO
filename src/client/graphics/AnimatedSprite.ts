@@ -13,6 +13,9 @@ export class AnimatedSprite {
     private originX: number,
     private originY: number,
   ) {
+    if (frameCount <= 0) {
+      throw new Error("Animated sprite should at least have one frame");
+    }
     if ("height" in image && "width" in image) {
       this.frameHeight = (image as HTMLImageElement | HTMLCanvasElement).height;
       this.frameWidth = Math.floor(
