@@ -1,0 +1,20 @@
+﻿in_progress		v0.29.20	­ƒÅÀ´©Å Release	v0.29.20	release	22779695417	51s	2026-03-06T19:57:41Z
+in_progress		UI: Remove unused shield icon from NameLayer	­ƒº¬ CI	fix/remove-shield-icon	pull_request	22779684479	1m10s	2026-03-06T19:57:22Z
+completed	failure	UI: Remove unused shield icon from NameLayer	­ƒº╝ PR	fix/remove-shield-icon	pull_request	22779684448	8s	2026-03-06T19:57:22Z
+completed	failure	UI: Remove unused shield icon from NameLayer	­ƒº╝ PR	fix/remove-shield-icon	pull_request	22779625463	8s	2026-03-06T19:55:36Z
+completed	failure	UI: Remove unused shield icon from NameLayer	­ƒº¬ CI	fix/remove-shield-icon	pull_request	22779340794	1m8s	2026-03-06T19:56:03Z
+completed	failure	UI: Remove unused shield icon from NameLayer	­ƒº╝ PR	fix/remove-shield-icon	pull_request	22779340779	8s	2026-03-06T19:47:13Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒº╝ PR	rejoinfix	pull_request	22779118782	6s	2026-03-06T19:40:50Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒº¬ CI	rejoinfix	pull_request	22779118738	1m23s	2026-03-06T19:40:50Z
+completed	success	rabbit	­ƒÜÇ Deploy	rejoinfix	push	22779117839	2m50s	2026-03-06T19:40:49Z
+completed	success	PR #3369	CodeQL	refs/pull/3369/head	dynamic	22779117792	1m53s	2026-03-06T19:40:49Z
+completed	success	Copilot code review	Copilot code review	refs/pull/3369/head	dynamic	22777973661	6m43s	2026-03-06T19:07:29Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒº¬ CI	rejoinfix	pull_request	22777972731	1m33s	2026-03-06T19:07:27Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒº╝ PR	rejoinfix	pull_request	22777972720	8s	2026-03-06T19:07:27Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒº╝ PR	rejoinfix	pull_request	22777972693	7s	2026-03-06T19:07:27Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒº╝ PR	rejoinfix	pull_request_target	22777971985	7s	2026-03-06T19:07:26Z
+completed	success	PR #3369	CodeQL	refs/pull/3369/head	dynamic	22777971345	1m53s	2026-03-06T19:07:24Z
+completed	success	clientId replay bugfix (was picking first clientID in the array)	­ƒÜÇ Deploy	rejoinfix	push	22777953606	2m30s	2026-03-06T19:06:54Z
+completed	failure	UI: Remove unused shield icon from NameLayer	­ƒº╝ PR	fix/remove-shield-icon	pull_request	22776933499	8s	2026-03-06T18:38:29Z
+completed	failure	UI: Remove unused shield icon from NameLayer	­ƒº¬ CI	fix/remove-shield-icon	pull_request	22776882014	1m22s	2026-03-06T18:37:05Z
+completed	success	UI: Remove unused shield icon from NameLayer	­ƒº╝ PR	fix/remove-shield-icon	pull_request_target	22776881998	8s	2026-03-06T18:37:05Z
