@@ -4,6 +4,7 @@ import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
@@ -39,7 +40,7 @@ export class HelpModal extends BaseModal {
       console.warn("Invalid keybinds JSON:", e);
     }
 
-    const isMac = /Mac/.test(navigator.userAgent);
+    const isMac = Platform.isMac;
     return {
       toggleView: "Space",
       coordinateGrid: "KeyM",

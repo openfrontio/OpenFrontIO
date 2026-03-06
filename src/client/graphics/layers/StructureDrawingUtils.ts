@@ -1,6 +1,10 @@
 import * as PIXI from "pixi.js";
 import { Theme } from "../../../core/configuration/Config";
-import { Cell, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "/images/AnchorIcon.png?url";
@@ -108,7 +112,7 @@ export class SpriteFactory {
     player: PlayerView,
     ghostStage: PIXI.Container,
     pos: { x: number; y: number },
-    structureType: UnitType,
+    structureType: PlayerBuildableUnitType,
   ): {
     container: PIXI.Container;
     priceText: PIXI.BitmapText;

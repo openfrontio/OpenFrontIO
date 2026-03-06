@@ -112,8 +112,8 @@ export class GameServer {
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableNations !== undefined) {
-      this.gameConfig.disableNations = gameConfig.disableNations;
+    if (gameConfig.nations !== undefined) {
+      this.gameConfig.nations = gameConfig.nations;
     }
     if (gameConfig.bots !== undefined) {
       this.gameConfig.bots = gameConfig.bots;

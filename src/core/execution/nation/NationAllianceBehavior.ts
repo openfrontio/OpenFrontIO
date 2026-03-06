@@ -28,6 +28,13 @@ export class NationAllianceBehavior {
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
+      // Alliance Request intents created during the spawn phase are executed on
+      // the first tick post-spawn phase. With the following condition we reject
+      // all requests created during the spawn phase.
+      if (req.createdAt() <= this.game.config().numSpawnPhaseTurns() + 1) {
+        req.reject();
+        continue;
+      }
       if (this.getAllianceDecision(req.requestor(), true)) {
         req.accept();
       } else {
@@ -76,11 +83,6 @@ export class NationAllianceBehavior {
     otherPlayer: Player,
     isResponse: boolean,
   ): boolean {
-    // Reject alliance requests during the spawn phase
-    if (this.game.inSpawnPhase()) {
-      return false;
-    }
-
     // Easy (dumb) nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
     if (this.isConfused()) {
       return this.random.chance(2);
