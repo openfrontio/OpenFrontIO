@@ -79,8 +79,8 @@ describe("SegmentTrailRaster", () => {
     expect(drew).toBe(true);
     expect(ops).toEqual([
       { op: "beginPath" },
-      { op: "moveTo", x: 0, y: 0 },
-      { op: "lineTo", x: 1, y: 0 },
+      { op: "moveTo", x: 0.5, y: 0.5 },
+      { op: "lineTo", x: 1.5, y: 0.5 },
       { op: "stroke" },
     ]);
   });
@@ -93,9 +93,9 @@ describe("SegmentTrailRaster", () => {
     expect(drew).toBe(true);
     expect(ops).toEqual([
       { op: "beginPath" },
-      { op: "moveTo", x: 2, y: 0 },
-      { op: "lineTo", x: 3, y: 0 },
-      { op: "lineTo", x: 3, y: 2 },
+      { op: "moveTo", x: 2.5, y: 0.5 },
+      { op: "lineTo", x: 3.5, y: 0.5 },
+      { op: "lineTo", x: 3.5, y: 2.5 },
       { op: "stroke" },
     ]);
   });
@@ -106,6 +106,33 @@ describe("SegmentTrailRaster", () => {
     const game = makeGame();
     expect(strokeStepInterval(ctx, game, plan, 4, 4)).toBe(false);
     expect(ops).toEqual([]);
+  });
+
+  it("keeps +0.5 offset even when rounding is disabled", () => {
+    const { ctx, ops } = makeMockCtx();
+    const game = {
+      x(ref: number): number {
+        return ref === 0 ? 0.2 : 1.7;
+      },
+      y(): number {
+        return 0.4;
+      },
+    };
+    const plan = {
+      startTick: 0,
+      ticksPerStep: 1,
+      points: Uint32Array.from([0, 1]),
+      segmentSteps: Uint32Array.from([1]),
+      segCumSteps: Uint32Array.from([0, 1]),
+    };
+
+    expect(strokeStepInterval(ctx, game, plan, 0, 1, false)).toBe(true);
+    expect(ops).toEqual([
+      { op: "beginPath" },
+      { op: "moveTo", x: 0.7, y: 0.9 },
+      { op: "lineTo", x: 2.2, y: 0.9 },
+      { op: "stroke" },
+    ]);
   });
 
   it("supports replan-style epoch replay by drawing multiple intervals", () => {
@@ -131,12 +158,12 @@ describe("SegmentTrailRaster", () => {
 
     expect(ops).toEqual([
       { op: "beginPath" },
-      { op: "moveTo", x: 0, y: 0 },
-      { op: "lineTo", x: 3, y: 0 },
+      { op: "moveTo", x: 0.5, y: 0.5 },
+      { op: "lineTo", x: 3.5, y: 0.5 },
       { op: "stroke" },
       { op: "beginPath" },
-      { op: "moveTo", x: 3, y: 0 },
-      { op: "lineTo", x: 3, y: 2 },
+      { op: "moveTo", x: 3.5, y: 0.5 },
+      { op: "lineTo", x: 3.5, y: 2.5 },
       { op: "stroke" },
     ]);
   });
