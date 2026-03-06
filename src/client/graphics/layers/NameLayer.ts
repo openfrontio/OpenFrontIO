@@ -27,7 +27,7 @@ class RenderInfo {
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
-  ) { }
+  ) {}
 }
 
 export class NameLayer implements Layer {
@@ -48,7 +48,7 @@ export class NameLayer implements Layer {
     private game: GameView,
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
-  ) { }
+  ) {}
 
   resizeCanvas() {
     this.canvas.width = window.innerWidth;
