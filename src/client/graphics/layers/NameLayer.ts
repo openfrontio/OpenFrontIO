@@ -16,7 +16,6 @@ import {
 } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import shieldIcon from "/images/ShieldIconBlack.svg?url";
 
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
@@ -39,7 +38,6 @@ export class NameLayer implements Layer {
   private rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
-  private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
@@ -50,12 +48,7 @@ export class NameLayer implements Layer {
     private game: GameView,
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
-  ) {
-    this.shieldIconImage = new Image();
-    this.shieldIconImage.src = shieldIcon;
-    this.shieldIconImage = new Image();
-    this.shieldIconImage.src = shieldIcon;
-  }
+  ) {}
 
   resizeCanvas() {
     this.canvas.width = window.innerWidth;
@@ -253,33 +246,6 @@ export class NameLayer implements Layer {
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
 
-    // TODO: Remove the shield icon.
-    /* eslint-disable no-constant-condition */
-    if (false) {
-      const shieldDiv = document.createElement("div");
-      shieldDiv.classList.add("player-shield");
-      shieldDiv.style.zIndex = "3";
-      shieldDiv.style.marginTop = "-5%";
-      shieldDiv.style.display = "flex";
-      shieldDiv.style.alignItems = "center";
-      shieldDiv.style.gap = "0px";
-      const shieldImg = document.createElement("img");
-      shieldImg.src = this.shieldIconImage.src;
-      shieldImg.style.width = "16px";
-      shieldImg.style.height = "16px";
-
-      const shieldSpan = document.createElement("span");
-      shieldSpan.textContent = "0";
-      shieldSpan.style.color = "black";
-      shieldSpan.style.fontSize = "10px";
-      shieldSpan.style.marginTop = "-2px";
-
-      shieldDiv.appendChild(shieldImg);
-      shieldDiv.appendChild(shieldSpan);
-      element.appendChild(shieldDiv);
-    }
-    /* eslint-enable no-constant-condition */
-
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
 
@@ -343,23 +309,6 @@ export class NameLayer implements Layer {
     troopsDiv.style.fontSize = `${render.fontSize}px`;
     troopsDiv.style.color = render.fontColor;
     troopsDiv.textContent = renderTroops(render.player.troops());
-
-    const density = renderNumber(
-      render.player.troops() / render.player.numTilesOwned(),
-    );
-    const shieldDiv: HTMLDivElement | null =
-      render.element.querySelector(".player-shield");
-    const shieldImg = shieldDiv?.querySelector("img");
-    const shieldNumber = shieldDiv?.querySelector("span");
-    if (shieldImg) {
-      shieldImg.style.width = `${render.fontSize * 0.8}px`;
-      shieldImg.style.height = `${render.fontSize * 0.8}px`;
-    }
-    if (shieldNumber) {
-      shieldNumber.style.fontSize = `${render.fontSize * 0.6}px`;
-      shieldNumber.style.marginTop = `${-render.fontSize * 0.1}px`;
-      shieldNumber.textContent = density;
-    }
 
     // Handle icons
     const iconsDiv = render.element.querySelector(
