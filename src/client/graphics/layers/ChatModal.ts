@@ -13,6 +13,7 @@ import { translateText } from "../../Utils";
 export type QuickChatPhrase = {
   key: string;
   requiresPlayer: boolean;
+  requiresPlayer2?: boolean;
 };
 
 export type QuickChatPhrases = Record<string, QuickChatPhrase[]>;
@@ -35,28 +36,20 @@ export class ChatModal extends LitElement {
   private playerSearchQuery: string = "";
   private previewText: string | null = null;
   private requiresPlayerSelection: boolean = false;
+  private requiresPlayer2Selection: boolean = false;
   private selectedCategory: string | null = null;
   private selectedPhraseText: string | null = null;
   private selectedPhraseTemplate: string | null = null;
   private selectedQuickChatKey: string | null = null;
   private selectedPlayer: PlayerView | null = null;
+  private selectedPlayer2: PlayerView | null = null;
+  private selectingPlayer2: boolean = false;
 
   private recipient: PlayerView;
   private sender: PlayerView;
   public eventBus: EventBus;
 
   public g: GameView;
-
-  quickChatPhrases: Record<
-    string,
-    Array<{ text: string; requiresPlayer: boolean }>
-  > = {
-    help: [{ text: "Please give me troops!", requiresPlayer: false }],
-    attack: [{ text: "Attack [P1]!", requiresPlayer: true }],
-    defend: [{ text: "Defend [P1]!", requiresPlayer: true }],
-    greet: [{ text: "Hello!", requiresPlayer: false }],
-    misc: [{ text: "Let's go!", requiresPlayer: false }],
-  };
 
   public categories = [
     { id: "help" },
@@ -123,7 +116,11 @@ export class ChatModal extends LitElement {
             ? html`
                 <div class="chat-column">
                   <div class="column-title">
-                    ${translateText("chat.player")}
+                    ${this.selectingPlayer2
+                      ? translateText("chat.player_2")
+                      : this.requiresPlayer2Selection
+                        ? translateText("chat.player_1")
+                        : translateText("chat.player")}
                   </div>
 
                   <input
@@ -138,13 +135,16 @@ export class ChatModal extends LitElement {
                     ${this.getSortedFilteredPlayers().map(
                       (player) => html`
                         <button
-                          class="chat-option-button ${this.selectedPlayer ===
-                          player
+                          class="chat-option-button ${(this.selectingPlayer2
+                            ? this.selectedPlayer2
+                            : this.selectedPlayer) === player
                             ? "selected"
                             : ""}"
                           style="border: 2px solid ${player
                             .territoryColor()
                             .toHex()};"
+                          ?disabled=${this.selectingPlayer2 &&
+                          this.selectedPlayer === player}
                           @click=${() => this.selectPlayer(player)}
                         >
                           ${player.name()}
@@ -158,16 +158,15 @@ export class ChatModal extends LitElement {
         </div>
 
         <div class="chat-preview">
-          ${this.previewText
-            ? translateText(this.previewText)
-            : translateText("chat.build")}
+          ${this.previewText ?? translateText("chat.build")}
         </div>
         <div class="chat-send">
           <button
             class="chat-send-button"
             @click=${this.sendChatMessage}
             ?disabled=${!this.previewText ||
-            (this.requiresPlayerSelection && !this.selectedPlayer)}
+            (this.requiresPlayerSelection && !this.selectedPlayer) ||
+            (this.requiresPlayer2Selection && !this.selectedPlayer2)}
           >
             ${translateText("chat.send")}
           </button>
@@ -190,6 +189,9 @@ export class ChatModal extends LitElement {
     this.selectedPhraseText = null;
     this.previewText = null;
     this.requiresPlayerSelection = false;
+    this.requiresPlayer2Selection = false;
+    this.selectedPlayer2 = null;
+    this.selectingPlayer2 = false;
     this.requestUpdate();
   }
 
@@ -198,14 +200,17 @@ export class ChatModal extends LitElement {
       this.selectedCategory!,
       phrase.key,
     );
-    this.selectedPhraseTemplate = translateText(
+    const translated = translateText(
       `chat.${this.selectedCategory}.${phrase.key}`,
     );
-    this.selectedPhraseText = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
-    this.previewText = `chat.${this.selectedCategory}.${phrase.key}`;
+    this.selectedPhraseTemplate = translated;
+    this.selectedPhraseText = translated;
+    this.previewText = translated;
     this.requiresPlayerSelection = phrase.requiresPlayer;
+    this.requiresPlayer2Selection = phrase.requiresPlayer2 ?? false;
+    this.selectedPlayer = null;
+    this.selectedPlayer2 = null;
+    this.selectingPlayer2 = false;
     this.requestUpdate();
   }
 
@@ -214,27 +219,34 @@ export class ChatModal extends LitElement {
   }
 
   private selectPlayer(player: PlayerView) {
-    if (this.previewText) {
-      this.previewText =
-        this.selectedPhraseTemplate?.replace("[P1]", player.name()) ?? null;
-      this.selectedPlayer = player;
+    if (!this.previewText) return;
+
+    if (this.selectingPlayer2) {
+      this.previewText = this.previewText.replace("[P2]", player.name());
+      this.selectedPlayer2 = player;
+      this.selectingPlayer2 = false;
       this.requiresPlayerSelection = false;
       this.requestUpdate();
+      return;
     }
+
+    this.previewText =
+      this.selectedPhraseTemplate?.replace("[P1]", player.name()) ?? null;
+    this.selectedPlayer = player;
+    this.selectedPlayer2 = null;
+    this.selectingPlayer2 = this.requiresPlayer2Selection;
+    this.requiresPlayerSelection = this.requiresPlayer2Selection;
+    this.requestUpdate();
   }
 
   private sendChatMessage() {
-    console.log("Sent message:", this.previewText);
-    console.log("Sender:", this.sender);
-    console.log("Recipient:", this.recipient);
-    console.log("Key:", this.selectedQuickChatKey);
-
     if (this.sender && this.recipient && this.selectedQuickChatKey) {
       this.eventBus.emit(
         new SendQuickChatEvent(
           this.recipient,
           this.selectedQuickChatKey,
           this.selectedPlayer?.id(),
+          this.selectedPlayer2?.id(),
         ),
       );
     }
@@ -242,6 +254,9 @@ export class ChatModal extends LitElement {
     this.previewText = null;
     this.selectedCategory = null;
     this.requiresPlayerSelection = false;
+    this.requiresPlayer2Selection = false;
+    this.selectedPlayer2 = null;
+    this.selectingPlayer2 = false;
     this.close();
 
     this.requestUpdate();
@@ -290,6 +305,9 @@ export class ChatModal extends LitElement {
     this.selectedPhraseText = null;
     this.previewText = null;
     this.requiresPlayerSelection = false;
+    this.requiresPlayer2Selection = false;
+    this.selectedPlayer2 = null;
+    this.selectingPlayer2 = false;
     this.modalEl?.close();
   }
 
