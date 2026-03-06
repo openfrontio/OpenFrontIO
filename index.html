@@ -264,23 +264,37 @@
     <!-- Game components -->
     <div id="app"></div>
 
+    <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
     <div
-      class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
+      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_460px_1fr] lg:items-end min-[1200px]:bottom-4 min-[1200px]:px-4"
+      style="
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      "
     >
+      <!-- HUD: <sm full-width, sm..lg left side 460px, lg+ col-2 -->
       <div
-        class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
+        class="flex flex-col pointer-events-none w-full sm:w-[460px] lg:col-start-2 z-10"
       >
-        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
-        <control-panel class="order-4 sm:order-none w-full"></control-panel>
+        <attacks-display class="w-full pointer-events-auto"></attacks-display>
+        <div
+          class="pointer-events-auto bg-gray-800/70 backdrop-blur-xs rounded-lg shadow-lg"
+        >
+          <control-panel class="w-full"></control-panel>
+          <unit-display class="hidden lg:block w-full"></unit-display>
+        </div>
       </div>
+
+      <!-- events+chat: <sm above HUD (order-first), sm..lg right side, lg+ col-3 -->
       <div
-        class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
+        class="flex flex-col pointer-events-none items-end order-first sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end"
       >
         <chat-display
-          class="order-1 sm:order-none w-full sm:w-auto"
+          class="w-full sm:w-auto pointer-events-auto"
         ></chat-display>
         <events-display
-          class="order-3 sm:order-none w-full sm:w-auto"
+          class="w-full sm:w-auto pointer-events-auto"
         ></events-display>
       </div>
     </div>
@@ -290,7 +304,6 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
-    <unit-display></unit-display>
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
     >
