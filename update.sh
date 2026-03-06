@@ -73,7 +73,8 @@ docker run -d \
     --network web \
     --label "traefik.enable=true" \
     --label "traefik.http.routers.${CONTAINER_NAME}.rule=Host(\`${SUBDOMAIN}.${DOMAIN}\`)" \
-    --label "traefik.http.routers.${CONTAINER_NAME}.entrypoints=web" \
+    --label "traefik.http.routers.${CONTAINER_NAME}.entrypoints=websecure" \
+    --label "traefik.http.routers.${CONTAINER_NAME}.tls=true" \
     --label "traefik.http.services.${CONTAINER_NAME}.loadbalancer.server.port=80" \
     "${GHCR_IMAGE}"
 

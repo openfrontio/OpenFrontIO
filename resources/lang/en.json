@@ -23,7 +23,8 @@
     "none": "None",
     "copied": "Copied!",
     "click_to_copy": "Click to copy",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "map_default": "Map default"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -186,7 +187,8 @@
     "options_title": "Options",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
-    "disable_nations": "Disable Nations",
+    "nations": "Nations: ",
+    "nations_disabled": "Disabled",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
@@ -199,8 +201,8 @@
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
-    "starting_gold": "Starting gold",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold": "Starting Gold (Millions)",
+    "starting_gold_placeholder": "5"
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -334,7 +336,8 @@
     "tradersdream": "Traders Dream",
     "hawaii": "Hawaii",
     "alps": "Alps",
-    "niledelta": "Nile Delta"
+    "niledelta": "Nile Delta",
+    "arctic": "Arctic"
   },
   "map_categories": {
     "featured": "Featured",
@@ -360,13 +363,10 @@
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
-    "teams_Duos": "{team_count} teams of 2 (Duos)",
-    "teams_Trios": "{team_count} teams of 3 (Trios)",
-    "teams_Quads": "{team_count} teams of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
     "connecting": "Connecting to lobby...",
     "starting_in": "Starting in {time}",
-    "starting_game": "Starting game…",
+    "starting_game": "Starting…",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
@@ -401,8 +401,9 @@
     "options_title": "Options",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
+    "nations": "Nations: ",
+    "nations_disabled": "Disabled",
     "player_immunity_duration": "PVP immunity duration (minutes)",
-    "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
     "mins_placeholder": "Mins",
     "instant_build": "Instant build",
@@ -430,7 +431,8 @@
     "teams_Humans Vs Nations": "Humans vs Nations",
     "starting_gold": "Starting gold",
     "crowded": "Crowded modifier",
-    "hard_nations": "Hard Nations"
+    "hard_nations": "Hard Nations",
+    "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {
     "red": "Red",
@@ -461,7 +463,6 @@
     "teams": "Teams"
   },
   "mode_selector": {
-    "special_title": "Special Mix",
     "teams_title": "Teams",
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",

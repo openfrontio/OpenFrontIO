@@ -112,7 +112,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     screenX: number | null = null,
     screenY: number | null = null,
   ) {
-    this.buildMenu.playerActions = actions;
+    this.buildMenu.playerBuildables = actions.buildableUnits;
 
     const tileOwner = this.game.owner(tile);
     const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;

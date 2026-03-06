@@ -1,4 +1,4 @@
-import { AllPlayers, nukeTypes } from "../../core/game/Game";
+import { AllPlayers, Nukes } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import allianceIconFaded from "/images/AllianceIconFaded.svg?url";
@@ -134,7 +134,7 @@ export function getPlayerIcons(
   }
 
   // Nuke icon (different color depending on whether the local player is the target)
-  const nukesSentByOtherPlayer = game.units(...nukeTypes).filter((unit) => {
+  const nukesSentByOtherPlayer = game.units(...Nukes.types).filter((unit) => {
     const isSendingNuke = player.id() === unit.owner().id();
     const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
     return isSendingNuke && notMyPlayer && unit.isActive();
