@@ -26,6 +26,7 @@ import {
 } from "../../Utils";
 import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
@@ -39,6 +40,7 @@ import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import soldierIcon from "/images/SoldierIcon.svg?url";
+import swordIcon from "/images/SwordIcon.svg?url";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -71,6 +73,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public transform!: TransformHandler;
 
+  @property({ type: Object })
+  public uiState!: UIState;
+
   @state()
   private player: PlayerView | null = null;
 
@@ -87,6 +92,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private spawnBarVisible = false;
   @state()
   private immunityBarVisible = false;
+
+  @state()
+  private hoverScreenX = 0;
+
+  @state()
+  private hoverScreenY = 0;
 
   private _isActive = false;
 
@@ -115,6 +126,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   private onMouseEvent(event: MouseMoveEvent) {
+    this.hoverScreenX = event.x;
+    this.hoverScreenY = event.y;
+
     const now = Date.now();
     if (now - this.lastMouseUpdate < 100) {
       return;
@@ -130,6 +144,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   public maybeShow(x: number, y: number) {
+    this.hoverScreenX = x;
+    this.hoverScreenY = y;
+
     this.hide();
     const worldCoord = this.transform.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
@@ -483,10 +500,135 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     `;
   }
 
+  private isDesktopViewport(): boolean {
+    return typeof window !== "undefined" && window.innerWidth >= 1024;
+  }
+
+  private canShowAttackPreview(player: PlayerView): boolean {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || !myPlayer.isAlive()) return false;
+    if (myPlayer.id() === player.id()) return false;
+    if (myPlayer.isFriendly(player)) return false;
+    return true;
+  }
+
+  private predictedOutgoingAttackTroops(): number {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return 0;
+    const ratio = this.uiState?.attackRatio ?? 0;
+    return Math.max(0, Math.floor(myPlayer.troops() * ratio));
+  }
+
+  private myCurrentTroopPercent(): number {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return 0;
+
+    const myMaxTroops = this.game.config().maxTroops(myPlayer);
+    if (myMaxTroops <= 0) return 0;
+
+    const ratio = (myPlayer.troops() / myMaxTroops) * 100;
+    return Math.max(0, Math.min(100, ratio));
+  }
+
+  private isMiniHoverOverlayEnabled(): boolean {
+    if (typeof document === "undefined") return true;
+    return !document.body.classList.contains("mini-hover-overlay-disabled");
+  }
+
+  private compactOverlayStyle(): string {
+    if (typeof window === "undefined") {
+      return `left: ${this.hoverScreenX}px; top: ${this.hoverScreenY}px;`;
+    }
+
+    const margin = 8;
+    const overlayWidth = Math.min(230, Math.max(210, window.innerWidth - 16));
+    const x = Math.min(
+      Math.max(margin, this.hoverScreenX + 16),
+      Math.max(margin, window.innerWidth - overlayWidth - margin),
+    );
+    const y = Math.min(
+      Math.max(margin, this.hoverScreenY - 102),
+      Math.max(margin, window.innerHeight - 130),
+    );
+
+    return `left: ${Math.round(x)}px; top: ${Math.round(y)}px;`;
+  }
+
+  private renderCompactHoverPlayerInfo(player: PlayerView) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer && myPlayer.id() === player.id()) {
+      return html``;
+    }
+
+    const totalTroops = player.troops();
+    const maxTroops = this.game.config().maxTroops(player);
+    const attackingTroops = player
+      .outgoingAttacks()
+      .map((a) => a.troops)
+      .reduce((a, b) => a + b, 0);
+    const attackPreviewEnabled = this.canShowAttackPreview(player);
+    const previewTroops = this.predictedOutgoingAttackTroops();
+    const myTroopPercent = this.myCurrentTroopPercent();
+
+    return html`
+      <div
+        class="fixed z-[70] pointer-events-none flex flex-col gap-1.5 w-[230px] max-w-[calc(100vw-1rem)]"
+        style="${this.compactOverlayStyle()}"
+      >
+        <div
+          class="inline-flex items-center gap-2 self-start rounded-md border border-white/20 bg-black/82 backdrop-blur-xs px-2 py-1 text-xs text-white shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
+          translate="no"
+        >
+          <span class="font-semibold">${renderTroops(totalTroops)}</span>
+          <span class="text-white/60">/ ${renderTroops(maxTroops)}</span>
+          ${attackingTroops > 0
+            ? html`<span
+                class="inline-flex items-center gap-1 rounded-sm bg-red-900/35 border border-red-500/40 px-1.5 py-0.5 text-red-400"
+              >
+                <img
+                  src=${swordIcon}
+                  class="h-3.5 w-3.5"
+                  style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
+                />
+                <span>${renderTroops(attackingTroops)}</span>
+              </span>`
+            : ""}
+        </div>
+
+        ${attackPreviewEnabled && previewTroops > 0
+          ? html`<div
+              class="self-start inline-flex items-center gap-1 rounded-md border border-blue-300/70 bg-black/88 backdrop-blur-xs px-2 py-1 text-blue-400 text-xs font-bold shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
+              translate="no"
+            >
+              <img
+                src=${swordIcon}
+                class="h-3.5 w-3.5"
+                style="filter: brightness(0) saturate(100%) invert(72%) sepia(56%) saturate(3204%) hue-rotate(176deg) brightness(99%) contrast(101%)"
+              />
+              <span>${renderTroops(previewTroops)}</span>
+              <span class="text-blue-200/90"
+                >(${myTroopPercent.toFixed(0)}%)</span
+              >
+            </div>`
+          : ""}
+      </div>
+    `;
+  }
+
   render() {
     if (!this._isActive) {
       return html``;
     }
+
+    const myPlayer = this.game.myPlayer();
+    const showCompactHoverOverlay =
+      this._isInfoVisible &&
+      this.player !== null &&
+      this.unit === null &&
+      this.isDesktopViewport() &&
+      this.isMiniHoverOverlayEnabled() &&
+      myPlayer !== null &&
+      this.player.id() !== myPlayer.id();
 
     const containerClasses = this._isInfoVisible
       ? "opacity-100 visible"
@@ -506,6 +648,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
+      ${showCompactHoverOverlay
+        ? this.renderCompactHoverPlayerInfo(this.player!)
+        : ""}
     `;
   }
 
