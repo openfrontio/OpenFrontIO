@@ -39,6 +39,11 @@ export abstract class BaseModal extends LitElement {
     if (this.modalEl) {
       this.modalEl.onClose = () => {
         if (this.isModalOpen) {
+          if (!this.confirmBeforeClose()) {
+            // Re-open the underlying o-modal since it already closed itself
+            this.modalEl?.open();
+            return;
+          }
           this.close();
         }
       };
