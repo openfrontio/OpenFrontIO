@@ -552,8 +552,9 @@ export const ServerStartGameMessageSchema = z.object({
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
   lobbyCreatedAt: z.number(),
-  // The clientID assigned to this connection by the server
-  myClientID: ID,
+  // The clientID assigned to this connection by the server.
+  // Absent for replays where the viewer has no player identity.
+  myClientID: ID.optional(),
 });
 
 export const ServerDesyncSchema = z.object({

@@ -39,7 +39,7 @@ interface BaseWorkerMessage {
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
-  clientID: ClientID;
+  clientID: ClientID | undefined;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
