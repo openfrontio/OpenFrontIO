@@ -115,6 +115,8 @@ export interface ModifierInfo {
   badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
+  /** Pre-formatted display string (used instead of renderNumber when provided) */
+  formattedValue?: string;
 }
 
 /**
@@ -150,13 +152,17 @@ export function getActiveModifiers(
     });
   }
   if (modifiers.startingGold) {
+    const millions = parseFloat(
+      (modifiers.startingGold / 1_000_000).toPrecision(12),
+    );
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
       badgeParams: {
-        amount: Math.round(modifiers.startingGold / 1_000_000),
+        amount: millions,
       },
       value: modifiers.startingGold,
+      formattedValue: `${millions}M`,
     });
   }
   return result;

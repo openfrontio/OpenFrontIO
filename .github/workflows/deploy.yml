@@ -21,6 +21,7 @@ on:
         options:
           - masters
           - staging
+          - falk2
           - falk1
       target_subdomain:
         description: "Deployment Subdomain"
@@ -94,6 +95,7 @@ jobs:
         env:
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
@@ -102,6 +104,7 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_MASTERS" && ssh-keyscan -H "$SERVER_HOST_MASTERS" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
@@ -118,6 +121,7 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest

@@ -23,16 +23,17 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
-  isStructureType,
   MessageType,
   MutableAlliance,
   Player,
+  PlayerBuildable,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
   PlayerType,
   Relation,
-  StructureTypes,
+  Structures,
   Team,
   TerraNullius,
   Tick,
@@ -979,6 +980,17 @@ export class PlayerImpl implements Player {
   }
 
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+    const unit = this.findExistingUnitToUpgrade(type, targetTile);
+    if (unit === false || !this.canUpgradeUnit(unit)) {
+      return false;
+    }
+    return unit;
+  }
+
+  private findExistingUnitToUpgrade(
+    type: UnitType,
+    targetTile: TileRef,
+  ): Unit | false {
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type, undefined, true)
@@ -986,32 +998,51 @@ export class PlayerImpl implements Player {
     if (existing.length === 0) {
       return false;
     }
-    const unit = existing[0].unit;
-    if (!this.canUpgradeUnit(unit)) {
-      return false;
-    }
-    return unit;
+    return existing[0].unit;
   }
 
-  public canUpgradeUnit(unit: Unit): boolean {
-    if (unit.isMarkedForDeletion()) {
+  private canBuildUnitType(
+    unitType: UnitType,
+    knownCost: Gold | null = null,
+  ): boolean {
+    if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
+    const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
+    if (this._gold < cost) {
+      return false;
+    }
+    if (unitType !== UnitType.MIRVWarhead && !this.isAlive()) {
+      return false;
+    }
+    return true;
+  }
+
+  private canUpgradeUnitType(unitType: UnitType): boolean {
+    return Boolean(this.mg.config().unitInfo(unitType).upgradable);
+  }
+
+  private isUnitValidToUpgrade(unit: Unit): boolean {
     if (unit.isUnderConstruction()) {
       return false;
     }
-    if (!this.mg.config().unitInfo(unit.type()).upgradable) {
-      return false;
-    }
-    if (this.mg.config().isUnitDisabled(unit.type())) {
-      return false;
-    }
-    if (
-      this._gold < this.mg.config().unitInfo(unit.type()).cost(this.mg, this)
-    ) {
+    if (unit.isMarkedForDeletion()) {
       return false;
     }
     if (unit.owner() !== this) {
+      return false;
+    }
+    return true;
+  }
+
+  public canUpgradeUnit(unit: Unit): boolean {
+    if (!this.canUpgradeUnitType(unit.type())) {
+      return false;
+    }
+    if (!this.canBuildUnitType(unit.type())) {
+      return false;
+    }
+    if (!this.isUnitValidToUpgrade(unit)) {
       return false;
     }
     return true;
@@ -1026,42 +1057,58 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    units?: UnitType[],
+    units: readonly PlayerBuildableUnitType[] = PlayerBuildable.types,
   ): BuildableUnit[] {
+    const mg = this.mg;
+    const config = mg.config();
+    const rail = mg.railNetwork();
+    const inSpawnPhase = mg.inSpawnPhase();
+
     const validTiles =
-      tile !== null &&
-      (units === undefined || units.some((u) => isStructureType(u)))
+      tile !== null && units.some((u) => Structures.has(u))
         ? this.validStructureSpawnTiles(tile)
         : [];
-    return Object.values(UnitType)
-      .filter((u) => units === undefined || units.includes(u))
-      .map((u) => {
-        let canUpgrade: number | false = false;
-        let canBuild: TileRef | false = false;
-        if (!this.mg.inSpawnPhase()) {
-          const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-          if (existingUnit !== false) {
+
+    const len = units.length;
+    const result = new Array<BuildableUnit>(len);
+
+    for (let i = 0; i < len; i++) {
+      const u = units[i];
+
+      const cost = config.unitInfo(u).cost(mg, this);
+      let canUpgrade: number | false = false;
+      let canBuild: TileRef | false = false;
+
+      if (tile !== null && this.canBuildUnitType(u, cost) && !inSpawnPhase) {
+        if (this.canUpgradeUnitType(u)) {
+          const existingUnit = this.findExistingUnitToUpgrade(u, tile);
+          if (
+            existingUnit !== false &&
+            this.isUnitValidToUpgrade(existingUnit)
+          ) {
             canUpgrade = existingUnit.id();
           }
-          if (tile !== null) {
-            canBuild = this.canBuild(u, tile, validTiles);
-          }
         }
-        return {
-          type: u,
-          canBuild,
-          canUpgrade,
-          cost: this.mg.config().unitInfo(u).cost(this.mg, this),
-          overlappingRailroads:
-            canBuild !== false
-              ? this.mg.railNetwork().overlappingRailroads(canBuild)
-              : [],
-          ghostRailPaths:
-            canBuild !== false
-              ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
-              : [],
-        };
-      });
+        canBuild = this.canSpawnUnitType(u, tile, validTiles);
+      }
+
+      const buildNew = canBuild !== false && canUpgrade === false;
+
+      result[i] = {
+        type: u,
+        canBuild,
+        canUpgrade,
+        cost,
+        overlappingRailroads: buildNew
+          ? rail.overlappingRailroads(canBuild as TileRef)
+          : [],
+        ghostRailPaths: buildNew
+          ? rail.computeGhostRailPaths(u, canBuild as TileRef)
+          : [],
+      };
+    }
+
+    return result;
   }
 
   canBuild(
@@ -1069,17 +1116,18 @@ export class PlayerImpl implements Player {
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
   ): TileRef | false {
-    if (this.mg.config().isUnitDisabled(unitType)) {
+    if (!this.canBuildUnitType(unitType)) {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
-    if (
-      unitType !== UnitType.MIRVWarhead &&
-      (!this.isAlive() || this.gold() < cost)
-    ) {
-      return false;
-    }
+    return this.canSpawnUnitType(unitType, targetTile, validTiles);
+  }
+
+  private canSpawnUnitType(
+    unitType: UnitType,
+    targetTile: TileRef,
+    validTiles: TileRef[] | null,
+  ): TileRef | false {
     switch (unitType) {
       case UnitType.MIRV:
         if (!this.mg.hasOwner(targetTile)) {
@@ -1135,7 +1183,7 @@ export class PlayerImpl implements Player {
       const wouldHitTeammate = this.mg.anyUnitNearby(
         tile,
         magnitude.outer,
-        StructureTypes,
+        Structures.types,
         (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
       );
       if (wouldHitTeammate) {
@@ -1218,7 +1266,7 @@ export class PlayerImpl implements Player {
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      StructureTypes,
+      Structures.types,
       undefined,
       true,
     );

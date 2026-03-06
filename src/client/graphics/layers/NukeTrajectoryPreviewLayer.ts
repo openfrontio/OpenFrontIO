@@ -26,7 +26,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
   private currentGhostStructure: UnitType | null = null;
-  // Cache spawn tile to avoid expensive player.actions() calls
+  // Cache spawn tile to avoid expensive player.buildables() calls
   private cachedSpawnTile: TileRef | null = null;
 
   constructor(
@@ -75,7 +75,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   }
 
   /**
-   * Update trajectory preview - called from tick() to cache spawn tile via expensive player.actions() call
+   * Update trajectory preview - called from tick() to cache spawn tile via expensive player.buildables() call
    * This only runs when target tile changes, minimizing worker thread communication
    */
   private updateTrajectoryPreview() {
@@ -138,14 +138,14 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     // Get buildable units to find spawn tile (expensive call - only on tick when tile changes)
     player
-      .actions(targetTile, [ghostStructure])
-      .then((actions) => {
+      .buildables(targetTile, [ghostStructure])
+      .then((buildables) => {
         // Ignore stale results if target changed
         if (this.lastTargetTile !== targetTile) {
           return;
         }
 
-        const buildableUnit = actions.buildableUnits.find(
+        const buildableUnit = buildables.find(
           (bu) => bu.type === ghostStructure,
         );
 
@@ -171,7 +171,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
   /**
    * Update trajectory path - called from renderLayer() each frame for smooth visual feedback
-   * Uses cached spawn tile to avoid expensive player.actions() calls
+   * Uses cached spawn tile to avoid expensive player.buildables() calls
    */
   private updateTrajectoryPath() {
     const ghostStructure = this.currentGhostStructure;

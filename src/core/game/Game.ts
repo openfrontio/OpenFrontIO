@@ -136,14 +136,10 @@ export enum GameMapType {
   Hawaii = "Hawaii",
   Alps = "Alps",
   NileDelta = "Nile Delta",
+  Arctic = "Arctic",
 }
 
 export type GameMapName = keyof typeof GameMapType;
-
-/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
-export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
-}
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -189,6 +185,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Hawaii,
     GameMapType.Alps,
     GameMapType.NileDelta,
+    GameMapType.Arctic,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -252,6 +249,15 @@ export interface UnitInfo {
   upgradable?: boolean;
 }
 
+function unitTypeGroup<T extends readonly UnitType[]>(types: T) {
+  return {
+    types,
+    has(type: UnitType): type is T[number] {
+      return (types as readonly UnitType[]).includes(type);
+    },
+  };
+}
+
 export enum UnitType {
   TransportShip = "Transport",
   Warship = "Warship",
@@ -277,20 +283,40 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
+export const Nukes = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRVWarhead,
+  UnitType.MIRV,
+] as const);
+
+export const BuildableAttacks = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.Warship,
+] as const);
+
+export const Structures = unitTypeGroup([
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
-]);
+] as const);
 
-export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+export const BuildMenus = unitTypeGroup([
+  ...Structures.types,
+  ...BuildableAttacks.types,
+] as const);
 
-export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
-}
+export const PlayerBuildable = unitTypeGroup([
+  ...BuildMenus.types,
+  UnitType.TransportShip,
+] as const);
+
+export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
 
 export interface OwnerComp {
   owner: Player;
@@ -360,13 +386,6 @@ export interface UnitParamsMap {
 export type UnitParams<T extends UnitType> = UnitParamsMap[T];
 
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
-
-export const nukeTypes = [
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRVWarhead,
-  UnitType.MIRV,
-] as UnitType[];
 
 export enum Relation {
   Hostile = 0,
@@ -647,8 +666,15 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
-  canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
+  buildableUnits(
+    tile: TileRef | null,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[];
+  canBuild(
+    type: UnitType,
+    targetTile: TileRef,
+    validTiles?: TileRef[] | null,
+  ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
@@ -873,7 +899,7 @@ export interface BuildableUnit {
   canBuild: TileRef | false;
   // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
   canUpgrade: number | false;
-  type: UnitType;
+  type: PlayerBuildableUnitType;
   cost: Gold;
   overlappingRailroads: number[];
   ghostRailPaths: TileRef[][];

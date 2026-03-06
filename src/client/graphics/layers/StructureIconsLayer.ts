@@ -8,7 +8,9 @@ import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
+  PlayerBuildableUnitType,
   PlayerID,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -84,14 +86,10 @@ export class StructureIconsLayer implements Layer {
   private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
   private factory: SpriteFactory;
-  private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
-    [UnitType.City, { visible: true }],
-    [UnitType.Factory, { visible: true }],
-    [UnitType.DefensePost, { visible: true }],
-    [UnitType.Port, { visible: true }],
-    [UnitType.MissileSilo, { visible: true }],
-    [UnitType.SAMLauncher, { visible: true }],
-  ]);
+  private readonly structures: Map<
+    PlayerBuildableUnitType,
+    { visible: boolean }
+  > = new Map(Structures.types.map((type) => [type, { visible: true }]));
   private lastGhostQueryAt: number;
   private visibilityStateDirty = true;
   private hasHiddenStructure = false;
@@ -299,8 +297,8 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
-      .then((actions) => {
+      ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
+      .then((buildables) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];
           this.potentialUpgrade.dotContainer.filters = [];
@@ -311,7 +309,7 @@ export class StructureIconsLayer implements Layer {
 
         if (!this.ghostUnit) return;
 
-        const unit = actions.buildableUnits.find(
+        const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
         const showPrice = this.game.config().userSettings().cursorCostLabel();
@@ -453,7 +451,7 @@ export class StructureIconsLayer implements Layer {
     this.ghostUnit.range?.position.set(localX, localY);
   }
 
-  private createGhostStructure(type: UnitType | null) {
+  private createGhostStructure(type: PlayerBuildableUnitType | null) {
     const player = this.game.myPlayer();
     if (!player) return;
     if (type === null) {
@@ -559,7 +557,9 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
-  private toggleStructures(toggleStructureType: UnitType[] | null): void {
+  private toggleStructures(
+    toggleStructureType: PlayerBuildableUnitType[] | null,
+  ): void {
     for (const [structureType, infos] of this.structures) {
       infos.visible =
         toggleStructureType?.indexOf(structureType) !== -1 ||
@@ -602,7 +602,9 @@ export class StructureIconsLayer implements Layer {
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
-    } else if (this.structures.has(unitView.type())) {
+    } else if (
+      this.structures.has(unitView.type() as PlayerBuildableUnitType)
+    ) {
       this.addNewStructure(unitView);
     }
   }
@@ -621,7 +623,7 @@ export class StructureIconsLayer implements Layer {
   private modifyVisibility(render: StructureRenderInfo) {
     this.refreshVisibilityStateCache();
 
-    const structureType = render.unit.type();
+    const structureType = render.unit.type() as PlayerBuildableUnitType;
     const structureInfos = this.structures.get(structureType);
 
     if (structureInfos) {
