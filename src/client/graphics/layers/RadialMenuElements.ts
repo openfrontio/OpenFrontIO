@@ -1,8 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
+  BuildableAttacks,
   PlayerActions,
-  StructureTypes,
+  PlayerBuildableUnitType,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -376,40 +378,34 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
-function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const units: Set<UnitType> = new Set<UnitType>();
+function getAllEnabledUnits(
+  myPlayer: boolean,
+  config: Config,
+): Set<PlayerBuildableUnitType> {
+  const units: Set<PlayerBuildableUnitType> =
+    new Set<PlayerBuildableUnitType>();
 
-  const addIfEnabled = (unitType: UnitType) => {
+  const addIfEnabled = (unitType: PlayerBuildableUnitType) => {
     if (!config.isUnitDisabled(unitType)) {
       units.add(unitType);
     }
   };
 
   if (myPlayer) {
-    StructureTypes.forEach(addIfEnabled);
+    Structures.types.forEach(addIfEnabled);
   } else {
-    addIfEnabled(UnitType.Warship);
-    addIfEnabled(UnitType.HydrogenBomb);
-    addIfEnabled(UnitType.MIRV);
-    addIfEnabled(UnitType.AtomBomb);
+    BuildableAttacks.types.forEach(addIfEnabled);
   }
 
   return units;
 }
-
-const ATTACK_UNIT_TYPES: UnitType[] = [
-  UnitType.AtomBomb,
-  UnitType.MIRV,
-  UnitType.HydrogenBomb,
-  UnitType.Warship,
-];
 
 function createMenuElements(
   params: MenuElementParams,
   filterType: "attack" | "build",
   elementIdPrefix: string,
 ): MenuElement[] {
-  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+  const unitTypes: Set<PlayerBuildableUnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
     params.game.config(),
   );
@@ -419,8 +415,8 @@ function createMenuElements(
       (item) =>
         unitTypes.has(item.unitType) &&
         (filterType === "attack"
-          ? ATTACK_UNIT_TYPES.includes(item.unitType)
-          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
+          ? BuildableAttacks.has(item.unitType)
+          : !BuildableAttacks.has(item.unitType)),
     )
     .map((item: BuildItemDisplay) => {
       const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);
