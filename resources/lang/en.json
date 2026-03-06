@@ -430,7 +430,8 @@
     "teams_Humans Vs Nations": "Humans vs Nations",
     "starting_gold": "Starting gold",
     "crowded": "Crowded modifier",
-    "hard_nations": "Hard Nations"
+    "hard_nations": "Hard Nations",
+    "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {
     "red": "Red",

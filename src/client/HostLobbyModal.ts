@@ -406,6 +406,10 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
+  public confirmBeforeClose(): boolean {
+    return confirm(translateText("host_modal.leave_confirmation"));
+  }
+
   protected onClose(): void {
     console.log("Closing host lobby modal");
     this.stopLobbyUpdates();
