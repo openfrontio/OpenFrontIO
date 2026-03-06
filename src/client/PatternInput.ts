@@ -130,7 +130,7 @@ export class PatternInput extends LitElement {
         <span
           class=${showSelect
             ? "hidden"
-            : "w-full h-full overflow-hidden flex items-center justify-center [&>img]:object-cover [&>img]:w-full [&>img]:h-full"}
+            : "w-full h-full overflow-hidden flex items-center justify-center [&>img]:object-cover [&>img]:w-full [&>img]:h-full [&>img]:pointer-events-none"}
         >
           ${!showSelect ? previewContent : null}
         </span>

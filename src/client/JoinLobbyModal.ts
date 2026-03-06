@@ -19,12 +19,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import {
-  GameMapSize,
-  GameMode,
-  GameType,
-  HumansVsNations,
-} from "../core/game/Game";
+import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -34,6 +29,7 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -134,11 +130,10 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .nationCount=${this.nationCount}
-                        .disableNations=${this.gameConfig?.disableNations ??
-                        false}
-                        .isCompactMap=${this.gameConfig?.gameMapSize ===
-                        GameMapSize.Compact}
+                        .nationCount=${nationsConfigToSlider(
+                          this.gameConfig?.nations ?? "default",
+                          this.nationCount,
+                        )}
                       ></lobby-player-view>
                     `
                   : ""}
@@ -437,9 +432,10 @@ export class JoinLobbyModal extends BaseModal {
           (m) => html`
             <lobby-config-item
               .label=${translateText(m.labelKey)}
-              .value=${m.value !== undefined
+              .value=${m.formattedValue ??
+              (m.value !== undefined
                 ? renderNumber(m.value)
-                : translateText("common.enabled")}
+                : translateText("common.enabled"))}
             ></lobby-config-item>
           `,
         )}

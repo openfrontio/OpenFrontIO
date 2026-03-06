@@ -9,7 +9,7 @@ import {
   GameMode,
   GameType,
 } from "../src/core/game/Game";
-import { AnalyticsRecord } from "../src/core/Schemas";
+import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -19,7 +19,7 @@ import {
 } from "../src/core/StatsSchemas";
 
 describe("Ranking class", () => {
-  const mockConfig = {
+  const mockConfig: GameConfig = {
     gameMap: GameMapType.Montreal,
     difficulty: Difficulty.Medium,
     donateGold: false,
@@ -27,7 +27,7 @@ describe("Ranking class", () => {
     gameType: GameType.Public,
     gameMode: GameMode.FFA,
     gameMapSize: GameMapSize.Normal,
-    disableNations: true,
+    nations: "disabled",
     bots: 0,
     infiniteGold: false,
     infiniteTroops: false,

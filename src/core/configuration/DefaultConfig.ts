@@ -224,7 +224,7 @@ export class DefaultConfig implements Config {
   }
 
   spawnNations(): boolean {
-    return !this._gameConfig.disableNations;
+    return this._gameConfig.nations !== "disabled";
   }
 
   isUnitDisabled(unitType: UnitType): boolean {

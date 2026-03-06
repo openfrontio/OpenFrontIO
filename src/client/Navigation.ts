@@ -106,6 +106,13 @@ export function initNavigation() {
             ) as any;
 
             if (openModal && typeof openModal.close === "function") {
+              // Check confirmation guard before closing
+              if (
+                typeof openModal.confirmBeforeClose === "function" &&
+                !openModal.confirmBeforeClose()
+              ) {
+                return;
+              }
               // Call leaveLobby or closeAndLeave first if it exists (for lobby modals)
               if (typeof openModal.leaveLobby === "function") {
                 openModal.leaveLobby();

@@ -3,8 +3,8 @@ import {
   Cell,
   Execution,
   Game,
-  isStructureType,
   Player,
+  Structures,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -42,7 +42,7 @@ export class PlayerExecution implements Execution {
   tick(ticks: number) {
     this.player.decayRelations();
     for (const u of this.player.units()) {
-      if (!isStructureType(u.type())) {
+      if (!Structures.has(u.type())) {
         continue;
       }
 

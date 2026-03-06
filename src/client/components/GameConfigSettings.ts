@@ -186,6 +186,13 @@ export interface GameConfigSettingsData {
       labelKey: string;
       disabledKey: string;
     };
+    nations?: {
+      value: number;
+      defaultValue?: number;
+      labelKey: string;
+      disabledKey: string;
+      hidden?: boolean;
+    };
     toggles: ToggleOptionConfig[];
     inputCards: TemplateResult[];
   };
@@ -244,6 +251,11 @@ export class GameConfigSettings extends LitElement {
   private handleBotsChanged = (event: Event) => {
     const customEvent = event as CustomEvent<{ value: number }>;
     this.emit("bots-changed", customEvent.detail);
+  };
+
+  private handleNationsChanged = (event: Event) => {
+    const customEvent = event as CustomEvent<{ value: number }>;
+    this.emit("nations-changed", customEvent.detail);
   };
 
   private handleUnitToggle = (unit: UnitType, checked: boolean) => {
@@ -423,6 +435,26 @@ export class GameConfigSettings extends LitElement {
                 ></fluent-slider>
               </div>
 
+              ${settings.options.nations && !settings.options.nations.hidden
+                ? html`<div
+                    class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${settings
+                      .options.nations.value > 0
+                      ? ACTIVE_CARD
+                      : INACTIVE_CARD}"
+                  >
+                    <fluent-slider
+                      min="0"
+                      max="400"
+                      step="1"
+                      .value=${settings.options.nations.value}
+                      .defaultValue=${settings.options.nations.defaultValue}
+                      defaultLabelKey="common.map_default"
+                      labelKey=${settings.options.nations.labelKey}
+                      disabledKey=${settings.options.nations.disabledKey}
+                      @value-changed=${this.handleNationsChanged}
+                    ></fluent-slider>
+                  </div>`
+                : nothing}
               ${settings.options.toggles.map((toggle) =>
                 this.renderOptionToggle(toggle),
               )}

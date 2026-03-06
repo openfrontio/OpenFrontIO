@@ -59,7 +59,8 @@ export class FlagInputModal extends BaseModal {
                       w-[100px] sm:w-[120px]"
                 >
                   <img
-                    class="w-full h-auto rounded shadow-sm group-hover:scale-105 transition-transform duration-200"
+                    class="w-full h-auto rounded group-hover:scale-105 transition-transform duration-200 pointer-events-none"
+                    draggable="false"
                     src="/flags/${country.code}.svg"
                     loading="lazy"
                     @error=${(e: Event) => {
