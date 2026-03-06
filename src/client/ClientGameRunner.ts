@@ -294,7 +294,7 @@ export class ClientGameRunner {
   }
 
   private async saveGame(update: WinUpdate) {
-    if (this.myPlayer === null || !this.clientID) {
+    if (!this.clientID) {
       return;
     }
     const players: PlayerRecord[] = [
