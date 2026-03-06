@@ -53,7 +53,7 @@ export class TrainStation {
   id: number = -1; // assigned by StationManager
   private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
     {};
-  private cluster: Cluster | null;
+  private cluster: Cluster | null = null;
   private railroads: Set<Railroad> = new Set();
   // Quick lookup from neighboring station to connecting railroad
   private railroadByNeighbor: Map<TrainStation, Railroad> = new Map();
@@ -129,6 +129,10 @@ export class TrainStation {
   }
 
   setCluster(cluster: Cluster | null) {
+    // Properly disconnect cluster if it's already set
+    if (this.cluster !== null) {
+      this.cluster.removeStation(this);
+    }
     this.cluster = cluster;
   }
 

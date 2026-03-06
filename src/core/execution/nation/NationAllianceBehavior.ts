@@ -28,6 +28,13 @@ export class NationAllianceBehavior {
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
+      // Alliance Request intents created during the spawn phase are executed on
+      // the first tick post-spawn phase. With the following condition we reject
+      // all requests created during the spawn phase.
+      if (req.createdAt() <= this.game.config().numSpawnPhaseTurns() + 1) {
+        req.reject();
+        continue;
+      }
       if (this.getAllianceDecision(req.requestor(), true)) {
         req.accept();
       } else {
@@ -87,7 +94,7 @@ export class NationAllianceBehavior {
       }
       return false;
     }
-    // Reject if otherPlayer has allied with 50% or more of all players (Hard and Impossible only)
+    // Reject if otherPlayer has allied with a lot of players (Hard and Impossible only)
     // To make sure there are enough non-friendly players in the game to stop the crown with nukes
     if (this.hasTooManyAlliances(otherPlayer)) {
       return false;
@@ -148,7 +155,7 @@ export class NationAllianceBehavior {
       .filter((p) => p.type() !== PlayerType.Bot).length;
     const otherPlayerAlliances = otherPlayer.alliances().length;
 
-    if (difficulty !== Difficulty.Hard) {
+    if (difficulty === Difficulty.Hard) {
       return otherPlayerAlliances >= totalPlayers * 0.5;
     } else {
       return otherPlayerAlliances >= totalPlayers * 0.25;

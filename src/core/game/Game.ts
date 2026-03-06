@@ -10,6 +10,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
@@ -51,6 +52,15 @@ export const isDifficulty = (value: unknown): value is Difficulty =>
   isEnumValue(Difficulty, value);
 
 export type Team = string;
+
+export interface SpawnArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type TeamGameSpawnAreas = Record<string, SpawnArea[]>;
 
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
@@ -110,6 +120,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
   TwoLakes = "Two Lakes",
@@ -118,15 +129,17 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  BosphorusStraits = "Bosphorus Straits",
+  BeringStrait = "Bering Strait",
   Yenisei = "Yenisei",
+  TradersDream = "Traders Dream",
+  Hawaii = "Hawaii",
+  Alps = "Alps",
+  NileDelta = "Nile Delta",
+  Arctic = "Arctic",
 }
 
 export type GameMapName = keyof typeof GameMapType;
-
-/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
-export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver;
-}
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -166,7 +179,13 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.BosphorusStraits,
+    GameMapType.BeringStrait,
     GameMapType.Yenisei,
+    GameMapType.Hawaii,
+    GameMapType.Alps,
+    GameMapType.NileDelta,
+    GameMapType.Arctic,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -178,6 +197,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+    GameMapType.TradersDream,
+    GameMapType.Passage,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -216,19 +237,25 @@ export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
   isCrowded: boolean;
+  isHardNations: boolean;
   startingGold?: number;
 }
 
 export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
-  // Determines if its owner changes when its tile is conquered.
-  territoryBound: boolean;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
-  canBuildTrainStation?: boolean;
-  experimental?: boolean;
+}
+
+function unitTypeGroup<T extends readonly UnitType[]>(types: T) {
+  return {
+    types,
+    has(type: UnitType): type is T[number] {
+      return (types as readonly UnitType[]).includes(type);
+    },
+  };
 }
 
 export enum UnitType {
@@ -256,20 +283,40 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
+export const Nukes = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRVWarhead,
+  UnitType.MIRV,
+] as const);
+
+export const BuildableAttacks = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.Warship,
+] as const);
+
+export const Structures = unitTypeGroup([
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
-]);
+] as const);
 
-export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+export const BuildMenus = unitTypeGroup([
+  ...Structures.types,
+  ...BuildableAttacks.types,
+] as const);
 
-export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
-}
+export const PlayerBuildable = unitTypeGroup([
+  ...BuildMenus.types,
+  UnitType.TransportShip,
+] as const);
+
+export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
 
 export interface OwnerComp {
   owner: Player;
@@ -339,13 +386,6 @@ export interface UnitParamsMap {
 export type UnitParams<T extends UnitType> = UnitParamsMap[T];
 
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
-
-export const nukeTypes = [
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRVWarhead,
-  UnitType.MIRV,
-] as UnitType[];
 
 export enum Relation {
   Hostile = 0,
@@ -452,6 +492,8 @@ export interface MutableAlliance extends Alliance {
   id(): number;
   extend(): void;
   onlyOneAgreedToExtend(): boolean;
+
+  agreedToExtend(player: Player): boolean;
 }
 
 export class PlayerInfo {
@@ -623,8 +665,15 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null): BuildableUnit[];
-  canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
+  buildableUnits(
+    tile: TileRef | null,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[];
+  canBuild(
+    type: UnitType,
+    targetTile: TileRef,
+    validTiles?: TileRef[] | null,
+  ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
@@ -659,8 +708,10 @@ export interface Player {
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
+  allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
+  removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
   betrayals(): number;
 
@@ -747,6 +798,7 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
   alliances(): MutableAlliance[];
@@ -754,11 +806,15 @@ export interface Game extends GameMap {
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
+  isNationSpawnImmunityActive(): boolean;
 
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
+  drainPackedTileUpdates(): Uint32Array;
+  recordMotionPlan(record: MotionPlanRecord): void;
+  drainPackedMotionPlans(): Uint32Array | null;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;
   config(): Config;
@@ -787,7 +843,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
@@ -843,9 +899,10 @@ export interface BuildableUnit {
   canBuild: TileRef | false;
   // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
   canUpgrade: number | false;
-  type: UnitType;
+  type: PlayerBuildableUnitType;
   cost: Gold;
   overlappingRailroads: number[];
+  ghostRailPaths: TileRef[][];
 }
 
 export interface PlayerProfile {
@@ -857,6 +914,14 @@ export interface PlayerBorderTiles {
   borderTiles: ReadonlySet<TileRef>;
 }
 
+export interface AllianceInfo {
+  expiresAt: Tick;
+  inExtensionWindow: boolean;
+  myPlayerAgreedToExtend: boolean;
+  otherAgreedToExtend: boolean;
+  canExtend: boolean;
+}
+
 export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
@@ -866,7 +931,7 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
-  allianceExpiresAt?: Tick;
+  allianceInfo?: AllianceInfo;
 }
 
 export interface EmojiMessage {

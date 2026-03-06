@@ -659,15 +659,15 @@
     "title_with_name": "ارسال نیروها به {name}",
     "available_tooltip": "نیروهای فعلی در دسترس شما",
     "min_keep": "حداقل نگهداری",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "نوار نیروها",
-    "capacity_note": "گیرنده فقط می‌تواند {{amount}} را در حال حاضر بپذیرد."
+    "capacity_note": "گیرنده فقط می‌تواند {amount} را در حال حاضر بپذیرد."
   },
   "send_gold_modal": {
     "title_with_name": "ارسال طلا به {name}",
     "available_tooltip": "طلا فعلی در دسترس شما",
     "aria_slider": "اسلاید مقدار",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "سرعت بازپخش",

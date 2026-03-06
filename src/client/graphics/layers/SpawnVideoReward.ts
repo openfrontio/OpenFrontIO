@@ -1,10 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
+import { Platform } from "src/client/Platform";
 import { getGamesPlayed } from "src/client/Utils";
 import { GameType } from "src/core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import "../../components/VideoReward";
+import "../../components/VideoPromo";
 import { Layer } from "./Layer";
 
 @customElement("spawn-video-ad")
@@ -21,7 +22,7 @@ export class SpawnVideoAd extends LitElement implements Layer {
   init() {
     if (
       !window.adsEnabled ||
-      window.innerWidth < 768 ||
+      Platform.isMobileWidth ||
       crazyGamesSDK.isOnCrazyGames() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
       getGamesPlayed() < 3 // Don't show to new players

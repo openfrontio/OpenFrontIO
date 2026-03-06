@@ -18,9 +18,7 @@ export class FlagInputModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <div
           class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
         >
@@ -61,7 +59,8 @@ export class FlagInputModal extends BaseModal {
                       w-[100px] sm:w-[120px]"
                 >
                   <img
-                    class="w-full h-auto rounded shadow-sm group-hover:scale-105 transition-transform duration-200"
+                    class="w-full h-auto rounded group-hover:scale-105 transition-transform duration-200 pointer-events-none"
+                    draggable="false"
                     src="/flags/${country.code}.svg"
                     loading="lazy"
                     @error=${(e: Event) => {

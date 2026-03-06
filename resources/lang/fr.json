@@ -790,15 +790,15 @@
     "title_with_name": "Envoyer des troupes à {name}",
     "available_tooltip": "Vos troupes actuellement disponibles",
     "min_keep": "Garder au minimum",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Curseur de troupes",
-    "capacity_note": "Le destinataire ne peut accepter que {{amount}} pour le moment."
+    "capacity_note": "Le destinataire ne peut accepter que {amount} pour le moment."
   },
   "send_gold_modal": {
     "title_with_name": "Envoyer de l'or à {name}",
     "available_tooltip": "Votre or disponible",
     "aria_slider": "Curseur de quantité",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Vitesse de relecture",

@@ -1,4 +1,4 @@
-import { LitElement } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
 
 /**
@@ -10,10 +10,20 @@ import { property, query, state } from "lit/decorators.js";
  * - Automatic listener lifecycle management
  * - Common inline/modal element handling
  * - Shared open/close logic with hooks for custom behavior
+ * - Standardized loading spinner UI
+ * - Consistent modal container styling
  */
 export abstract class BaseModal extends LitElement {
   @state() protected isModalOpen = false;
   @property({ type: Boolean }) inline = false;
+
+  /**
+   * Standard modal container class string.
+   * Provides consistent dark glassmorphic styling across all modals.
+   * No rounding on mobile for full-screen appearance.
+   */
+  protected readonly modalContainerClass =
+    "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10";
 
   @query("o-modal") protected modalEl?: HTMLElement & {
     open: () => void;
@@ -29,6 +39,11 @@ export abstract class BaseModal extends LitElement {
     if (this.modalEl) {
       this.modalEl.onClose = () => {
         if (this.isModalOpen) {
+          if (!this.confirmBeforeClose()) {
+            // Re-open the underlying o-modal since it already closed itself
+            this.modalEl?.open();
+            return;
+          }
           this.close();
         }
       };
@@ -47,6 +62,9 @@ export abstract class BaseModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.isModalOpen) {
       e.preventDefault();
+      if (!this.confirmBeforeClose()) {
+        return;
+      }
       this.close();
     }
   };
@@ -81,6 +99,15 @@ export abstract class BaseModal extends LitElement {
    */
   protected onClose(): void {
     // Default implementation does nothing
+  }
+
+  /**
+   * Guard called before closing via Escape key or click-outside.
+   * Override in subclasses to show a confirmation dialog.
+   * Return false to prevent the modal from closing.
+   */
+  public confirmBeforeClose(): boolean {
+    return true;
   }
 
   /**
@@ -120,5 +147,44 @@ export abstract class BaseModal extends LitElement {
     } else {
       this.modalEl?.close();
     }
+  }
+
+  /**
+   * Renders a standardized loading spinner with optional custom message.
+   * Use this for consistent loading states across all modals.
+   *
+   * @param message - Optional loading message text. Defaults to no message.
+   * @param spinnerColor - Optional spinner color. Defaults to 'blue'.
+   * @returns TemplateResult of the loading UI
+   */
+  protected renderLoadingSpinner(
+    message?: string,
+    spinnerColor: "blue" | "green" | "yellow" | "white" = "blue",
+  ): TemplateResult {
+    const colorClasses = {
+      blue: "border-blue-500/30 border-t-blue-500",
+      green: "border-green-500/30 border-t-green-500",
+      yellow: "border-yellow-500/30 border-t-yellow-500",
+      white: "border-white/20 border-t-white",
+    };
+
+    return html`
+      <div
+        class="flex flex-col items-center justify-center p-12 text-white h-full min-h-[400px]"
+      >
+        <div
+          class="w-12 h-12 border-4 ${colorClasses[
+            spinnerColor
+          ]} rounded-full animate-spin mb-4"
+        ></div>
+        ${message
+          ? html`<p
+              class="text-white/60 font-medium tracking-wide animate-pulse"
+            >
+              ${message}
+            </p>`
+          : ""}
+      </div>
+    `;
   }
 }

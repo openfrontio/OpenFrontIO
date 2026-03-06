@@ -12,6 +12,7 @@ import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  getPlayerCosmetics,
   handlePurchase,
   patternRelationship,
 } from "./Cosmetics";
@@ -37,8 +38,8 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | false = false;
 
-  private _onPatternSelected = () => {
-    this.updateFromSettings();
+  private _onPatternSelected = async () => {
+    await this.updateFromSettings();
     this.refresh();
   };
 
@@ -62,24 +63,16 @@ export class TerritoryPatternsModal extends BaseModal {
     window.removeEventListener("pattern-selected", this._onPatternSelected);
   }
 
-  private updateFromSettings() {
-    this.selectedPattern =
-      this.cosmetics !== null
-        ? this.userSettings.getSelectedPatternName(this.cosmetics)
-        : null;
-    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
+  private async updateFromSettings() {
+    const cosmetics = await getPlayerCosmetics();
+    this.selectedPattern = cosmetics.pattern ?? null;
+    this.selectedColor = cosmetics.color?.color ?? null;
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
-    if (!hasLinkedAccount(userMeResponse)) {
-      this.userSettings.setSelectedPatternName(undefined);
-      this.userSettings.setSelectedColor(undefined);
-      this.selectedPattern = null;
-      this.selectedColor = null;
-    }
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
-    this.updateFromSettings();
+    await this.updateFromSettings();
     this.refresh();
   }
 
@@ -87,7 +80,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       ${modalHeader({
         title: translateText("territory_patterns.title"),
-        onBack: this.close,
+        onBack: () => this.close(),
         ariaLabel: translateText("common.back"),
         rightContent: !hasLinkedAccount(this.userMeResponse)
           ? html`<div class="flex items-center">
@@ -212,11 +205,15 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private renderNotLoggedInWarning(): TemplateResult {
-    return html`<div
-      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30"
+    return html`<button
+      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 cursor-pointer hover:bg-red-500/30"
+      @click=${() => {
+        this.close();
+        window.showPage?.("page-account");
+      }}
     >
       ${translateText("territory_patterns.not_logged_in")}
-    </div>`;
+    </button>`;
   }
 
   private renderColorSwatchGrid(): TemplateResult {
@@ -251,11 +248,7 @@ export class TerritoryPatternsModal extends BaseModal {
     if (!this.isActive && !this.inline) return html``;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
           ${this.activeTab === "patterns"

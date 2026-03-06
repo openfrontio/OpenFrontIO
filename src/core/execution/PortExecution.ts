@@ -9,6 +9,7 @@ export class PortExecution implements Execution {
   private port: Unit;
   private random: PseudoRandom;
   private checkOffset: number;
+  private tradeShipSpawnRejections = 0;
 
   constructor(port: Unit) {
     this.port = port;
@@ -69,17 +70,15 @@ export class PortExecution implements Execution {
 
   shouldSpawnTradeShip(): boolean {
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
-    const numPlayerPorts = this.port!.owner().unitCount(UnitType.Port);
-    const numPlayerTradeShips = this.port!.owner().unitCount(
-      UnitType.TradeShip,
-    );
     const spawnRate = this.mg
       .config()
-      .tradeShipSpawnRate(numTradeShips, numPlayerPorts, numPlayerTradeShips);
+      .tradeShipSpawnRate(this.tradeShipSpawnRejections, numTradeShips);
     for (let i = 0; i < this.port!.level(); i++) {
       if (this.random.chance(spawnRate)) {
+        this.tradeShipSpawnRejections = 0;
         return true;
       }
+      this.tradeShipSpawnRejections++;
     }
     return false;
   }

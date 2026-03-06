@@ -8,7 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { GameConfig, GameID } from "../core/Schemas";
+import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -46,10 +46,11 @@ export class GameManager {
     persistentID: string,
     gameID: GameID,
     lastTurn: number = 0,
+    newUsername?: string,
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn);
+    return game.rejoinClient(ws, persistentID, lastTurn, newUsername);
   }
 
   createGame(
@@ -57,6 +58,7 @@ export class GameManager {
     gameConfig: GameConfig | undefined,
     creatorPersistentID?: string,
     startsAt?: number,
+    publicGameType?: PublicGameType,
   ) {
     const game = new GameServer(
       id,
@@ -70,7 +72,7 @@ export class GameManager {
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
         difficulty: Difficulty.Medium,
-        disableNations: false,
+        nations: "default",
         infiniteGold: false,
         infiniteTroops: false,
         maxTimerValue: undefined,
@@ -83,6 +85,7 @@ export class GameManager {
       },
       creatorPersistentID,
       startsAt,
+      publicGameType,
     );
     this.games.set(id, game);
     return game;

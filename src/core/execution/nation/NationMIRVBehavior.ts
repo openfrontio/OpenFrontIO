@@ -4,7 +4,9 @@ import {
   Game,
   Gold,
   Player,
+  PlayerID,
   PlayerType,
+  Tick,
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
@@ -18,7 +20,15 @@ import {
   respondToMIRV,
 } from "./NationEmojiBehavior";
 
+// 30 seconds at 10 ticks/second
+const MIRV_COOLDOWN_TICKS = 300;
+
 export class NationMIRVBehavior {
+  // Shared across all NationMIRVBehavior instances.
+  // Tracks the last tick a MIRV was sent at each player, so multiple nations don't pile-on the same target.
+  // Especially important for games with very high starting gold settings.
+  private static recentMirvTargets = new Map<PlayerID, Tick>();
+
   constructor(
     private random: PseudoRandom,
     private game: Game,
@@ -119,19 +129,19 @@ export class NationMIRVBehavior {
     }
 
     const inboundMIRVSender = this.selectCounterMirvTarget();
-    if (inboundMIRVSender) {
+    if (inboundMIRVSender && !this.wasRecentlyMirved(inboundMIRVSender)) {
       this.maybeSendMIRV(inboundMIRVSender);
       return true;
     }
 
     const victoryDenialTarget = this.selectVictoryDenialTarget();
-    if (victoryDenialTarget) {
+    if (victoryDenialTarget && !this.wasRecentlyMirved(victoryDenialTarget)) {
       this.maybeSendMIRV(victoryDenialTarget);
       return true;
     }
 
     const steamrollStopTarget = this.selectSteamrollStopTarget();
-    if (steamrollStopTarget) {
+    if (steamrollStopTarget && !this.wasRecentlyMirved(steamrollStopTarget)) {
       this.maybeSendMIRV(steamrollStopTarget);
       return true;
     }
@@ -223,6 +233,17 @@ export class NationMIRVBehavior {
     return null;
   }
 
+  // MIRV Cooldown Methods
+  private wasRecentlyMirved(target: Player): boolean {
+    const lastTick = NationMIRVBehavior.recentMirvTargets.get(target.id());
+    if (lastTick === undefined) return false;
+    return this.game.ticks() - lastTick < MIRV_COOLDOWN_TICKS;
+  }
+
+  private recordMirvHit(target: Player): void {
+    NationMIRVBehavior.recentMirvTargets.set(target.id(), this.game.ticks());
+  }
+
   // MIRV Helper Methods
   private getValidMirvTargetPlayers(): Player[] {
     if (this.player === null) throw new Error("not initialized");
@@ -261,6 +282,7 @@ export class NationMIRVBehavior {
     const centerTile = this.calculateTerritoryCenter(enemy);
     if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
       this.game.addExecution(new MirvExecution(this.player, centerTile));
+      this.recordMirvHit(enemy);
       this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
       respondToMIRV(this.game, this.random, enemy);
     }

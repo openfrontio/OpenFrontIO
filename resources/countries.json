@@ -1534,6 +1534,11 @@
     "name": "Norway"
   },
   {
+    "code": "1_Occitania",
+    "continent": "Europe",
+    "name": "Occitania"
+  },
+  {
     "code": "Ohio",
     "continent": "North America",
     "name": "Ohio"

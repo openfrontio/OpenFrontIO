@@ -790,15 +790,15 @@
     "title_with_name": "{name}へ軍隊を送信",
     "available_tooltip": "あなたの兵士数",
     "min_keep": "最小値を保つ",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "軍隊スライダー",
-    "capacity_note": "現在、受取主は {{amount}} のみ受け取ることができます。"
+    "capacity_note": "現在、受取主は {amount} のみ受け取ることができます。"
   },
   "send_gold_modal": {
     "title_with_name": "{name}へゴールドを送信",
     "available_tooltip": "現在利用可能な資金",
     "aria_slider": "スライダー",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "再生速度",

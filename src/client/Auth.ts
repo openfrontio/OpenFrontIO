@@ -10,6 +10,7 @@ export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 const PERSISTENT_ID_KEY = "player_persistent_id";
 
 let __jwt: string | null = null;
+let __refreshPromise: Promise<void> | null = null;
 
 export function discordLogin() {
   const redirectUri = encodeURIComponent(window.location.href);
@@ -138,6 +139,18 @@ export async function userAuth(
 }
 
 async function refreshJwt(): Promise<void> {
+  if (__refreshPromise) {
+    return __refreshPromise;
+  }
+  __refreshPromise = doRefreshJwt();
+  try {
+    await __refreshPromise;
+  } finally {
+    __refreshPromise = null;
+  }
+}
+
+async function doRefreshJwt(): Promise<void> {
   try {
     console.log("Refreshing jwt");
     const response = await fetch(getApiBase() + "/auth/refresh", {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMapType, GameMode, GameType } from "./game/Game";
+import { Difficulty, GameMode, GameType, RankedType } from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -43,7 +43,7 @@ export const DiscordUserSchema = z.object({
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
 const SingleplayerMapAchievementSchema = z.object({
-  mapName: z.enum(GameMapType),
+  mapName: z.string(),
   difficulty: z.enum(Difficulty),
 });
 
@@ -99,7 +99,7 @@ export const PlayerGameSchema = z.object({
   start: z.iso.datetime(),
   mode: z.enum(GameMode),
   type: z.enum(GameType),
-  map: z.enum(GameMapType),
+  map: z.string(),
   difficulty: z.enum(Difficulty),
   clientId: z.string().optional(),
 });
@@ -174,7 +174,7 @@ export type RankedLeaderboardEntry = z.infer<
 >;
 
 export const RankedLeaderboardResponseSchema = z.object({
-  "1v1": RankedLeaderboardEntrySchema.array(),
+  [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
