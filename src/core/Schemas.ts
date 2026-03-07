@@ -219,7 +219,12 @@ export const GameConfigSchema = z.object({
       startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
-  disableNations: z.boolean(),
+  nations: z
+    .number()
+    .int()
+    .min(1)
+    .max(400)
+    .or(z.enum(["default", "disabled"])),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
@@ -547,8 +552,9 @@ export const ServerStartGameMessageSchema = z.object({
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
   lobbyCreatedAt: z.number(),
-  // The clientID assigned to this connection by the server
-  myClientID: ID,
+  // The clientID assigned to this connection by the server.
+  // Absent for replays where the viewer has no player identity.
+  myClientID: ID.optional(),
 });
 
 export const ServerDesyncSchema = z.object({

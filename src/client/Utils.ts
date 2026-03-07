@@ -6,10 +6,12 @@ import {
   MessageType,
   PublicGameModifiers,
   Quads,
+  Team,
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
+import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
@@ -113,6 +115,8 @@ export interface ModifierInfo {
   badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
+  /** Pre-formatted display string (used instead of renderNumber when provided) */
+  formattedValue?: string;
 }
 
 /**
@@ -148,13 +152,17 @@ export function getActiveModifiers(
     });
   }
   if (modifiers.startingGold) {
+    const millions = parseFloat(
+      (modifiers.startingGold / 1_000_000).toPrecision(12),
+    );
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
       badgeParams: {
-        amount: Math.round(modifiers.startingGold / 1_000_000),
+        amount: millions,
       },
       value: modifiers.startingGold,
+      formattedValue: `${millions}M`,
     });
   }
   return result;
@@ -407,6 +415,13 @@ export const translateText = (
   }
 };
 
+export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+  if (!team) return "";
+  const translationKey = `team_colors.${team.toLowerCase()}`;
+  const translated = translateText(translationKey);
+  return translated === translationKey ? team : translated;
+}
+
 /**
  * Severity colors mapping for message types
  */
@@ -463,21 +478,11 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌘"; // Command key
-  } else {
-    return "Ctrl";
-  }
+  return Platform.isMac ? "⌘" : "Ctrl";
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌥"; // Option key
-  } else {
-    return "Alt";
-  }
+  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {
