@@ -398,7 +398,7 @@ export class Nation {
   constructor(
     public readonly spawnCell: Cell | undefined,
     public readonly playerInfo: PlayerInfo,
-  ) {}
+  ) { }
 }
 
 export class Cell {
@@ -502,7 +502,7 @@ export class PlayerInfo {
   constructor(
     public readonly name: string,
     public readonly playerType: PlayerType,
-    // null if bot.
+    // null if tribe.
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,

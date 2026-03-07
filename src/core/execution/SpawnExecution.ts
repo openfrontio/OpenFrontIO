@@ -10,7 +10,7 @@ import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
-import { BotExecution } from "./BotExecution";
+import { TribeExecution } from "./TribeExecution";
 import { PlayerExecution } from "./PlayerExecution";
 import { getSpawnTiles } from "./Util";
 
@@ -71,7 +71,7 @@ export class SpawnExecution implements Execution {
     if (!player.hasSpawned()) {
       this.mg.addExecution(new PlayerExecution(player));
       if (player.type() === PlayerType.Bot) {
-        this.mg.addExecution(new BotExecution(player));
+        this.mg.addExecution(new TribeExecution(player));
       }
     }
 
