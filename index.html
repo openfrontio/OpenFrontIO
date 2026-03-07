@@ -273,22 +273,24 @@
         padding-right: env(safe-area-inset-right);
       "
     >
-      <!-- HUD: <sm full-width, sm..lg left side 460px, lg+ col-2 -->
+      <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
       <div
-        class="flex flex-col pointer-events-none w-full sm:w-[460px] lg:col-start-2 z-10"
+        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[460px] lg:col-start-2 sm:z-10"
       >
-        <attacks-display class="w-full pointer-events-auto"></attacks-display>
+        <attacks-display
+          class="w-full pointer-events-auto order-1 sm:order-none"
+        ></attacks-display>
         <div
-          class="pointer-events-auto bg-gray-800/70 backdrop-blur-xs rounded-lg shadow-lg"
+          class="pointer-events-auto bg-gray-800/70 backdrop-blur-xs sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
         >
           <control-panel class="w-full"></control-panel>
           <unit-display class="hidden lg:block w-full"></unit-display>
         </div>
       </div>
 
-      <!-- events+chat: <sm above HUD (order-first), sm..lg right side, lg+ col-3 -->
+      <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
       <div
-        class="flex flex-col pointer-events-none items-end order-first sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end"
+        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end min-[1200px]:mr-4"
       >
         <chat-display
           class="w-full sm:w-auto pointer-events-auto"
