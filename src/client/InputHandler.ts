@@ -420,54 +420,11 @@ export class InputHandler {
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildCity)) {
+      // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
+      const matchedBuild = this.resolveBuildKeybind(e.code);
+      if (matchedBuild !== null) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.City);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildFactory)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildPort)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Port);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildDefensePost)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.DefensePost);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildMissileSilo)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MissileSilo);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildSamLauncher)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.SAMLauncher);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildAtomBomb)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.AtomBomb);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildHydrogenBomb)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.HydrogenBomb);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildWarship)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Warship);
-      }
-
-      if (this.buildKeybindMatches(e.code, this.keybinds.buildMIRV)) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MIRV);
+        this.setGhostStructure(matchedBuild);
       }
 
       if (e.code === this.keybinds.swapDirection) {
@@ -647,11 +604,48 @@ export class InputHandler {
     return null;
   }
 
+  /** Strict equality only: used for first-pass exact KeyboardEvent.code match. */
   private buildKeybindMatches(code: string, keybindValue: string): boolean {
-    if (code === keybindValue) return true;
+    return code === keybindValue;
+  }
+
+  /** Digit/Numpad alias match: used only when no exact match was found. */
+  private buildKeybindMatchesDigit(
+    code: string,
+    keybindValue: string,
+  ): boolean {
     const digit = this.digitFromKeyCode(code);
     const bindDigit = this.digitFromKeyCode(keybindValue);
     return digit !== null && bindDigit !== null && digit === bindDigit;
+  }
+
+  /**
+   * Resolves a keyup code to a build action: exact code match first, then digit/Numpad alias.
+   * Returns the UnitType to set as ghost, or null if no build keybind matched.
+   */
+  private resolveBuildKeybind(code: string): PlayerBuildableUnitType | null {
+    const buildKeybinds: ReadonlyArray<{
+      key: string;
+      type: PlayerBuildableUnitType;
+    }> = [
+      { key: "buildCity", type: UnitType.City },
+      { key: "buildFactory", type: UnitType.Factory },
+      { key: "buildPort", type: UnitType.Port },
+      { key: "buildDefensePost", type: UnitType.DefensePost },
+      { key: "buildMissileSilo", type: UnitType.MissileSilo },
+      { key: "buildSamLauncher", type: UnitType.SAMLauncher },
+      { key: "buildAtomBomb", type: UnitType.AtomBomb },
+      { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
+      { key: "buildWarship", type: UnitType.Warship },
+      { key: "buildMIRV", type: UnitType.MIRV },
+    ];
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatches(code, this.keybinds[key])) return type;
+    }
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatchesDigit(code, this.keybinds[key])) return type;
+    }
+    return null;
   }
 
   private getPinchDistance(): number {

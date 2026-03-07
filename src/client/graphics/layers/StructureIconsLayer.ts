@@ -44,6 +44,11 @@ import {
 } from "./StructureDrawingUtils";
 import bitmapFont from "/fonts/round_6x6_modified.xml?url";
 
+/** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
+export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
+  return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+}
+
 extend([a11yPlugin]);
 
 class StructureRenderInfo {
@@ -424,6 +429,7 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.buildableUnit.type,
         ),
       );
+      this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       const unitType = this.ghostUnit.buildableUnit.type;
       const rocketDirectionUp =
@@ -437,8 +443,12 @@ export class StructureIconsLayer implements Layer {
           rocketDirectionUp,
         ),
       );
+      if (!shouldPreserveGhostAfterBuild(unitType)) {
+        this.removeGhostStructure();
+      }
+    } else {
+      this.removeGhostStructure();
     }
-    this.removeGhostStructure();
   }
 
   private moveGhost(e: MouseMoveEvent) {
