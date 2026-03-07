@@ -3,6 +3,7 @@ import {
   ConfirmGhostStructureEvent,
   InputHandler,
 } from "../src/client/InputHandler";
+import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 
@@ -469,13 +470,7 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Enter key confirm ghost structure", () => {
-    let uiState: {
-      attackRatio: number;
-      ghostStructure: UnitType | null;
-      overlappingRailroads: number[];
-      ghostRailPaths: any[];
-      rocketDirectionUp: boolean;
-    };
+    let uiState: UIState;
 
     beforeEach(() => {
       localStorage.removeItem("settings.keybinds");
@@ -485,7 +480,7 @@ describe("InputHandler AutoUpgrade", () => {
         rocketDirectionUp: true,
         overlappingRailroads: [],
         ghostRailPaths: [],
-      };
+      } as UIState;
       inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
       inputHandler.initialize();
     });
@@ -531,13 +526,13 @@ describe("InputHandler AutoUpgrade", () => {
     beforeEach(() => {
       localStorage.removeItem("settings.keybinds");
       inputHandler.destroy();
-      const uiState = {
+      const uiState: UIState = {
         attackRatio: 20,
-        ghostStructure: null as UnitType | null,
+        ghostStructure: null,
         rocketDirectionUp: true,
-        overlappingRailroads: [] as number[],
-        ghostRailPaths: [] as any[],
-      };
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
       inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
       inputHandler.initialize();
     });
