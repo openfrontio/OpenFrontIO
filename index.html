@@ -311,16 +311,6 @@
     <performance-overlay></performance-overlay>
     <player-info-overlay></player-info-overlay>
     <leader-board></leader-board>
-    <div
-      class="hidden in-[.in-game]:flex fixed top-[22rem] left-4 z-[1200] pointer-events-auto"
-    >
-      <button
-        id="mini-hover-toggle-button"
-        class="px-3 py-1.5 rounded-md bg-gray-900/80 border border-white/20 text-white text-xs lg:text-sm hover:bg-gray-800/90 transition-colors"
-      >
-        Mini Hover: On
-      </button>
-    </div>
     <team-stats></team-stats>
     <heads-up-message></heads-up-message>
 
@@ -342,42 +332,15 @@
     <script>
       (function () {
         const MINI_HOVER_STORAGE_KEY = "settings.miniHoverOverlay";
-        const MINI_HOVER_ENABLED = "enabled";
         const MINI_HOVER_DISABLED = "disabled";
 
-        function applyMiniHoverOverlay(enabled) {
-          document.body.classList.toggle(
-            "mini-hover-overlay-disabled",
-            !enabled,
-          );
-          const toggleBtn = document.getElementById("mini-hover-toggle-button");
-          if (toggleBtn) {
-            toggleBtn.textContent = enabled
-              ? "Mini Hover: On"
-              : "Mini Hover: Off";
-          }
-        }
-
         const savedMiniHover = localStorage.getItem(MINI_HOVER_STORAGE_KEY);
-        const initialMiniHoverEnabled = savedMiniHover !== MINI_HOVER_DISABLED;
-        applyMiniHoverOverlay(initialMiniHoverEnabled);
-
-        const miniHoverButton = document.getElementById(
-          "mini-hover-toggle-button",
+        const initialMiniHoverEnabled =
+          savedMiniHover !== MINI_HOVER_DISABLED && savedMiniHover !== "false";
+        document.body.classList.toggle(
+          "mini-hover-overlay-disabled",
+          !initialMiniHoverEnabled,
         );
-        if (miniHoverButton) {
-          miniHoverButton.addEventListener("click", function () {
-            const enabled = !document.body.classList.contains(
-              "mini-hover-overlay-disabled",
-            );
-            const nextEnabled = !enabled;
-            localStorage.setItem(
-              MINI_HOVER_STORAGE_KEY,
-              nextEnabled ? MINI_HOVER_ENABLED : MINI_HOVER_DISABLED,
-            );
-            applyMiniHoverOverlay(nextEnabled);
-          });
-        }
       })();
     </script>
 
