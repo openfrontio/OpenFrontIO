@@ -60,7 +60,8 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
-      changedProperties.has("nationCount")
+      changedProperties.has("nationCount") ||
+      changedProperties.has("isPublicGame")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
