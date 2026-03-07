@@ -809,7 +809,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg max-sm:rounded-tr-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
               })}
             </div>
           `
@@ -819,7 +819,9 @@ export class EventsDisplay extends LitElement implements Layer {
               class="relative w-full z-50 min-[1200px]:w-96 backdrop-blur-sm"
             >
               <!-- Button Bar -->
-              <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-t-lg">
+              <div
+                class="w-full p-2 lg:p-3 bg-gray-800/70 sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
+              >
                 <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
                     ${this.renderToggleButton(
