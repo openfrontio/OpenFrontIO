@@ -319,7 +319,10 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.container.filters = [];
         }
 
-        if (!this.ghostUnit) return;
+        if (!this.ghostUnit) {
+          this.pendingConfirm = null;
+          return;
+        }
 
         const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
@@ -334,6 +337,7 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
+          this.pendingConfirm = null;
           return;
         }
 
@@ -382,10 +386,12 @@ export class StructureIconsLayer implements Layer {
         this.ghostUnit.container.scale.set(s);
         this.ghostUnit.range?.scale.set(this.transformHandler.scale);
 
-        if (this.pendingConfirm !== null && this.isGhostReadyForConfirm()) {
+        if (this.pendingConfirm !== null) {
           const ev = this.pendingConfirm;
           this.pendingConfirm = null;
-          this.createStructure(ev);
+          if (this.isGhostReadyForConfirm()) {
+            this.createStructure(ev);
+          }
         }
       });
   }
@@ -433,6 +439,7 @@ export class StructureIconsLayer implements Layer {
    * and mouse click (MouseUpEvent) so numpad-select-then-confirm works.
    */
   private requestConfirmStructure(e: MouseUpEvent): void {
+    if (!this.ghostUnit) return;
     if (this.isGhostReadyForConfirm()) {
       this.createStructure(e);
     } else {
