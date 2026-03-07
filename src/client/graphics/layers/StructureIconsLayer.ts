@@ -98,6 +98,7 @@ export class StructureIconsLayer implements Layer {
   > = new Map(Structures.types.map((type) => [type, { visible: true }]));
   private lastGhostQueryAt: number;
   private visibilityStateDirty = true;
+  private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
   potentialUpgrade: StructureRenderInfo | undefined;
 
@@ -177,9 +178,11 @@ export class StructureIconsLayer implements Layer {
     );
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
-    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+    this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
     this.eventBus.on(ConfirmGhostStructureEvent, () =>
-      this.createStructure(new MouseUpEvent(this.mousePos.x, this.mousePos.y)),
+      this.requestConfirmStructure(
+        new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+      ),
     );
 
     window.addEventListener("resize", () => this.resizeCanvas());
@@ -378,6 +381,12 @@ export class StructureIconsLayer implements Layer {
             : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
         this.ghostUnit.container.scale.set(s);
         this.ghostUnit.range?.scale.set(this.transformHandler.scale);
+
+        if (this.pendingConfirm !== null && this.isGhostReadyForConfirm()) {
+          const ev = this.pendingConfirm;
+          this.pendingConfirm = null;
+          this.createStructure(ev);
+        }
       });
   }
 
@@ -406,6 +415,29 @@ export class StructureIconsLayer implements Layer {
         4,
       )
       .fill({ color: 0x000000, alpha: 0.65 });
+  }
+
+  /**
+   * True when the ghost exists and buildableUnit has been refreshed (canBuild or canUpgrade set).
+   * Used to avoid running createStructure before renderGhost's async buildables() has updated the ghost.
+   */
+  private isGhostReadyForConfirm(): boolean {
+    if (!this.ghostUnit) return false;
+    const bu = this.ghostUnit.buildableUnit;
+    return bu.canBuild !== false || bu.canUpgrade !== false;
+  }
+
+  /**
+   * Request confirm (place/upgrade): run createStructure now if ghost is ready, otherwise defer until
+   * renderGhost's buildables() callback has updated the ghost. Shared by Enter (ConfirmGhostStructureEvent)
+   * and mouse click (MouseUpEvent) so numpad-select-then-confirm works.
+   */
+  private requestConfirmStructure(e: MouseUpEvent): void {
+    if (this.isGhostReadyForConfirm()) {
+      this.createStructure(e);
+    } else {
+      this.pendingConfirm = e;
+    }
   }
 
   private createStructure(e: MouseUpEvent) {
@@ -503,6 +535,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private clearGhostStructure() {
+    this.pendingConfirm = null;
     if (this.ghostUnit) {
       this.ghostUnit.container.destroy();
       this.ghostUnit.range?.destroy();
