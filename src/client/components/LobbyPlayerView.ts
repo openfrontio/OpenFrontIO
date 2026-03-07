@@ -35,10 +35,23 @@ export class LobbyTeamView extends LitElement {
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
+  @property({ type: Boolean }) isPublicGame: boolean = false;
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
   private userSettings: UserSettings = new UserSettings();
+
+  /**
+   * For public HumansVsNations games, nation count always matches human count
+   * (server enforces this in NationCreation). For private games, the host
+   * controls the nation count via the slider.
+   */
+  private get effectiveNationCount(): number {
+    if (this.isPublicGame && this.teamCount === HumansVsNations) {
+      return this.clients.length;
+    }
+    return this.nationCount;
+  }
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
@@ -67,8 +80,8 @@ export class LobbyTeamView extends LitElement {
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
-            ${this.nationCount}
-            ${this.nationCount === 1
+            ${this.effectiveNationCount}
+            ${this.effectiveNationCount === 1
               ? translateText("host_modal.nation_player")
               : translateText("host_modal.nation_players")}
           </div>
@@ -179,12 +192,12 @@ export class LobbyTeamView extends LitElement {
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
     const displayCount =
       preview.team === ColoredTeams.Nations
-        ? this.nationCount
+        ? this.effectiveNationCount
         : preview.players.length;
 
     const maxTeamSize =
       preview.team === ColoredTeams.Nations
-        ? this.nationCount
+        ? this.effectiveNationCount
         : this.teamMaxSize;
 
     const teamLabel = getTranslatedPlayerTeamLabel(preview.team);
@@ -245,7 +258,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length + this.nationCount;
+    const playerCount = this.clients.length + this.effectiveNationCount;
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -309,7 +322,7 @@ export class LobbyTeamView extends LitElement {
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
-      this.nationCount,
+      this.effectiveNationCount,
     );
     const buckets = new Map<Team, ClientInfo[]>();
     for (const t of teams) buckets.set(t, []);
@@ -333,7 +346,9 @@ export class LobbyTeamView extends LitElement {
       // Fallback: divide players across teams; guard against 0 and empty lobbies
       this.teamMaxSize = Math.max(
         1,
-        Math.ceil((this.clients.length + this.nationCount) / teams.length),
+        Math.ceil(
+          (this.clients.length + this.effectiveNationCount) / teams.length,
+        ),
       );
     }
     this.teamPreview = teams.map((t) => ({
