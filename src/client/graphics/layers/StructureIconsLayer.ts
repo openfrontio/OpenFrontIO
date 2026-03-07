@@ -439,7 +439,7 @@ export class StructureIconsLayer implements Layer {
    * and mouse click (MouseUpEvent) so numpad-select-then-confirm works.
    */
   private requestConfirmStructure(e: MouseUpEvent): void {
-    if (!this.ghostUnit) return;
+    if (!this.ghostUnit && !this.uiState.ghostStructure) return;
     if (this.isGhostReadyForConfirm()) {
       this.createStructure(e);
     } else {
