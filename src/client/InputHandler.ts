@@ -623,6 +623,11 @@ export class InputHandler {
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
   }
 
+  /**
+   * Extracts the digit character from KeyboardEvent.code.
+   * Codes look like "Digit0".."Digit9" (6 chars, digit at index 5) and
+   * "Numpad0".."Numpad9" (7 chars, digit at index 6). Returns null if not a digit key.
+   */
   private digitFromKeyCode(code: string): string | null {
     if (
       code?.length === 6 &&
