@@ -33,7 +33,7 @@ import { simpleHash } from "./Util";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
-  clientID: ClientID,
+  clientID: ClientID | undefined,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {

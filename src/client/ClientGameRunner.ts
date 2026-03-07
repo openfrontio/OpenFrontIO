@@ -194,7 +194,7 @@ export function joinLobby(
 
 async function createClientGame(
   lobbyConfig: LobbyConfig,
-  clientID: ClientID,
+  clientID: ClientID | undefined,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
@@ -267,7 +267,7 @@ export class ClientGameRunner {
 
   constructor(
     private lobby: LobbyConfig,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
     private eventBus: EventBus,
     private renderer: GameRenderer,
     private input: InputHandler,
@@ -294,7 +294,7 @@ export class ClientGameRunner {
   }
 
   private async saveGame(update: WinUpdate) {
-    if (this.myPlayer === null) {
+    if (!this.clientID) {
       return;
     }
     const players: PlayerRecord[] = [
@@ -544,6 +544,7 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
@@ -578,6 +579,7 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
@@ -639,6 +641,7 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
@@ -664,6 +667,7 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;

@@ -36,7 +36,7 @@ export class Executor {
   constructor(
     private mg: Game,
     private gameID: GameID,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
     // Add one to avoid id collisions with tribes.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
