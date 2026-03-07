@@ -221,12 +221,12 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.incomingAttacks.map(
       (attack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1 py-0 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<img
                 src="${swordIcon}"
-                class="h-4 w-4 inline-block"
+                class="h-3.5 w-3.5 inline-block"
                 style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
               />
               <span class="inline-block min-w-[3rem] text-right"
@@ -241,20 +241,20 @@ export class AttacksDisplay extends LitElement implements Layer {
                 ? `(${translateText("events_display.retreating")}...)`
                 : ""} `,
             onClick: () => this.attackWarningOnClick(attack),
-            className:
-              "text-left text-red-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+                className:
+              "text-left text-red-400 inline-flex items-center gap-0.5 min-w-0 text-xs lg:text-sm",
             translate: false,
           })}
           ${!attack.retreating
             ? this.renderButton({
                 content: html`<img
                   src="${swordIcon}"
-                  class="h-4 w-4"
+                  class="h-3.5 w-3.5"
                   style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
                 />`,
                 onClick: () => this.handleRetaliate(attack),
                 className:
-                  "ml-auto inline-flex items-center justify-center cursor-pointer bg-red-900/50 hover:bg-red-800/70 rounded-lg px-1.5 py-1 border border-red-700/50",
+                  "ml-auto inline-flex items-center justify-center cursor-pointer bg-red-900/50 hover:bg-red-800/70 rounded-md px-1 py-0.5 border border-red-700/50",
                 translate: false,
               })
             : ""}
@@ -269,12 +269,12 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.outgoingAttacks.map(
       (attack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1 py-0 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<img
                 src="${swordIcon}"
-                class="h-4 w-4 inline-block"
+                class="h-3.5 w-3.5 inline-block"
                 style="filter: invert(1)"
               />
               <span class="inline-block min-w-[3rem] text-right"
@@ -287,7 +287,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               > `,
             onClick: async () => this.attackWarningOnClick(attack),
             className:
-              "text-left text-blue-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-blue-400 inline-flex items-center gap-0.5 min-w-0 text-xs lg:text-sm",
             translate: false,
           })}
           ${!attack.retreating
@@ -311,12 +311,12 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.outgoingLandAttacks.map(
       (landAttack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1 py-0 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<img
                 src="${swordIcon}"
-                class="h-4 w-4 inline-block"
+                class="h-3.5 w-3.5 inline-block"
                 style="filter: invert(1)"
               />
               <span class="inline-block min-w-[3rem] text-right"
@@ -324,7 +324,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               >
               ${translateText("help_modal.ui_wilderness")}`,
             className:
-              "text-left text-gray-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-gray-400 inline-flex items-center gap-0.5 min-w-0 text-xs lg:text-sm",
             translate: false,
           })}
           ${!landAttack.retreating
@@ -367,7 +367,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.outgoingBoats.map(
       (boat) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1 py-0 overflow-hidden"
         >
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
@@ -379,7 +379,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
-              "text-left text-blue-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-blue-400 inline-flex items-center gap-0.5 min-w-0 text-xs lg:text-sm",
             translate: false,
           })}
           ${!boat.retreating()
@@ -403,7 +403,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.incomingBoats.map(
       (boat) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1 py-0 overflow-hidden"
         >
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
@@ -415,7 +415,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
-              "text-left text-red-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-red-400 inline-flex items-center gap-0.5 min-w-0 text-xs lg:text-sm",
             translate: false,
           })}
         </div>
@@ -439,13 +439,20 @@ export class AttacksDisplay extends LitElement implements Layer {
       return html``;
     }
 
+    const incoming = html`
+      ${this.renderIncomingAttacks()} ${this.renderIncomingBoats()}
+    `;
+    const outgoing = html`
+      ${this.renderOutgoingAttacks()} ${this.renderOutgoingLandAttacks()}
+      ${this.renderBoats()}
+    `;
+
     return html`
       <div
-        class="w-full mb-1 mt-1 sm:mt-0 pointer-events-auto grid grid-cols-2 sm:grid-cols-1 gap-1 text-white text-sm lg:text-base"
+        class="w-full mb-0.5 mt-0.5 sm:mt-0 pointer-events-auto grid grid-cols-1 min-[1200px]:grid-cols-2 gap-0.5 text-white text-xs lg:text-sm"
       >
-        ${this.renderOutgoingAttacks()} ${this.renderOutgoingLandAttacks()}
-        ${this.renderBoats()} ${this.renderIncomingAttacks()}
-        ${this.renderIncomingBoats()}
+        <div class="flex flex-col gap-0.5 min-w-0 max-h-[7rem] lg:max-h-[8rem] overflow-y-auto pr-0.5">${outgoing}</div>
+        <div class="flex flex-col gap-0.5 min-w-0 max-h-[7rem] lg:max-h-[8rem] overflow-y-auto pl-0.5">${incoming}</div>
       </div>
     `;
   }

@@ -34,6 +34,47 @@
         min-height: 100%;
         min-height: -webkit-fill-available;
       }
+
+      /* Alternate in-game layout: control panel/attacks on the left */
+      body.layout-classic #layout-control-container,
+      body.layout-classic #layout-attacks-container {
+        left: 1rem;
+        right: auto;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      body.layout-classic #layout-control-container {
+        width: min(350px, calc(100vw - 2rem));
+      }
+
+      body.layout-classic:not(.control-panel-style-classic)
+        #layout-control-container {
+        width: min(700px, calc(100vw - 2rem));
+      }
+
+      body.layout-classic #layout-attacks-container {
+        width: min(540px, calc(100vw - 2rem));
+        bottom: 7rem;
+      }
+
+      body.layout-classic.control-panel-style-classic
+        #layout-attacks-container {
+        bottom: 9.5rem;
+      }
+
+      body.layout-classic #layout-control-container > unit-display {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%) scale(1.15);
+        transform-origin: bottom center;
+        bottom: 0.75rem;
+        width: min(540px, calc(100vw - 2rem));
+        pointer-events: auto;
+        z-index: 50;
+      }
     </style>
 
     <!-- SEO -->
@@ -270,8 +311,22 @@
       <div
         class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
       >
-        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
-        <control-panel class="order-4 sm:order-none w-full"></control-panel>
+        <!-- Bottom-left: attacks -->
+        <div
+          id="layout-attacks-container"
+          class="fixed left-0 right-0 bottom-33 mx-auto z-[55] w-full max-w-[420px] lg:max-w-[540px] px-2 pointer-events-none"
+        >
+          <attacks-display class="w-full pointer-events-auto"></attacks-display>
+        </div>
+
+        <!-- Bottom-center: control panel -->
+        <div
+          id="layout-control-container"
+          class="fixed left-0 right-0 bottom-4 mx-auto min-[1200px]:bottom-4 z-50 w-full max-w-[420px] lg:max-w-[540px] px-2 pointer-events-none"
+        >
+          <control-panel class="w-full pointer-events-auto"></control-panel>
+          <unit-display class="w-full pointer-events-auto"></unit-display>
+        </div>
       </div>
       <div
         class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
@@ -290,7 +345,6 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
-    <unit-display></unit-display>
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
     >
@@ -311,6 +365,22 @@
     <performance-overlay></performance-overlay>
     <player-info-overlay></player-info-overlay>
     <leader-board></leader-board>
+    <div
+      class="hidden in-[.in-game]:flex fixed top-4 right-[13.5rem] z-[1200] pointer-events-auto gap-2"
+    >
+      <button
+        id="layout-switch-button"
+        class="px-3 py-1.5 rounded-md bg-gray-900/80 border border-white/20 text-white text-xs lg:text-sm hover:bg-gray-800/90 transition-colors"
+      >
+        Layout: Split
+      </button>
+      <button
+        id="control-panel-style-button"
+        class="px-3 py-1.5 rounded-md bg-gray-900/80 border border-white/20 text-white text-xs lg:text-sm hover:bg-gray-800/90 transition-colors"
+      >
+        Panel: Split
+      </button>
+    </div>
     <team-stats></team-stats>
     <heads-up-message></heads-up-message>
 
@@ -327,6 +397,83 @@
       setTimeout(function () {
         document.documentElement.classList.remove("preload");
       }, 3000);
+    </script>
+
+    <script>
+      (function () {
+        const STORAGE_KEY = "settings.ingameLayout";
+        const CONTROL_PANEL_STYLE_STORAGE_KEY = "settings.controlPanelStyle";
+        const SPLIT = "split";
+        const CLASSIC = "classic";
+        const CONTROL_PANEL_STYLE_SPLIT = "split";
+        const CONTROL_PANEL_STYLE_CLASSIC = "classic";
+
+        function applyControlPanelStyle(style) {
+          const useClassic = style === CONTROL_PANEL_STYLE_CLASSIC;
+          document.body.classList.toggle(
+            "control-panel-style-classic",
+            useClassic,
+          );
+          const btn = document.getElementById("control-panel-style-button");
+          if (btn) {
+            btn.textContent = useClassic ? "Panel: Classic" : "Panel: Split";
+          }
+        }
+
+        function applyLayout(layout) {
+          const isClassic = layout === CLASSIC;
+          document.body.classList.toggle("layout-classic", isClassic);
+
+          const btn = document.getElementById("layout-switch-button");
+          if (btn) {
+            btn.textContent = isClassic
+              ? "Layout: Classic"
+              : "Layout: Split";
+          }
+        }
+
+        const savedLayout = localStorage.getItem(STORAGE_KEY);
+        const initialLayout = savedLayout === CLASSIC ? CLASSIC : SPLIT;
+        applyLayout(initialLayout);
+
+        const savedControlPanelStyle = localStorage.getItem(
+          CONTROL_PANEL_STYLE_STORAGE_KEY,
+        );
+        const initialControlPanelStyle =
+          savedControlPanelStyle === CONTROL_PANEL_STYLE_CLASSIC ||
+          savedControlPanelStyle === CONTROL_PANEL_STYLE_SPLIT
+            ? savedControlPanelStyle
+            : initialLayout === CLASSIC
+              ? CONTROL_PANEL_STYLE_CLASSIC
+              : CONTROL_PANEL_STYLE_SPLIT;
+        applyControlPanelStyle(initialControlPanelStyle);
+
+        const switchButton = document.getElementById("layout-switch-button");
+        if (switchButton) {
+          switchButton.addEventListener("click", function () {
+            const nowClassic = document.body.classList.contains("layout-classic");
+            const nextLayout = nowClassic ? SPLIT : CLASSIC;
+            localStorage.setItem(STORAGE_KEY, nextLayout);
+            applyLayout(nextLayout);
+          });
+        }
+
+        const controlPanelStyleButton = document.getElementById(
+          "control-panel-style-button",
+        );
+        if (controlPanelStyleButton) {
+          controlPanelStyleButton.addEventListener("click", function () {
+            const isClassic = document.body.classList.contains(
+              "control-panel-style-classic",
+            );
+            const nextStyle = isClassic
+              ? CONTROL_PANEL_STYLE_SPLIT
+              : CONTROL_PANEL_STYLE_CLASSIC;
+            localStorage.setItem(CONTROL_PANEL_STYLE_STORAGE_KEY, nextStyle);
+            applyControlPanelStyle(nextStyle);
+          });
+        }
+      })();
     </script>
 
     <script>
