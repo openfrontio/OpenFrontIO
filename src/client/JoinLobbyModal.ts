@@ -50,6 +50,7 @@ export class JoinLobbyModal extends BaseModal {
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
+  private hostTransferDispatched = false;
 
   private isPrivateLobby(): boolean {
     return this.gameConfig?.gameType === GameType.Private;
@@ -66,6 +67,27 @@ export class JoinLobbyModal extends BaseModal {
       ...lobby,
       startsAt: lobby.startsAt ?? undefined,
     });
+    // If this client has become the host of a private lobby, switch to HostLobbyModal
+    if (
+      !this.hostTransferDispatched &&
+      this.isPrivateLobby() &&
+      this.currentClientID &&
+      lobby.lobbyCreatorClientID &&
+      this.currentClientID === lobby.lobbyCreatorClientID
+    ) {
+      this.hostTransferDispatched = true;
+      this.dispatchEvent(
+        new CustomEvent("host-transfer", {
+          detail: {
+            lobbyId: this.currentLobbyId,
+            gameConfig: this.gameConfig,
+            clients: this.players,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
   };
 
   render() {
@@ -329,6 +351,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
+    this.hostTransferDispatched = false;
     this.startLobbyUpdates();
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
@@ -378,6 +401,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
+    this.hostTransferDispatched = false;
   }
 
   disconnectedCallback() {

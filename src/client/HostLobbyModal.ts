@@ -35,6 +35,7 @@ import {
   getNationsForCompactMap,
   getRandomMapType,
   getUpdatedDisabledUnits,
+  nationsConfigToSlider,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
@@ -391,6 +392,71 @@ export class HostLobbyModal extends BaseModal {
       };
     }
     this.loadNationCount();
+  }
+
+  /**
+   * Open the host modal for an existing lobby (e.g. after host transfer).
+   * Unlike normal open(), this does NOT create a new lobby or emit join-lobby.
+   */
+  public openExisting(
+    lobbyId: string,
+    gameConfig: GameConfig,
+    clients: ClientInfo[],
+  ): void {
+    super.open();
+    this.startLobbyUpdates();
+    this.lobbyId = lobbyId;
+
+    // Hydrate form state from the existing game config
+    this.selectedMap = gameConfig.gameMap;
+    this.selectedDifficulty = gameConfig.difficulty;
+    this.gameMode = gameConfig.gameMode;
+    this.teamCount = gameConfig.playerTeams ?? 2;
+    this.bots = gameConfig.bots;
+    this.infiniteGold = gameConfig.infiniteGold;
+    this.donateGold = gameConfig.donateGold;
+    this.infiniteTroops = gameConfig.infiniteTroops;
+    this.donateTroops = gameConfig.donateTroops;
+    this.instantBuild = gameConfig.instantBuild;
+    this.randomSpawn = gameConfig.randomSpawn;
+    this.compactMap = gameConfig.gameMapSize === GameMapSize.Compact;
+    this.disabledUnits = gameConfig.disabledUnits ?? [];
+    this.spawnImmunity =
+      gameConfig.spawnImmunityDuration !== undefined &&
+      gameConfig.spawnImmunityDuration > 0;
+    this.spawnImmunityDurationMinutes = this.spawnImmunity
+      ? Math.round((gameConfig.spawnImmunityDuration ?? 0) / (60 * 10))
+      : undefined;
+    this.maxTimer =
+      gameConfig.maxTimerValue !== undefined && gameConfig.maxTimerValue > 0;
+    this.maxTimerValue = gameConfig.maxTimerValue;
+    this.goldMultiplier =
+      gameConfig.goldMultiplier !== undefined && gameConfig.goldMultiplier > 0;
+    this.goldMultiplierValue = gameConfig.goldMultiplier;
+    this.startingGold =
+      gameConfig.startingGold !== undefined && gameConfig.startingGold > 0;
+    this.startingGoldValue =
+      gameConfig.startingGold !== undefined
+        ? gameConfig.startingGold / 1_000_000
+        : undefined;
+
+    this.clients = clients;
+
+    // Set up URL and invite button
+    void (async () => {
+      crazyGamesSDK.showInviteButton(this.lobbyId);
+      const url = await this.constructUrl();
+      this.updateHistory(url);
+    })();
+
+    if (this.modalEl) {
+      this.modalEl.onClose = () => {
+        this.close();
+      };
+    }
+    // Load default nation count from map, then restore the actual nation
+    // value from the existing config (instead of resetting to the default).
+    this.loadNationCountThenRestore(gameConfig.nations);
   }
 
   private leaveLobby() {
@@ -855,6 +921,26 @@ export class HostLobbyModal extends BaseModal {
     } catch (error) {
       console.warn("Failed to load nation count", error);
       // Leave existing values unchanged so the UI stays consistent
+    }
+  }
+
+  /**
+   * Load the default nation count from the map manifest, then restore
+   * the nation slider to the value from an existing GameConfig.
+   */
+  private async loadNationCountThenRestore(
+    nations: GameConfig["nations"],
+  ): Promise<void> {
+    const currentMap = this.selectedMap;
+    try {
+      const mapData = this.mapLoader.getMapData(currentMap);
+      const manifest = await mapData.manifest();
+      if (this.selectedMap === currentMap) {
+        this.defaultNationCount = manifest.nations.length;
+        this.nations = nationsConfigToSlider(nations, this.defaultNationCount);
+      }
+    } catch (error) {
+      console.warn("Failed to load nation count for restore", error);
     }
   }
 }

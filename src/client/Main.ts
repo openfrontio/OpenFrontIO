@@ -212,6 +212,7 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "host-transfer": CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
   }
@@ -313,6 +314,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener(
+      "host-transfer",
+      this.handleHostTransfer.bind(this),
+    );
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -893,6 +898,29 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
     }
+  }
+
+  private handleHostTransfer(event: CustomEvent) {
+    const { lobbyId, gameConfig, clients } = event.detail;
+    if (!lobbyId || !gameConfig) {
+      console.warn("host-transfer event missing required data");
+      return;
+    }
+    // Close JoinLobbyModal without leaving the lobby (we're staying in the same game)
+    this.joinModal?.closeWithoutLeaving();
+    // Switch to the HostLobbyModal page and open with existing lobby state
+    window.showPage?.("page-host-lobby");
+    this.hostModal?.openExisting(lobbyId, gameConfig, clients ?? []);
+    // Notify the new host
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("host_modal.you_are_now_host"),
+          color: "green",
+          duration: 4000,
+        },
+      }),
+    );
   }
 
   private handleUpdateGameConfig(event: CustomEvent) {
