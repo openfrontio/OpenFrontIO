@@ -689,7 +689,7 @@
       "snowballing": "[P1] is snowballing too fast!",
       "cheating": "[P1] is cheating!",
       "stop_trading": "Stop trading with [P1]!",
-      "stop_trading_all": "Please use \"Stop Trading with All\"."
+      "stop_trading_all": "Please stop trading with all!"
     }
   },
   "build_menu": {
