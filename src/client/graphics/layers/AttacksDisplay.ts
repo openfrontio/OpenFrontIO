@@ -24,6 +24,7 @@ import {
 } from "./Leaderboard";
 import swordIcon from "/images/SwordIcon.svg?url";
 
+/** Estimates boat arrival time in seconds from Manhattan distance and server tick interval. */
 export function estimateBoatEtaSeconds(
   distance: number,
   turnIntervalMs: number,
