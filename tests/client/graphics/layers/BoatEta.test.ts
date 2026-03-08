@@ -33,4 +33,16 @@ describe("estimateBoatEtaSeconds", () => {
   test("returns null for Infinity distance", () => {
     expect(estimateBoatEtaSeconds(Infinity, 100)).toBeNull();
   });
+
+  test("returns null for zero turnIntervalMs", () => {
+    expect(estimateBoatEtaSeconds(100, 0)).toBeNull();
+  });
+
+  test("returns null for negative turnIntervalMs", () => {
+    expect(estimateBoatEtaSeconds(100, -100)).toBeNull();
+  });
+
+  test("returns null for NaN turnIntervalMs", () => {
+    expect(estimateBoatEtaSeconds(100, NaN)).toBeNull();
+  });
 });

@@ -30,6 +30,7 @@ export function estimateBoatEtaSeconds(
   turnIntervalMs: number,
 ): number | null {
   if (!Number.isFinite(distance) || distance < 0) return null;
+  if (!Number.isFinite(turnIntervalMs) || turnIntervalMs <= 0) return null;
   const secondsPerTick = turnIntervalMs / 1000;
   return Math.ceil(distance * secondsPerTick);
 }
