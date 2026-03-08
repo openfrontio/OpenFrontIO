@@ -100,13 +100,16 @@ export class PlayPage extends LitElement {
         </div>
 
         <div
-          class="w-full pb-4 lg:pb-0 flex flex-col gap-0 lg:grid lg:grid-cols-12 lg:gap-2"
+          class="w-full pb-4 lg:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-[2fr_1fr] lg:gap-4"
         >
           <!-- Mobile: spacer for fixed top bar -->
-          <div class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)]"></div>
-
           <div
-            class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:col-span-9 lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
+            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2 -mb-4"
+          ></div>
+
+          <!-- Username: left col -->
+          <div
+            class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
           >
             <div class="flex items-center gap-2 min-w-0 w-full">
               <username-input
@@ -121,7 +124,8 @@ export class PlayPage extends LitElement {
             </div>
           </div>
 
-          <div class="hidden lg:flex lg:col-span-3 h-[60px] gap-2">
+          <!-- Skin + flag: right col -->
+          <div class="hidden lg:flex h-[60px] gap-2">
             <pattern-input
               id="pattern-input-desktop"
               show-select-label

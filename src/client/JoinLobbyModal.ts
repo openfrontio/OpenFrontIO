@@ -130,6 +130,8 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                        .isPublicGame=${this.gameConfig?.gameType ===
+                        GameType.Public}
                         .nationCount=${nationsConfigToSlider(
                           this.gameConfig?.nations ?? "default",
                           this.nationCount,
@@ -432,9 +434,10 @@ export class JoinLobbyModal extends BaseModal {
           (m) => html`
             <lobby-config-item
               .label=${translateText(m.labelKey)}
-              .value=${m.value !== undefined
+              .value=${m.formattedValue ??
+              (m.value !== undefined
                 ? renderNumber(m.value)
-                : translateText("common.enabled")}
+                : translateText("common.enabled"))}
             ></lobby-config-item>
           `,
         )}

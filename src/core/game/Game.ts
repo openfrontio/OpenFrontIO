@@ -136,14 +136,11 @@ export enum GameMapType {
   Hawaii = "Hawaii",
   Alps = "Alps",
   NileDelta = "Nile Delta",
+  Arctic = "Arctic",
+  SanFrancisco = "San Francisco",
 }
 
 export type GameMapName = keyof typeof GameMapType;
-
-/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
-export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
-}
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -189,6 +186,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Hawaii,
     GameMapType.Alps,
     GameMapType.NileDelta,
+    GameMapType.Arctic,
+    GameMapType.SanFrancisco,
   ],
   fantasy: [
     GameMapType.Pangaea,
