@@ -69,6 +69,24 @@ export function shouldClearNukeGhostWhenOutOfGold(
   return player.gold() < cost;
 }
 
+/**
+ * Returns true when the layer should clear the nuke ghost in the render path
+ * (e.g. after buildables() returns). Only true when the user has already placed
+ * at least one nuke with this ghost and is now out of gold—so "press 8 with no
+ * gold" does not flash, but "launch until out of gold" does clear the preview.
+ */
+export function shouldClearNukeGhostInRenderWhenOutOfGold(
+  hasPlacedNukeWithCurrentGhost: boolean,
+  ghostType: PlayerBuildableUnitType,
+  unit: BuildableUnit,
+  player: { gold(): bigint } | null,
+): boolean {
+  return (
+    hasPlacedNukeWithCurrentGhost &&
+    shouldClearNukeGhostWhenOutOfGold(ghostType, unit, player)
+  );
+}
+
 extend([a11yPlugin]);
 
 class StructureRenderInfo {
@@ -121,6 +139,8 @@ export class StructureIconsLayer implements Layer {
   private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
   private rebuildPending = false;
+  /** True after placing at least one nuke with current ghost; used to clear ghost when out of gold. */
+  private hasPlacedNukeWithCurrentGhost = false;
   potentialUpgrade: StructureRenderInfo | undefined;
   private filterRedArray: OutlineFilter[] = [];
   private filterGreenArray: OutlineFilter[] = [];
@@ -477,8 +497,11 @@ export class StructureIconsLayer implements Layer {
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
+          // Clear nuke ghost when out of gold only after they've placed at least one nuke
+          // (so "press 8 with no gold" doesn't flash; "launch until out of gold" does clear).
           if (
-            shouldClearNukeGhostWhenOutOfGold(
+            shouldClearNukeGhostInRenderWhenOutOfGold(
+              this.hasPlacedNukeWithCurrentGhost,
               this.ghostUnit.buildableUnit.type,
               unit,
               this.game.myPlayer(),
@@ -595,7 +618,11 @@ export class StructureIconsLayer implements Layer {
           rocketDirectionUp,
         ),
       );
-      if (!shouldPreserveGhostAfterBuild(unitType)) {
+      const keepGhostForMultiplePlacement =
+        shouldPreserveGhostAfterBuild(unitType);
+      if (keepGhostForMultiplePlacement) {
+        this.hasPlacedNukeWithCurrentGhost = true;
+      } else {
         this.removeGhostStructure();
       }
     } else {
@@ -652,6 +679,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private clearGhostStructure() {
+    this.hasPlacedNukeWithCurrentGhost = false;
     this.pendingConfirm = null;
     if (this.ghostUnit) {
       this.ghostUnit.container.destroy({ children: true });
