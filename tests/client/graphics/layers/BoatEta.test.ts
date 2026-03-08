@@ -23,22 +23,26 @@ describe("estimateBoatEtaSeconds", () => {
   });
 
   test("throws for negative distance", () => {
-    expect(() => estimateBoatEtaSeconds(-5, 100)).toThrow("Invalid distance");
+    expect(() => estimateBoatEtaSeconds(-5, 100)).toThrow(
+      "Invalid remainingTicks",
+    );
   });
 
   test("throws for NaN distance", () => {
-    expect(() => estimateBoatEtaSeconds(NaN, 100)).toThrow("Invalid distance");
+    expect(() => estimateBoatEtaSeconds(NaN, 100)).toThrow(
+      "Invalid remainingTicks",
+    );
   });
 
   test("throws for Infinity distance", () => {
     expect(() => estimateBoatEtaSeconds(Infinity, 100)).toThrow(
-      "Invalid distance",
+      "Invalid remainingTicks",
     );
   });
 
   test("throws for -Infinity distance", () => {
     expect(() => estimateBoatEtaSeconds(-Infinity, 100)).toThrow(
-      "Invalid distance",
+      "Invalid remainingTicks",
     );
   });
 

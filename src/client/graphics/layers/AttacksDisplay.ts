@@ -24,19 +24,19 @@ import {
 } from "./Leaderboard";
 import swordIcon from "/images/SwordIcon.svg?url";
 
-/** Estimates arrival time in seconds from remaining steps and server tick interval. */
+/** Estimates arrival time in seconds from remaining ticks and server tick interval. */
 export function estimateBoatEtaSeconds(
-  distance: number,
+  remainingTicks: number,
   turnIntervalMs: number,
 ): number {
-  if (!Number.isFinite(distance) || distance < 0) {
-    throw new Error(`Invalid distance: ${distance}`);
+  if (!Number.isFinite(remainingTicks) || remainingTicks < 0) {
+    throw new Error(`Invalid remainingTicks: ${remainingTicks}`);
   }
   if (!Number.isFinite(turnIntervalMs) || turnIntervalMs <= 0) {
     throw new Error(`Invalid turnIntervalMs: ${turnIntervalMs}`);
   }
   const secondsPerTick = turnIntervalMs / 1000;
-  return Math.ceil(distance * secondsPerTick);
+  return Math.ceil(remainingTicks * secondsPerTick);
 }
 
 @customElement("attacks-display")
@@ -375,7 +375,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     const remaining = plan.path.length - 1 - elapsed;
     if (remaining <= 0) return 0;
     return estimateBoatEtaSeconds(
-      remaining,
+      remaining * plan.ticksPerStep,
       this.game.config().serverConfig().turnIntervalMs(),
     );
   }
