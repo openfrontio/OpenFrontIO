@@ -92,6 +92,8 @@ export class GhostStructureChangedEvent implements GameEvent {
   constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
 
+export class ConfirmGhostStructureEvent implements GameEvent {}
+
 export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
 }
@@ -340,6 +342,14 @@ export class InputHandler {
       }
 
       if (
+        (e.code === "Enter" || e.code === "NumpadEnter") &&
+        this.uiState.ghostStructure !== null
+      ) {
+        e.preventDefault();
+        this.eventBus.emit(new ConfirmGhostStructureEvent());
+      }
+
+      if (
         [
           this.keybinds.moveUp,
           this.keybinds.moveDown,
@@ -410,54 +420,11 @@ export class InputHandler {
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (e.code === this.keybinds.buildCity) {
+      // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
+      const matchedBuild = this.resolveBuildKeybind(e.code);
+      if (matchedBuild !== null) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.City);
-      }
-
-      if (e.code === this.keybinds.buildFactory) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
-      }
-
-      if (e.code === this.keybinds.buildPort) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Port);
-      }
-
-      if (e.code === this.keybinds.buildDefensePost) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.DefensePost);
-      }
-
-      if (e.code === this.keybinds.buildMissileSilo) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MissileSilo);
-      }
-
-      if (e.code === this.keybinds.buildSamLauncher) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.SAMLauncher);
-      }
-
-      if (e.code === this.keybinds.buildAtomBomb) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.AtomBomb);
-      }
-
-      if (e.code === this.keybinds.buildHydrogenBomb) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.HydrogenBomb);
-      }
-
-      if (e.code === this.keybinds.buildWarship) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Warship);
-      }
-
-      if (e.code === this.keybinds.buildMIRV) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MIRV);
+        this.setGhostStructure(matchedBuild);
       }
 
       if (e.code === this.keybinds.swapDirection) {
@@ -614,6 +581,71 @@ export class InputHandler {
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
+  }
+
+  /**
+   * Extracts the digit character from KeyboardEvent.code.
+   * Codes look like "Digit0".."Digit9" (6 chars, digit at index 5) and
+   * "Numpad0".."Numpad9" (7 chars, digit at index 6). Returns null if not a digit key.
+   */
+  private digitFromKeyCode(code: string): string | null {
+    if (
+      code?.length === 6 &&
+      code.startsWith("Digit") &&
+      /^[0-9]$/.test(code[5])
+    )
+      return code[5];
+    if (
+      code?.length === 7 &&
+      code.startsWith("Numpad") &&
+      /^[0-9]$/.test(code[6])
+    )
+      return code[6];
+    return null;
+  }
+
+  /** Strict equality only: used for first-pass exact KeyboardEvent.code match. */
+  private buildKeybindMatches(code: string, keybindValue: string): boolean {
+    return code === keybindValue;
+  }
+
+  /** Digit/Numpad alias match: used only when no exact match was found. */
+  private buildKeybindMatchesDigit(
+    code: string,
+    keybindValue: string,
+  ): boolean {
+    const digit = this.digitFromKeyCode(code);
+    const bindDigit = this.digitFromKeyCode(keybindValue);
+    return digit !== null && bindDigit !== null && digit === bindDigit;
+  }
+
+  /**
+   * Resolves a keyup code to a build action: exact code match first, then digit/Numpad alias.
+   * Returns the UnitType to set as ghost, or null if no build keybind matched.
+   */
+  private resolveBuildKeybind(code: string): PlayerBuildableUnitType | null {
+    const buildKeybinds: ReadonlyArray<{
+      key: string;
+      type: PlayerBuildableUnitType;
+    }> = [
+      { key: "buildCity", type: UnitType.City },
+      { key: "buildFactory", type: UnitType.Factory },
+      { key: "buildPort", type: UnitType.Port },
+      { key: "buildDefensePost", type: UnitType.DefensePost },
+      { key: "buildMissileSilo", type: UnitType.MissileSilo },
+      { key: "buildSamLauncher", type: UnitType.SAMLauncher },
+      { key: "buildAtomBomb", type: UnitType.AtomBomb },
+      { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
+      { key: "buildWarship", type: UnitType.Warship },
+      { key: "buildMIRV", type: UnitType.MIRV },
+    ];
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatches(code, this.keybinds[key])) return type;
+    }
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatchesDigit(code, this.keybinds[key])) return type;
+    }
+    return null;
   }
 
   private getPinchDistance(): number {

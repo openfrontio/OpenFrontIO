@@ -1,5 +1,11 @@
-import { AutoUpgradeEvent, InputHandler } from "../src/client/InputHandler";
+import {
+  AutoUpgradeEvent,
+  ConfirmGhostStructureEvent,
+  InputHandler,
+} from "../src/client/InputHandler";
+import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
+import { UnitType } from "../src/core/game/Game";
 
 class MockPointerEvent {
   button: number;
@@ -460,6 +466,187 @@ describe("InputHandler AutoUpgrade", () => {
       // default remains when parsing fails
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
       spy.mockRestore();
+    });
+  });
+
+  describe("Enter key confirm ghost structure", () => {
+    let uiState: UIState;
+
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+      uiState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+    });
+
+    test("emits ConfirmGhostStructureEvent on Enter when ghost structure is set", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      uiState.ghostStructure = UnitType.City;
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Enter" }));
+
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.any(ConfirmGhostStructureEvent),
+      );
+    });
+
+    test("emits ConfirmGhostStructureEvent on NumpadEnter when ghost structure is set", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      uiState.ghostStructure = UnitType.Factory;
+
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "NumpadEnter" }),
+      );
+
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.any(ConfirmGhostStructureEvent),
+      );
+    });
+
+    test("does not emit ConfirmGhostStructureEvent on Enter when no ghost structure", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      expect(uiState.ghostStructure).toBeNull();
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Enter" }));
+
+      const confirmCalls = mockEmit.mock.calls.filter(
+        (call) => call[0] instanceof ConfirmGhostStructureEvent,
+      );
+      expect(confirmCalls).toHaveLength(0);
+    });
+  });
+
+  describe("Numpad number keys for build keybinds", () => {
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+    });
+
+    test("Numpad1 sets ghost structure to City when buildCity is Digit1", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad1", key: "1" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+
+    test("Numpad5 sets ghost structure to MissileSilo when buildMissileSilo is Digit5", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad5", key: "5" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MissileSilo);
+    });
+
+    test("Numpad0 sets ghost structure to MIRV when buildMIRV is Digit0", () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad0", key: "0" }),
+      );
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
+    });
+  });
+
+  describe("Build keybind two-phase matching (exact code first, then digit/Numpad alias)", () => {
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+    });
+
+    test("exact code match wins: Digit1 sets City when buildCity=Digit1 and buildFactory=Numpad1", () => {
+      localStorage.setItem(
+        "settings.keybinds",
+        JSON.stringify({
+          buildCity: "Digit1",
+          buildFactory: "Numpad1",
+        }),
+      );
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", key: "1" }),
+      );
+
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+
+    test("exact code match wins: Numpad1 sets Factory when buildCity=Digit1 and buildFactory=Numpad1", () => {
+      localStorage.setItem(
+        "settings.keybinds",
+        JSON.stringify({
+          buildCity: "Digit1",
+          buildFactory: "Numpad1",
+        }),
+      );
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad1", key: "1" }),
+      );
+
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.Factory);
+    });
+
+    test("digit alias used when no exact match: Numpad1 sets City when only buildCity=Digit1", () => {
+      localStorage.setItem(
+        "settings.keybinds",
+        JSON.stringify({ buildCity: "Digit1" }),
+      );
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad1", key: "1" }),
+      );
+
+      expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
     });
   });
 });

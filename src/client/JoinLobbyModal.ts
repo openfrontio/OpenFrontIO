@@ -130,6 +130,8 @@ export class JoinLobbyModal extends BaseModal {
                         .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                        .isPublicGame=${this.gameConfig?.gameType ===
+                        GameType.Public}
                         .nationCount=${nationsConfigToSlider(
                           this.gameConfig?.nations ?? "default",
                           this.nationCount,
