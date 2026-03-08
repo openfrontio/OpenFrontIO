@@ -119,7 +119,7 @@ export class GameModeSelector extends LitElement {
     const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
-      <div class="flex flex-col gap-4 w-[84%] sm:w-full mx-auto pb-4 sm:pb-0">
+      <div class="flex flex-col gap-4 w-full px-4 sm:px-0 mx-auto pb-4 sm:pb-0">
         <!-- Solo: mobile only, top -->
         <div class="sm:hidden h-14">
           ${this.renderSmallActionCard(
