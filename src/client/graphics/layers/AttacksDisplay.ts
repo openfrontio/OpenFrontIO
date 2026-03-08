@@ -24,7 +24,7 @@ import {
 } from "./Leaderboard";
 import swordIcon from "/images/SwordIcon.svg?url";
 
-/** Estimates boat arrival time in seconds from Manhattan distance and server tick interval. */
+/** Estimates arrival time in seconds from remaining steps and server tick interval. */
 export function estimateBoatEtaSeconds(
   distance: number,
   turnIntervalMs: number,
@@ -367,11 +367,15 @@ export class AttacksDisplay extends LitElement implements Layer {
   }
 
   private getBoatEtaSeconds(boat: UnitView): number | null {
-    const targetTile = boat.targetTile();
-    if (targetTile === undefined) return null;
-    const distance = this.game.manhattanDist(boat.tile(), targetTile);
+    const plan = this.game.motionPlans().get(boat.id());
+    if (!plan) return null;
+    const elapsed = Math.floor(
+      (this.game.ticks() - plan.startTick) / plan.ticksPerStep,
+    );
+    const remaining = plan.path.length - 1 - elapsed;
+    if (remaining <= 0) return 0;
     return estimateBoatEtaSeconds(
-      distance,
+      remaining,
       this.game.config().serverConfig().turnIntervalMs(),
     );
   }

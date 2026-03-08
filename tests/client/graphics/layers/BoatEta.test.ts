@@ -36,6 +36,12 @@ describe("estimateBoatEtaSeconds", () => {
     );
   });
 
+  test("throws for -Infinity distance", () => {
+    expect(() => estimateBoatEtaSeconds(-Infinity, 100)).toThrow(
+      "Invalid distance",
+    );
+  });
+
   test("throws for zero turnIntervalMs", () => {
     expect(() => estimateBoatEtaSeconds(100, 0)).toThrow(
       "Invalid turnIntervalMs",
@@ -50,6 +56,12 @@ describe("estimateBoatEtaSeconds", () => {
 
   test("throws for NaN turnIntervalMs", () => {
     expect(() => estimateBoatEtaSeconds(100, NaN)).toThrow(
+      "Invalid turnIntervalMs",
+    );
+  });
+
+  test("throws for Infinity turnIntervalMs", () => {
+    expect(() => estimateBoatEtaSeconds(100, Infinity)).toThrow(
       "Invalid turnIntervalMs",
     );
   });
