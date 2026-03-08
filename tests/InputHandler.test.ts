@@ -410,8 +410,28 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Keybinds JSON parsing", () => {
+    const localStorageMock = (() => {
+      let store: Record<string, string> = {};
+      return {
+        getItem: (key: string) => store[key] ?? null,
+        setItem: (key: string, value: string) => {
+          store[key] = value;
+        },
+        removeItem: (key: string) => {
+          delete store[key];
+        },
+        clear: () => {
+          store = {};
+        },
+      };
+    })();
+
     beforeEach(() => {
-      localStorage.removeItem("settings.keybinds");
+      Object.defineProperty(globalThis, "localStorage", {
+        value: localStorageMock,
+        writable: true,
+      });
+      localStorageMock.clear(); // replaces removeItem("settings.keybinds")
     });
 
     test("parses nested object values and flattens them to strings", () => {

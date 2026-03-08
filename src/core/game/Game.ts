@@ -136,6 +136,7 @@ export enum GameMapType {
   Hawaii = "Hawaii",
   Alps = "Alps",
   NileDelta = "Nile Delta",
+  PuertoRico = "Puerto Rico",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -189,6 +190,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Hawaii,
     GameMapType.Alps,
     GameMapType.NileDelta,
+    GameMapType.PuertoRico,
   ],
   fantasy: [
     GameMapType.Pangaea,

@@ -1,0 +1,160 @@
+{
+  "map": {
+    "height": 864,
+    "num_land_tiles": 836751,
+    "width": 2392
+  },
+  "map16x": {
+    "height": 216,
+    "num_land_tiles": 48501,
+    "width": 598
+  },
+  "map4x": {
+    "height": 432,
+    "num_land_tiles": 204032,
+    "width": 1196
+  },
+  "name": "Pangaea",
+  "nations": [
+    {
+      "coordinates": [1424, 159],
+      "flag": "pr-sj",
+      "name": "San Juan"
+    },
+    {
+      "coordinates": [1335, 201],
+      "flag": "pr-bayamon",
+      "name": "Bayamón"
+    },
+    {
+      "coordinates": [1553, 198],
+      "flag": "pr-carolina",
+      "name": "Carolina"
+    },
+    {
+      "coordinates": [727, 612],
+      "flag": "pr-ponce",
+      "name": "Ponce"
+    },
+    {
+      "coordinates": [1533, 376],
+      "flag": "pr-caguas",
+      "name": "Caguas"
+    },
+    {
+      "coordinates": [1420, 258],
+      "flag": "pr-guaynabo",
+      "name": "Guaynabo"
+    },
+    {
+      "coordinates": [284, 403],
+      "flag": "pr-mayaguez",
+      "name": "Mayagüez"
+    },
+    {
+      "coordinates": [724, 144],
+      "flag": "pr-arecibo",
+      "name": "Arecibo"
+    },
+    {
+      "coordinates": [1880, 323],
+      "flag": "pr-fajardo",
+      "name": "Fajardo"
+    },
+    {
+      "coordinates": [824, 350],
+      "flag": "pr-utuado",
+      "name": "Utuado"
+    },
+    {
+      "coordinates": [588, 396],
+      "flag": "pr-lares",
+      "name": "Lares"
+    },
+    {
+      "coordinates": [979, 153],
+      "flag": "pr-barceloneta",
+      "name": "Barceloneta"
+    },
+    {
+      "coordinates": [830, 482],
+      "flag": "pr-adjuntas",
+      "name": "Adjuntas"
+    },
+    {
+      "coordinates": [1460, 520],
+      "flag": "pr-aibonito",
+      "name": "Aibonito"
+    },
+    {
+      "coordinates": [1058, 373],
+      "flag": "pr-jayuya",
+      "name": "Jayuya"
+    },
+    {
+      "coordinates": [1693, 466],
+      "flag": "pr-humacao",
+      "name": "Humacao"
+    },
+    {
+      "coordinates": [1162, 643],
+      "flag": "pr-salinas",
+      "name": "Salinas"
+    },
+    {
+      "coordinates": [3000, 480],
+      "flag": "pr-vieques",
+      "name": "Vieques"
+    },
+    {
+      "coordinates": [2250, 294],
+      "flag": "pr-culebra",
+      "name": "Culebra"
+    },
+    {
+      "coordinates": [1219, 462],
+      "flag": "pr-barranquitas",
+      "name": "Barranquitas"
+    },
+    {
+      "coordinates": [331, 532],
+      "flag": "pr-sg",
+      "name": "San Germán"
+    },
+    {
+      "coordinates": [1208, 163],
+      "flag": "pr-dorado",
+      "name": "Dorado"
+    },
+    {
+      "coordinates": [1324, 326],
+      "flag": "pr-ab",
+      "name": "Aguas Buenas"
+    },
+    {
+      "coordinates": [1775, 264],
+      "flag": "pr-luquillo",
+      "name": "Luquillo"
+    },
+    {
+      "coordinates": [1587, 608],
+      "flag": "pr-maunabo",
+      "name": "Maunabo"
+    },
+    {
+      "coordinates": [445, 296],
+      "flag": "pr-ss",
+      "name": "San Sebastián"
+    },
+    {
+      "coordinates": [405, 476],
+      "flag": "pr-maricao",
+      "name": "Maricao"
+    },
+    {
+      "coordinates": [228, 657],
+      "flag": "pr-cr",
+      "name": "Cabo Rojo"
+    }
+  ]
+}
