@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  shouldClearNukeGhostInRenderWhenOutOfGold,
   shouldClearNukeGhostWhenOutOfGold,
   shouldPreserveGhostAfterBuild,
 } from "../../../../src/client/graphics/layers/StructureIconsLayer";
@@ -118,6 +119,47 @@ describe("shouldClearNukeGhostWhenOutOfGold", () => {
     const player = { gold: () => 0n };
     expect(
       shouldClearNukeGhostWhenOutOfGold(UnitType.HydrogenBomb, unit, player),
+    ).toBe(false);
+  });
+});
+
+describe("shouldClearNukeGhostInRenderWhenOutOfGold", () => {
+  test("does not clear when user has not placed a nuke yet (press 8 with no gold → no flash)", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
+    const player = { gold: () => 50n };
+    expect(
+      shouldClearNukeGhostInRenderWhenOutOfGold(
+        false,
+        UnitType.AtomBomb,
+        unit,
+        player,
+      ),
+    ).toBe(false);
+  });
+
+  test("clears when user has placed at least one nuke and then runs out of gold", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
+    const player = { gold: () => 50n };
+    expect(
+      shouldClearNukeGhostInRenderWhenOutOfGold(
+        true,
+        UnitType.AtomBomb,
+        unit,
+        player,
+      ),
+    ).toBe(true);
+  });
+
+  test("does not clear when user has placed a nuke but can still afford another", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
+    const player = { gold: () => 200n };
+    expect(
+      shouldClearNukeGhostInRenderWhenOutOfGold(
+        true,
+        UnitType.AtomBomb,
+        unit,
+        player,
+      ),
     ).toBe(false);
   });
 });
