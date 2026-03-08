@@ -9,6 +9,7 @@ ENV HUSKY=0
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack enable \
+    && corepack prepare pnpm@10.30.3 --activate \
     && pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy only what's needed for build
@@ -30,6 +31,7 @@ ENV HUSKY=0
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack enable \
+    && corepack prepare pnpm@10.30.3 --activate \
     && pnpm install --frozen-lockfile --ignore-scripts --prod
 
 # Final production image
@@ -73,8 +75,8 @@ RUN chmod +x /usr/local/bin/startup.sh
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml ./
 
-# Enable Corepack so pnpm is available for supervisord (command=pnpm run start:server)
-RUN corepack enable
+# Enable Corepack and pre-install pnpm binary so supervisord (pnpm run start:server) needs no network at runtime
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 # Copy built artifacts from build stage
 COPY --from=build /usr/src/app/static ./static
