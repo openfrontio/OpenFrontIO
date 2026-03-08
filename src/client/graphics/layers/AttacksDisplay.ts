@@ -28,9 +28,13 @@ import swordIcon from "/images/SwordIcon.svg?url";
 export function estimateBoatEtaSeconds(
   distance: number,
   turnIntervalMs: number,
-): number | null {
-  if (!Number.isFinite(distance) || distance < 0) return null;
-  if (!Number.isFinite(turnIntervalMs) || turnIntervalMs <= 0) return null;
+): number {
+  if (!Number.isFinite(distance) || distance < 0) {
+    throw new Error(`Invalid distance: ${distance}`);
+  }
+  if (!Number.isFinite(turnIntervalMs) || turnIntervalMs <= 0) {
+    throw new Error(`Invalid turnIntervalMs: ${turnIntervalMs}`);
+  }
   const secondsPerTick = turnIntervalMs / 1000;
   return Math.ceil(distance * secondsPerTick);
 }

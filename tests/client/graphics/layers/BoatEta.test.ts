@@ -22,27 +22,35 @@ describe("estimateBoatEtaSeconds", () => {
     expect(estimateBoatEtaSeconds(100, 50)).toBe(5);
   });
 
-  test("returns null for negative distance", () => {
-    expect(estimateBoatEtaSeconds(-5, 100)).toBeNull();
+  test("throws for negative distance", () => {
+    expect(() => estimateBoatEtaSeconds(-5, 100)).toThrow("Invalid distance");
   });
 
-  test("returns null for NaN distance", () => {
-    expect(estimateBoatEtaSeconds(NaN, 100)).toBeNull();
+  test("throws for NaN distance", () => {
+    expect(() => estimateBoatEtaSeconds(NaN, 100)).toThrow("Invalid distance");
   });
 
-  test("returns null for Infinity distance", () => {
-    expect(estimateBoatEtaSeconds(Infinity, 100)).toBeNull();
+  test("throws for Infinity distance", () => {
+    expect(() => estimateBoatEtaSeconds(Infinity, 100)).toThrow(
+      "Invalid distance",
+    );
   });
 
-  test("returns null for zero turnIntervalMs", () => {
-    expect(estimateBoatEtaSeconds(100, 0)).toBeNull();
+  test("throws for zero turnIntervalMs", () => {
+    expect(() => estimateBoatEtaSeconds(100, 0)).toThrow(
+      "Invalid turnIntervalMs",
+    );
   });
 
-  test("returns null for negative turnIntervalMs", () => {
-    expect(estimateBoatEtaSeconds(100, -100)).toBeNull();
+  test("throws for negative turnIntervalMs", () => {
+    expect(() => estimateBoatEtaSeconds(100, -100)).toThrow(
+      "Invalid turnIntervalMs",
+    );
   });
 
-  test("returns null for NaN turnIntervalMs", () => {
-    expect(estimateBoatEtaSeconds(100, NaN)).toBeNull();
+  test("throws for NaN turnIntervalMs", () => {
+    expect(() => estimateBoatEtaSeconds(100, NaN)).toThrow(
+      "Invalid turnIntervalMs",
+    );
   });
 });
