@@ -646,6 +646,8 @@ export class StructureIconsLayer implements Layer {
     if (type === null) {
       return;
     }
+    // New ghost selection (from keybind, UnitDisplay click, or after clear); never treat as already-placed.
+    this.hasPlacedNukeWithCurrentGhost = false;
     const local = this.transformHandler.screenToCanvasCoordinates(
       this.mousePos.x,
       this.mousePos.y,
