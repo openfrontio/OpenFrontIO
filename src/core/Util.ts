@@ -298,7 +298,8 @@ export function createRandomName(
     const hash = simpleHash(name);
     const prefixIndex = hash % TRIBE_NAME_PREFIXES.length;
     const suffixIndex =
-      Math.floor(hash / TRIBE_NAME_PREFIXES.length) % TRIBE_NAME_SUFFIXES.length;
+      Math.floor(hash / TRIBE_NAME_PREFIXES.length) %
+      TRIBE_NAME_SUFFIXES.length;
 
     randomName = `👤 ${TRIBE_NAME_PREFIXES[prefixIndex]} ${TRIBE_NAME_SUFFIXES[suffixIndex]}`;
   }

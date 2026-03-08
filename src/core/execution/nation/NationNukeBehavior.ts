@@ -40,7 +40,7 @@ export class NationNukeBehavior {
     private player: Player,
     private attackBehavior: AiAttackBehavior,
     private emojiBehavior: NationEmojiBehavior,
-  ) { }
+  ) {}
 
   maybeSendNuke() {
     const nukeTarget = this.findBestNukeTarget();
@@ -355,7 +355,7 @@ export class NationNukeBehavior {
       // Strongest player
       return validTargets.reduce((prev, current) =>
         this.game.config().maxTroops(prev) >
-          this.game.config().maxTroops(current)
+        this.game.config().maxTroops(current)
           ? prev
           : current,
       );
@@ -382,7 +382,7 @@ export class NationNukeBehavior {
     if (
       this.game.config().gameConfig().gameMode === GameMode.Team ||
       this.player.gold() >
-      this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
+        this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
     ) {
       return this.cost(type);
     }
@@ -849,7 +849,7 @@ export class NationNukeBehavior {
         while (
           end < sortedByFlight.length &&
           sortedByFlight[end].flightTicks - sortedByFlight[start].flightTicks <=
-          maxTotalArrivalSpread
+            maxTotalArrivalSpread
         ) {
           end++;
         }

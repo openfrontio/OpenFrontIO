@@ -10,8 +10,8 @@ import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
-import { TribeExecution } from "./TribeExecution";
 import { PlayerExecution } from "./PlayerExecution";
+import { TribeExecution } from "./TribeExecution";
 import { getSpawnTiles } from "./Util";
 
 type Spawn = { center: TileRef; tiles: TileRef[] };

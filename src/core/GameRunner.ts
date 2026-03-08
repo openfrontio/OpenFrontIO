@@ -91,7 +91,7 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
-  ) { }
+  ) {}
 
   init() {
     if (this.game.config().isRandomSpawn()) {
