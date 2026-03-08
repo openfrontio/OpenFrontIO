@@ -24,6 +24,15 @@ import {
 } from "./Leaderboard";
 import swordIcon from "/images/SwordIcon.svg?url";
 
+export function estimateBoatEtaSeconds(
+  distance: number,
+  turnIntervalMs: number,
+): number | null {
+  if (!Number.isFinite(distance) || distance < 0) return null;
+  const secondsPerTick = turnIntervalMs / 1000;
+  return Math.ceil(distance * secondsPerTick);
+}
+
 @customElement("attacks-display")
 export class AttacksDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
@@ -351,6 +360,16 @@ export class AttacksDisplay extends LitElement implements Layer {
     return player?.name() ?? "";
   }
 
+  private getBoatEtaSeconds(boat: UnitView): number | null {
+    const targetTile = boat.targetTile();
+    if (targetTile === undefined) return null;
+    const distance = this.game.manhattanDist(boat.tile(), targetTile);
+    return estimateBoatEtaSeconds(
+      distance,
+      this.game.config().serverConfig().turnIntervalMs(),
+    );
+  }
+
   private renderBoatIcon(boat: UnitView) {
     const dataURL = this.getBoatSpriteDataURL(boat);
     if (!dataURL) return html``;
@@ -364,8 +383,9 @@ export class AttacksDisplay extends LitElement implements Layer {
   private renderBoats() {
     if (this.outgoingBoats.length === 0) return html``;
 
-    return this.outgoingBoats.map(
-      (boat) => html`
+    return this.outgoingBoats.map((boat) => {
+      const etaSeconds = this.getBoatEtaSeconds(boat);
+      return html`
         <div
           class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
@@ -374,6 +394,13 @@ export class AttacksDisplay extends LitElement implements Layer {
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(boat.troops())}</span
               >
+              ${etaSeconds !== null
+                ? html`<span class="text-xs"
+                    >${translateText("events_display.seconds_abbrev", {
+                      seconds: etaSeconds,
+                    })}</span
+                  >`
+                : ""}
               <span class="truncate text-xs ml-1"
                 >${this.getBoatTargetName(boat)}</span
               >`,
@@ -393,15 +420,16 @@ export class AttacksDisplay extends LitElement implements Layer {
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
-      `,
-    );
+      `;
+    });
   }
 
   private renderIncomingBoats() {
     if (this.incomingBoats.length === 0) return html``;
 
-    return this.incomingBoats.map(
-      (boat) => html`
+    return this.incomingBoats.map((boat) => {
+      const etaSeconds = this.getBoatEtaSeconds(boat);
+      return html`
         <div
           class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
@@ -410,6 +438,13 @@ export class AttacksDisplay extends LitElement implements Layer {
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(boat.troops())}</span
               >
+              ${etaSeconds !== null
+                ? html`<span class="text-xs"
+                    >${translateText("events_display.seconds_abbrev", {
+                      seconds: etaSeconds,
+                    })}</span
+                  >`
+                : ""}
               <span class="truncate text-xs ml-1"
                 >${boat.owner()?.name()}</span
               >`,
@@ -419,8 +454,8 @@ export class AttacksDisplay extends LitElement implements Layer {
             translate: false,
           })}
         </div>
-      `,
-    );
+      `;
+    });
   }
 
   render() {
