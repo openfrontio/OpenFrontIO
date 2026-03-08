@@ -49,6 +49,25 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
 }
 
+/**
+ * Returns true when the ghost structure should be cleared because the user
+ * has the nuke (atom/hydrogen bomb) ghost selected but can no longer afford it.
+ * Used so the ghost goes away when the user runs out of gold.
+ */
+export function shouldClearNukeGhostWhenOutOfGold(
+  ghostType: PlayerBuildableUnitType,
+  unit: BuildableUnit,
+  player: { gold(): bigint } | null,
+): boolean {
+  if (unit.canBuild !== false) return false;
+  if (ghostType !== UnitType.AtomBomb && ghostType !== UnitType.HydrogenBomb) {
+    return false;
+  }
+  if (!player) return false;
+  const cost = unit.cost ?? 0n;
+  return player.gold() < cost;
+}
+
 extend([a11yPlugin]);
 
 class StructureRenderInfo {
@@ -368,6 +387,16 @@ export class StructureIconsLayer implements Layer {
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
+          if (
+            shouldClearNukeGhostWhenOutOfGold(
+              this.ghostUnit.buildableUnit.type,
+              unit,
+              this.game.myPlayer(),
+            )
+          ) {
+            this.removeGhostStructure();
+            return;
+          }
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
