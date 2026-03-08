@@ -337,7 +337,8 @@
     "hawaii": "Hawaii",
     "alps": "Alps",
     "niledelta": "Nile Delta",
-    "arctic": "Arctic"
+    "arctic": "Arctic",
+    "sanfrancisco": "San Francisco"
   },
   "map_categories": {
     "featured": "Featured",
