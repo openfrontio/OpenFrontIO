@@ -219,7 +219,11 @@ describe("computeClanTeamName", () => {
   });
 
   it("returns null when three distinct clans each hold one player", () => {
-    const players = [human("1", "ALPHA"), human("2", "BETA"), human("3", "GAMMA")];
+    const players = [
+      human("1", "ALPHA"),
+      human("2", "BETA"),
+      human("3", "GAMMA"),
+    ];
     expect(computeClanTeamName(players)).toBeNull();
   });
 
