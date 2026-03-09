@@ -338,7 +338,8 @@
     "alps": "Alps",
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
-    "sanfrancisco": "San Francisco"
+    "sanfrancisco": "San Francisco",
+	"stornogorm": "Stornogorm"
   },
   "map_categories": {
     "featured": "Featured",

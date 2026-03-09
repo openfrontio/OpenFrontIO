@@ -77,6 +77,7 @@ var maps = []struct {
 	{Name: "niledelta"},
 	{Name: "arctic"},
 	{Name: "sanfrancisco"},
+	{Name: "stornogorm"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},

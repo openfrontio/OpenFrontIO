@@ -1,0 +1,227 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 2444509,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 146311,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 602288,
+    "width": 1000
+  },
+  "name": "stornogorm",
+  "nations": [
+    {
+      "coordinates": [
+        1286,
+        353
+      ],
+      "flag": "gb-sct",
+      "name": "Lewis",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        900,
+        309
+      ],
+      "flag": "gb-sct",
+      "name": "Harris",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        651,
+        230
+      ],
+      "flag": "gb-sct",
+      "name": "North Uist",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        355,
+        320
+      ],
+      "flag": "gb-sct",
+      "name": "South Uist",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1662,
+        580
+      ],
+      "flag": "gb-sct",
+      "name": "Skye",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1015,
+        652
+      ],
+      "flag": "gb-sct",
+      "name": "Mull",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        418,
+        605
+      ],
+      "flag": "gb-sct",
+      "name": "Islay",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        595,
+        770
+      ],
+      "flag": "gb-sct",
+      "name": "Jura",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        240,
+        1015
+      ],
+      "flag": "gb-sct",
+      "name": "Arran",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1717,
+        1508
+      ],
+      "flag": "gb-sct",
+      "name": "Inverness",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1721,
+        1049
+      ],
+      "flag": "gb-sct",
+      "name": "Rosshire",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        727,
+        969
+      ],
+      "flag": "gb-sct",
+      "name": "Argyll",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1831,
+        1859
+      ],
+      "flag": "gb-sct",
+      "name": "Nairn",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1374,
+        1794
+      ],
+      "flag": "gb-sct",
+      "name": "Cairngorms",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        862,
+        1441
+      ],
+      "flag": "gb-sct",
+      "name": "Perth",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        678,
+        1890
+      ],
+      "flag": "gb-sct",
+      "name": "Fife",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        446,
+        1817
+      ],
+      "flag": "gb-sct",
+      "name": "Lothian",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1243,
+        1157
+      ],
+      "flag": "gb-sct",
+      "name": "Strathspey",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1689,
+        1936
+      ],
+      "flag": "gb-sct",
+      "name": "Moray",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        408,
+        1345
+      ],
+      "flag": "gb-sct",
+      "name": "Renfew",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        118,
+        1356
+      ],
+      "flag": "gb-sct",
+      "name": "Ayr",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        78,
+        1813
+      ],
+      "flag": "gb-sct",
+      "name": "Borders",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        627,
+        1501
+      ],
+      "flag": "gb-sct",
+      "name": "Dumbarton",
+      "strength": 1
+    }
+  ]
+}

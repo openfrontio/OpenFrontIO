@@ -81,6 +81,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   NileDelta: 4,
   Arctic: 6,
   SanFrancisco: 3,
+  Stornogorm: 3,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [

@@ -1,0 +1,143 @@
+{
+   "name": "stornogorm",
+  "nations": [
+    {
+      "coordinates": [1286, 353],
+      "name": "Lewis",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [900, 309],
+      "name": "Harris",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [651, 230],
+      "name": "North Uist",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [355, 320],
+      "name": "South Uist",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1662, 580],
+      "name": "Skye",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1015, 652],
+      "name": "Mull",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [418, 605],
+      "name": "Islay",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [595, 770],
+      "name": "Jura",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [240, 1015],
+      "name": "Arran",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1717, 1508],
+      "name": "Inverness",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1721, 1049],
+      "name": "Rosshire",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [727, 969],
+      "name": "Argyll",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1831, 1859],
+      "name": "Nairn",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1374, 1794],
+      "name": "Cairngorms",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [862, 1441],
+      "name": "Perth",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [678, 1890],
+      "name": "Fife",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [446, 1817],
+      "name": "Lothian",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1243, 1157],
+      "name": "Strathspey",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [1689, 1936],
+      "name": "Moray",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [408, 1345],
+      "name": "Renfew",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [118, 1356],
+      "name": "Ayr",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [78, 1813],
+      "name": "Borders",
+      "strength": 1,
+      "flag": "gb-sct"
+    },
+    {
+      "coordinates": [627, 1501],
+      "name": "Dumbarton",
+      "strength": 1,
+      "flag": "gb-sct"
+    }
+  ]
+}
