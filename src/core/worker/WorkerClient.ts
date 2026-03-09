@@ -1,10 +1,11 @@
 import {
+  BuildableUnit,
   Cell,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
@@ -22,7 +23,7 @@ export class WorkerClient {
 
   constructor(
     private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
       type: "module",
@@ -166,7 +167,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -187,6 +188,40 @@ export class WorkerClient {
 
       this.worker.postMessage({
         type: "player_actions",
+        id: messageId,
+        playerID,
+        x,
+        y,
+        units,
+      });
+    });
+  }
+
+  playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_buildables_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "player_buildables",
         id: messageId,
         playerID,
         x,

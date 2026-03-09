@@ -39,6 +39,11 @@ export abstract class BaseModal extends LitElement {
     if (this.modalEl) {
       this.modalEl.onClose = () => {
         if (this.isModalOpen) {
+          if (!this.confirmBeforeClose()) {
+            // Re-open the underlying o-modal since it already closed itself
+            this.modalEl?.open();
+            return;
+          }
           this.close();
         }
       };
@@ -57,6 +62,9 @@ export abstract class BaseModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.isModalOpen) {
       e.preventDefault();
+      if (!this.confirmBeforeClose()) {
+        return;
+      }
       this.close();
     }
   };
@@ -91,6 +99,15 @@ export abstract class BaseModal extends LitElement {
    */
   protected onClose(): void {
     // Default implementation does nothing
+  }
+
+  /**
+   * Guard called before closing via Escape key or click-outside.
+   * Override in subclasses to show a confirmation dialog.
+   * Return false to prevent the modal from closing.
+   */
+  public confirmBeforeClose(): boolean {
+    return true;
   }
 
   /**

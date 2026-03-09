@@ -36,9 +36,12 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
 
   // Humans vs Nations
   if (playerTeams === HumansVsNations) {
-    return translateText("public_lobby.teams_hvn_detailed", {
-      num: maxPlayers ?? 0,
-    });
+    if (maxPlayers) {
+      return translateText("public_lobby.teams_hvn_detailed", {
+        num: maxPlayers,
+      });
+    }
+    return translateText("public_lobby.teams_hvn");
   }
 
   // Named team types (Duos, Trios, Quads)
@@ -115,6 +118,8 @@ export interface ModifierInfo {
   badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
+  /** Pre-formatted display string (used instead of renderNumber when provided) */
+  formattedValue?: string;
 }
 
 /**
@@ -150,13 +155,17 @@ export function getActiveModifiers(
     });
   }
   if (modifiers.startingGold) {
+    const millions = parseFloat(
+      (modifiers.startingGold / 1_000_000).toPrecision(12),
+    );
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
       badgeParams: {
-        amount: Math.round(modifiers.startingGold / 1_000_000),
+        amount: millions,
       },
       value: modifiers.startingGold,
+      formattedValue: `${millions}M`,
     });
   }
   return result;

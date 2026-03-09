@@ -49,7 +49,7 @@ export class DesktopNavBar extends LitElement {
 
     return html`
       <nav
-        class="hidden lg:flex w-full bg-slate-900 items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
+        class="hidden lg:flex w-full bg-zinc-900/90 backdrop-blur-md items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8 text-[#2563eb]">
@@ -102,7 +102,7 @@ export class DesktopNavBar extends LitElement {
         <button
           class="nav-menu-item ${currentPage === "page-play"
             ? "active"
-            : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            : ""} text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-play"
           data-i18n="main.play"
         ></button>
@@ -111,7 +111,7 @@ export class DesktopNavBar extends LitElement {
           <button
             class="nav-menu-item ${currentPage === "page-news"
               ? "active"
-              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+              : ""} text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-news"
             data-i18n="main.news"
             @click=${this._notifications.onNewsClick}
@@ -131,7 +131,7 @@ export class DesktopNavBar extends LitElement {
           <button
             class="nav-menu-item ${currentPage === "page-item-store"
               ? "active"
-              : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+              : ""} text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-item-store"
             data-i18n="main.store"
             @click=${this._notifications.onStoreClick}
@@ -148,18 +148,18 @@ export class DesktopNavBar extends LitElement {
             : ""}
         </div>
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-settings"
           data-i18n="main.settings"
         ></button>
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-leaderboard"
           data-i18n="main.leaderboard"
         ></button>
         <div class="relative">
           <button
-            class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            class="nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-help"
             data-i18n="main.help"
             @click=${this._notifications.onHelpClick}

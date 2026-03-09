@@ -195,18 +195,18 @@ export class HostLobbyModal extends BaseModal {
         .labelKey=${"single_modal.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
-        .inputMin=${0}
-        .inputMax=${1000000000}
-        .inputStep=${100000}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
         .inputValue=${this.startingGoldValue}
         .inputAriaLabel=${translateText("single_modal.starting_gold")}
         .inputPlaceholder=${translateText(
           "single_modal.starting_gold_placeholder",
         )}
-        .defaultInputValue=${5000000}
-        .minValidOnEnable=${0}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0.1}
         .onToggle=${this.handleStartingGoldToggle}
-        .onInput=${this.handleStartingGoldValueChanges}
+        .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
     ];
@@ -328,7 +328,7 @@ export class HostLobbyModal extends BaseModal {
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <button
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
             @click=${this.startGame}
             ?disabled=${this.clients.length < 2}
           >
@@ -404,6 +404,10 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  public confirmBeforeClose(): boolean {
+    return confirm(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {
@@ -646,12 +650,17 @@ export class HostLobbyModal extends BaseModal {
 
   private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, {
-      min: 0,
-      max: 1000000000,
+    const value = parseBoundedFloatFromInput(input, {
+      min: 0.1,
+      max: 1000,
     });
 
-    this.startingGoldValue = value;
+    if (value === undefined) {
+      this.startingGoldValue = undefined;
+      input.value = "";
+    } else {
+      this.startingGoldValue = value;
+    }
     this.putGameConfig();
   };
 
@@ -783,7 +792,9 @@ export class HostLobbyModal extends BaseModal {
                 ? this.goldMultiplierValue
                 : undefined,
             startingGold:
-              this.startingGold === true ? this.startingGoldValue : undefined,
+              this.startingGold === true && this.startingGoldValue !== undefined
+                ? Math.round(this.startingGoldValue * 1_000_000)
+                : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

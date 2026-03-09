@@ -693,7 +693,8 @@
   {
     "code": "Empire of Japan",
     "continent": "Asia",
-    "name": "Empire of Japan"
+    "name": "Empire of Japan",
+    "restricted": true
   },
   {
     "code": "Empire of Japan1",

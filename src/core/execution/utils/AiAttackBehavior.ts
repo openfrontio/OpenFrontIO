@@ -3,11 +3,11 @@ import {
   Game,
   GameMode,
   HumansVsNations,
-  isStructureType,
   Player,
   PlayerID,
   PlayerType,
   Relation,
+  Structures,
   TerraNullius,
   UnitType,
 } from "../../game/Game";
@@ -361,7 +361,7 @@ export class AiAttackBehavior {
           n.isPlayer() &&
           n.type() === PlayerType.Bot &&
           !this.player.isFriendly(n) &&
-          n.units().some((u) => isStructureType(u.type())),
+          n.units().some((u) => Structures.has(u.type())),
       );
   }
 
@@ -419,7 +419,7 @@ export class AiAttackBehavior {
 
     const density = (p: Player) => p.troops() / p.numTilesOwned();
     const ownsStructures = (p: Player) =>
-      p.units().some((u) => isStructureType(u.type()));
+      p.units().some((u) => Structures.has(u.type()));
     const sortedBots = bots.slice().sort((a, b) => {
       const aHasStructures = ownsStructures(a);
       const bHasStructures = ownsStructures(b);
@@ -743,7 +743,7 @@ export class AiAttackBehavior {
     const botWithStructures =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
-      target.units().some((u) => isStructureType(u.type()));
+      target.units().some((u) => Structures.has(u.type()));
     // Use the expand ratio when attacking a bot that owns structures — we need to
     // recapture those structures ASAP, even before reaching the normal reserve.
     const useReserve = target.isPlayer() && !botWithStructures;

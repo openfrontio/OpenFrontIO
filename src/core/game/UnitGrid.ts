@@ -149,9 +149,7 @@ export class UnitGrid {
     );
     const rangeSquared = searchRange * searchRange;
 
-    // `Array.isArray` does not reliably narrow `readonly T[]` in TS, so use a
-    // cheap runtime check that narrows correctly for our string-backed UnitType.
-    if (typeof types !== "string") {
+    if (Array.isArray(types)) {
       for (let cy = startGridY; cy <= endGridY; cy++) {
         for (let cx = startGridX; cx <= endGridX; cx++) {
           const cell = this.grid[cy][cx];
@@ -182,7 +180,7 @@ export class UnitGrid {
     const type = types;
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
-        const unitSet = this.grid[cy][cx].get(type);
+        const unitSet = this.grid[cy][cx].get(type as UnitType);
         if (unitSet === undefined) continue;
         for (const unit of unitSet) {
           if (!unit.isActive()) continue;
