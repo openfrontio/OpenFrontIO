@@ -180,7 +180,10 @@ export function computeClanTeamName(players: PlayerInfo[]): string | null {
   // Coalition: top two clans cover the majority of humans
   if (sorted.length >= 2) {
     const [secondTag, secondCount] = sorted[1];
-    if ((topCount + secondCount) / total > 0.5) {
+    if (
+      (topCount + secondCount) / total > 2 / 3 &&
+      secondCount / total >= 0.25
+    ) {
       return `${topTag} / ${secondTag}`;
     }
   }

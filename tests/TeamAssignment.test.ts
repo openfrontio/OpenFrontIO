@@ -218,6 +218,11 @@ describe("computeClanTeamName", () => {
     expect(computeClanTeamName(players)).toBe("ALPHA / BETA");
   });
 
+  it("returns null when three distinct clans each hold one player", () => {
+    const players = [human("1", "ALPHA"), human("2", "BETA"), human("3", "GAMMA")];
+    expect(computeClanTeamName(players)).toBeNull();
+  });
+
   it("returns null when no players have clan tags", () => {
     const players = [human("1"), human("2"), human("3")];
     expect(computeClanTeamName(players)).toBeNull();
