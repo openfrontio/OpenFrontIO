@@ -503,6 +503,7 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      this.maybeTransferHost(client);
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -520,6 +521,30 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
     }
+  }
+
+  private maybeTransferHost(disconnectedClient: Client): void {
+    // Only transfer host in the lobby phase for private games
+    if (this._hasStarted || this._hasEnded || this.isPublic()) {
+      return;
+    }
+    // Only transfer if the disconnected client was the host
+    if (disconnectedClient.clientID !== this.lobbyCreatorID) {
+      return;
+    }
+    const newHost = this.activeClients[0];
+    if (!newHost) {
+      return;
+    }
+    this.creatorPersistentID = newHost.persistentID;
+    this.log.info("Transferred lobby host", {
+      oldHostClientID: disconnectedClient.clientID,
+      newHostClientID: newHost.clientID,
+      newHostPersistentID: newHost.persistentID,
+      gameID: this.id,
+    });
+    // Immediately broadcast updated lobby info so clients see the new host
+    this.broadcastLobbyInfo();
   }
 
   public setStartsAt(startsAt: number) {

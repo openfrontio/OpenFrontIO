@@ -434,7 +434,8 @@
     "starting_gold": "Starting gold",
     "crowded": "Crowded modifier",
     "hard_nations": "Hard Nations",
-    "leave_confirmation": "Are you sure you want to leave the lobby?"
+    "leave_confirmation": "Are you sure you want to leave the lobby?",
+    "you_are_now_host": "You are now the host of this lobby."
   },
   "team_colors": {
     "red": "Red",
