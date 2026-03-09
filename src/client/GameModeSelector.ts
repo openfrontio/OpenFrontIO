@@ -125,7 +125,7 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-sky-600",
+            "bg-sky-600 hover:bg-sky-500 active:bg-sky-700",
           )}
         </div>
         <!-- Create/ranked/join: mobile only, below solo -->
@@ -196,7 +196,7 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-sky-600",
+            "bg-sky-600 hover:bg-sky-500 active:bg-sky-700",
           )}
         </div>
         <!-- Bottom row: create + ranked + join (desktop only) -->
