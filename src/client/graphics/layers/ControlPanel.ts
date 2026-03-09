@@ -125,9 +125,14 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   private handleRatioSliderInput(e: Event) {
-    const value = Number((e.target as HTMLInputElement).value);
+    const input = e.target as HTMLInputElement;
+    const value = Number(input.value);
     this.attackRatio = value / 100;
     this.onAttackRatioChange(this.attackRatio);
+  }
+
+  private handleRatioSliderPointerUp(e: Event) {
+    (e.target as HTMLInputElement).blur();
   }
 
   private calculateTroopBar(): { greenPercent: number; orangePercent: number } {
@@ -304,6 +309,7 @@ export class ControlPanel extends LitElement implements Layer {
           max="100"
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
+          @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
           class="flex-1 h-2 accent-blue-500 cursor-pointer"
         />
       </div>
@@ -347,6 +353,7 @@ export class ControlPanel extends LitElement implements Layer {
             max="100"
             .value=${String(Math.round(this.attackRatio * 100))}
             @input=${(e: Event) => this.handleRatioSliderInput(e)}
+            @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
             class="w-full h-1.5 accent-blue-500 cursor-pointer"
           />
         </div>
