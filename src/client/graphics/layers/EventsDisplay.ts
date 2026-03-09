@@ -794,9 +794,7 @@ export class EventsDisplay extends LitElement implements Layer {
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
-            <div
-              class="relative w-fit min-[1200px]:bottom-4 min-[1200px]:right-4 z-50"
-            >
+            <div class="relative w-fit z-50">
               ${this.renderButton({
                 content: html`
                   <span class="flex items-center gap-2">
@@ -811,18 +809,18 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg max-sm:rounded-tr-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full min-[1200px]:bottom-4 min-[1200px]:right-4 z-50 min-[1200px]:w-96 backdrop-blur-sm"
+              class="relative w-full z-50 min-[1200px]:w-96 backdrop-blur-sm"
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg sm:rounded-tl-lg"
+                class="w-full p-2 lg:p-3 bg-gray-800/70 sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
               >
                 <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">

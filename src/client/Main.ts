@@ -58,6 +58,7 @@ import {
 } from "./Utils";
 import "./components/DesktopNavBar";
 import "./components/Footer";
+import "./components/HomeFooterAd";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";

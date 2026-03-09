@@ -20,24 +20,28 @@ export class GameStartingModal extends LitElement {
           : "opacity-0 invisible"}"
       ></div>
       <div
-        class="fixed top-1/2 left-1/2 bg-zinc-800/70 p-6 rounded-xl z-[9999] shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-[5px] text-white w-[300px] text-center transition-all duration-300 -translate-x-1/2 ${isVisible
+        class="fixed top-1/2 left-1/2 bg-zinc-900/90 backdrop-blur-md border border-white/10 p-6 rounded-2xl z-[9999] shadow-2xl text-white w-[400px] text-center transition-all duration-300 -translate-x-1/2 ${isVisible
           ? "opacity-100 visible -translate-y-1/2"
           : "opacity-0 invisible -translate-y-[48%]"}"
       >
-        <div class="text-xl mt-5 mb-2.5 px-0">
+        <div
+          class="text-base font-medium tracking-wider uppercase text-white/40 mb-3"
+        >
           © OpenFront and Contributors
         </div>
         <a
           href="https://github.com/openfrontio/OpenFrontIO/blob/main/CREDITS.md"
           target="_blank"
           rel="noopener noreferrer"
-          class="block mt-2.5 mb-4 text-xl text-blue-400 no-underline transition-colors duration-200 hover:text-blue-300 hover:underline"
+          class="block mb-4 text-lg font-medium tracking-wider uppercase text-sky-400 no-underline transition-colors duration-200 hover:text-sky-300"
           >${translateText("game_starting_modal.credits")}</a
         >
-        <p class="my-0.5 text-sm">
+        <p class="text-base text-white/40 mb-4">
           ${translateText("game_starting_modal.code_license")}
         </p>
-        <p class="text-base my-5 bg-black/30 p-2.5 rounded">
+        <p
+          class="text-xl font-medium tracking-wider text-white bg-white/5 border border-white/10 px-4 py-3 rounded-xl"
+        >
           ${translateText("game_starting_modal.title")}
         </p>
       </div>

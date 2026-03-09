@@ -1,0 +1,81 @@
+{
+  "name": "aegean",
+  "nations": [
+    {
+      "coordinates": [786, 1860],
+      "name": "Crete"
+    },
+    {
+      "coordinates": [1554, 1530],
+      "name": "Rhodes"
+    },
+    {
+      "coordinates": [1051, 539],
+      "name": "Lesbos"
+    },
+    {
+      "coordinates": [1070, 820],
+      "name": "Chios"
+    },
+    {
+      "coordinates": [1235, 1023],
+      "name": "Samos"
+    },
+    {
+      "coordinates": [1193, 301],
+      "name": "Troy"
+    },
+    {
+      "coordinates": [1446, 954],
+      "name": "Ephesus"
+    },
+    {
+      "coordinates": [1515, 1223],
+      "name": "Miletus"
+    },
+    {
+      "coordinates": [824, 305],
+      "name": "Lemnos"
+    },
+    {
+      "coordinates": [1312, 37],
+      "name": "Thrace"
+    },
+    {
+      "coordinates": [1473, 509],
+      "name": "Achaemenid Empire",
+      "flag": "Achaemenid Empire"
+    },
+    {
+      "coordinates": [702, 40],
+      "name": "Thasos"
+    },
+    {
+      "coordinates": [832, 1253],
+      "name": "Cyclades"
+    },
+    {
+      "coordinates": [479, 943],
+      "name": "Athens",
+      "flag": "Athens"
+    },
+    {
+      "coordinates": [110, 1157],
+      "name": "Sparta",
+      "flag": "Sparta"
+    },
+    {
+      "coordinates": [348, 56],
+      "name": "Macedonia",
+      "flag": "Macedonia"
+    },
+    {
+      "coordinates": [175, 456],
+      "name": "Thessaly"
+    },
+    {
+      "coordinates": [71, 742],
+      "name": "Aetolia"
+    }
+  ]
+}

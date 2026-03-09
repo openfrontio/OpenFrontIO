@@ -112,7 +112,8 @@ export class LocalServer {
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
-      myClientID: this.clientID,
+      // Don't send myClientID for replays — viewer has no player identity.
+      myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
   }
 
@@ -126,7 +127,7 @@ export class LocalServer {
         gameStartInfo: this.lobbyConfig.gameStartInfo!,
         turns: this.turns,
         lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
-        myClientID: this.clientID,
+        myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {

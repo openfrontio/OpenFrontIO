@@ -36,9 +36,12 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
 
   // Humans vs Nations
   if (playerTeams === HumansVsNations) {
-    return translateText("public_lobby.teams_hvn_detailed", {
-      num: maxPlayers ?? 0,
-    });
+    if (maxPlayers) {
+      return translateText("public_lobby.teams_hvn_detailed", {
+        num: maxPlayers,
+      });
+    }
+    return translateText("public_lobby.teams_hvn");
   }
 
   // Named team types (Duos, Trios, Quads)

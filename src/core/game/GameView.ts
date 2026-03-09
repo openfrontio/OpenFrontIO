@@ -657,7 +657,7 @@ export class GameView implements GameMap {
     public worker: WorkerClient,
     private _config: Config,
     private _mapData: TerrainMapData,
-    private _myClientID: ClientID,
+    private _myClientID: ClientID | undefined,
     private _myUsername: string,
     private _myClanTag: string | null,
     private _gameID: GameID,
@@ -792,7 +792,9 @@ export class GameView implements GameMap {
       }
     });
 
-    this._myPlayer ??= this.playerByClientID(this._myClientID);
+    if (this._myClientID) {
+      this._myPlayer ??= this.playerByClientID(this._myClientID);
+    }
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
@@ -1110,7 +1112,7 @@ export class GameView implements GameMap {
     );
   }
 
-  myClientID(): ClientID {
+  myClientID(): ClientID | undefined {
     return this._myClientID;
   }
 
