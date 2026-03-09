@@ -354,7 +354,8 @@ export class LangSelector extends LitElement {
       >
         <img
           id="lang-flag"
-          class="object-contain pointer-events-none"
+          class="object-contain pointer-events-none transition-all"
+          style="filter: grayscale(1) sepia(1) saturate(3) hue-rotate(190deg) brightness(0.85)"
           style="width: 28px; height: 28px;"
           src="/flags/${currentLang.svg}.svg"
           alt="flag"

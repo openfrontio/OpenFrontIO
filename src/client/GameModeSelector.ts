@@ -23,7 +23,7 @@ import {
   translateText,
 } from "./Utils";
 
-const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
+const CARD_BG = "bg-sky-950";
 
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
@@ -119,7 +119,7 @@ export class GameModeSelector extends LitElement {
     const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
-      <div class="flex flex-col gap-4 w-[84%] sm:w-full mx-auto pb-4 sm:pb-0">
+      <div class="flex flex-col gap-4 w-full px-4 sm:px-0 mx-auto pb-4 sm:pb-0">
         <!-- Solo: mobile only, top -->
         <div class="sm:hidden h-14">
           ${this.renderSmallActionCard(
@@ -133,17 +133,17 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
-            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
           )}
         </div>
         <!-- Game cards grid -->
@@ -204,17 +204,17 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
-            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
           )}
         </div>
       </div>
@@ -255,7 +255,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-xl ${bgClass} border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
+        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-colors text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
       >
         ${title}
       </button>
@@ -306,8 +306,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-        style="background-color: color-mix(in oklab, var(--frenchBlue) 75%, black)"
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-sky-950"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div
@@ -329,11 +328,11 @@ export class GameModeSelector extends LitElement {
           class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
         >
           ${modifierLabels.length > 0
-            ? html`<div class="flex flex-col items-start gap-1">
+            ? html`<div class="flex flex-col items-start gap-1 mt-[2px]">
                 ${modifierLabels.map(
                   (label) =>
                     html`<span
-                      class="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-widest bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
+                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-sky-600 text-white shadow-[0_0_6px_rgba(14,165,233,0.35)]"
                       >${label}</span
                     >`,
                 )}
@@ -343,7 +342,7 @@ export class GameModeSelector extends LitElement {
             <span
               class="text-xs font-bold tracking-widest ${timeDisplayUppercase
                 ? "uppercase"
-                : "normal-case"} bg-sky-600 px-2.5 py-1 rounded"
+                : "normal-case"} bg-sky-600 text-white px-2 py-1 rounded"
               >${timeDisplay}</span
             >
           </div>
