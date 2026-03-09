@@ -10,7 +10,7 @@ import {
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createPartialGameRecord, replacer } from "../core/Util";
+import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
@@ -621,15 +621,15 @@ export class ClientGameRunner {
       }
 
       if (upgradeUnits.length > 0) {
-        upgradeUnits.sort((a, b) => a.distance - b.distance);
-        const bestUpgrade = upgradeUnits[0];
-
-        this.eventBus.emit(
-          new SendUpgradeStructureIntentEvent(
-            bestUpgrade.unitId,
-            bestUpgrade.unitType,
-          ),
-        );
+        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+        if (bestUpgrade) {
+          this.eventBus.emit(
+            new SendUpgradeStructureIntentEvent(
+              bestUpgrade.unitId,
+              bestUpgrade.unitType,
+            ),
+          );
+        }
       }
     });
   }
