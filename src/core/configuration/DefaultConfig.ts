@@ -240,6 +240,9 @@ export class DefaultConfig implements Config {
   disableNavMesh(): boolean {
     return this._gameConfig.disableNavMesh ?? false;
   }
+  disableAlliances(): boolean {
+    return this._gameConfig.disableAlliances ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }

@@ -71,6 +71,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
+  @state() private disableAlliances: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -294,6 +295,10 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.compact_map",
                     checked: this.compactMap,
                   },
+                  {
+                    labelKey: "host_modal.disable_alliances",
+                    checked: this.disableAlliances,
+                  },
                 ],
                 inputCards,
               },
@@ -457,6 +462,7 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+    this.disableAlliances = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -532,6 +538,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "host_modal.disable_alliances":
+        this.disableAlliances = checked;
+        this.putGameConfig();
         break;
       default:
         break;
@@ -795,6 +805,7 @@ export class HostLobbyModal extends BaseModal {
               this.startingGold === true && this.startingGoldValue !== undefined
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : undefined,
+            disableAlliances: this.disableAlliances || undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

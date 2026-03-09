@@ -74,6 +74,7 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   disableNavMesh(): boolean;
+  disableAlliances(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
