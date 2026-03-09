@@ -14,6 +14,11 @@
     "name": "Achaemenid Empire"
   },
   {
+    "code": "pr-adjuntas",
+    "continent": "North America",
+    "name": "Adjuntas"
+  },
+  {
     "code": "ae",
     "continent": "Asia",
     "name": "United Arab Emirates"
@@ -29,6 +34,11 @@
     "name": "African Union"
   },
   {
+    "code": "pr-ag",
+    "continent": "North America",
+    "name": "Aguas Buenas"
+  },
+  {
     "code": "ag",
     "continent": "North America",
     "name": "Antigua and Barbuda"
@@ -37,6 +47,11 @@
     "code": "ai",
     "continent": "North America",
     "name": "Anguilla"
+  },
+  {
+    "code": "pr-aibonito",
+    "continent": "North America",
+    "name": "Aibonito"
   },
   {
     "code": "1_Airgialla",
@@ -231,6 +246,16 @@
     "name": "Babylonia"
   },
   {
+    "code": "pr-barceloneta",
+    "continent": "North America",
+    "name": "Barceloneta"
+  },
+  {
+    "code": "pr-barranquitas",
+    "continent": "North America",
+    "name": "Barranquitas"
+  },
+  {
     "code": "es-pv",
     "continent": "Europe",
     "name": "Basque Country"
@@ -353,6 +378,11 @@
     "code": "Byzantine Empire",
     "continent": "Europe",
     "name": "Byzantine Empire"
+  },
+  {
+    "code": "pr-cr",
+    "continent": "North America",
+    "name": "Cabo Rojo"
   },
   {
     "code": "cv",
@@ -572,6 +602,11 @@
     "name": "Cuba"
   },
   {
+    "code": "pr-culebra",
+    "continent": "North America",
+    "name": "Culebra"
+  },
+  {
     "code": "cw",
     "continent": "South America",
     "name": "Curaçao"
@@ -635,6 +670,11 @@
     "code": "do",
     "continent": "North America",
     "name": "Dominican Republic"
+  },
+  {
+    "code": "pr-dorado",
+    "continent": "North America",
+    "name": "Dorado"
   },
   {
     "code": "1_Dumnonia",
@@ -740,6 +780,11 @@
     "code": "eu",
     "continent": "Europe",
     "name": "Europe"
+  },
+  {
+    "code": "pr-fajardo",
+    "continent": "North America",
+    "name": "Fajardo"
   },
   {
     "code": "fk",
@@ -991,6 +1036,11 @@
     "name": "Hong Kong"
   },
   {
+    "code": "pr-humacao",
+    "continent": "North America",
+    "name": "Humacao"
+  },
+  {
     "code": "hu",
     "continent": "Europe",
     "name": "Hungary"
@@ -1084,6 +1134,11 @@
     "code": "jp",
     "continent": "Asia",
     "name": "Japan"
+  },
+  {
+    "code": "pr-jayuya",
+    "continent": "North America",
+    "name": "Jayuya"
   },
   {
     "code": "je",
@@ -1200,6 +1255,11 @@
     "name": "Laos"
   },
   {
+    "code": "pr-lares",
+    "continent": "North America",
+    "name": "Lares"
+  },
+  {
     "code": "lv",
     "continent": "Europe",
     "name": "Latvia"
@@ -1277,6 +1337,11 @@
     "name": "Lower Silesia"
   },
   {
+    "code": "pr-luquillo",
+    "continent": "North America",
+    "name": "Luquillo"
+  },
+  {
     "code": "lu",
     "continent": "Europe",
     "name": "Luxembourg"
@@ -1337,6 +1402,11 @@
     "name": "Māori Flag"
   },
   {
+    "code": "pr-maricao",
+    "continent": "North America",
+    "name": "Maricao"
+  },
+  {
     "code": "mh",
     "continent": "Oceania",
     "name": "Marshall Islands"
@@ -1350,6 +1420,11 @@
     "code": "Maryland",
     "continent": "North America",
     "name": "Maryland"
+  },
+  {
+    "code": "pr-maunabo",
+    "continent": "North America",
+    "name": "Maunabo"
   },
   {
     "code": "mr",
@@ -1893,6 +1968,11 @@
     "name": "Saint Vincent and the Grenadines"
   },
   {
+    "code": "pr-salinas",
+    "continent": "North America",
+    "name": "Salinas"
+  },
+  {
     "code": "Sami flag",
     "continent": "Europe",
     "name": "Sami Flag"
@@ -1903,6 +1983,11 @@
     "name": "Samoa"
   },
   {
+    "code": "pr-sg",
+    "continent": "North America",
+    "name": "San Germán"
+  },
+  {
     "code": "pr-sj",
     "continent": "North America",
     "name": "San Juan"
@@ -1911,6 +1996,11 @@
     "code": "sm",
     "continent": "Europe",
     "name": "San Marino"
+  },
+  {
+    "code": "pr-ss",
+    "continent": "North America",
+    "name": "San Sebastián"
   },
   {
     "code": "Santa Cruz",
@@ -2314,6 +2404,11 @@
     "name": "Utah"
   },
   {
+    "code": "pr-utuado",
+    "continent": "North America",
+    "name": "Utuado"
+  },
+  {
     "code": "uz",
     "continent": "Asia",
     "name": "Uzbekistan"
@@ -2347,6 +2442,11 @@
     "code": "vn",
     "continent": "Asia",
     "name": "Vietnam"
+  },
+  {
+    "code": "pr-vieques",
+    "continent": "North America",
+    "name": "Vieques"
   },
   {
     "code": "vg",
