@@ -261,6 +261,11 @@
     "name": "Basque Country"
   },
   {
+    "code": "pr-bayamon",
+    "continent": "North America",
+    "name": "Bayamón"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -390,6 +395,11 @@
     "name": "Cabo Verde"
   },
   {
+    "code": "pr-caguas",
+    "continent": "North America",
+    "name": "Caguas"
+  },
+  {
     "code": "California",
     "continent": "North America",
     "name": "California"
@@ -417,6 +427,11 @@
   {
     "code": "Capybara",
     "name": "Capybara"
+  },
+  {
+    "code": "pr-carolina",
+    "continent": "North America",
+    "name": "Carolina"
   },
   {
     "code": "Carthage",
@@ -957,6 +972,11 @@
     "name": "Guatemala"
   },
   {
+    "code": "pr-guaynabo",
+    "continent": "North America",
+    "name": "Guaynabo"
+  },
+  {
     "code": "gg",
     "continent": "Europe",
     "name": "Guernsey"
@@ -1437,6 +1457,11 @@
     "name": "Mauritius"
   },
   {
+    "code": "pr-mayaguez",
+    "continent": "North America",
+    "name": "Mayagüez"
+  },
+  {
     "code": "yt",
     "continent": "Africa",
     "name": "Mayotte"
@@ -1812,6 +1837,11 @@
     "code": "Polish–Lithuanian Commonwealth",
     "continent": "Europe",
     "name": "Polish–Lithuanian Commonwealth"
+  },
+  {
+    "code": "pr-ponce",
+    "continent": "North America",
+    "name": "Ponce"
   },
   {
     "code": "pt",
