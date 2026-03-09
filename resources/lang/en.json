@@ -480,7 +480,9 @@
     "compact_map": "Compact Map",
     "crowded": "Crowded",
     "hard_nations": "Hard Nations",
-    "starting_gold": "{amount}M Starting Gold"
+    "starting_gold": "{amount}M Starting Gold",
+    "gold_multiplier": "x{amount} Gold Multiplier",
+    "disable_alliances": "Alliances Disabled"
   },
   "select_lang": {
     "title": "Select Language"

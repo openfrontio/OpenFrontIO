@@ -243,6 +243,8 @@ export interface PublicGameModifiers {
   isCrowded: boolean;
   isHardNations: boolean;
   startingGold?: number;
+  goldMultiplier?: number;
+  isAlliancesDisabled: boolean;
 }
 
 export interface UnitInfo {

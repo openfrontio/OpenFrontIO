@@ -217,6 +217,8 @@ export const GameConfigSchema = z.object({
       isCrowded: z.boolean(),
       isHardNations: z.boolean(),
       startingGold: z.number().int().min(0).optional(),
+      goldMultiplier: z.number().min(0.1).max(1000).optional(),
+      isAlliancesDisabled: z.boolean(),
     })
     .optional(),
   nations: z
