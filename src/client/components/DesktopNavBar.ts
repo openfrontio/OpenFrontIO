@@ -175,7 +175,6 @@ export class DesktopNavBar extends LitElement {
               `
             : ""}
         </div>
-        <lang-selector></lang-selector>
         <button
           id="nav-account-button"
           class="no-crazygames nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"

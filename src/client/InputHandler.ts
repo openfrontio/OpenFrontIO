@@ -671,7 +671,7 @@ export class InputHandler {
     }
     if (element.tagName === "INPUT") {
       const input = element as HTMLInputElement;
-      if (input.id === "attack-ratio" && input.type === "range") {
+      if (input.type === "range") {
         return false;
       }
       return true;
