@@ -348,7 +348,10 @@ export class ControlPanel extends LitElement implements Layer {
           ${this.renderMobileTroopBar()}
         </div>
         <!-- Sword + % label -->
-        <div class="flex flex-col items-center shrink-0 gap-0.5 w-8" translate="no">
+        <div
+          class="flex flex-col items-center shrink-0 gap-0.5 w-8"
+          translate="no"
+        >
           <img
             src=${swordIcon}
             alt=""
