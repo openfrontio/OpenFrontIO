@@ -555,14 +555,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
-    if (
-      update.betrayedID === myPlayer.smallID() ||
-      update.traitorID === myPlayer.smallID()
-    ) {
-      SoundManager.playSoundEffect(SoundEffect.AllianceBroken);
-    }
-
     if (!betrayed.isTraitor() && traitor === myPlayer) {
+      SoundManager.playSoundEffect(SoundEffect.AllianceBroken);
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
@@ -589,6 +583,7 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: update.betrayedID,
       });
     } else if (betrayed === myPlayer) {
+      SoundManager.playSoundEffect(SoundEffect.AllianceBroken);
       const buttons = [
         {
           text: translateText("events_display.focus"),
