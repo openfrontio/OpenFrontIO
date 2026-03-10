@@ -153,6 +153,7 @@ export class CoordinateGridLayer implements Layer {
     const bottomRight = this.transformHandler.worldToScreenCoordinates(
       new Cell(width, height),
     );
+    const darkMode = this.game.config().userSettings()?.darkMode() ?? false;
     return [
       width,
       height,
@@ -163,6 +164,7 @@ export class CoordinateGridLayer implements Layer {
       topLeft.y.toFixed(2),
       bottomRight.x.toFixed(2),
       bottomRight.y.toFixed(2),
+      darkMode ? "1" : "0",
     ].join("|");
   }
 
@@ -268,10 +270,13 @@ export class CoordinateGridLayer implements Layer {
 
     context.font = "12px monospace";
 
+    const isDarkMode = this.game.config().userSettings()?.darkMode() ?? false;
     const drawLabel = (text: string, x: number, y: number) => {
       context.textAlign = "left";
       context.textBaseline = "top";
-      context.fillStyle = "rgba(20, 20, 20, 0.9)";
+      context.fillStyle = isDarkMode
+        ? "rgba(255, 255, 255, 0.9)"
+        : "rgba(20, 20, 20, 0.9)";
       context.fillText(text, x, y);
     };
 
