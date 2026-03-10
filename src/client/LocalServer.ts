@@ -106,23 +106,25 @@ export class LocalServer {
       this.replaySpeedMultiplier = event.replaySpeedMultiplier;
     });
 
-    this.eventBus.on(GameSpeedUpIntentEvent, () => {
-      const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
-      if (idx < 0 || idx >= SPEED_ORDER.length - 1) return;
-      this.replaySpeedMultiplier = SPEED_ORDER[idx + 1];
-      this.eventBus.emit(
-        new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
-      );
-    });
+    if (!this.isReplay) {
+      this.eventBus.on(GameSpeedUpIntentEvent, () => {
+        const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
+        if (idx < 0 || idx >= SPEED_ORDER.length - 1) return;
+        this.replaySpeedMultiplier = SPEED_ORDER[idx + 1];
+        this.eventBus.emit(
+          new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
+        );
+      });
 
-    this.eventBus.on(GameSpeedDownIntentEvent, () => {
-      const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
-      if (idx <= 0) return;
-      this.replaySpeedMultiplier = SPEED_ORDER[idx - 1];
-      this.eventBus.emit(
-        new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
-      );
-    });
+      this.eventBus.on(GameSpeedDownIntentEvent, () => {
+        const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
+        if (idx <= 0) return;
+        this.replaySpeedMultiplier = SPEED_ORDER[idx - 1];
+        this.eventBus.emit(
+          new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
+        );
+      });
+    }
 
     this.startedAt = Date.now();
     this.clientConnect();
