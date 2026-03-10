@@ -99,7 +99,7 @@ export class GameRunner {
     }
     if (this.game.config().bots() > 0) {
       this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
+        ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
     if (this.game.config().spawnNations()) {

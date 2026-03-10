@@ -1,4 +1,4 @@
-export const BOT_NAME_PREFIXES = [
+export const TRIBE_NAME_PREFIXES = [
   "Akkadian",
   "Babylonian",
   "Sumerian",
@@ -159,8 +159,6 @@ export const BOT_NAME_PREFIXES = [
   "Armenian",
   "Circassian",
   "Georgian",
-  "Phoenician",
-  "Chaldean",
   "Kurdish",
   "Turkic",
   "Kazakh",
@@ -171,7 +169,6 @@ export const BOT_NAME_PREFIXES = [
   "Pashtun",
   "Baloch",
   "Afghan",
-  "Persian",
   "Kenyan",
   "Ugandan",
   "Bhutanese",
@@ -180,7 +177,7 @@ export const BOT_NAME_PREFIXES = [
   "Militant",
   "Spartan",
 ];
-export const BOT_NAME_SUFFIXES = [
+export const TRIBE_NAME_SUFFIXES = [
   "Empire",
   "Dynasty",
   "Kingdom",
@@ -218,7 +215,6 @@ export const BOT_NAME_SUFFIXES = [
   "Confederacy",
   "Order",
   "Regime",
-  "Dominion",
   "Syndicate",
   "Guild",
   "Corporation",
@@ -231,10 +227,7 @@ export const BOT_NAME_SUFFIXES = [
   "Sisterhood",
   "Ascendancy",
   "Supremacy",
-  "Province",
   "Tribe",
-  "Dominion",
-  "Assembly",
   "Republics",
   "Army",
   "Dictatorship",

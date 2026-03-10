@@ -240,6 +240,9 @@ export class DefaultConfig implements Config {
   disableNavMesh(): boolean {
     return this._gameConfig.disableNavMesh ?? false;
   }
+  disableAlliances(): boolean {
+    return this._gameConfig.disableAlliances ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
@@ -268,7 +271,7 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 18;
+    return (numPlayerFactories + 10) * 25;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     const multiplier = this.goldMultiplier();

@@ -1,284 +1,240 @@
 {
   "map": {
     "height": 1828,
-    "num_land_tiles": 1678775,
+    "num_land_tiles": 1679064,
     "width": 1828
   },
   "map16x": {
     "height": 457,
-    "num_land_tiles": 97927,
+    "num_land_tiles": 97929,
     "width": 457
   },
   "map4x": {
     "height": 914,
-    "num_land_tiles": 409832,
+    "num_land_tiles": 409868,
     "width": 914
   },
-  "name": "arctic_circle",
+  "name": "Arctic",
   "nations": [
     {
       "coordinates": [622, 1171],
       "flag": "gl",
-      "name": "Greenland",
-      "strength": 2
+      "name": "Greenland"
     },
     {
       "coordinates": [632, 1438],
       "flag": "is",
-      "name": "Iceland",
-      "strength": 1
+      "name": "Iceland"
     },
     {
       "coordinates": [90, 1046],
       "flag": "Quebec",
-      "name": "Quebec",
-      "strength": 1
+      "name": "Quebec"
     },
     {
       "coordinates": [747, 336],
       "flag": "Alaska",
-      "name": "Alaska",
-      "strength": 2
+      "name": "Alaska"
     },
     {
       "coordinates": [485, 927],
       "flag": "ca",
-      "name": "Nunavut",
-      "strength": 1
+      "name": "Nunavut"
     },
     {
       "coordinates": [432, 550],
       "flag": "ca",
-      "name": "Northwest Territories",
-      "strength": 1
+      "name": "Northwest Territories"
     },
     {
       "coordinates": [608, 447],
       "flag": "ca",
-      "name": "Yukon",
-      "strength": 1
+      "name": "Yukon"
     },
     {
       "coordinates": [344, 320],
       "flag": "ca",
-      "name": "British Columbia",
-      "strength": 1
+      "name": "British Columbia"
     },
     {
       "coordinates": [64, 601],
       "flag": "ca",
-      "name": "Manitoba",
-      "strength": 1
+      "name": "Manitoba"
     },
     {
       "coordinates": [247, 571],
       "flag": "ca",
-      "name": "Saskatchewan",
-      "strength": 1
+      "name": "Saskatchewan"
     },
     {
       "coordinates": [136, 401],
       "flag": "ca",
-      "name": "Alberta",
-      "strength": 1
+      "name": "Alberta"
     },
     {
       "coordinates": [67, 795],
       "flag": "ca",
-      "name": "Ontario",
-      "strength": 2
+      "name": "Ontario"
     },
     {
       "coordinates": [49, 1313],
       "flag": "ca",
-      "name": "Newfoundland and Labrador",
-      "strength": 1
+      "name": "Newfoundland and Labrador"
     },
     {
       "coordinates": [74, 226],
       "flag": "us",
-      "name": "United States of America",
-      "strength": 3
+      "name": "United States of America"
     },
     {
       "coordinates": [1457, 1381],
       "flag": "Communist flag",
-      "name": "Soviet Union",
-      "strength": 3
+      "name": "Soviet Union"
     },
     {
       "coordinates": [1683, 1414],
       "flag": "Communist flag",
-      "name": "Kazakh SSR",
-      "strength": 2
+      "name": "Kazakh SSR"
     },
     {
       "coordinates": [1709, 1603],
       "flag": "Communist flag",
-      "name": "Uzbek SSR",
-      "strength": 1
+      "name": "Uzbek SSR"
     },
     {
       "coordinates": [1784, 1744],
       "flag": "Communist flag",
-      "name": "Turkmen SSR",
-      "strength": 2
+      "name": "Turkmen SSR"
     },
     {
       "coordinates": [1803, 1265],
       "flag": "Communist flag",
-      "name": "Kirghiz SSR",
-      "strength": 1
+      "name": "Kirghiz SSR"
     },
     {
       "coordinates": [745, 1736],
       "flag": "gb",
-      "name": "United Kingdom",
-      "strength": 3
+      "name": "United Kingdom"
     },
     {
       "coordinates": [893, 1773],
       "flag": "west_germany",
-      "name": "West Germany",
-      "strength": 1
+      "name": "West Germany"
     },
     {
       "coordinates": [987, 1792],
       "flag": "east_germany",
-      "name": "East Germany",
-      "strength": 2
+      "name": "East Germany"
     },
     {
       "coordinates": [1333, 1774],
       "flag": "Communist flag",
-      "name": "Ukrainian SSR",
-      "strength": 2
+      "name": "Ukrainian SSR"
     },
     {
       "coordinates": [1194, 1814],
       "flag": "Communist flag",
-      "name": "Moldovan SSR",
-      "strength": 1
+      "name": "Moldovan SSR"
     },
     {
       "coordinates": [1197, 1626],
       "flag": "Communist flag",
-      "name": "Belorussian SSR",
-      "strength": 1
+      "name": "Belorussian SSR"
     },
     {
       "coordinates": [1091, 1744],
       "flag": "pl",
-      "name": "Poland",
-      "strength": 2
+      "name": "Poland"
     },
     {
       "coordinates": [1805, 1486],
       "flag": "Communist flag",
-      "name": "Tajik SSR",
-      "strength": 1
+      "name": "Tajik SSR"
     },
     {
       "coordinates": [1442, 1807],
       "flag": "Communist flag",
-      "name": "Georgian SSR",
-      "strength": 1
+      "name": "Georgian SSR"
     },
     {
       "coordinates": [1573, 1790],
       "flag": "Communist flag",
-      "name": "Azerbaijan SSR",
-      "strength": 1
+      "name": "Azerbaijan SSR"
     },
     {
       "coordinates": [1089, 1519],
       "flag": "fi",
-      "name": "Finland",
-      "strength": 2
+      "name": "Finland"
     },
     {
       "coordinates": [987, 1538],
       "flag": "se",
-      "name": "Sweden",
-      "strength": 1
+      "name": "Sweden"
     },
     {
       "coordinates": [889, 1587],
       "flag": "no",
-      "name": "Norway",
-      "strength": 1
+      "name": "Norway"
     },
     {
       "coordinates": [1793, 156],
       "flag": "jp",
-      "name": "Japan",
-      "strength": 2
+      "name": "Japan"
     },
     {
       "coordinates": [1776, 517],
       "flag": "cn",
-      "name": "China",
-      "strength": 3
+      "name": "China"
     },
     {
       "coordinates": [1792, 774],
       "flag": "mn",
-      "name": "Mongolia",
-      "strength": 1
+      "name": "Mongolia"
     },
     {
       "coordinates": [1773, 961],
       "flag": "Communist flag",
-      "name": "Tannu Tuva",
-      "strength": 2
+      "name": "Tannu Tuva"
     },
     {
       "coordinates": [1142, 382],
       "flag": "Communist flag",
-      "name": "Far East",
-      "strength": 1
+      "name": "Far East"
     },
     {
       "coordinates": [1410, 625],
       "flag": "Communist flag",
-      "name": "Yakut ASSR",
-      "strength": 1
+      "name": "Yakut ASSR"
     },
     {
       "coordinates": [1817, 364],
       "flag": "kp",
-      "name": "North Korea",
-      "strength": 2
+      "name": "North Korea"
     },
     {
       "coordinates": [1664, 689],
       "flag": "Communist flag",
-      "name": "Buryat ASSR",
-      "strength": 1
+      "name": "Buryat ASSR"
     },
     {
       "coordinates": [1440, 1170],
       "flag": "Communist flag",
-      "name": "Komi ASSR",
-      "strength": 1
+      "name": "Komi ASSR"
     },
     {
       "coordinates": [1383, 875],
       "flag": "Siberia",
-      "name": "Siberia",
-      "strength": 2
+      "name": "Siberia"
     },
     {
       "coordinates": [950, 1174],
       "flag": "sj",
-      "name": "Svalbard",
-      "strength": 1
+      "name": "Svalbard"
     },
     {
       "coordinates": [789, 1823],
       "flag": "fr",
-      "name": "France",
-      "strength": 1
+      "name": "France"
     }
   ]
 }

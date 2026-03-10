@@ -157,6 +157,9 @@ export class GameServer {
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
     }
+    if (gameConfig.disableAlliances !== undefined) {
+      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
+    }
   }
 
   private isKicked(clientID: ClientID): boolean {
