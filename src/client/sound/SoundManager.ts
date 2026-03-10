@@ -3,9 +3,27 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import kaChingSound from "/sounds/effects/ka-ching.mp3?url";
+import atomHitSound from "/sounds/effects/atom-hit.mp3?url";
+import atomLaunchSound from "/sounds/effects/atom-launch.mp3?url";
+import hydrogenHitSound from "/sounds/effects/hydrogen-hit.mp3?url";
+import hydrogenLaunchSound from "/sounds/effects/hydrogen-launch.mp3?url";
+import mirvLaunchSound from "/sounds/effects/mirv-launch.mp3?url";
+import samHitSound from "/sounds/effects/sam-hit.mp3?url";
+import samShootSound from "/sounds/effects/sam-shoot.mp3?url";
+import warshipShotSound from "/sounds/effects/warship-shot.mp3?url";
+import warshipLostSound from "/sounds/effects/warship-lost.mp3?url";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
+  AtomHit = "atom-hit",
+  AtomLaunch = "atom-launch",
+  HydrogenHit = "hydrogen-hit",
+  HydrogenLaunch = "hydrogen-launch",
+  MIRVLaunch = "mirv-launch",
+  SAMHit = "sam-hit",
+  SAMShoot = "sam-shoot",
+  WarshipShot = "warship-shot",
+  WarshipLost = "warship-lost",
 }
 
 class SoundManager {
@@ -37,6 +55,15 @@ class SoundManager {
       }),
     ];
     this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
+    this.loadSoundEffect(SoundEffect.AtomHit, atomHitSound);
+    this.loadSoundEffect(SoundEffect.AtomLaunch, atomLaunchSound);
+    this.loadSoundEffect(SoundEffect.HydrogenHit, hydrogenHitSound);
+    this.loadSoundEffect(SoundEffect.HydrogenLaunch, hydrogenLaunchSound);
+    this.loadSoundEffect(SoundEffect.MIRVLaunch, mirvLaunchSound);
+    this.loadSoundEffect(SoundEffect.SAMHit, samHitSound);
+    this.loadSoundEffect(SoundEffect.SAMShoot, samShootSound);
+    this.loadSoundEffect(SoundEffect.WarshipShot, warshipShotSound);
+    this.loadSoundEffect(SoundEffect.WarshipLost, warshipLostSound);
   }
 
   public playBackgroundMusic(): void {

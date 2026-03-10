@@ -103,6 +103,7 @@ export class FxLayer implements Layer {
           FxType.MiniExplosion,
         );
         this.allFx.push(explosion);
+        SoundManager.playSoundEffect(SoundEffect.WarshipShot);
       }
     }
   }
@@ -174,6 +175,7 @@ export class FxLayer implements Layer {
         this.theme,
       );
       this.allFx.push(sinkingShip);
+      SoundManager.playSoundEffect(SoundEffect.WarshipLost);
     }
   }
 
@@ -188,6 +190,7 @@ export class FxLayer implements Layer {
         FxType.BuildingExplosion,
       );
       this.allFx.push(explosion);
+      SoundManager.playSoundEffect(SoundEffect.WarshipShot);
     }
   }
 
@@ -213,6 +216,11 @@ export class FxLayer implements Layer {
       this.game,
     );
     this.allFx = this.allFx.concat(nukeFx);
+    const sound =
+      unit.type() === UnitType.HydrogenBomb
+        ? SoundEffect.HydrogenHit
+        : SoundEffect.AtomHit;
+    SoundManager.playSoundEffect(sound);
   }
 
   handleSAMInterception(unit: UnitView) {
@@ -227,6 +235,7 @@ export class FxLayer implements Layer {
     this.allFx.push(explosion);
     const shockwave = new ShockwaveFx(x, y, 800, 40);
     this.allFx.push(shockwave);
+    SoundManager.playSoundEffect(SoundEffect.SAMHit);
   }
 
   async init() {
