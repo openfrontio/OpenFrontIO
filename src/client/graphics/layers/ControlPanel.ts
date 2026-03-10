@@ -158,13 +158,13 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-green-500 transition-[width] duration-200"
+                class="h-full bg-sky-700 transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-orange-400 transition-[width] duration-200"
+                class="h-full bg-sky-600 transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -208,35 +208,51 @@ export class ControlPanel extends LitElement implements Layer {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-8 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-green-500 transition-[width] duration-200"
+                class="h-full bg-sky-700 transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-orange-400 transition-[width] duration-200"
+                class="h-full bg-sky-600 transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
         </div>
         <div
-          class="absolute inset-0 flex items-center justify-start px-1.5 text-xs font-bold leading-none pointer-events-none gap-0.5"
+          class="absolute inset-0 flex items-center text-xl font-bold leading-none pointer-events-none"
           translate="no"
         >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(this._troops)}</span
-          >
-          <span class="text-white/60 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+          <span class="flex-1 flex justify-end h-full items-center pr-0.5">
+            <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+              >${renderTroops(this._troops)}</span
+            >
+          </span>
+          <span
+            class="h-full flex items-center px-0.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
             >/</span
           >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(this._maxTroops)}</span
+          <span
+            class="flex-1 flex justify-start h-full items-center pl-0.5 gap-0.5"
           >
+            <span
+              class="text-white tabular-nums w-[3.5rem] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+              >${renderTroops(this._maxTroops)}</span
+            >
+            <img
+              src=${soldierIcon}
+              alt=""
+              aria-hidden="true"
+              width="22"
+              height="22"
+              class="shrink-0 brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ml-1.5"
+            />
+          </span>
         </div>
       </div>
     `;
@@ -248,7 +264,7 @@ export class ControlPanel extends LitElement implements Layer {
       <div class="flex gap-1.5 items-center mb-1.5">
         <!-- Troop rate -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-xs p-1 w-[5.5rem] ${this
+          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm p-1 w-[5.5rem] ${this
             ._troopRateIsIncreasing
             ? "border-green-400"
             : "border-orange-400"}"
@@ -266,7 +282,7 @@ export class ControlPanel extends LitElement implements Layer {
               : "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)"}"
           />
           <span
-            class="text-xs font-bold tabular-nums ${this._troopRateIsIncreasing
+            class="text-sm font-bold tabular-nums ${this._troopRateIsIncreasing
               ? "text-green-400"
               : "text-orange-400"}"
             >+${renderTroops(this.troopRate)}/s</span
@@ -276,7 +292,7 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="flex-1">${this.renderDesktopTroopBar()}</div>
         <!-- Gold -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs p-1 w-[4.5rem]"
+          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm p-1 w-[4.5rem]"
           translate="no"
         >
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
@@ -286,7 +302,7 @@ export class ControlPanel extends LitElement implements Layer {
       <!-- Row 2: attack ratio | slider -->
       <div class="flex items-center gap-2" translate="no">
         <div
-          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md p-1 text-xs font-bold text-white cursor-pointer w-[7rem]"
+          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md p-1 text-sm font-bold text-white cursor-pointer w-[8rem]"
         >
           <img
             src=${swordIcon}
