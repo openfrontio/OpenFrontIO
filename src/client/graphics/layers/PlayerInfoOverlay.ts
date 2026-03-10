@@ -318,17 +318,39 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
-      <div class="flex items-start gap-2 lg:gap-3 p-1.5 lg:p-2">
+      <div class="flex items-start gap-1 lg:gap-2 p-1.5 lg:p-2">
         <!-- Left: Gold & Troop bar -->
-        <div class="flex flex-col gap-1 shrink-0 w-28">
-          <div
-            class="flex items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-28 lg:gap-1"
-            translate="no"
-          >
-            <img src=${goldCoinIcon} width="13" height="13" />
-            <span class="px-0.5">${renderNumber(player.gold())}</span>
+        <div class="flex flex-col gap-1 shrink-0 w-36">
+          <div class="flex items-center gap-1">
+            <div
+              class="flex flex-1 items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
+              translate="no"
+            >
+              <img src=${goldCoinIcon} width="13" height="13" />
+              <span class="px-0.5">${renderNumber(player.gold())}</span>
+            </div>
+            <div
+              class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
+              0
+                ? "text-sky-400"
+                : "text-white/40"} drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+              translate="no"
+            >
+              <span class="flex items-center gap-px leading-none text-xs"
+                ><img
+                  src=${soldierIcon}
+                  class="w-2.5 h-2.5"
+                  style="${attackingTroops > 0
+                    ? "filter: brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%); opacity:1"
+                    : "filter: brightness(0) invert(1); opacity:0.4"}"
+                />↑</span
+              >
+              <span class="tabular-nums leading-none text-sm mt-0.5"
+                >${renderTroops(attackingTroops)}</span
+              >
+            </div>
           </div>
-          <div class="w-28" translate="no">
+          <div class="w-36" translate="no">
             ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
           </div>
         </div>
@@ -418,7 +440,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mt-1 lg:mt-2 h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full mt-0.5 lg:mt-1 h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="h-full flex">
           ${greenPercent > 0
@@ -435,7 +457,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
         </div>
         <div
-          class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
+          class="absolute inset-0 flex items-center justify-between px-1.5 text-sm font-bold leading-none pointer-events-none"
           translate="no"
         >
           <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
