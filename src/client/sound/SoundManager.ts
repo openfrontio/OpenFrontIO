@@ -2,16 +2,16 @@ import { Howl } from "howler";
 import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
-import kaChingSound from "/sounds/effects/ka-ching.mp3?url";
 import atomHitSound from "/sounds/effects/atom-hit.mp3?url";
 import atomLaunchSound from "/sounds/effects/atom-launch.mp3?url";
 import hydrogenHitSound from "/sounds/effects/hydrogen-hit.mp3?url";
 import hydrogenLaunchSound from "/sounds/effects/hydrogen-launch.mp3?url";
+import kaChingSound from "/sounds/effects/ka-ching.mp3?url";
 import mirvLaunchSound from "/sounds/effects/mirv-launch.mp3?url";
 import samHitSound from "/sounds/effects/sam-hit.mp3?url";
 import samShootSound from "/sounds/effects/sam-shoot.mp3?url";
-import warshipShotSound from "/sounds/effects/warship-shot.mp3?url";
 import warshipLostSound from "/sounds/effects/warship-lost.mp3?url";
+import warshipShotSound from "/sounds/effects/warship-shot.mp3?url";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
