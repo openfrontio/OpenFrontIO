@@ -108,8 +108,8 @@ export class LocalServer {
 
     this.eventBus.on(GameSpeedUpIntentEvent, () => {
       const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
-      const nextIdx = idx < 0 ? 0 : (idx + 1) % SPEED_ORDER.length;
-      this.replaySpeedMultiplier = SPEED_ORDER[nextIdx];
+      if (idx < 0 || idx >= SPEED_ORDER.length - 1) return;
+      this.replaySpeedMultiplier = SPEED_ORDER[idx + 1];
       this.eventBus.emit(
         new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
       );
@@ -117,8 +117,8 @@ export class LocalServer {
 
     this.eventBus.on(GameSpeedDownIntentEvent, () => {
       const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
-      const prevIdx = idx <= 0 ? SPEED_ORDER.length - 1 : idx - 1;
-      this.replaySpeedMultiplier = SPEED_ORDER[prevIdx];
+      if (idx <= 0) return;
+      this.replaySpeedMultiplier = SPEED_ORDER[idx - 1];
       this.eventBus.emit(
         new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
       );
