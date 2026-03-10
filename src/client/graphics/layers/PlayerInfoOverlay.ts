@@ -423,13 +423,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-green-500 transition-[width] duration-200"
+                class="h-full bg-sky-700 transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-orange-400 transition-[width] duration-200"
+                class="h-full bg-sky-600 transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
