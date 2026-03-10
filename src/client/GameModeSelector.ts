@@ -133,17 +133,17 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
         </div>
         <!-- Game cards grid -->
@@ -204,17 +204,17 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
           ${this.renderSmallActionCard(
             translateText("mode_selector.ranked_title"),
             this.openRankedMenu,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
         </div>
       </div>
