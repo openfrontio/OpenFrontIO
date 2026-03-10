@@ -180,7 +180,7 @@ declare global {
     ramp: {
       que: Array<() => void>;
       passiveMode: boolean;
-      spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
+      spaAddAds: (ads: Array<{ type: string; selectorId?: string }>) => void;
       destroyUnits: (adType: string) => void;
       settings?: {
         slots?: any;
@@ -737,6 +737,8 @@ class Client {
       console.log("joining lobby, stopping existing game");
       this.gameStop(true);
       document.body.classList.remove("in-game");
+      const bottomHud = document.getElementById("bottom-hud");
+      if (bottomHud) bottomHud.style.paddingBottom = "";
     }
     if (lobby.source === "public") {
       this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
@@ -879,6 +881,8 @@ class Client {
     }
 
     document.body.classList.remove("in-game");
+    const bottomHud = document.getElementById("bottom-hud");
+    if (bottomHud) bottomHud.style.paddingBottom = "";
 
     crazyGamesSDK.gameplayStop();
   }

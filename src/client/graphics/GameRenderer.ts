@@ -21,6 +21,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
+import { InGameFooterAd } from "./layers/InGameFooterAd";
 import { InGameHeaderAd } from "./layers/InGameHeaderAd";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -270,6 +271,14 @@ export function createRenderer(
   }
   inGameHeaderAd.game = game;
 
+  const inGameFooterAd = document.querySelector(
+    "in-game-footer-ad",
+  ) as InGameFooterAd;
+  if (!(inGameFooterAd instanceof InGameFooterAd)) {
+    console.error("in-game footer ad not found");
+  }
+  inGameFooterAd.game = game;
+
   const spawnVideoAd = document.querySelector("spawn-video-ad") as SpawnVideoAd;
   if (!(spawnVideoAd instanceof SpawnVideoAd)) {
     console.error("spawn video ad not found");
@@ -322,6 +331,7 @@ export function createRenderer(
     headsUpMessage,
     multiTabModal,
     inGameHeaderAd,
+    inGameFooterAd,
     spawnVideoAd,
     alertFrame,
     performanceOverlay,
