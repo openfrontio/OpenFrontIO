@@ -550,17 +550,17 @@ export class EventsDisplay extends LitElement implements Layer {
     this.alliancesCheckedAt.delete(update.allianceID);
     this.requestUpdate();
 
+    const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
+    const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
+
+    if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
+
     if (
       update.betrayedID === myPlayer.smallID() ||
       update.traitorID === myPlayer.smallID()
     ) {
       SoundManager.playSoundEffect(SoundEffect.AllianceBroken);
     }
-
-    const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
-    const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
-
-    if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
       const malusPercent = Math.round(
