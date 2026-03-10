@@ -214,8 +214,6 @@ export class GameImpl implements Game {
       ...this._nations.map((n) => n.playerInfo),
     ];
     const playerToTeam = assignTeams(allPlayers, this.playerTeams);
-    // this.playerTeams is updated in-place by assignTeams
-
     for (const [playerInfo, team] of playerToTeam.entries()) {
       if (team === "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
