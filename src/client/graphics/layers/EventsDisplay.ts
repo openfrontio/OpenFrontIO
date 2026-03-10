@@ -35,6 +35,7 @@ import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
@@ -443,6 +444,7 @@ export class EventsDisplay extends LitElement implements Layer {
       type: MessageType.CHAT,
       unsafeDescription: false,
     });
+    SoundManager.playSoundEffect(SoundEffect.Message);
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
@@ -458,6 +460,7 @@ export class EventsDisplay extends LitElement implements Layer {
       update.recipientID,
     ) as PlayerView;
 
+    SoundManager.playSoundEffect(SoundEffect.AllianceSuggested);
     this.addEvent({
       description: translateText("events_display.request_alliance", {
         name: requestor.name(),
@@ -546,6 +549,13 @@ export class EventsDisplay extends LitElement implements Layer {
     this.removeAllianceRenewalEvents(update.allianceID);
     this.alliancesCheckedAt.delete(update.allianceID);
     this.requestUpdate();
+
+    if (
+      update.betrayedID === myPlayer.smallID() ||
+      update.traitorID === myPlayer.smallID()
+    ) {
+      SoundManager.playSoundEffect(SoundEffect.AllianceBroken);
+    }
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;

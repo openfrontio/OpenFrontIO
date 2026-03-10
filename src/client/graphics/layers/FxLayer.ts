@@ -26,6 +26,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private hasBufferedFrame = false;
+  private constructionState: Map<number, boolean> = new Map();
 
   constructor(
     private game: GameView,
@@ -60,6 +61,11 @@ export class FxLayer implements Layer {
   }
 
   onUnitEvent(unit: UnitView) {
+    // Detect unit creation (launches, warship built)
+    if (unit.isActive() && unit.createdAt() === this.game.ticks()) {
+      this.onUnitCreated(unit);
+    }
+
     switch (unit.type()) {
       case UnitType.AtomBomb: {
         this.onNukeEvent(unit, 70);
@@ -92,21 +98,37 @@ export class FxLayer implements Layer {
     }
   }
 
+  onUnitCreated(unit: UnitView) {
+    switch (unit.type()) {
+      case UnitType.AtomBomb:
+        SoundManager.playSoundEffect(SoundEffect.AtomLaunch);
+        break;
+      case UnitType.HydrogenBomb:
+        SoundManager.playSoundEffect(SoundEffect.HydrogenLaunch);
+        break;
+      case UnitType.MIRV:
+        SoundManager.playSoundEffect(SoundEffect.MIRVLaunch);
+        break;
+      case UnitType.Warship:
+        if (unit.owner() === this.game.myPlayer()) {
+          SoundManager.playSoundEffect(SoundEffect.BuildWarship);
+        }
+        break;
+    }
+  }
+
   onShellEvent(unit: UnitView) {
     if (!unit.isActive()) {
-      if (unit.reachedTarget()) {
-        if (this.fxEnabled()) {
-          const x = this.game.x(unit.lastTile());
-          const y = this.game.y(unit.lastTile());
-          const explosion = new SpriteFx(
-            this.animatedSpriteLoader,
-            x,
-            y,
-            FxType.MiniExplosion,
-          );
-          this.allFx.push(explosion);
-        }
-        SoundManager.playSoundEffect(SoundEffect.WarshipShot);
+      if (unit.reachedTarget() && this.fxEnabled()) {
+        const x = this.game.x(unit.lastTile());
+        const y = this.game.y(unit.lastTile());
+        const explosion = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.MiniExplosion,
+        );
+        this.allFx.push(explosion);
       }
     }
   }
@@ -161,29 +183,26 @@ export class FxLayer implements Layer {
   }
 
   onWarshipEvent(unit: UnitView) {
-    if (!unit.isActive()) {
-      if (this.fxEnabled()) {
-        const x = this.game.x(unit.lastTile());
-        const y = this.game.y(unit.lastTile());
-        const shipExplosion = new UnitExplosionFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          this.game,
-        );
-        this.allFx.push(shipExplosion);
-        const sinkingShip = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.SinkingShip,
-          undefined,
-          unit.owner(),
-          this.theme,
-        );
-        this.allFx.push(sinkingShip);
-      }
-      SoundManager.playSoundEffect(SoundEffect.WarshipLost);
+    if (!unit.isActive() && this.fxEnabled()) {
+      const x = this.game.x(unit.lastTile());
+      const y = this.game.y(unit.lastTile());
+      const shipExplosion = new UnitExplosionFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        this.game,
+      );
+      this.allFx.push(shipExplosion);
+      const sinkingShip = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.SinkingShip,
+        undefined,
+        unit.owner(),
+        this.theme,
+      );
+      this.allFx.push(sinkingShip);
     }
   }
 
@@ -200,7 +219,32 @@ export class FxLayer implements Layer {
         );
         this.allFx.push(explosion);
       }
-      SoundManager.playSoundEffect(SoundEffect.WarshipShot);
+      this.constructionState.delete(unit.id());
+    } else {
+      const wasUnderConstruction = this.constructionState.get(unit.id());
+      this.constructionState.set(unit.id(), unit.isUnderConstruction());
+      if (wasUnderConstruction && !unit.isUnderConstruction()) {
+        if (unit.owner() === this.game.myPlayer()) {
+          this.onStructureBuilt(unit);
+        }
+      }
+    }
+  }
+
+  onStructureBuilt(unit: UnitView) {
+    switch (unit.type()) {
+      case UnitType.City:
+        SoundManager.playSoundEffect(SoundEffect.BuildCity);
+        break;
+      case UnitType.Port:
+        SoundManager.playSoundEffect(SoundEffect.BuildPort);
+        break;
+      case UnitType.DefensePost:
+        SoundManager.playSoundEffect(SoundEffect.BuildDefensePost);
+        break;
+      case UnitType.SAMLauncher:
+        SoundManager.playSoundEffect(SoundEffect.SAMBuilt);
+        break;
     }
   }
 
@@ -249,7 +293,6 @@ export class FxLayer implements Layer {
       const shockwave = new ShockwaveFx(x, y, 800, 40);
       this.allFx.push(shockwave);
     }
-    SoundManager.playSoundEffect(SoundEffect.SAMHit);
   }
 
   async init() {
