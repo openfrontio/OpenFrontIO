@@ -74,7 +74,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   private loadKeybindsFromStorage() {
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
+    const savedKeybinds = this.userSettings.getString("settings.keybinds");
     if (!savedKeybinds) return;
 
     try {
@@ -202,7 +202,10 @@ export class UserSettingModal extends BaseModal {
     }
 
     this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
-    localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
+    this.userSettings.setString(
+      "settings.keybinds",
+      JSON.stringify(this.keybinds),
+    );
   }
 
   private getKeyValue(action: string): string | undefined {
@@ -262,7 +265,7 @@ export class UserSettingModal extends BaseModal {
       return;
     }
 
-    this.userSettings.set("settings.darkMode", enabled);
+    this.userSettings.setBool("settings.darkMode", enabled);
 
     if (enabled) {
       document.documentElement.classList.add("dark");
@@ -285,7 +288,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.emojis", enabled);
+    this.userSettings.setBool("settings.emojis", enabled);
 
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
@@ -294,7 +297,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.alertFrame", enabled);
+    this.userSettings.setBool("settings.alertFrame", enabled);
 
     console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
   }
@@ -303,7 +306,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.specialEffects", enabled);
+    this.userSettings.setBool("settings.specialEffects", enabled);
 
     console.log("💥 Special effects:", enabled ? "ON" : "OFF");
   }
@@ -312,7 +315,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.structureSprites", enabled);
+    this.userSettings.setBool("settings.structureSprites", enabled);
 
     console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
   }
@@ -321,7 +324,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.cursorCostLabel", enabled);
+    this.userSettings.setBool("settings.cursorCostLabel", enabled);
 
     console.log("💰 Cursor build cost:", enabled ? "ON" : "OFF");
   }
@@ -330,7 +333,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.anonymousNames", enabled);
+    this.userSettings.setBool("settings.anonymousNames", enabled);
 
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
@@ -339,7 +342,7 @@ export class UserSettingModal extends BaseModal {
     const hideIds = e.detail?.checked;
     if (typeof hideIds !== "boolean") return;
 
-    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
+    this.userSettings.setBool("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
     console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
   }
 
@@ -347,7 +350,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.leftClickOpensMenu", enabled);
+    this.userSettings.setBool("settings.leftClickOpensMenu", enabled);
     console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
 
     this.requestUpdate();
@@ -357,7 +360,7 @@ export class UserSettingModal extends BaseModal {
     const value = e.detail?.value;
     if (typeof value === "number") {
       const ratio = value / 100;
-      localStorage.setItem("settings.attackRatio", ratio.toString());
+      this.userSettings.setFloat("settings.attackRatio", ratio);
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -384,7 +387,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.territoryPatterns", enabled);
+    this.userSettings.setBool("settings.territoryPatterns", enabled);
 
     console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
   }
@@ -393,7 +396,7 @@ export class UserSettingModal extends BaseModal {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.performanceOverlay", enabled);
+    this.userSettings.setBool("settings.performanceOverlay", enabled);
   }
 
   private openFlagSelector = () => {
@@ -893,7 +896,10 @@ export class UserSettingModal extends BaseModal {
         label="${translateText("user_setting.lobby_id_visibility_label")}"
         description="${translateText("user_setting.lobby_id_visibility_desc")}"
         id="lobby-id-visibility-toggle"
-        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        .checked=${!this.userSettings.getBool(
+          "settings.lobbyIdVisibility",
+          true,
+        )}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
 
@@ -921,8 +927,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
-        100}
+        .value=${this.userSettings.getFloat("settings.attackRatio", 0.2) * 100}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 

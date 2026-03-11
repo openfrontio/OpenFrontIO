@@ -4,7 +4,9 @@ import { PlayerPattern } from "../Schemas";
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
-  private emitChange(key: string, value: boolean | number): void {
+  private static cache = new Map<string, string | null>();
+
+  private emitChange(key: string, value: boolean | number | string): void {
     try {
       const maybeDispatch = (globalThis as any)?.dispatchEvent;
       if (typeof maybeDispatch !== "function") return;
@@ -18,134 +20,148 @@ export class UserSettings {
     }
   }
 
-  get(key: string, defaultValue: boolean): boolean {
-    const value = localStorage.getItem(key);
+  private getCached(key: string): string | null {
+    if (!UserSettings.cache.has(key)) {
+      UserSettings.cache.set(key, localStorage.getItem(key));
+    }
+    return UserSettings.cache.get(key) || null;
+  }
+
+  private setCached(key: string, value: string) {
+    localStorage.setItem(key, value);
+    UserSettings.cache.set(key, value);
+  }
+
+  private removeCached(key: string) {
+    localStorage.removeItem(key);
+    UserSettings.cache.set(key, null);
+  }
+
+  getBool(key: string, defaultValue: boolean): boolean {
+    const value = this.getCached(key);
     if (!value) return defaultValue;
-
     if (value === "true") return true;
-
     if (value === "false") return false;
-
     return defaultValue;
   }
 
-  set(key: string, value: boolean) {
-    localStorage.setItem(key, value ? "true" : "false");
+  setBool(key: string, value: boolean) {
+    this.setCached(key, value ? "true" : "false");
+    this.emitChange(key, value);
+  }
+
+  getString(key: string, defaultValue: string = ""): string {
+    const value = this.getCached(key);
+    if (value === null) return defaultValue;
+    return value;
+  }
+
+  setString(key: string, value: string) {
+    this.setCached(key, value);
     this.emitChange(key, value);
   }
 
   getFloat(key: string, defaultValue: number): number {
-    const value = localStorage.getItem(key);
+    const value = this.getCached(key);
     if (!value) return defaultValue;
 
     const floatValue = parseFloat(value);
     if (isNaN(floatValue)) return defaultValue;
-
     return floatValue;
   }
 
   setFloat(key: string, value: number) {
-    localStorage.setItem(key, value.toString());
+    this.setCached(key, value.toString());
     this.emitChange(key, value);
   }
 
   emojis() {
-    return this.get("settings.emojis", true);
+    return this.getBool("settings.emojis", true);
   }
 
   performanceOverlay() {
-    return this.get("settings.performanceOverlay", false);
+    return this.getBool("settings.performanceOverlay", false);
   }
 
   alertFrame() {
-    return this.get("settings.alertFrame", true);
+    return this.getBool("settings.alertFrame", true);
   }
 
   anonymousNames() {
-    return this.get("settings.anonymousNames", false);
+    return this.getBool("settings.anonymousNames", false);
   }
 
   lobbyIdVisibility() {
-    return this.get("settings.lobbyIdVisibility", true);
+    return this.getBool("settings.lobbyIdVisibility", true);
   }
 
   fxLayer() {
-    return this.get("settings.specialEffects", true);
+    return this.getBool("settings.specialEffects", true);
   }
 
   structureSprites() {
-    return this.get("settings.structureSprites", true);
+    return this.getBool("settings.structureSprites", true);
   }
 
   darkMode() {
-    return this.get("settings.darkMode", false);
+    return this.getBool("settings.darkMode", false);
   }
 
   leftClickOpensMenu() {
-    return this.get("settings.leftClickOpensMenu", false);
+    return this.getBool("settings.leftClickOpensMenu", false);
   }
 
   territoryPatterns() {
-    return this.get("settings.territoryPatterns", true);
+    return this.getBool("settings.territoryPatterns", true);
   }
 
   cursorCostLabel() {
-    const legacy = this.get("settings.ghostPricePill", true);
-    return this.get("settings.cursorCostLabel", legacy);
-  }
-
-  focusLocked() {
-    return false;
-    // TODO: re-enable when performance issues are fixed.
-    this.get("settings.focusLocked", true);
+    const legacy = this.getBool("settings.ghostPricePill", true);
+    return this.getBool("settings.cursorCostLabel", legacy);
   }
 
   toggleLeftClickOpenMenu() {
-    this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
-  }
-
-  toggleFocusLocked() {
-    this.set("settings.focusLocked", !this.focusLocked());
+    this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
 
   toggleEmojis() {
-    this.set("settings.emojis", !this.emojis());
+    this.setBool("settings.emojis", !this.emojis());
   }
 
   togglePerformanceOverlay() {
-    this.set("settings.performanceOverlay", !this.performanceOverlay());
+    this.setBool("settings.performanceOverlay", !this.performanceOverlay());
   }
 
   toggleAlertFrame() {
-    this.set("settings.alertFrame", !this.alertFrame());
+    this.setBool("settings.alertFrame", !this.alertFrame());
   }
 
   toggleRandomName() {
-    this.set("settings.anonymousNames", !this.anonymousNames());
+    this.setBool("settings.anonymousNames", !this.anonymousNames());
   }
 
   toggleLobbyIdVisibility() {
-    this.set("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
+    this.setBool("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
   }
 
   toggleFxLayer() {
-    this.set("settings.specialEffects", !this.fxLayer());
+    this.setBool("settings.specialEffects", !this.fxLayer());
   }
 
   toggleStructureSprites() {
-    this.set("settings.structureSprites", !this.structureSprites());
+    this.setBool("settings.structureSprites", !this.structureSprites());
   }
 
   toggleCursorCostLabel() {
-    this.set("settings.cursorCostLabel", !this.cursorCostLabel());
+    this.setBool("settings.cursorCostLabel", !this.cursorCostLabel());
   }
 
   toggleTerritoryPatterns() {
-    this.set("settings.territoryPatterns", !this.territoryPatterns());
+    this.setBool("settings.territoryPatterns", !this.territoryPatterns());
   }
 
   toggleDarkMode() {
-    this.set("settings.darkMode", !this.darkMode());
+    this.setBool("settings.darkMode", !this.darkMode());
     if (this.darkMode()) {
       document.documentElement.classList.add("dark");
     } else {
@@ -170,7 +186,7 @@ export class UserSettings {
 
   getSelectedPatternName(cosmetics: Cosmetics | null): PlayerPattern | null {
     if (cosmetics === null) return null;
-    let data = localStorage.getItem(PATTERN_KEY) ?? null;
+    let data = this.getCached(PATTERN_KEY) ?? null;
     if (data === null) return null;
     const patternPrefix = "pattern:";
     if (data.startsWith(patternPrefix)) {
@@ -188,28 +204,26 @@ export class UserSettings {
 
   setSelectedPatternName(patternName: string | undefined): void {
     if (patternName === undefined) {
-      localStorage.removeItem(PATTERN_KEY);
+      this.removeCached(PATTERN_KEY);
     } else {
-      localStorage.setItem(PATTERN_KEY, patternName);
+      this.setCached(PATTERN_KEY, patternName);
     }
   }
 
   getSelectedColor(): string | undefined {
-    const data = localStorage.getItem("settings.territoryColor") ?? undefined;
-    if (data === undefined) return undefined;
-    return data;
+    return this.getCached("settings.territoryColor") ?? undefined;
   }
 
   setSelectedColor(color: string | undefined): void {
     if (color === undefined) {
-      localStorage.removeItem("settings.territoryColor");
+      this.removeCached("settings.territoryColor");
     } else {
-      localStorage.setItem("settings.territoryColor", color);
+      this.setCached("settings.territoryColor", color);
     }
   }
 
   getFlag(): string | undefined {
-    const flag = localStorage.getItem("flag");
+    const flag = this.getCached("flag") ?? undefined;
     if (!flag || flag === "xx") return undefined;
     return flag;
   }
