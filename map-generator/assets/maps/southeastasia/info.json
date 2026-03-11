@@ -1,0 +1,131 @@
+{
+  "name": "southeastasia",
+  "nations": [
+    {
+      "coordinates": [131, 33],
+      "name": "Myanmar",
+      "flag": "mm"
+    },
+    {
+      "coordinates": [391, 269],
+      "name": "Thailand",
+      "flag": "th"
+    },
+    {
+      "coordinates": [505, 53],
+      "name": "Laos",
+      "flag": "la"
+    },
+    {
+      "coordinates": [603, 335],
+      "name": "Cambodia",
+      "flag": "kh"
+    },
+    {
+      "coordinates": [732, 246],
+      "name": "Vietnam",
+      "flag": "vn"
+    },
+    {
+      "coordinates": [841, 40],
+      "name": "China",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1480, 346],
+      "name": "Philippines",
+      "flag": "ph"
+    },
+    {
+      "coordinates": [1112, 747],
+      "name": "Brunei",
+      "flag": "bn"
+    },
+    {
+      "coordinates": [559, 903],
+      "name": "Singapore",
+      "flag": "sg"
+    },
+    {
+      "coordinates": [485, 769],
+      "name": "Malaysia",
+      "flag": "my"
+    },
+    {
+      "coordinates": [464, 1066],
+      "name": "Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1123, 995],
+      "name": "Kalimantan",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1343, 1068],
+      "name": "Sulawesi",
+      "flag": "id"
+    },
+    {
+      "coordinates": [886, 1314],
+      "name": "Java",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1597, 1379],
+      "name": "Timor-Leste",
+      "flag": "tl"
+    },
+    {
+      "coordinates": [2142, 1167],
+      "name": "West Papua",
+      "flag": "id"
+    },
+    {
+      "coordinates": [2427, 1229],
+      "name": "Papua New Guinea",
+      "flag": "pg"
+    },
+    {
+      "coordinates": [1761, 1110],
+      "name": "Maluku",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1995, 615],
+      "name": "Palau",
+      "flag": "pw"
+    },
+    {
+      "coordinates": [2605, 586],
+      "name": "Federated States of Micronesia",
+      "flag": "fm"
+    },
+    {
+      "coordinates": [2471, 336],
+      "name": "Guam",
+      "flag": "gu"
+    },
+    {
+      "coordinates": [2514, 255],
+      "name": "Northern Mariana Islands",
+      "flag": "mp"
+    },
+    {
+      "coordinates": [973, 871],
+      "name": "East Malaysia",
+      "strength": 1,
+      "flag": "my"
+    },
+    {
+      "coordinates": [42, 372],
+      "name": "India",
+      "flag": "in"
+    },
+    {
+      "coordinates": [2362, 1490],
+      "name": "Australia",
+      "flag": "au"
+    }
+  ]
+}
