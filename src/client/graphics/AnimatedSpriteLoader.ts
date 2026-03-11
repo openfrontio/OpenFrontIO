@@ -32,8 +32,10 @@ export class AnimatedSpriteLoader {
 
   public async loadAllAnimatedSpriteImages() {
     const result = AnimatedSpriteConfigsSchema.safeParse(animationConfig);
-    if (!result.success) {
-      console.error(`Invalid animated sprite config: ${result.error.message}`);
+    if (!result.success || !result.data) {
+      throw new Error(
+        `Invalid animated sprite config: ${result.error.message}`,
+      );
     }
     await Promise.all(
       result.data!.animatedSprites.map((config) => {

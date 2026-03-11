@@ -17,7 +17,7 @@
       "originY": 10
     },
     {
-      "name": "BigSmoke",
+      "name": "MiniBigSmoke",
       "frameCount": 5,
       "frameDuration": 120,
       "looping": true,

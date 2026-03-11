@@ -83,9 +83,4 @@ export class AnimatedSprite {
     this.currentFrame = 0;
     this.elapsedTime = 0;
   }
-
-  setOrigin(xRatio: number, yRatio: number) {
-    this.config.originX = xRatio;
-    this.config.originY = yRatio;
-  }
 }
