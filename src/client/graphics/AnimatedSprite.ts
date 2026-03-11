@@ -1,3 +1,11 @@
+export interface AnimatedSpriteConfig {
+  name: string;
+  frameCount: number;
+  frameDuration: number; // ms per frame
+  looping: boolean;
+  originX: number;
+  originY: number;
+}
 export class AnimatedSprite {
   private frameHeight: number;
   private frameWidth: number;
@@ -6,20 +14,17 @@ export class AnimatedSprite {
   private active: boolean = true;
 
   constructor(
-    private image: CanvasImageSource,
-    private frameCount: number,
-    private frameDuration: number, // in milliseconds
-    private looping: boolean = false,
-    private originX: number,
-    private originY: number,
+    private image: HTMLCanvasElement,
+    private config: AnimatedSpriteConfig,
   ) {
-    if (frameCount <= 0) {
+    if (config.frameCount <= 0) {
       throw new Error("Animated sprite should at least have one frame");
     }
     if ("height" in image && "width" in image) {
       this.frameHeight = (image as HTMLImageElement | HTMLCanvasElement).height;
       this.frameWidth = Math.floor(
-        (image as HTMLImageElement | HTMLCanvasElement).width / frameCount,
+        (image as HTMLImageElement | HTMLCanvasElement).width /
+          config.frameCount,
       );
     } else {
       throw new Error(
@@ -31,15 +36,15 @@ export class AnimatedSprite {
   update(deltaTime: number) {
     if (!this.active) return;
     this.elapsedTime += deltaTime;
-    if (this.elapsedTime >= this.frameDuration) {
-      this.elapsedTime -= this.frameDuration;
+    if (this.elapsedTime >= this.config.frameDuration) {
+      this.elapsedTime -= this.config.frameDuration;
       this.currentFrame++;
 
-      if (this.currentFrame >= this.frameCount) {
-        if (this.looping) {
+      if (this.currentFrame >= this.config.frameCount) {
+        if (this.config.looping) {
           this.currentFrame = 0;
         } else {
-          this.currentFrame = this.frameCount - 1;
+          this.currentFrame = this.config.frameCount - 1;
           this.active = false;
         }
       }
@@ -51,15 +56,15 @@ export class AnimatedSprite {
   }
 
   lifeTime(): number | undefined {
-    if (this.looping) {
+    if (this.config.looping) {
       return undefined;
     }
-    return this.frameDuration * this.frameCount;
+    return this.config.frameDuration * this.config.frameCount;
   }
 
   draw(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    const drawX = x - this.originX;
-    const drawY = y - this.originY;
+    const drawX = x - this.config.originX;
+    const drawY = y - this.config.originY;
 
     ctx.drawImage(
       this.image,
@@ -80,7 +85,7 @@ export class AnimatedSprite {
   }
 
   setOrigin(xRatio: number, yRatio: number) {
-    this.originX = xRatio;
-    this.originY = yRatio;
+    this.config.originX = xRatio;
+    this.config.originY = yRatio;
   }
 }
