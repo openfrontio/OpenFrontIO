@@ -3,7 +3,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { UnitView } from "../../../core/game/GameView";
+import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
@@ -127,7 +127,8 @@ export class UnitLayer implements Layer {
     clickRef?: TileRef,
     nearbyWarships?: UnitView[],
   ) {
-    if (clickRef === undefined) {
+    let targetRef = clickRef;
+    if (targetRef === undefined) {
       // Convert screen coordinates to world coordinates
       const cell = this.transformHandler.screenToWorldCoordinates(
         event.x,
@@ -135,13 +136,13 @@ export class UnitLayer implements Layer {
       );
       if (!this.game.isValidCoord(cell.x, cell.y)) return;
 
-      clickRef = this.game.ref(cell.x, cell.y);
+      targetRef = this.game.ref(cell.x, cell.y);
     }
-    if (!this.game.isOcean(clickRef)) return;
+    if (!this.game.isOcean(targetRef)) return;
 
     if (this.selectedUnit) {
       this.eventBus.emit(
-        new MoveWarshipIntentEvent(this.selectedUnit.id(), clickRef),
+        new MoveWarshipIntentEvent(this.selectedUnit.id(), targetRef),
       );
       // Deselect
       this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
@@ -149,10 +150,10 @@ export class UnitLayer implements Layer {
     }
 
     // Find warships near this tile, sorted by distance
-    nearbyWarships ??= this.findWarshipsNearCell(clickRef);
-    if (nearbyWarships.length > 0) {
+    const warships = nearbyWarships ?? this.findWarshipsNearCell(targetRef);
+    if (warships.length > 0) {
       // Toggle selection of the closest warship
-      this.eventBus.emit(new UnitSelectionEvent(nearbyWarships[0], true));
+      this.eventBus.emit(new UnitSelectionEvent(warships[0], true));
     }
   }
 
