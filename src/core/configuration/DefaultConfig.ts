@@ -658,7 +658,7 @@ export class DefaultConfig implements Config {
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
       const attackerTroopLoss =
-        0.5 * currentAttackerLoss + 0.5 * altAttackerLoss;
+        0.7 * currentAttackerLoss + 0.3 * altAttackerLoss;
 
       return {
         attackerTroopLoss,
