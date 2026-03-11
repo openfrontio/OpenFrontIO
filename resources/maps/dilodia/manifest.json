@@ -1,0 +1,92 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 559001,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 33218,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 137431,
+    "width": 500
+  },
+  "name": "dilodia",
+  "nations": [
+    {
+      "coordinates": [
+        145,
+        174
+      ],
+      "flag": "",
+      "name": "Bulopai"
+    },
+    {
+      "coordinates": [
+        629,
+        48
+      ],
+      "flag": "",
+      "name": "Taxinos"
+    },
+    {
+      "coordinates": [
+        891,
+        481
+      ],
+      "flag": "",
+      "name": "Kirshtro"
+    },
+    {
+      "coordinates": [
+        206,
+        564
+      ],
+      "flag": "",
+      "name": "Leperax"
+    },
+    {
+      "coordinates": [
+        298,
+        983
+      ],
+      "flag": "",
+      "name": "Umasoar"
+    },
+    {
+      "coordinates": [
+        947,
+        894
+      ],
+      "flag": "",
+      "name": "Alcrun"
+    },
+    {
+      "coordinates": [
+        977,
+        353
+      ],
+      "flag": "",
+      "name": "Herodia"
+    },
+    {
+      "coordinates": [
+        465,
+        429
+      ],
+      "flag": "",
+      "name": "Aquanithos"
+    },
+    {
+      "coordinates": [
+        36,
+        494
+      ],
+      "flag": "",
+      "name": "Sandit"
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 563614,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 33715,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 138871,
+    "width": 500
+  },
+  "name": "aginza",
+  "nations": [
+    {
+      "coordinates": [
+        79,
+        130
+      ],
+      "flag": "",
+      "name": "Ashio"
+    },
+    {
+      "coordinates": [
+        635,
+        25
+      ],
+      "flag": "",
+      "name": "Imitebe"
+    },
+    {
+      "coordinates": [
+        987,
+        113
+      ],
+      "flag": "",
+      "name": "Aretarlo"
+    },
+    {
+      "coordinates": [
+        621,
+        132
+      ],
+      "flag": "",
+      "name": "Beekahu"
+    },
+    {
+      "coordinates": [
+        520,
+        403
+      ],
+      "flag": "",
+      "name": "Dozthis"
+    },
+    {
+      "coordinates": [
+        942,
+        440
+      ],
+      "flag": "",
+      "name": "Overanov"
+    },
+    {
+      "coordinates": [
+        33,
+        377
+      ],
+      "flag": "",
+      "name": "Erlikid"
+    },
+    {
+      "coordinates": [
+        166,
+        498
+      ],
+      "flag": "",
+      "name": "Okaiwel"
+    },
+    {
+      "coordinates": [
+        599,
+        520
+      ],
+      "flag": "",
+      "name": "Atleesthi"
+    },
+    {
+      "coordinates": [
+        844,
+        560
+      ],
+      "flag": "",
+      "name": "Isthalas"
+    },
+    {
+      "coordinates": [
+        740,
+        686
+      ],
+      "flag": "",
+      "name": "Wonovthy"
+    },
+    {
+      "coordinates": [
+        820,
+        872
+      ],
+      "flag": "",
+      "name": "Ihavtud"
+    },
+    {
+      "coordinates": [
+        625,
+        888
+      ],
+      "flag": "",
+      "name": "Domastas"
+    },
+    {
+      "coordinates": [
+        988,
+        906
+      ],
+      "flag": "",
+      "name": "Domimoma"
+    },
+    {
+      "coordinates": [
+        256,
+        832
+      ],
+      "flag": "",
+      "name": "Atlesithi"
+    },
+    {
+      "coordinates": [
+        24,
+        978
+      ],
+      "flag": "",
+      "name": "Ifthera"
+    },
+    {
+      "coordinates": [
+        815,
+        240
+      ],
+      "flag": "",
+      "name": "Moraimset"
+    },
+    {
+      "coordinates": [
+        259,
+        81
+      ],
+      "flag": "",
+      "name": "Jususe"
+    },
+    {
+      "coordinates": [
+        811,
+        915
+      ],
+      "flag": "",
+      "name": "Accontri"
+    },
+    {
+      "coordinates": [
+        280,
+        423
+      ],
+      "flag": "",
+      "name": "Namforesta"
+    }
+  ]
+}

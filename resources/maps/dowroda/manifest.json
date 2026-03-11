@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 354123,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 20116,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 85728,
+    "width": 500
+  },
+  "name": "dowroda",
+  "nations": [
+    {
+      "coordinates": [
+        189,
+        118
+      ],
+      "flag": "",
+      "name": "Temretar"
+    },
+    {
+      "coordinates": [
+        414,
+        298
+      ],
+      "flag": "",
+      "name": "Axino"
+    },
+    {
+      "coordinates": [
+        109,
+        336
+      ],
+      "flag": "",
+      "name": "Bundello"
+    },
+    {
+      "coordinates": [
+        261,
+        555
+      ],
+      "flag": "",
+      "name": "Trenchock"
+    },
+    {
+      "coordinates": [
+        106,
+        767
+      ],
+      "flag": "",
+      "name": "Yusephole"
+    },
+    {
+      "coordinates": [
+        401,
+        704
+      ],
+      "flag": "",
+      "name": "Kurioss"
+    },
+    {
+      "coordinates": [
+        321,
+        911
+      ],
+      "flag": "",
+      "name": "Insitnew"
+    },
+    {
+      "coordinates": [
+        599,
+        448
+      ],
+      "flag": "",
+      "name": "Fashtol"
+    },
+    {
+      "coordinates": [
+        733,
+        527
+      ],
+      "flag": "",
+      "name": "Violaren"
+    },
+    {
+      "coordinates": [
+        655,
+        675
+      ],
+      "flag": "",
+      "name": "Norush"
+    },
+    {
+      "coordinates": [
+        842,
+        439
+      ],
+      "flag": "",
+      "name": "Sochiacon"
+    },
+    {
+      "coordinates": [
+        942,
+        532
+      ],
+      "flag": "",
+      "name": "Pritestor"
+    },
+    {
+      "coordinates": [
+        747,
+        70
+      ],
+      "flag": "",
+      "name": "Privmili"
+    },
+    {
+      "coordinates": [
+        818,
+        862
+      ],
+      "flag": "",
+      "name": "Mussola"
+    },
+    {
+      "coordinates": [
+        867,
+        304
+      ],
+      "flag": "",
+      "name": "Koddnappar"
+    }
+  ]
+}

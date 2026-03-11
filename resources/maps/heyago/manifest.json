@@ -1,0 +1,76 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 387458,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 22141,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 94006,
+    "width": 500
+  },
+  "name": "heyago",
+  "nations": [
+    {
+      "coordinates": [
+        253,
+        145
+      ],
+      "flag": "",
+      "name": "Thimarsk"
+    },
+    {
+      "coordinates": [
+        427,
+        145
+      ],
+      "flag": "",
+      "name": "Maebron"
+    },
+    {
+      "coordinates": [
+        678,
+        60
+      ],
+      "flag": "",
+      "name": "Amenuja"
+    },
+    {
+      "coordinates": [
+        400,
+        602
+      ],
+      "flag": "",
+      "name": "Vorith"
+    },
+    {
+      "coordinates": [
+        744,
+        591
+      ],
+      "flag": "",
+      "name": "Carnakay"
+    },
+    {
+      "coordinates": [
+        101,
+        783
+      ],
+      "flag": "",
+      "name": "Sunamen"
+    },
+    {
+      "coordinates": [
+        978,
+        201
+      ],
+      "flag": "",
+      "name": "Ikolda"
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 2517117,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 152746,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 623080,
+    "width": 1000
+  },
+  "name": "novoy",
+  "nations": [
+    {
+      "coordinates": [
+        50,
+        50
+      ],
+      "flag": "",
+      "name": "Kleptam"
+    },
+    {
+      "coordinates": [
+        55,
+        469
+      ],
+      "flag": "",
+      "name": "Ekaj"
+    },
+    {
+      "coordinates": [
+        161,
+        891
+      ],
+      "flag": "",
+      "name": "Celalein"
+    },
+    {
+      "coordinates": [
+        519,
+        1005
+      ],
+      "flag": "",
+      "name": "Nellahoan"
+    },
+    {
+      "coordinates": [
+        99,
+        1339
+      ],
+      "flag": "",
+      "name": "Issiram"
+    },
+    {
+      "coordinates": [
+        185,
+        1553
+      ],
+      "flag": "",
+      "name": "Leachim"
+    },
+    {
+      "coordinates": [
+        180,
+        1800
+      ],
+      "flag": "",
+      "name": "Nodnarb"
+    },
+    {
+      "coordinates": [
+        329,
+        1901
+      ],
+      "flag": "",
+      "name": "Eitak"
+    },
+    {
+      "coordinates": [
+        735,
+        1803
+      ],
+      "flag": "",
+      "name": "Nosilla"
+    },
+    {
+      "coordinates": [
+        1177,
+        1819
+      ],
+      "flag": "",
+      "name": "Ecnedi"
+    },
+    {
+      "coordinates": [
+        1433,
+        1785
+      ],
+      "flag": "",
+      "name": "Tenaip"
+    },
+    {
+      "coordinates": [
+        1801,
+        1967
+      ],
+      "flag": "",
+      "name": "Maetor"
+    },
+    {
+      "coordinates": [
+        1699,
+        1643
+      ],
+      "flag": "",
+      "name": "Emanodarb"
+    },
+    {
+      "coordinates": [
+        1583,
+        1357
+      ],
+      "flag": "",
+      "name": "Gnidal"
+    },
+    {
+      "coordinates": [
+        1973,
+        1411
+      ],
+      "flag": "",
+      "name": "Enigne"
+    },
+    {
+      "coordinates": [
+        1859,
+        1125
+      ],
+      "flag": "",
+      "name": "Tachea"
+    },
+    {
+      "coordinates": [
+        1451,
+        907
+      ],
+      "flag": "",
+      "name": "Tuctorsh"
+    },
+    {
+      "coordinates": [
+        1323,
+        1049
+      ],
+      "flag": "",
+      "name": "Nairide"
+    },
+    {
+      "coordinates": [
+        973,
+        999
+      ],
+      "flag": "",
+      "name": "Berylam"
+    },
+    {
+      "coordinates": [
+        841,
+        975
+      ],
+      "flag": "",
+      "name": "Howaidoo"
+    },
+    {
+      "coordinates": [
+        879,
+        1303
+      ],
+      "flag": "",
+      "name": "Soagota"
+    },
+    {
+      "coordinates": [
+        1921,
+        703
+      ],
+      "flag": "",
+      "name": "Gettyclo"
+    },
+    {
+      "coordinates": [
+        1835,
+        481
+      ],
+      "flag": "",
+      "name": "Nivarp"
+    },
+    {
+      "coordinates": [
+        987,
+        605
+      ],
+      "flag": "",
+      "name": "Nederbewd"
+    },
+    {
+      "coordinates": [
+        1679,
+        219
+      ],
+      "flag": "",
+      "name": "Yunmoras"
+    },
+    {
+      "coordinates": [
+        1141,
+        103
+      ],
+      "flag": "",
+      "name": "Airumas"
+    },
+    {
+      "coordinates": [
+        849,
+        149
+      ],
+      "flag": "",
+      "name": "Samchir"
+    },
+    {
+      "coordinates": [
+        663,
+        271
+      ],
+      "flag": "",
+      "name": "Resaike"
+    },
+    {
+      "coordinates": [
+        1473,
+        537
+      ],
+      "flag": "",
+      "name": "Toftsmik"
+    },
+    {
+      "coordinates": [
+        491,
+        641
+      ],
+      "flag": "",
+      "name": "Elfynarsh"
+    }
+  ]
+}

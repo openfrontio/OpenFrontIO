@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 273920,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 15263,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 65893,
+    "width": 500
+  },
+  "name": "babrage",
+  "nations": [
+    {
+      "coordinates": [
+        278,
+        132
+      ],
+      "flag": "",
+      "name": "Whydida"
+    },
+    {
+      "coordinates": [
+        370,
+        302
+      ],
+      "flag": "",
+      "name": "Usariox"
+    },
+    {
+      "coordinates": [
+        867,
+        58
+      ],
+      "flag": "",
+      "name": "Thesames"
+    },
+    {
+      "coordinates": [
+        764,
+        285
+      ],
+      "flag": "",
+      "name": "Mapunam"
+    },
+    {
+      "coordinates": [
+        967,
+        412
+      ],
+      "flag": "",
+      "name": "Overaya"
+    },
+    {
+      "coordinates": [
+        747,
+        925
+      ],
+      "flag": "",
+      "name": "Eatinxi"
+    },
+    {
+      "coordinates": [
+        359,
+        974
+      ],
+      "flag": "",
+      "name": "Uvary"
+    },
+    {
+      "coordinates": [
+        131,
+        964
+      ],
+      "flag": "",
+      "name": "Igianoe"
+    },
+    {
+      "coordinates": [
+        122,
+        511
+      ],
+      "flag": "",
+      "name": "Seiusli"
+    },
+    {
+      "coordinates": [
+        281,
+        473
+      ],
+      "flag": "",
+      "name": "Maitasvir"
+    },
+    {
+      "coordinates": [
+        555,
+        521
+      ],
+      "flag": "",
+      "name": "Beasonak"
+    },
+    {
+      "coordinates": [
+        280,
+        213
+      ],
+      "flag": "",
+      "name": "Aniditit"
+    },
+    {
+      "coordinates": [
+        729,
+        612
+      ],
+      "flag": "",
+      "name": "Relasnatti"
+    },
+    {
+      "coordinates": [
+        709,
+        333
+      ],
+      "flag": "",
+      "name": "Makistop"
+    },
+    {
+      "coordinates": [
+        401,
+        179
+      ],
+      "flag": "",
+      "name": "Ahnehep"
+    }
+  ]
+}

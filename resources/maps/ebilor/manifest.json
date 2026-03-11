@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 697012,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 41613,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 171630,
+    "width": 500
+  },
+  "name": "ebilor",
+  "nations": [
+    {
+      "coordinates": [
+        68,
+        102
+      ],
+      "flag": "",
+      "name": "Yavatu"
+    },
+    {
+      "coordinates": [
+        317,
+        94
+      ],
+      "flag": "",
+      "name": "Wiprolo"
+    },
+    {
+      "coordinates": [
+        692,
+        199
+      ],
+      "flag": "",
+      "name": "Khevasi"
+    },
+    {
+      "coordinates": [
+        991,
+        193
+      ],
+      "flag": "",
+      "name": "Tipan"
+    },
+    {
+      "coordinates": [
+        283,
+        285
+      ],
+      "flag": "",
+      "name": "Lemnav"
+    },
+    {
+      "coordinates": [
+        558,
+        281
+      ],
+      "flag": "",
+      "name": "Iritai"
+    },
+    {
+      "coordinates": [
+        722,
+        292
+      ],
+      "flag": "",
+      "name": "Masave"
+    },
+    {
+      "coordinates": [
+        83,
+        435
+      ],
+      "flag": "",
+      "name": "Insani"
+    },
+    {
+      "coordinates": [
+        344,
+        450
+      ],
+      "flag": "",
+      "name": "Quanon"
+    },
+    {
+      "coordinates": [
+        848,
+        413
+      ],
+      "flag": "",
+      "name": "Chatello"
+    },
+    {
+      "coordinates": [
+        512,
+        588
+      ],
+      "flag": "",
+      "name": "Everick"
+    },
+    {
+      "coordinates": [
+        50,
+        781
+      ],
+      "flag": "",
+      "name": "Shugo"
+    },
+    {
+      "coordinates": [
+        484,
+        821
+      ],
+      "flag": "",
+      "name": "Stahrock"
+    },
+    {
+      "coordinates": [
+        968,
+        826
+      ],
+      "flag": "",
+      "name": "Abusard"
+    },
+    {
+      "coordinates": [
+        683,
+        990
+      ],
+      "flag": "",
+      "name": "Aliann"
+    }
+  ]
+}

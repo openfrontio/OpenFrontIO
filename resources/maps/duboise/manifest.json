@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 1582442,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 88744,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 381389,
+    "width": 1000
+  },
+  "name": "duboise",
+  "nations": [
+    {
+      "coordinates": [
+        565,
+        69
+      ],
+      "flag": "",
+      "name": "Rakyeg"
+    },
+    {
+      "coordinates": [
+        369,
+        1799
+      ],
+      "flag": "",
+      "name": "Minoarus"
+    },
+    {
+      "coordinates": [
+        1703,
+        1921
+      ],
+      "flag": "",
+      "name": "Skipora"
+    },
+    {
+      "coordinates": [
+        1833,
+        1321
+      ],
+      "flag": "",
+      "name": "Revolunda"
+    },
+    {
+      "coordinates": [
+        1643,
+        757
+      ],
+      "flag": "",
+      "name": "Quantamis"
+    },
+    {
+      "coordinates": [
+        1517,
+        455
+      ],
+      "flag": "",
+      "name": "Surshurma"
+    },
+    {
+      "coordinates": [
+        1167,
+        559
+      ],
+      "flag": "",
+      "name": "Phomapha"
+    },
+    {
+      "coordinates": [
+        613,
+        855
+      ],
+      "flag": "",
+      "name": "Listuniman"
+    },
+    {
+      "coordinates": [
+        791,
+        1223
+      ],
+      "flag": "",
+      "name": "Okiandir"
+    },
+    {
+      "coordinates": [
+        1135,
+        911
+      ],
+      "flag": "",
+      "name": "Norabin"
+    },
+    {
+      "coordinates": [
+        979,
+        1685
+      ],
+      "flag": "",
+      "name": "Khelaros"
+    },
+    {
+      "coordinates": [
+        519,
+        1233
+      ],
+      "flag": "",
+      "name": "Wandavik"
+    },
+    {
+      "coordinates": [
+        1861,
+        689
+      ],
+      "flag": "",
+      "name": "Luamno"
+    },
+    {
+      "coordinates": [
+        815,
+        1701
+      ],
+      "flag": "",
+      "name": "Awekwa"
+    },
+    {
+      "coordinates": [
+        667,
+        565
+      ],
+      "flag": "",
+      "name": "Jakyanus"
+    }
+  ]
+}

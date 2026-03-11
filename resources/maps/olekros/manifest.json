@@ -1,0 +1,268 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 1617908,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 96061,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 397641,
+    "width": 1000
+  },
+  "name": "olekros",
+  "nations": [
+    {
+      "coordinates": [
+        49,
+        367
+      ],
+      "flag": "",
+      "name": "Benapos"
+    },
+    {
+      "coordinates": [
+        351,
+        143
+      ],
+      "flag": "",
+      "name": "Quatoros"
+    },
+    {
+      "coordinates": [
+        509,
+        447
+      ],
+      "flag": "",
+      "name": "Kellemnos"
+    },
+    {
+      "coordinates": [
+        657,
+        731
+      ],
+      "flag": "",
+      "name": "Isarmos"
+    },
+    {
+      "coordinates": [
+        915,
+        931
+      ],
+      "flag": "",
+      "name": "Orros"
+    },
+    {
+      "coordinates": [
+        1051,
+        261
+      ],
+      "flag": "",
+      "name": "Himikos"
+    },
+    {
+      "coordinates": [
+        1395,
+        185
+      ],
+      "flag": "",
+      "name": "Skalatos"
+    },
+    {
+      "coordinates": [
+        1739,
+        400
+      ],
+      "flag": "",
+      "name": "Vizaros"
+    },
+    {
+      "coordinates": [
+        1703,
+        525
+      ],
+      "flag": "",
+      "name": "Titheros"
+    },
+    {
+      "coordinates": [
+        1775,
+        700
+      ],
+      "flag": "",
+      "name": "Jerros"
+    },
+    {
+      "coordinates": [
+        1963,
+        169
+      ],
+      "flag": "",
+      "name": "Kutamos"
+    },
+    {
+      "coordinates": [
+        1505,
+        631
+      ],
+      "flag": "",
+      "name": "Weremos"
+    },
+    {
+      "coordinates": [
+        59,
+        1075
+      ],
+      "flag": "",
+      "name": "Jallepos"
+    },
+    {
+      "coordinates": [
+        399,
+        1081
+      ],
+      "flag": "",
+      "name": "Alatos"
+    },
+    {
+      "coordinates": [
+        165,
+        1673
+      ],
+      "flag": "",
+      "name": "Writtos"
+    },
+    {
+      "coordinates": [
+        13,
+        1951
+      ],
+      "flag": "",
+      "name": "Marisos"
+    },
+    {
+      "coordinates": [
+        491,
+        1357
+      ],
+      "flag": "",
+      "name": "Amios"
+    },
+    {
+      "coordinates": [
+        379,
+        1583
+      ],
+      "flag": "",
+      "name": "Osos"
+    },
+    {
+      "coordinates": [
+        373,
+        1957
+      ],
+      "flag": "",
+      "name": "Budapos"
+    },
+    {
+      "coordinates": [
+        669,
+        1883
+      ],
+      "flag": "",
+      "name": "Cerethos"
+    },
+    {
+      "coordinates": [
+        1039,
+        1561
+      ],
+      "flag": "",
+      "name": "Zairotos"
+    },
+    {
+      "coordinates": [
+        1267,
+        1511
+      ],
+      "flag": "",
+      "name": "Hadebos"
+    },
+    {
+      "coordinates": [
+        1315,
+        1263
+      ],
+      "flag": "",
+      "name": "Almoshos"
+    },
+    {
+      "coordinates": [
+        1361,
+        1041
+      ],
+      "flag": "",
+      "name": "Theresthos"
+    },
+    {
+      "coordinates": [
+        1649,
+        1107
+      ],
+      "flag": "",
+      "name": "Howmannos"
+    },
+    {
+      "coordinates": [
+        1779,
+        1111
+      ],
+      "flag": "",
+      "name": "Ofthos"
+    },
+    {
+      "coordinates": [
+        1887,
+        1387
+      ],
+      "flag": "",
+      "name": "Diedos"
+    },
+    {
+      "coordinates": [
+        1539,
+        1505
+      ],
+      "flag": "",
+      "name": "Aios"
+    },
+    {
+      "coordinates": [
+        1539,
+        1679
+      ],
+      "flag": "",
+      "name": "Actuos"
+    },
+    {
+      "coordinates": [
+        1513,
+        1933
+      ],
+      "flag": "",
+      "name": "Realos"
+    },
+    {
+      "coordinates": [
+        1911,
+        1869
+      ],
+      "flag": "",
+      "name": "Creatimos"
+    }
+  ]
+}

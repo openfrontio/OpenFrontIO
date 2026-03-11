@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 469344,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 27267,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 114517,
+    "width": 500
+  },
+  "name": "crasnor",
+  "nations": [
+    {
+      "coordinates": [
+        126,
+        56
+      ],
+      "flag": "",
+      "name": "Erewego"
+    },
+    {
+      "coordinates": [
+        51,
+        258
+      ],
+      "flag": "",
+      "name": "Againes"
+    },
+    {
+      "coordinates": [
+        87,
+        442
+      ],
+      "flag": "",
+      "name": "Withamo"
+    },
+    {
+      "coordinates": [
+        174,
+        607
+      ],
+      "flag": "",
+      "name": "Anuthas"
+    },
+    {
+      "coordinates": [
+        150,
+        868
+      ],
+      "flag": "",
+      "name": "Mapomu"
+    },
+    {
+      "coordinates": [
+        436,
+        510
+      ],
+      "flag": "",
+      "name": "Namingar"
+    },
+    {
+      "coordinates": [
+        333,
+        612
+      ],
+      "flag": "",
+      "name": "Surpuree"
+    },
+    {
+      "coordinates": [
+        312,
+        933
+      ],
+      "flag": "",
+      "name": "Itijus"
+    },
+    {
+      "coordinates": [
+        644,
+        210
+      ],
+      "flag": "",
+      "name": "Nuvart"
+    },
+    {
+      "coordinates": [
+        660,
+        534
+      ],
+      "flag": "",
+      "name": "Seemasno"
+    },
+    {
+      "coordinates": [
+        629,
+        822
+      ],
+      "flag": "",
+      "name": "Tuokomo"
+    },
+    {
+      "coordinates": [
+        956,
+        864
+      ],
+      "flag": "",
+      "name": "Endatic"
+    },
+    {
+      "coordinates": [
+        944,
+        385
+      ],
+      "flag": "",
+      "name": "Dusarscan"
+    },
+    {
+      "coordinates": [
+        781,
+        29
+      ],
+      "flag": "",
+      "name": "Itapsid"
+    },
+    {
+      "coordinates": [
+        806,
+        966
+      ],
+      "flag": "",
+      "name": "Lemaosva"
+    }
+  ]
+}

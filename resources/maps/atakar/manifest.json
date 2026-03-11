@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 1197845,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 69520,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 292151,
+    "width": 1000
+  },
+  "name": "atakar",
+  "nations": [
+    {
+      "coordinates": [
+        253,
+        145
+      ],
+      "flag": "",
+      "name": "Ahreli"
+    },
+    {
+      "coordinates": [
+        381,
+        415
+      ],
+      "flag": "",
+      "name": "Hopidint"
+    },
+    {
+      "coordinates": [
+        541,
+        439
+      ],
+      "flag": "",
+      "name": "Usthasam"
+    },
+    {
+      "coordinates": [
+        575,
+        729
+      ],
+      "flag": "",
+      "name": "Namsonuth"
+    },
+    {
+      "coordinates": [
+        502,
+        515
+      ],
+      "flag": "",
+      "name": "Macuzai"
+    },
+    {
+      "coordinates": [
+        1307,
+        191
+      ],
+      "flag": "",
+      "name": "Amrelige"
+    },
+    {
+      "coordinates": [
+        1489,
+        405
+      ],
+      "flag": "",
+      "name": "Tingsik"
+    },
+    {
+      "coordinates": [
+        1935,
+        467
+      ],
+      "flag": "",
+      "name": "Ofcomi"
+    },
+    {
+      "coordinates": [
+        1701,
+        611
+      ],
+      "flag": "",
+      "name": "Gupwitna"
+    },
+    {
+      "coordinates": [
+        1867,
+        747
+      ],
+      "flag": "",
+      "name": "Mesforthe"
+    },
+    {
+      "coordinates": [
+        1279,
+        1239
+      ],
+      "flag": "",
+      "name": "Semapsi"
+    },
+    {
+      "coordinates": [
+        243,
+        1639
+      ],
+      "flag": "",
+      "name": "Almosdo"
+    },
+    {
+      "coordinates": [
+        895,
+        1967
+      ],
+      "flag": "",
+      "name": "Newitees"
+    },
+    {
+      "coordinates": [
+        1663,
+        1867
+      ],
+      "flag": "",
+      "name": "Alsvarv"
+    },
+    {
+      "coordinates": [
+        1931,
+        1365
+      ],
+      "flag": "",
+      "name": "Vrietne"
+    }
+  ]
+}

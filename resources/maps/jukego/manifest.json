@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 407100,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 23299,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 98817,
+    "width": 500
+  },
+  "name": "jukego",
+  "nations": [
+    {
+      "coordinates": [
+        310,
+        31
+      ],
+      "flag": "",
+      "name": "Tarrah"
+    },
+    {
+      "coordinates": [
+        608,
+        22
+      ],
+      "flag": "",
+      "name": "Ongoco"
+    },
+    {
+      "coordinates": [
+        814,
+        84
+      ],
+      "flag": "",
+      "name": "Capmian"
+    },
+    {
+      "coordinates": [
+        992,
+        65
+      ],
+      "flag": "",
+      "name": "Burtaleit"
+    },
+    {
+      "coordinates": [
+        319,
+        224
+      ],
+      "flag": "",
+      "name": "Trakase"
+    },
+    {
+      "coordinates": [
+        667,
+        342
+      ],
+      "flag": "",
+      "name": "Cleseneff"
+    },
+    {
+      "coordinates": [
+        757,
+        617
+      ],
+      "flag": "",
+      "name": "Briforiel"
+    },
+    {
+      "coordinates": [
+        966,
+        479
+      ],
+      "flag": "",
+      "name": "Eupania"
+    },
+    {
+      "coordinates": [
+        469,
+        789
+      ],
+      "flag": "",
+      "name": "Micksanot"
+    },
+    {
+      "coordinates": [
+        290,
+        968
+      ],
+      "flag": "",
+      "name": "Jenbrit"
+    },
+    {
+      "coordinates": [
+        334,
+        738
+      ],
+      "flag": "",
+      "name": "Viderce"
+    },
+    {
+      "coordinates": [
+        396,
+        558
+      ],
+      "flag": "",
+      "name": "Wadinor"
+    },
+    {
+      "coordinates": [
+        114,
+        277
+      ],
+      "flag": "",
+      "name": "Streyinow"
+    },
+    {
+      "coordinates": [
+        135,
+        556
+      ],
+      "flag": "",
+      "name": "Nosurping"
+    },
+    {
+      "coordinates": [
+        521,
+        444
+      ],
+      "flag": "",
+      "name": "Nornethtu"
+    }
+  ]
+}

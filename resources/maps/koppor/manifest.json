@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 464184,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 26988,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 113309,
+    "width": 500
+  },
+  "name": "koppor",
+  "nations": [
+    {
+      "coordinates": [
+        230,
+        90
+      ],
+      "flag": "",
+      "name": "Shutepia"
+    },
+    {
+      "coordinates": [
+        567,
+        53
+      ],
+      "flag": "",
+      "name": "Jusang"
+    },
+    {
+      "coordinates": [
+        851,
+        208
+      ],
+      "flag": "",
+      "name": "Nodilos"
+    },
+    {
+      "coordinates": [
+        671,
+        418
+      ],
+      "flag": "",
+      "name": "Ouchyusef"
+    },
+    {
+      "coordinates": [
+        344,
+        336
+      ],
+      "flag": "",
+      "name": "Ownwun"
+    },
+    {
+      "coordinates": [
+        317,
+        478
+      ],
+      "flag": "",
+      "name": "Chethanhu"
+    },
+    {
+      "coordinates": [
+        757,
+        586
+      ],
+      "flag": "",
+      "name": "Kinfunai"
+    },
+    {
+      "coordinates": [
+        833,
+        748
+      ],
+      "flag": "",
+      "name": "Waheli"
+    },
+    {
+      "coordinates": [
+        896,
+        872
+      ],
+      "flag": "",
+      "name": "Beshtok"
+    },
+    {
+      "coordinates": [
+        661,
+        936
+      ],
+      "flag": "",
+      "name": "Daseven"
+    },
+    {
+      "coordinates": [
+        402,
+        808
+      ],
+      "flag": "",
+      "name": "Nobataki"
+    },
+    {
+      "coordinates": [
+        172,
+        882
+      ],
+      "flag": "",
+      "name": "Awkwasi"
+    },
+    {
+      "coordinates": [
+        23,
+        332
+      ],
+      "flag": "",
+      "name": "Stilkwi"
+    },
+    {
+      "coordinates": [
+        473,
+        200
+      ],
+      "flag": "",
+      "name": "Runnowtana"
+    },
+    {
+      "coordinates": [
+        230,
+        220
+      ],
+      "flag": "",
+      "name": "Itheenko"
+    }
+  ]
+}

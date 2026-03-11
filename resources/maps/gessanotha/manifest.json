@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 673815,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 39783,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 165296,
+    "width": 500
+  },
+  "name": "gessanotha",
+  "nations": [
+    {
+      "coordinates": [
+        26,
+        85
+      ],
+      "flag": "",
+      "name": "Drebrum"
+    },
+    {
+      "coordinates": [
+        308,
+        127
+      ],
+      "flag": "",
+      "name": "Kiozor"
+    },
+    {
+      "coordinates": [
+        695,
+        80
+      ],
+      "flag": "",
+      "name": "Ewovras"
+    },
+    {
+      "coordinates": [
+        681,
+        306
+      ],
+      "flag": "",
+      "name": "Zerael"
+    },
+    {
+      "coordinates": [
+        972,
+        442
+      ],
+      "flag": "",
+      "name": "Nezhul"
+    },
+    {
+      "coordinates": [
+        589,
+        546
+      ],
+      "flag": "",
+      "name": "Hilos"
+    },
+    {
+      "coordinates": [
+        289,
+        364
+      ],
+      "flag": "",
+      "name": "Birius"
+    },
+    {
+      "coordinates": [
+        176,
+        305
+      ],
+      "flag": "",
+      "name": "Boumon"
+    },
+    {
+      "coordinates": [
+        19,
+        516
+      ],
+      "flag": "",
+      "name": "Iruzar"
+    },
+    {
+      "coordinates": [
+        499,
+        787
+      ],
+      "flag": "",
+      "name": "Chexir"
+    },
+    {
+      "coordinates": [
+        962,
+        763
+      ],
+      "flag": "",
+      "name": "Omisorn"
+    },
+    {
+      "coordinates": [
+        875,
+        963
+      ],
+      "flag": "",
+      "name": "Pacrum"
+    },
+    {
+      "coordinates": [
+        58,
+        978
+      ],
+      "flag": "",
+      "name": "Yauza"
+    },
+    {
+      "coordinates": [
+        520,
+        635
+      ],
+      "flag": "",
+      "name": "Sadrem"
+    },
+    {
+      "coordinates": [
+        569,
+        349
+      ],
+      "flag": "",
+      "name": "Laiora"
+    }
+  ]
+}

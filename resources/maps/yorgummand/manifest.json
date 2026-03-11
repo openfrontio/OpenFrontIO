@@ -1,0 +1,68 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 423888,
+    "width": 998
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 24999,
+    "width": 249
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 103803,
+    "width": 499
+  },
+  "name": "yorgummandbig",
+  "nations": [
+    {
+      "coordinates": [
+        825,
+        580
+      ],
+      "flag": "ru",
+      "name": "Dhavasol"
+    },
+    {
+      "coordinates": [
+        310,
+        291
+      ],
+      "flag": "ru",
+      "name": "Eregond"
+    },
+    {
+      "coordinates": [
+        53,
+        54
+      ],
+      "flag": "ru",
+      "name": "Porisk"
+    },
+    {
+      "coordinates": [
+        94,
+        275
+      ],
+      "flag": "ru",
+      "name": "Yevendr"
+    },
+    {
+      "coordinates": [
+        502,
+        515
+      ],
+      "flag": "ru",
+      "name": "Mithandel"
+    },
+    {
+      "coordinates": [
+        754,
+        710
+      ],
+      "flag": "ru",
+      "name": "Aseri"
+    }
+  ]
+}

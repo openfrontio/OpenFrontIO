@@ -1,0 +1,180 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 2075621,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 125100,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 512677,
+    "width": 1000
+  },
+  "name": "lapolia",
+  "nations": [
+    {
+      "coordinates": [
+        117,
+        129
+      ],
+      "flag": "",
+      "name": "Dupaol"
+    },
+    {
+      "coordinates": [
+        627,
+        207
+      ],
+      "flag": "",
+      "name": "Tiordrey"
+    },
+    {
+      "coordinates": [
+        1303,
+        119
+      ],
+      "flag": "",
+      "name": "Notlimah"
+    },
+    {
+      "coordinates": [
+        1091,
+        593
+      ],
+      "flag": "",
+      "name": "Ogachic"
+    },
+    {
+      "coordinates": [
+        1491,
+        325
+      ],
+      "flag": "",
+      "name": "Drofkor"
+    },
+    {
+      "coordinates": [
+        1921,
+        305
+      ],
+      "flag": "",
+      "name": "Nodlon"
+    },
+    {
+      "coordinates": [
+        571,
+        845
+      ],
+      "flag": "",
+      "name": "Regenyab"
+    },
+    {
+      "coordinates": [
+        1085,
+        949
+      ],
+      "flag": "",
+      "name": "Nosidam"
+    },
+    {
+      "coordinates": [
+        1587,
+        1355
+      ],
+      "flag": "",
+      "name": "Olafub"
+    },
+    {
+      "coordinates": [
+        1977,
+        1487
+      ],
+      "flag": "",
+      "name": "Rechoster"
+    },
+    {
+      "coordinates": [
+        687,
+        1585
+      ],
+      "flag": "",
+      "name": "Stonking"
+    },
+    {
+      "coordinates": [
+        309,
+        1861
+      ],
+      "flag": "",
+      "name": "Danleclev"
+    },
+    {
+      "coordinates": [
+        935,
+        1927
+      ],
+      "flag": "",
+      "name": "Rednuth"
+    },
+    {
+      "coordinates": [
+        1437,
+        1755
+      ],
+      "flag": "",
+      "name": "Yeksop"
+    },
+    {
+      "coordinates": [
+        1581,
+        759
+      ],
+      "flag": "",
+      "name": "Esrevart"
+    },
+    {
+      "coordinates": [
+        869,
+        267
+      ],
+      "flag": "",
+      "name": "Ekuamil"
+    },
+    {
+      "coordinates": [
+        1149,
+        1107
+      ],
+      "flag": "",
+      "name": "Rybusud"
+    },
+    {
+      "coordinates": [
+        549,
+        341
+      ],
+      "flag": "",
+      "name": "Ketmark"
+    },
+    {
+      "coordinates": [
+        1495,
+        1509
+      ],
+      "flag": "",
+      "name": "Notfough"
+    },
+    {
+      "coordinates": [
+        1591,
+        993
+      ],
+      "flag": "",
+      "name": "Thulud"
+    }
+  ]
+}

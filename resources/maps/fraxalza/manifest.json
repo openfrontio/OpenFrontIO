@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 694564,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 41174,
+    "width": 250
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 170563,
+    "width": 500
+  },
+  "name": "fraxalza",
+  "nations": [
+    {
+      "coordinates": [
+        15,
+        326
+      ],
+      "flag": "",
+      "name": "Galsod"
+    },
+    {
+      "coordinates": [
+        421,
+        140
+      ],
+      "flag": "",
+      "name": "Asjaki"
+    },
+    {
+      "coordinates": [
+        805,
+        184
+      ],
+      "flag": "",
+      "name": "Jayak"
+    },
+    {
+      "coordinates": [
+        853,
+        357
+      ],
+      "flag": "",
+      "name": "Yimoldis"
+    },
+    {
+      "coordinates": [
+        986,
+        545
+      ],
+      "flag": "",
+      "name": "Marsdow"
+    },
+    {
+      "coordinates": [
+        713,
+        623
+      ],
+      "flag": "",
+      "name": "Deltray"
+    },
+    {
+      "coordinates": [
+        971,
+        806
+      ],
+      "flag": "",
+      "name": "Vivisno"
+    },
+    {
+      "coordinates": [
+        732,
+        760
+      ],
+      "flag": "",
+      "name": "Uzbroka"
+    },
+    {
+      "coordinates": [
+        535,
+        692
+      ],
+      "flag": "",
+      "name": "Yeolda"
+    },
+    {
+      "coordinates": [
+        311,
+        842
+      ],
+      "flag": "",
+      "name": "Nopsiria"
+    },
+    {
+      "coordinates": [
+        483,
+        991
+      ],
+      "flag": "",
+      "name": "Ecksen"
+    },
+    {
+      "coordinates": [
+        187,
+        918
+      ],
+      "flag": "",
+      "name": "Cordinta"
+    },
+    {
+      "coordinates": [
+        175,
+        640
+      ],
+      "flag": "",
+      "name": "Utinnar"
+    },
+    {
+      "coordinates": [
+        621,
+        504
+      ],
+      "flag": "",
+      "name": "Nascriz"
+    },
+    {
+      "coordinates": [
+        340,
+        629
+      ],
+      "flag": "",
+      "name": "Odawaj"
+    }
+  ]
+}
