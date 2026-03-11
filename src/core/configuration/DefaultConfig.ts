@@ -277,8 +277,8 @@ export class DefaultConfig implements Config {
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
   ): Gold {
-    // No penalty for the first 3 cities.
-    citiesVisited = Math.max(0, citiesVisited - 2);
+    // No penalty for the first 5 cities.
+    citiesVisited = Math.max(0, citiesVisited - 5);
     let baseGold: number;
     switch (rel) {
       case "ally":
