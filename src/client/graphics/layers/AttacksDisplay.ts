@@ -380,6 +380,17 @@ export class AttacksDisplay extends LitElement implements Layer {
     );
   }
 
+  private getBoatProgress(boat: UnitView): number | null {
+    const plan = this.game.motionPlans().get(boat.id());
+    if (!plan) return null;
+    const totalSteps = plan.path.length - 1;
+    if (totalSteps <= 0) return 1;
+    const elapsed = Math.floor(
+      (this.game.ticks() - plan.startTick) / plan.ticksPerStep,
+    );
+    return Math.min(1, Math.max(0, elapsed / totalSteps));
+  }
+
   private renderBoatIcon(boat: UnitView) {
     const dataURL = this.getBoatSpriteDataURL(boat);
     if (!dataURL) return html``;
@@ -390,10 +401,33 @@ export class AttacksDisplay extends LitElement implements Layer {
     />`;
   }
 
+  private renderProgressBar(
+    progress: number | null,
+    etaSeconds: number | null,
+    color: string,
+  ) {
+    if (progress === null) return html``;
+    const pct = Math.round(progress * 100);
+    const showCountdown =
+      etaSeconds !== null && etaSeconds > 0 && etaSeconds <= 5;
+    return html`<div
+      class="w-10 h-2 rounded-full bg-gray-900/60 overflow-hidden shrink-0 relative"
+    >
+      <div class="h-full rounded-full ${color}" style="width: ${pct}%"></div>
+      ${showCountdown
+        ? html`<span
+            class="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white leading-none"
+            >${etaSeconds}</span
+          >`
+        : ""}
+    </div>`;
+  }
+
   private renderBoats() {
     if (this.outgoingBoats.length === 0) return html``;
 
     return this.outgoingBoats.map((boat) => {
+      const progress = this.getBoatProgress(boat);
       const etaSeconds = this.getBoatEtaSeconds(boat);
       return html`
         <div
@@ -404,13 +438,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(boat.troops())}</span
               >
-              ${etaSeconds !== null
-                ? html`<span class="text-xs"
-                    >${translateText("events_display.seconds_abbrev", {
-                      seconds: etaSeconds,
-                    })}</span
-                  >`
-                : ""}
+              ${this.renderProgressBar(progress, etaSeconds, "bg-blue-400")}
               <span class="truncate text-xs ml-1"
                 >${this.getBoatTargetName(boat)}</span
               >`,
@@ -438,6 +466,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     if (this.incomingBoats.length === 0) return html``;
 
     return this.incomingBoats.map((boat) => {
+      const progress = this.getBoatProgress(boat);
       const etaSeconds = this.getBoatEtaSeconds(boat);
       return html`
         <div
@@ -448,13 +477,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(boat.troops())}</span
               >
-              ${etaSeconds !== null
-                ? html`<span class="text-xs"
-                    >${translateText("events_display.seconds_abbrev", {
-                      seconds: etaSeconds,
-                    })}</span
-                  >`
-                : ""}
+              ${this.renderProgressBar(progress, etaSeconds, "bg-red-400")}
               <span class="truncate text-xs ml-1"
                 >${boat.owner()?.name()}</span
               >`,
