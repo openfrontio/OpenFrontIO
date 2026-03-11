@@ -24,6 +24,7 @@ export class TrainExecution implements Execution {
   private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
   private speed: number = 2;
+  private _tradeStopsVisited: number = 0;
 
   constructor(
     private railNetwork: RailNetwork,
@@ -35,6 +36,10 @@ export class TrainExecution implements Execution {
 
   public owner(): Player {
     return this.player;
+  }
+
+  public tradeStopsVisited(): number {
+    return this._tradeStopsVisited;
   }
 
   init(mg: Game, ticks: number): void {
@@ -261,6 +266,10 @@ export class TrainExecution implements Execution {
       throw new Error("Not initialized");
     }
     this.stations[1].onTrainStop(this);
+    const stationType = this.stations[1].unit.type();
+    if (stationType === UnitType.City || stationType === UnitType.Port) {
+      this._tradeStopsVisited++;
+    }
     return;
   }
 
