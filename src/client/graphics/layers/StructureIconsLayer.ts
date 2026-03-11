@@ -748,7 +748,7 @@ export class StructureIconsLayer implements Layer {
   private computeNewLocation(render: StructureRenderInfo) {
     const tile = render.unit.tile();
     const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
-    const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(worldPos);
     screenPos.x = Math.round(screenPos.x);
 
     const scale = this.transformHandler.scale;

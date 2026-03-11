@@ -183,7 +183,7 @@ export class SpriteFactory {
     const parentContainer = new PIXI.Container();
     const tile = unit.tile();
     const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
-    const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(worldPos);
 
     const isMarkedForDeletion = unit.markedForDeletion() !== false;
     const isConstruction = unit.isUnderConstruction();
