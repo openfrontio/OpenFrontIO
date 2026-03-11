@@ -78,7 +78,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleClanTagChange}
           placeholder="${translateText("username.tag")}"
           maxlength="5"
-          class="w-[6rem] text-xl font-bold text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
+          class="w-[6rem] text-xl font-medium tracking-wider text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
         />
         <input
           type="text"
@@ -86,7 +86,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
           maxlength="${MAX_USERNAME_LENGTH}"
-          class="flex-1 min-w-0 border-0 text-2xl font-bold text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
+          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
       </div>
       ${this.validationError

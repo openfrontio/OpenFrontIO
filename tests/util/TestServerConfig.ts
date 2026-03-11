@@ -85,6 +85,7 @@ export class TestServerConfig implements ServerConfig {
       isRandomSpawn: false,
       isCrowded: false,
       isHardNations: false,
+      isAlliancesDisabled: false,
     };
   }
   async supportsCompactMapForTeams(): Promise<boolean> {

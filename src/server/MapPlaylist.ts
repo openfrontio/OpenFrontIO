@@ -81,6 +81,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   NileDelta: 4,
   Arctic: 6,
   SanFrancisco: 3,
+  Aegean: 6,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -102,7 +103,9 @@ type ModifierKey =
   | "isCrowded"
   | "isHardNations"
   | "startingGold"
-  | "startingGoldHigh";
+  | "startingGoldHigh"
+  | "goldMultiplier"
+  | "isAlliancesDisabled";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
@@ -112,6 +115,8 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isHardNations"),
   ...Array<ModifierKey>(8).fill("startingGold"),
   ...Array<ModifierKey>(1).fill("startingGoldHigh"),
+  ...Array<ModifierKey>(1).fill("goldMultiplier"),
+  ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
 ];
 
 // Modifiers that cannot be active at the same time.
@@ -196,6 +201,7 @@ export class MapPlaylist {
         isCrowded,
         isHardNations,
         startingGold,
+        isAlliancesDisabled: false,
       },
       startingGold,
       difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
@@ -262,7 +268,14 @@ export class MapPlaylist {
       undefined,
       poolCountReduction,
     );
-    let { isCrowded, startingGold, isCompact, isRandomSpawn } = poolResult;
+    let {
+      isCrowded,
+      startingGold,
+      isCompact,
+      isRandomSpawn,
+      goldMultiplier,
+      isAlliancesDisabled,
+    } = poolResult;
     let isHardNations =
       hardNationsFromIndependentRoll ?? poolResult.isHardNations;
 
@@ -279,7 +292,9 @@ export class MapPlaylist {
           !isRandomSpawn &&
           !isCompact &&
           !isHardNations &&
-          startingGold === undefined
+          startingGold === undefined &&
+          goldMultiplier === undefined &&
+          !isAlliancesDisabled
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
@@ -287,7 +302,13 @@ export class MapPlaylist {
             1,
             poolCountReduction,
           );
-          ({ isRandomSpawn, isCompact, startingGold } = fallback);
+          ({
+            isRandomSpawn,
+            isCompact,
+            startingGold,
+            goldMultiplier,
+            isAlliancesDisabled,
+          } = fallback);
           isHardNations =
             hardNationsFromIndependentRoll ?? fallback.isHardNations;
         }
@@ -320,8 +341,12 @@ export class MapPlaylist {
         isCrowded,
         isHardNations,
         startingGold,
+        goldMultiplier,
+        isAlliancesDisabled,
       },
       startingGold,
+      goldMultiplier,
+      disableAlliances: isAlliancesDisabled,
       difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
@@ -481,6 +506,7 @@ export class MapPlaylist {
         playerTeams === HumansVsNations
           ? Math.random() < HARD_NATIONS_HVN_PROBABILITY
           : Math.random() < 0.025, // 2.5% chance
+      isAlliancesDisabled: false,
     };
   }
 
@@ -529,6 +555,8 @@ export class MapPlaylist {
         : selected.has("startingGold")
           ? 5_000_000
           : undefined,
+      goldMultiplier: selected.has("goldMultiplier") ? 2 : undefined,
+      isAlliancesDisabled: selected.has("isAlliancesDisabled"),
     };
   }
 

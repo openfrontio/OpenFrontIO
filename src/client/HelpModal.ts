@@ -75,6 +75,8 @@ export class HelpModal extends BaseModal {
       MetaLeft: "⌘",
       MetaRight: "⌘",
       Space: "Space",
+      Escape: "Esc",
+      Enter: "↵ Return",
       ArrowUp: "↑",
       ArrowDown: "↓",
       ArrowLeft: "←",
@@ -259,6 +261,22 @@ export class HelpModal extends BaseModal {
                   </tr>
                 </thead>
                 <tbody class="text-white/80">
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey("Escape")}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_esc")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey("Enter")}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_enter")}
+                    </td>
+                  </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       ${this.renderKey(keybinds.toggleView)}

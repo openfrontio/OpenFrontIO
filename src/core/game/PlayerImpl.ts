@@ -477,6 +477,9 @@ export class PlayerImpl implements Player {
   }
 
   canSendAllianceRequest(other: Player): boolean {
+    if (this.mg.config().disableAlliances()) {
+      return false;
+    }
     if (other === this) {
       return false;
     }
