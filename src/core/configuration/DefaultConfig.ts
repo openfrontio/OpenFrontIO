@@ -201,7 +201,7 @@ export class DefaultConfig implements Config {
     return 5 - falloutRatio * 2;
   }
   SAMCooldown(): number {
-    return 75;
+    return 120;
   }
   SiloCooldown(): number {
     return 75;
