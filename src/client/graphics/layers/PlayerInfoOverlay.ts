@@ -320,7 +320,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="flex items-start gap-1 lg:gap-2 p-1.5 lg:p-2">
         <!-- Left: Gold & Troop bar -->
-        <div class="flex flex-col gap-1 shrink-0 w-36">
+        <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
           <div class="flex items-center gap-1">
             <div
               class="flex flex-1 items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
@@ -350,7 +350,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               >
             </div>
           </div>
-          <div class="w-36" translate="no">
+          <div class="w-28 md:w-36" translate="no">
             ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
           </div>
         </div>
