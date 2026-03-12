@@ -41,7 +41,6 @@ export class AnimatedSpriteLoader {
       result.data!.animatedSprites.map((config) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
-        img.src = "/animatedSprites/" + config.name + ".png";
         return new Promise<void>((resolve, reject) => {
           img.onload = () => {
             this.createCanvas(config, img);
@@ -51,6 +50,7 @@ export class AnimatedSpriteLoader {
             reject(e);
             console.error(`Could not load animated sprite: `, e);
           };
+          img.src = "/animatedSprites/" + config.name + ".png";
         });
       }),
     );
