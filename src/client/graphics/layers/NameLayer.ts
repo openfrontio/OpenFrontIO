@@ -68,6 +68,7 @@ export class NameLayer implements Layer {
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private lastContainerTransform: string = "";
 
   constructor(
     private game: GameView,
@@ -187,7 +188,11 @@ export class NameLayer implements Layer {
       screenPosOld.x - window.innerWidth / 2,
       screenPosOld.y - window.innerHeight / 2,
     );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    const newTransform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    if (this.lastContainerTransform !== newTransform) {
+      this.container.style.transform = newTransform;
+      this.lastContainerTransform = newTransform;
+    }
 
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
