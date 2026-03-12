@@ -261,24 +261,28 @@ export class NameLayer implements Layer {
       return;
     }
 
-    const oldLocation = render.location;
-    render.location = new Cell(
-      render.player.nameLocation().x,
-      render.player.nameLocation().y,
-    );
+    // Update location and size, show or hide dependent on those
+    const nameLocation = render.player.nameLocation();
+    const newX = nameLocation.x;
+    const newY = nameLocation.y;
 
-    // Calculate base size and scale
-    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
+    const positionChanged =
+      !render.location ||
+      render.location.x !== newX ||
+      render.location.y !== newY;
 
-    // Update element visibility (handles Ctrl key, size, and screen position)
+    if (positionChanged) {
+      render.location = new Cell(newX, newY);
+    }
+
+    const baseSize = Math.max(1, Math.floor(nameLocation.size));
     this.updateElementVisibility(render, baseSize);
 
-    // If element is hidden, don't continue with rendering
     if (render.element.style.display === "none") {
       return;
     }
 
-    // Throttle updates
+    // Throttle further updates
     const now = Date.now();
     if (now - render.lastRenderCalc <= this.renderRefreshRate) {
       return;
@@ -467,9 +471,9 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (render.location && render.location !== oldLocation) {
+    if (positionChanged) {
       const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+      render.element.style.transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
     }
   }
 
