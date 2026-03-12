@@ -281,6 +281,14 @@ export class UserSettingModal extends BaseModal {
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
+  private toggleAccessibilityPatterns(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.accessibilityPatterns", enabled);
+    this.requestUpdate();
+  }
+
   private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -823,6 +831,17 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.darkMode()}
         @change=${(e: CustomEvent<{ checked: boolean }>) =>
           this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- ♿ Accessibility Patterns -->
+      <setting-toggle
+        label="${translateText("user_setting.accessibility_patterns_label")}"
+        description="${translateText(
+          "user_setting.accessibility_patterns_desc",
+        )}"
+        id="accessibility-patterns-toggle"
+        .checked=${this.userSettings.accessibilityPatterns()}
+        @change=${this.toggleAccessibilityPatterns}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
