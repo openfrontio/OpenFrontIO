@@ -17,8 +17,20 @@ import {
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+const PLAYER_NAME = "player-name";
+const PLAYER_NAME_SPAN = "player-name-span";
+const PLAYER_TROOPS = "player-troops";
+const PLAYER_ICONS = "player-icons";
+const PLAYER_FLAG = "player-flag";
+
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
+
+  public nameDiv: HTMLDivElement;
+  public nameSpan: HTMLSpanElement | null;
+  public troopsDiv: HTMLDivElement;
+  public flagDiv: HTMLDivElement | null;
+  public iconsDiv: HTMLDivElement;
 
   constructor(
     public player: PlayerView,
@@ -27,7 +39,20 @@ class RenderInfo {
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
-  ) {}
+  ) {
+    // Traverse the DOM once, upon creation
+    this.nameDiv = element.querySelector(`.${PLAYER_NAME}`) as HTMLDivElement;
+    this.nameSpan = element.querySelector(
+      `.${PLAYER_NAME_SPAN}`,
+    ) as HTMLSpanElement | null;
+    this.troopsDiv = element.querySelector(
+      `.${PLAYER_TROOPS}`,
+    ) as HTMLDivElement;
+    this.flagDiv = element.querySelector(
+      `.${PLAYER_FLAG}`,
+    ) as HTMLDivElement | null;
+    this.iconsDiv = element.querySelector(`.${PLAYER_ICONS}`) as HTMLDivElement;
+  }
 }
 
 export class NameLayer implements Layer {
@@ -190,7 +215,7 @@ export class NameLayer implements Layer {
     element.style.gap = "0px";
 
     const iconsDiv = document.createElement("div");
-    iconsDiv.classList.add("player-icons");
+    iconsDiv.classList.add(PLAYER_ICONS);
     iconsDiv.style.display = "flex";
     iconsDiv.style.gap = "4px";
     iconsDiv.style.justifyContent = "center";
@@ -201,7 +226,7 @@ export class NameLayer implements Layer {
 
     const nameDiv = document.createElement("div");
     const applyFlagStyles = (element: HTMLElement): void => {
-      element.classList.add("player-flag");
+      element.classList.add(PLAYER_FLAG);
       element.style.opacity = "0.8";
       element.style.zIndex = "1";
       element.style.aspectRatio = "3/4";
@@ -221,7 +246,7 @@ export class NameLayer implements Layer {
         nameDiv.appendChild(flagImg);
       }
     }
-    nameDiv.classList.add("player-name");
+    nameDiv.classList.add(PLAYER_NAME);
     nameDiv.style.color = this.theme.textColor(player);
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
@@ -232,13 +257,13 @@ export class NameLayer implements Layer {
     nameDiv.style.alignItems = "center";
 
     const nameSpan = document.createElement("span");
-    nameSpan.className = "player-name-span";
+    nameSpan.className = PLAYER_NAME_SPAN;
     nameSpan.innerHTML = player.name();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
     const troopsDiv = document.createElement("div");
-    troopsDiv.classList.add("player-troops");
+    troopsDiv.classList.add(PLAYER_TROOPS);
     troopsDiv.setAttribute("translate", "no");
     troopsDiv.textContent = renderTroops(player.troops());
     troopsDiv.style.color = this.theme.textColor(player);
@@ -289,37 +314,24 @@ export class NameLayer implements Layer {
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
+    // Update text sizes
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
     render.fontColor = this.theme.textColor(render.player);
 
-    // Update text sizes
-    const nameDiv = render.element.querySelector(
-      ".player-name",
-    ) as HTMLDivElement;
-    const flagDiv = render.element.querySelector(
-      ".player-flag",
-    ) as HTMLDivElement;
-    const troopsDiv = render.element.querySelector(
-      ".player-troops",
-    ) as HTMLDivElement;
-    nameDiv.style.fontSize = `${render.fontSize}px`;
-    nameDiv.style.lineHeight = `${render.fontSize}px`;
-    nameDiv.style.color = render.fontColor;
-    const span = nameDiv.querySelector(".player-name-span");
-    if (span) {
-      span.innerHTML = render.player.name();
+    render.nameDiv.style.fontSize = `${render.fontSize}px`;
+    render.nameDiv.style.lineHeight = `${render.fontSize}px`;
+    render.nameDiv.style.color = render.fontColor;
+    if (render.nameSpan) {
+      render.nameSpan.innerHTML = render.player.name();
     }
-    if (flagDiv) {
-      flagDiv.style.height = `${render.fontSize}px`;
+    if (render.flagDiv) {
+      render.flagDiv.style.height = `${render.fontSize}px`;
     }
-    troopsDiv.style.fontSize = `${render.fontSize}px`;
-    troopsDiv.style.color = render.fontColor;
-    troopsDiv.textContent = renderTroops(render.player.troops());
+    render.troopsDiv.style.fontSize = `${render.fontSize}px`;
+    render.troopsDiv.style.color = render.fontColor;
+    render.troopsDiv.textContent = renderTroops(render.player.troops());
 
     // Handle icons
-    const iconsDiv = render.element.querySelector(
-      ".player-icons",
-    ) as HTMLDivElement;
     const iconSize = Math.min(render.fontSize * 1.5, 48);
 
     // Compute which icons should be shown for this player using shared logic
@@ -351,7 +363,7 @@ export class NameLayer implements Layer {
           emojiDiv.style.position = "absolute";
           emojiDiv.style.top = "50%";
           emojiDiv.style.transform = "translateY(-50%)";
-          iconsDiv.appendChild(emojiDiv);
+          render.iconsDiv.appendChild(emojiDiv);
           render.icons.set(icon.id, emojiDiv);
         }
 
@@ -388,7 +400,7 @@ export class NameLayer implements Layer {
               hasExtensionRequest,
               this.userSettings.darkMode(),
             );
-            iconsDiv.appendChild(allianceWrapper);
+            render.iconsDiv.appendChild(allianceWrapper);
             render.icons.set(icon.id, allianceWrapper);
           } else {
             // Update existing alliance icon
@@ -428,7 +440,7 @@ export class NameLayer implements Layer {
 
         if (!imgElement) {
           imgElement = this.createIconElement(icon.src, iconSize, icon.center);
-          iconsDiv.appendChild(imgElement);
+          render.iconsDiv.appendChild(imgElement);
           render.icons.set(icon.id, imgElement);
         }
 
