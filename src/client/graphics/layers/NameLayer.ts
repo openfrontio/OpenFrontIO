@@ -258,7 +258,7 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = PLAYER_NAME_SPAN;
-    nameSpan.innerHTML = player.name();
+    nameSpan.textContent = player.name();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
@@ -291,12 +291,11 @@ export class NameLayer implements Layer {
     const newX = nameLocation.x;
     const newY = nameLocation.y;
 
-    const positionChanged =
+    if (
       !render.location ||
       render.location.x !== newX ||
-      render.location.y !== newY;
-
-    if (positionChanged) {
+      render.location.y !== newY
+    ) {
       render.location = new Cell(newX, newY);
     }
 
@@ -321,9 +320,6 @@ export class NameLayer implements Layer {
     render.nameDiv.style.fontSize = `${render.fontSize}px`;
     render.nameDiv.style.lineHeight = `${render.fontSize}px`;
     render.nameDiv.style.color = render.fontColor;
-    if (render.nameSpan) {
-      render.nameSpan.innerHTML = render.player.name();
-    }
     if (render.flagDiv) {
       render.flagDiv.style.height = `${render.fontSize}px`;
     }
@@ -483,10 +479,11 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (positionChanged) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
-    }
+    // Even when positionChanged is false: Scale update otherwise sometimes only happens after seconds which looks buggy.
+    // Because of sometimes overlapping delays of 20 ticks for nameLocation() (largestClusterBoundingBox in PlayerExecution)
+    // and the 500ms renderRefreshRate in NameLayer.
+    const scale = Math.min(baseSize * 0.25, 3);
+    render.element.style.transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
   }
 
   private createIconElement(
