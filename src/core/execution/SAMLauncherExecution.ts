@@ -279,7 +279,18 @@ export class SAMLauncherExecution implements Execution {
       ({ unit }) => {
         if (!isUnit(unit)) return false;
         if (unit.owner() === this.player) return false;
-        if (this.player.isFriendly(unit.owner())) return false;
+
+        // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
+        const nukeOwner = unit.owner();
+        if (this.player.isFriendly(nukeOwner)) {
+          if (
+            this.mg.getWinner() === null ||
+            !this.player.isOnSameTeam(nukeOwner)
+          ) {
+            return false;
+          }
+        }
+
         const dst = unit.targetTile();
         return (
           this.sam !== null &&
