@@ -98,15 +98,15 @@ describe("Spawn execution", () => {
 
     const game = await setup("half_land_half_ocean", undefined, [playerInfo]);
 
-    game.addExecution(new SpawnExecution("game_id", playerInfo, 50));
-    game.addExecution(new SpawnExecution("game_id", playerInfo, 60));
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 10));
+    game.addExecution(new SpawnExecution("game_id", playerInfo, 20));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
     }
 
-    expect(game.playerByClientID("client_id")?.spawnTile()).toBe(60);
+    expect(game.playerByClientID("client_id")?.spawnTile()).toBe(20);
     // Previous territory from first spawn should be relinquished
-    expect(game.owner(50).isPlayer()).toBe(false);
+    expect(game.owner(10).isPlayer()).toBe(false);
   });
 });

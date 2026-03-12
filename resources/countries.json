@@ -643,7 +643,8 @@
   {
     "code": "Empire of Japan",
     "continent": "Asia",
-    "name": "Empire of Japan"
+    "name": "Empire of Japan",
+    "restricted": true
   },
   {
     "code": "Empire of Japan1",
@@ -1532,6 +1533,11 @@
     "code": "no",
     "continent": "Europe",
     "name": "Norway"
+  },
+  {
+    "code": "1_Occitania",
+    "continent": "Europe",
+    "name": "Occitania"
   },
   {
     "code": "Ohio",

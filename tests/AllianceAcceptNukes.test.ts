@@ -1,4 +1,4 @@
-import { AllianceRequestReplyExecution } from "src/core/execution/alliance/AllianceRequestReplyExecution";
+import { AllianceRequestExecution } from "src/core/execution/alliance/AllianceRequestExecution";
 import { GameUpdateType } from "src/core/game/GameUpdates";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import {
@@ -69,12 +69,10 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     expect(player2.isAlliedWith(player1)).toBe(false);
     expect(player1.isFriendly(player2)).toBe(false);
 
-    player2.createAllianceRequest(player1);
-    game.addExecution(
-      new AllianceRequestReplyExecution(player2.id(), player1, true),
-    );
-
-    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick(); // creates request
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick(); // counter-request auto-accepts
 
     expect(player2.isAlliedWith(player1)).toBe(true);
     expect(player1.isFriendly(player2)).toBe(true);
@@ -100,12 +98,11 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     expect(player2.isAlliedWith(player1)).toBe(false);
     expect(player1.isFriendly(player2)).toBe(false);
 
-    player1.createAllianceRequest(player2);
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
-
-    game.executeNextTick();
+    // Both requests added in same tick so the nuke tick can't revoke the first
+    // before the counter-request sees it.
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick(); // both init: first creates request, second auto-accepts
 
     expect(player2.isAlliedWith(player1)).toBe(true);
     expect(player1.isFriendly(player2)).toBe(true);
@@ -137,12 +134,10 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     expect(player2.isAlliedWith(player1)).toBe(false);
     expect(player1.isFriendly(player2)).toBe(false);
 
-    player2.createAllianceRequest(player1);
-    game.addExecution(
-      new AllianceRequestReplyExecution(player2.id(), player1, true),
-    );
-
-    const updates = game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick(); // creates request
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    const updates = game.executeNextTick(); // counter-request auto-accepts
 
     expect(player2.isAlliedWith(player1)).toBe(true);
     expect(player1.isFriendly(player2)).toBe(true);

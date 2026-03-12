@@ -1,6 +1,8 @@
 import {
+  BuildableUnit,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
@@ -9,13 +11,15 @@ import { GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
-  | "heartbeat"
   | "init"
   | "initialized"
   | "turn"
   | "game_update"
+  | "game_update_batch"
   | "player_actions"
   | "player_actions_result"
+  | "player_buildables"
+  | "player_buildables_result"
   | "player_profile"
   | "player_profile_result"
   | "player_border_tiles"
@@ -31,15 +35,11 @@ interface BaseWorkerMessage {
   id?: string;
 }
 
-export interface HeartbeatMessage extends BaseWorkerMessage {
-  type: "heartbeat";
-}
-
 // Messages from main thread to worker
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
-  clientID: ClientID;
+  clientID: ClientID | undefined;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -57,16 +57,35 @@ export interface GameUpdateMessage extends BaseWorkerMessage {
   gameUpdate: GameUpdateViewData;
 }
 
+export interface GameUpdateBatchMessage extends BaseWorkerMessage {
+  type: "game_update_batch";
+  gameUpdates: GameUpdateViewData[];
+}
+
 export interface PlayerActionsMessage extends BaseWorkerMessage {
   type: "player_actions";
   playerID: PlayerID;
   x?: number;
   y?: number;
+  units?: readonly PlayerBuildableUnitType[] | null;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {
   type: "player_actions_result";
   result: PlayerActions;
+}
+
+export interface PlayerBuildablesMessage extends BaseWorkerMessage {
+  type: "player_buildables";
+  playerID: PlayerID;
+  x?: number;
+  y?: number;
+  units?: readonly PlayerBuildableUnitType[];
+}
+
+export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
+  type: "player_buildables_result";
+  result: BuildableUnit[];
 }
 
 export interface PlayerProfileMessage extends BaseWorkerMessage {
@@ -114,10 +133,10 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
 
 // Union types for type safety
 export type MainThreadMessage =
-  | HeartbeatMessage
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
+  | PlayerBuildablesMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackAveragePositionMessage
@@ -127,7 +146,9 @@ export type MainThreadMessage =
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
+  | GameUpdateBatchMessage
   | PlayerActionsResultMessage
+  | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackAveragePositionResultMessage

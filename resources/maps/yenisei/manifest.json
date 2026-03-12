@@ -1,0 +1,50 @@
+{
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 1207315,
+    "width": 1200
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 70747,
+    "width": 300
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 295140,
+    "width": 600
+  },
+  "name": "Yenisei",
+  "nations": [
+    {
+      "coordinates": [1050, 535],
+      "flag": "ru",
+      "name": "Baikalovsk"
+    },
+    {
+      "coordinates": [1120, 1315],
+      "flag": "ru",
+      "name": "Mungui"
+    },
+    {
+      "coordinates": [345, 1190],
+      "flag": "ru",
+      "name": "Polykarpovsk"
+    },
+    {
+      "coordinates": [335, 800],
+      "flag": "ru",
+      "name": "Central Island"
+    },
+    {
+      "coordinates": [75, 390],
+      "flag": "ru",
+      "name": "West Coast"
+    },
+    {
+      "coordinates": [420, 440],
+      "flag": "ru",
+      "name": "Northern Island"
+    }
+  ]
+}

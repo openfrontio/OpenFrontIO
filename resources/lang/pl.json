@@ -631,17 +631,17 @@
     "available_tooltip": "Obecnie dostępne wojsko",
     "min_keep": "Min. utrzymanie",
     "min_keep_pct": "(30%)",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "toggle_attack_bar_mode": "Użyj suwaka ataku, aby wysłać wojsko",
     "warning_attackbar": "Po włączeniu tej opcji nie możesz bezpośrednio otworzyć tego modułu. Będziesz wysyłał wojsko tylko przez suwak ataku.",
     "aria_slider": "Suwak Jednostek",
-    "capacity_note": "Odbiorca może teraz zaakceptować tylko {{amount}}."
+    "capacity_note": "Odbiorca może teraz zaakceptować tylko {amount}."
   },
   "send_gold_modal": {
     "title_with_name": "Wyślij Złoto do {name}",
     "available_tooltip": "Obecnie dostępne złoto",
     "aria_slider": "Suwak Ilości Złota",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Prędkość powtórki",

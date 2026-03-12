@@ -10,9 +10,11 @@ export class Footer extends LitElement {
   render() {
     return html`
       <footer
-        class="[.in-game_&]:hidden bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-2 pt-[2px] pb-2 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
+        class="[.in-game_&]:hidden bg-zinc-900/90 backdrop-blur-md flex flex-col items-center justify-center gap-1 pt-1 pb-3 text-white/50 w-full border-t border-white/10 shrink-0 relative z-50"
       >
-        <div class="flex items-center justify-center gap-6 pt-2">
+        <div
+          class="flex items-center justify-center gap-4 lg:gap-6 pt-2 w-full relative"
+        >
           <a
             href="https://github.com/openfrontio/OpenFrontIO"
             target="_blank"
@@ -22,7 +24,8 @@ export class Footer extends LitElement {
             <img
               src="/icons/github-mark-white.svg"
               data-i18n-alt="news.github_link"
-              class="h-7 w-7 object-contain"
+              class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
+              draggable="false"
             />
           </a>
           <a
@@ -32,7 +35,7 @@ export class Footer extends LitElement {
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
           >
             <svg
-              class="h-7 w-7 object-contain"
+              class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
               viewBox="0 0 24 24"
               fill="white"
               xmlns="http://www.w3.org/2000/svg"
@@ -43,13 +46,13 @@ export class Footer extends LitElement {
             </svg>
           </a>
           <a
-            href="https://discord.gg/jRpxXvG42t"
+            href="https://discord.gg/openfront"
             target="_blank"
             rel="noopener noreferrer"
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
           >
             <svg
-              class="h-7 w-7 object-contain"
+              class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
               viewBox="0 0 24 24"
               fill="white"
             >
@@ -67,11 +70,17 @@ export class Footer extends LitElement {
             <img
               src="/icons/wiki-logo.svg"
               data-i18n-alt="main.wiki"
-              class="h-7 w-7 object-contain"
+              class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
+              draggable="false"
             />
           </a>
+          <lang-selector
+            class="absolute right-4 top-0 sm:top-[10px]"
+          ></lang-selector>
         </div>
-        <div class="text-xs mt-2 flex items-center justify-center gap-4">
+        <div
+          class="text-xs mt-1 lg:mt-2 flex items-center justify-center gap-4 px-4"
+        >
           <a
             href="/terms-of-service.html"
             data-i18n="main.terms_of_service"

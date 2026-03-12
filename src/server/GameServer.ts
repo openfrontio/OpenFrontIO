@@ -7,20 +7,20 @@ import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
-  ClientRejoinMessage,
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
-  Intent,
   PlayerRecord,
+  PublicGameType,
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
+  StampedIntent,
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
@@ -43,9 +43,11 @@ export class GameServer {
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
   private turns: Turn[] = [];
-  private intents: Intent[] = [];
+  private intents: StampedIntent[] = [];
   public activeClients: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
+  // Map persistentID to clientID for reconnection lookup
+  private persistentIdToClientId: Map<string, ClientID> = new Map();
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
@@ -63,7 +65,7 @@ export class GameServer {
 
   private _hasPrestarted = false;
 
-  private kickedClients: Set<ClientID> = new Set();
+  private kickedPersistentIds: Set<string> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
   private isPaused = false;
@@ -77,8 +79,6 @@ export class GameServer {
 
   private _hasEnded = false;
 
-  public desyncCount = 0;
-
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -87,9 +87,17 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
-    private lobbyCreatorID?: string,
+    private creatorPersistentID?: string,
+    private startsAt?: number,
+    private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+  }
+
+  private get lobbyCreatorID(): ClientID | undefined {
+    return this.creatorPersistentID
+      ? this.persistentIdToClientId.get(this.creatorPersistentID)
+      : undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -102,8 +110,8 @@ export class GameServer {
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableNations !== undefined) {
-      this.gameConfig.disableNations = gameConfig.disableNations;
+    if (gameConfig.nations !== undefined) {
+      this.gameConfig.nations = gameConfig.nations;
     }
     if (gameConfig.bots !== undefined) {
       this.gameConfig.bots = gameConfig.bots;
@@ -147,22 +155,29 @@ export class GameServer {
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
     }
+    if (gameConfig.disableAlliances !== undefined) {
+      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
+    }
   }
 
-  public joinClient(client: Client) {
-    this.websockets.add(client.ws);
-    if (this.kickedClients.has(client.clientID)) {
-      this.log.warn(`cannot add client, already kicked`, {
-        clientID: client.clientID,
-      });
-      return;
-    }
+  private isKicked(clientID: ClientID): boolean {
+    const persistentID = this.allClients.get(clientID)?.persistentID;
+    return (
+      persistentID !== undefined && this.kickedPersistentIds.has(persistentID)
+    );
+  }
 
-    if (this.allClients.has(client.clientID)) {
-      this.log.warn("cannot add client, already in game", {
-        clientID: client.clientID,
-      });
-      return;
+  // Get existing clientID for this persistentID, or null if new player
+  public getClientIdForPersistentId(persistentID: string): ClientID | null {
+    const clientID = this.persistentIdToClientId.get(persistentID);
+    if (!clientID) return null;
+    if (this.kickedPersistentIds.has(persistentID)) return null;
+    return clientID;
+  }
+
+  public joinClient(client: Client): "joined" | "kicked" | "rejected" {
+    if (this.kickedPersistentIds.has(client.persistentID)) {
+      return "kicked";
     }
 
     if (
@@ -179,16 +194,9 @@ export class GameServer {
           error: "full-lobby",
         } satisfies ServerErrorMessage),
       );
-      return;
+      return "rejected";
     }
 
-    // Log when lobby creator joins private game
-    if (client.clientID === this.lobbyCreatorID) {
-      this.log.info("Lobby creator joined", {
-        gameID: this.id,
-        creatorID: this.lobbyCreatorID,
-      });
-    }
     this.log.info("client joining game", {
       clientID: client.clientID,
       persistentID: client.persistentID,
@@ -205,7 +213,7 @@ export class GameServer {
         clientID: client.clientID,
         clientIP: ipAnonymize(client.ip),
       });
-      return;
+      return "rejected";
     }
 
     if (this.config.env() === GameEnv.Prod) {
@@ -216,7 +224,7 @@ export class GameServer {
           c.clientID !== client.clientID,
       );
       if (conflicting !== undefined) {
-        this.log.error("client ids do not match", {
+        this.log.warn("client ids do not match", {
           clientID: client.clientID,
           clientIP: ipAnonymize(client.ip),
           clientPersistentID: client.persistentID,
@@ -230,6 +238,8 @@ export class GameServer {
     }
 
     // Client connection accepted
+    this.websockets.add(client.ws);
+    this.persistentIdToClientId.set(client.persistentID, client.clientID);
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
@@ -241,54 +251,55 @@ export class GameServer {
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, 0);
     }
+
+    return "joined";
   }
 
+  // Attempt to reconnect a client by persistentID. Returns true if successful.
+  // Only the WebSocket is updated — username, cosmetics, etc. are preserved
+  // from the original join to maintain consistency throughout the game session.
+  // Exception: in the pre-game lobby, the username is updated so players can
+  // rename between leaving and rejoining.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
-    msg: ClientRejoinMessage,
-  ): void {
+    lastTurn: number = 0,
+    newUsername?: string,
+  ): boolean {
+    const clientID = this.getClientIdForPersistentId(persistentID);
+    if (!clientID) return false;
+    const client = this.allClients.get(clientID);
+    if (!client) return false;
+
     this.websockets.add(ws);
+    this.log.info("client rejoining", { clientID, lastTurn });
 
-    if (this.kickedClients.has(msg.clientID)) {
-      this.log.warn("cannot rejoin client, client has been kicked", {
-        clientID: msg.clientID,
-      });
-      return;
-    }
-
-    const client = this.allClients.get(msg.clientID);
-    if (!client) {
-      this.log.warn("cannot rejoin client, existing client not found", {
-        clientID: msg.clientID,
-      });
-      return;
-    }
-
-    if (client.persistentID !== persistentID) {
-      this.log.error("persistent ids do not match", {
-        clientID: msg.clientID,
-        clientPersistentID: persistentID,
-        existingIP: ipAnonymize(client.ip),
-        existingPersistentID: client.persistentID,
-      });
-      return;
+    // Close old WebSocket to prevent resource leaks
+    if (client.ws !== ws) {
+      client.ws.removeAllListeners();
+      client.ws.close();
     }
 
     this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== msg.clientID,
+      (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
     client.lastPing = Date.now();
-    this.markClientDisconnected(msg.clientID, false);
+    this.markClientDisconnected(client.clientID, false);
+
+    // Allow username updates in the pre-game lobby
+    if (!this._hasStarted && newUsername !== undefined) {
+      client.username = newUsername;
+    }
 
     client.ws = ws;
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
-      this.sendStartGameMsg(client.ws, msg.lastTurn);
+      this.sendStartGameMsg(client.ws, lastTurn);
     }
+    return true;
   }
 
   private addListeners(client: Client) {
@@ -320,13 +331,12 @@ export class GameServer {
             break;
           }
           case "intent": {
-            if (clientMsg.intent.clientID !== client.clientID) {
-              this.log.warn(
-                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-              );
-              return;
-            }
-            switch (clientMsg.intent.type) {
+            // Server stamps clientID from the authenticated connection
+            const stampedIntent = {
+              ...clientMsg.intent,
+              clientID: client.clientID,
+            };
+            switch (stampedIntent.type) {
               case "mark_disconnected": {
                 this.log.warn(
                   `Should not receive mark_disconnected intent from client`,
@@ -341,14 +351,14 @@ export class GameServer {
                   this.log.warn(`Only lobby creator can kick players`, {
                     clientID: client.clientID,
                     creatorID: this.lobbyCreatorID,
-                    target: clientMsg.intent.target,
+                    target: stampedIntent.target,
                     gameID: this.id,
                   });
                   return;
                 }
 
                 // Don't allow lobby creator to kick themselves
-                if (client.clientID === clientMsg.intent.target) {
+                if (client.clientID === stampedIntent.target) {
                   this.log.warn(`Cannot kick yourself`, {
                     clientID: client.clientID,
                   });
@@ -358,13 +368,13 @@ export class GameServer {
                 // Log and execute the kick
                 this.log.info(`Lobby creator initiated kick of player`, {
                   creatorID: client.clientID,
-                  target: clientMsg.intent.target,
+                  target: stampedIntent.target,
                   gameID: this.id,
                   kickMethod: "websocket",
                 });
 
                 this.kickClient(
-                  clientMsg.intent.target,
+                  stampedIntent.target,
                   KICK_REASON_LOBBY_CREATOR,
                 );
                 return;
@@ -399,7 +409,7 @@ export class GameServer {
                   return;
                 }
 
-                if (clientMsg.intent.config.gameType === GameType.Public) {
+                if (stampedIntent.config.gameType === GameType.Public) {
                   this.log.warn(`Cannot update game to public via WebSocket`, {
                     gameID: this.id,
                     clientID: client.clientID,
@@ -415,7 +425,7 @@ export class GameServer {
                   },
                 );
 
-                this.updateGameConfig(clientMsg.intent.config);
+                this.updateGameConfig(stampedIntent.config);
                 return;
               }
               case "toggle_pause": {
@@ -429,15 +439,15 @@ export class GameServer {
                   return;
                 }
 
-                if (clientMsg.intent.paused) {
+                if (stampedIntent.paused) {
                   // Pausing: send intent and complete current turn before pause takes effect
-                  this.addIntent(clientMsg.intent);
+                  this.addIntent(stampedIntent);
                   this.endTurn();
                   this.isPaused = true;
                 } else {
                   // Unpausing: clear pause flag before sending intent so next turn can execute
                   this.isPaused = false;
-                  this.addIntent(clientMsg.intent);
+                  this.addIntent(stampedIntent);
                   this.endTurn();
                 }
 
@@ -450,7 +460,7 @@ export class GameServer {
               default: {
                 // Don't process intents while game is paused
                 if (!this.isPaused) {
-                  this.addIntent(clientMsg.intent);
+                  this.addIntent(stampedIntent);
                 }
                 break;
               }
@@ -500,19 +510,29 @@ export class GameServer {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
+
+    // Check if WebSocket already closed before we added the listener (race condition)
+    if (client.ws.readyState >= 2) {
+      this.log.info("client WebSocket already closing/closed, removing", {
+        clientID: client.clientID,
+        readyState: client.ws.readyState,
+      });
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== client.clientID,
+      );
+    }
+  }
+
+  public setStartsAt(startsAt: number) {
+    this.startsAt = startsAt;
   }
 
   public numClients(): number {
     return this.activeClients.length;
   }
 
-  public startTime(): number {
-    if (this._startTime !== null && this._startTime > 0) {
-      return this._startTime;
-    } else {
-      //game hasn't started yet, only works for public games
-      return this.createdAt + this.config.gameCreationRate();
-    }
+  public numDesyncedClients(): number {
+    return this.outOfSyncClients.size;
   }
 
   public prestart() {
@@ -577,12 +597,14 @@ export class GameServer {
   }
 
   private broadcastLobbyInfo() {
-    const msg = JSON.stringify({
-      type: "lobby_info",
-      lobby: this.gameInfo(),
-    } satisfies ServerLobbyInfoMessage);
+    const lobbyInfo = this.gameInfo();
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
+        const msg = JSON.stringify({
+          type: "lobby_info",
+          lobby: lobbyInfo,
+          myClientID: c.clientID,
+        } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
       }
     });
@@ -629,7 +651,7 @@ export class GameServer {
     });
   }
 
-  private addIntent(intent: Intent) {
+  private addIntent(intent: StampedIntent) {
     this.intents.push(intent);
   }
 
@@ -654,6 +676,7 @@ export class GameServer {
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
           lobbyCreatedAt: this.createdAt,
+          myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
@@ -787,8 +810,9 @@ export class GameServer {
       }
     }
 
-    const msSinceCreation = now - this.createdAt;
-    const lessThanLifetime = msSinceCreation < this.config.gameCreationRate();
+    // Public Games
+
+    const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     const notEnoughPlayers =
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
@@ -796,8 +820,7 @@ export class GameServer {
     if (lessThanLifetime && notEnoughPlayers) {
       return GamePhase.Lobby;
     }
-    const warmupOver =
-      now > this.createdAt + this.config.gameCreationRate() + 30 * 1000;
+    const warmupOver = now > this.startsAt! + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
@@ -816,14 +839,12 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
       })),
+      lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
-      msUntilStart: this.isPublic() ? this.getMsUntilStart() : undefined,
+      startsAt: this.startsAt,
+      serverTime: Date.now(),
+      publicGameType: this.publicGameType,
     };
-  }
-
-  private getMsUntilStart(): number {
-    const startTime = this.createdAt + this.config.gameCreationRate();
-    return Math.max(0, startTime - Date.now());
   }
 
   public isPublic(): boolean {
@@ -834,7 +855,7 @@ export class GameServer {
     clientID: ClientID,
     reasonKey: string = KICK_REASON_DUPLICATE_SESSION,
   ): void {
-    if (this.kickedClients.has(clientID)) {
+    if (this.isKicked(clientID)) {
       this.log.warn(`cannot kick client, already kicked`, {
         clientID,
         reasonKey,
@@ -842,7 +863,8 @@ export class GameServer {
       return;
     }
 
-    if (!this.allClients.has(clientID)) {
+    const clientToKick = this.allClients.get(clientID);
+    if (!clientToKick) {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
         reasonKey,
@@ -850,7 +872,7 @@ export class GameServer {
       return;
     }
 
-    this.kickedClients.add(clientID);
+    this.kickedPersistentIds.add(clientToKick.persistentID);
 
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
@@ -963,8 +985,6 @@ export class GameServer {
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
 
-    this.desyncCount += outOfSyncClients.length;
-
     if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
       return;
@@ -1053,7 +1073,7 @@ export class GameServer {
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
     if (
       this.outOfSyncClients.has(client.clientID) ||
-      this.kickedClients.has(client.clientID) ||
+      this.isKicked(client.clientID) ||
       this.winner !== null ||
       client.reportedWinner !== null
     ) {

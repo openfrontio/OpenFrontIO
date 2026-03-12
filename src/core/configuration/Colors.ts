@@ -24,20 +24,27 @@ export const greenTeamColors: Colord[] = generateTeamColors(green);
 export const botTeamColors: Colord[] = [botColor];
 
 function generateTeamColors(baseColor: Colord): Colord[] {
-  const hsl = baseColor.toHsl();
+  const lch = baseColor.toLch();
   const colorCount = 64;
+  const goldenAngle = 137.508;
 
   return Array.from({ length: colorCount }, (_, index) => {
-    const progression = index / (colorCount - 1);
+    if (index === 0) return baseColor;
 
-    const saturation = hsl.s * (1.0 - 0.3 * progression);
-    const lightness = Math.min(100, hsl.l + progression * 30);
+    // Spread hues evenly across ±12° band using golden angle within that range
+    const hueShift = ((index * goldenAngle) % 24) - 12;
+    const h = (lch.h + hueShift + 360) % 360;
 
-    return colord({
-      h: hsl.h,
-      s: saturation,
-      l: lightness,
-    });
+    // Chroma oscillates ±10% around the base to add variety without washing out
+    const chromaFactor = 1.0 + 0.1 * Math.sin(index * 0.7);
+    const c = Math.max(10, Math.min(130, lch.c * chromaFactor));
+
+    // Lightness alternates above/below the base using golden angle spacing
+    // Tighter range (±18) keeps teammates recognizable as the same team
+    const lightOffset = 18 * Math.sin(index * goldenAngle * (Math.PI / 180));
+    const l = Math.max(25, Math.min(80, lch.l + lightOffset));
+
+    return colord({ l, c, h });
   });
 }
 

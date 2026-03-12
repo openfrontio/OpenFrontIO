@@ -50,8 +50,8 @@ export class PlayerStatsTreeView extends LitElement {
 
   private labelForMode(m: GameMode) {
     return m === GameMode.FFA
-      ? translateText("player_stats_tree.mode_ffa")
-      : translateText("player_stats_tree.mode_team");
+      ? translateText("game_mode.ffa")
+      : translateText("game_mode.teams");
   }
 
   createRenderRoot() {

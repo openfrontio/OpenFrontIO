@@ -63,6 +63,7 @@ export class MirvExecution implements Execution {
       }
       if (this.targetPlayer !== this.player) {
         this.targetPlayer.updateRelation(this.player, -100);
+        this.player.updateRelation(this.targetPlayer, -100);
       }
     }
   }

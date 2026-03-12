@@ -69,14 +69,18 @@ export class TeamStats extends LitElement implements Layer {
     }
 
     for (const player of players) {
-      const team = player.team();
-      if (team === null) continue;
-      grouped[team] ??= [];
-      grouped[team].push(player);
+      const rawTeam = player.team();
+      if (rawTeam === null) continue;
+      grouped[rawTeam] ??= [];
+      grouped[rawTeam].push(player);
     }
 
     this.teams = Object.entries(grouped)
-      .map(([teamStr, teamPlayers]) => {
+      .map(([rawTeam, teamPlayers]) => {
+        const key = `team_colors.${rawTeam.toLowerCase()}`;
+        const translated = translateText(key);
+        const teamName = translated !== key ? translated : rawTeam;
+
         let totalGold = 0n;
         let totalMaxTroops = 0;
         let totalScoreSort = 0;
@@ -102,8 +106,8 @@ export class TeamStats extends LitElement implements Layer {
         const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
 
         return {
-          teamName: teamStr,
-          isMyTeam: teamStr === this._myTeam,
+          teamName,
+          isMyTeam: rawTeam === this._myTeam,
           totalScoreStr: formatPercentage(totalScorePercent),
           totalScoreSort,
           totalGold: renderNumber(totalGold),
@@ -132,7 +136,7 @@ export class TeamStats extends LitElement implements Layer {
 
     return html`
       <div
-        class="max-h-[30vh] overflow-y-auto grid bg-slate-800/70 w-full text-white text-xs md:text-sm"
+        class="max-h-[30vh] overflow-x-hidden overflow-y-auto grid bg-slate-800/85 w-full text-white text-xs md:text-sm mt-2 rounded-lg"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
@@ -140,7 +144,7 @@ export class TeamStats extends LitElement implements Layer {
           style="--cols:${this.showUnits ? 5 : 4};"
         >
           <!-- Header -->
-          <div class="contents font-bold bg-slate-700/50">
+          <div class="contents font-bold bg-slate-700/60">
             <div class="p-1.5 md:p-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
             </div>

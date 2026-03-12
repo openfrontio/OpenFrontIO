@@ -7,6 +7,7 @@ import {
 import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHierarchical";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { ATTACK_INDEX_SENT } from "../StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -30,7 +31,9 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
+  SpawnArea,
   Team,
+  TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
   Trios,
@@ -38,8 +41,9 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -55,9 +59,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    teamGameSpawnAreas,
+  );
 }
 
 export type CellString = string;
@@ -82,9 +95,12 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
+  private tileUpdatePairs: number[] = [];
+  private motionPlanRecords: MotionPlanRecord[] = [];
+  private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
+  private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -95,6 +111,7 @@ export class GameImpl implements Game {
   private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
+  private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -103,9 +120,11 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    teamGameSpawnAreas?: TeamGameSpawnAreas,
   ) {
     const constructorStart = performance.now();
 
+    this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -247,10 +266,7 @@ export class GameImpl implements Game {
       return;
     }
     this._map.setFallout(tile, value);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -331,12 +347,6 @@ export class GameImpl implements Game {
       request,
     );
 
-    // Automatically remove embargoes only if they were automatically created
-    if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient);
-    if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor);
-
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -384,6 +394,7 @@ export class GameImpl implements Game {
 
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
+    this.tileUpdatePairs.length = 0;
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
@@ -420,6 +431,60 @@ export class GameImpl implements Game {
     }
     this._ticks++;
     return this.updates;
+  }
+
+  private recordTileUpdate(tile: TileRef): void {
+    this.tileUpdatePairs.push(tile, this._map.tileState(tile));
+  }
+
+  drainPackedTileUpdates(): Uint32Array {
+    const pairs = this.tileUpdatePairs;
+    const packed = new Uint32Array(pairs.length);
+    for (let i = 0; i < pairs.length; i++) {
+      packed[i] = pairs[i];
+    }
+    pairs.length = 0;
+    return packed;
+  }
+
+  recordMotionPlan(record: MotionPlanRecord): void {
+    switch (record.kind) {
+      case "grid":
+        this.planDrivenUnitIds.add(record.unitId);
+        break;
+      case "train":
+        this.planDrivenUnitIds.add(record.engineUnitId);
+        for (const unitId of record.carUnitIds) {
+          this.planDrivenUnitIds.add(unitId);
+        }
+        break;
+    }
+    this.motionPlanRecords.push(record);
+  }
+
+  private isUnitPlanDriven(unitId: number): boolean {
+    return this.planDrivenUnitIds.has(unitId);
+  }
+
+  maybeAddUnitUpdate(unit: Unit): void {
+    if (!this.isUnitPlanDriven(unit.id())) {
+      this.addUpdate(unit.toUpdate());
+    }
+  }
+
+  onUnitMoved(unit: Unit): void {
+    this.updateUnitTile(unit);
+    this.maybeAddUnitUpdate(unit);
+  }
+
+  drainPackedMotionPlans(): Uint32Array | null {
+    const records = this.motionPlanRecords;
+    if (records.length === 0) {
+      return null;
+    }
+    const packed = packMotionPlans(records);
+    records.length = 0;
+    return packed;
   }
 
   private hash(): number {
@@ -593,10 +658,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   relinquish(tile: TileRef) {
@@ -614,38 +676,50 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.recordTileUpdate(tile);
   }
 
   private updateBorders(tile: TileRef) {
-    const tiles: TileRef[] = [];
-    tiles.push(tile);
-    this.neighbors(tile).forEach((t) => tiles.push(t));
-
-    for (const t of tiles) {
+    const updateBorderStatus = (t: TileRef) => {
       if (!this.hasOwner(t)) {
-        continue;
+        return;
       }
+      const owner = this.owner(t) as PlayerImpl;
       if (this.calcIsBorder(t)) {
-        (this.owner(t) as PlayerImpl)._borderTiles.add(t);
+        owner._borderTiles.add(t);
       } else {
-        (this.owner(t) as PlayerImpl)._borderTiles.delete(t);
+        owner._borderTiles.delete(t);
       }
-    }
+    };
+
+    updateBorderStatus(tile);
+    this.forEachNeighbor(tile, updateBorderStatus);
   }
 
   private calcIsBorder(tile: TileRef): boolean {
     if (!this.hasOwner(tile)) {
       return false;
     }
-    for (const neighbor of this.neighbors(tile)) {
-      const bordersEnemy = this.owner(tile) !== this.owner(neighbor);
-      if (bordersEnemy) {
-        return true;
-      }
+    const ownerId = this.ownerID(tile);
+    const x = this.x(tile);
+    const y = this.y(tile);
+    if (x > 0 && this.ownerID(this._map.ref(x - 1, y)) !== ownerId) {
+      return true;
+    }
+    if (
+      x + 1 < this._width &&
+      this.ownerID(this._map.ref(x + 1, y)) !== ownerId
+    ) {
+      return true;
+    }
+    if (y > 0 && this.ownerID(this._map.ref(x, y - 1)) !== ownerId) {
+      return true;
+    }
+    if (
+      y + 1 < this._height &&
+      this.ownerID(this._map.ref(x, y + 1)) !== ownerId
+    ) {
+      return true;
     }
     return false;
   }
@@ -703,10 +777,24 @@ export class GameImpl implements Game {
     });
   }
 
+  public removeAlliancesByPlayerSilently(player: Player): void {
+    this.alliances_ = this.alliances_.filter(
+      (a) => a.requestor() !== player && a.recipient() !== player,
+    );
+  }
+
   public isSpawnImmunityActive(): boolean {
     return (
       this.config().numSpawnPhaseTurns() +
-        this.config().spawnImmunityDuration() >=
+        this.config().spawnImmunityDuration() >
+      this.ticks()
+    );
+  }
+
+  public isNationSpawnImmunityActive(): boolean {
+    return (
+      this.config().numSpawnPhaseTurns() +
+        this.config().nationSpawnImmunityDuration() >
       this.ticks()
     );
   }
@@ -758,6 +846,22 @@ export class GameImpl implements Game {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
+  }
+
+  teamSpawnArea(team: Team): SpawnArea | undefined {
+    if (!this._teamGameSpawnAreas) {
+      return undefined;
+    }
+    const numTeams = this.playerTeams.length;
+    const areas = this._teamGameSpawnAreas[String(numTeams)];
+    if (!areas) {
+      return undefined;
+    }
+    const teamIndex = this.playerTeams.indexOf(team);
+    if (teamIndex < 0 || teamIndex >= areas.length) {
+      return undefined;
+    }
+    return areas[teamIndex];
   }
 
   displayMessage(
@@ -826,6 +930,7 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
@@ -871,7 +976,7 @@ export class GameImpl implements Game {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }> {
@@ -993,11 +1098,11 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): void {
+    this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
@@ -1097,26 +1202,48 @@ export class GameImpl implements Game {
       }
     }
 
-    const gold = conquered.gold();
-    this.displayMessage(
-      `Conquered ${conquered.displayName()} received ${renderNumber(
+    // Don't transfer gold when the conquered player didn't play (never attacked anyone)
+    // This is especially important when starting gold is enabled
+    const stats = this._stats.getPlayerStats(conquered);
+    const attacksSent = stats?.attacks?.[ATTACK_INDEX_SENT] ?? 0n;
+    const skipGoldTransfer =
+      attacksSent === 0n && conquered.type() === PlayerType.Human;
+    const gold = skipGoldTransfer ? 0n : conquered.gold();
+
+    if (skipGoldTransfer) {
+      this.displayMessage(
+        "events_display.conquered_no_gold",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
+        undefined,
+        {
+          name: conquered.displayName(),
+        },
+      );
+    } else {
+      this.displayMessage(
+        "events_display.received_gold_from_conquest",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
         gold,
-      )} gold`,
-      MessageType.CONQUERED_PLAYER,
-      conqueror.id(),
-      gold,
-    );
-    conqueror.addGold(gold);
-    conquered.removeGold(gold);
+        {
+          gold: renderNumber(gold),
+          name: conquered.displayName(),
+        },
+      );
+      conqueror.addGold(gold);
+      conquered.removeGold(gold);
+
+      // Record stats
+      this.stats().goldWar(conqueror, conquered, gold);
+    }
+
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
       conqueredId: conquered.id(),
       gold,
     });
-
-    // Record stats
-    this.stats().goldWar(conqueror, conquered, gold);
   }
 }
 

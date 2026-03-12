@@ -1,14 +1,13 @@
 import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID, GameID, Intent, Turn } from "../Schemas";
+import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
+import { AllianceRejectExecution } from "./alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
-import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
@@ -26,6 +25,7 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
+import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
@@ -36,9 +36,9 @@ export class Executor {
   constructor(
     private mg: Game,
     private gameID: GameID,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
-    // Add one to avoid id collisions with bots.
+    // Add one to avoid id collisions with tribes.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
   }
 
@@ -46,7 +46,7 @@ export class Executor {
     return turn.intents.map((i) => this.createExec(i));
   }
 
-  createExec(intent: Intent): Execution {
+  createExec(intent: StampedIntent): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -75,12 +75,8 @@ export class Executor {
         return new TransportShipExecution(player, intent.dst, intent.troops);
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);
-      case "allianceRequestReply":
-        return new AllianceRequestReplyExecution(
-          intent.requestor,
-          player,
-          intent.accept,
-        );
+      case "allianceReject":
+        return new AllianceRejectExecution(intent.requestor, player);
       case "breakAlliance":
         return new BreakAllianceExecution(player, intent.recipient);
       case "targetPlayer":
@@ -130,8 +126,8 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): SpawnExecution[] {
-    return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
+  spawnTribes(numTribes: number): SpawnExecution[] {
+    return new TribeSpawner(this.mg, this.gameID).spawnTribes(numTribes);
   }
 
   spawnPlayers(): SpawnExecution[] {

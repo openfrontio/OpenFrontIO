@@ -44,6 +44,21 @@ Licensed under [Open Data Commons Open Database License (ODbL)](https://opendata
 Copernicus Global Digital Elevation Models distributed by OpenTopography.
 Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://opentopography.org/usageterms)
 
+### Hawaii Relief Map
+
+[USA Hawaii relief location map](https://commons.wikimedia.org/wiki/File:USA_Hawaii_relief_location_map.svg) by NordNordWest
+Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/de/deed.en)
+
+### Nile Delta Map
+
+[Niledelta 33](https://commons.wikimedia.org/wiki/File:Niledelta_33.svg) by John187
+Licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+### Arctic Map
+
+[Arctic SDI](https://catalogue.arctic-sdi.org/geonetwork/srv/spa/catalog.search#/metadata/8b4f2b34-2d0d-4744-ae0f-d7989b9f7a02)
+Licensed under [CC0 1.0.](https://creativecommons.org/publicdomain/zero/1.0/legalcode.en)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)

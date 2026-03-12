@@ -11,13 +11,18 @@ import {
   Quads,
   RankedType,
   Trios,
+  mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { GameConfig, TeamCountConfig } from "../core/Schemas";
+import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
+const ARCADE_MAPS = new Set(mapCategories.arcade);
+
+// Hard cap on player count for performance. Applied after compact-map reduction.
+const MAX_PLAYER_COUNT = 125;
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
@@ -56,22 +61,28 @@ const frequency: Partial<Record<GameMapName, number>> = {
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
   Svalmel: 8,
-  World: 8,
+  World: 20,
   Lemnos: 3,
+  Passage: 4,
   TwoLakes: 6,
   StraitOfHormuz: 4,
   Surrounded: 4,
   DidierFrance: 1,
   Didier: 1,
   AmazonRiver: 3,
+  BosphorusStraits: 3,
+  BeringStrait: 4,
   Sierpinski: 10,
   TheBox: 3,
+  Yenisei: 6,
+  TradersDream: 4,
+  Hawaii: 4,
+  Alps: 4,
+  NileDelta: 4,
+  Arctic: 6,
+  SanFrancisco: 3,
+  Aegean: 6,
 };
-
-interface MapWithMode {
-  map: GameMapType;
-  mode: GameMode;
-}
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
@@ -86,20 +97,58 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: HumansVsNations, weight: 20 },
 ];
 
+type ModifierKey =
+  | "isRandomSpawn"
+  | "isCompact"
+  | "isCrowded"
+  | "isHardNations"
+  | "startingGold"
+  | "startingGoldHigh"
+  | "goldMultiplier"
+  | "isAlliancesDisabled";
+
+// Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
+const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
+  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(8).fill("isCompact"),
+  ...Array<ModifierKey>(1).fill("isCrowded"),
+  ...Array<ModifierKey>(1).fill("isHardNations"),
+  ...Array<ModifierKey>(8).fill("startingGold"),
+  ...Array<ModifierKey>(1).fill("startingGoldHigh"),
+  ...Array<ModifierKey>(1).fill("goldMultiplier"),
+  ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
+];
+
+// Modifiers that cannot be active at the same time.
+const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
+  ["startingGold", "startingGoldHigh"],
+  ["isHardNations", "startingGoldHigh"],
+];
+
+// Probability of hard nations modifier in HumansVsNations games.
+const HARD_NATIONS_HVN_PROBABILITY = 0.2; // 20%
+
 export class MapPlaylist {
-  private mapsPlaylist: MapWithMode[] = [];
+  private playlists: Record<PublicGameType, GameMapType[]> = {
+    ffa: [],
+    special: [],
+    team: [],
+  };
 
-  constructor(private disableTeams: boolean = false) {}
+  public async gameConfig(type: PublicGameType): Promise<GameConfig> {
+    if (type === "special") {
+      return this.getSpecialConfig();
+    }
 
-  public async gameConfig(): Promise<GameConfig> {
-    const { map, mode } = this.getNextMap();
+    const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
+    const map = this.getNextMap(type);
 
     const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+      mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
-    const modifiers = this.getRandomPublicGameModifiers();
+    const modifiers = this.getRandomPublicGameModifiers(playerTeams);
     const { startingGold } = modifiers;
-    let { isCompact, isRandomSpawn, isCrowded } = modifiers;
+    let { isCompact, isRandomSpawn, isCrowded, isHardNations } = modifiers;
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
@@ -110,17 +159,22 @@ export class MapPlaylist {
       isRandomSpawn = false;
     }
 
-    // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
-    // (not enough players after 75% player reduction for compact maps)
+    // Hard nations modifier only applies when nations are present
+    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+      isHardNations = false;
+    }
+
+    // Check if compact map would leave every team with at least 2 players
     if (
+      isCompact &&
       mode === GameMode.Team &&
-      !(await this.supportsCompactMapForTeams(map))
+      !(await this.supportsCompactMapForTeams(map, playerTeams!))
     ) {
       isCompact = false;
     }
 
     // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to 125 (or 60 if compact map is also enabled)
+    // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
@@ -145,74 +199,288 @@ export class MapPlaylist {
         isCompact,
         isRandomSpawn,
         isCrowded,
+        isHardNations,
         startingGold,
+        isAlliancesDisabled: false,
       },
       startingGold,
-      difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
+      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: isRandomSpawn,
-      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      nations:
+        mode === GameMode.Team && playerTeams !== HumansVsNations
+          ? "disabled"
+          : "default",
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: 5 * 10,
+      spawnImmunityDuration: this.getSpawnImmunityDuration(
+        playerTeams,
+        startingGold,
+      ),
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
+  private async getSpecialConfig(): Promise<GameConfig> {
+    const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
+    const map = this.getNextMap("special");
+    const playerTeams =
+      mode === GameMode.Team ? this.getTeamCount(map) : undefined;
+
+    const excludedModifiers: ModifierKey[] = [];
+
+    const supportsCompact =
+      mode !== GameMode.Team ||
+      (await this.supportsCompactMapForTeams(map, playerTeams!));
+    if (!supportsCompact) {
+      excludedModifiers.push("isCompact");
+    }
+
+    if (
+      playerTeams === Duos ||
+      playerTeams === Trios ||
+      playerTeams === Quads
+    ) {
+      excludedModifiers.push("isRandomSpawn");
+    }
+
+    // Hard nations: excluded for non-HvN team modes (no nations present).
+    // For HumansVsNations: rolled independently (not via pool).
+    // For FFA: stays in the pool for normal ticket-based selection.
+    let hardNationsFromIndependentRoll: boolean | undefined;
+    let poolCountReduction = 0;
+    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+      excludedModifiers.push("isHardNations");
+    } else if (playerTeams === HumansVsNations) {
+      excludedModifiers.push("isHardNations");
+      excludedModifiers.push("startingGoldHigh"); // Nations are disabled if that modifier is active
+      hardNationsFromIndependentRoll =
+        Math.random() < HARD_NATIONS_HVN_PROBABILITY;
+      poolCountReduction = hardNationsFromIndependentRoll ? 1 : 0;
+    }
+
+    const poolResult = this.getRandomSpecialGameModifiers(
+      excludedModifiers,
+      undefined,
+      poolCountReduction,
+    );
+    let {
+      isCrowded,
+      startingGold,
+      isCompact,
+      isRandomSpawn,
+      goldMultiplier,
+      isAlliancesDisabled,
+    } = poolResult;
+    let isHardNations =
+      hardNationsFromIndependentRoll ?? poolResult.isHardNations;
+
+    let crowdedMaxPlayers: number | undefined;
+    if (isCrowded) {
+      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
+      if (crowdedMaxPlayers !== undefined) {
+        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+      } else {
+        // Map doesn't support crowded. Drop it and pick one replacement only
+        // if it was the sole modifier, so the lobby always has at least one.
+        isCrowded = false;
+        if (
+          !isRandomSpawn &&
+          !isCompact &&
+          !isHardNations &&
+          startingGold === undefined &&
+          goldMultiplier === undefined &&
+          !isAlliancesDisabled
+        ) {
+          excludedModifiers.push("isCrowded");
+          const fallback = this.getRandomSpecialGameModifiers(
+            excludedModifiers,
+            1,
+            poolCountReduction,
+          );
+          ({
+            isRandomSpawn,
+            isCompact,
+            startingGold,
+            goldMultiplier,
+            isAlliancesDisabled,
+          } = fallback);
+          isHardNations =
+            hardNationsFromIndependentRoll ?? fallback.isHardNations;
+        }
+      }
+    }
+
+    const maxPlayers = Math.max(
+      2,
+      crowdedMaxPlayers ??
+        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+    );
+
+    const nations: GameConfig["nations"] =
+      (mode === GameMode.Team && playerTeams !== HumansVsNations) ||
+      // Nations don't have PVP immunity, so 25M starting gold wouldn't work well with them
+      (startingGold !== undefined && startingGold >= 25_000_000)
+        ? "disabled"
+        : "default";
+
+    return {
+      donateGold: mode === GameMode.Team,
+      donateTroops: mode === GameMode.Team,
+      gameMap: map,
+      maxPlayers,
+      gameType: GameType.Public,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      publicGameModifiers: {
+        isCompact,
+        isRandomSpawn,
+        isCrowded,
+        isHardNations,
+        startingGold,
+        goldMultiplier,
+        isAlliancesDisabled,
+      },
+      startingGold,
+      goldMultiplier,
+      disableAlliances: isAlliancesDisabled,
+      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: undefined,
+      instantBuild: false,
+      randomSpawn: isRandomSpawn,
+      nations,
+      gameMode: mode,
+      playerTeams,
+      bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: this.getSpawnImmunityDuration(
+        playerTeams,
+        startingGold,
+      ),
       disabledUnits: [],
     } satisfies GameConfig;
   }
 
   public get1v1Config(): GameConfig {
     const maps = [
-      GameMapType.Iceland,
+      GameMapType.Australia, // 40%
       GameMapType.Australia,
-      GameMapType.Australia,
-      GameMapType.Australia,
-      GameMapType.Pangaea,
-      GameMapType.Italia,
-      GameMapType.FalklandIslands,
-      GameMapType.Sierpinski,
+      GameMapType.Iceland, // 20%
+      GameMapType.Asia, // 20%
+      GameMapType.EuropeClassic, // 20%
     ];
+    const isCompact = Math.random() < 0.5;
     return {
       donateGold: false,
       donateTroops: false,
       gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Compact,
-      difficulty: Difficulty.Easy,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
       rankedType: RankedType.OneVOne,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: 10, // 10 minutes
+      maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
       randomSpawn: false,
-      disableNations: true,
+      nations: "disabled",
       gameMode: GameMode.FFA,
-      bots: 100,
+      bots: isCompact ? 100 : 400,
       spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
 
-  private getNextMap(): MapWithMode {
-    if (this.mapsPlaylist.length === 0) {
-      const numAttempts = 10000;
-      for (let i = 0; i < numAttempts; i++) {
-        if (this.shuffleMapsPlaylist()) {
-          log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
-        }
-      }
-      log.error("Failed to generate a valid map playlist");
+  private getNextMap(type: PublicGameType): GameMapType {
+    const playlist = this.playlists[type];
+    if (playlist.length === 0) {
+      playlist.push(...this.generateNewPlaylist(type));
     }
-    // Even if it failed, playlist will be partially populated.
-    return this.mapsPlaylist.shift()!;
+    return playlist.shift()!;
   }
 
-  private getTeamCount(): TeamCountConfig {
+  private generateNewPlaylist(type: PublicGameType): GameMapType[] {
+    const maps = this.buildMapsList(type);
+    const rand = new PseudoRandom(Date.now());
+    const playlist: GameMapType[] = [];
+
+    const numAttempts = 10000;
+    for (let attempt = 0; attempt < numAttempts; attempt++) {
+      playlist.length = 0;
+      // Re-shuffle every attempt so retries can explore different orderings.
+      const source = rand.shuffleArray([...maps]);
+
+      let success = true;
+      while (source.length > 0) {
+        if (!this.addNextMapNonConsecutive(playlist, source)) {
+          success = false;
+          break;
+        }
+      }
+
+      if (success) {
+        log.info(`Generated map playlist in ${attempt} attempts`);
+        return playlist;
+      }
+    }
+
+    log.warn(
+      `Failed to generate non-consecutive playlist after ${numAttempts} attempts, falling back to shuffle`,
+    );
+    return rand.shuffleArray([...maps]);
+  }
+
+  private addNextMapNonConsecutive(
+    playlist: GameMapType[],
+    source: GameMapType[],
+  ): boolean {
+    const nonConsecutiveNum = 5;
+    const lastMaps = playlist.slice(-nonConsecutiveNum);
+
+    for (let i = 0; i < source.length; i++) {
+      const map = source[i];
+      if (!lastMaps.includes(map)) {
+        source.splice(i, 1);
+        playlist.push(map);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private buildMapsList(type: PublicGameType): GameMapType[] {
+    const maps: GameMapType[] = [];
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      const map = GameMapType[key];
+      if (type !== "special" && ARCADE_MAPS.has(map)) {
+        return;
+      }
+      let freq = frequency[key] ?? 0;
+      // Double frequency for Baikal and FourIslands in team games
+      if (type === "team" && (key === "Baikal" || key === "FourIslands")) {
+        freq *= 2;
+      }
+      for (let i = 0; i < freq; i++) {
+        maps.push(map);
+      }
+    });
+    return maps;
+  }
+
+  private getTeamCount(map: GameMapType): TeamCountConfig {
+    // Override team count for specific maps (75% chance)
+    if (map === GameMapType.Baikal && Math.random() < 0.75) {
+      return 2;
+    }
+    if (map === GameMapType.FourIslands && Math.random() < 0.75) {
+      return 4;
+    }
+
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
     const roll = Math.random() * totalWeight;
 
@@ -226,21 +494,145 @@ export class MapPlaylist {
     return TEAM_WEIGHTS[0].config;
   }
 
-  private getRandomPublicGameModifiers(): PublicGameModifiers {
+  private getRandomPublicGameModifiers(
+    playerTeams?: TeamCountConfig,
+  ): PublicGameModifiers {
     return {
-      isRandomSpawn: Math.random() < 0.1, // 10% chance
+      isRandomSpawn: Math.random() < 0.05, // 5% chance
       isCompact: Math.random() < 0.05, // 5% chance
       isCrowded: Math.random() < 0.05, // 5% chance
       startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
+      isHardNations:
+        playerTeams === HumansVsNations
+          ? Math.random() < HARD_NATIONS_HVN_PROBABILITY
+          : Math.random() < 0.025, // 2.5% chance
+      isAlliancesDisabled: false,
     };
   }
 
-  // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
-  // (not enough players after 75% player reduction for compact maps)
-  private async supportsCompactMapForTeams(map: GameMapType): Promise<boolean> {
+  private getRandomSpecialGameModifiers(
+    excludedModifiers: ModifierKey[] = [],
+    count?: number,
+    countReduction: number = 0,
+  ): PublicGameModifiers {
+    // Roll how many modifiers to pick: 30% → 1, 40% → 2, 20% → 3, 10% → 4
+    const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
+    const k = Math.max(
+      0,
+      (count ??
+        (modifierCountRoll <= 3
+          ? 1
+          : modifierCountRoll <= 7
+            ? 2
+            : modifierCountRoll <= 9
+              ? 3
+              : 4)) - countReduction,
+    );
+
+    // Shuffle the pool, then pick the first k unique modifier keys.
+    const pool = SPECIAL_MODIFIER_POOL.filter(
+      (key) => !excludedModifiers.includes(key),
+    ).sort(() => Math.random() - 0.5);
+
+    const selected = new Set<ModifierKey>();
+    for (const key of pool) {
+      if (selected.size >= k) break;
+      // Skip if a mutually exclusive modifier is already selected
+      const blocked = MUTUALLY_EXCLUSIVE_MODIFIERS.some(
+        ([a, b]) =>
+          (key === a && selected.has(b)) || (key === b && selected.has(a)),
+      );
+      if (!blocked) selected.add(key);
+    }
+
+    return {
+      isRandomSpawn: selected.has("isRandomSpawn"),
+      isCompact: selected.has("isCompact"),
+      isCrowded: selected.has("isCrowded"),
+      isHardNations: selected.has("isHardNations"),
+      startingGold: selected.has("startingGoldHigh")
+        ? 25_000_000
+        : selected.has("startingGold")
+          ? 5_000_000
+          : undefined,
+      goldMultiplier: selected.has("goldMultiplier") ? 2 : undefined,
+      isAlliancesDisabled: selected.has("isAlliancesDisabled"),
+    };
+  }
+
+  // Check whether a compact map still gives every team at least 2 players,
+  // using the worst-case player tier (smallest) from lobbyMaxPlayers.
+  private async supportsCompactMapForTeams(
+    map: GameMapType,
+    playerTeams: TeamCountConfig,
+  ): Promise<boolean> {
     const landTiles = await getMapLandTiles(map);
-    const [, , smallest] = this.calculateMapPlayerCounts(landTiles);
-    return smallest >= 50;
+    const [l, , s] = this.calculateMapPlayerCounts(landTiles);
+    // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
+    let p = Math.min(Math.ceil(s * 1.5), l);
+    // Apply compact 75% player reduction, then cap for performance
+    p = Math.min(Math.max(3, Math.floor(p * 0.25)), MAX_PLAYER_COUNT);
+    // Apply team adjustment
+    p = this.adjustForTeams(p, playerTeams);
+    // Check at least 2 players per team AND at least 2 teams
+    return (
+      this.playersPerTeam(p, playerTeams) >= 2 &&
+      this.numberOfTeams(p, playerTeams) >= 2
+    );
+  }
+
+  private playersPerTeam(
+    adjustedPlayerCount: number,
+    playerTeams: TeamCountConfig,
+  ): number {
+    switch (playerTeams) {
+      case Duos:
+        return Math.min(2, adjustedPlayerCount);
+      case Trios:
+        return Math.min(3, adjustedPlayerCount);
+      case Quads:
+        return Math.min(4, adjustedPlayerCount);
+      case HumansVsNations:
+        return adjustedPlayerCount; // adjustedPlayerCount is the human count
+      default:
+        return Math.floor(adjustedPlayerCount / playerTeams);
+    }
+  }
+
+  private numberOfTeams(
+    adjustedPlayerCount: number,
+    playerTeams: TeamCountConfig,
+  ): number {
+    switch (playerTeams) {
+      case Duos:
+        return Math.floor(adjustedPlayerCount / 2);
+      case Trios:
+        return Math.floor(adjustedPlayerCount / 3);
+      case Quads:
+        return Math.floor(adjustedPlayerCount / 4);
+      case HumansVsNations:
+        return 2; // always 2 teams
+      default:
+        return playerTeams; // numeric value IS the team count
+    }
+  }
+
+  /**
+   * Centralised spawn-immunity duration logic.
+   * - HumansVsNations: always 5s (nations can't benefit from longer PVP immunity)
+   * - 25M starting gold: 2:30 (extra time to compensate for high gold)
+   * - 5M starting gold: 30s
+   * - Default: 5s
+   */
+  private getSpawnImmunityDuration(
+    playerTeams?: TeamCountConfig,
+    startingGold?: number,
+  ): number {
+    if (playerTeams === HumansVsNations) return 5 * 10;
+    if (startingGold !== undefined && startingGold >= 25_000_000)
+      return 150 * 10;
+    if (startingGold) return 30 * 10;
+    return 5 * 10;
   }
 
   private async getCrowdedMaxPlayers(
@@ -248,9 +640,10 @@ export class MapPlaylist {
     isCompact: boolean,
   ): Promise<number | undefined> {
     const landTiles = await getMapLandTiles(map);
-    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    const [rawFirstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    const firstPlayerCount = Math.min(rawFirstPlayerCount, MAX_PLAYER_COUNT);
     if (firstPlayerCount <= 60) {
-      return isCompact ? 60 : 125;
+      return isCompact ? 60 : MAX_PLAYER_COUNT;
     }
     return undefined;
   }
@@ -270,6 +663,8 @@ export class MapPlaylist {
     if (isCompactMap) {
       p = Math.max(3, Math.floor(p * 0.25));
     }
+    // Cap for performance
+    p = Math.min(p, MAX_PLAYER_COUNT);
     return this.adjustForTeams(p, numPlayerTeams);
   }
 
@@ -303,7 +698,6 @@ export class MapPlaylist {
   /**
    * Calculate player counts from land tiles
    * For every 1,000,000 land tiles, take 50 players
-   * Limit to max 125 players for performance
    * Second value is 75% of calculated value, third is 50%
    * All values are rounded to the nearest 5
    */
@@ -312,74 +706,7 @@ export class MapPlaylist {
   ): [number, number, number] {
     const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
 
-    const base = roundToNearest5((landTiles / 1_000_000) * 50);
-    const limitedBase = Math.min(Math.max(base, 5), 125);
-    return [
-      limitedBase,
-      roundToNearest5(limitedBase * 0.75),
-      roundToNearest5(limitedBase * 0.5),
-    ];
-  }
-
-  private shuffleMapsPlaylist(): boolean {
-    const maps: GameMapType[] = [];
-    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
-      for (let i = 0; i < (frequency[key] ?? 0); i++) {
-        maps.push(GameMapType[key]);
-      }
-    });
-
-    const rand = new PseudoRandom(Date.now());
-
-    const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
-    const team1: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const team2: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
-
-    this.mapsPlaylist = [];
-    for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
-          return false;
-        }
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
-          return false;
-        }
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private addNextMap(
-    playlist: MapWithMode[],
-    nextEls: GameMapType[],
-    mode: GameMode,
-  ): boolean {
-    const nonConsecutiveNum = 5;
-    const lastEls = playlist
-      .slice(playlist.length - nonConsecutiveNum)
-      .map((m) => m.map);
-    for (let i = 0; i < nextEls.length; i++) {
-      const next = nextEls[i];
-      if (lastEls.includes(next)) {
-        continue;
-      }
-      nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
-      return true;
-    }
-    return false;
+    const base = Math.max(roundToNearest5((landTiles / 1_000_000) * 50), 5);
+    return [base, roundToNearest5(base * 0.75), roundToNearest5(base * 0.5)];
   }
 }

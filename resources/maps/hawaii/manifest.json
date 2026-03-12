@@ -1,0 +1,65 @@
+{
+  "map": {
+    "height": 2076,
+    "num_land_tiles": 408264,
+    "width": 3200
+  },
+  "map16x": {
+    "height": 519,
+    "num_land_tiles": 24703,
+    "width": 800
+  },
+  "map4x": {
+    "height": 1038,
+    "num_land_tiles": 100951,
+    "width": 1600
+  },
+  "name": "Hawaii",
+  "nations": [
+    {
+      "coordinates": [283, 281],
+      "flag": "us",
+      "name": "Niihau"
+    },
+    {
+      "coordinates": [613, 189],
+      "flag": "us",
+      "name": "Kauai"
+    },
+    {
+      "coordinates": [1424, 525],
+      "flag": "us",
+      "name": "Oahu"
+    },
+    {
+      "coordinates": [1930, 708],
+      "flag": "us",
+      "name": "Molokai"
+    },
+    {
+      "coordinates": [1977, 874],
+      "flag": "us",
+      "name": "Lanai"
+    },
+    {
+      "coordinates": [2145, 1036],
+      "flag": "us",
+      "name": "Kahoolawe"
+    },
+    {
+      "coordinates": [2287, 900],
+      "flag": "us",
+      "name": "Maui"
+    },
+    {
+      "coordinates": [2550, 1550],
+      "flag": "us",
+      "name": "Kona"
+    },
+    {
+      "coordinates": [2900, 1500],
+      "flag": "us",
+      "name": "Hilo"
+    }
+  ]
+}

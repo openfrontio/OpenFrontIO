@@ -1,7 +1,7 @@
-import { RailroadExecution } from "../execution/RailroadExecution";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { Game, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
+import { GameUpdateType } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";
 import { RailSpatialGrid } from "./RailroadSpatialGrid";
@@ -85,6 +85,8 @@ export class RailNetworkImpl implements RailNetwork {
   private stationRadius: number = 3;
   private gridCellSize: number = 4;
   private railGrid: RailSpatialGrid;
+  private nextId: number = 0;
+  private dirtyClusters = new Set<Cluster>();
 
   constructor(
     private game: Game,
@@ -105,26 +107,48 @@ export class RailNetworkImpl implements RailNetwork {
     }
   }
 
+  recomputeClusters() {
+    if (this.dirtyClusters.size === 0) return;
+
+    for (const cluster of this.dirtyClusters) {
+      const allOriginalStations = new Set(cluster.stations);
+      while (allOriginalStations.size > 0) {
+        const nextStation = allOriginalStations.values().next().value;
+        const allConnectedStations = this.computeCluster(nextStation);
+        // Filter stations that are connected to the current cluster
+        for (const connectedStation of allConnectedStations) {
+          allOriginalStations.delete(connectedStation);
+        }
+        // Those stations were disconnected: new cluster
+        if (allOriginalStations.size > 0) {
+          const newCluster = new Cluster();
+          // Switching their cluster will automatically remove them from their current cluster
+          newCluster.addStations(allConnectedStations);
+        }
+      }
+    }
+    this.dirtyClusters.clear();
+  }
+
   removeStation(unit: Unit): void {
     const station = this._stationManager.findStation(unit);
     if (!station) return;
 
-    const neighbors = station.neighbors();
     this.disconnectFromNetwork(station);
     this._stationManager.removeStation(station);
+    station.unit.setTrainStation(false);
 
     const cluster = station.getCluster();
     if (!cluster) return;
-    if (neighbors.length === 1) {
-      cluster.removeStation(station);
-    } else if (neighbors.length > 1) {
-      for (const neighbor of neighbors) {
-        const stations = this.computeCluster(neighbor);
-        const newCluster = new Cluster();
-        newCluster.addStations(stations);
-      }
+
+    cluster.removeStation(station);
+    if (cluster.size() === 0) {
+      this.deleteCluster(cluster);
+      this.dirtyClusters.delete(cluster);
+      return;
     }
-    station.unit.setTrainStation(false);
+
+    this.dirtyClusters.add(cluster);
   }
 
   /**
@@ -141,6 +165,7 @@ export class RailNetworkImpl implements RailNetwork {
     for (const rail of rails) {
       const from = rail.from;
       const to = rail.to;
+      const originalId = rail.id;
       const closestRailIndex = rail.getClosestTileIndex(
         this.game,
         station.tile(),
@@ -158,11 +183,13 @@ export class RailNetworkImpl implements RailNetwork {
         from,
         station,
         rail.tiles.slice(0, closestRailIndex),
+        this.nextId++,
       );
       const newRailTo = new Railroad(
         station,
         to,
         rail.tiles.slice(closestRailIndex),
+        this.nextId++,
       );
 
       // New station is connected to both new rails
@@ -179,12 +206,87 @@ export class RailNetworkImpl implements RailNetwork {
         cluster.addStation(station);
         editedClusters.add(cluster);
       }
+      this.game.addUpdate({
+        type: GameUpdateType.RailroadSnapEvent,
+        originalId,
+        newId1: newRailFrom.id,
+        newId2: newRailTo.id,
+        tiles1: newRailFrom.tiles,
+        tiles2: newRailTo.tiles,
+      });
     }
     // If multiple clusters own the new station, merge them into a single cluster
     if (editedClusters.size > 1) {
       this.mergeClusters(editedClusters);
     }
     return editedClusters.size !== 0;
+  }
+
+  overlappingRailroads(tile: TileRef): number[] {
+    return [...this.railGrid.query(tile, this.stationRadius)].map(
+      (railroad: Railroad) => railroad.id,
+    );
+  }
+
+  private canSnapToExistingRailway(tile: TileRef): boolean {
+    return this.railGrid.query(tile, this.stationRadius).size > 0;
+  }
+
+  computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
+    // Factories already show their radius, so we'll exclude from ghost rails
+    // in order not to clutter the interface too much.
+    if (![UnitType.City, UnitType.Port].includes(unitType)) {
+      return [];
+    }
+
+    if (this.canSnapToExistingRailway(tile)) {
+      return [];
+    }
+
+    const maxRange = this.game.config().trainStationMaxRange();
+    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
+    const maxPathSize = this.game.config().railroadMaxSize();
+
+    // Cannot connect if outside the max range of a factory
+    if (!this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)) {
+      return [];
+    }
+
+    const neighbors = this.game.nearbyUnits(tile, maxRange, [
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+    ]);
+    neighbors.sort((a, b) => a.distSquared - b.distSquared);
+
+    const paths: TileRef[][] = [];
+    const connectedStations: TrainStation[] = [];
+    for (const neighbor of neighbors) {
+      // Limit to the closest 5 stations to avoid running too many pathfinding calls.
+      if (paths.length >= 5) break;
+      if (neighbor.distSquared <= minRangeSquared) continue;
+
+      const neighborStation = this._stationManager.findStation(neighbor.unit);
+      if (!neighborStation) continue;
+
+      const alreadyReachable = connectedStations.some(
+        (s) =>
+          this.distanceFrom(
+            neighborStation,
+            s,
+            this.maxConnectionDistance - 1,
+          ) !== -1,
+      );
+      if (alreadyReachable) continue;
+
+      const path = this.pathService.findTilePath(tile, neighborStation.tile());
+      if (path.length > 0 && path.length < maxPathSize) {
+        paths.push(path);
+        connectedStations.push(neighborStation);
+      }
+    }
+
+    return paths;
   }
 
   private connectToNearbyStations(station: TrainStation) {
@@ -240,10 +342,6 @@ export class RailNetworkImpl implements RailNetwork {
       this.railGrid.unregister(rail);
     }
     station.clearRailroads();
-    const cluster = station.getCluster();
-    if (cluster !== null && cluster.size() === 1) {
-      this.deleteCluster(cluster);
-    }
   }
 
   private deleteCluster(cluster: Cluster) {
@@ -256,11 +354,15 @@ export class RailNetworkImpl implements RailNetwork {
   private connect(from: TrainStation, to: TrainStation) {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
     if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
-      const railRoad = new Railroad(from, to, path);
-      this.game.addExecution(new RailroadExecution(railRoad));
-      from.addRailroad(railRoad);
-      to.addRailroad(railRoad);
-      this.railGrid.register(railRoad);
+      const railroad = new Railroad(from, to, path, this.nextId++);
+      this.game.addUpdate({
+        type: GameUpdateType.RailroadConstructionEvent,
+        id: railroad.id,
+        tiles: railroad.tiles,
+      });
+      from.addRailroad(railroad);
+      to.addRailroad(railroad);
+      this.railGrid.register(railroad);
       return true;
     }
     return false;

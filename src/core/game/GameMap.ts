@@ -1,7 +1,6 @@
 import { Cell, TerrainType } from "./Game";
 
 export type TileRef = number;
-export type TileUpdate = bigint;
 
 export interface GameMap {
   ref(x: number, y: number): TileRef;
@@ -49,8 +48,20 @@ export interface GameMap {
     filter: (gm: GameMap, tile: TileRef) => boolean,
   ): Set<TileRef>;
 
-  toTileUpdate(tile: TileRef): bigint;
-  updateTile(tu: TileUpdate): TileRef;
+  /**
+   * Returns the packed per-tile state as an unsigned 16-bit value (`0..65535`).
+   *
+   * Backed by a `Uint16Array` in `GameMapImpl`, so callers must treat this as `uint16`.
+   */
+  tileState(tile: TileRef): number;
+
+  /**
+   * Applies a packed per-tile state value.
+   *
+   * `state` must be an unsigned 16-bit value (`0..65535`). Implementations may
+   * store this in a `Uint16Array` and will truncate higher bits if provided.
+   */
+  updateTile(tile: TileRef, state: number): void;
 
   numTilesWithFallout(): number;
 }
@@ -342,29 +353,20 @@ export class GameMapImpl implements GameMap {
     return seen;
   }
 
-  toTileUpdate(tile: TileRef): bigint {
-    // Pack the tile reference and state into a bigint
-    // Format: [32 bits for tile reference][16 bits for state]
-    return (BigInt(tile) << 16n) | BigInt(this.state[tile]);
+  tileState(tile: TileRef): number {
+    return this.state[tile];
   }
 
-  updateTile(tu: TileUpdate): TileRef {
-    // Extract tile reference and state from the TileUpdate
-    // Last 16 bits are state, rest is tile reference
-    const tileRef = Number(tu >> 16n);
-    const state = Number(tu & 0xffffn);
-
-    const existingFallout = this.hasFallout(tileRef);
-    this.state[tileRef] = state;
-    const newFallout = this.hasFallout(tileRef);
+  updateTile(tile: TileRef, state: number): void {
+    const existingFallout = this.hasFallout(tile);
+    this.state[tile] = state;
+    const newFallout = this.hasFallout(tile);
     if (existingFallout && !newFallout) {
       this._numTilesWithFallout--;
     }
     if (!existingFallout && newFallout) {
       this._numTilesWithFallout++;
     }
-
-    return tileRef;
   }
 }
 

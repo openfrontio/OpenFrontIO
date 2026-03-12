@@ -790,15 +790,15 @@
     "title_with_name": "{name}'e Birlik Gönder",
     "available_tooltip": "Şu anda mevcut olan birliklerin",
     "min_keep": "Minimum Elinde Tutma",
-    "slider_tooltip": "%{{percent}} •{{amount}}",
+    "slider_tooltip": "%{percent} •{amount}",
     "aria_slider": "Birlik çubuğu",
-    "capacity_note": "Alıcı ancak {{amount}} kadar alabilir."
+    "capacity_note": "Alıcı ancak {amount} kadar alabilir."
   },
   "send_gold_modal": {
     "title_with_name": "{name}'e Altın Gönder",
     "available_tooltip": "Mevcut altının",
     "aria_slider": "Miktar çubuğu",
-    "slider_tooltip": "%{{percent}} • {{amount}}"
+    "slider_tooltip": "%{percent} • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Tekrar oynatma hızı",

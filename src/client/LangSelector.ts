@@ -218,7 +218,7 @@ export class LangSelector extends LitElement {
       "help-modal",
       "settings-modal",
       "username-input",
-      "public-lobby",
+      "game-mode-selector",
       "user-setting",
       "o-modal",
       "o-button",
@@ -349,15 +349,14 @@ export class LangSelector extends LitElement {
         id="lang-selector"
         title="Change Language"
         @click=${this.openModal}
-        class="border-none bg-none cursor-pointer p-0 flex items-center justify-center"
-        style="width: 28px; height: 28px;"
+        class="border-none bg-none cursor-pointer p-0 flex items-center justify-center transition-transform duration-200 hover:scale-[1.1] active:scale-[0.9] opacity-60 hover:opacity-100 w-[40px] h-[40px] lg:w-[56px] lg:h-[56px]"
       >
         <img
           id="lang-flag"
-          class="object-contain hover:scale-110 transition-transform duration-200"
-          style="width: 28px; height: 28px;"
+          class="object-contain pointer-events-none transition-all w-[40px] h-[40px] lg:w-[48px] lg:h-[48px]"
           src="/flags/${currentLang.svg}.svg"
           alt="flag"
+          draggable="false"
         />
       </button>
     `;

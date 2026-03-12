@@ -1,7 +1,9 @@
 import {
+  BuildableUnit,
   Cell,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
@@ -21,7 +23,7 @@ export class WorkerClient {
 
   constructor(
     private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
       type: "module",
@@ -42,6 +44,13 @@ export class WorkerClient {
       case "game_update":
         if (this.gameUpdateCallback && message.gameUpdate) {
           this.gameUpdateCallback(message.gameUpdate);
+        }
+        break;
+      case "game_update_batch":
+        if (this.gameUpdateCallback && message.gameUpdates) {
+          for (const gu of message.gameUpdates) {
+            this.gameUpdateCallback(gu);
+          }
         }
         break;
 
@@ -102,12 +111,6 @@ export class WorkerClient {
     });
   }
 
-  sendHeartbeat() {
-    this.worker.postMessage({
-      type: "heartbeat",
-    });
-  }
-
   playerProfile(playerID: number): Promise<PlayerProfile> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -164,6 +167,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -185,9 +189,44 @@ export class WorkerClient {
       this.worker.postMessage({
         type: "player_actions",
         id: messageId,
-        playerID: playerID,
-        x: x,
-        y: y,
+        playerID,
+        x,
+        y,
+        units,
+      });
+    });
+  }
+
+  playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_buildables_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "player_buildables",
+        id: messageId,
+        playerID,
+        x,
+        y,
+        units,
       });
     });
   }

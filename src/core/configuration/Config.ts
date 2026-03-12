@@ -58,6 +58,8 @@ export interface NukeMagnitude {
 
 export interface Config {
   spawnImmunityDuration(): Tick;
+  nationSpawnImmunityDuration(): Tick;
+  hasExtendedSpawnImmunity(): boolean;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
   theme(): Theme;
@@ -72,6 +74,7 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   disableNavMesh(): boolean;
+  disableAlliances(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
@@ -124,13 +127,15 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipShortRangeDebuff(): number;
-  tradeShipGold(dist: number, numPorts: number): Gold;
+  tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(
+    tradeShipSpawnRejections: number,
     numTradeShips: number,
-    numPlayerPorts: number,
-    numPlayerTradeShips: number,
   ): number;
-  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainGold(
+    rel: "self" | "team" | "ally" | "other",
+    citiesVisited: number,
+  ): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;

@@ -13,7 +13,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -60,7 +60,6 @@ export interface LobbyConfig {
   serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
-  clientID: ClientID;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -75,9 +74,10 @@ export function joinLobby(
   onPrestart: () => void,
   onJoin: () => void,
 ): (force?: boolean) => boolean {
-  console.log(
-    `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
-  );
+  // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
+  let clientID: ClientID | undefined;
+
+  console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
   const userSettings: UserSettings = new UserSettings();
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
@@ -86,23 +86,18 @@ export function joinLobby(
 
   let currentGameRunner: ClientGameRunner | null = null;
 
-  let hasJoined = false;
-
   const onconnect = () => {
-    if (hasJoined) {
-      console.log("rejoining game");
-      transport.rejoinGame(0);
-    } else {
-      hasJoined = true;
-      console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-      transport.joinGame();
-    }
+    // Always send join - server will detect reconnection via persistentID
+    console.log(`Joining game lobby ${lobbyConfig.gameID}`);
+    transport.joinGame();
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "lobby_info") {
-      eventBus.emit(new LobbyInfoEvent(message.lobby));
+      // Server tells us our assigned clientID
+      clientID = message.myClientID;
+      eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       return;
     }
     if (message.type === "prestart") {
@@ -122,11 +117,14 @@ export function joinLobby(
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
+      // Server tells us our assigned clientID (also sent on start for late joins)
+      clientID = message.myClientID;
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
       createClientGame(
         lobbyConfig,
+        clientID,
         eventBus,
         transport,
         userSettings,
@@ -152,7 +150,7 @@ export function joinLobby(
             e.message,
             e.stack,
             lobbyConfig.gameID,
-            lobbyConfig.clientID,
+            clientID,
             true,
             false,
             "error_modal.connection_error",
@@ -173,7 +171,7 @@ export function joinLobby(
           message.error,
           message.message,
           lobbyConfig.gameID,
-          lobbyConfig.clientID,
+          clientID,
           true,
           false,
           "error_modal.connection_error",
@@ -200,6 +198,7 @@ export function joinLobby(
 
 async function createClientGame(
   lobbyConfig: LobbyConfig,
+  clientID: ClientID | undefined,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
@@ -225,16 +224,14 @@ async function createClientGame(
       mapLoader,
     );
   }
-  const worker = new WorkerClient(
-    lobbyConfig.gameStartInfo,
-    lobbyConfig.clientID,
-  );
+  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
   const gameView = new GameView(
     worker,
     config,
     gameMap,
-    lobbyConfig.clientID,
+    clientID,
+    lobbyConfig.playerName,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
   );
@@ -248,6 +245,7 @@ async function createClientGame(
 
   return new ClientGameRunner(
     lobbyConfig,
+    clientID,
     eventBus,
     gameRenderer,
     new InputHandler(gameRenderer.uiState, canvas, eventBus),
@@ -273,6 +271,7 @@ export class ClientGameRunner {
 
   constructor(
     private lobby: LobbyConfig,
+    private clientID: ClientID | undefined,
     private eventBus: EventBus,
     private renderer: GameRenderer,
     private input: InputHandler,
@@ -299,15 +298,15 @@ export class ClientGameRunner {
   }
 
   private async saveGame(update: WinUpdate) {
-    if (this.myPlayer === null) {
+    if (!this.clientID) {
       return;
     }
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
-        clientID: this.lobby.clientID,
-        stats: update.allPlayersStats[this.lobby.clientID],
+        clientID: this.clientID,
+        stats: update.allPlayersStats[this.clientID],
       },
     ];
 
@@ -372,7 +371,7 @@ export class ClientGameRunner {
           gu.errMsg,
           gu.stack ?? "missing",
           this.lobby.gameStartInfo.gameID,
-          this.lobby.clientID,
+          this.clientID,
         );
         console.error(gu.stack);
         this.stop();
@@ -397,15 +396,6 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
-
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
       console.log("Connected to game server!");
@@ -434,7 +424,7 @@ export class ClientGameRunner {
                 "spawn_failed",
                 translateText("error_modal.spawn_failed.description"),
                 this.lobby.gameID,
-                this.lobby.clientID,
+                this.clientID,
                 true,
                 false,
                 translateText("error_modal.spawn_failed.title"),
@@ -471,7 +461,7 @@ export class ClientGameRunner {
           `desync from server: ${JSON.stringify(message)}`,
           "",
           this.lobby.gameStartInfo.gameID,
-          this.lobby.clientID,
+          this.clientID,
           true,
           false,
           "error_modal.desync_notice",
@@ -482,7 +472,7 @@ export class ClientGameRunner {
           message.error,
           message.message,
           this.lobby.gameID,
-          this.lobby.clientID,
+          this.clientID,
           true,
           false,
           "error_modal.connection_error",
@@ -566,20 +556,20 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
+    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canAutoBoat(actions, tile)) {
+      } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -601,7 +591,8 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -614,7 +605,7 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer!.actions(clickedTile, Structures.types).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -662,16 +653,23 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) !== false) {
-        this.sendBoatAttackIntent(tile);
-      }
-    });
+    this.myPlayer
+      .buildables(tile, [UnitType.TransportShip])
+      .then((buildables) => {
+        if (this.canBoatAttack(buildables) !== false) {
+          this.sendBoatAttackIntent(tile);
+        } else {
+          console.warn(
+            "Boat attack triggered but can't send Transport Ship to tile",
+          );
+        }
+      });
   }
 
   private doGroundAttackUnderCursor(): void {
@@ -681,18 +679,18 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
+    this.myPlayer.actions(tile, null).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       }
@@ -760,15 +758,9 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions): false | TileRef {
-    const bu = actions.buildableUnits.find(
-      (bu) => bu.type === UnitType.TransportShip,
-    );
-    if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
-      return false;
-    }
-    return bu.canBuild;
+  private canBoatAttack(buildables: BuildableUnit[]): false | TileRef {
+    const bu = buildables.find((bu) => bu.type === UnitType.TransportShip);
+    return bu?.canBuild ?? false;
   }
 
   private sendBoatAttackIntent(tile: TileRef) {
@@ -782,10 +774,10 @@ export class ClientGameRunner {
     );
   }
 
-  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
+  private canAutoBoat(buildables: BuildableUnit[], tile: TileRef): boolean {
     if (!this.gameView.isLand(tile)) return false;
 
-    const canBuild = this.canBoatAttack(actions);
+    const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
     // TODO: Global enable flag
@@ -822,7 +814,7 @@ function showErrorModal(
   error: string,
   message: string | undefined,
   gameID: GameID,
-  clientID: ClientID,
+  clientID: ClientID | undefined,
   closable = false,
   showDiscord = true,
   heading = "error_modal.crashed",

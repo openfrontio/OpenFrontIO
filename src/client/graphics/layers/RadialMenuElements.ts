@@ -1,5 +1,12 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  BuildableAttacks,
+  PlayerActions,
+  PlayerBuildableUnitType,
+  Structures,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -46,7 +53,7 @@ export interface MenuElement {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
-  color?: string;
+  color?: string | ((params: MenuElementParams) => string);
   icon?: string;
   text?: string;
   fontSize?: string;
@@ -57,6 +64,10 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+
+  renderType?: string;
+
+  timerFraction?: (params: MenuElementParams) => number; // 0..1, for arc timer overlay
 }
 
 export interface TooltipKey {
@@ -71,31 +82,32 @@ export interface CenterButtonElement {
 }
 
 export const COLORS = {
-  build: "#ebe250",
-  building: "#2c2c2c",
-  boat: "#3f6ab1",
-  ally: "#53ac75",
-  breakAlly: "#c74848",
-  delete: "#ff0000",
-  info: "#64748B",
-  target: "#ff0000",
-  attack: "#ff0000",
+  build: "#e6c74a",
+  building: "#1e3a5f",
+  boat: "#2a82c9",
+  ally: "#4ade80",
+  breakAlly: "#dc2626",
+  breakAllyNoDebuff: "#d97706",
+  delete: "#ef4444",
+  info: "#475569",
+  target: "#ef4444",
+  attack: "#ef4444",
   infoDetails: "#7f8c8d",
-  infoEmoji: "#f1c40f",
-  trade: "#008080",
-  embargo: "#6600cc",
+  infoEmoji: "#fbbf24",
+  trade: "#0891b2",
+  embargo: "#7c3aed",
   tooltip: {
-    cost: "#ffd700",
-    count: "#aaa",
+    cost: "#f59e0b",
+    count: "#94a3b8",
   },
   chat: {
-    default: "#66c",
-    help: "#4caf50",
-    attack: "#f44336",
-    defend: "#2196f3",
-    greet: "#ff9800",
-    misc: "#9c27b0",
-    warnings: "#e3c532",
+    default: "#6366f1",
+    help: "#22c55e",
+    attack: "#ef4444",
+    defend: "#3b82f6",
+    greet: "#f97316",
+    misc: "#a855f7",
+    warnings: "#fbbf24",
   },
 };
 
@@ -209,6 +221,36 @@ const allyRequestElement: MenuElement = {
   },
 };
 
+const allyExtendElement: MenuElement = {
+  id: "ally_extend",
+  name: "extend",
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.allianceInfo?.inExtensionWindow,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.allianceInfo?.canExtend,
+  color: COLORS.ally,
+  icon: allianceIcon,
+  action: (params: MenuElementParams) => {
+    if (!params.playerActions?.interaction?.allianceInfo?.canExtend) return;
+    params.playerActionHandler.handleExtendAlliance(params.selected!);
+    params.closeMenu();
+  },
+  timerFraction: (params: MenuElementParams): number => {
+    const interaction = params.playerActions?.interaction;
+    if (!interaction?.allianceInfo) return 1;
+    const remaining = Math.max(
+      0,
+      interaction.allianceInfo.expiresAt - params.game.ticks(),
+    );
+    const extensionWindow = Math.max(
+      1,
+      params.game.config().allianceExtensionPromptOffset(),
+    );
+    return Math.max(0, Math.min(1, remaining / extensionWindow));
+  },
+  renderType: "allyExtend",
+};
+
 const allyBreakElement: MenuElement = {
   id: "ally_break",
   name: "break",
@@ -216,7 +258,10 @@ const allyBreakElement: MenuElement = {
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
+  color: (params: MenuElementParams) =>
+    params.selected?.isTraitor() || params.selected?.isDisconnected()
+      ? COLORS.breakAllyNoDebuff
+      : COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
@@ -333,45 +378,34 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
-function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const Units: Set<UnitType> = new Set<UnitType>();
+function getAllEnabledUnits(
+  myPlayer: boolean,
+  config: Config,
+): Set<PlayerBuildableUnitType> {
+  const units: Set<PlayerBuildableUnitType> =
+    new Set<PlayerBuildableUnitType>();
 
-  const addStructureIfEnabled = (unitType: UnitType) => {
+  const addIfEnabled = (unitType: PlayerBuildableUnitType) => {
     if (!config.isUnitDisabled(unitType)) {
-      Units.add(unitType);
+      units.add(unitType);
     }
   };
 
   if (myPlayer) {
-    addStructureIfEnabled(UnitType.City);
-    addStructureIfEnabled(UnitType.DefensePost);
-    addStructureIfEnabled(UnitType.Port);
-    addStructureIfEnabled(UnitType.MissileSilo);
-    addStructureIfEnabled(UnitType.SAMLauncher);
-    addStructureIfEnabled(UnitType.Factory);
+    Structures.types.forEach(addIfEnabled);
   } else {
-    addStructureIfEnabled(UnitType.Warship);
-    addStructureIfEnabled(UnitType.HydrogenBomb);
-    addStructureIfEnabled(UnitType.MIRV);
-    addStructureIfEnabled(UnitType.AtomBomb);
+    BuildableAttacks.types.forEach(addIfEnabled);
   }
 
-  return Units;
+  return units;
 }
-
-const ATTACK_UNIT_TYPES: UnitType[] = [
-  UnitType.AtomBomb,
-  UnitType.MIRV,
-  UnitType.HydrogenBomb,
-  UnitType.Warship,
-];
 
 function createMenuElements(
   params: MenuElementParams,
   filterType: "attack" | "build",
   elementIdPrefix: string,
 ): MenuElement[] {
-  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+  const unitTypes: Set<PlayerBuildableUnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
     params.game.config(),
   );
@@ -381,51 +415,53 @@ function createMenuElements(
       (item) =>
         unitTypes.has(item.unitType) &&
         (filterType === "attack"
-          ? ATTACK_UNIT_TYPES.includes(item.unitType)
-          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
+          ? BuildableAttacks.has(item.unitType)
+          : !BuildableAttacks.has(item.unitType)),
     )
-    .map((item: BuildItemDisplay) => ({
-      id: `${elementIdPrefix}_${item.unitType}`,
-      name: item.key
-        ? item.key.replace("unit_type.", "")
-        : item.unitType.toString(),
-      disabled: (params: MenuElementParams) =>
-        !params.buildMenu.canBuildOrUpgrade(item),
-      color: params.buildMenu.canBuildOrUpgrade(item)
-        ? filterType === "attack"
-          ? COLORS.attack
-          : COLORS.building
-        : undefined,
-      icon: item.icon,
-      tooltipItems: [
-        { text: translateText(item.key ?? ""), className: "title" },
-        {
-          text: translateText(item.description ?? ""),
-          className: "description",
+    .map((item: BuildItemDisplay) => {
+      const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);
+      return {
+        id: `${elementIdPrefix}_${item.unitType}`,
+        name: item.key
+          ? item.key.replace("unit_type.", "")
+          : item.unitType.toString(),
+        disabled: () => !canBuildOrUpgrade,
+        color: canBuildOrUpgrade
+          ? filterType === "attack"
+            ? COLORS.attack
+            : COLORS.building
+          : undefined,
+        icon: item.icon,
+        tooltipItems: [
+          { text: translateText(item.key ?? ""), className: "title" },
+          {
+            text: translateText(item.description ?? ""),
+            className: "description",
+          },
+          {
+            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+            className: "cost",
+          },
+          item.countable
+            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+            : null,
+        ].filter(
+          (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+        ),
+        action: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (buildableUnit === undefined) {
+            return;
+          }
+          if (canBuildOrUpgrade) {
+            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+          }
+          params.closeMenu();
         },
-        {
-          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-          className: "cost",
-        },
-        item.countable
-          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-          : null,
-      ].filter(
-        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-      ),
-      action: (params: MenuElementParams) => {
-        const buildableUnit = params.playerActions.buildableUnits.find(
-          (bu) => bu.type === item.unitType,
-        );
-        if (buildableUnit === undefined) {
-          return;
-        }
-        if (params.buildMenu.canBuildOrUpgrade(item)) {
-          params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
-        }
-        params.closeMenu();
-      },
-    }));
+      };
+    });
 }
 
 export const attackMenuElement: MenuElement = {
@@ -448,7 +484,7 @@ const donateGoldRadialElement: MenuElement = {
     params.game.inSpawnPhase() ||
     !params.playerActions?.interaction?.canDonateGold,
   icon: donateGoldIcon,
-  color: "#EAB308",
+  color: "#f59e0b",
   action: (params: MenuElementParams) => {
     if (!params.selected) return;
     params.playerPanel.openSendGoldModal(
@@ -618,20 +654,24 @@ export const rootMenuElement: MenuElement = {
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
     const isAllied = params.selected?.isAlliedWith(params.myPlayer);
+    const isDisconnected = isDisconnectedTarget(params);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    const inExtensionWindow =
+      params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            isAllied ? allyBreakElement : boatMenuElement,
-            allyRequestElement,
-            isFriendlyTarget(params) && !isDisconnectedTarget(params)
+            isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
+            inExtensionWindow ? allyExtendElement : allyRequestElement,
+            isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),
