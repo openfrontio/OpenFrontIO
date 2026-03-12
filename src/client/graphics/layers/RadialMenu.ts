@@ -462,7 +462,7 @@ export class RadialMenu implements Layer {
         return;
       }
 
-      path.attr("filter", "url(#glow)");
+      path.style("filter", "brightness(1.5)");
     };
 
     const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: any) => {
@@ -481,7 +481,7 @@ export class RadialMenu implements Layer {
           d.data.id === this.selectedItemId)
       )
         return;
-      path.attr("filter", null);
+      path.style("filter", null);
       const color = disabled
         ? this.config.disabledColor
         : (resolveColor(d.data, this.params) ?? "#333333");
