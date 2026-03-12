@@ -1180,16 +1180,20 @@ export class PlayerImpl implements Player {
       return false;
     }
     const owner = this.mg.owner(tile);
+    // Allow nuking teammates after the game is over (aftergame fun)
+    const gameOver = this.mg.getWinner() !== null;
     if (owner.isPlayer()) {
-      if (this.isOnSameTeam(owner)) {
+      if (this.isOnSameTeam(owner) && !gameOver) {
         return false;
       }
     }
 
-    // Prevent launching nukes that would hit teammate structures (only in team games)
+    // Prevent launching nukes that would hit teammate structures (only in team games).
+    // Disabled after game-over so players can nuke teammates in the aftergame.
     if (
       this.mg.config().gameConfig().gameMode === GameMode.Team &&
-      nukeType !== UnitType.MIRV
+      nukeType !== UnitType.MIRV &&
+      !gameOver
     ) {
       const magnitude = this.mg.config().nukeMagnitudes(nukeType);
       const wouldHitTeammate = this.mg.anyUnitNearby(

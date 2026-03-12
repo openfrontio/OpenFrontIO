@@ -116,12 +116,20 @@ class SAMTargetingSystem {
       detectionRange,
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) => {
-        return (
-          isUnit(unit) &&
-          unit.owner() !== this.sam.owner() &&
-          !this.sam.owner().isFriendly(unit.owner()) &&
-          !unit.targetedBySAM()
-        );
+        if (!isUnit(unit) || unit.targetedBySAM()) return false;
+        if (unit.owner() === this.sam.owner()) return false;
+
+        const samOwner = this.sam.owner();
+        const nukeOwner = unit.owner();
+
+        // After game-over in team games, SAMs also target teammate nukes (aftergame fun)
+        if (samOwner.isFriendly(nukeOwner)) {
+          return (
+            this.mg.getWinner() !== null && samOwner.isOnSameTeam(nukeOwner)
+          );
+        }
+
+        return true;
       },
     );
 
