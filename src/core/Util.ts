@@ -14,9 +14,9 @@ import {
 } from "./Schemas";
 
 import {
-  BOT_NAME_PREFIXES,
-  BOT_NAME_SUFFIXES,
-} from "./execution/utils/BotNames";
+  TRIBE_NAME_PREFIXES,
+  TRIBE_NAME_SUFFIXES,
+} from "./execution/utils/TribeNames";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -297,11 +297,12 @@ export function createRandomName(
   let randomName: string | null = null;
   if (playerType === PlayerType.Human) {
     const hash = simpleHash(name);
-    const prefixIndex = hash % BOT_NAME_PREFIXES.length;
+    const prefixIndex = hash % TRIBE_NAME_PREFIXES.length;
     const suffixIndex =
-      Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
+      Math.floor(hash / TRIBE_NAME_PREFIXES.length) %
+      TRIBE_NAME_SUFFIXES.length;
 
-    randomName = `👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+    randomName = `👤 ${TRIBE_NAME_PREFIXES[prefixIndex]} ${TRIBE_NAME_SUFFIXES[suffixIndex]}`;
   }
   return randomName;
 }

@@ -104,11 +104,10 @@ export class GameManager {
   }
 
   desyncCount(): number {
-    let totalDesyncs = 0;
-    this.games.forEach((game: GameServer) => {
-      totalDesyncs += game.desyncCount;
-    });
-    return totalDesyncs;
+    return [...this.games.values()].reduce(
+      (acc, game) => acc + game.numDesyncedClients(),
+      0,
+    );
   }
 
   tick() {

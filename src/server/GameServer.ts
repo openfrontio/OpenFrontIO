@@ -79,8 +79,6 @@ export class GameServer {
 
   private _hasEnded = false;
 
-  public desyncCount = 0;
-
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -156,6 +154,9 @@ export class GameServer {
     }
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
+    }
+    if (gameConfig.disableAlliances !== undefined) {
+      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
     }
   }
 
@@ -525,6 +526,10 @@ export class GameServer {
 
   public numClients(): number {
     return this.activeClients.length;
+  }
+
+  public numDesyncedClients(): number {
+    return this.outOfSyncClients.size;
   }
 
   public prestart() {
@@ -978,8 +983,6 @@ export class GameServer {
 
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
-
-    this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
