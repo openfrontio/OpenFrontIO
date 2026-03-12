@@ -817,7 +817,7 @@ export class GameServer {
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
       this.activeClients.length < this.gameConfig.maxPlayers;
-    if (lessThanLifetime && notEnoughPlayers) {
+    if (lessThanLifetime && notEnoughPlayers && !this.hasStarted()) {
       return GamePhase.Lobby;
     }
     const warmupOver = now > this.startsAt! + 30 * 1000;
