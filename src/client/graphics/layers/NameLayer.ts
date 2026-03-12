@@ -109,12 +109,12 @@ export class NameLayer implements Layer {
     }
   }
 
-  private updateElementVisibility(render: RenderInfo) {
+  private updateElementVisibility(render: RenderInfo, baseSize?: number) {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
       return;
     }
 
-    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
+    baseSize = baseSize ?? Math.max(1, Math.floor(render.player.nameLocation().size));
     const size = this.transformHandler.scale * baseSize;
     const isOnScreen = render.location
       ? this.transformHandler.isOnScreen(render.location)
@@ -302,11 +302,9 @@ export class NameLayer implements Layer {
 
     // Calculate base size and scale
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.fontColor = this.theme.textColor(render.player);
 
     // Update element visibility (handles Ctrl key, size, and screen position)
-    this.updateElementVisibility(render);
+    this.updateElementVisibility(render, baseSize);
 
     // If element is hidden, don't continue with rendering
     if (render.element.style.display === "none") {
@@ -319,6 +317,9 @@ export class NameLayer implements Layer {
       return;
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
+
+    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
+    render.fontColor = this.theme.textColor(render.player);
 
     // Update text sizes
     const nameDiv = render.element.querySelector(
