@@ -122,6 +122,7 @@ export enum GameMapType {
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
+  Conakry = "Conakry",
   Alps = "Alps",
 }
 
@@ -172,6 +173,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.AmazonRiver,
     GameMapType.Yenisei,
     GameMapType.Hawaii,
+    GameMapType.Conakry,
     GameMapType.Alps,
   ],
   fantasy: [
