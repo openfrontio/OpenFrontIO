@@ -701,10 +701,14 @@ export class ClientGameRunner {
     const tile = this.getTileUnderCursor();
     if (tile === null) return;
 
-    const myPlayer =
-      this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
-    if (myPlayer === null) return;
-    this.myPlayer = myPlayer;
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const myPlayer = this.myPlayer;
 
     const tileOwner = this.gameView.owner(tile);
     if (!tileOwner.isPlayer()) return;
@@ -723,10 +727,14 @@ export class ClientGameRunner {
     const tile = this.getTileUnderCursor();
     if (tile === null) return;
 
-    const myPlayer =
-      this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
-    if (myPlayer === null) return;
-    this.myPlayer = myPlayer;
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const myPlayer = this.myPlayer;
 
     const tileOwner = this.gameView.owner(tile);
     if (!tileOwner.isPlayer()) return;
