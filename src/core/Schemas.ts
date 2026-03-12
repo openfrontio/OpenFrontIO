@@ -164,10 +164,22 @@ export const PublicGameInfoSchema = z.object({
   publicGameType: PublicGameTypeSchema,
 });
 
-export const PublicGamesSchema = z.object({
+const SingleLobbyGamesSchema = z.object({
+  mode: z.literal("single"),
+  serverTime: z.number(),
+  lobby: PublicGameInfoSchema,
+});
+
+const MultiLobbyGamesSchema = z.object({
+  mode: z.literal("multi"),
   serverTime: z.number(),
   games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
+
+export const PublicGamesSchema = z.discriminatedUnion("mode", [
+  SingleLobbyGamesSchema,
+  MultiLobbyGamesSchema,
+]);
 
 export class LobbyInfoEvent implements GameEvent {
   constructor(

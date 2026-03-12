@@ -88,9 +88,12 @@ export class GameModeSelector extends LitElement {
     );
     this.requestUpdate();
 
-    const allGames = Object.values(lobbies.games ?? {}).flat();
+    const allGames =
+      lobbies.mode === "multi"
+        ? Object.values(lobbies.games).flat()
+        : [lobbies.lobby];
     for (const game of allGames) {
-      const mapType = game.gameConfig?.gameMap as GameMapType;
+      const mapType = game?.gameConfig?.gameMap as GameMapType;
       if (mapType && !this.mapAspectRatios.has(mapType)) {
         // New Map reference triggers Lit reactivity; placeholder ratio 1 lets
         // has() guard against duplicate in-flight fetches.
@@ -114,9 +117,15 @@ export class GameModeSelector extends LitElement {
   }
 
   render() {
-    const ffa = this.lobbies?.games?.["ffa"]?.[0];
-    const teams = this.lobbies?.games?.["team"]?.[0];
-    const special = this.lobbies?.games?.["special"]?.[0];
+    const lobbies = this.lobbies;
+    const isSingle = lobbies?.mode === "single";
+    const singleLobby = lobbies?.mode === "single" ? lobbies.lobby : undefined;
+    const ffa =
+      lobbies?.mode === "multi" ? lobbies.games?.["ffa"]?.[0] : undefined;
+    const teams =
+      lobbies?.mode === "multi" ? lobbies.games?.["team"]?.[0] : undefined;
+    const special =
+      lobbies?.mode === "multi" ? lobbies.games?.["special"]?.[0] : undefined;
 
     return html`
       <div class="flex flex-col gap-4 w-full px-4 sm:px-0 mx-auto pb-4 sm:pb-0">
@@ -148,47 +157,74 @@ export class GameModeSelector extends LitElement {
         </div>
         <!-- Game cards grid -->
         <div
-          class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
+          class="grid grid-cols-1 gap-4 sm:h-[min(24rem,40vh)] ${isSingle
+            ? ""
+            : "sm:grid-cols-[2fr_1fr]"}"
         >
-          <!-- Left col: main card (desktop only) -->
-          ${special
-            ? html`<div class="hidden sm:block">
-                ${this.renderSpecialLobbyCard(special)}
-              </div>`
-            : ffa
-              ? html`<div class="hidden sm:block">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                </div>`
-              : nothing}
+          ${isSingle && singleLobby
+            ? html`
+                <!-- Single lobby mode: one full-width card -->
+                <div class="hidden sm:block">
+                  ${singleLobby.publicGameType === "special"
+                    ? this.renderSpecialLobbyCard(singleLobby)
+                    : this.renderLobbyCard(
+                        singleLobby,
+                        this.getLobbyTitle(singleLobby),
+                      )}
+                </div>
+                <div class="sm:hidden">
+                  ${singleLobby.publicGameType === "special"
+                    ? this.renderSpecialLobbyCard(singleLobby)
+                    : this.renderLobbyCard(
+                        singleLobby,
+                        this.getLobbyTitle(singleLobby),
+                      )}
+                </div>
+              `
+            : html`
+                <!-- Left col: main card (desktop only) -->
+                ${special
+                  ? html`<div class="hidden sm:block">
+                      ${this.renderSpecialLobbyCard(special)}
+                    </div>`
+                  : ffa
+                    ? html`<div class="hidden sm:block">
+                        ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                      </div>`
+                    : nothing}
 
-          <!-- Right col: FFA + teams (desktop only) -->
-          <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special && ffa
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                </div>`
-              : nothing}
-            ${teams
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                </div>`
-              : nothing}
-          </div>
+                <!-- Right col: FFA + teams (desktop only) -->
+                <div class="hidden sm:flex sm:flex-col sm:gap-4">
+                  ${special && ffa
+                    ? html`<div class="flex-1 min-h-0">
+                        ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                      </div>`
+                    : nothing}
+                  ${teams
+                    ? html`<div class="flex-1 min-h-0">
+                        ${this.renderLobbyCard(
+                          teams,
+                          this.getLobbyTitle(teams),
+                        )}
+                      </div>`
+                    : nothing}
+                </div>
 
-          <!-- Mobile: special, ffa, teams inline -->
-          <div class="sm:hidden">
-            ${special ? this.renderSpecialLobbyCard(special) : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${ffa
-              ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-              : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${teams
-              ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-              : nothing}
-          </div>
+                <!-- Mobile: special, ffa, teams inline -->
+                <div class="sm:hidden">
+                  ${special ? this.renderSpecialLobbyCard(special) : nothing}
+                </div>
+                <div class="sm:hidden">
+                  ${ffa
+                    ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                    : nothing}
+                </div>
+                <div class="sm:hidden">
+                  ${teams
+                    ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+                    : nothing}
+                </div>
+              `}
         </div>
 
         <!-- Solo: full width, desktop only -->

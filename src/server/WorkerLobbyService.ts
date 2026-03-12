@@ -88,7 +88,11 @@ export class WorkerLobbyService {
           publicGameType: gi.publicGameType!,
         } satisfies PublicGameInfo;
       });
-    process.send?.({ type: "lobbyList", lobbies } satisfies WorkerLobbyList);
+    process.send?.({
+      type: "lobbyList",
+      lobbies,
+      clientCount: this.gm.activeClients(),
+    } satisfies WorkerLobbyList);
   }
 
   private setupUpgradeHandler() {

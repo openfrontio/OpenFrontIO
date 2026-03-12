@@ -19,12 +19,17 @@ export interface MasterLobbyServiceOptions {
   log: typeof logger;
 }
 
+const CCU_SINGLE_LOBBY_THRESHOLD = 1500;
+const SINGLE_LOBBY_ROTATION: PublicGameType[] = ["special", "team", "ffa"];
+
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
   private readonly workerLobbies = new Map<number, PublicGameInfo[]>();
+  private readonly workerClientCounts = new Map<number, number>();
   private readonly readyWorkers = new Set<number>();
   private started = false;
+  private singleLobbyRotationIndex = 0;
 
   constructor(
     private config: ServerConfig,
@@ -49,6 +54,7 @@ export class MasterLobbyService {
           break;
         case "lobbyList":
           this.workerLobbies.set(workerId, msg.lobbies);
+          this.workerClientCounts.set(workerId, msg.clientCount);
           break;
       }
     });
@@ -109,13 +115,27 @@ export class MasterLobbyService {
     return result;
   }
 
+  private getTotalCCU(): number {
+    let total = 0;
+    for (const count of this.workerClientCounts.values()) {
+      total += count;
+    }
+    return total;
+  }
+
   private broadcastLobbies() {
+    const singleLobbyMode = this.getTotalCCU() < CCU_SINGLE_LOBBY_THRESHOLD;
+    const publicGames = singleLobbyMode
+      ? this.buildSingleLobbyBroadcast()
+      : {
+          mode: "multi" as const,
+          serverTime: Date.now(),
+          games: this.getAllLobbies(),
+        };
+
     const msg = {
       type: "lobbiesBroadcast",
-      publicGames: {
-        serverTime: Date.now(),
-        games: this.getAllLobbies(),
-      },
+      publicGames,
     } satisfies MasterLobbiesBroadcast;
     for (const worker of this.workers.values()) {
       worker.send(msg, (e) => {
@@ -126,7 +146,63 @@ export class MasterLobbyService {
     }
   }
 
+  private buildSingleLobbyBroadcast() {
+    const allLobbies = this.getAllLobbies();
+    const type = SINGLE_LOBBY_ROTATION[this.singleLobbyRotationIndex];
+    const lobby = allLobbies[type][0];
+    // If the active rotation type has no lobby yet, fall back to any available lobby.
+    const activeLobby =
+      lobby ?? SINGLE_LOBBY_ROTATION.map((t) => allLobbies[t][0]).find(Boolean);
+    return {
+      mode: "single" as const,
+      serverTime: Date.now(),
+      lobby: activeLobby,
+    };
+  }
+
   private async maybeScheduleLobby() {
+    const singleLobbyMode = this.getTotalCCU() < CCU_SINGLE_LOBBY_THRESHOLD;
+
+    if (singleLobbyMode) {
+      await this.maybeScheduleSingleLobby();
+    } else {
+      await this.maybeScheduleAllLobbies();
+    }
+  }
+
+  private async maybeScheduleSingleLobby() {
+    const allLobbies = this.getAllLobbies();
+    const type = SINGLE_LOBBY_ROTATION[this.singleLobbyRotationIndex];
+    const lobbies = allLobbies[type];
+
+    // Advance rotation when the current lobby has started.
+    if (lobbies[0]?.startsAt !== undefined) {
+      this.singleLobbyRotationIndex =
+        (this.singleLobbyRotationIndex + 1) % SINGLE_LOBBY_ROTATION.length;
+    }
+
+    // Clean up any stale lobbies from the other two types (don't schedule more of them).
+    // We only need to manage the active type.
+    if (lobbies.length >= 2) return;
+
+    const nextLobby = lobbies[0];
+    if (nextLobby && nextLobby.startsAt === undefined) {
+      this.sendMessageToWorker({
+        type: "updateLobby",
+        gameID: nextLobby.gameID,
+        startsAt: Date.now() + this.config.gameCreationRate(),
+      });
+    }
+
+    this.sendMessageToWorker({
+      type: "createGame",
+      gameID: generateID(),
+      gameConfig: await this.playlist.gameConfig(type),
+      publicGameType: type,
+    } satisfies MasterCreateGame);
+  }
+
+  private async maybeScheduleAllLobbies() {
     const lobbiesByType = this.getAllLobbies();
 
     for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {

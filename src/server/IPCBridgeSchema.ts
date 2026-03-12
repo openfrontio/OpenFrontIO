@@ -23,6 +23,7 @@ export type MasterMessage = z.infer<typeof MasterMessageSchema>;
 const WorkerLobbyListSchema = z.object({
   type: z.literal("lobbyList"),
   lobbies: z.array(PublicGameInfoSchema),
+  clientCount: z.number(),
 });
 
 const WorkerReadySchema = z.object({
