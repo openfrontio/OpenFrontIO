@@ -6,7 +6,7 @@ import { Cell } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
-import { createCanvas, renderTroops } from "../../Utils";
+import { renderTroops } from "../../Utils";
 import {
   computeAllianceClipPath,
   createAllianceProgressIcon,
@@ -56,7 +56,6 @@ class RenderInfo {
 }
 
 export class NameLayer implements Layer {
-  private canvas: HTMLCanvasElement;
   private lastChecked = 0;
   private renderCheckRate = 100;
   private renderRefreshRate = 500;
@@ -76,11 +75,6 @@ export class NameLayer implements Layer {
     private eventBus: EventBus,
   ) {}
 
-  resizeCanvas() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-  }
-
   shouldTransform(): boolean {
     return false;
   }
@@ -90,10 +84,6 @@ export class NameLayer implements Layer {
   }
 
   public init() {
-    this.canvas = createCanvas();
-    window.addEventListener("resize", () => this.resizeCanvas());
-    this.resizeCanvas();
-
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
     this.container.style.left = "50%";
@@ -180,7 +170,7 @@ export class NameLayer implements Layer {
     }
   }
 
-  public renderLayer(mainContex: CanvasRenderingContext2D) {
+  public renderLayer() {
     const screenPosOld = this.transformHandler.worldToScreenCoordinates(
       new Cell(0, 0),
     );
@@ -201,14 +191,6 @@ export class NameLayer implements Layer {
         this.renderPlayerInfo(render);
       }
     }
-
-    mainContex.drawImage(
-      this.canvas,
-      0,
-      0,
-      mainContex.canvas.width,
-      mainContex.canvas.height,
-    );
   }
 
   private createPlayerElement(player: PlayerView): HTMLDivElement {
