@@ -51,6 +51,7 @@ export class GameServer {
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
+  private hasReachedMaxPlayerCount: boolean = false;
 
   private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
 
@@ -246,6 +247,10 @@ export class GameServer {
     this.allClients.set(client.clientID, client);
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
+
+    if (this.activeClients.length >= (this.gameConfig.maxPlayers ?? Infinity)) {
+      this.hasReachedMaxPlayerCount = true;
+    }
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
@@ -813,11 +818,11 @@ export class GameServer {
     // Public Games
 
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
-    const notEnoughPlayers =
-      this.gameConfig.gameType === GameType.Public &&
-      this.gameConfig.maxPlayers &&
-      this.activeClients.length < this.gameConfig.maxPlayers;
-    if (lessThanLifetime && notEnoughPlayers && !this.hasStarted()) {
+    if (
+      lessThanLifetime &&
+      !this.hasStarted() &&
+      !this.hasReachedMaxPlayerCount
+    ) {
       return GamePhase.Lobby;
     }
     const warmupOver = now > this.startsAt! + 30 * 1000;
