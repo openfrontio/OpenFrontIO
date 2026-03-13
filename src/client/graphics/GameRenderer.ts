@@ -137,6 +137,7 @@ export function createRenderer(
   attacksDisplay.eventBus = eventBus;
   attacksDisplay.game = game;
   attacksDisplay.uiState = uiState;
+  attacksDisplay.transform = transformHandler;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
