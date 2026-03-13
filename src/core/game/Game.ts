@@ -243,6 +243,8 @@ export interface PublicGameModifiers {
   isCrowded: boolean;
   isHardNations: boolean;
   startingGold?: number;
+  goldMultiplier?: number;
+  isAlliancesDisabled: boolean;
 }
 
 export interface UnitInfo {
@@ -506,7 +508,7 @@ export class PlayerInfo {
   constructor(
     public readonly name: string,
     public readonly playerType: PlayerType,
-    // null if bot.
+    // null if tribe.
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,

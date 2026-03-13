@@ -22,6 +22,7 @@ import {
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
+import soldierIcon from "/images/SoldierIcon.svg?url";
 import swordIcon from "/images/SwordIcon.svg?url";
 
 @customElement("attacks-display")
@@ -224,14 +225,13 @@ export class AttacksDisplay extends LitElement implements Layer {
           class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
-            content: html`<img
-                src="${swordIcon}"
-                class="h-4 w-4 inline-block"
-                style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
-              />
-              <span class="inline-block min-w-[3rem] text-right"
-                >${renderTroops(attack.troops)}</span
-              >
+            content: html`<span class="inline-flex items-center"
+                ><img
+                  src="${soldierIcon}"
+                  class="h-4 w-4"
+                  style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
+                />↓</span
+              ><span class="ml-1">${renderTroops(attack.troops)}</span>
               <span class="truncate ml-1"
                 >${(
                   this.game.playerBySmallID(attack.attackerID) as PlayerView
@@ -272,14 +272,13 @@ export class AttacksDisplay extends LitElement implements Layer {
           class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
-            content: html`<img
-                src="${swordIcon}"
-                class="h-4 w-4 inline-block"
-                style="filter: invert(1)"
-              />
-              <span class="inline-block min-w-[3rem] text-right"
-                >${renderTroops(attack.troops)}</span
-              >
+            content: html`<span class="inline-flex items-center"
+                ><img
+                  src="${soldierIcon}"
+                  class="h-4 w-4"
+                  style="filter: brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%)"
+                />↑</span
+              ><span class="ml-1">${renderTroops(attack.troops)}</span>
               <span class="truncate ml-1"
                 >${(
                   this.game.playerBySmallID(attack.targetID) as PlayerView
@@ -287,7 +286,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               > `,
             onClick: async () => this.attackWarningOnClick(attack),
             className:
-              "text-left text-blue-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-sky-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${!attack.retreating
@@ -314,17 +313,16 @@ export class AttacksDisplay extends LitElement implements Layer {
           class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
-            content: html`<img
-                src="${swordIcon}"
-                class="h-4 w-4 inline-block"
-                style="filter: invert(1)"
-              />
-              <span class="inline-block min-w-[3rem] text-right"
-                >${renderTroops(landAttack.troops)}</span
-              >
+            content: html`<span class="inline-flex items-center"
+                ><img
+                  src="${soldierIcon}"
+                  class="h-4 w-4"
+                  style="filter: brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%)"
+                />↑</span
+              ><span class="ml-1">${renderTroops(landAttack.troops)}</span>
               ${translateText("help_modal.ui_wilderness")}`,
             className:
-              "text-left text-gray-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-sky-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${!landAttack.retreating
@@ -441,7 +439,7 @@ export class AttacksDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mb-1 mt-1 sm:mt-0 pointer-events-auto grid grid-cols-2 gap-1 text-white text-sm lg:text-base"
+        class="w-full mb-1 mt-1 sm:mt-0 pointer-events-auto grid grid-cols-2 gap-1 text-white text-sm lg:text-base max-h-[7rem] overflow-y-auto"
       >
         ${this.renderOutgoingAttacks()} ${this.renderOutgoingLandAttacks()}
         ${this.renderBoats()} ${this.renderIncomingAttacks()}

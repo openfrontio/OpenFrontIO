@@ -189,9 +189,7 @@ export class MobileNavBar extends LitElement {
         </div>
         <div
           class="flex flex-col w-full mt-auto [.in-game_&]:hidden items-end justify-end pt-4 border-t border-white/10"
-        >
-          <lang-selector></lang-selector>
-        </div>
+        ></div>
       </div>
     `;
   }

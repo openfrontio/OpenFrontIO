@@ -71,6 +71,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
+  @state() private disableAlliances: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -174,16 +175,16 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleSpawnImmunityDurationKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.gold_multiplier"}
+        .labelKey=${"host_modal.gold_multiplier"}
         .checked=${this.goldMultiplier}
         .inputId=${"gold-multiplier-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.goldMultiplierValue}
-        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
+        .inputAriaLabel=${translateText("host_modal.gold_multiplier")}
         .inputPlaceholder=${translateText(
-          "single_modal.gold_multiplier_placeholder",
+          "host_modal.gold_multiplier_placeholder",
         )}
         .defaultInputValue=${2}
         .minValidOnEnable=${0.1}
@@ -192,16 +193,16 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.starting_gold"}
+        .labelKey=${"host_modal.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.startingGoldValue}
-        .inputAriaLabel=${translateText("single_modal.starting_gold")}
+        .inputAriaLabel=${translateText("host_modal.starting_gold")}
         .inputPlaceholder=${translateText(
-          "single_modal.starting_gold_placeholder",
+          "host_modal.starting_gold_placeholder",
         )}
         .defaultInputValue=${5}
         .minValidOnEnable=${0.1}
@@ -293,6 +294,10 @@ export class HostLobbyModal extends BaseModal {
                   {
                     labelKey: "host_modal.compact_map",
                     checked: this.compactMap,
+                  },
+                  {
+                    labelKey: "host_modal.disable_alliances",
+                    checked: this.disableAlliances,
                   },
                 ],
                 inputCards,
@@ -457,6 +462,7 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+    this.disableAlliances = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -532,6 +538,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "host_modal.disable_alliances":
+        this.disableAlliances = checked;
+        this.putGameConfig();
         break;
       default:
         break;
@@ -795,6 +805,7 @@ export class HostLobbyModal extends BaseModal {
               this.startingGold === true && this.startingGoldValue !== undefined
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : undefined,
+            disableAlliances: this.disableAlliances || undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
