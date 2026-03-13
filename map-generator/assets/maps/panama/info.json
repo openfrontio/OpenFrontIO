@@ -1,0 +1,65 @@
+{
+  "name": "Panama",
+  "nations": [
+    {
+      "coordinates": [791, 415],
+      "name": "Chiriquí",
+      "flag": "pa-4"
+    },
+    {
+      "coordinates": [1391, 542],
+      "name": "Los Santos",
+      "flag": "pa-7"
+    },
+    {
+      "coordinates": [982, 338],
+      "name": "Ngäbe-Buglé Comarca",
+      "flag": "pa-nb"
+    },
+    {
+      "coordinates": [1380, 407],
+      "name": "Coclé",
+      "flag": "pa-2"
+    },
+    {
+      "coordinates": [1624, 231],
+      "name": "Colón",
+      "flag": "pa-3"
+    },
+    {
+      "coordinates": [1550, 352],
+      "name": "Panamá Oeste",
+      "flag": "pa-10"
+    },
+    {
+      "coordinates": [96, 240],
+      "name": "Guna Yala",
+      "flag": "pa-ky"
+    },
+    {
+      "coordinates": [2222, 760],
+      "name": "Darién",
+      "flag": "pa-5"
+    },
+    {
+      "coordinates": [2373, 770],
+      "name": "Chocó",
+      "flag": "co-cho"
+    },
+    {
+      "coordinates": [2720, 312],
+      "name": "Córdoba",
+      "flag": "co-cor"
+    },
+    {
+      "coordinates": [264, 44],
+      "name": "Heredia",
+      "flag": "cr-h"
+    },
+    {
+      "coordinates": [428, 303],
+      "name": "Puntarenas",
+      "flag": "cr-p"
+    }
+  ]
+}
