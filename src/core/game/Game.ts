@@ -716,6 +716,11 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
+  blockPlayer(other: Player): void;
+  unblockPlayer(other: Player): void;
+  hasBlocked(other: Player): boolean;
+  isBlockedBy(other: Player): boolean;
+  blockedPlayers(): ReadonlySet<PlayerID>;
   breakAlliance(alliance: Alliance): void;
   removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
@@ -937,6 +942,8 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
+  isBlocked: boolean;
+  blockedPlayers: string[];
   allianceInfo?: AllianceInfo;
 }
 

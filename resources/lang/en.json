@@ -816,6 +816,8 @@
     "stop_trade": "Stop Trading",
     "stop_trade_all": "Stop Trading with All",
     "start_trade_all": "Start Trading with All",
+    "block": "Block",
+    "unblock": "Unblock",
     "alliances": "Alliances",
     "chat": "Chat",
     "target": "Target",

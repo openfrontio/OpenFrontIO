@@ -31,6 +31,7 @@ import {
 import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
@@ -410,6 +411,25 @@ export class EventsDisplay extends LitElement implements Layer {
       return;
     }
 
+    let otherPlayerDiplayName: string = "";
+    if (event.recipient !== null) {
+      //'recipient' parameter contains sender ID or recipient ID
+      const player = this.game.player(event.recipient);
+
+      if (player) {
+        // Silently filter out blocked players
+        if (myPlayer.isBlockedBy(player) || player.hasBlocked(myPlayer)) {
+          return;
+        }
+        const userSettings = new UserSettings();
+        if (userSettings.isPlayerBlocked(player.displayName())) {
+          return;
+        }
+      }
+
+      otherPlayerDiplayName = player ? player.displayName() : "";
+    }
+
     const baseMessage = translateText(`chat.${event.category}.${event.key}`);
     let translatedMessage = baseMessage;
     if (event.target) {
@@ -424,13 +444,6 @@ export class EventsDisplay extends LitElement implements Layer {
         );
         return;
       }
-    }
-
-    let otherPlayerDiplayName: string = "";
-    if (event.recipient !== null) {
-      //'recipient' parameter contains sender ID or recipient ID
-      const player = this.game.player(event.recipient);
-      otherPlayerDiplayName = player ? player.displayName() : "";
     }
 
     this.addEvent({
@@ -457,6 +470,15 @@ export class EventsDisplay extends LitElement implements Layer {
     const recipient = this.game.playerBySmallID(
       update.recipientID,
     ) as PlayerView;
+
+    // Silently filter out blocked players
+    if (myPlayer.isBlockedBy(requestor) || requestor.hasBlocked(myPlayer)) {
+      return;
+    }
+    const userSettings = new UserSettings();
+    if (userSettings.isPlayerBlocked(requestor.displayName())) {
+      return;
+    }
 
     this.addEvent({
       description: translateText("events_display.request_alliance", {
@@ -672,6 +694,15 @@ export class EventsDisplay extends LitElement implements Layer {
     const sender = this.game.playerBySmallID(
       update.emoji.senderID,
     ) as PlayerView;
+
+    // Silently filter out blocked players
+    if (myPlayer.isBlockedBy(sender) || sender.hasBlocked(myPlayer)) {
+      return;
+    }
+    const userSettings = new UserSettings();
+    if (userSettings.isPlayerBlocked(sender.displayName())) {
+      return;
+    }
 
     if (recipient === myPlayer) {
       this.addEvent({
