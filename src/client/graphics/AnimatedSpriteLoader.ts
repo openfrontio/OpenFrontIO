@@ -1,226 +1,116 @@
-import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
-import buildingExplosion from "../../../resources/sprites/buildingExplosion.png";
-import conquestSword from "../../../resources/sprites/conquestSword.png";
-import dust from "../../../resources/sprites/dust.png";
-import miniExplosion from "../../../resources/sprites/miniExplosion.png";
-import miniFire from "../../../resources/sprites/minifire.png";
-import nuke from "../../../resources/sprites/nukeExplosion.png";
-import SAMExplosion from "../../../resources/sprites/samExplosion.png";
-import sinkingShip from "../../../resources/sprites/sinkingShip.png";
-import miniSmoke from "../../../resources/sprites/smoke.png";
-import miniSmokeAndFire from "../../../resources/sprites/smokeAndFire.png";
-import unitExplosion from "../../../resources/sprites/unitExplosion.png";
+import z from "zod";
+import animationConfig from "../../../resources/animatedSprites/config.json";
 import { Theme } from "../../core/configuration/Config";
 import { PlayerView } from "../../core/game/GameView";
-import { AnimatedSprite } from "./AnimatedSprite";
+import { AnimatedSprite, AnimatedSpriteConfig } from "./AnimatedSprite";
 import { FxType } from "./fx/Fx";
 import { colorizeCanvas } from "./SpriteLoader";
 
-type AnimatedSpriteConfig = {
-  url: string;
-  frameCount: number;
-  frameDuration: number; // ms per frame
-  looping?: boolean;
-  originX: number;
-  originY: number;
-};
+const AnimatedSpriteConfigSchema = z.object({
+  name: z.string(),
+  frameCount: z.number(),
+  frameDuration: z.number(),
+  looping: z.boolean(),
+  originX: z.number(),
+  originY: z.number(),
+});
 
-const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
-  [FxType.MiniFire]: {
-    url: miniFire,
-    frameCount: 6,
-    frameDuration: 100,
-    looping: true,
-    originX: 3,
-    originY: 11,
-  },
-  [FxType.MiniSmoke]: {
-    url: miniSmoke,
-    frameCount: 4,
-    frameDuration: 120,
-    looping: true,
-    originX: 2,
-    originY: 10,
-  },
-  [FxType.MiniBigSmoke]: {
-    url: miniBigSmoke,
-    frameCount: 5,
-    frameDuration: 120,
-    looping: true,
-    originX: 9,
-    originY: 14,
-  },
-  [FxType.MiniSmokeAndFire]: {
-    url: miniSmokeAndFire,
-    frameCount: 6,
-    frameDuration: 120,
-    looping: true,
-    originX: 9,
-    originY: 14,
-  },
-  [FxType.MiniExplosion]: {
-    url: miniExplosion,
-    frameCount: 4,
-    frameDuration: 70,
-    looping: false,
-    originX: 6,
-    originY: 6,
-  },
-  [FxType.Dust]: {
-    url: dust,
-    frameCount: 3,
-    frameDuration: 100,
-    looping: false,
-    originX: 4,
-    originY: 5,
-  },
-  [FxType.UnitExplosion]: {
-    url: unitExplosion,
-    frameCount: 4,
-    frameDuration: 70,
-    looping: false,
-    originX: 9,
-    originY: 9,
-  },
-  [FxType.BuildingExplosion]: {
-    url: buildingExplosion,
-    frameCount: 10,
-    frameDuration: 70,
-    looping: false,
-    originX: 8,
-    originY: 8,
-  },
-  [FxType.SinkingShip]: {
-    url: sinkingShip,
-    frameCount: 14,
-    frameDuration: 90,
-    looping: false,
-    originX: 7,
-    originY: 7,
-  },
-  [FxType.Nuke]: {
-    url: nuke,
-    frameCount: 9,
-    frameDuration: 70,
-    looping: false,
-    originX: 30,
-    originY: 30,
-  },
-  [FxType.SAMExplosion]: {
-    url: SAMExplosion,
-    frameCount: 9,
-    frameDuration: 70,
-    looping: false,
-    originX: 23,
-    originY: 19,
-  },
-  [FxType.Conquest]: {
-    url: conquestSword,
-    frameCount: 10,
-    frameDuration: 90,
-    looping: false,
-    originX: 10,
-    originY: 16,
-  },
-};
+const AnimatedSpriteConfigsSchema = z.object({
+  animatedSprites: AnimatedSpriteConfigSchema.array(),
+});
+
+interface AnimatedSpriteCanvas {
+  config: AnimatedSpriteConfig;
+  canvas: HTMLCanvasElement;
+}
 
 export class AnimatedSpriteLoader {
-  private animatedSpriteImageMap: Map<FxType, HTMLCanvasElement> = new Map();
+  private animatedSpriteImageMap: Map<string, AnimatedSpriteCanvas> = new Map();
   // Do not color the same sprite twice
-  private coloredAnimatedSpriteCache: Map<string, HTMLCanvasElement> =
+  private coloredAnimatedSpriteCache: Map<string, AnimatedSpriteCanvas> =
     new Map();
 
-  public async loadAllAnimatedSpriteImages(): Promise<void> {
-    const entries = Object.entries(ANIMATED_SPRITE_CONFIG);
-
+  public async loadAllAnimatedSpriteImages() {
+    const result = AnimatedSpriteConfigsSchema.safeParse(animationConfig);
+    if (!result.success || !result.data) {
+      throw new Error(
+        `Invalid animated sprite config: ${result.error.message}`,
+      );
+    }
     await Promise.all(
-      entries.map(async ([fxType, config]) => {
-        const typedFxType = fxType as FxType;
-        if (!config?.url) return;
-
-        try {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = config.url;
-
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = (e) => reject(e);
-          });
-
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          canvas.getContext("2d")!.drawImage(img, 0, 0);
-
-          this.animatedSpriteImageMap.set(typedFxType, canvas);
-        } catch (err) {
-          console.error(`Failed to load sprite for ${typedFxType}:`, err);
-        }
+      result.data!.animatedSprites.map((config) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        return new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            this.createCanvas(config, img);
+            resolve();
+          };
+          img.onerror = (e) => {
+            reject(e);
+            console.error(`Could not load animated sprite: `, e);
+          };
+          img.src = "/animatedSprites/" + config.name + ".png";
+        });
       }),
     );
   }
 
-  private createRegularAnimatedSprite(fxType: FxType): AnimatedSprite | null {
-    const config = ANIMATED_SPRITE_CONFIG[fxType];
-    const image = this.animatedSpriteImageMap.get(fxType);
-    if (!config || !image) return null;
-
-    return new AnimatedSprite(
-      image,
-      config.frameCount,
-      config.frameDuration,
-      config.looping ?? true,
-      config.originX,
-      config.originY,
-    );
+  private createCanvas(
+    config: AnimatedSpriteConfig,
+    image: HTMLImageElement,
+  ): void {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    canvas.getContext("2d")!.drawImage(image, 0, 0);
+    this.animatedSpriteImageMap.set(config.name, { config, canvas });
   }
 
-  private getColoredAnimatedSprite(
-    owner: PlayerView,
-    fxType: FxType,
-    theme: Theme,
-  ): HTMLCanvasElement | null {
-    const baseImage = this.animatedSpriteImageMap.get(fxType);
-    const config = ANIMATED_SPRITE_CONFIG[fxType];
-    if (!baseImage || !config) return null;
-    const territoryColor = owner.territoryColor();
-    const borderColor = owner.borderColor();
-    const spawnHighlightColor = theme.spawnHighlightColor();
-    const key = `${fxType}-${owner.id()}`;
-    let coloredCanvas: HTMLCanvasElement;
-    if (this.coloredAnimatedSpriteCache.has(key)) {
-      coloredCanvas = this.coloredAnimatedSpriteCache.get(key)!;
-    } else {
-      coloredCanvas = colorizeCanvas(
-        baseImage,
-        territoryColor,
-        borderColor,
-        spawnHighlightColor,
-      );
-
-      this.coloredAnimatedSpriteCache.set(key, coloredCanvas);
-    }
-    return coloredCanvas;
+  private createRegularAnimatedSprite(fxType: FxType): AnimatedSprite | null {
+    const sprite = this.animatedSpriteImageMap.get(fxType);
+    return sprite ? new AnimatedSprite(sprite.canvas, sprite.config) : null;
   }
 
   private createColoredAnimatedSpriteForUnit(
-    fxType: FxType,
     owner: PlayerView,
+    fxType: FxType,
     theme: Theme,
   ): AnimatedSprite | null {
-    const config = ANIMATED_SPRITE_CONFIG[fxType];
-    const image = this.getColoredAnimatedSprite(owner, fxType, theme);
-    if (!config || !image) return null;
+    const key = `${fxType}-${owner.id()}`;
+    const sprite = this.coloredAnimatedSpriteCache.get(key);
+    if (sprite !== undefined) {
+      // Use cached sprite if it was already created
+      return new AnimatedSprite(sprite.canvas, sprite.config);
+    } else {
+      // Create one and cache it otherwise
+      const animatedSprite = this.animatedSpriteImageMap.get(fxType);
+      if (!animatedSprite) return null;
+      const coloredSprite = this.createColoredAnimatedSpriteCanvas(
+        animatedSprite,
+        owner,
+        theme,
+      );
+      this.coloredAnimatedSpriteCache.set(key, coloredSprite);
+      return new AnimatedSprite(coloredSprite.canvas, coloredSprite.config);
+    }
+  }
 
-    return new AnimatedSprite(
-      image,
-      config.frameCount,
-      config.frameDuration,
-      config.looping ?? true,
-      config.originX,
-      config.originY,
+  private createColoredAnimatedSpriteCanvas(
+    sprite: AnimatedSpriteCanvas,
+    owner: PlayerView,
+    theme: Theme,
+  ): AnimatedSpriteCanvas {
+    const territoryColor = owner.territoryColor();
+    const borderColor = owner.borderColor();
+    const spawnHighlightColor = theme.spawnHighlightColor();
+    const canvas = colorizeCanvas(
+      sprite.canvas,
+      territoryColor,
+      borderColor,
+      spawnHighlightColor,
     );
+    return { canvas, config: sprite.config };
   }
 
   public createAnimatedSprite(
@@ -229,7 +119,7 @@ export class AnimatedSpriteLoader {
     theme?: Theme,
   ): AnimatedSprite | null {
     if (owner && theme) {
-      return this.createColoredAnimatedSpriteForUnit(fxType, owner, theme);
+      return this.createColoredAnimatedSpriteForUnit(owner, fxType, theme);
     }
     return this.createRegularAnimatedSprite(fxType);
   }

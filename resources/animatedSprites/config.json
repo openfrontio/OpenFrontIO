@@ -1,0 +1,100 @@
+{
+  "animatedSprites": [
+    {
+      "name": "MiniFire",
+      "frameCount": 6,
+      "frameDuration": 100,
+      "looping": true,
+      "originX": 3,
+      "originY": 11
+    },
+    {
+      "name": "MiniSmoke",
+      "frameCount": 4,
+      "frameDuration": 120,
+      "looping": true,
+      "originX": 2,
+      "originY": 10
+    },
+    {
+      "name": "MiniBigSmoke",
+      "frameCount": 5,
+      "frameDuration": 120,
+      "looping": true,
+      "originX": 9,
+      "originY": 14
+    },
+    {
+      "name": "MiniSmokeAndFire",
+      "frameCount": 6,
+      "frameDuration": 120,
+      "looping": true,
+      "originX": 9,
+      "originY": 14
+    },
+    {
+      "name": "MiniExplosion",
+      "frameCount": 4,
+      "frameDuration": 70,
+      "looping": false,
+      "originX": 6,
+      "originY": 6
+    },
+    {
+      "name": "Dust",
+      "frameCount": 3,
+      "frameDuration": 100,
+      "looping": false,
+      "originX": 4,
+      "originY": 5
+    },
+    {
+      "name": "UnitExplosion",
+      "frameCount": 4,
+      "frameDuration": 70,
+      "looping": false,
+      "originX": 9,
+      "originY": 9
+    },
+    {
+      "name": "BuildingExplosion",
+      "frameCount": 10,
+      "frameDuration": 70,
+      "looping": false,
+      "originX": 8,
+      "originY": 8
+    },
+    {
+      "name": "SinkingShip",
+      "frameCount": 14,
+      "frameDuration": 90,
+      "looping": false,
+      "originX": 7,
+      "originY": 7
+    },
+    {
+      "name": "Nuke",
+      "frameCount": 9,
+      "frameDuration": 70,
+      "looping": false,
+      "originX": 30,
+      "originY": 30
+    },
+    {
+      "name": "SAMExplosion",
+      "frameCount": 9,
+      "frameDuration": 70,
+      "looping": false,
+      "originX": 23,
+      "originY": 19
+    },
+    {
+      "name": "Conquest",
+      "frameCount": 10,
+      "frameDuration": 90,
+      "looping": false,
+      "originX": 10,
+      "originY": 16
+    }
+  ]
+}
