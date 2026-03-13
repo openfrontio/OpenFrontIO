@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
@@ -65,6 +66,14 @@ export class GameRightSidebar extends LitElement implements Layer {
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       this.requestUpdate();
+    });
+
+    this.eventBus.on(TogglePauseIntentEvent, () => {
+      const isReplayOrSingleplayer =
+        this._isSinglePlayer || this.game?.config()?.isReplay();
+      if (isReplayOrSingleplayer || this.isLobbyCreator) {
+        this.onPauseButtonClick();
+      }
     });
 
     this.requestUpdate();
