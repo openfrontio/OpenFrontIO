@@ -162,7 +162,6 @@ export class MapPlaylist {
         isRandomSpawn: false,
         isCrowded: false,
         isHardNations,
-        startingGold: undefined,
         isAlliancesDisabled: false,
       },
       difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
