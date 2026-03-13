@@ -208,7 +208,7 @@ export class ControlPanel extends LitElement implements Layer {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-8 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="h-full flex">
           ${greenPercent > 0
@@ -225,7 +225,7 @@ export class ControlPanel extends LitElement implements Layer {
             : ""}
         </div>
         <div
-          class="absolute inset-0 flex items-center text-xl font-bold leading-none pointer-events-none"
+          class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
           translate="no"
         >
           <span class="flex-1 flex justify-end h-full items-center pr-0.5">
@@ -264,7 +264,7 @@ export class ControlPanel extends LitElement implements Layer {
       <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm p-1 w-[5.5rem] ${this
+          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this
             ._troopRateIsIncreasing
             ? "border-green-400"
             : "border-orange-400"}"
@@ -292,7 +292,7 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="flex-1">${this.renderDesktopTroopBar()}</div>
         <!-- Gold -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm p-1 w-[4.5rem]"
+          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 w-[4.5rem]"
           translate="no"
         >
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
