@@ -114,6 +114,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
+    const ownedPatterns: PlayerPattern[] = [];
     const patterns: (Pattern | null)[] = [
       null,
       ...Object.values(this.cosmetics?.patterns ?? {}),
@@ -131,6 +132,15 @@ export class TerritoryPatternsModal extends BaseModal {
             this.userMeResponse,
             this.affiliateCode,
           );
+        }
+        if (rel === "owned" && pattern !== null) {
+          ownedPatterns.push({
+            name: pattern.name,
+            patternData: pattern.pattern,
+            colorPalette:
+              this.cosmetics?.colorPalettes?.[colorPalette?.name ?? ""] ??
+              undefined,
+          });
         }
         if (rel === "blocked") {
           continue;
@@ -164,6 +174,35 @@ export class TerritoryPatternsModal extends BaseModal {
           ></pattern-button>
         `);
       }
+    }
+
+    // Insert random skin tile after "Default" when viewing owned skins
+    if (this.showOnlyOwned && ownedPatterns.length >= 1) {
+      const randomTile = html`
+        <div
+          class="flex flex-col items-center justify-between gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl w-48 h-full transition-all duration-200 hover:bg-white/10 hover:border-white/20 hover:shadow-xl"
+        >
+          <button
+            class="group relative flex flex-col items-center w-full gap-2 rounded-lg cursor-pointer transition-all duration-200 flex-1"
+            @click=${() => this.selectRandomPattern()}
+          >
+            <div class="flex flex-col items-center w-full">
+              <div
+                class="text-xs font-bold text-white uppercase tracking-wider mb-1 text-center truncate w-full"
+              >
+                ${translateText("territory_patterns.random_skin")}
+              </div>
+              <div class="h-[22px] mb-2 w-full"></div>
+            </div>
+            <div
+              class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 border border-white/10 group-hover:border-white/20 transition-colors duration-200 overflow-hidden"
+            >
+              <span class="text-5xl">🎲</span>
+            </div>
+          </button>
+        </div>
+      `;
+      buttons.splice(1, 0, randomTile);
     }
 
     return html`
@@ -304,6 +343,24 @@ export class TerritoryPatternsModal extends BaseModal {
     this.isActive = false;
     this.affiliateCode = null;
     super.close();
+  }
+
+  private selectRandomPattern() {
+    this.selectedColor = null;
+    this.userSettings.setSelectedColor(undefined);
+    this.userSettings.setSelectedPatternName("random");
+    this.selectedPattern = null;
+    this.refresh();
+    this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: `${translateText("territory_patterns.random_skin")} ${translateText("territory_patterns.selected")}`,
+          duration: 2000,
+        },
+      }),
+    );
+    this.close();
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
