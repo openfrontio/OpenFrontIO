@@ -781,6 +781,8 @@
     "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
     "conquered_no_gold": "Conquered {name} (didn't play, no gold awarded)",
     "missile_intercepted": "Missile intercepted {unit}",
+    "interceptor_destroyed": "Interceptor destroyed, retargeting {unit}",
+    "interceptor_destroyed_attacker": "{unit} survived interception, will re-attempt interception, if possible",
     "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV warhead intercepted} other {{count} MIRV warheads intercepted}}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
     "received_troops_from_player": "Received {troops} troops from {name}",
