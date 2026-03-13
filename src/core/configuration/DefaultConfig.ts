@@ -627,16 +627,21 @@ export class DefaultConfig implements Config {
 
       const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
       const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
+      const attackerTilesOwned = attacker.numTilesOwned();
 
       let largeAttackBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
+      if (attackerTilesOwned > 100_000) {
+        largeAttackBonus = Math.sqrt(100_000 / attackerTilesOwned) ** 0.7;
       }
       let largeAttackerSpeedBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
+      if (attackerTilesOwned > 100_000) {
+        const attackerSpeed =
+          1 +
+          2.2 * (1 - Math.exp(-(attackerTilesOwned - 100_000) / 400_000)) +
+          1.1 *
+            (Math.max(0, attackerTilesOwned - 1_000_000) / 1_000_000) ** 0.8;
+        largeAttackerSpeedBonus = 1 / attackerSpeed;
       }
-
       const defenderTroopLoss = defender.troops() / defender.numTilesOwned();
       const traitorMod = defender.isTraitor() ? this.traitorDefenseDebuff() : 1;
       const currentAttackerLoss =
@@ -662,9 +667,15 @@ export class DefaultConfig implements Config {
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
+      const singleplayerEmptyLandDiscount =
+        this._gameConfig.gameType === GameType.Singleplayer &&
+        attacker.type() === PlayerType.Human
+          ? 0.5
+          : 1;
       return {
         attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+          (attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5) *
+          singleplayerEmptyLandDiscount,
         defenderTroopLoss: 0,
         tilesPerTickUsed: within(
           (2000 * Math.max(10, speed)) / attackTroops,
@@ -681,14 +692,15 @@ export class DefaultConfig implements Config {
     defender: Player | TerraNullius,
     numAdjacentTilesWithEnemy: number,
   ): number {
+    const attackSpeedMultiplier = 1.5;
     if (defender.isPlayer()) {
-      return (
+      const baseTilesPerTick =
         within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
         numAdjacentTilesWithEnemy *
-        3
-      );
+        3;
+      return baseTilesPerTick * attackSpeedMultiplier;
     } else {
-      return numAdjacentTilesWithEnemy * 2;
+      return numAdjacentTilesWithEnemy * 2 * attackSpeedMultiplier;
     }
   }
 

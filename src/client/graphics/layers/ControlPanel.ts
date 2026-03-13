@@ -61,6 +61,7 @@ export class ControlPanel extends LitElement implements Layer {
   private _lastTroopIncreaseRate: number;
   private _lastProcessedIncomeTick: number = -1;
   private _incomeWindow: Array<{ atMs: number; amount: bigint }> = [];
+  private _sliderDraggingPointerId: number | null = null;
   private readonly panelBottomSpacerPx: number = 10;
   private readonly classicSplitBottomSpacerPx: number = 8;
 
@@ -146,14 +147,48 @@ export class ControlPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private handleRatioSliderInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const newRatio = Number(input.value) / 100;
-    this.attackRatio = newRatio;
+  private setAttackRatio(newRatio: number) {
+    const clamped = Math.min(1, Math.max(0.01, newRatio));
+    this.attackRatio = clamped;
     localStorage.setItem("settings.attackRatio", String(this.attackRatio));
     this.onAttackRatioChange(this.attackRatio);
     this.requestUpdate();
   }
+
+  private updateAttackRatioFromPointer(
+    e: PointerEvent,
+    sliderTrack: HTMLElement,
+  ) {
+    const rect = sliderTrack.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = (e.clientX - rect.left) / rect.width;
+    this.setAttackRatio(ratio);
+  }
+
+  private handleCustomSliderPointerDown = (e: PointerEvent) => {
+    const sliderTrack = e.currentTarget as HTMLElement;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    this._sliderDraggingPointerId = e.pointerId;
+    sliderTrack.setPointerCapture(e.pointerId);
+    this.updateAttackRatioFromPointer(e, sliderTrack);
+    e.preventDefault();
+  };
+
+  private handleCustomSliderPointerMove = (e: PointerEvent) => {
+    if (this._sliderDraggingPointerId !== e.pointerId) return;
+    const sliderTrack = e.currentTarget as HTMLElement;
+    this.updateAttackRatioFromPointer(e, sliderTrack);
+    e.preventDefault();
+  };
+
+  private handleCustomSliderPointerUp = (e: PointerEvent) => {
+    if (this._sliderDraggingPointerId !== e.pointerId) return;
+    this._sliderDraggingPointerId = null;
+    const sliderTrack = e.currentTarget as HTMLElement;
+    if (sliderTrack.hasPointerCapture(e.pointerId)) {
+      sliderTrack.releasePointerCapture(e.pointerId);
+    }
+  };
 
   private handleAttackTouchStart(e: TouchEvent) {
     // toggle touch-drag UI
@@ -435,6 +470,36 @@ export class ControlPanel extends LitElement implements Layer {
     `;
   }
 
+  private renderCustomAttackRatioSlider(extraClass: string = "") {
+    const ratioPercent = Math.max(1, Math.min(100, this.attackRatio * 100));
+
+    return html`
+      <div class="w-full min-w-0 ${extraClass}">
+        <div
+          class="relative w-full h-1.5 rounded-full bg-slate-700/70 border border-slate-300/25 shadow-inner cursor-pointer touch-none select-none"
+          role="slider"
+          aria-label="Attack ratio"
+          aria-valuemin="1"
+          aria-valuemax="100"
+          aria-valuenow=${Math.round(ratioPercent)}
+          @pointerdown=${this.handleCustomSliderPointerDown}
+          @pointermove=${this.handleCustomSliderPointerMove}
+          @pointerup=${this.handleCustomSliderPointerUp}
+          @pointercancel=${this.handleCustomSliderPointerUp}
+        >
+          <div
+            class="absolute left-0 top-0 h-full rounded-full bg-blue-500"
+            style="width: ${ratioPercent}%;"
+          ></div>
+          <div
+            class="absolute top-1/2 w-3 h-3 rounded-full bg-white border border-slate-300 -translate-x-1/2 -translate-y-1/2"
+            style="left: ${ratioPercent}%; box-shadow: 0 0 0 1px rgba(15,23,42,0.35), 0 1px 2px rgba(0,0,0,0.45);"
+          ></div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderGoldPerMinuteBadge(
     hideOnMobile: boolean = true,
     compact: boolean = false,
@@ -531,14 +596,7 @@ export class ControlPanel extends LitElement implements Layer {
                         )})</span
                       >
                     </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="100"
-                      .value=${String(Math.round(this.attackRatio * 100))}
-                      @input=${(e: Event) => this.handleRatioSliderInput(e)}
-                      class="mt-1 w-full min-w-0 h-1.5 accent-blue-400 cursor-pointer"
-                    />
+                    ${this.renderCustomAttackRatioSlider("mt-1")}
                   </div>
                 `
               : html`
@@ -574,14 +632,7 @@ export class ControlPanel extends LitElement implements Layer {
                         )})
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="100"
-                      .value=${String(Math.round(this.attackRatio * 100))}
-                      @input=${(e: Event) => this.handleRatioSliderInput(e)}
-                      class="w-full min-w-0 h-1.5 accent-blue-400 cursor-pointer"
-                    />
+                    ${this.renderCustomAttackRatioSlider()}
                   </div>
                 `}
           </div>
@@ -756,14 +807,7 @@ export class ControlPanel extends LitElement implements Layer {
           ${this.renderAttackRatioBadge()}
 
           <div class="w-full lg:flex-1">
-            <input
-              type="range"
-              min="1"
-              max="100"
-              .value=${String(Math.round(this.attackRatio * 100))}
-              @input=${(e: Event) => this.handleRatioSliderInput(e)}
-              class="w-full min-w-0 h-1.5 accent-blue-400 cursor-pointer"
-            />
+            ${this.renderCustomAttackRatioSlider()}
           </div>
 
           ${this.renderGoldPerMinuteBadge(true, isClassicMapLayout)}

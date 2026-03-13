@@ -591,6 +591,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return !document.body.classList.contains("mini-hover-overlay-disabled");
   }
 
+  private renderMiniHoverTroops(troops: number): string {
+    // Keep mini-hover stats compact: avoid 2-decimal values like 1.16K.
+    return renderNumber(troops / 10, 1);
+  }
+
   private compactOverlayStyle(): string {
     if (typeof window === "undefined") {
       return `left: ${this.hoverScreenX}px; top: ${this.hoverScreenY}px;`;
@@ -598,14 +603,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     const margin = 8;
     const overlayWidth = Math.min(230, Math.max(210, window.innerWidth - 16));
-    const x = Math.min(
-      Math.max(margin, this.hoverScreenX + 16),
-      Math.max(margin, window.innerWidth - overlayWidth - margin),
-    );
-    const y = Math.min(
-      Math.max(margin, this.hoverScreenY - 102),
-      Math.max(margin, window.innerHeight - 130),
-    );
+    const overlayHeight = 130;
+    const maxX = Math.max(margin, window.innerWidth - overlayWidth - margin);
+    const maxY = Math.max(margin, window.innerHeight - overlayHeight - margin);
+
+    // Keep overlay close to cursor while avoiding overlap with viewport edges.
+    const x = Math.min(maxX, Math.max(margin, this.hoverScreenX + 10));
+    let y = this.hoverScreenY - 34;
+    if (y < margin) {
+      // If not enough space above, place it just below the cursor.
+      y = this.hoverScreenY + 14;
+    }
+    y = Math.min(maxY, Math.max(margin, y));
 
     return `left: ${Math.round(x)}px; top: ${Math.round(y)}px;`;
   }
@@ -628,32 +637,32 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed z-[70] pointer-events-none flex flex-col gap-1.5 w-[230px] max-w-[calc(100vw-1rem)]"
-        style="${this.compactOverlayStyle()}"
+        class="fixed z-[70] pointer-events-none flex flex-col gap-0.5 w-auto max-w-[calc(100vw-1rem)] text-[11px] font-bold"
+        style="${this.compactOverlayStyle()} text-shadow: 0 1px 2px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.55);"
       >
         <div
-          class="inline-flex items-center gap-2 self-start rounded-md border border-white/20 bg-black/82 backdrop-blur-xs px-2 py-1 text-xs text-white shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
+          class="inline-flex items-center gap-1.5 self-start text-white rounded-sm border border-white/10 bg-black/35 px-1.5 py-0.5 backdrop-blur-[1px]"
           translate="no"
         >
-          <span class="font-semibold">${renderTroops(totalTroops)}</span>
-          <span class="text-white/60">/ ${renderTroops(maxTroops)}</span>
+          <span class="font-semibold">${this.renderMiniHoverTroops(totalTroops)}</span>
+          <span class="text-white/75">/ ${this.renderMiniHoverTroops(maxTroops)}</span>
           ${attackingTroops > 0
             ? html`<span
-                class="inline-flex items-center gap-1 rounded-sm bg-red-900/35 border border-red-500/40 px-1.5 py-0.5 text-red-400"
+                class="inline-flex items-center gap-1 text-red-400"
               >
                 <img
                   src=${swordIcon}
                   class="h-3.5 w-3.5"
                   style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
                 />
-                <span>${renderTroops(attackingTroops)}</span>
+                <span>${this.renderMiniHoverTroops(attackingTroops)}</span>
               </span>`
             : ""}
         </div>
 
         ${attackPreviewEnabled && previewTroops > 0
           ? html`<div
-              class="self-start inline-flex items-center gap-1 rounded-md border border-blue-300/70 bg-black/88 backdrop-blur-xs px-2 py-1 text-blue-400 text-xs font-bold shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
+              class="self-start inline-flex items-center gap-1 text-[#93c5fd] rounded-sm border border-blue-200/20 bg-black/35 px-1.5 py-0.5 backdrop-blur-[1px]"
               translate="no"
             >
               <img
@@ -661,8 +670,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 class="h-3.5 w-3.5"
                 style="filter: brightness(0) saturate(100%) invert(72%) sepia(56%) saturate(3204%) hue-rotate(176deg) brightness(99%) contrast(101%)"
               />
-              <span>${renderTroops(previewTroops)}</span>
-              <span class="text-blue-200/90">(${myTroopPercent.toFixed(0)}%)</span>
+              <span
+                style="text-shadow: 0 1px 2px rgba(0,0,0,0.98), 0 0 8px rgba(0,0,0,0.7);"
+                >${this.renderMiniHoverTroops(previewTroops)}</span
+              >
+              <span
+                class="text-[#bfdbfe]"
+                style="text-shadow: 0 1px 2px rgba(0,0,0,0.98), 0 0 8px rgba(0,0,0,0.7);"
+                >(${myTroopPercent.toFixed(0)}%)</span
+              >
             </div>`
           : ""}
       </div>

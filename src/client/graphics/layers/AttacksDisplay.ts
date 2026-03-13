@@ -1,13 +1,19 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/Game";
 import {
   AttackUpdate,
   GameUpdateType,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { TransformHandler } from "../TransformHandler";
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
@@ -29,6 +35,7 @@ export class AttacksDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
+  public transform?: TransformHandler;
 
   private active: boolean = false;
   private incomingBoatIDs: Set<number> = new Set();
@@ -39,6 +46,12 @@ export class AttacksDisplay extends LitElement implements Layer {
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
   @state() private incomingBoats: UnitView[] = [];
+  @state()
+  private outgoingAttackAnchors: Map<string, { x: number; y: number } | null> =
+    new Map();
+  private outgoingAttackAngles: Map<string, number> = new Map();
+
+  private pendingOutgoingAnchorLookups: Set<string> = new Set();
 
   createRenderRoot() {
     return this;
@@ -96,6 +109,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     this.outgoingAttacks = myPlayer
       .outgoingAttacks()
       .filter((a) => a.targetID !== 0);
+    this.refreshOutgoingAttackAnchors(this.outgoingAttacks);
 
     this.outgoingLandAttacks = myPlayer
       .outgoingAttacks()
@@ -113,6 +127,66 @@ export class AttacksDisplay extends LitElement implements Layer {
   }
 
   renderLayer(): void {}
+
+  private refreshOutgoingAttackAnchors(attacks: AttackUpdate[]) {
+    const activeIds = new Set(attacks.map((a) => a.id));
+
+    for (const id of Array.from(this.outgoingAttackAnchors.keys())) {
+      if (!activeIds.has(id)) this.outgoingAttackAnchors.delete(id);
+    }
+    for (const id of Array.from(this.pendingOutgoingAnchorLookups)) {
+      if (!activeIds.has(id)) this.pendingOutgoingAnchorLookups.delete(id);
+    }
+    for (const id of Array.from(this.outgoingAttackAngles.keys())) {
+      if (!activeIds.has(id)) this.outgoingAttackAngles.delete(id);
+    }
+
+    for (const attack of attacks) {
+      if (!this.outgoingAttackAngles.has(attack.id)) {
+        this.outgoingAttackAngles.set(
+          attack.id,
+          this.getOutgoingAttackMarkerAngle(attack),
+        );
+      }
+      if (
+        this.outgoingAttackAnchors.has(attack.id) ||
+        this.pendingOutgoingAnchorLookups.has(attack.id)
+      ) {
+        continue;
+      }
+      this.resolveOutgoingAttackAnchor(attack);
+    }
+  }
+
+  private async resolveOutgoingAttackAnchor(attack: AttackUpdate) {
+    this.pendingOutgoingAnchorLookups.add(attack.id);
+    try {
+      const attacker = this.game.playerBySmallID(attack.attackerID);
+      if (!(attacker instanceof PlayerView)) {
+        this.outgoingAttackAnchors.set(attack.id, null);
+        return;
+      }
+
+      const averagePosition = await attacker.attackAveragePosition(
+        attack.attackerID,
+        attack.id,
+      );
+
+      if (averagePosition === null) {
+        this.outgoingAttackAnchors.set(attack.id, null);
+      } else {
+        this.outgoingAttackAnchors.set(attack.id, {
+          x: averagePosition.x,
+          y: averagePosition.y,
+        });
+      }
+    } catch {
+      this.outgoingAttackAnchors.set(attack.id, null);
+    } finally {
+      this.pendingOutgoingAnchorLookups.delete(attack.id);
+      this.requestUpdate();
+    }
+  }
 
   private renderButton(options: {
     content: any;
@@ -423,6 +497,71 @@ export class AttacksDisplay extends LitElement implements Layer {
     );
   }
 
+  private getOutgoingAttackAnchor(
+    attack: AttackUpdate,
+  ): { x: number; y: number } | null {
+    return this.outgoingAttackAnchors.get(attack.id) ?? null;
+  }
+
+  private getOutgoingAttackMarkerAngle(attack: AttackUpdate): number {
+    const me = this.game.myPlayer();
+    const target = this.game.playerBySmallID(attack.targetID) as
+      | PlayerView
+      | undefined;
+    const meCenter = me?.nameLocation();
+    const targetCenter = target?.nameLocation();
+    if (!meCenter || !targetCenter) return -18;
+
+    // Stable orientation: based on target position vs my position (once per attack).
+    const dx = targetCenter.x - meCenter.x;
+    const dy = targetCenter.y - meCenter.y;
+
+    // Top / bottom: flatter angle.
+    if (Math.abs(dx) <= Math.abs(dy) * 0.45) return -8;
+
+    // Top-left and bottom-right.
+    const sameDiagonal = (dx < 0 && dy < 0) || (dx > 0 && dy > 0);
+    return sameDiagonal ? -20 : 20;
+  }
+
+  private renderOutgoingAttackMarkers() {
+    if (!this.transform || this.outgoingAttacks.length === 0) {
+      return html``;
+    }
+    const myTerritoryColor =
+      this.game.myPlayer()?.territoryColor().toHex() ?? "#7dd3fc";
+
+    const markers = this.outgoingAttacks
+      .map((attack) => {
+        const anchor = this.getOutgoingAttackAnchor(attack);
+        if (!anchor) return null;
+
+        const worldCell = new Cell(anchor.x, anchor.y);
+        if (!this.transform!.isOnScreen(worldCell)) return null;
+
+        const screen = this.transform!.worldToScreenCoordinates(worldCell);
+        const angle = this.outgoingAttackAngles.get(attack.id) ?? -18;
+        const markerColor = attack.retreating ? "#9ca3af" : myTerritoryColor;
+
+        return html`
+          <button
+            class="fixed z-[75] pointer-events-auto select-none tabular-nums leading-none font-extrabold italic text-[14px] lg:text-[16px] disabled:opacity-45 disabled:cursor-default"
+            style="left:${Math.round(screen.x)}px; top:${Math.round(
+              screen.y,
+            )}px; transform: translate(-50%, -48%) rotate(${angle}deg); color: ${markerColor}; opacity: 0.92; -webkit-text-stroke: 0.55px rgba(0,0,0,0.82); text-shadow: -0.7px -0.7px 0 rgba(0,0,0,0.7), 0.7px -0.7px 0 rgba(0,0,0,0.7), -0.7px 0.7px 0 rgba(0,0,0,0.7), 0.7px 0.7px 0 rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.35);"
+            translate="no"
+            @click=${() => this.emitCancelAttackIntent(attack.id)}
+            ?disabled=${attack.retreating}
+          >
+            ${renderTroops(attack.troops)}
+          </button>
+        `;
+      })
+      .filter((x) => x !== null);
+
+    return html`${markers}`;
+  }
+
   render() {
     if (!this.active || !this._isVisible) {
       return html``;
@@ -443,11 +582,11 @@ export class AttacksDisplay extends LitElement implements Layer {
       ${this.renderIncomingAttacks()} ${this.renderIncomingBoats()}
     `;
     const outgoing = html`
-      ${this.renderOutgoingAttacks()} ${this.renderOutgoingLandAttacks()}
-      ${this.renderBoats()}
+      ${this.renderOutgoingLandAttacks()} ${this.renderBoats()}
     `;
 
     return html`
+      ${this.renderOutgoingAttackMarkers()}
       <div
         class="w-full mb-0.5 mt-0.5 sm:mt-0 pointer-events-auto grid grid-cols-1 min-[1200px]:grid-cols-2 gap-0.5 text-white text-xs lg:text-sm"
       >
