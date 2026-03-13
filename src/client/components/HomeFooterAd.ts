@@ -40,6 +40,8 @@ export class HomeFooterAd extends LitElement {
   };
 
   private loadAd(): void {
+    console.log("homepage footer ad disabled");
+    return;
     if (!window.ramp) {
       console.warn("Playwire RAMP not available for footer ad");
       return;
