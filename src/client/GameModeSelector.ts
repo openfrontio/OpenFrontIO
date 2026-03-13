@@ -158,18 +158,20 @@ export class GameModeSelector extends LitElement {
             : nothing}
 
           <!-- Right col: Teams + Special (desktop only) -->
-          <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${teams
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                </div>`
-              : nothing}
-            ${special
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderSpecialLobbyCard(special)}
-                </div>`
-              : nothing}
-          </div>
+          ${teams || special
+            ? html`<div class="hidden sm:flex sm:flex-col sm:gap-4">
+                ${teams
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                    </div>`
+                  : nothing}
+                ${special
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderSpecialLobbyCard(special)}
+                    </div>`
+                  : nothing}
+              </div>`
+            : nothing}
 
           <!-- Mobile: ffa, teams, special inline -->
           <div class="sm:hidden">
