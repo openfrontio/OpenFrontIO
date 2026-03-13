@@ -311,7 +311,7 @@ export class DefaultConfig implements Config {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      50_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
+      75_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
     const multiplier = this.goldMultiplier();
     return BigInt(Math.floor(baseGold * multiplier));
   }
