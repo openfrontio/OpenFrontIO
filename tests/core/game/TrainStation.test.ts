@@ -192,36 +192,35 @@ describe("DefaultConfig.trainGold trade stop penalty", () => {
     );
   });
 
-  it("returns full base gold within free window (stops 0-2)", () => {
-    // first 3 stops (0, 1, 2) are free — no penalty
+  it("returns full base gold within free window (stops 0-5)", () => {
+    // first 6 stops (0-5) are free — no penalty
     expect(config.trainGold("self", 0)).toBe(10_000n);
-    expect(config.trainGold("self", 1)).toBe(10_000n);
-    expect(config.trainGold("self", 2)).toBe(10_000n);
+    expect(config.trainGold("self", 5)).toBe(10_000n);
   });
 
   it("reduces gold by 5k per stop after the free window", () => {
-    // stop 3: effective = 3-2 = 1 -> 10k - 5k = 5k
-    expect(config.trainGold("self", 3)).toBe(5_000n);
+    // stop 6: effective = 6-5 = 1 -> 10k - 5k = 5k
+    expect(config.trainGold("self", 6)).toBe(5_000n);
   });
 
   it("floors at 5k when penalty exceeds base gold", () => {
-    // stop 5: effective = 3 -> 10k - 15k -> floor at 5k
-    expect(config.trainGold("self", 5)).toBe(5_000n);
+    // stop 8: effective = 3 -> 10k - 15k -> floor at 5k
+    expect(config.trainGold("self", 8)).toBe(5_000n);
   });
 
   it("floors at 5k for ally base even with heavy penalty", () => {
-    // ally base 35k, stop 20: effective = 18 -> penalty 90k -> floor at 5k
+    // ally base 35k, stop 20: effective = 15 -> penalty 75k -> floor at 5k
     expect(config.trainGold("ally", 20)).toBe(5_000n);
   });
 
   it("ally base gold reduces correctly after free window", () => {
-    // ally base 35k, stop 4: effective = 2 -> 35k - 10k = 25k
-    expect(config.trainGold("ally", 4)).toBe(25_000n);
+    // ally base 35k, stop 7: effective = 2 -> 35k - 10k = 25k
+    expect(config.trainGold("ally", 7)).toBe(25_000n);
   });
 
   it("other/team base gold reduces correctly after free window", () => {
-    // other base 25k, stop 3: effective = 1 -> 25k - 5k = 20k
-    expect(config.trainGold("other", 3)).toBe(20_000n);
-    expect(config.trainGold("team", 3)).toBe(20_000n);
+    // other base 25k, stop 6: effective = 1 -> 25k - 5k = 20k
+    expect(config.trainGold("other", 6)).toBe(20_000n);
+    expect(config.trainGold("team", 6)).toBe(20_000n);
   });
 });

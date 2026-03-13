@@ -150,35 +150,30 @@ export class GameModeSelector extends LitElement {
         <div
           class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
         >
-          <!-- Left col: main card (desktop only) -->
-          ${special
+          <!-- Left col: FFA (desktop only) -->
+          ${ffa
             ? html`<div class="hidden sm:block">
-                ${this.renderSpecialLobbyCard(special)}
+                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
               </div>`
-            : ffa
-              ? html`<div class="hidden sm:block">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                </div>`
-              : nothing}
+            : nothing}
 
-          <!-- Right col: FFA + teams (desktop only) -->
-          <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special && ffa
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                </div>`
-              : nothing}
-            ${teams
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                </div>`
-              : nothing}
-          </div>
+          <!-- Right col: Teams + Special (desktop only) -->
+          ${teams || special
+            ? html`<div class="hidden sm:flex sm:flex-col sm:gap-4">
+                ${teams
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                    </div>`
+                  : nothing}
+                ${special
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderSpecialLobbyCard(special)}
+                    </div>`
+                  : nothing}
+              </div>`
+            : nothing}
 
-          <!-- Mobile: special, ffa, teams inline -->
-          <div class="sm:hidden">
-            ${special ? this.renderSpecialLobbyCard(special) : nothing}
-          </div>
+          <!-- Mobile: ffa, teams, special inline -->
           <div class="sm:hidden">
             ${ffa
               ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
@@ -188,6 +183,9 @@ export class GameModeSelector extends LitElement {
             ${teams
               ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
               : nothing}
+          </div>
+          <div class="sm:hidden">
+            ${special ? this.renderSpecialLobbyCard(special) : nothing}
           </div>
         </div>
 
