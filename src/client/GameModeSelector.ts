@@ -10,6 +10,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -135,11 +136,13 @@ export class GameModeSelector extends LitElement {
             this.openHostLobby,
             "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
-          )}
+          ${!crazyGamesSDK.isOnCrazyGames()
+            ? this.renderSmallActionCard(
+                translateText("mode_selector.ranked_title"),
+                this.openRankedMenu,
+                "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+              )
+            : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
@@ -204,11 +207,13 @@ export class GameModeSelector extends LitElement {
             this.openHostLobby,
             "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
-          )}
+          ${!crazyGamesSDK.isOnCrazyGames()
+            ? this.renderSmallActionCard(
+                translateText("mode_selector.ranked_title"),
+                this.openRankedMenu,
+                "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+              )
+            : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
