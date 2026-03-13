@@ -111,7 +111,7 @@ type ModifierKey =
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(8).fill("isRandomSpawn"),
   ...Array<ModifierKey>(16).fill("isCompact"),
-  ...Array<ModifierKey>(3).fill("isCrowded"), // should be quite rare as it causes big lobbies
+  ...Array<ModifierKey>(3).fill("isCrowded"), // should be quite rare as it causes max-size lobbies
   ...Array<ModifierKey>(1).fill("isHardNations"), // should be quite rare because it's just for the PvPvE enjoyers
   ...Array<ModifierKey>(16).fill("startingGold"),
   ...Array<ModifierKey>(4).fill("startingGoldHigh"), // should be quite rare because it's very crazy
