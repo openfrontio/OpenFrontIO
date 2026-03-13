@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 2248304,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 135654,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 555450,
+    "width": 1000
+  },
+  "name": "movtoc",
+  "nations": [
+    {
+      "coordinates": [
+        631,
+        123
+      ],
+      "flag": "",
+      "name": "Beckrim"
+    },
+    {
+      "coordinates": [
+        1295,
+        69
+      ],
+      "flag": "",
+      "name": "Kachold"
+    },
+    {
+      "coordinates": [
+        1949,
+        269
+      ],
+      "flag": "",
+      "name": "Armtis"
+    },
+    {
+      "coordinates": [
+        1589,
+        461
+      ],
+      "flag": "",
+      "name": "Precksto Isle"
+    },
+    {
+      "coordinates": [
+        1055,
+        513
+      ],
+      "flag": "",
+      "name": "Lemero"
+    },
+    {
+      "coordinates": [
+        79,
+        581
+      ],
+      "flag": "",
+      "name": "Ghanori"
+    },
+    {
+      "coordinates": [
+        637,
+        851
+      ],
+      "flag": "",
+      "name": "Dwarzen"
+    },
+    {
+      "coordinates": [
+        1235,
+        793
+      ],
+      "flag": "",
+      "name": "Silvaz Coast"
+    },
+    {
+      "coordinates": [
+        1743,
+        961
+      ],
+      "flag": "",
+      "name": "Benthakia"
+    },
+    {
+      "coordinates": [
+        1197,
+        1145
+      ],
+      "flag": "",
+      "name": "Ethuluar"
+    },
+    {
+      "coordinates": [
+        767,
+        1253
+      ],
+      "flag": "",
+      "name": "Kennikai"
+    },
+    {
+      "coordinates": [
+        1479,
+        1689
+      ],
+      "flag": "",
+      "name": "Hethkop"
+    },
+    {
+      "coordinates": [
+        941,
+        1713
+      ],
+      "flag": "",
+      "name": "Iafora"
+    },
+    {
+      "coordinates": [
+        367,
+        1843
+      ],
+      "flag": "",
+      "name": "Thenarisar"
+    },
+    {
+      "coordinates": [
+        205,
+        1409
+      ],
+      "flag": "",
+      "name": "Remoltan"
+    }
+  ]
+}
