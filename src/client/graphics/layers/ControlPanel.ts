@@ -261,7 +261,7 @@ export class ControlPanel extends LitElement implements Layer {
   private renderDesktop() {
     return html`
       <!-- Row 1: troop rate | troop bar | gold -->
-      <div class="flex gap-1.5 items-center mb-1.5">
+      <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
         <div
           class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm p-1 w-[5.5rem] ${this
@@ -300,9 +300,9 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
       </div>
       <!-- Row 2: attack ratio | slider -->
-      <div class="flex items-center gap-2" translate="no">
+      <div class="flex items-center gap-1.5" translate="no">
         <div
-          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md p-1 text-sm font-bold text-white cursor-pointer w-[8rem]"
+          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
         >
           <img
             src=${swordIcon}
@@ -326,7 +326,7 @@ export class ControlPanel extends LitElement implements Layer {
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          class="flex-1 h-2 accent-blue-500 cursor-pointer"
+          class="flex-1 h-1.5 accent-blue-500 cursor-pointer"
         />
       </div>
     `;
@@ -384,7 +384,7 @@ export class ControlPanel extends LitElement implements Layer {
     return html`
       <div
         class="relative pointer-events-auto ${this._isVisible
-          ? "relative w-full text-sm px-2 py-1.5"
+          ? "relative w-full text-sm px-2 py-1"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
