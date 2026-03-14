@@ -267,40 +267,41 @@
     <!-- Game components -->
     <div id="app"></div>
 
-    <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
+    <!-- Bottom HUD -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+      class="fixed bottom-0 left-0 w-full z-[200] pointer-events-none px-1 sm:px-2 min-[1200px]:px-4"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
       "
     >
-      <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
       <div
-        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
+        id="hud-grid"
+        class="flex flex-col gap-1 lg:grid lg:grid-cols-[1fr_500px_1fr] lg:gap-2 lg:items-end"
       >
-        <attacks-display
-          class="w-full pointer-events-auto order-1 sm:order-none"
-        ></attacks-display>
+        <!-- Center: attacks + control panel -->
         <div
-          class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
+          id="hud-control-area"
+          class="order-1 lg:order-2 lg:col-start-2 lg:row-start-1 flex flex-col items-end lg:items-end pointer-events-none"
         >
-          <control-panel class="w-full"></control-panel>
-          <unit-display class="hidden lg:block w-full"></unit-display>
+          <attacks-display class="w-full lg:w-[500px] pointer-events-auto"></attacks-display>
+          <div
+            class="w-full lg:w-[500px] pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg"
+          >
+            <control-panel class="w-full"></control-panel>
+            <unit-display class="hidden lg:block w-full"></unit-display>
+          </div>
         </div>
-      </div>
 
-      <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
-      <div
-        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end min-[1200px]:mr-4"
-      >
-        <chat-display
-          class="w-full sm:w-auto pointer-events-auto"
-        ></chat-display>
-        <events-display
-          class="w-full sm:w-auto pointer-events-auto"
-        ></events-display>
+        <!-- Right: events + chat (original area) -->
+        <div
+          id="hud-events-area"
+          class="order-2 lg:order-3 lg:col-start-3 lg:row-start-1 flex flex-col pointer-events-none items-end lg:self-end lg:justify-end"
+        >
+          <events-display class="w-full lg:w-auto pointer-events-auto"></events-display>
+          <chat-display class="w-full lg:w-auto pointer-events-auto"></chat-display>
+        </div>
       </div>
     </div>
 
@@ -345,6 +346,51 @@
       setTimeout(function () {
         document.documentElement.classList.remove("preload");
       }, 3000);
+    </script>
+
+    <script>
+      (function () {
+        const CONTROL_KEY = "ui.hud.controlPanelPosition";
+        const EVENTS_KEY = "ui.hud.eventDisplayPosition";
+
+        function applyHudPositions() {
+          const controlArea = document.getElementById("hud-control-area");
+          const eventsArea = document.getElementById("hud-events-area");
+          if (!controlArea || !eventsArea) return;
+
+          const controlPos =
+            localStorage.getItem(CONTROL_KEY) === "left" ? "left" : "center";
+          const eventsPos =
+            localStorage.getItem(EVENTS_KEY) === "left" ? "left" : "right";
+
+          controlArea.classList.remove(
+            "lg:col-start-1",
+            "lg:col-start-2",
+            "lg:items-start",
+            "lg:items-end",
+          );
+          controlArea.classList.add(
+            controlPos === "left" ? "lg:col-start-1" : "lg:col-start-2",
+            controlPos === "left" ? "lg:items-start" : "lg:items-end",
+          );
+
+          eventsArea.classList.remove(
+            "lg:col-start-1",
+            "lg:col-start-3",
+            "lg:items-start",
+            "lg:items-end",
+          );
+          eventsArea.classList.add(
+            eventsPos === "left" ? "lg:col-start-1" : "lg:col-start-3",
+            eventsPos === "left" ? "lg:items-start" : "lg:items-end",
+          );
+        }
+
+        window.addEventListener("hud-position-change", applyHudPositions);
+        window.addEventListener("storage", applyHudPositions);
+        window.addEventListener("load", applyHudPositions);
+        applyHudPositions();
+      })();
     </script>
 
     <script>
