@@ -26,6 +26,7 @@ import {
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
+import { IntentRateLimiter } from "./IntentRateLimiter";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -37,6 +38,8 @@ const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
+
+  private intentRateLimiter = new IntentRateLimiter();
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -311,6 +314,13 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
+        if (Buffer.byteLength(message, "utf8") > 1024) {
+          this.log.warn(`Intent message too large, dropping`, {
+            clientID: client.clientID,
+            bytes: Buffer.byteLength(message, "utf8"),
+          });
+          return;
+        }
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
@@ -657,6 +667,12 @@ export class GameServer {
   }
 
   private addIntent(intent: StampedIntent) {
+    if (!this.intentRateLimiter.tryConsume(intent.clientID)) {
+      this.log.warn(`Intent rate limit exceeded`, {
+        clientID: intent.clientID,
+      });
+      return;
+    }
     this.intents.push(intent);
   }
 
