@@ -135,17 +135,22 @@ export class MasterLobbyService {
 
     for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
       const lobbies = lobbiesByType[type];
-      if (lobbies.length >= 2) {
-        continue;
-      }
+
+      // Always ensure the next lobby has a timer, even if we already have 2+
+      // lobbies. This prevents a race where two lobbies are created before
+      // either receives a startsAt (IPC round-trip delay), leaving both stuck
+      // without a countdown.
       const nextLobby = lobbies[0];
       if (nextLobby && nextLobby.startsAt === undefined) {
-        // The previous game has started, so we need to set the timer on the next game.
         this.sendMessageToWorker({
           type: "updateLobby",
           gameID: nextLobby.gameID,
           startsAt: Date.now() + this.config.gameCreationRate(),
         });
+      }
+
+      if (lobbies.length >= 2) {
+        continue;
       }
 
       this.sendMessageToWorker({
