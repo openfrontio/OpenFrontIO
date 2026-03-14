@@ -169,6 +169,16 @@ export const PublicGamesSchema = z.object({
   games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
+// Slim update sent when game configs haven't changed — just player counts + timers.
+export const LobbyCountsSchema = z.object({
+  serverTime: z.number(),
+  counts: z.record(
+    z.string(), // gameID
+    z.object({ numClients: z.number(), startsAt: z.number().optional() }),
+  ),
+});
+export type LobbyCounts = z.infer<typeof LobbyCountsSchema>;
+
 export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,

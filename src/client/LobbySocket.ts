@@ -1,5 +1,9 @@
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { PublicGames, PublicGamesSchema } from "../core/Schemas";
+import {
+  LobbyCountsSchema,
+  PublicGames,
+  PublicGamesSchema,
+} from "../core/Schemas";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
@@ -19,6 +23,7 @@ export class PublicLobbySocket {
   private wsAttemptCounted = false;
   private workerPath: string = "";
   private stopped = true;
+  private lastGames: PublicGames | null = null;
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -79,10 +84,30 @@ export class PublicLobbySocket {
 
   private handleMessage(event: MessageEvent) {
     try {
-      const publicGames = PublicGamesSchema.parse(
-        JSON.parse(event.data as string),
-      );
-      this.onLobbiesUpdate(publicGames);
+      const raw = JSON.parse(event.data as string);
+
+      // Slim update — just counts/timers, merge into cached full state.
+      const counts = LobbyCountsSchema.safeParse(raw);
+      if (counts.success && this.lastGames) {
+        const games = {} as PublicGames["games"];
+        for (const [type, lobbies] of Object.entries(this.lastGames.games) as [
+          keyof PublicGames["games"],
+          PublicGames["games"][keyof PublicGames["games"]],
+        ][]) {
+          games[type] = lobbies.map((lobby) => {
+            const update = counts.data.counts[lobby.gameID];
+            return update ? { ...lobby, ...update } : lobby;
+          }) as PublicGames["games"][typeof type];
+        }
+        this.onLobbiesUpdate({ serverTime: counts.data.serverTime, games });
+        this.lastGames = { serverTime: counts.data.serverTime, games };
+        return;
+      }
+
+      // Full update — store and forward.
+      const incoming = PublicGamesSchema.parse(raw);
+      this.lastGames = incoming;
+      this.onLobbiesUpdate(incoming);
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {

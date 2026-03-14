@@ -1,6 +1,6 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { LobbyCounts, PublicGameInfo, PublicGames } from "../core/Schemas";
 import { GameManager } from "./GameManager";
 import {
   MasterMessageSchema,
@@ -12,6 +12,8 @@ import { logger } from "./Logger";
 export class WorkerLobbyService {
   private readonly lobbiesWss: WebSocketServer;
   private readonly lobbyClients: Set<WebSocket> = new Set();
+  private lastPublicGames: PublicGames | null = null;
+  private lastGameSetKey: string = "";
 
   constructor(
     private readonly server: http.Server,
@@ -112,6 +114,10 @@ export class WorkerLobbyService {
   private setupLobbiesWebSocket() {
     this.lobbiesWss.on("connection", (ws: WebSocket) => {
       this.lobbyClients.add(ws);
+      // Send the last known full state immediately on connect.
+      if (this.lastPublicGames && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(this.lastPublicGames));
+      }
       ws.on("message", () => {
         ws.terminate();
       });
@@ -136,8 +142,39 @@ export class WorkerLobbyService {
     });
   }
 
+  private buildCountsMessage(publicGames: PublicGames): string {
+    const counts: LobbyCounts["counts"] = {};
+    for (const lobbies of Object.values(publicGames.games)) {
+      for (const lobby of lobbies) {
+        counts[lobby.gameID] = {
+          numClients: lobby.numClients,
+          startsAt: lobby.startsAt,
+        };
+      }
+    }
+    return JSON.stringify({
+      serverTime: publicGames.serverTime,
+      counts,
+    } satisfies LobbyCounts);
+  }
+
   private broadcastLobbiesToClients(publicGames: PublicGames) {
-    const message = JSON.stringify(publicGames);
+    const allLobbies = Object.values(publicGames.games).flat();
+    const gameSetKey = allLobbies
+      .map((g) => g.gameID)
+      .sort()
+      .join(",");
+
+    const configsChanged = gameSetKey !== this.lastGameSetKey;
+    this.lastGameSetKey = gameSetKey;
+
+    if (configsChanged) {
+      this.lastPublicGames = publicGames;
+    }
+
+    const message = configsChanged
+      ? JSON.stringify(publicGames)
+      : this.buildCountsMessage(publicGames);
 
     const clientsToRemove: WebSocket[] = [];
     this.lobbyClients.forEach((client) => {
