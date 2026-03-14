@@ -42,6 +42,7 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TroopAdvantageLayer } from "./layers/TroopAdvantageLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
@@ -292,6 +293,7 @@ export function createRenderer(
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
+    new TroopAdvantageLayer(game, transformHandler, eventBus, userSettings),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     attacksDisplay,
