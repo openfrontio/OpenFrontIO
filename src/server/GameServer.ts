@@ -35,6 +35,7 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_RATE_LIMIT = "kick_reason.rate_limit";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
@@ -314,11 +315,13 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
-        if (Buffer.byteLength(message, "utf8") > 1024) {
-          this.log.warn(`Intent message too large, dropping`, {
+        const bytes = Buffer.byteLength(message, "utf8");
+        if (bytes > 2000) {
+          this.log.warn(`Intent message too large, kicking client`, {
             clientID: client.clientID,
-            bytes: Buffer.byteLength(message, "utf8"),
+            bytes,
           });
+          this.kickClient(client.clientID, KICK_REASON_RATE_LIMIT);
           return;
         }
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
