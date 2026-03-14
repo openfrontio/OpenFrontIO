@@ -7,11 +7,14 @@ const MAX_BYTES_PER_MINUTE = 25 * 1024; // 25KB/min per client
 const MAX_INTENT_BYTES = 500; // intents are stored in turns, keep them small
 export type RateLimitResult = "ok" | "limit" | "kick";
 
+// Allow 3 winner messages per client since a player can rejoin and resend.
+const MAX_WINNER_MSGS = 3;
+
 interface ClientBucket {
   perSecond: RateLimiter;
   perMinute: RateLimiter;
   bytesPerMinute: RateLimiter;
-  hasSentWinnerMsg: boolean;
+  winnerMsgCount: number;
 }
 
 export class ClientMsgRateLimiter {
@@ -23,8 +26,8 @@ export class ClientMsgRateLimiter {
     // Winner message contains stats for all players and can be large (100s of KB).
     // It bypasses the byte rate limit but is strictly limited to one per client.
     if (type === "winner") {
-      if (bucket.hasSentWinnerMsg) return "kick";
-      bucket.hasSentWinnerMsg = true;
+      if (bucket.winnerMsgCount >= MAX_WINNER_MSGS) return "kick";
+      bucket.winnerMsgCount++;
       return "ok";
     }
 
@@ -61,7 +64,7 @@ export class ClientMsgRateLimiter {
         tokensPerInterval: MAX_BYTES_PER_MINUTE,
         interval: "minute",
       }),
-      hasSentWinnerMsg: false,
+      winnerMsgCount: 0,
     };
     this.buckets.set(clientID, bucket);
     return bucket;

@@ -42,9 +42,11 @@ describe("ClientMsgRateLimiter", () => {
       expect(limiter.check(CLIENT_A, "winner", 50000)).toBe("ok");
     });
 
-    it("kicks on second winner message", () => {
+    it("allows up to 3 winner messages", () => {
       const limiter = new ClientMsgRateLimiter();
-      limiter.check(CLIENT_A, "winner", 50000);
+      expect(limiter.check(CLIENT_A, "winner", 50000)).toBe("ok");
+      expect(limiter.check(CLIENT_A, "winner", 50000)).toBe("ok");
+      expect(limiter.check(CLIENT_A, "winner", 50000)).toBe("ok");
       expect(limiter.check(CLIENT_A, "winner", 50000)).toBe("kick");
     });
 
