@@ -5,6 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
   ColoredTeams,
+  GameMode,
   PlayerType,
   Team,
   UnitType,
@@ -20,10 +21,13 @@ import {
   MouseOverEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
+import { drawTeammateGlow } from "../TeammateGlow";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
+  private static readonly SPAWN_HIGHLIGHT_RADIUS = 9;
+  private static readonly PULSE_SPEED = 0.2;
   private userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -183,6 +187,7 @@ export class TerritoryLayer implements Layer {
 
     const focusedPlayer = this.game.focusedPlayer();
     const teamColors = Object.values(ColoredTeams);
+    const myPlayer = this.game.myPlayer();
     for (const human of humans) {
       if (human === focusedPlayer) {
         continue;
@@ -196,7 +201,6 @@ export class TerritoryLayer implements Layer {
         continue;
       }
       let color = this.theme.spawnHighlightColor();
-      const myPlayer = this.game.myPlayer();
       if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
         // In FFA games (when team === null), use default yellow spawn highlight color
         color = this.theme.spawnHighlightColor();
@@ -217,12 +221,14 @@ export class TerritoryLayer implements Layer {
 
       for (const tile of this.game.bfs(
         centerTile,
-        euclDistFN(centerTile, 9, true),
+        euclDistFN(centerTile, TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS, true),
       )) {
-        if (!this.game.hasOwner(tile)) {
+        if (this.game.ownerID(tile) === 0) {
           this.paintHighlightTile(tile, color, 255);
         }
       }
+
+      this.maybeDrawTeammateGlow(human);
     }
   }
 
@@ -264,61 +270,34 @@ export class TerritoryLayer implements Layer {
       teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
     );
 
-    // Draw breathing rings for teammates in team games (helps colorblind players identify teammates)
-    this.drawTeammateHighlights(minRad, maxRad, radius);
+    this.maybeDrawTeammateGlow(focusedPlayer);
   }
 
-  private drawTeammateHighlights(
-    minRad: number,
-    maxRad: number,
-    radius: number,
-  ) {
+  private maybeDrawTeammateGlow(player: PlayerView): void {
     const myPlayer = this.game.myPlayer();
-    if (myPlayer === null || myPlayer.team() === null) {
+    if (
+      !this.userSettings.colorBlind() ||
+      this.game.config().gameConfig().gameMode !== GameMode.Team ||
+      myPlayer === null ||
+      player.smallID() === myPlayer.smallID() ||
+      !myPlayer.isOnSameTeam(player)
+    ) {
       return;
     }
 
-    const teammates = this.game
-      .playerViews()
-      .filter((p) => p !== myPlayer && myPlayer.isOnSameTeam(p));
-
-    // Smaller radius for teammates (more subtle than self highlight)
-    const teammateMinRad = 5;
-    const teammateMaxRad = 14;
-    const teammateRadius =
-      teammateMinRad +
-      (teammateMaxRad - teammateMinRad) *
-        ((radius - minRad) / (maxRad - minRad));
-
-    const teamColors = Object.values(ColoredTeams);
-    for (const teammate of teammates) {
-      const center = teammate.nameLocation();
-      if (!center) {
-        continue;
-      }
-
-      const team = teammate.team();
-      let baseColor: Colord;
-      let breathingColor: Colord;
-
-      if (team !== null && teamColors.includes(team)) {
-        baseColor = this.theme.teamColor(team).alpha(0.5);
-        breathingColor = this.theme.teamColor(team).alpha(0.5);
-      } else {
-        baseColor = this.theme.spawnHighlightTeamColor();
-        breathingColor = this.theme.spawnHighlightTeamColor();
-      }
-
-      this.drawBreathingRing(
-        center.x,
-        center.y,
-        teammateMinRad,
-        teammateMaxRad,
-        teammateRadius,
-        baseColor,
-        breathingColor,
-      );
+    const spawnTile = player.spawnTile();
+    if (spawnTile === undefined) {
+      return;
     }
+    drawTeammateGlow(
+      this.highlightContext,
+      this.game.x(spawnTile),
+      this.game.y(spawnTile),
+      {
+        outerRadius: TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1,
+        pulsePhase: this.game.ticks() * TerritoryLayer.PULSE_SPEED,
+      },
+    );
   }
 
   init() {
