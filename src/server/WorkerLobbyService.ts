@@ -19,7 +19,10 @@ export class WorkerLobbyService {
     private readonly gm: GameManager,
     private readonly log: typeof logger,
   ) {
-    this.lobbiesWss = new WebSocketServer({ noServer: true });
+    this.lobbiesWss = new WebSocketServer({
+      noServer: true,
+      maxPayload: 256 * 1024,
+    });
     this.setupUpgradeHandler();
     this.setupLobbiesWebSocket();
     this.setupIPCListener();

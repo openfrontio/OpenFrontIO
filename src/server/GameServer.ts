@@ -26,7 +26,7 @@ import {
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
-import { IntentRateLimiter } from "./IntentRateLimiter";
+import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -35,12 +35,13 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
-const KICK_REASON_RATE_LIMIT = "kick_reason.rate_limit";
+const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
+const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
 
-  private intentRateLimiter = new IntentRateLimiter();
+  private intentRateLimiter = new ClientMsgRateLimiter();
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -315,31 +316,48 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
-        const bytes = Buffer.byteLength(message, "utf8");
-        if (bytes > 2000) {
-          this.log.warn(`Intent message too large, kicking client`, {
+        let json: unknown;
+        try {
+          json = JSON.parse(message);
+        } catch (e) {
+          this.log.warn(`Failed to parse client message JSON, kicking`, {
             clientID: client.clientID,
-            bytes,
+            error: String(e),
           });
-          this.kickClient(client.clientID, KICK_REASON_RATE_LIMIT);
+          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
         }
-        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+        const parsed = ClientMessageSchema.safeParse(json);
         if (!parsed.success) {
-          const error = z.prettifyError(parsed.error);
-          this.log.warn(`Failed to parse client message ${error}`, {
+          this.log.warn(`Failed to parse client message, kicking`, {
             clientID: client.clientID,
+            error: z.prettifyError(parsed.error),
           });
-          client.ws.send(
-            JSON.stringify({
-              type: "error",
-              error,
-              message: `Server could not parse message from client: ${message}`,
-            } satisfies ServerErrorMessage),
-          );
+          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
         }
         const clientMsg = parsed.data;
+        const bytes = Buffer.byteLength(message, "utf8");
+        const rateResult = this.intentRateLimiter.check(
+          client.clientID,
+          clientMsg.type,
+          bytes,
+        );
+        if (rateResult === "kick") {
+          this.log.warn(`Client rate limit exceeded, kicking`, {
+            clientID: client.clientID,
+            type: clientMsg.type,
+          });
+          this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
+          return;
+        }
+        if (rateResult === "limit") {
+          this.log.warn(`Client message rate limit exceeded, dropping`, {
+            clientID: client.clientID,
+            type: clientMsg.type,
+          });
+          return;
+        }
         switch (clientMsg.type) {
           case "rejoin": {
             // Client is already connected, no auth required, send start game message if game has started
@@ -670,12 +688,6 @@ export class GameServer {
   }
 
   private addIntent(intent: StampedIntent) {
-    if (!this.intentRateLimiter.tryConsume(intent.clientID)) {
-      this.log.warn(`Intent rate limit exceeded`, {
-        clientID: intent.clientID,
-      });
-      return;
-    }
     this.intents.push(intent);
   }
 
