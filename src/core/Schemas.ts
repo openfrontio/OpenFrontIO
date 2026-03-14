@@ -143,7 +143,8 @@ export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
 
 const ClientInfoSchema = z.object({
   clientID: z.string(),
-  username: z.string(),
+  username: z.lazy(() => UsernameSchema),
+  clanTag: z.lazy(() => ClanTagSchema),
 });
 
 export const GameInfoSchema = z.object({
@@ -179,6 +180,7 @@ export class LobbyInfoEvent implements GameEvent {
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
+  clanTag: string | null;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -281,9 +283,14 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = z
   .string()
-  .regex(/^[a-zA-Z0-9_ [\]üÜ.]+$/u)
+  .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
   .min(3)
   .max(27);
+
+export const ClanTagSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9]{2,5}$/)
+  .nullable();
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(
@@ -510,6 +517,7 @@ export const PlayerCosmeticsSchema = z.object({
 export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
+  clanTag: ClanTagSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
 });
@@ -630,6 +638,7 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII - server extracts persistentID from this
   gameID: ID,
   username: UsernameSchema,
+  clanTag: ClanTagSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
@@ -659,7 +668,6 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
-  clanTag: z.string().optional(),
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;

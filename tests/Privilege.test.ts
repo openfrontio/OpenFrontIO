@@ -17,7 +17,7 @@ const bannedWords = [
 
 const matcher = createMatcher(bannedWords);
 
-// Create a minimal PrivilegeCheckerImpl for testing censorUsername
+// Create a minimal PrivilegeCheckerImpl for testing censor
 const mockCosmetics = { patterns: {}, colorPalettes: {} };
 const mockDecoder = () => new Uint8Array();
 const checker = new PrivilegeCheckerImpl(
@@ -75,73 +75,82 @@ describe("UsernameCensor", () => {
     });
   });
 
-  describe("censorUsername", () => {
+  describe("censor", () => {
     test("returns clean usernames unchanged", () => {
-      expect(checker.censorUsername("CoolPlayer")).toBe("CoolPlayer");
-      expect(checker.censorUsername("GameMaster")).toBe("GameMaster");
+      expect(checker.censor("CoolPlayer", null).username).toBe("CoolPlayer");
+      expect(checker.censor("GameMaster", null).username).toBe("GameMaster");
     });
 
     test("replaces profane usernames with a shadow name", () => {
-      const result = checker.censorUsername("hitler");
-      expect(shadowNames).toContain(result);
+      const result = checker.censor("hitler", null);
+      expect(shadowNames).toContain(result.username);
     });
 
     test("replaces leet speak profane usernames with a shadow name", () => {
-      const result = checker.censorUsername("h1tl3r");
-      expect(shadowNames).toContain(result);
+      const result = checker.censor("h1tl3r", null);
+      expect(shadowNames).toContain(result.username);
     });
 
     test("preserves clean clan tag when username is profane", () => {
-      const result = checker.censorUsername("[COOL]hitler");
-      expect(result).toMatch(/^\[COOL\] /);
-      const nameAfterTag = result.replace("[COOL] ", "");
-      expect(shadowNames).toContain(nameAfterTag);
+      const result = checker.censor("hitler", "COOL");
+      expect(result.clanTag).toBe("COOL");
+      expect(shadowNames).toContain(result.username);
     });
 
     test("removes profane clan tag but keeps clean username", () => {
-      expect(checker.censorUsername("[NAZI]CoolPlayer")).toBe("CoolPlayer");
+      const result = checker.censor("CoolPlayer", "NAZI");
+      expect(result.username).toBe("CoolPlayer");
+      expect(result.clanTag).toBeNull();
     });
 
     test("removes clan tag with leet speak profanity", () => {
-      expect(checker.censorUsername("[N4Z1]CoolPlayer")).toBe("CoolPlayer");
+      const result = checker.censor("CoolPlayer", "N4Z1");
+      expect(result.username).toBe("CoolPlayer");
+      expect(result.clanTag).toBeNull();
     });
 
     test("removes clan tag with uppercased banned word", () => {
-      expect(checker.censorUsername("[ADOLF]CoolPlayer")).toBe("CoolPlayer");
+      const result = checker.censor("CoolPlayer", "ADOLF");
+      expect(result.username).toBe("CoolPlayer");
+      expect(result.clanTag).toBeNull();
     });
 
     test("removes clan tag containing banned word substring", () => {
-      expect(checker.censorUsername("[JEWS]CoolPlayer")).toBe("CoolPlayer");
+      const result = checker.censor("CoolPlayer", "JEWS");
+      expect(result.username).toBe("CoolPlayer");
+      expect(result.clanTag).toBeNull();
     });
 
     test("removes profane clan tag and censors profane username", () => {
-      const result = checker.censorUsername("[NAZI]hitler");
-      // No clan tag prefix, just a shadow name
-      expect(shadowNames).toContain(result);
+      const result = checker.censor("hitler", "NAZI");
+      expect(result.clanTag).toBeNull();
+      expect(shadowNames).toContain(result.username);
     });
 
     test("removes leet speak profane clan tag and censors leet speak username", () => {
-      const result = checker.censorUsername("[N4Z1]h1tl3r");
-      // No clan tag prefix, just a shadow name
-      expect(shadowNames).toContain(result);
+      const result = checker.censor("h1tl3r", "N4Z1");
+      expect(result.clanTag).toBeNull();
+      expect(shadowNames).toContain(result.username);
     });
 
     test("returns deterministic shadow name for same input", () => {
-      const a = checker.censorUsername("hitler");
-      const b = checker.censorUsername("hitler");
-      expect(a).toBe(b);
+      const a = checker.censor("hitler", null);
+      const b = checker.censor("hitler", null);
+      expect(a.username).toBe(b.username);
     });
 
     test("handles username with no clan tag", () => {
-      expect(checker.censorUsername("NormalPlayer")).toBe("NormalPlayer");
+      expect(checker.censor("NormalPlayer", null).username).toBe(
+        "NormalPlayer",
+      );
     });
 
     test("empty banned words list still catches englishDataset profanity", () => {
-      // The emptyChecker still uses englishDataset, so common profanity is caught
-      expect(emptyChecker.censorUsername("CoolPlayer")).toBe("CoolPlayer");
-      // Verify a known english profanity gets censored even without custom banned words
-      const result = emptyChecker.censorUsername("fuck");
-      expect(shadowNames).toContain(result);
+      expect(emptyChecker.censor("CoolPlayer", null).username).toBe(
+        "CoolPlayer",
+      );
+      const result = emptyChecker.censor("fuck", null);
+      expect(shadowNames).toContain(result.username);
     });
   });
 });

@@ -16,6 +16,7 @@ import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { UsernameInput } from "./UsernameInput";
 import {
   getMapName,
   getModifierLabels,
@@ -45,20 +46,10 @@ export class GameModeSelector extends LitElement {
    * Returns true if valid, false otherwise.
    */
   private validateUsername(): boolean {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (usernameInput?.isValid?.() === false) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return false;
-    }
-    return true;
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput | null;
+    return usernameInput ? usernameInput.validateOrShowError() : true;
   }
 
   connectedCallback() {

@@ -380,7 +380,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                   />`
               : html``}
-            <span>${player.name()}</span>
+            <span>${player.displayName()}</span>
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
@@ -488,7 +488,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
-          ${unit.owner().name()}
+          ${unit.owner().displayName()}
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
