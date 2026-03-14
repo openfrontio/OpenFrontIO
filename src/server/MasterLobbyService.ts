@@ -117,10 +117,14 @@ export class MasterLobbyService {
         games: this.getAllLobbies(),
       },
     } satisfies MasterLobbiesBroadcast;
-    for (const worker of this.workers.values()) {
+    for (const [workerId, worker] of this.workers.entries()) {
       worker.send(msg, (e) => {
         if (e) {
-          this.log.error("Failed to send lobbies broadcast to worker:", e);
+          this.log.error(
+            `Failed to send lobbies broadcast to worker ${workerId}, killing worker:`,
+            e,
+          );
+          worker.kill();
         }
       });
     }
@@ -162,7 +166,11 @@ export class MasterLobbyService {
     }
     worker.send(msg, (e) => {
       if (e) {
-        this.log.error("Failed to send message to worker:", e);
+        this.log.error(
+          `Failed to send message to worker ${workerId}, killing worker:`,
+          e,
+        );
+        worker.kill();
       }
     });
   }
