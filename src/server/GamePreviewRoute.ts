@@ -102,6 +102,7 @@ export function registerGamePreviewRoute(opts: {
         config.workerPath(gameID),
         lobby,
         publicInfo,
+        config,
       );
 
       // Always serve HTML with meta tags for /game/:id route

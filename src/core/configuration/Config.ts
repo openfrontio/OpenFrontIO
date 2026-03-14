@@ -2,6 +2,7 @@ import { Colord } from "colord";
 import { JWK } from "jose";
 import {
   Game,
+  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -27,6 +28,8 @@ export interface ServerConfig {
   turnstileSiteKey(): string;
   turnstileSecretKey(): string;
   turnIntervalMs(): number;
+  spawnPhaseTicks(gameType: GameType): number;
+  spawnPhaseSeconds(gameType: GameType): number;
   gameCreationRate(): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
