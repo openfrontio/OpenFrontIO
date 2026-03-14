@@ -1,5 +1,6 @@
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -16,6 +17,7 @@ describe("PlayerImpl", () => {
     game = await setup(
       "plains",
       {
+        gameType: GameType.Public,
         instantBuild: true,
       },
       [

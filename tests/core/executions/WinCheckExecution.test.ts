@@ -2,6 +2,7 @@ import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution
 import {
   ColoredTeams,
   GameMode,
+  GameType,
   PlayerInfo,
   PlayerType,
   RankedType,
@@ -14,6 +15,7 @@ describe("WinCheckExecution", () => {
 
   beforeEach(async () => {
     mg = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       maxTimerValue: 5,
@@ -93,6 +95,7 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should set Nation as winner when reaching 80% territory", async () => {
     // Setup game
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       instantBuild: true,
@@ -145,6 +148,7 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should set Nation as winner when timer expires with most territory", async () => {
     // Setup game with timer
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       instantBuild: true,
@@ -224,6 +228,7 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should set correct Nation as winner among multiple Nations", async () => {
     // Setup game
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       instantBuild: true,
@@ -307,6 +312,7 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should not set winner for bot team in Team mode", async () => {
     // Setup Team mode game
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.Team,
       instantBuild: true,
@@ -377,6 +383,7 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -432,6 +439,7 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -488,6 +496,7 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -530,6 +539,7 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,

@@ -1,6 +1,7 @@
 import { PortExecution } from "../src/core/execution/PortExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -17,6 +18,7 @@ describe("PortExecution", () => {
     game = await setup(
       "half_land_half_ocean",
       {
+        gameType: GameType.Public,
         instantBuild: true,
       },
       [

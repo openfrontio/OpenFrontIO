@@ -813,10 +813,12 @@ export interface Game extends GameMap {
   // Immunity timer
   isSpawnImmunityActive(): boolean;
   isNationSpawnImmunityActive(): boolean;
+  elapsedGameSeconds(): number;
 
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
+  endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;

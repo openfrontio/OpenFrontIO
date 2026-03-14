@@ -64,8 +64,7 @@ export class WinCheckExecution implements Execution {
     }
 
     const max = sorted[0];
-    const timeElapsed =
-      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
+    const timeElapsed = this.mg.elapsedGameSeconds();
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     if (
@@ -100,8 +99,7 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
-    const timeElapsed =
-      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
+    const timeElapsed = this.mg.elapsedGameSeconds();
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     const percentage = (max[1] / numTilesWithoutFallout) * 100;
