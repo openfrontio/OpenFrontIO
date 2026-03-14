@@ -109,6 +109,9 @@ export class WorkerLobbyService {
   private setupLobbiesWebSocket() {
     this.lobbiesWss.on("connection", (ws: WebSocket) => {
       this.lobbyClients.add(ws);
+      ws.on("message", () => {
+        ws.terminate();
+      });
       ws.on("close", () => {
         this.lobbyClients.delete(ws);
       });
