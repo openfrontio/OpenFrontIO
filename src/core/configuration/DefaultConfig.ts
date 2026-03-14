@@ -276,19 +276,23 @@ export class DefaultConfig implements Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
+    isReceiver: boolean = false,
   ): Gold {
     // No penalty for the first 5 cities.
     citiesVisited = Math.max(0, citiesVisited - 5);
     let baseGold: number;
     switch (rel) {
       case "ally":
-        baseGold = 35_000;
+        // Factory owner (sender) earns 35k; city owner (receiver) earns 30k.
+        baseGold = isReceiver ? 30_000 : 35_000;
         break;
       case "team":
       case "other":
-        baseGold = 25_000;
+        // Factory owner (sender) earns 25k; city owner (receiver) earns 20k.
+        baseGold = isReceiver ? 20_000 : 25_000;
         break;
       case "self":
+        // Symmetric: factory and city belong to the same player.
         baseGold = 10_000;
         break;
     }

@@ -100,7 +100,7 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(trainGoldSpy).toHaveBeenCalledWith(expect.any(String), 3);
+    expect(trainGoldSpy).toHaveBeenCalledWith(expect.any(String), 3, false);
   });
 
   it("checks trade availability (same owner)", () => {
