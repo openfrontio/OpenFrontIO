@@ -381,12 +381,10 @@ export class AttacksDisplay extends LitElement implements Layer {
   private getBoatProgress(boat: UnitView): number | null {
     const plan = this.game.motionPlans().get(boat.id());
     if (!plan) return null;
-    const totalSteps = plan.path.length - 1;
-    if (totalSteps <= 0) return 1;
-    const elapsed = Math.floor(
-      (this.game.ticks() - plan.startTick) / plan.ticksPerStep,
-    );
-    return Math.min(1, Math.max(0, elapsed / totalSteps));
+    const totalTicks = (plan.path.length - 1) * plan.ticksPerStep;
+    if (totalTicks <= 0) return 1;
+    const elapsedTicks = this.game.ticks() - plan.startTick;
+    return Math.min(1, Math.max(0, elapsedTicks / totalTicks));
   }
 
   private renderBoatIcon(boat: UnitView) {
