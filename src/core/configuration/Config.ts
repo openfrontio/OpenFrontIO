@@ -135,7 +135,7 @@ export interface Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
-    isReceiver?: boolean,
+    isReceiver: boolean,
   ): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;

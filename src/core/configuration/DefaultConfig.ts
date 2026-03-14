@@ -276,7 +276,7 @@ export class DefaultConfig implements Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
-    isReceiver: boolean = false,
+    isReceiver: boolean,
   ): Gold {
     // No penalty for the first 5 cities.
     citiesVisited = Math.max(0, citiesVisited - 5);
