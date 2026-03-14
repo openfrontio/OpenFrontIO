@@ -43,6 +43,7 @@ export class ControlPanel extends LitElement implements Layer {
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
+  private _sliderDraggingPointerId: number | null = null;
 
   getTickIntervalMs() {
     return 100;
@@ -69,8 +70,7 @@ export class ControlPanel extends LitElement implements Layer {
         newAttackRatio = 0.1;
       }
 
-      this.attackRatio = newAttackRatio;
-      this.onAttackRatioChange(this.attackRatio);
+      this.setAttackRatio(newAttackRatio);
     });
   }
 
@@ -124,15 +124,79 @@ export class ControlPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private handleRatioSliderInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const value = Number(input.value);
-    this.attackRatio = value / 100;
+  private setAttackRatio(newRatio: number) {
+    const clamped = Math.min(1, Math.max(0.01, newRatio));
+    this.attackRatio = clamped;
+    localStorage.setItem("settings.attackRatio", String(this.attackRatio));
     this.onAttackRatioChange(this.attackRatio);
+    this.requestUpdate();
   }
 
-  private handleRatioSliderPointerUp(e: Event) {
-    (e.target as HTMLInputElement).blur();
+  private updateAttackRatioFromPointer(
+    e: PointerEvent,
+    sliderTrack: HTMLElement,
+  ) {
+    const rect = sliderTrack.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = (e.clientX - rect.left) / rect.width;
+    this.setAttackRatio(ratio);
+  }
+
+  private handleRatioSliderPointerDown = (e: PointerEvent) => {
+    const sliderTrack = e.currentTarget as HTMLElement;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    this._sliderDraggingPointerId = e.pointerId;
+    sliderTrack.setPointerCapture(e.pointerId);
+    this.updateAttackRatioFromPointer(e, sliderTrack);
+    e.preventDefault();
+  };
+
+  private handleRatioSliderPointerMove = (e: PointerEvent) => {
+    if (this._sliderDraggingPointerId !== e.pointerId) return;
+    const sliderTrack = e.currentTarget as HTMLElement;
+    this.updateAttackRatioFromPointer(e, sliderTrack);
+    e.preventDefault();
+  };
+
+  private handleRatioSliderPointerUp = (e: PointerEvent) => {
+    if (this._sliderDraggingPointerId !== e.pointerId) return;
+    this._sliderDraggingPointerId = null;
+    const sliderTrack = e.currentTarget as HTMLElement;
+    if (sliderTrack.hasPointerCapture(e.pointerId)) {
+      sliderTrack.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  private renderCustomAttackRatioSlider(compact: boolean = false) {
+    const ratioPercent = Math.max(1, Math.min(100, this.attackRatio * 100));
+    const heightClass = compact ? "h-1.5" : "h-2";
+    const thumbClass = compact ? "w-3 h-3" : "w-3.5 h-3.5";
+
+    return html`
+      <div class="w-full min-w-0">
+        <div
+          class="relative w-full ${heightClass} rounded-full bg-slate-700/70 border border-slate-300/25 shadow-inner cursor-pointer touch-none select-none"
+          role="slider"
+          aria-label="Attack ratio"
+          aria-valuemin="1"
+          aria-valuemax="100"
+          aria-valuenow=${Math.round(ratioPercent)}
+          @pointerdown=${this.handleRatioSliderPointerDown}
+          @pointermove=${this.handleRatioSliderPointerMove}
+          @pointerup=${this.handleRatioSliderPointerUp}
+          @pointercancel=${this.handleRatioSliderPointerUp}
+        >
+          <div
+            class="absolute left-0 top-0 h-full rounded-full bg-blue-500"
+            style="width: ${ratioPercent}%;"
+          ></div>
+          <div
+            class="absolute top-1/2 ${thumbClass} rounded-full bg-white border border-slate-300 -translate-x-1/2 -translate-y-1/2"
+            style="left: ${ratioPercent}%; box-shadow: 0 0 0 1px rgba(15,23,42,0.35), 0 1px 2px rgba(0,0,0,0.45);"
+          ></div>
+        </div>
+      </div>
+    `;
   }
 
   private calculateTroopBar(): { greenPercent: number; orangePercent: number } {
@@ -319,15 +383,7 @@ export class ControlPanel extends LitElement implements Layer {
             )})</span
           >
         </div>
-        <input
-          type="range"
-          min="1"
-          max="100"
-          .value=${String(Math.round(this.attackRatio * 100))}
-          @input=${(e: Event) => this.handleRatioSliderInput(e)}
-          @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          class="flex-1 h-2 accent-blue-500 cursor-pointer"
-        />
+        <div class="flex-1">${this.renderCustomAttackRatioSlider()}</div>
       </div>
     `;
   }
@@ -366,15 +422,7 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
         <!-- Attack ratio slider -->
         <div class="flex-1" translate="no">
-          <input
-            type="range"
-            min="1"
-            max="100"
-            .value=${String(Math.round(this.attackRatio * 100))}
-            @input=${(e: Event) => this.handleRatioSliderInput(e)}
-            @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-            class="w-full h-1.5 accent-blue-500 cursor-pointer"
-          />
+          ${this.renderCustomAttackRatioSlider(true)}
         </div>
       </div>
     `;
