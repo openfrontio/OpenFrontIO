@@ -734,7 +734,8 @@ export class NationStructureBehavior {
         : player.isAlliedWith(neighbor)
           ? "ally"
           : "other";
-      const weight = Number(game.config().trainGold(relType, 0, false)) / maxTradeGold;
+      const weight =
+        Number(game.config().trainGold(relType, 0, false)) / maxTradeGold;
       for (const unit of neighbor.units(
         UnitType.City,
         UnitType.Port,
