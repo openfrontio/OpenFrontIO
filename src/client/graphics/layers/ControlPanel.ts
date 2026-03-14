@@ -165,7 +165,33 @@ export class ControlPanel extends LitElement implements Layer {
     if (sliderTrack.hasPointerCapture(e.pointerId)) {
       sliderTrack.releasePointerCapture(e.pointerId);
     }
-  }
+  };
+
+  private handleRatioSliderKeyDown = (e: KeyboardEvent) => {
+    const step = (e.shiftKey ? 5 : 1) / 100;
+    switch (e.key) {
+      case "ArrowLeft":
+      case "ArrowDown":
+        this.setAttackRatio(this.attackRatio - step);
+        e.preventDefault();
+        break;
+      case "ArrowRight":
+      case "ArrowUp":
+        this.setAttackRatio(this.attackRatio + step);
+        e.preventDefault();
+        break;
+      case "Home":
+        this.setAttackRatio(0.01);
+        e.preventDefault();
+        break;
+      case "End":
+        this.setAttackRatio(1);
+        e.preventDefault();
+        break;
+      default:
+        break;
+    }
+  };
 
   private renderCustomAttackRatioSlider(compact: boolean = false) {
     const ratioPercent = Math.max(1, Math.min(100, this.attackRatio * 100));
@@ -177,6 +203,7 @@ export class ControlPanel extends LitElement implements Layer {
         <div
           class="relative w-full ${heightClass} rounded-full bg-slate-700/70 border border-slate-300/25 shadow-inner cursor-pointer touch-none select-none"
           role="slider"
+          tabindex="0"
           aria-label="Attack ratio"
           aria-valuemin="1"
           aria-valuemax="100"
@@ -185,6 +212,7 @@ export class ControlPanel extends LitElement implements Layer {
           @pointermove=${this.handleRatioSliderPointerMove}
           @pointerup=${this.handleRatioSliderPointerUp}
           @pointercancel=${this.handleRatioSliderPointerUp}
+          @keydown=${this.handleRatioSliderKeyDown}
         >
           <div
             class="absolute left-0 top-0 h-full rounded-full bg-blue-500"
