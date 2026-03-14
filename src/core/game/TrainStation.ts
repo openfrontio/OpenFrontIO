@@ -20,19 +20,24 @@ class TradeStationStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const gold = mg
+    const relationship = rel(trainOwner, stationOwner);
+    const citiesVisited = trainExecution.tradeStopsVisited();
+
+    // Factory owner (sender) always gets the full sender reward.
+    const senderGold = mg
       .config()
-      .trainGold(
-        rel(trainOwner, stationOwner),
-        trainExecution.tradeStopsVisited(),
-      );
-    // Share revenue with the station owner if it's not the current player
+      .trainGold(relationship, citiesVisited, false);
+    trainOwner.addGold(senderGold, station.tile());
+    mg.stats().trainSelfTrade(trainOwner, senderGold);
+
+    // City owner (receiver) gets a reduced reward when the train belongs to another player.
     if (trainOwner !== stationOwner) {
-      stationOwner.addGold(gold, station.tile());
-      mg.stats().trainExternalTrade(trainOwner, gold);
+      const receiverGold = mg
+        .config()
+        .trainGold(relationship, citiesVisited, true);
+      stationOwner.addGold(receiverGold, station.tile());
+      mg.stats().trainExternalTrade(stationOwner, receiverGold);
     }
-    trainOwner.addGold(gold, station.tile());
-    mg.stats().trainSelfTrade(trainOwner, gold);
   }
 }
 
