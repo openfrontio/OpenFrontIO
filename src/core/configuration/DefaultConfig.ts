@@ -343,6 +343,7 @@ export class DefaultConfig implements Config {
       case UnitType.TransportShip:
         info = {
           cost: () => 0n,
+          maxHealth: 500,
         };
         break;
       case UnitType.Warship:
@@ -905,7 +906,7 @@ export class DefaultConfig implements Config {
   }
 
   warshipShellAttackRate(): number {
-    return 20;
+    return 40;
   }
 
   defensePostShellAttackRate(): number {
