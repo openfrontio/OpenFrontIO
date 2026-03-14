@@ -348,6 +348,21 @@
     </script>
 
     <script>
+      (function () {
+        const MINI_HOVER_STORAGE_KEY = "settings.miniHoverOverlay";
+        const MINI_HOVER_DISABLED = "disabled";
+
+        const savedMiniHover = localStorage.getItem(MINI_HOVER_STORAGE_KEY);
+        const initialMiniHoverEnabled =
+          savedMiniHover !== MINI_HOVER_DISABLED && savedMiniHover !== "false";
+        document.body.classList.toggle(
+          "mini-hover-overlay-disabled",
+          !initialMiniHoverEnabled,
+        );
+      })();
+    </script>
+
+    <script>
       // Fallback sidebar toggle so hamburger works even if module bundle fails to load
       window.__toggleSidebar = function (e) {
         try {
