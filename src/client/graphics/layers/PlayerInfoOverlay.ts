@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
+import { ref } from "lit/directives/ref.js";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
