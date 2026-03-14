@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  shouldClearNukeGhostInRenderWhenOutOfGold,
-  shouldClearNukeGhostWhenOutOfGold,
+  shouldClearNukeGhost,
+  shouldClearNukeGhostInRender,
   shouldPreserveGhostAfterBuild,
 } from "../../../../src/client/graphics/layers/StructureIconsLayer";
 import { BuildableUnit, UnitType } from "../../../../src/core/game/Game";
@@ -56,29 +56,15 @@ function nukeBuildable(
   };
 }
 
-describe("shouldClearNukeGhostWhenOutOfGold", () => {
-  test("returns true for atom bomb ghost when player gold is less than cost", () => {
-    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
-    const player = { gold: () => 50n };
-    expect(
-      shouldClearNukeGhostWhenOutOfGold(UnitType.AtomBomb, unit, player),
-    ).toBe(true);
+describe("shouldClearNukeGhost", () => {
+  test("returns true for atom bomb ghost when canBuild is false", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb);
+    expect(shouldClearNukeGhost(UnitType.AtomBomb, unit)).toBe(true);
   });
 
-  test("returns true for hydrogen bomb ghost when player gold is less than cost", () => {
-    const unit = nukeBuildable(UnitType.HydrogenBomb, { cost: 200n });
-    const player = { gold: () => 0n };
-    expect(
-      shouldClearNukeGhostWhenOutOfGold(UnitType.HydrogenBomb, unit, player),
-    ).toBe(true);
-  });
-
-  test("returns false when player can afford the nuke (gold >= cost)", () => {
-    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
-    const player = { gold: () => 100n };
-    expect(
-      shouldClearNukeGhostWhenOutOfGold(UnitType.AtomBomb, unit, player),
-    ).toBe(false);
+  test("returns true for hydrogen bomb ghost when canBuild is false", () => {
+    const unit = nukeBuildable(UnitType.HydrogenBomb);
+    expect(shouldClearNukeGhost(UnitType.HydrogenBomb, unit)).toBe(true);
   });
 
   test("returns false when ghost is not a nuke type", () => {
@@ -90,76 +76,38 @@ describe("shouldClearNukeGhostWhenOutOfGold", () => {
       overlappingRailroads: [],
       ghostRailPaths: [],
     };
-    const player = { gold: () => 0n };
-    expect(shouldClearNukeGhostWhenOutOfGold(UnitType.City, unit, player)).toBe(
-      false,
-    );
+    expect(shouldClearNukeGhost(UnitType.City, unit)).toBe(false);
   });
 
   test("returns false when unit canBuild is not false (e.g. can place)", () => {
     const unit = nukeBuildable(UnitType.AtomBomb, {
       canBuild: 0 as BuildableUnit["canBuild"],
     });
-    const player = { gold: () => 50n };
-    expect(
-      shouldClearNukeGhostWhenOutOfGold(UnitType.AtomBomb, unit, player),
-    ).toBe(false);
-  });
-
-  test("returns false when player is null", () => {
-    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
-    expect(
-      shouldClearNukeGhostWhenOutOfGold(UnitType.AtomBomb, unit, null),
-    ).toBe(false);
-  });
-
-  test("treats undefined cost as 0 (player with 0 gold does not clear)", () => {
-    const unit = nukeBuildable(UnitType.HydrogenBomb);
-    (unit as { cost?: bigint }).cost = undefined;
-    const player = { gold: () => 0n };
-    expect(
-      shouldClearNukeGhostWhenOutOfGold(UnitType.HydrogenBomb, unit, player),
-    ).toBe(false);
+    expect(shouldClearNukeGhost(UnitType.AtomBomb, unit)).toBe(false);
   });
 });
 
-describe("shouldClearNukeGhostInRenderWhenOutOfGold", () => {
-  test("does not clear when user has not placed a nuke yet (press 8 with no gold → no flash)", () => {
-    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
-    const player = { gold: () => 50n };
-    expect(
-      shouldClearNukeGhostInRenderWhenOutOfGold(
-        false,
-        UnitType.AtomBomb,
-        unit,
-        player,
-      ),
-    ).toBe(false);
+describe("shouldClearNukeGhostInRender", () => {
+  test("does not clear when user has not placed a nuke yet (press 8 when can't build → no flash)", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb);
+    expect(shouldClearNukeGhostInRender(false, UnitType.AtomBomb, unit)).toBe(
+      false,
+    );
   });
 
-  test("clears when user has placed at least one nuke and then runs out of gold", () => {
-    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
-    const player = { gold: () => 50n };
-    expect(
-      shouldClearNukeGhostInRenderWhenOutOfGold(
-        true,
-        UnitType.AtomBomb,
-        unit,
-        player,
-      ),
-    ).toBe(true);
+  test("clears when user has placed at least one nuke and can no longer build", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb);
+    expect(shouldClearNukeGhostInRender(true, UnitType.AtomBomb, unit)).toBe(
+      true,
+    );
   });
 
-  test("does not clear when user has placed a nuke but can still afford another", () => {
-    const unit = nukeBuildable(UnitType.AtomBomb, { cost: 100n });
-    const player = { gold: () => 200n };
-    expect(
-      shouldClearNukeGhostInRenderWhenOutOfGold(
-        true,
-        UnitType.AtomBomb,
-        unit,
-        player,
-      ),
-    ).toBe(false);
+  test("does not clear when user has placed a nuke but can still build another", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb, {
+      canBuild: 0 as BuildableUnit["canBuild"],
+    });
+    expect(shouldClearNukeGhostInRender(true, UnitType.AtomBomb, unit)).toBe(
+      false,
+    );
   });
 });

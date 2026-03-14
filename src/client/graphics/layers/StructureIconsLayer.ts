@@ -51,39 +51,30 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
 
 /**
  * Returns true when the ghost structure should be cleared because the user
- * has the nuke (atom/hydrogen bomb) ghost selected but can no longer afford it.
- * Used so the ghost goes away when the user runs out of gold.
+ * has the nuke (atom/hydrogen bomb) ghost selected and can no longer build it
+ * (silo reloading, out of gold, etc.).
  */
-export function shouldClearNukeGhostWhenOutOfGold(
+export function shouldClearNukeGhost(
   ghostType: PlayerBuildableUnitType,
   unit: BuildableUnit,
-  player: { gold(): bigint } | null,
 ): boolean {
   if (unit.canBuild !== false) return false;
-  if (ghostType !== UnitType.AtomBomb && ghostType !== UnitType.HydrogenBomb) {
-    return false;
-  }
-  if (!player) return false;
-  const cost = unit.cost ?? 0n;
-  return player.gold() < cost;
+  return ghostType === UnitType.AtomBomb || ghostType === UnitType.HydrogenBomb;
 }
 
 /**
  * Returns true when the layer should clear the nuke ghost in the render path
  * (e.g. after buildables() returns). Only true when the user has already placed
- * at least one nuke with this ghost and is now out of gold—so "press 8 with no
- * gold" does not flash, but "launch until out of gold" does clear the preview.
+ * at least one nuke with this ghost and can no longer build another—so "press 8
+ * when you can't build" does not flash, but "launch until you can't build
+ * another" does clear the preview.
  */
-export function shouldClearNukeGhostInRenderWhenOutOfGold(
+export function shouldClearNukeGhostInRender(
   hasPlacedNukeWithCurrentGhost: boolean,
   ghostType: PlayerBuildableUnitType,
   unit: BuildableUnit,
-  player: { gold(): bigint } | null,
 ): boolean {
-  return (
-    hasPlacedNukeWithCurrentGhost &&
-    shouldClearNukeGhostWhenOutOfGold(ghostType, unit, player)
-  );
+  return hasPlacedNukeWithCurrentGhost && shouldClearNukeGhost(ghostType, unit);
 }
 
 extend([a11yPlugin]);
@@ -407,14 +398,11 @@ export class StructureIconsLayer implements Layer {
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
-          // Clear nuke ghost when out of gold only after they've placed at least one nuke
-          // (so "press 8 with no gold" doesn't flash; "launch until out of gold" does clear).
           if (
-            shouldClearNukeGhostInRenderWhenOutOfGold(
+            shouldClearNukeGhostInRender(
               this.hasPlacedNukeWithCurrentGhost,
               this.ghostUnit.buildableUnit.type,
               unit,
-              this.game.myPlayer(),
             )
           ) {
             this.removeGhostStructure();
