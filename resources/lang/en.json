@@ -752,6 +752,7 @@
   "events_display": {
     "events": "Events",
     "retreating": "retreating",
+    "seconds_abbrev": "{seconds}s",
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
     "alliance_rejected": "rejected",
