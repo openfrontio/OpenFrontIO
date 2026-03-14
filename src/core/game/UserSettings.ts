@@ -89,6 +89,14 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  troopAdvantageLayer() {
+    return this.get("settings.troopAdvantageLayer", true);
+  }
+
+  toggleTroopAdvantageLayer() {
+    this.set("settings.troopAdvantageLayer", !this.troopAdvantageLayer());
+  }
+
   cursorCostLabel() {
     const legacy = this.get("settings.ghostPricePill", true);
     return this.get("settings.cursorCostLabel", legacy);
