@@ -61,7 +61,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
   Svalmel: 8,
-  World: 8,
+  World: 20,
   Lemnos: 3,
   Passage: 4,
   TwoLakes: 6,
@@ -109,14 +109,14 @@ type ModifierKey =
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
-  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
-  ...Array<ModifierKey>(8).fill("isCompact"),
-  ...Array<ModifierKey>(1).fill("isCrowded"),
-  ...Array<ModifierKey>(1).fill("isHardNations"),
-  ...Array<ModifierKey>(8).fill("startingGold"),
-  ...Array<ModifierKey>(1).fill("startingGoldHigh"),
-  ...Array<ModifierKey>(1).fill("goldMultiplier"),
-  ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
+  ...Array<ModifierKey>(8).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(16).fill("isCompact"),
+  ...Array<ModifierKey>(3).fill("isCrowded"), // should be quite rare as it causes max-size lobbies
+  ...Array<ModifierKey>(1).fill("isHardNations"), // should be quite rare because it's just for the PvPvE enjoyers
+  ...Array<ModifierKey>(16).fill("startingGold"),
+  ...Array<ModifierKey>(4).fill("startingGoldHigh"), // should be quite rare because it's very crazy
+  ...Array<ModifierKey>(6).fill("goldMultiplier"),
+  ...Array<ModifierKey>(1).fill("isAlliancesDisabled"), // should be quite rare because it removes a key element of OpenFront
 ];
 
 // Modifiers that cannot be active at the same time.
@@ -515,16 +515,16 @@ export class MapPlaylist {
     count?: number,
     countReduction: number = 0,
   ): PublicGameModifiers {
-    // Roll how many modifiers to pick: 30% → 1, 40% → 2, 20% → 3, 10% → 4
-    const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
+    // Roll how many modifiers to pick: 40% → 1, 40% → 2, 15% → 3, 5% → 4
+    const modifierCountRoll = Math.floor(Math.random() * 100) + 1;
     const k = Math.max(
       0,
       (count ??
-        (modifierCountRoll <= 3
+        (modifierCountRoll <= 40
           ? 1
-          : modifierCountRoll <= 7
+          : modifierCountRoll <= 80
             ? 2
-            : modifierCountRoll <= 9
+            : modifierCountRoll <= 95
               ? 3
               : 4)) - countReduction,
     );

@@ -79,8 +79,6 @@ export class GameServer {
 
   private _hasEnded = false;
 
-  public desyncCount = 0;
-
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -533,6 +531,10 @@ export class GameServer {
     return this.activeClients.length;
   }
 
+  public numDesyncedClients(): number {
+    return this.outOfSyncClients.size;
+  }
+
   public prestart() {
     if (this.hasStarted()) {
       return;
@@ -982,8 +984,6 @@ export class GameServer {
 
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
-
-    this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
