@@ -460,6 +460,13 @@ export class PlayerView {
     return this.game.worker.attackAveragePosition(playerID, attackID);
   }
 
+  async attackClusterPositions(
+    playerID: number,
+    attackID: string,
+  ): Promise<Cell[]> {
+    return this.game.worker.attackClusterPositions(playerID, attackID);
+  }
+
   units(...types: UnitType[]): UnitView[] {
     return this.game
       .units(...types)

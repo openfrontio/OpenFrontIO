@@ -4,6 +4,7 @@ import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
+  AttackClusterPositionsResultMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsResultMessage,
@@ -262,6 +263,30 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       } catch (error) {
         console.error("Failed to get attack average position:", error);
         throw error;
+      }
+      break;
+    case "attack_cluster_positions":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const clusters = (await gameRunner).attackClusterPositions(
+          message.playerID,
+          message.attackID,
+        );
+        sendMessage({
+          type: "attack_cluster_positions_result",
+          id: message.id,
+          clusters,
+        } as AttackClusterPositionsResultMessage);
+      } catch (error) {
+        console.error("Failed to get attack cluster positions:", error);
+        sendMessage({
+          type: "attack_cluster_positions_result",
+          id: message.id,
+          clusters: [],
+        } as AttackClusterPositionsResultMessage);
       }
       break;
     case "transport_ship_spawn":

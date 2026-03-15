@@ -255,6 +255,24 @@ export class GameRunner {
     } as PlayerBorderTiles;
   }
 
+  public attackClusterPositions(
+    playerID: number,
+    attackID: string,
+  ): { x: number; y: number }[] {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const condition = (a: Attack) => a.id() === attackID;
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
+    if (attack === undefined) return [];
+
+    return attack.clusterPositions();
+  }
+
   public attackAveragePosition(
     playerID: number,
     attackID: string,
