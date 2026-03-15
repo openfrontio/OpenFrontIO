@@ -15,6 +15,7 @@ import {
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
+import { decodeMsgPack, isBinaryMessage } from "../core/serialization";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -282,7 +283,7 @@ export async function startWorker() {
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
-    ws.on("message", async (message: string) => {
+    ws.on("message", async (message: Buffer | string) => {
       const forwarded = req.headers["x-forwarded-for"];
       const ip = Array.isArray(forwarded)
         ? forwarded[0]
@@ -290,10 +291,26 @@ export async function startWorker() {
           forwarded || req.socket.remoteAddress || "unknown";
 
       try {
-        // Parse and handle client messages
-        const parsed = ClientMessageSchema.safeParse(
-          JSON.parse(message.toString()),
-        );
+        // Parse and handle client messages.
+        // Binary frames (Buffer) → MessagePack; text frames (string) → JSON.
+        let raw: unknown;
+        const isBinary = isBinaryMessage(message);
+        try {
+          raw = isBinary
+            ? decodeMsgPack(message as Buffer)
+            : JSON.parse((message as string).toString());
+        } catch (e) {
+          log.warn("Error deserializing client message", String(e));
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              error: "parse_error",
+            } satisfies ServerErrorMessage),
+          );
+          ws.close(1002, "ClientJoinMessageSchema");
+          return;
+        }
+        const parsed = ClientMessageSchema.safeParse(raw);
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
           log.warn("Error parsing client message", error);
@@ -454,7 +471,10 @@ export async function startWorker() {
           }
         }
 
-        // Create client and add to game
+        // Create client and add to game.
+        // If the join message arrived as a binary (msgpack) frame, the client
+        // has declared msgpack support — all subsequent server→client messages
+        // for this connection will use MessagePack binary frames.
         const client = new Client(
           generateID(),
           persistentId,
@@ -467,6 +487,7 @@ export async function startWorker() {
           ws,
           cosmeticResult.cosmetics,
         );
+        client.supportsMsgPack = isBinary;
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
 
