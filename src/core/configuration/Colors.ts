@@ -31,8 +31,8 @@ function generateTeamColors(baseColor: Colord): Colord[] {
   return Array.from({ length: colorCount }, (_, index) => {
     if (index === 0) return baseColor;
 
-    // Spread hues evenly across ±12° band using golden angle within that range
-    const hueShift = ((index * goldenAngle) % 24) - 12;
+    // Spread hues evenly across ±6° band using golden angle within that range
+    const hueShift = ((index * goldenAngle) % 12) - 6;
     const h = (lch.h + hueShift + 360) % 360;
 
     // Chroma oscillates ±10% around the base to add variety without washing out
