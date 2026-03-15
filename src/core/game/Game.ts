@@ -471,6 +471,7 @@ export interface Attack {
   clearBorder(): void;
   borderSize(): number;
   averagePosition(): Cell | null;
+  clusterPositions(): Cell[];
 }
 
 export interface AllianceRequest {

@@ -1,16 +1,31 @@
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+export function troopAttackColor(
+  attackerTroops: number,
+  defenderTroops: number,
+): string {
+  return attackerTroops > defenderTroops ? "#66ff66" : "#ffbe3c";
+}
+
+export function troopDefenceColor(
+  attackerTroops: number,
+  myTroops: number,
+): string {
+  return attackerTroops > myTroops ? "#ff4444" : "#ff9944";
+}
+
+// One label element per disconnected cluster of front-line tiles
 interface AttackLabel {
-  attackID: string;
-  element: HTMLDivElement;
-  position: Cell | null;
+  elements: HTMLDivElement[];
+  positions: (Cell | null)[];
+  isIncoming: boolean;
 }
 
 export class TroopAdvantageLayer implements Layer {
@@ -60,7 +75,7 @@ export class TroopAdvantageLayer implements Layer {
 
   tick() {
     if (!this.userSettings.troopAdvantageLayer()) {
-      this.clearAllLabels();
+      if (this.labels.size > 0) this.clearAllLabels();
       return;
     }
 
@@ -70,64 +85,109 @@ export class TroopAdvantageLayer implements Layer {
       return;
     }
 
-    const attacks = myPlayer.outgoingAttacks();
-    const activeIDs = new Set(attacks.map((a) => a.id));
+    const outgoing = myPlayer.outgoingAttacks();
+    const incoming = myPlayer.incomingAttacks();
+    const activeIDs = new Set([
+      ...outgoing.map((a) => a.id),
+      ...incoming.map((a) => a.id),
+    ]);
 
     // Remove labels for attacks that no longer exist
-    for (const [id, label] of this.labels) {
-      if (!activeIDs.has(id)) {
-        label.element.remove();
-        this.labels.delete(id);
-        this.inFlightPositionRequests.delete(id);
-      }
+    for (const [id] of this.labels) {
+      if (!activeIDs.has(id)) this.removeLabel(id);
     }
 
-    // Update or create labels for active attacks
-    for (const attack of attacks) {
-      // Skip boat attacks (targetID === 0 means attacking sea/empty)
+    const myTroops = myPlayer.troops();
+
+    // Outgoing attacks — ⚔ green if winning, amber if losing
+    for (const attack of outgoing) {
       if (!attack.targetID) {
         this.removeLabel(attack.id);
         continue;
       }
-
       const defender = this.game.playerBySmallID(attack.targetID);
       if (!defender || !defender.isPlayer()) {
         this.removeLabel(attack.id);
         continue;
       }
 
-      const attackerTroops = attack.troops;
-      const defenderTroops = defender.troops();
+      this.processAttack(
+        myPlayer,
+        attack.id,
+        attack.attackerID,
+        attack.troops,
+        defender.troops(),
+        false,
+      );
+    }
 
-      let label = this.labels.get(attack.id);
-      if (!label) {
-        const element = this.createLabelElement(attackerTroops, defenderTroops);
-        label = { attackID: attack.id, element, position: null };
-        this.labels.set(attack.id, label);
-      } else {
-        this.updateLabelContent(label.element, attackerTroops, defenderTroops);
+    // Incoming attacks — red if attacker > my troops, orange if attacker < my troops
+    for (const attack of incoming) {
+      const attacker = this.game.playerBySmallID(attack.attackerID);
+      if (!attacker || !attacker.isPlayer()) {
+        this.removeLabel(attack.id);
+        continue;
       }
 
-      // Re-fetch position every tick so the label follows the moving front line
-      const attackID = attack.id;
-      if (this.inFlightPositionRequests.has(attackID)) continue;
-      this.inFlightPositionRequests.add(attackID);
-
-      void myPlayer
-        .attackAveragePosition(attack.attackerID, attackID)
-        .then((pos) => {
-          const lbl = this.labels.get(attackID);
-          if (!lbl) return;
-          lbl.position = pos; // null hides stale label
-        })
-        .catch(() => {
-          const lbl = this.labels.get(attackID);
-          if (lbl) lbl.position = null;
-        })
-        .finally(() => {
-          this.inFlightPositionRequests.delete(attackID);
-        });
+      this.processAttack(
+        myPlayer,
+        attack.id,
+        attack.attackerID,
+        attack.troops,
+        myTroops,
+        true,
+      );
     }
+  }
+
+  private processAttack(
+    myPlayer: PlayerView,
+    attackID: string,
+    attackerSmallID: number,
+    attackerTroops: number,
+    defenderTroops: number,
+    isIncoming: boolean,
+  ) {
+    let label = this.labels.get(attackID);
+    if (!label) {
+      label = { elements: [], positions: [], isIncoming };
+      this.labels.set(attackID, label);
+    }
+    for (const el of label.elements) {
+      this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+    }
+
+    if (this.inFlightPositionRequests.has(attackID)) return;
+    this.inFlightPositionRequests.add(attackID);
+
+    void myPlayer
+      .attackClusterPositions(attackerSmallID, attackID)
+      .then((clusters) => {
+        const lbl = this.labels.get(attackID);
+        if (!lbl) return;
+
+        while (lbl.elements.length < clusters.length) {
+          lbl.elements.push(
+            this.createLabelElement(attackerTroops, defenderTroops, isIncoming),
+          );
+          lbl.positions.push(null);
+        }
+        while (lbl.elements.length > clusters.length) {
+          lbl.elements.pop()!.remove();
+          lbl.positions.pop();
+        }
+
+        for (let i = 0; i < clusters.length; i++) {
+          lbl.positions[i] = clusters[i];
+        }
+      })
+      .catch(() => {
+        const lbl = this.labels.get(attackID);
+        if (lbl) lbl.positions.fill(null);
+      })
+      .finally(() => {
+        this.inFlightPositionRequests.delete(attackID);
+      });
   }
 
   renderLayer(_context: CanvasRenderingContext2D) {
@@ -141,25 +201,25 @@ export class TroopAdvantageLayer implements Layer {
     this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
 
     for (const label of this.labels.values()) {
-      if (!label.position) {
-        label.element.style.display = "none";
-        continue;
-      }
+      for (let i = 0; i < label.elements.length; i++) {
+        const el = label.elements[i];
+        const pos = label.positions[i];
 
-      const isOnScreen = this.transformHandler.isOnScreen(label.position);
-      if (!isOnScreen) {
-        label.element.style.display = "none";
-        continue;
-      }
+        if (!pos || !this.transformHandler.isOnScreen(pos)) {
+          el.style.display = "none";
+          continue;
+        }
 
-      label.element.style.display = "block";
-      label.element.style.transform = `translate(${label.position.x}px, ${label.position.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        el.style.display = "block";
+        el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+      }
     }
   }
 
   private createLabelElement(
     attackerTroops: number,
     defenderTroops: number,
+    isIncoming: boolean,
   ): HTMLDivElement {
     const el = document.createElement("div");
     el.style.position = "absolute";
@@ -173,7 +233,7 @@ export class TroopAdvantageLayer implements Layer {
     el.style.backgroundColor = "rgba(0,0,0,0.55)";
     el.style.pointerEvents = "none";
     el.style.lineHeight = "1.3";
-    this.updateLabelContent(el, attackerTroops, defenderTroops);
+    this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
     this.container.appendChild(el);
     return el;
   }
@@ -182,37 +242,33 @@ export class TroopAdvantageLayer implements Layer {
     el: HTMLDivElement,
     attackerTroops: number,
     defenderTroops: number,
+    isIncoming: boolean,
   ) {
-    const atkStr = renderTroops(attackerTroops);
-    const defStr = renderTroops(defenderTroops);
-    const advantage = attackerTroops > defenderTroops;
-
-    const atk = document.createElement("span");
-    atk.style.color = advantage ? "#66ff66" : "#ff6666";
-    atk.textContent = `⚔ ${atkStr}`;
-
-    const vs = document.createElement("span");
-    vs.style.color = "#aaa";
-    vs.textContent = " vs ";
-
-    const def = document.createElement("span");
-    def.style.color = "#ff9944";
-    def.textContent = defStr;
-
-    el.replaceChildren(atk, vs, def);
+    const span = document.createElement("span");
+    if (isIncoming) {
+      const icon = document.createElement("span");
+      icon.textContent = "🛡 ";
+      span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
+      span.textContent = renderTroops(attackerTroops);
+      el.replaceChildren(icon, span);
+    } else {
+      span.style.color = troopAttackColor(attackerTroops, defenderTroops);
+      span.textContent = `⚔ ${renderTroops(attackerTroops)}`;
+      el.replaceChildren(span);
+    }
   }
 
   private removeLabel(attackID: string) {
     const label = this.labels.get(attackID);
     if (!label) return;
-    label.element.remove();
+    for (const el of label.elements) el.remove();
     this.labels.delete(attackID);
     this.inFlightPositionRequests.delete(attackID);
   }
 
   private clearAllLabels() {
     for (const label of this.labels.values()) {
-      label.element.remove();
+      for (const el of label.elements) el.remove();
     }
     this.labels.clear();
     this.inFlightPositionRequests.clear();

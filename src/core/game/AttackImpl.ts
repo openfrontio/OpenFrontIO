@@ -97,6 +97,68 @@ export class AttackImpl implements Attack {
     }
   }
 
+  clusterPositions(): Cell[] {
+    // Minimum border tiles for a cluster to get its own label.
+    // Clusters smaller than this are suppressed (except we always keep the largest).
+    const MIN_CLUSTER_SIZE = 30;
+
+    if (this._borderSize === 0) {
+      const avg = this.averagePosition();
+      return avg ? [avg] : [];
+    }
+
+    const map = this._mg.map();
+    const visited = new Set<TileRef>();
+    const clusters: { centroid: Cell; size: number }[] = [];
+
+    for (const startTile of this._border) {
+      if (visited.has(startTile)) continue;
+
+      const queue: TileRef[] = [startTile];
+      visited.add(startTile);
+      let qi = 0;
+      let sumX = 0;
+      let sumY = 0;
+      let count = 0;
+
+      while (qi < queue.length) {
+        const tile = queue[qi++];
+        const tx = map.x(tile);
+        const ty = map.y(tile);
+        sumX += tx;
+        sumY += ty;
+        count++;
+
+        // 8-directional BFS so diagonal border tiles merge into one cluster
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            if (!map.isValidCoord(tx + dx, ty + dy)) continue;
+            const neighbor = map.ref(tx + dx, ty + dy);
+            if (this._border.has(neighbor) && !visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push(neighbor);
+            }
+          }
+        }
+      }
+
+      clusters.push({
+        centroid: new Cell(sumX / count, sumY / count),
+        size: count,
+      });
+    }
+
+    // Keep only clusters above the minimum size.
+    // Always keep the largest cluster so there's at least one label.
+    const significant = clusters.filter((c) => c.size >= MIN_CLUSTER_SIZE);
+    if (significant.length === 0) {
+      const largest = clusters.reduce((a, b) => (b.size > a.size ? b : a));
+      return [largest.centroid];
+    }
+    return significant.map((c) => c.centroid);
+  }
+
   averagePosition(): Cell | null {
     if (this._borderSize === 0) {
       if (this.sourceTile() === null) {
