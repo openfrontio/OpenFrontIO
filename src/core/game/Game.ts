@@ -139,6 +139,7 @@ export enum GameMapType {
   Arctic = "Arctic",
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
+  StraitOfFlorida = "Strait of Florida",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -190,6 +191,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Arctic,
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
+    GameMapType.StraitOfFlorida,
   ],
   fantasy: [
     GameMapType.Pangaea,
