@@ -50,9 +50,13 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
   );
 
   for (const word of bannedWords) {
-    customDataset.addPhrase((phrase) =>
-      phrase.setMetadata({ originalWord: word }).addPattern(pattern`${word}`),
-    );
+    try {
+      customDataset.addPhrase((phrase) =>
+        phrase.setMetadata({ originalWord: word }).addPattern(pattern`${word}`),
+      );
+    } catch (e) {
+      console.error(`Invalid banned word pattern "${word}": ${e}`);
+    }
   }
 
   return new RegExpMatcher({

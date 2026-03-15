@@ -168,6 +168,23 @@ export function getActiveModifiers(
       formattedValue: `${millions}M`,
     });
   }
+  if (modifiers.goldMultiplier) {
+    result.push({
+      labelKey: "host_modal.gold_multiplier",
+      badgeKey: "public_game_modifier.gold_multiplier",
+      badgeParams: {
+        amount: modifiers.goldMultiplier,
+      },
+      value: modifiers.goldMultiplier,
+      formattedValue: `x${modifiers.goldMultiplier}`,
+    });
+  }
+  if (modifiers.isAlliancesDisabled) {
+    result.push({
+      labelKey: "host_modal.disable_alliances",
+      badgeKey: "public_game_modifier.disable_alliances",
+    });
+  }
   return result;
 }
 

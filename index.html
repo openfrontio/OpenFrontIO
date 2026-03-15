@@ -120,12 +120,12 @@
   </head>
 
   <body
-    class="h-full select-none font-sans min-h-screen bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
+    class="h-full select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-0 bg-cover bg-center opacity-60 [filter:brightness(0.5)_saturate(1.4)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.4)]"
+        class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
         style="
           background-image: url(&quot;/resources/images/background.webp&quot;);
         "
@@ -134,14 +134,14 @@
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
         style="
           background-image: url(&quot;/resources/images/OpenFront.webp&quot;);
-          opacity: 0.25;
+          opacity: 0.5;
         "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
         style="
           background-image: url(&quot;/resources/images/OF.webp&quot;);
-          opacity: 0.25;
+          opacity: 0.5;
         "
       ></div>
     </div>
@@ -252,8 +252,11 @@
         ></ranked-modal>
       </main-layout>
 
-      <!-- Desktop Footer -->
-      <page-footer></page-footer>
+      <!-- Ad above footer -->
+      <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
+        <home-footer-ad></home-footer-ad>
+        <page-footer></page-footer>
+      </div>
 
       <!-- Global Modals -->
       <territory-patterns-modal
@@ -266,7 +269,7 @@
 
     <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_460px_1fr] lg:items-end min-[1200px]:bottom-4 min-[1200px]:px-4"
+      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
@@ -275,7 +278,7 @@
     >
       <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
       <div
-        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[460px] lg:col-start-2 sm:z-10"
+        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
       >
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
