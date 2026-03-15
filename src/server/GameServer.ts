@@ -23,6 +23,11 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
+import {
+  decodeMsgPack,
+  encodeMsgPack,
+  isBinaryMessage,
+} from "../core/serialization";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
@@ -181,6 +186,25 @@ export class GameServer {
     return clientID;
   }
 
+  /**
+   * Send a server message to a single WebSocket, choosing the wire format
+   * based on whether the client has declared msgpack support.
+   *
+   * - supportsMsgPack=true  → binary frame (MessagePack Uint8Array)
+   * - supportsMsgPack=false → text frame (JSON string)   ← backward-compat default
+   */
+  private sendToClient(
+    ws: WebSocket,
+    payload: unknown,
+    msgpack: boolean,
+  ): void {
+    if (msgpack) {
+      ws.send(encodeMsgPack(payload));
+    } else {
+      ws.send(JSON.stringify(payload));
+    }
+  }
+
   public joinClient(client: Client): "joined" | "kicked" | "rejected" {
     if (this.kickedPersistentIds.has(client.persistentID)) {
       return "kicked";
@@ -194,11 +218,10 @@ export class GameServer {
         clientID: client.clientID,
       });
 
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "full-lobby",
-        } satisfies ServerErrorMessage),
+      this.sendToClient(
+        client.ws,
+        { type: "error", error: "full-lobby" } satisfies ServerErrorMessage,
+        client.supportsMsgPack,
       );
       return "rejected";
     }
@@ -314,13 +337,20 @@ export class GameServer {
 
   private addListeners(client: Client) {
     client.ws.removeAllListeners("message");
-    client.ws.on("message", async (message: string) => {
+    client.ws.on("message", async (message: Buffer | string) => {
       try {
         let json: unknown;
         try {
-          json = JSON.parse(message);
+          // Discriminate wire format by frame type:
+          //   Binary frame (Buffer/Uint8Array) → MessagePack
+          //   Text frame (string)              → JSON  (backward-compat)
+          if (isBinaryMessage(message)) {
+            json = decodeMsgPack(message as Buffer);
+          } else {
+            json = JSON.parse(message as string);
+          }
         } catch (e) {
-          this.log.warn(`Failed to parse client message JSON, kicking`, {
+          this.log.warn(`Failed to parse client message, kicking`, {
             clientID: client.clientID,
             error: String(e),
           });
@@ -593,13 +623,12 @@ export class GameServer {
       return;
     }
 
-    const msg = JSON.stringify(prestartMsg.data);
     this.activeClients.forEach((c) => {
       this.log.info("sending prestart message", {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(msg);
+      this.sendToClient(c.ws, prestartMsg.data, c.supportsMsgPack);
     });
   }
 
@@ -636,12 +665,15 @@ export class GameServer {
     const lobbyInfo = this.gameInfo();
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
-        const msg = JSON.stringify({
-          type: "lobby_info",
-          lobby: lobbyInfo,
-          myClientID: c.clientID,
-        } satisfies ServerLobbyInfoMessage);
-        c.ws.send(msg);
+        this.sendToClient(
+          c.ws,
+          {
+            type: "lobby_info",
+            lobby: lobbyInfo,
+            myClientID: c.clientID,
+          } satisfies ServerLobbyInfoMessage,
+          c.supportsMsgPack,
+        );
       }
     });
   }
@@ -706,14 +738,16 @@ export class GameServer {
     });
 
     try {
-      ws.send(
-        JSON.stringify({
+      this.sendToClient(
+        ws,
+        {
           type: "start",
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
-        } satisfies ServerStartGameMessage),
+        } satisfies ServerStartGameMessage,
+        client.supportsMsgPack,
       );
     } catch (error) {
       throw new Error(
@@ -741,12 +775,23 @@ export class GameServer {
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    const msg = JSON.stringify({
+    // Pre-encode both formats once per turn (avoids re-encoding per client).
+    // Only encode msgpack if at least one client supports it.
+    const turnPayload = {
       type: "turn",
       turn: pastTurn,
-    } satisfies ServerTurnMessage);
+    } satisfies ServerTurnMessage;
+    const jsonMsg = JSON.stringify(turnPayload);
+    let msgpackMsg: Uint8Array | null = null;
+
     this.activeClients.forEach((c) => {
-      c.ws.send(msg);
+      if (c.supportsMsgPack) {
+        // Lazy-encode msgpack only on first msgpack client
+        msgpackMsg ??= encodeMsgPack(turnPayload);
+        c.ws.send(msgpackMsg);
+      } else {
+        c.ws.send(jsonMsg);
+      }
     });
   }
 
@@ -917,11 +962,10 @@ export class GameServer {
         persistentID: client.persistentID,
         reasonKey,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: reasonKey,
-        } satisfies ServerErrorMessage),
+      this.sendToClient(
+        client.ws,
+        { type: "error", error: reasonKey } satisfies ServerErrorMessage,
+        client.supportsMsgPack,
       );
       client.ws.close(1000, reasonKey);
       this.activeClients = this.activeClients.filter(
@@ -1042,7 +1086,6 @@ export class GameServer {
       return;
     }
 
-    const desyncMsg = JSON.stringify(serverDesync.data);
     for (const c of outOfSyncClients) {
       this.outOfSyncClients.add(c.clientID);
       if (this.sentDesyncMessageClients.has(c.clientID)) {
@@ -1054,7 +1097,7 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(desyncMsg);
+      this.sendToClient(c.ws, serverDesync.data, c.supportsMsgPack);
     }
   }
 
