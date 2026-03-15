@@ -633,6 +633,13 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  /**
+   * When true, the client declares it can handle MessagePack binary frames.
+   * The server will then send all game messages as binary (MessagePack) frames
+   * instead of text (JSON) frames for ~20-25% bandwidth reduction.
+   * Absent or false → JSON fallback (backward compatible).
+   */
+  msgpack: z.boolean().optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
