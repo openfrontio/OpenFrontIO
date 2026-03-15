@@ -809,7 +809,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/92 backdrop-blur-sm",
               })}
             </div>
           `
@@ -820,7 +820,7 @@ export class EventsDisplay extends LitElement implements Layer {
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
+                class="w-full p-2 lg:p-3 bg-gray-800/92 backdrop-blur-sm sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
               >
                 <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
@@ -864,7 +864,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="bg-gray-800/70 max-h-[15vh] lg:max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
+                class="bg-gray-800/92 backdrop-blur-sm max-h-[15vh] lg:max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
               >
                 <div>
                   <table
