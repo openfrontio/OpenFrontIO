@@ -25,7 +25,7 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
-import { replacer } from "../core/Util";
+import { decodeMsgPack, encodeMsgPack } from "../core/serialization";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
@@ -178,7 +178,9 @@ export class Transport {
 
   private localServer: LocalServer;
 
-  private buffer: string[] = [];
+  // Buffer holds either Uint8Array (msgpack) or string (JSON, pre-msgpack
+  // during the initial connection before we know the socket is open).
+  private buffer: Array<string | Uint8Array> = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
@@ -330,6 +332,12 @@ export class Transport {
       this.lobbyConfig.gameID,
     );
     this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    // Receive binary frames as ArrayBuffer so we can pass them directly to
+    // @msgpack/msgpack's decode(). "blob" is the default and requires an
+    // extra async .arrayBuffer() call; "arraybuffer" is synchronous.
+    // Both are supported in all modern browsers (Chrome 15+, Firefox 11+,
+    // Safari 6+, all mobile browsers).
+    this.socket.binaryType = "arraybuffer";
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -351,7 +359,13 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
-        const parsed = JSON.parse(event.data);
+        // Binary frame → MessagePack; text frame → JSON (backward-compat)
+        let parsed: unknown;
+        if (event.data instanceof ArrayBuffer) {
+          parsed = decodeMsgPack(event.data);
+        } else {
+          parsed = JSON.parse(event.data as string);
+        }
         const result = ServerMessageSchema.safeParse(parsed);
         if (!result.success) {
           const error = z.prettifyError(result.error);
@@ -402,6 +416,9 @@ export class Transport {
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
+      // Declare msgpack support. The server uses the fact that this message
+      // arrives as a binary frame (see sendMsg below) as the capability signal.
+      msgpack: true,
     } satisfies ClientJoinMessage);
   }
 
@@ -668,17 +685,22 @@ export class Transport {
       // Socket missing, do nothing
       return;
     }
-    const str = JSON.stringify(msg, replacer);
+    // Encode all client→server messages as MessagePack binary frames.
+    // The server uses the binary frame type as the capability handshake:
+    // receiving a binary join message sets client.supportsMsgPack = true.
+    // replacer handled bigint→string for JSON; msgpack natively handles
+    // numbers (bigints are not used in ClientMessage payloads).
+    const encoded = encodeMsgPack(msg);
     if (this.socket.readyState === WebSocket.CLOSED) {
       // Buffer message
       console.warn("socket not ready, closing and trying later");
       this.socket.close();
       this.socket = null;
       this.connectRemote(this.onconnect, this.onmessage);
-      this.buffer.push(str);
+      this.buffer.push(encoded);
     } else {
       // Send the message directly
-      this.socket.send(str);
+      this.socket.send(encoded);
     }
   }
 
