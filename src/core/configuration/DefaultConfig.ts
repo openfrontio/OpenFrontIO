@@ -271,14 +271,14 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 18;
+    return (numPlayerFactories + 10) * 15;
   }
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
   ): Gold {
-    // No penalty for the first 5 cities.
-    citiesVisited = Math.max(0, citiesVisited - 5);
+    // No penalty for the first 10 cities.
+    citiesVisited = Math.max(0, citiesVisited - 9);
     let baseGold: number;
     switch (rel) {
       case "ally":
@@ -311,7 +311,7 @@ export class DefaultConfig implements Config {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      50_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
+      75_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
     const multiplier = this.goldMultiplier();
     return BigInt(Math.floor(baseGold * multiplier));
   }

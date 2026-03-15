@@ -192,35 +192,35 @@ describe("DefaultConfig.trainGold trade stop penalty", () => {
     );
   });
 
-  it("returns full base gold within free window (stops 0-5)", () => {
-    // first 6 stops (0-5) are free — no penalty
+  it("returns full base gold within free window (stops 0-9)", () => {
+    // first 10 stops (0-9) are free — no penalty
     expect(config.trainGold("self", 0)).toBe(10_000n);
-    expect(config.trainGold("self", 5)).toBe(10_000n);
+    expect(config.trainGold("self", 9)).toBe(10_000n);
   });
 
   it("reduces gold by 5k per stop after the free window", () => {
-    // stop 6: effective = 6-5 = 1 -> 10k - 5k = 5k
-    expect(config.trainGold("self", 6)).toBe(5_000n);
+    // stop 10: effective = 10-9 = 1 -> 10k - 5k = 5k
+    expect(config.trainGold("self", 10)).toBe(5_000n);
   });
 
   it("floors at 5k when penalty exceeds base gold", () => {
-    // stop 8: effective = 3 -> 10k - 15k -> floor at 5k
-    expect(config.trainGold("self", 8)).toBe(5_000n);
+    // stop 12: effective = 3 -> 10k - 15k -> floor at 5k
+    expect(config.trainGold("self", 12)).toBe(5_000n);
   });
 
   it("floors at 5k for ally base even with heavy penalty", () => {
-    // ally base 35k, stop 20: effective = 15 -> penalty 75k -> floor at 5k
+    // ally base 35k, stop 20: effective = 11 -> penalty 55k -> floor at 5k
     expect(config.trainGold("ally", 20)).toBe(5_000n);
   });
 
   it("ally base gold reduces correctly after free window", () => {
-    // ally base 35k, stop 7: effective = 2 -> 35k - 10k = 25k
-    expect(config.trainGold("ally", 7)).toBe(25_000n);
+    // ally base 35k, stop 11: effective = 2 -> 35k - 10k = 25k
+    expect(config.trainGold("ally", 11)).toBe(25_000n);
   });
 
   it("other/team base gold reduces correctly after free window", () => {
-    // other base 25k, stop 6: effective = 1 -> 25k - 5k = 20k
-    expect(config.trainGold("other", 6)).toBe(20_000n);
-    expect(config.trainGold("team", 6)).toBe(20_000n);
+    // other base 25k, stop 10: effective = 1 -> 25k - 5k = 20k
+    expect(config.trainGold("other", 10)).toBe(20_000n);
+    expect(config.trainGold("team", 10)).toBe(20_000n);
   });
 });
