@@ -10,6 +10,14 @@ export class Client {
 
   public reportedWinner: Winner | null = null;
 
+  /**
+   * Whether this client supports MessagePack binary frames.
+   * Set to true when the client sends `msgpack: true` in its join/rejoin
+   * message. Defaults to false for backward compatibility — such clients
+   * receive JSON text frames exactly as before.
+   */
+  public supportsMsgPack: boolean = false;
+
   constructor(
     public readonly clientID: ClientID,
     public readonly persistentID: string,
