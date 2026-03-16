@@ -273,9 +273,13 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
-    const tooltip = toggle.descriptionKey
+    const translatedTooltip = toggle.descriptionKey
       ? translateText(toggle.descriptionKey)
       : undefined;
+    const tooltip =
+      translatedTooltip && translatedTooltip !== toggle.descriptionKey
+        ? translatedTooltip
+        : undefined;
     return renderTextCardButton(
       translateText(toggle.labelKey),
       toggle.checked,

@@ -104,9 +104,13 @@ export class ToggleInputCard extends LitElement {
   };
 
   render() {
-    const tooltip = this.descriptionKey
+    const translatedTooltip = this.descriptionKey
       ? translateText(this.descriptionKey)
       : undefined;
+    const tooltip =
+      translatedTooltip && translatedTooltip !== this.descriptionKey
+        ? translatedTooltip
+        : undefined;
     return html`
       <div
         class="${cardClass(this.checked, "relative overflow-hidden")}"
