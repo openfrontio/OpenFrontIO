@@ -130,9 +130,54 @@ export function patternRelationship(
   return "purchasable";
 }
 
+export function isRandomSkinSelected(): boolean {
+  return localStorage.getItem("territoryPattern") === "random";
+}
+
+async function resolveRandomPattern(): Promise<PlayerPattern | null> {
+  const cosmetics = await fetchCosmetics();
+  if (!cosmetics) return null;
+
+  const userMe = await getUserMe();
+
+  const ownedPatterns: PlayerPattern[] = [];
+  for (const [name, pattern] of Object.entries(cosmetics.patterns)) {
+    const colorPalettes = pattern.colorPalettes
+      ? [...pattern.colorPalettes, null]
+      : [null];
+    for (const cp of colorPalettes) {
+      const rel = patternRelationship(pattern, cp, userMe || false, null);
+      if (rel === "owned") {
+        ownedPatterns.push({
+          name,
+          patternData: pattern.pattern,
+          colorPalette: cp
+            ? (cosmetics.colorPalettes?.[cp.name] ?? undefined)
+            : undefined,
+        });
+      }
+    }
+  }
+
+  if (ownedPatterns.length === 0) return null;
+  return ownedPatterns[Math.floor(Math.random() * ownedPatterns.length)];
+}
+
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
   const cosmetics = await fetchCosmetics();
+
+  // Handle random skin selection
+  if (isRandomSkinSelected()) {
+    const randomPattern = await resolveRandomPattern();
+    return {
+      flag: userSettings.getFlag(),
+      color: userSettings.getSelectedColor() ?? undefined,
+      patternName: randomPattern?.name ?? undefined,
+      patternColorPaletteName: randomPattern?.colorPalette?.name ?? undefined,
+    };
+  }
+
   let pattern: PlayerPattern | null =
     userSettings.getSelectedPatternName(cosmetics);
 
