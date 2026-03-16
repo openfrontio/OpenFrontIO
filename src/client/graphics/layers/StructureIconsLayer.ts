@@ -471,6 +471,7 @@ export class StructureIconsLayer implements Layer {
       this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       const unitType = this.ghostUnit.buildableUnit.type;
+      const cost = this.ghostUnit.buildableUnit.cost;
       const rocketDirectionUp =
         unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
           ? this.uiState.rocketDirectionUp
@@ -483,7 +484,16 @@ export class StructureIconsLayer implements Layer {
         ),
       );
       if (!shouldPreserveGhostAfterBuild(unitType)) {
-        this.removeGhostStructure();
+        const myPlayer = this.game.myPlayer();
+        const remainingGold = myPlayer ? myPlayer.gold() - cost : 0n;
+        if (remainingGold >= cost) {
+          // Stay in build mode - player can afford another one.
+          // Reset buildable state so renderGhost re-evaluates on next frame.
+          this.ghostUnit.buildableUnit.canBuild = false;
+          this.ghostUnit.buildableUnit.canUpgrade = false;
+        } else {
+          this.removeGhostStructure();
+        }
       }
     } else {
       this.removeGhostStructure();
