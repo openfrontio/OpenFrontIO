@@ -89,12 +89,12 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
-  troopAdvantageLayer() {
-    return this.get("settings.troopAdvantageLayer", true);
+  attackingTroopsOverlay() {
+    return this.get("settings.attackingTroopsOverlay", true);
   }
 
-  toggleTroopAdvantageLayer() {
-    this.set("settings.troopAdvantageLayer", !this.troopAdvantageLayer());
+  toggleAttackingTroopsOverlay() {
+    this.set("settings.attackingTroopsOverlay", !this.attackingTroopsOverlay());
   }
 
   cursorCostLabel() {

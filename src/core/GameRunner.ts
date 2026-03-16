@@ -255,22 +255,30 @@ export class GameRunner {
     } as PlayerBorderTiles;
   }
 
-  public attackClusterPositions(
+  public attackFrontLinePositions(
     playerID: number,
-    attackID: string,
-  ): { x: number; y: number }[] {
+    attackID?: string,
+  ): { id: string; positions: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = (a: Attack) => a.id() === attackID;
-    const attack =
-      player.outgoingAttacks().find(condition) ??
-      player.incomingAttacks().find(condition);
-    if (attack === undefined) return [];
+    const allAttacks = [
+      ...player.outgoingAttacks(),
+      ...player.incomingAttacks(),
+    ];
+    const attacks = attackID
+      ? allAttacks.filter((a) => a.id() === attackID)
+      : allAttacks;
 
-    return attack.clusterPositions();
+    return attacks.map((a) => ({
+      id: a.id(),
+      positions: a.frontLinePositions().map((tile) => ({
+        x: this.game.map().x(tile),
+        y: this.game.map().y(tile),
+      })),
+    }));
   }
 
   public attackAveragePosition(
@@ -290,7 +298,11 @@ export class GameRunner {
       return null;
     }
 
-    return attack.averagePosition();
+    // Use the largest front line's representative tile (index 0, sorted by frontLinePositions)
+    const tiles = attack.frontLinePositions();
+    if (tiles.length === 0) return null;
+    const tile = tiles[0];
+    return new Cell(this.game.map().x(tile), this.game.map().y(tile));
   }
 
   public bestTransportShipSpawn(

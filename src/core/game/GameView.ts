@@ -453,18 +453,14 @@ export class PlayerView {
     return this.data.incomingAttacks;
   }
 
-  async attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
-    return this.game.worker.attackAveragePosition(playerID, attackID);
+  async attackAveragePosition(attackID: string): Promise<Cell | null> {
+    return this.game.worker.attackAveragePosition(this.smallID(), attackID);
   }
 
-  async attackClusterPositions(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell[]> {
-    return this.game.worker.attackClusterPositions(playerID, attackID);
+  async attackFrontLinePositions(
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
+    return this.game.worker.attackFrontLinePositions(this.smallID(), attackID);
   }
 
   units(...types: UnitType[]): UnitView[] {

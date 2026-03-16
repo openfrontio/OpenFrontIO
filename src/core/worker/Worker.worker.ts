@@ -4,7 +4,7 @@ import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
-  AttackClusterPositionsResultMessage,
+  AttackFrontLinePositionsResultMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsResultMessage,
@@ -265,28 +265,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         throw error;
       }
       break;
-    case "attack_cluster_positions":
+    case "attack_front_line_positions":
       if (!gameRunner) {
         throw new Error("Game runner not initialized");
       }
 
       try {
-        const clusters = (await gameRunner).attackClusterPositions(
+        const attacks = (await gameRunner).attackFrontLinePositions(
           message.playerID,
           message.attackID,
         );
         sendMessage({
-          type: "attack_cluster_positions_result",
+          type: "attack_front_line_positions_result",
           id: message.id,
-          clusters,
-        } as AttackClusterPositionsResultMessage);
+          attacks,
+        } as AttackFrontLinePositionsResultMessage);
       } catch (error) {
-        console.error("Failed to get attack cluster positions:", error);
+        console.error("Failed to get attack front line centers:", error);
         sendMessage({
-          type: "attack_cluster_positions_result",
+          type: "attack_front_line_positions_result",
           id: message.id,
-          clusters: [],
-        } as AttackClusterPositionsResultMessage);
+          attacks: [],
+        } as AttackFrontLinePositionsResultMessage);
       }
       break;
     case "transport_ship_spawn":

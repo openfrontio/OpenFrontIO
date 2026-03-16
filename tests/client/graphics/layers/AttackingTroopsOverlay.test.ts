@@ -1,7 +1,7 @@
 import {
   troopAttackColor,
   troopDefenceColor,
-} from "../../../../src/client/graphics/layers/TroopAdvantageLayer";
+} from "../../../../src/client/graphics/layers/AttackingTroopsOverlay";
 
 describe("troopAttackColor", () => {
   test("returns green when attacker has more troops", () => {
