@@ -125,9 +125,6 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["isHardNations", "startingGoldHigh"],
 ];
 
-// Probability of hard nations modifier in HumansVsNations games.
-const HARD_NATIONS_HVN_PROBABILITY = 0.2; // 20%
-
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
     ffa: [],
@@ -159,8 +156,8 @@ export class MapPlaylist {
       isRandomSpawn = false;
     }
 
-    // Hard nations modifier only applies when nations are present
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
+    if (mode === GameMode.Team) {
       isHardNations = false;
     }
 
@@ -204,7 +201,10 @@ export class MapPlaylist {
         isAlliancesDisabled: false,
       },
       startingGold,
-      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      difficulty:
+        isHardNations || playerTeams === HumansVsNations
+          ? Difficulty.Hard
+          : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -248,26 +248,15 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // Hard nations: excluded for non-HvN team modes (no nations present).
-    // For HumansVsNations: rolled independently (not via pool).
-    // For FFA: stays in the pool for normal ticket-based selection.
-    let hardNationsFromIndependentRoll: boolean | undefined;
-    let poolCountReduction = 0;
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
+    if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
-    } else if (playerTeams === HumansVsNations) {
-      excludedModifiers.push("isHardNations");
+    }
+    if (playerTeams === HumansVsNations) {
       excludedModifiers.push("startingGoldHigh"); // Nations are disabled if that modifier is active
-      hardNationsFromIndependentRoll =
-        Math.random() < HARD_NATIONS_HVN_PROBABILITY;
-      poolCountReduction = hardNationsFromIndependentRoll ? 1 : 0;
     }
 
-    const poolResult = this.getRandomSpecialGameModifiers(
-      excludedModifiers,
-      undefined,
-      poolCountReduction,
-    );
+    const poolResult = this.getRandomSpecialGameModifiers(excludedModifiers);
     let {
       isCrowded,
       startingGold,
@@ -275,9 +264,8 @@ export class MapPlaylist {
       isRandomSpawn,
       goldMultiplier,
       isAlliancesDisabled,
+      isHardNations,
     } = poolResult;
-    let isHardNations =
-      hardNationsFromIndependentRoll ?? poolResult.isHardNations;
 
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
@@ -300,7 +288,6 @@ export class MapPlaylist {
           const fallback = this.getRandomSpecialGameModifiers(
             excludedModifiers,
             1,
-            poolCountReduction,
           );
           ({
             isRandomSpawn,
@@ -309,8 +296,7 @@ export class MapPlaylist {
             goldMultiplier,
             isAlliancesDisabled,
           } = fallback);
-          isHardNations =
-            hardNationsFromIndependentRoll ?? fallback.isHardNations;
+          ({ isHardNations } = fallback);
         }
       }
     }
@@ -347,7 +333,10 @@ export class MapPlaylist {
       startingGold,
       goldMultiplier,
       disableAlliances: isAlliancesDisabled,
-      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      difficulty:
+        isHardNations || playerTeams === HumansVsNations
+          ? Difficulty.Hard
+          : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -502,10 +491,7 @@ export class MapPlaylist {
       isCompact: Math.random() < 0.05, // 5% chance
       isCrowded: Math.random() < 0.05, // 5% chance
       startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
-      isHardNations:
-        playerTeams === HumansVsNations
-          ? Math.random() < HARD_NATIONS_HVN_PROBABILITY
-          : Math.random() < 0.025, // 2.5% chance
+      isHardNations: Math.random() < 0.025, // 2.5% chance
       isAlliancesDisabled: false,
     };
   }
