@@ -545,10 +545,13 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ||
-      this.isRandomSpawn()
-      ? 100
-      : 300;
+    if (this._gameConfig.gameType === GameType.Singleplayer) {
+      return 100;
+    }
+    if (this.isRandomSpawn()) {
+      return 150;
+    }
+    return 300;
   }
   numBots(): number {
     return this.bots();
