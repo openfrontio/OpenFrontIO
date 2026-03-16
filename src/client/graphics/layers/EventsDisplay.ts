@@ -40,8 +40,12 @@ import { UIState } from "../UIState";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import hydroIcon from "/images/MushroomCloudIconWhite.svg?url";
 import nukeIcon from "/images/NukeIconWhite.svg?url";
 import swordIcon from "/images/SwordIconWhite.svg?url";
+
+const EVENT_DISPLAY_POSITION_KEY = "ui.hud.eventDisplayPosition";
+const DIPLOMACY_POSITION_KEY = "ui.hud.diplomacyPosition";
 
 interface GameEvent {
   description: string;
@@ -81,6 +85,8 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private newEvents: number = 0;
   @state() private latestGoldAmount: bigint | null = null;
   @state() private goldAmountAnimating: boolean = false;
+  @state() private _eventDisplayPosition: "right" | "left" = "right";
+  @state() private _diplomacyPosition: "right" | "left" = "right";
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
@@ -92,12 +98,24 @@ export class EventsDisplay extends LitElement implements Layer {
 
   @query(".events-container")
   private _eventsContainer?: HTMLDivElement;
+  @query(".events-main-panel")
+  private _eventsMainPanel?: HTMLDivElement;
+  @query(".events-toggle-panel")
+  private _eventsTogglePanel?: HTMLDivElement;
+  @state() private _eventsPanelHeight = 0;
   private _shouldScrollToBottom = true;
 
   updated(changed: Map<string, unknown>) {
     super.updated(changed);
     if (this._eventsContainer && this._shouldScrollToBottom) {
       this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
+    }
+    const measuredHeight =
+      this._eventsMainPanel?.offsetHeight ??
+      this._eventsTogglePanel?.offsetHeight ??
+      0;
+    if (measuredHeight !== this._eventsPanelHeight) {
+      this._eventsPanelHeight = measuredHeight;
     }
   }
 
@@ -164,6 +182,21 @@ export class EventsDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private toggleEventDisplayPosition() {
+    this._eventDisplayPosition =
+      this._eventDisplayPosition === "right" ? "left" : "right";
+    localStorage.setItem(EVENT_DISPLAY_POSITION_KEY, this._eventDisplayPosition);
+    window.dispatchEvent(new CustomEvent("hud-position-change"));
+    this.requestUpdate();
+  }
+
+  private toggleDiplomacyPosition() {
+    this._diplomacyPosition =
+      this._diplomacyPosition === "right" ? "left" : "right";
+    localStorage.setItem(DIPLOMACY_POSITION_KEY, this._diplomacyPosition);
+    this.requestUpdate();
+  }
+
   private updateMap = [
     [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
     [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
@@ -186,6 +219,14 @@ export class EventsDisplay extends LitElement implements Layer {
   constructor() {
     super();
     this.events = [];
+    this._eventDisplayPosition =
+      localStorage.getItem(EVENT_DISPLAY_POSITION_KEY) === "left"
+        ? "left"
+        : "right";
+    this._diplomacyPosition =
+      localStorage.getItem(DIPLOMACY_POSITION_KEY) === "left"
+        ? "left"
+        : "right";
   }
 
   init() {}
@@ -705,6 +746,10 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     const unitView = this.game.unit(event.unitID);
+    const isNukeInbound =
+      event.messageType === MessageType.NUKE_INBOUND ||
+      event.messageType === MessageType.HYDROGEN_BOMB_INBOUND ||
+      event.messageType === MessageType.MIRV_INBOUND;
 
     this.addEvent({
       description: event.message,
@@ -713,6 +758,18 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       createdAt: this.game.ticks(),
       unitView: unitView,
+      focusID: unitView?.owner()?.smallID(),
+      duration: isNukeInbound ? 60 * 60 * 10 : undefined,
+      shouldDelete: isNukeInbound
+        ? (game) => {
+            const currentUnit = game.unit(event.unitID);
+            return (
+              !currentUnit ||
+              !currentUnit.isActive() ||
+              currentUnit.reachedTarget()
+            );
+          }
+        : undefined,
     });
   }
 
@@ -748,6 +805,114 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private isPriorityEvent(event: GameEvent): boolean {
+    const category = getMessageCategory(event.type);
+    if (category === MessageCategory.NUKE) return true;
+    return (
+      event.type === MessageType.ALLIANCE_REQUEST ||
+      event.type === MessageType.RENEW_ALLIANCE
+    );
+  }
+
+  private isDiplomacyFeedEvent(event: GameEvent): boolean {
+    const category = getMessageCategory(event.type);
+    if (category === MessageCategory.CHAT) return true;
+    return (
+      event.type === MessageType.ALLIANCE_ACCEPTED ||
+      event.type === MessageType.ALLIANCE_REJECTED
+    );
+  }
+
+  private renderEventBody(event: GameEvent) {
+    return html`
+      ${event.focusID
+        ? this.renderButton({
+            content: this.getEventDescription(event),
+            onClick: () => {
+              if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
+            },
+            className: "text-left",
+          })
+        : event.unitView
+          ? this.renderButton({
+              content: this.getEventDescription(event),
+              onClick: () => {
+                if (event.unitView) this.emitGoToUnitEvent(event.unitView);
+              },
+              className: "text-left",
+            })
+          : this.getEventDescription(event)}
+      ${event.buttons
+        ? html`
+            <div class="flex flex-wrap gap-1.5 mt-1">
+              ${event.buttons.map(
+                (btn) => html`
+                  <button
+                    class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
+                      ${btn.className.includes("btn-info")
+                      ? "bg-blue-500 hover:bg-blue-600"
+                      : btn.className.includes("btn-gray")
+                        ? "bg-gray-500 hover:bg-gray-600"
+                        : "bg-green-600 hover:bg-green-700"}"
+                    @click=${() => {
+                      btn.action();
+                      if (!btn.preventClose) {
+                        const originalIndex = this.events.findIndex(
+                          (e) => e === event,
+                        );
+                        if (originalIndex !== -1) {
+                          this.removeEvent(originalIndex);
+                        }
+                      }
+                      this.requestUpdate();
+                    }}
+                  >
+                    ${btn.text}
+                  </button>
+                `,
+              )}
+            </div>
+          `
+        : ""}
+    `;
+  }
+
+  private formatRemainingTime(ticks: Tick): string {
+    const totalSeconds = Math.max(0, Math.ceil(ticks / 10));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes <= 0) {
+      return `${totalSeconds}s`;
+    }
+    return `${minutes}m ${seconds}s`;
+  }
+
+  private getAllianceRemainingTimeClass(ticks: Tick): string {
+    if (ticks <= 30 * 10) {
+      return "text-red-400";
+    }
+    if (ticks <= 60 * 10) {
+      return "text-orange-300";
+    }
+    if (ticks <= 120 * 10) {
+      return "text-yellow-300";
+    }
+    return "text-white/70";
+  }
+
+  private getAlliancePlayerNameClass(ticks: Tick): string {
+    if (ticks <= 30 * 10) {
+      return "text-red-400 hover:text-red-400";
+    }
+    if (ticks <= 60 * 10) {
+      return "text-orange-300 hover:text-orange-200";
+    }
+    if (ticks <= 120 * 10) {
+      return "text-yellow-300 hover:text-yellow-200";
+    }
+    return "text-emerald-300 hover:text-emerald-200";
+  }
+
   render() {
     if (!this.active || !this._isVisible) {
       return html``;
@@ -775,10 +940,20 @@ export class EventsDisplay extends LitElement implements Layer {
       </style>
     `;
 
-    const filteredEvents = this.events.filter((event) => {
+    const visibleNonPriorityEvents = this.events.filter((event) => {
+      if (this.isPriorityEvent(event)) return false;
       const category = getMessageCategory(event.type);
       return !this.eventsFilters.get(category);
     });
+    const filteredEvents = visibleNonPriorityEvents.filter(
+      (event) => !this.isDiplomacyFeedEvent(event),
+    );
+    const diplomacyFeedEvents = visibleNonPriorityEvents
+      .filter((event) => this.isDiplomacyFeedEvent(event))
+      .sort((a, b) => b.createdAt - a.createdAt);
+    const priorityEvents = this.events.filter((event) =>
+      this.isPriorityEvent(event),
+    );
 
     filteredEvents.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
@@ -788,13 +963,84 @@ export class EventsDisplay extends LitElement implements Layer {
       }
       return bPrior - aPrior;
     });
+    priorityEvents.sort((a, b) => a.createdAt - b.createdAt);
+    const alliancePriorityEvents =
+      this.eventsFilters.get(MessageCategory.ALLIANCE) === true
+        ? []
+        : priorityEvents.filter(
+            (event) =>
+              event.type === MessageType.ALLIANCE_REQUEST ||
+              event.type === MessageType.RENEW_ALLIANCE,
+          );
+    const nukePriorityEvents = priorityEvents.filter(
+      (event) =>
+        this.eventsFilters.get(MessageCategory.NUKE) !== true &&
+        getMessageCategory(event.type) === MessageCategory.NUKE,
+    );
+    const compactNukeAlerts = (() => {
+      const grouped = new Map<
+        string,
+        {
+          event: GameEvent;
+          count: number;
+        }
+      >();
+      for (const event of nukePriorityEvents) {
+        const sourceKey =
+          event.focusID !== undefined
+            ? `p:${event.focusID}`
+            : `d:${event.description}`;
+        const key = `${event.type}:${sourceKey}`;
+        const existing = grouped.get(key);
+        if (!existing) {
+          grouped.set(key, { event, count: 1 });
+          continue;
+        }
+        existing.count += 1;
+        if (event.createdAt >= existing.event.createdAt) {
+          existing.event = event;
+        }
+      }
+      return [...grouped.values()].sort(
+        (a, b) => b.event.createdAt - a.event.createdAt,
+      );
+    })();
+    const myPlayer = this.game.myPlayer();
+    const expiringAlliances = (myPlayer?.alliances() ?? [])
+      .slice()
+      .sort((a, b) => a.expiresAt - b.expiresAt)
+      .map((alliance) => {
+        const other = this.game.player(alliance.other) as
+          | PlayerView
+          | undefined;
+        if (!other) {
+          return null;
+        }
+        return {
+          other,
+          remainingTicks: Math.max(0, alliance.expiresAt - this.game.ticks()),
+        };
+      })
+      .filter(
+        (
+          row,
+        ): row is {
+          other: PlayerView;
+          remainingTicks: Tick;
+        } => row !== null,
+      );
+    const diplomacyOnLeft = this._diplomacyPosition === "left";
+    const diplomacyBottomOffset =
+      this._eventDisplayPosition === this._diplomacyPosition
+        ? this._eventsPanelHeight + 8
+        : 8;
 
     return html`
       ${styles}
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
-        ? html`
-            <div class="relative w-fit z-50">
+          ? html`
+            <div class="relative w-fit z-50 events-toggle-panel">
               ${this.renderButton({
                 content: html`
                   <span class="flex items-center gap-2">
@@ -809,18 +1055,18 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/92 backdrop-blur-sm",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full z-50 min-[1200px]:w-96 backdrop-blur-sm"
+              class="relative w-full z-50 min-[1200px]:w-96 backdrop-blur-sm events-main-panel"
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
+                class="w-full p-2 lg:p-3 bg-gray-800/92 backdrop-blur-sm sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
               >
                 <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
@@ -828,16 +1074,14 @@ export class EventsDisplay extends LitElement implements Layer {
                       swordIcon,
                       MessageCategory.ATTACK,
                     )}
-                    ${this.renderToggleButton(nukeIcon, MessageCategory.NUKE)}
+                    ${this.renderToggleButton(
+                      nukeIcon,
+                      MessageCategory.NUKE,
+                    )}
                     ${this.renderToggleButton(
                       donateGoldIcon,
                       MessageCategory.TRADE,
                     )}
-                    ${this.renderToggleButton(
-                      allianceIcon,
-                      MessageCategory.ALLIANCE,
-                    )}
-                    ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
                   </div>
                   <div class="flex items-center gap-3">
                     ${this.latestGoldAmount !== null
@@ -852,6 +1096,16 @@ export class EventsDisplay extends LitElement implements Layer {
                           >+${renderNumber(this.latestGoldAmount)}</span
                         >`
                       : ""}
+                    <button
+                      class="px-1.5 py-0.5 rounded border border-white/20 text-[10px] font-semibold leading-none text-white/70 hover:text-white hover:border-white/40 transition-colors"
+                      title="${this._eventDisplayPosition === "right"
+                        ? "Move event display to left"
+                        : "Move event display to right"}"
+                      @click=${() => this.toggleEventDisplayPosition()}
+                      translate="no"
+                    >
+                      ${this._eventDisplayPosition === "right" ? "R" : "L"}
+                    </button>
                     ${this.renderButton({
                       content: translateText("leaderboard.hide"),
                       onClick: this.toggleHidden,
@@ -863,8 +1117,52 @@ export class EventsDisplay extends LitElement implements Layer {
               </div>
 
               <!-- Content Area -->
+              ${compactNukeAlerts.length > 0
+                ? html`
+                    <div class="bg-gray-800/92 border-t border-white/10 max-h-[4.5rem] overflow-y-auto">
+                      ${compactNukeAlerts.map(({ event, count }) => {
+                        const isHydrogen =
+                          event.type === MessageType.HYDROGEN_BOMB_INBOUND;
+                        const isMirv = event.type === MessageType.MIRV_INBOUND;
+                        const cardClass = isMirv
+                          ? "bg-red-600/92 border-b border-red-300/30 text-white"
+                          : "bg-amber-400/92 border-b border-amber-300/60 text-zinc-900";
+                        const iconClass = isMirv
+                          ? "h-4 w-4 object-contain"
+                          : "h-4 w-4 object-contain brightness-0";
+                        return html`
+                          <div
+                            class="${cardClass} px-2 py-1.5 cursor-pointer"
+                            @click=${() => {
+                              if (event.unitView) {
+                                this.emitGoToUnitEvent(event.unitView);
+                                return;
+                              }
+                              if (event.focusID) {
+                                this.emitGoToPlayerEvent(event.focusID);
+                              }
+                            }}
+                          >
+                            <div class="flex items-center gap-2">
+                              <img
+                                src=${isHydrogen ? hydroIcon : nukeIcon}
+                                class="${iconClass}"
+                              />
+                              <div class="flex-1 min-w-0 text-xs font-semibold truncate">
+                                ${this.getEventDescription(event)}
+                              </div>
+                              <div class="text-[11px] font-bold whitespace-nowrap">
+                                X${count}
+                              </div>
+                            </div>
+                          </div>
+                        `;
+                      })}
+                    </div>
+                  `
+                : ""}
               <div
-                class="bg-gray-800/70 max-h-[15vh] lg:max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
+                class="bg-gray-800/92 backdrop-blur-sm max-h-[10.5rem] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
               >
                 <div>
                   <table
@@ -872,72 +1170,14 @@ export class EventsDisplay extends LitElement implements Layer {
                   >
                     <tbody>
                       ${filteredEvents.map(
-                        (event, index) => html`
+                        (event) => html`
                           <tr>
                             <td
                               class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
                                 event.type,
                               )}"
                             >
-                              ${event.focusID
-                                ? this.renderButton({
-                                    content: this.getEventDescription(event),
-                                    onClick: () => {
-                                      if (event.focusID)
-                                        this.emitGoToPlayerEvent(event.focusID);
-                                    },
-                                    className: "text-left",
-                                  })
-                                : event.unitView
-                                  ? this.renderButton({
-                                      content: this.getEventDescription(event),
-                                      onClick: () => {
-                                        if (event.unitView)
-                                          this.emitGoToUnitEvent(
-                                            event.unitView,
-                                          );
-                                      },
-                                      className: "text-left",
-                                    })
-                                  : this.getEventDescription(event)}
-                              <!-- Events with buttons (Alliance requests) -->
-                              ${event.buttons
-                                ? html`
-                                    <div class="flex flex-wrap gap-1.5 mt-1">
-                                      ${event.buttons.map(
-                                        (btn) => html`
-                                          <button
-                                            class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
-                            ${btn.className.includes("btn-info")
-                                              ? "bg-blue-500 hover:bg-blue-600"
-                                              : btn.className.includes(
-                                                    "btn-gray",
-                                                  )
-                                                ? "bg-gray-500 hover:bg-gray-600"
-                                                : "bg-green-600 hover:bg-green-700"}"
-                                            @click=${() => {
-                                              btn.action();
-                                              if (!btn.preventClose) {
-                                                const originalIndex =
-                                                  this.events.findIndex(
-                                                    (e) => e === event,
-                                                  );
-                                                if (originalIndex !== -1) {
-                                                  this.removeEvent(
-                                                    originalIndex,
-                                                  );
-                                                }
-                                              }
-                                              this.requestUpdate();
-                                            }}
-                                          >
-                                            ${btn.text}
-                                          </button>
-                                        `,
-                                      )}
-                                    </div>
-                                  `
-                                : ""}
+                              ${this.renderEventBody(event)}
                             </td>
                           </tr>
                         `,
@@ -986,6 +1226,173 @@ export class EventsDisplay extends LitElement implements Layer {
               </div>
             </div>
           `}
+      <div
+        class="hidden lg:flex fixed ${diplomacyOnLeft ? "left-0" : "right-0"} z-[260] w-96 max-w-[calc(100vw-1rem)] flex-col gap-1.5 pointer-events-none"
+        style="${diplomacyOnLeft
+          ? "left: env(safe-area-inset-left);"
+          : "right: env(safe-area-inset-right);"} bottom: calc(env(safe-area-inset-bottom) + ${diplomacyBottomOffset}px);"
+      >
+        <div
+          class="w-full bg-gray-800/92 border border-indigo-300/30 text-white backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto overflow-hidden"
+        >
+          <div
+            class="px-3 py-2 border-b border-white/10 flex items-center justify-between gap-3"
+          >
+            <div class="min-w-0">
+              <div class="text-xs lg:text-sm font-semibold truncate">
+                Diplomacy
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                class="px-1.5 py-0.5 rounded border border-white/20 text-[10px] font-semibold leading-none text-white/70 hover:text-white hover:border-white/40 transition-colors"
+                title="${this._diplomacyPosition === "right"
+                  ? "Move diplomacy panel to left"
+                  : "Move diplomacy panel to right"}"
+                @click=${() => this.toggleDiplomacyPosition()}
+                translate="no"
+              >
+                ${this._diplomacyPosition === "right" ? "R" : "L"}
+              </button>
+              ${this.renderToggleButton(allianceIcon, MessageCategory.ALLIANCE)}
+              ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
+            </div>
+          </div>
+          ${alliancePriorityEvents.length > 0
+            ? html`
+                <div class="px-2 py-2 border-b border-white/10 space-y-1.5">
+                  ${alliancePriorityEvents.slice(-3).map((event) => {
+                    const focusButton = event.buttons?.find((btn) =>
+                      btn.className.includes("btn-gray"),
+                    );
+                    const noButton = event.buttons?.find((btn) =>
+                      btn.className.includes("btn-info"),
+                    );
+                    const actionButton = event.buttons?.find(
+                      (btn) =>
+                        btn.className.includes("btn") &&
+                        !btn.className.includes("btn-gray") &&
+                        !btn.className.includes("btn-info"),
+                    );
+                    return html`
+                      <div
+                        class="bg-gray-700/45 border border-indigo-300/20 rounded-lg px-2.5 py-2"
+                      >
+                        <div class="flex-1 min-w-0">
+                          <div class="text-xs lg:text-sm leading-tight font-bold">
+                            ${this.getEventDescription(event)}
+                          </div>
+                          <div class="mt-1.5 flex gap-1.5">
+                            <button
+                              class="w-[72px] py-1 rounded-md text-white text-[13px] leading-none text-center ${event.type ===
+                              MessageType.RENEW_ALLIANCE
+                                ? "bg-blue-600/90"
+                                : "bg-green-600/90"}"
+                              @click=${() => {
+                                actionButton?.action();
+                                if (!actionButton?.preventClose) {
+                                  const originalIndex = this.events.findIndex(
+                                    (e) => e === event,
+                                  );
+                                  if (originalIndex !== -1) this.removeEvent(originalIndex);
+                                }
+                                this.requestUpdate();
+                              }}
+                            >
+                              ${event.type === MessageType.RENEW_ALLIANCE
+                                ? "Renew"
+                                : "Yes"}
+                            </button>
+                            <button
+                              class="w-[72px] py-1 rounded-md bg-red-600/90 text-white text-[13px] leading-none text-center"
+                              @click=${() => {
+                                noButton?.action();
+                                if (!noButton?.preventClose) {
+                                  const originalIndex = this.events.findIndex(
+                                    (e) => e === event,
+                                  );
+                                  if (originalIndex !== -1) this.removeEvent(originalIndex);
+                                }
+                                this.requestUpdate();
+                              }}
+                            >
+                              No
+                            </button>
+                            <button
+                              class="w-[72px] py-1 rounded-md bg-zinc-600/90 text-white text-[13px] leading-none text-center"
+                              @click=${() => {
+                                if (event.focusID) {
+                                  this.emitGoToPlayerEvent(event.focusID);
+                                } else {
+                                  focusButton?.action();
+                                }
+                                this.requestUpdate();
+                              }}
+                            >
+                              Focus
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  })}
+                </div>
+              `
+            : ""}
+          <div class="max-h-[108px] overflow-y-auto">
+            ${expiringAlliances.length > 0
+              ? expiringAlliances.map(
+                  ({ other, remainingTicks }) => html`
+                    <div class="px-3 py-2 border-b border-white/10 last:border-b-0">
+                      <div class="flex items-center justify-between gap-2">
+                        <button
+                          class="text-left text-xs lg:text-sm font-semibold truncate ${this.getAlliancePlayerNameClass(
+                            remainingTicks,
+                          )}"
+                          @click=${() =>
+                            this.emitGoToPlayerEvent(other.smallID())}
+                        >
+                          ${other.name()}
+                        </button>
+                        <span
+                          class="text-[11px] lg:text-xs whitespace-nowrap ${this.getAllianceRemainingTimeClass(
+                            remainingTicks,
+                          )}"
+                        >
+                          ${this.formatRemainingTime(remainingTicks)}
+                        </span>
+                      </div>
+                    </div>
+                  `,
+                )
+              : html`<div class="px-3 py-2 text-xs text-white/60">
+                  No active alliances
+                </div>`}
+          </div>
+          <div class="border-t border-white/10">
+            <div class="px-3 py-1.5 text-[11px] uppercase tracking-wide text-white/55">
+              Messages
+            </div>
+            <div class="max-h-[78px] overflow-y-auto">
+              ${diplomacyFeedEvents.length > 0
+                ? diplomacyFeedEvents.slice(0, 20).map(
+                    (event) => html`
+                      <div
+                        class="px-3 py-1.5 border-b border-white/10 last:border-b-0 text-xs lg:text-sm ${getMessageTypeClasses(
+                          event.type,
+                        )}"
+                      >
+                        ${this.renderEventBody(event)}
+                      </div>
+                    `,
+                  )
+                : html`<div class="px-3 py-2 text-xs text-white/60">
+                    No diplomacy messages
+                  </div>`}
+            </div>
+          </div>
+        </div>
+      </div>
     `;
   }
 

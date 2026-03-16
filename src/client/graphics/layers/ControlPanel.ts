@@ -12,6 +12,8 @@ import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import soldierIcon from "/images/SoldierIcon.svg?url";
 import swordIcon from "/images/SwordIcon.svg?url";
 
+const CONTROL_PANEL_POSITION_KEY = "ui.hud.controlPanelPosition";
+
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
   public game: GameView;
@@ -40,6 +42,9 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _attackingTroops: number = 0;
 
+  @state()
+  private _hudPosition: "center" | "left" = "center";
+
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
@@ -49,6 +54,10 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   init() {
+    this._hudPosition =
+      localStorage.getItem(CONTROL_PANEL_POSITION_KEY) === "left"
+        ? "left"
+        : "center";
     this.attackRatio = Number(
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
@@ -72,6 +81,13 @@ export class ControlPanel extends LitElement implements Layer {
       this.attackRatio = newAttackRatio;
       this.onAttackRatioChange(this.attackRatio);
     });
+  }
+
+  private toggleHudPosition() {
+    this._hudPosition = this._hudPosition === "center" ? "left" : "center";
+    localStorage.setItem(CONTROL_PANEL_POSITION_KEY, this._hudPosition);
+    window.dispatchEvent(new CustomEvent("hud-position-change"));
+    this.requestUpdate();
   }
 
   tick() {
@@ -388,6 +404,16 @@ export class ControlPanel extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
+        <button
+          class="absolute -bottom-4 left-1 z-10 px-1.5 py-0.5 rounded border border-white/20 bg-gray-800/92 text-[10px] font-semibold leading-none text-white/70 hover:text-white hover:border-white/40 transition-colors"
+          title="${this._hudPosition === "center"
+            ? "Move control panel to left"
+            : "Move control panel to center"}"
+          @click=${() => this.toggleHudPosition()}
+          translate="no"
+        >
+          ${this._hudPosition === "center" ? "C" : "L"}
+        </button>
         <div class="lg:hidden">${this.renderMobile()}</div>
         <div class="hidden lg:block">${this.renderDesktop()}</div>
       </div>
