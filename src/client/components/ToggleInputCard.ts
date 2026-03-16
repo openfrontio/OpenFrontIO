@@ -114,7 +114,7 @@ export class ToggleInputCard extends LitElement {
     return html`
       <div
         class="${cardClass(this.checked, "relative overflow-hidden")}"
-        title=${tooltip ?? nothing}
+        data-tooltip=${tooltip ?? nothing}
       >
         <button
           type="button"

@@ -490,18 +490,18 @@
     "disable_alliances": "Alliances Disabled"
   },
   "modifier_description": {
-    "random_spawn": "Your starting location is chosen randomly instead of letting you pick where to spawn",
-    "compact_map": "Reduces the playable map area, forcing players closer together for faster encounters",
-    "crowded": "Increases the maximum number of players, making the map more densely populated",
-    "hard_nations": "Nation bots are stronger and more aggressive, providing a tougher challenge",
-    "starting_gold": "All players begin the game with a set amount of bonus gold",
-    "gold_multiplier": "Multiplies all gold income by the specified amount",
-    "disable_alliances": "Players cannot form alliances with each other",
-    "instant_build": "Structures are built immediately without any construction delay",
-    "infinite_gold": "Players have unlimited gold to spend on buildings and units",
-    "infinite_troops": "Players have unlimited troops available",
-    "donate_gold": "Players can donate gold to other players",
-    "donate_troops": "Players can donate troops to other players"
+    "random_spawn": "Spawn location is chosen randomly",
+    "compact_map": "Map is 1/4 the size",
+    "crowded": "More players allowed on the map",
+    "hard_nations": "Stronger, more aggressive nation bots",
+    "starting_gold": "Start with bonus gold",
+    "gold_multiplier": "Gold income is multiplied",
+    "disable_alliances": "No alliances allowed",
+    "instant_build": "Buildings are placed instantly",
+    "infinite_gold": "Unlimited gold",
+    "infinite_troops": "Unlimited troops",
+    "donate_gold": "Send gold to other players",
+    "donate_troops": "Send troops to other players"
   },
   "select_lang": {
     "title": "Select Language"

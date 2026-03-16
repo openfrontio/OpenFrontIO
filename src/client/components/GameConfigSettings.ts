@@ -70,7 +70,7 @@ function renderTextCardButton(
     <button
       class="${cardClass(active, cardExtraClass)}"
       @click=${onClick}
-      title=${tooltip ?? nothing}
+      data-tooltip=${tooltip ?? nothing}
     >
       <span class="${CARD_LABEL_CLASS} ${stateTextClass(active)}">
         ${label}

@@ -629,3 +629,42 @@ news-button .active button::after {
 .remove-player-btn:hover {
   background: #ff6666;
 }
+
+/* Custom tooltip – replaces native title for instant display */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: normal;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 50;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Allow wrapping for longer tooltips */
+[data-tooltip].tooltip-wrap::after {
+  white-space: normal;
+  max-width: 220px;
+  text-align: center;
+}

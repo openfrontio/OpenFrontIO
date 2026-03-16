@@ -342,7 +342,7 @@ export class GameModeSelector extends LitElement {
                   (m) =>
                     html`<span
                       class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-sky-600 text-white shadow-[0_0_6px_rgba(14,165,233,0.35)]"
-                      title=${translateText(m.descriptionKey)}
+                      data-tooltip=${translateText(m.descriptionKey)}
                       >${translateText(m.badgeKey, m.badgeParams)}</span
                     >`,
                 )}

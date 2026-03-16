@@ -16,7 +16,7 @@ export class LobbyConfigItem extends LitElement {
     return html`
       <div
         class="bg-white/5 border border-white/10 rounded-lg p-3 flex flex-col items-center justify-center gap-1 text-center min-w-[100px]"
-        title=${this.tooltip ?? nothing}
+        data-tooltip=${this.tooltip ?? nothing}
       >
         <span
           class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
