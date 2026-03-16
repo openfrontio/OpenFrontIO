@@ -18,6 +18,7 @@ function cardClass(active: boolean, extra = ""): string {
 @customElement("toggle-input-card")
 export class ToggleInputCard extends LitElement {
   @property({ attribute: false }) labelKey = "";
+  @property({ attribute: false }) descriptionKey?: string;
   @property({ type: Boolean, attribute: false }) checked = false;
   @property({ attribute: false }) inputId?: string;
   @property({ attribute: false }) inputType = "number";
@@ -102,8 +103,14 @@ export class ToggleInputCard extends LitElement {
   };
 
   render() {
+    const tooltip = this.descriptionKey
+      ? translateText(this.descriptionKey)
+      : undefined;
     return html`
-      <div class="${cardClass(this.checked, "relative overflow-hidden")}">
+      <div
+        class="${cardClass(this.checked, "relative overflow-hidden")}"
+        title=${tooltip ?? nothing}
+      >
         <button
           type="button"
           aria-pressed=${this.checked}

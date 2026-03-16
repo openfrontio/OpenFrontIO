@@ -438,6 +438,7 @@ export class JoinLobbyModal extends BaseModal {
               (m.value !== undefined
                 ? renderNumber(m.value)
                 : translateText("common.enabled"))}
+              .tooltip=${translateText(m.descriptionKey)}
             ></lobby-config-item>
           `,
         )}

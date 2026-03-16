@@ -192,6 +192,7 @@ export class SinglePlayerModal extends BaseModal {
       ></toggle-input-card>`,
       html`<toggle-input-card
         .labelKey=${"single_modal.gold_multiplier"}
+        .descriptionKey=${"modifier_description.gold_multiplier"}
         .checked=${this.goldMultiplier}
         .inputId=${"gold-multiplier-value"}
         .inputMin=${0.1}
@@ -210,6 +211,7 @@ export class SinglePlayerModal extends BaseModal {
       ></toggle-input-card>`,
       html`<toggle-input-card
         .labelKey=${"single_modal.starting_gold"}
+        .descriptionKey=${"modifier_description.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
         .inputMin=${0.1}
@@ -298,26 +300,32 @@ export class SinglePlayerModal extends BaseModal {
                   {
                     labelKey: "single_modal.instant_build",
                     checked: this.instantBuild,
+                    descriptionKey: "modifier_description.instant_build",
                   },
                   {
                     labelKey: "single_modal.random_spawn",
                     checked: this.randomSpawn,
+                    descriptionKey: "modifier_description.random_spawn",
                   },
                   {
                     labelKey: "single_modal.infinite_gold",
                     checked: this.infiniteGold,
+                    descriptionKey: "modifier_description.infinite_gold",
                   },
                   {
                     labelKey: "single_modal.infinite_troops",
                     checked: this.infiniteTroops,
+                    descriptionKey: "modifier_description.infinite_troops",
                   },
                   {
                     labelKey: "single_modal.compact_map",
                     checked: this.compactMap,
+                    descriptionKey: "modifier_description.compact_map",
                   },
                   {
                     labelKey: "single_modal.disable_alliances",
                     checked: this.disableAlliances,
+                    descriptionKey: "modifier_description.disable_alliances",
                   },
                 ],
                 inputCards,

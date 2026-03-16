@@ -114,6 +114,8 @@ export interface ModifierInfo {
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
+  /** Translation key for tooltip description (e.g. "modifier_description.random_spawn") */
+  descriptionKey: string;
   /** Parameters to pass to translateText for the badge key */
   badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
@@ -134,24 +136,28 @@ export function getActiveModifiers(
     result.push({
       labelKey: "host_modal.random_spawn",
       badgeKey: "public_game_modifier.random_spawn",
+      descriptionKey: "modifier_description.random_spawn",
     });
   }
   if (modifiers.isCompact) {
     result.push({
       labelKey: "host_modal.compact_map",
       badgeKey: "public_game_modifier.compact_map",
+      descriptionKey: "modifier_description.compact_map",
     });
   }
   if (modifiers.isCrowded) {
     result.push({
       labelKey: "host_modal.crowded",
       badgeKey: "public_game_modifier.crowded",
+      descriptionKey: "modifier_description.crowded",
     });
   }
   if (modifiers.isHardNations) {
     result.push({
       labelKey: "host_modal.hard_nations",
       badgeKey: "public_game_modifier.hard_nations",
+      descriptionKey: "modifier_description.hard_nations",
     });
   }
   if (modifiers.startingGold) {
@@ -161,6 +167,7 @@ export function getActiveModifiers(
     result.push({
       labelKey: "host_modal.starting_gold",
       badgeKey: "public_game_modifier.starting_gold",
+      descriptionKey: "modifier_description.starting_gold",
       badgeParams: {
         amount: millions,
       },
@@ -172,6 +179,7 @@ export function getActiveModifiers(
     result.push({
       labelKey: "host_modal.gold_multiplier",
       badgeKey: "public_game_modifier.gold_multiplier",
+      descriptionKey: "modifier_description.gold_multiplier",
       badgeParams: {
         amount: modifiers.goldMultiplier,
       },
@@ -183,6 +191,7 @@ export function getActiveModifiers(
     result.push({
       labelKey: "host_modal.disable_alliances",
       badgeKey: "public_game_modifier.disable_alliances",
+      descriptionKey: "modifier_description.disable_alliances",
     });
   }
   return result;

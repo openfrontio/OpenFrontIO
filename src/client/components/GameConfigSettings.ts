@@ -63,9 +63,14 @@ function renderTextCardButton(
   active: boolean,
   onClick: () => void,
   cardExtraClass: string,
+  tooltip?: string,
 ): TemplateResult {
   return html`
-    <button class="${cardClass(active, cardExtraClass)}" @click=${onClick}>
+    <button
+      class="${cardClass(active, cardExtraClass)}"
+      @click=${onClick}
+      title=${tooltip ?? nothing}
+    >
       <span class="${CARD_LABEL_CLASS} ${stateTextClass(active)}">
         ${label}
       </span>
@@ -159,6 +164,7 @@ export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
+  descriptionKey?: string;
 }
 
 export interface GameConfigSettingsData {
@@ -265,11 +271,15 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
+    const tooltip = toggle.descriptionKey
+      ? translateText(toggle.descriptionKey)
+      : undefined;
     return renderTextCardButton(
       translateText(toggle.labelKey),
       toggle.checked,
       () => this.handleOptionToggle(toggle),
       "p-4 text-center",
+      tooltip,
     );
   }
 

@@ -18,8 +18,8 @@ import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  getActiveModifiers,
   getMapName,
-  getModifierLabels,
   renderDuration,
   translateText,
 } from "./Utils";
@@ -300,12 +300,16 @@ export class GameModeSelector extends LitElement {
 
     const mapName = getMapName(lobby.gameConfig?.gameMap);
 
-    const modifierLabels = getModifierLabels(
+    const modifierInfos = getActiveModifiers(
       lobby.gameConfig?.publicGameModifiers,
     );
-    // Sort by length for visual consistency (shorter labels first)
-    if (modifierLabels.length > 1) {
-      modifierLabels.sort((a, b) => a.length - b.length);
+    // Sort by label length for visual consistency (shorter labels first)
+    if (modifierInfos.length > 1) {
+      modifierInfos.sort(
+        (a, b) =>
+          translateText(a.badgeKey, a.badgeParams).length -
+          translateText(b.badgeKey, b.badgeParams).length,
+      );
     }
 
     return html`
@@ -332,13 +336,14 @@ export class GameModeSelector extends LitElement {
         <div
           class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
         >
-          ${modifierLabels.length > 0
+          ${modifierInfos.length > 0
             ? html`<div class="flex flex-col items-start gap-1 mt-[2px]">
-                ${modifierLabels.map(
-                  (label) =>
+                ${modifierInfos.map(
+                  (m) =>
                     html`<span
                       class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-sky-600 text-white shadow-[0_0_6px_rgba(14,165,233,0.35)]"
-                      >${label}</span
+                      title=${translateText(m.descriptionKey)}
+                      >${translateText(m.badgeKey, m.badgeParams)}</span
                     >`,
                 )}
               </div>`
