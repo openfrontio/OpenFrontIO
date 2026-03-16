@@ -58,6 +58,7 @@ function stateTextClass(active: boolean): string {
   return active ? "text-white" : "text-white/60";
 }
 
+/** Renders a styled toggle-style card button with an optional hover tooltip. */
 function renderTextCardButton(
   label: string,
   active: boolean,
@@ -164,6 +165,7 @@ export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
+  /** Translation key for a tooltip description shown on hover */
   descriptionKey?: string;
 }
 

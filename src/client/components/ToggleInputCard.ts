@@ -18,6 +18,7 @@ function cardClass(active: boolean, extra = ""): string {
 @customElement("toggle-input-card")
 export class ToggleInputCard extends LitElement {
   @property({ attribute: false }) labelKey = "";
+  /** Translation key for a tooltip description shown on hover */
   @property({ attribute: false }) descriptionKey?: string;
   @property({ type: Boolean, attribute: false }) checked = false;
   @property({ attribute: false }) inputId?: string;

@@ -5,6 +5,7 @@ import { customElement, property } from "lit/decorators.js";
 export class LobbyConfigItem extends LitElement {
   @property({ type: String }) label = "";
   @property({ attribute: false }) value: string | TemplateResult = "";
+  /** Tooltip text shown on hover to describe the config item */
   @property({ type: String }) tooltip?: string;
 
   createRenderRoot() {
