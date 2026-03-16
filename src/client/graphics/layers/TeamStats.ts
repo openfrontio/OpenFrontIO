@@ -363,7 +363,7 @@ export class TeamStats extends LitElement implements Layer {
             this.showUnits
               ? html`
                   <div
-                    class="contents"
+                    class="contents group"
                     role="link"
                     tabindex="0"
                     @click=${() => this.handleTeamClick(team)}
@@ -371,29 +371,29 @@ export class TeamStats extends LitElement implements Layer {
                       this._handleKeyDown(e, () => this.handleTeamClick(team))}
                   >
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer ${team.isMyTeam
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer ${team.isMyTeam
                         ? "font-bold"
                         : ""}"
                     >
                       ${team.teamName}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalLaunchers}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalSAMs}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalWarShips}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalCities}
                     </div>
@@ -401,7 +401,7 @@ export class TeamStats extends LitElement implements Layer {
                 `
               : html`
                   <div
-                    class="contents"
+                    class="contents group"
                     role="link"
                     tabindex="0"
                     @click=${() => this.handleTeamClick(team)}
@@ -409,24 +409,24 @@ export class TeamStats extends LitElement implements Layer {
                       this._handleKeyDown(e, () => this.handleTeamClick(team))}
                   >
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer ${team.isMyTeam
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer ${team.isMyTeam
                         ? "font-bold"
                         : ""}"
                     >
                       ${team.teamName}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalScoreStr}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalGold}
                     </div>
                     <div
-                      class="py-1.5 border-b border-slate-500 text-center hover:bg-slate-600/60 cursor-pointer"
+                      class="py-1.5 border-b border-slate-500 text-center cursor-pointer"
                     >
                       ${team.totalMaxTroops}
                     </div>
