@@ -23,11 +23,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import {
-  decodeMsgPack,
-  encodeMsgPack,
-  isBinaryMessage,
-} from "../core/serialization";
+import { decodeMsgPack, encodeMsgPack } from "../core/serialization";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
@@ -337,231 +333,243 @@ export class GameServer {
 
   private addListeners(client: Client) {
     client.ws.removeAllListeners("message");
-    client.ws.on("message", async (message: Buffer | string) => {
-      try {
-        let json: unknown;
+    client.ws.on(
+      "message",
+      async (message: Buffer | string, isBinary: boolean) => {
         try {
-          // Discriminate wire format by frame type:
-          //   Binary frame (Buffer/Uint8Array) → MessagePack
-          //   Text frame (string)              → JSON  (backward-compat)
-          if (isBinaryMessage(message)) {
-            json = decodeMsgPack(message as Buffer);
-          } else {
-            json = JSON.parse(message as string);
-          }
-        } catch (e) {
-          this.log.warn(`Failed to parse client message, kicking`, {
-            clientID: client.clientID,
-            error: String(e),
-          });
-          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
-          return;
-        }
-        const parsed = ClientMessageSchema.safeParse(json);
-        if (!parsed.success) {
-          this.log.warn(`Failed to parse client message, kicking`, {
-            clientID: client.clientID,
-            error: z.prettifyError(parsed.error),
-          });
-          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
-          return;
-        }
-        const clientMsg = parsed.data;
-        const bytes = Buffer.byteLength(message, "utf8");
-        const rateResult = this.intentRateLimiter.check(
-          client.clientID,
-          clientMsg.type,
-          bytes,
-        );
-        if (rateResult === "kick") {
-          this.log.warn(`Client rate limit exceeded, kicking`, {
-            clientID: client.clientID,
-            type: clientMsg.type,
-          });
-          this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
-          return;
-        }
-        if (rateResult === "limit") {
-          this.log.warn(`Client message rate limit exceeded, dropping`, {
-            clientID: client.clientID,
-            type: clientMsg.type,
-          });
-          return;
-        }
-        switch (clientMsg.type) {
-          case "rejoin": {
-            // Client is already connected, no auth required, send start game message if game has started
-            if (this._hasStarted) {
-              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
+          let json: unknown;
+          try {
+            // Discriminate wire format by the isBinary flag provided by the
+            // ws library, rather than inspecting the payload shape. This
+            // correctly handles text frames delivered as Buffer objects.
+            if (isBinary) {
+              json = decodeMsgPack(message as Buffer);
+            } else {
+              json = JSON.parse(message.toString());
             }
-            break;
-          }
-          case "intent": {
-            // Server stamps clientID from the authenticated connection
-            const stampedIntent = {
-              ...clientMsg.intent,
+          } catch (e) {
+            this.log.warn(`Failed to parse client message, kicking`, {
               clientID: client.clientID,
-            };
-            switch (stampedIntent.type) {
-              case "mark_disconnected": {
-                this.log.warn(
-                  `Should not receive mark_disconnected intent from client`,
-                );
-                return;
+              error: String(e),
+            });
+            this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+            return;
+          }
+          const parsed = ClientMessageSchema.safeParse(json);
+          if (!parsed.success) {
+            this.log.warn(`Failed to parse client message, kicking`, {
+              clientID: client.clientID,
+              error: z.prettifyError(parsed.error),
+            });
+            this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+            return;
+          }
+          const clientMsg = parsed.data;
+          const bytes = Buffer.byteLength(message, "utf8");
+          const rateResult = this.intentRateLimiter.check(
+            client.clientID,
+            clientMsg.type,
+            bytes,
+          );
+          if (rateResult === "kick") {
+            this.log.warn(`Client rate limit exceeded, kicking`, {
+              clientID: client.clientID,
+              type: clientMsg.type,
+            });
+            this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
+            return;
+          }
+          if (rateResult === "limit") {
+            this.log.warn(`Client message rate limit exceeded, dropping`, {
+              clientID: client.clientID,
+              type: clientMsg.type,
+            });
+            return;
+          }
+          switch (clientMsg.type) {
+            case "rejoin": {
+              // Client is already connected, no auth required, send start game message if game has started
+              if (this._hasStarted) {
+                this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
               }
-
-              // Handle kick_player intent via WebSocket
-              case "kick_player": {
-                // Check if the authenticated client is the lobby creator
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can kick players`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    target: stampedIntent.target,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                // Don't allow lobby creator to kick themselves
-                if (client.clientID === stampedIntent.target) {
-                  this.log.warn(`Cannot kick yourself`, {
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                // Log and execute the kick
-                this.log.info(`Lobby creator initiated kick of player`, {
-                  creatorID: client.clientID,
-                  target: stampedIntent.target,
-                  gameID: this.id,
-                  kickMethod: "websocket",
-                });
-
-                this.kickClient(
-                  stampedIntent.target,
-                  KICK_REASON_LOBBY_CREATOR,
-                );
-                return;
-              }
-              case "update_game_config": {
-                // Only lobby creator can update config
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can update game config`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                if (this.isPublic()) {
-                  this.log.warn(`Cannot update public game via WebSocket`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                if (this.hasStarted()) {
+              break;
+            }
+            case "intent": {
+              // Server stamps clientID from the authenticated connection
+              const stampedIntent = {
+                ...clientMsg.intent,
+                clientID: client.clientID,
+              };
+              switch (stampedIntent.type) {
+                case "mark_disconnected": {
                   this.log.warn(
-                    `Cannot update game config after it has started`,
-                    {
-                      gameID: this.id,
-                      clientID: client.clientID,
-                    },
+                    `Should not receive mark_disconnected intent from client`,
                   );
                   return;
                 }
 
-                if (stampedIntent.config.gameType === GameType.Public) {
-                  this.log.warn(`Cannot update game to public via WebSocket`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
+                // Handle kick_player intent via WebSocket
+                case "kick_player": {
+                  // Check if the authenticated client is the lobby creator
+                  if (client.clientID !== this.lobbyCreatorID) {
+                    this.log.warn(`Only lobby creator can kick players`, {
+                      clientID: client.clientID,
+                      creatorID: this.lobbyCreatorID,
+                      target: stampedIntent.target,
+                      gameID: this.id,
+                    });
+                    return;
+                  }
 
-                this.log.info(
-                  `Lobby creator updated game config via WebSocket`,
-                  {
+                  // Don't allow lobby creator to kick themselves
+                  if (client.clientID === stampedIntent.target) {
+                    this.log.warn(`Cannot kick yourself`, {
+                      clientID: client.clientID,
+                    });
+                    return;
+                  }
+
+                  // Log and execute the kick
+                  this.log.info(`Lobby creator initiated kick of player`, {
                     creatorID: client.clientID,
+                    target: stampedIntent.target,
                     gameID: this.id,
-                  },
-                );
-
-                this.updateGameConfig(stampedIntent.config);
-                return;
-              }
-              case "toggle_pause": {
-                // Only lobby creator can pause/resume
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can toggle pause`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
+                    kickMethod: "websocket",
                   });
+
+                  this.kickClient(
+                    stampedIntent.target,
+                    KICK_REASON_LOBBY_CREATOR,
+                  );
                   return;
                 }
+                case "update_game_config": {
+                  // Only lobby creator can update config
+                  if (client.clientID !== this.lobbyCreatorID) {
+                    this.log.warn(`Only lobby creator can update game config`, {
+                      clientID: client.clientID,
+                      creatorID: this.lobbyCreatorID,
+                      gameID: this.id,
+                    });
+                    return;
+                  }
 
-                if (stampedIntent.paused) {
-                  // Pausing: send intent and complete current turn before pause takes effect
-                  this.addIntent(stampedIntent);
-                  this.endTurn();
-                  this.isPaused = true;
-                } else {
-                  // Unpausing: clear pause flag before sending intent so next turn can execute
-                  this.isPaused = false;
-                  this.addIntent(stampedIntent);
-                  this.endTurn();
-                }
+                  if (this.isPublic()) {
+                    this.log.warn(`Cannot update public game via WebSocket`, {
+                      gameID: this.id,
+                      clientID: client.clientID,
+                    });
+                    return;
+                  }
 
-                this.log.info(`Game ${this.isPaused ? "paused" : "resumed"}`, {
-                  clientID: client.clientID,
-                  gameID: this.id,
-                });
-                break;
-              }
-              default: {
-                // Don't process intents while game is paused
-                if (!this.isPaused) {
-                  this.addIntent(stampedIntent);
+                  if (this.hasStarted()) {
+                    this.log.warn(
+                      `Cannot update game config after it has started`,
+                      {
+                        gameID: this.id,
+                        clientID: client.clientID,
+                      },
+                    );
+                    return;
+                  }
+
+                  if (stampedIntent.config.gameType === GameType.Public) {
+                    this.log.warn(
+                      `Cannot update game to public via WebSocket`,
+                      {
+                        gameID: this.id,
+                        clientID: client.clientID,
+                      },
+                    );
+                    return;
+                  }
+
+                  this.log.info(
+                    `Lobby creator updated game config via WebSocket`,
+                    {
+                      creatorID: client.clientID,
+                      gameID: this.id,
+                    },
+                  );
+
+                  this.updateGameConfig(stampedIntent.config);
+                  return;
                 }
-                break;
+                case "toggle_pause": {
+                  // Only lobby creator can pause/resume
+                  if (client.clientID !== this.lobbyCreatorID) {
+                    this.log.warn(`Only lobby creator can toggle pause`, {
+                      clientID: client.clientID,
+                      creatorID: this.lobbyCreatorID,
+                      gameID: this.id,
+                    });
+                    return;
+                  }
+
+                  if (stampedIntent.paused) {
+                    // Pausing: send intent and complete current turn before pause takes effect
+                    this.addIntent(stampedIntent);
+                    this.endTurn();
+                    this.isPaused = true;
+                  } else {
+                    // Unpausing: clear pause flag before sending intent so next turn can execute
+                    this.isPaused = false;
+                    this.addIntent(stampedIntent);
+                    this.endTurn();
+                  }
+
+                  this.log.info(
+                    `Game ${this.isPaused ? "paused" : "resumed"}`,
+                    {
+                      clientID: client.clientID,
+                      gameID: this.id,
+                    },
+                  );
+                  break;
+                }
+                default: {
+                  // Don't process intents while game is paused
+                  if (!this.isPaused) {
+                    this.addIntent(stampedIntent);
+                  }
+                  break;
+                }
               }
+              break;
             }
-            break;
+            case "ping": {
+              this.lastPingUpdate = Date.now();
+              client.lastPing = Date.now();
+              break;
+            }
+            case "hash": {
+              client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+              break;
+            }
+            case "winner": {
+              this.handleWinner(client, clientMsg);
+              break;
+            }
+            default: {
+              this.log.warn(
+                `Unknown message type: ${(clientMsg as any).type}`,
+                {
+                  clientID: client.clientID,
+                },
+              );
+              break;
+            }
           }
-          case "ping": {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-            break;
-          }
-          case "hash": {
-            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-            break;
-          }
-          case "winner": {
-            this.handleWinner(client, clientMsg);
-            break;
-          }
-          default: {
-            this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
+        } catch (error) {
+          this.log.info(
+            `error handline websocket request in game server: ${error}`,
+            {
               clientID: client.clientID,
-            });
-            break;
-          }
+            },
+          );
         }
-      } catch (error) {
-        this.log.info(
-          `error handline websocket request in game server: ${error}`,
-          {
-            clientID: client.clientID,
-          },
-        );
-      }
-    });
+      },
+    );
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,

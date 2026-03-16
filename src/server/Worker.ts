@@ -15,7 +15,7 @@ import {
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
-import { decodeMsgPack, isBinaryMessage } from "../core/serialization";
+import { decodeMsgPack } from "../core/serialization";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -283,7 +283,7 @@ export async function startWorker() {
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
-    ws.on("message", async (message: Buffer | string) => {
+    ws.on("message", async (message: Buffer | string, isBinary: boolean) => {
       const forwarded = req.headers["x-forwarded-for"];
       const ip = Array.isArray(forwarded)
         ? forwarded[0]
@@ -293,12 +293,13 @@ export async function startWorker() {
       try {
         // Parse and handle client messages.
         // Binary frames (Buffer) → MessagePack; text frames (string) → JSON.
+        // Use the isBinary flag from the ws callback rather than inspecting
+        // the payload shape, which correctly handles text frames as Buffer.
         let raw: unknown;
-        const isBinary = isBinaryMessage(message);
         try {
           raw = isBinary
             ? decodeMsgPack(message as Buffer)
-            : JSON.parse((message as string).toString());
+            : JSON.parse(message.toString());
         } catch (e) {
           log.warn("Error deserializing client message", String(e));
           ws.send(
@@ -307,7 +308,7 @@ export async function startWorker() {
               error: "parse_error",
             } satisfies ServerErrorMessage),
           );
-          ws.close(1002, "ClientJoinMessageSchema");
+          ws.close(1002, "Message parse error");
           return;
         }
         const parsed = ClientMessageSchema.safeParse(raw);
@@ -320,7 +321,7 @@ export async function startWorker() {
               error: error.toString(),
             } satisfies ServerErrorMessage),
           );
-          ws.close(1002, "ClientJoinMessageSchema");
+          ws.close(1002, "Schema validation error");
           return;
         }
         const clientMsg = parsed.data;

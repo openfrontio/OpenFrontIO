@@ -27,10 +27,10 @@ import {
   ClientMessageSchema,
   ServerDesyncMessage,
   ServerLobbyInfoMessage,
+  ServerMessageSchema,
   ServerPingMessage,
   ServerStartGameMessage,
   ServerTurnMessage,
-  ServerMessageSchema,
 } from "../../src/core/Schemas";
 import {
   decodeMsgPack,
@@ -104,9 +104,12 @@ describe("encodeMsgPack / decodeMsgPack — primitives", () => {
   it("round-trips empty string", () => expect(roundTrip("")).toBe(""));
   it("round-trips non-ASCII string", () =>
     expect(roundTrip("héllo wörld")).toBe("héllo wörld"));
-  it("round-trips array", () => expect(roundTrip([1, 2, 3])).toEqual([1, 2, 3]));
+  it("round-trips array", () =>
+    expect(roundTrip([1, 2, 3])).toEqual([1, 2, 3]));
   it("round-trips nested object", () =>
-    expect(roundTrip({ a: { b: { c: 99 } } })).toEqual({ a: { b: { c: 99 } } }));
+    expect(roundTrip({ a: { b: { c: 99 } } })).toEqual({
+      a: { b: { c: 99 } },
+    }));
   it("round-trips array of objects", () =>
     expect(roundTrip([{ x: 1 }, { x: 2 }])).toEqual([{ x: 1 }, { x: 2 }]));
 });
@@ -462,7 +465,10 @@ describe("decodeMsgPack input type compatibility", () => {
 
   it("accepts ArrayBuffer", () => {
     const enc = encodeMsgPack(original);
-    const ab = enc.buffer.slice(enc.byteOffset, enc.byteOffset + enc.byteLength);
+    const ab = enc.buffer.slice(
+      enc.byteOffset,
+      enc.byteOffset + enc.byteLength,
+    );
     expect(decodeMsgPack(ab)).toEqual(original);
   });
 

@@ -22,12 +22,12 @@ Measured on Node.js v25, Apple M-series. Reusable `Encoder`/`Decoder` instances,
 
 ### Message size
 
-| Message type | JSON bytes | MsgPack bytes | Savings |
-|---|---|---|---|
-| `ServerTurnMessage` (3 intents + hash) | 283 | 213 | **−24.7%** |
-| `ServerTurnMessage` (50 intents) | 3 798 | 2 980 | **−21.5%** |
-| `ServerStartGameMessage` (16 players, 50 catch-up turns) | 32 154 | 24 073 | **−25.1%** |
-| `ServerLobbyInfoMessage` (8 clients) | 638 | 511 | **−19.9%** |
+| Message type                                             | JSON bytes | MsgPack bytes | Savings    |
+| -------------------------------------------------------- | ---------- | ------------- | ---------- |
+| `ServerTurnMessage` (3 intents + hash)                   | 283        | 213           | **−24.7%** |
+| `ServerTurnMessage` (50 intents)                         | 3 798      | 2 980         | **−21.5%** |
+| `ServerStartGameMessage` (16 players, 50 catch-up turns) | 32 154     | 24 073        | **−25.1%** |
+| `ServerLobbyInfoMessage` (8 clients)                     | 638        | 511           | **−19.9%** |
 
 For a 16-player game at typical turn rates (1 turn / 200 ms), the average `ServerTurnMessage` is ~300–1 000 bytes. At −20-25%, that's **60–250 bytes saved per turn per client**, or roughly **5–20 KB/s per player** freed at steady state.
 
@@ -35,8 +35,8 @@ The `ServerStartGameMessage` savings are the most impactful for late-joiners and
 
 ### Throughput
 
-| Operation | JSON | MsgPack | Notes |
-|---|---|---|---|
+| Operation                      | JSON            | MsgPack       | Notes     |
+| ------------------------------ | --------------- | ------------- | --------- |
 | Encode (3-intent turn, 5k ops) | 5 000 000 ops/s | 714 286 ops/s | 7× slower |
 | Decode (3-intent turn, 5k ops) | 1 666 667 ops/s | 714 286 ops/s | 2× slower |
 
@@ -48,13 +48,13 @@ The `ServerStartGameMessage` savings are the most impactful for late-joiners and
 
 **Evaluated:**
 
-| Library | Weekly downloads | Maintained | TS-native | Notes |
-|---|---|---|---|---|
-| `@msgpack/msgpack` | ~2.5M | ✅ Active | ✅ Ships `.d.ts` | Official msgpack.org JS reference impl |
-| `msgpackr` | ~3M | ✅ Active | ✅ | Fastest in Node.js benchmarks; non-standard "packr" format complicates Vite builds |
-| `msgpack-lite` | ~800K | ❌ 2017 | ❌ Needs `@types/` | Unmaintained, 4× slower decode |
-| `msgpack5` | ~600K | ⚠️ Slow | ❌ | Already in devDeps as `@types/msgpack5`; older API |
-| `protobuf` / `flatbuffers` | – | ✅ | Varies | Requires schema files, major refactor; out of scope |
+| Library                    | Weekly downloads | Maintained | TS-native          | Notes                                                                              |
+| -------------------------- | ---------------- | ---------- | ------------------ | ---------------------------------------------------------------------------------- |
+| `@msgpack/msgpack`         | ~2.5M            | ✅ Active  | ✅ Ships `.d.ts`   | Official msgpack.org JS reference impl                                             |
+| `msgpackr`                 | ~3M              | ✅ Active  | ✅                 | Fastest in Node.js benchmarks; non-standard "packr" format complicates Vite builds |
+| `msgpack-lite`             | ~800K            | ❌ 2017    | ❌ Needs `@types/` | Unmaintained, 4× slower decode                                                     |
+| `msgpack5`                 | ~600K            | ⚠️ Slow    | ❌                 | Already in devDeps as `@types/msgpack5`; older API                                 |
+| `protobuf` / `flatbuffers` | –                | ✅         | Varies             | Requires schema files, major refactor; out of scope                                |
 
 **Winner: `@msgpack/msgpack`** — official reference implementation, modern TypeScript-native API, universal (Node.js + all browsers), tree-shakable, used by Microsoft SignalR in their binary protocol upgrade. The `@types/msgpack5` in devDeps suggests the project already evaluated this space; `@msgpack/msgpack` is the modern successor.
 
@@ -82,14 +82,14 @@ The `ws` library already distinguishes these at zero cost: `typeof message === '
 
 `socket.binaryType = 'arraybuffer'` (set in Transport.ts) is supported in:
 
-| Browser | Min version | Notes |
-|---|---|---|
-| Chrome | 15 | Default binaryType is 'blob'; 'arraybuffer' supported since 2011 |
-| Firefox | 11 | Identical support |
-| Safari | 6 | Identical support |
-| Safari iOS | 6 | Identical support |
-| Android Chrome | All versions | Inherits Chrome Blink engine |
-| Edge | All versions | Chromium-based |
+| Browser        | Min version  | Notes                                                            |
+| -------------- | ------------ | ---------------------------------------------------------------- |
+| Chrome         | 15           | Default binaryType is 'blob'; 'arraybuffer' supported since 2011 |
+| Firefox        | 11           | Identical support                                                |
+| Safari         | 6            | Identical support                                                |
+| Safari iOS     | 6            | Identical support                                                |
+| Android Chrome | All versions | Inherits Chrome Blink engine                                     |
+| Edge           | All versions | Chromium-based                                                   |
 
 **`arraybuffer` vs `blob`:** We set `binaryType = 'arraybuffer'` so incoming binary data arrives as a synchronous `ArrayBuffer`. The alternative (`'blob'`) requires an async `.arrayBuffer()` call, adding a microtask delay per message. `@msgpack/msgpack`'s `decode()` accepts `ArrayBuffer` directly.
 
@@ -119,9 +119,13 @@ import { Decoder, Encoder } from "@msgpack/msgpack";
 const encoder = new Encoder();
 const decoder = new Decoder();
 
-export function encodeMsgPack(obj: unknown): Uint8Array
-export function decodeMsgPack(data: Uint8Array | ArrayBuffer | ArrayBufferView): unknown
-export function isBinaryMessage(data: unknown): data is Buffer | Uint8Array | ArrayBuffer
+export function encodeMsgPack(obj: unknown): Uint8Array;
+export function decodeMsgPack(
+  data: Uint8Array | ArrayBuffer | ArrayBufferView,
+): unknown;
+export function isBinaryMessage(
+  data: unknown,
+): data is Buffer | Uint8Array | ArrayBuffer;
 ```
 
 ### Modified: `src/server/Client.ts`
@@ -190,7 +194,7 @@ this.activeClients.forEach((c) => {
 
 ## Commit History
 
-```
+```text
 feat: add @msgpack/msgpack library and serialization module
 feat: use MessagePack binary frames on server (GameServer + Worker)
 feat: encode client→server messages as MessagePack binary frames

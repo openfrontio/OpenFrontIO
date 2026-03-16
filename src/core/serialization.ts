@@ -95,7 +95,7 @@ export function isBinaryMessage(
   data: unknown,
 ): data is Buffer | Uint8Array | ArrayBuffer {
   return (
-    Buffer.isBuffer(data) ||
+    (typeof Buffer !== "undefined" && Buffer.isBuffer(data)) ||
     data instanceof Uint8Array ||
     data instanceof ArrayBuffer
   );
