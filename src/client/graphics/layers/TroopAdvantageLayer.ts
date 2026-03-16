@@ -172,7 +172,13 @@ export class TroopAdvantageLayer implements Layer {
   ) {
     let label = this.labels.get(attackID);
     if (!label) {
-      label = { elements: [], positions: [], isIncoming, attackerTroops, defenderTroops };
+      label = {
+        elements: [],
+        positions: [],
+        isIncoming,
+        attackerTroops,
+        defenderTroops,
+      };
       this.labels.set(attackID, label);
     } else {
       label.attackerTroops = attackerTroops;
