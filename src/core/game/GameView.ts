@@ -462,8 +462,8 @@ export class PlayerView {
 
   async attackClusterPositions(
     playerID: number,
-    attackID: string,
-  ): Promise<Cell[]> {
+    attackID?: string,
+  ): Promise<{ id: string; clusters: Cell[] }[]> {
     return this.game.worker.attackClusterPositions(playerID, attackID);
   }
 

@@ -271,21 +271,21 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       }
 
       try {
-        const clusters = (await gameRunner).attackClusterPositions(
+        const attacks = (await gameRunner).attackClusterPositions(
           message.playerID,
           message.attackID,
         );
         sendMessage({
           type: "attack_cluster_positions_result",
           id: message.id,
-          clusters,
+          attacks,
         } as AttackClusterPositionsResultMessage);
       } catch (error) {
         console.error("Failed to get attack cluster positions:", error);
         sendMessage({
           type: "attack_cluster_positions_result",
           id: message.id,
-          clusters: [],
+          attacks: [],
         } as AttackClusterPositionsResultMessage);
       }
       break;

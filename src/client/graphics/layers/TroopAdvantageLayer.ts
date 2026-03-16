@@ -1,6 +1,6 @@
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
@@ -26,12 +26,14 @@ interface AttackLabel {
   elements: HTMLDivElement[];
   positions: (Cell | null)[];
   isIncoming: boolean;
+  attackerTroops: number;
+  defenderTroops: number;
 }
 
 export class TroopAdvantageLayer implements Layer {
   private container: HTMLDivElement;
   private labels = new Map<string, AttackLabel>();
-  private inFlightPositionRequests = new Set<string>();
+  private inFlightRequest = false;
   private isVisible = true;
   private onAlternateView: (e: AlternateViewEvent) => void;
 
@@ -52,7 +54,7 @@ export class TroopAdvantageLayer implements Layer {
     this.container.style.left = "50%";
     this.container.style.top = "50%";
     this.container.style.pointerEvents = "none";
-    this.container.style.zIndex = "2";
+    this.container.style.zIndex = "4";
     document.body.appendChild(this.container);
 
     this.onAlternateView = (e) => {
@@ -110,15 +112,7 @@ export class TroopAdvantageLayer implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-
-      this.processAttack(
-        myPlayer,
-        attack.id,
-        attack.attackerID,
-        attack.troops,
-        defender.troops(),
-        false,
-      );
+      this.ensureLabel(attack.id, attack.troops, defender.troops(), false);
     }
 
     // Incoming attacks — red if attacker > my troops, orange if attacker < my troops
@@ -128,66 +122,65 @@ export class TroopAdvantageLayer implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-
-      this.processAttack(
-        myPlayer,
-        attack.id,
-        attack.attackerID,
-        attack.troops,
-        myTroops,
-        true,
-      );
+      this.ensureLabel(attack.id, attack.troops, myTroops, true);
     }
+
+    // Single request per tick for all attack cluster positions
+    if (this.inFlightRequest) return;
+    this.inFlightRequest = true;
+
+    void myPlayer
+      .attackClusterPositions(myPlayer.smallID())
+      .then((attacks) => {
+        for (const { id, clusters } of attacks) {
+          const lbl = this.labels.get(id);
+          if (!lbl) continue;
+
+          while (lbl.elements.length < clusters.length) {
+            lbl.elements.push(
+              this.createLabelElement(
+                lbl.attackerTroops,
+                lbl.defenderTroops,
+                lbl.isIncoming,
+              ),
+            );
+            lbl.positions.push(null);
+          }
+          while (lbl.elements.length > clusters.length) {
+            lbl.elements.pop()!.remove();
+            lbl.positions.pop();
+          }
+
+          for (let i = 0; i < clusters.length; i++) {
+            lbl.positions[i] = clusters[i];
+          }
+        }
+      })
+      .catch(() => {
+        for (const lbl of this.labels.values()) lbl.positions.fill(null);
+      })
+      .finally(() => {
+        this.inFlightRequest = false;
+      });
   }
 
-  private processAttack(
-    myPlayer: PlayerView,
+  private ensureLabel(
     attackID: string,
-    attackerSmallID: number,
     attackerTroops: number,
     defenderTroops: number,
     isIncoming: boolean,
   ) {
     let label = this.labels.get(attackID);
     if (!label) {
-      label = { elements: [], positions: [], isIncoming };
+      label = { elements: [], positions: [], isIncoming, attackerTroops, defenderTroops };
       this.labels.set(attackID, label);
+    } else {
+      label.attackerTroops = attackerTroops;
+      label.defenderTroops = defenderTroops;
     }
     for (const el of label.elements) {
       this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
     }
-
-    if (this.inFlightPositionRequests.has(attackID)) return;
-    this.inFlightPositionRequests.add(attackID);
-
-    void myPlayer
-      .attackClusterPositions(attackerSmallID, attackID)
-      .then((clusters) => {
-        const lbl = this.labels.get(attackID);
-        if (!lbl) return;
-
-        while (lbl.elements.length < clusters.length) {
-          lbl.elements.push(
-            this.createLabelElement(attackerTroops, defenderTroops, isIncoming),
-          );
-          lbl.positions.push(null);
-        }
-        while (lbl.elements.length > clusters.length) {
-          lbl.elements.pop()!.remove();
-          lbl.positions.pop();
-        }
-
-        for (let i = 0; i < clusters.length; i++) {
-          lbl.positions[i] = clusters[i];
-        }
-      })
-      .catch(() => {
-        const lbl = this.labels.get(attackID);
-        if (lbl) lbl.positions.fill(null);
-      })
-      .finally(() => {
-        this.inFlightPositionRequests.delete(attackID);
-      });
   }
 
   renderLayer(_context: CanvasRenderingContext2D) {
@@ -263,7 +256,6 @@ export class TroopAdvantageLayer implements Layer {
     if (!label) return;
     for (const el of label.elements) el.remove();
     this.labels.delete(attackID);
-    this.inFlightPositionRequests.delete(attackID);
   }
 
   private clearAllLabels() {
@@ -271,6 +263,5 @@ export class TroopAdvantageLayer implements Layer {
       for (const el of label.elements) el.remove();
     }
     this.labels.clear();
-    this.inFlightPositionRequests.clear();
   }
 }

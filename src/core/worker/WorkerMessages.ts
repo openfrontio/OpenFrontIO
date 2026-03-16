@@ -125,12 +125,12 @@ export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
 export interface AttackClusterPositionsMessage extends BaseWorkerMessage {
   type: "attack_cluster_positions";
   playerID: number;
-  attackID: string;
+  attackID?: string;
 }
 
 export interface AttackClusterPositionsResultMessage extends BaseWorkerMessage {
   type: "attack_cluster_positions_result";
-  clusters: { x: number; y: number }[];
+  attacks: { id: string; clusters: { x: number; y: number }[] }[];
 }
 
 export interface TransportShipSpawnMessage extends BaseWorkerMessage {

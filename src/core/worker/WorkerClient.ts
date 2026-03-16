@@ -266,7 +266,10 @@ export class WorkerClient {
     });
   }
 
-  attackClusterPositions(playerID: number, attackID: string): Promise<Cell[]> {
+  attackClusterPositions(
+    playerID: number,
+    attackID?: string,
+  ): Promise<{ id: string; clusters: Cell[] }[]> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -277,7 +280,12 @@ export class WorkerClient {
 
       this.messageHandlers.set(messageId, (message) => {
         if (message.type === "attack_cluster_positions_result") {
-          resolve(message.clusters.map((c) => new Cell(c.x, c.y)));
+          resolve(
+            message.attacks.map((a) => ({
+              id: a.id,
+              clusters: a.clusters.map((c) => new Cell(c.x, c.y)),
+            })),
+          );
         }
       });
 

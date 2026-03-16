@@ -256,20 +256,22 @@ export class GameRunner {
 
   public attackClusterPositions(
     playerID: number,
-    attackID: string,
-  ): { x: number; y: number }[] {
+    attackID?: string,
+  ): { id: string; clusters: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = (a: Attack) => a.id() === attackID;
-    const attack =
-      player.outgoingAttacks().find(condition) ??
-      player.incomingAttacks().find(condition);
-    if (attack === undefined) return [];
+    const allAttacks = [
+      ...player.outgoingAttacks(),
+      ...player.incomingAttacks(),
+    ];
+    const attacks = attackID
+      ? allAttacks.filter((a) => a.id() === attackID)
+      : allAttacks;
 
-    return attack.clusterPositions();
+    return attacks.map((a) => ({ id: a.id(), clusters: a.clusterPositions() }));
   }
 
   public attackAveragePosition(
