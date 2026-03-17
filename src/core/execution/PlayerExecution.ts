@@ -97,8 +97,11 @@ export class PlayerExecution implements Execution {
       }
     }
 
-    if (ticks - this.lastCalc > this.ticksPerClusterCalc) {
-      if (this.player.lastTileChange() > this.lastCalc) {
+    if (
+      ticks - this.lastCalc > this.ticksPerClusterCalc ||
+      this.player.numTilesOwned() < 100
+    ) {
+      if (this.player.lastTileChange() >= this.lastCalc) {
         this.lastCalc = ticks;
         const start = performance.now();
         this.removeClusters();
