@@ -16,7 +16,7 @@ import {
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
-import { createRandomName } from "../../core/Util";
+import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
 import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -122,7 +122,7 @@ export class LobbyTeamView extends LitElement {
           this.clients,
           (c) => c.clientID ?? c.username,
           (client) => {
-            const displayName = this.displayUsername(client);
+            const displayName = this.getClientDisplayName(client);
             return html`<div
               class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white"
             >
@@ -167,7 +167,7 @@ export class LobbyTeamView extends LitElement {
       this.clients,
       (c) => c.clientID ?? c.username,
       (client) => {
-        const displayName = this.displayUsername(client);
+        const displayName = this.getClientDisplayName(client);
         return html`<span class="player-tag">
           <span class="text-white">${displayName}</span>
           ${client.clientID === this.lobbyCreatorClientID
@@ -226,7 +226,7 @@ export class LobbyTeamView extends LitElement {
                 preview.players,
                 (p) => p.clientID ?? p.username,
                 (p) => {
-                  const displayName = this.displayUsername(p);
+                  const displayName = this.getClientDisplayName(p);
                   return html` <div
                     class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
                   >
@@ -318,7 +318,14 @@ export class LobbyTeamView extends LitElement {
 
     const players = this.clients.map(
       (c) =>
-        new PlayerInfo(c.username, PlayerType.Human, c.clientID, c.clientID),
+        new PlayerInfo(
+          c.username,
+          PlayerType.Human,
+          c.clientID,
+          c.clientID,
+          false,
+          c.clanTag,
+        ),
     );
     const assignment = assignTeamsLobbyPreview(
       players,
@@ -358,17 +365,17 @@ export class LobbyTeamView extends LitElement {
     }));
   }
 
-  private displayUsername(client: ClientInfo): string {
+  private getClientDisplayName(client: ClientInfo): string {
+    const full = formatPlayerDisplayName(client.username, client.clanTag);
     if (!this.userSettings.anonymousNames()) {
-      return client.username;
+      return full;
     }
-
     if (this.currentClientID && client.clientID === this.currentClientID) {
-      return client.username;
+      return full;
     }
-
-    return (
-      createRandomName(client.username, PlayerType.Human) ?? client.username
-    );
+    // Keep clan tag visible while anonymizing only the username.
+    const anonymizedUsername =
+      createRandomName(client.username, PlayerType.Human) ?? client.username;
+    return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
   }
 }
