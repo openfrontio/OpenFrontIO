@@ -159,7 +159,7 @@ export function getActiveModifiers(
       (modifiers.startingGold / 1_000_000).toPrecision(12),
     );
     result.push({
-      labelKey: "host_modal.starting_gold",
+      labelKey: "public_game_modifier.starting_gold_label",
       badgeKey: "public_game_modifier.starting_gold",
       badgeParams: {
         amount: millions,
@@ -181,8 +181,9 @@ export function getActiveModifiers(
   }
   if (modifiers.isAlliancesDisabled) {
     result.push({
-      labelKey: "host_modal.disable_alliances",
+      labelKey: "public_game_modifier.disable_alliances_label",
       badgeKey: "public_game_modifier.disable_alliances",
+      formattedValue: translateText("common.disabled"),
     });
   }
   return result;
