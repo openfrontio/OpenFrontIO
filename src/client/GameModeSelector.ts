@@ -18,8 +18,10 @@ import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  calculateServerTimeOffset,
   getMapName,
   getModifierLabels,
+  getSecondsUntilServerTimestamp,
   renderDuration,
   translateText,
 } from "./Utils";
@@ -81,7 +83,7 @@ export class GameModeSelector extends LitElement {
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
-    this.serverTimeOffset = lobbies.serverTime - Date.now();
+    this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
     document.dispatchEvent(
       new CustomEvent("public-lobbies-update", {
         detail: { payload: lobbies },
@@ -279,12 +281,7 @@ export class GameModeSelector extends LitElement {
     const useContain =
       aspectRatio !== undefined && (aspectRatio > 4 || aspectRatio < 0.25);
     const timeRemaining = lobby.startsAt
-      ? Math.max(
-          0,
-          Math.floor(
-            (lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000,
-          ),
-        )
+      ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
       : undefined;
 
     let timeDisplay: string = "";
