@@ -269,7 +269,7 @@ export class WorkerClient {
   attackFrontLinePositions(
     playerID: number,
     attackID?: string,
-  ): Promise<{ id: string; centers: Cell[] }[]> {
+  ): Promise<{ id: string; positions: Cell[] }[]> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -296,7 +296,7 @@ export class WorkerClient {
         resolve(
           message.attacks.map((a) => ({
             id: a.id,
-            centers: a.centers.map((c) => new Cell(c.x, c.y)),
+            positions: a.positions.map((c) => new Cell(c.x, c.y)),
           })),
         );
       });

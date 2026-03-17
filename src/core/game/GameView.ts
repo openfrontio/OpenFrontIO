@@ -459,7 +459,7 @@ export class PlayerView {
 
   async attackFrontLinePositions(
     attackID?: string,
-  ): Promise<{ id: string; centers: Cell[] }[]> {
+  ): Promise<{ id: string; positions: Cell[] }[]> {
     return this.game.worker.attackFrontLinePositions(this.smallID(), attackID);
   }
 

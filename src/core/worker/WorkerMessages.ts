@@ -131,7 +131,7 @@ export interface AttackFrontLinePositionsMessage extends BaseWorkerMessage {
 export interface AttackFrontLinePositionsResultMessage
   extends BaseWorkerMessage {
   type: "attack_front_line_positions_result";
-  attacks: { id: string; centers: { x: number; y: number }[] }[];
+  attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
 
 export interface TransportShipSpawnMessage extends BaseWorkerMessage {

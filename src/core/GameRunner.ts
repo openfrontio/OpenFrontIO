@@ -257,7 +257,7 @@ export class GameRunner {
   public attackFrontLinePositions(
     playerID: number,
     attackID?: string,
-  ): { id: string; centers: { x: number; y: number }[] }[] {
+  ): { id: string; positions: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
       throw new Error(`player with id ${playerID} not found`);
@@ -273,7 +273,7 @@ export class GameRunner {
 
     return attacks.map((a) => ({
       id: a.id(),
-      centers: a.frontLinePositions().map((tile) => ({
+      positions: a.frontLinePositions().map((tile) => ({
         x: this.game.map().x(tile),
         y: this.game.map().y(tile),
       })),

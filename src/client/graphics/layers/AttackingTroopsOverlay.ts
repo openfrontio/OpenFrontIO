@@ -51,8 +51,6 @@ export class AttackingTroopsOverlay implements Layer {
   }
 
   init() {
-    // The container is anchored at the viewport centre (50%, 50%) so that
-    // label transforms can use raw world coordinates without an extra offset.
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
     this.container.style.left = "50%";
@@ -137,10 +135,10 @@ export class AttackingTroopsOverlay implements Layer {
     void myPlayer
       .attackFrontLinePositions()
       .then((attacks) => {
-        for (const { id, centers } of attacks) {
+        for (const { id, positions } of attacks) {
           const lbl = this.labels.get(id);
           if (!lbl) continue;
-          this.reconcileLabelPositions(lbl, centers);
+          this.reconcileLabelPositions(lbl, positions);
         }
       })
       .catch(() => {
@@ -209,8 +207,8 @@ export class AttackingTroopsOverlay implements Layer {
   // position (greedy nearest-neighbour matching). This prevents labels from
   // swapping front-line segments when their relative sizes change between ticks,
   // which would otherwise cause visible jumping.
-  private reconcileLabelPositions(lbl: AttackLabel, centers: Cell[]) {
-    const availableCenterIndexes = centers.map((_, i) => i);
+  private reconcileLabelPositions(lbl: AttackLabel, positions: Cell[]) {
+    const availableCenterIndexes = positions.map((_, i) => i);
     const updatedPositions: (Cell | null)[] = [];
 
     for (
@@ -221,7 +219,7 @@ export class AttackingTroopsOverlay implements Layer {
       const currentPos = lbl.positions[elementIndex];
       if (!currentPos) {
         // Element has no position yet — assign the first available center.
-        updatedPositions.push(centers[availableCenterIndexes.shift()!]);
+        updatedPositions.push(positions[availableCenterIndexes.shift()!]);
         continue;
       }
 
@@ -229,7 +227,7 @@ export class AttackingTroopsOverlay implements Layer {
       let closestCenterAt = 0;
       let closestDistance = Infinity;
       for (let i = 0; i < availableCenterIndexes.length; i++) {
-        const candidate = centers[availableCenterIndexes[i]];
+        const candidate = positions[availableCenterIndexes[i]];
         const dx = candidate.x - currentPos.x;
         const dy = candidate.y - currentPos.y;
         const squaredDistance = dx * dx + dy * dy;
@@ -239,11 +237,11 @@ export class AttackingTroopsOverlay implements Layer {
         }
       }
       updatedPositions.push(
-        centers[availableCenterIndexes.splice(closestCenterAt, 1)[0]],
+        positions[availableCenterIndexes.splice(closestCenterAt, 1)[0]],
       );
     }
 
-    // Create new label elements for centers that had no existing element to match.
+    // Create new label elements for positions that had no existing element to match.
     for (const centerIndex of availableCenterIndexes) {
       lbl.elements.push(
         this.createLabelElement(
@@ -252,7 +250,7 @@ export class AttackingTroopsOverlay implements Layer {
           lbl.isIncoming,
         ),
       );
-      updatedPositions.push(centers[centerIndex]);
+      updatedPositions.push(positions[centerIndex]);
     }
 
     // Remove elements for front-line segments that no longer exist.
