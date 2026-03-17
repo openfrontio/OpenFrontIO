@@ -76,7 +76,7 @@ export class TroopAdvantageLayer implements Layer {
   }
 
   tick() {
-    if (!this.userSettings.troopAdvantageLayer()) {
+    if (!this.userSettings.troopAdvantageLayer() || !this.isVisible) {
       if (this.labels.size > 0) this.clearAllLabels();
       return;
     }
