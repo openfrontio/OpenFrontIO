@@ -24,6 +24,7 @@
     "copied": "Copied!",
     "click_to_copy": "Click to copy",
     "enabled": "Enabled",
+    "disabled": "Disabled",
     "map_default": "Map default"
   },
   "main": {
@@ -488,8 +489,10 @@
     "crowded": "Crowded",
     "hard_nations": "Hard Nations",
     "starting_gold": "{amount}M Starting Gold",
+    "starting_gold_label": "Starting Gold",
     "gold_multiplier": "x{amount} Gold Multiplier",
-    "disable_alliances": "Alliances Disabled"
+    "disable_alliances": "Alliances Disabled",
+    "disable_alliances_label": "Alliances"
   },
   "select_lang": {
     "title": "Select Language"
