@@ -136,6 +136,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
 }
 
+/** SAM launcher construction duration in ticks (non-instant-build). */
+export const SAM_CONSTRUCTION_TICKS = 30 * 10;
+
 export class DefaultConfig implements Config {
   private pastelTheme: PastelTheme = new PastelTheme();
   private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
@@ -430,7 +433,9 @@ export class DefaultConfig implements Config {
               Math.min(3_000_000, (numUnits + 1) * 1_500_000),
             UnitType.SAMLauncher,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
+          constructionDuration: this.instantBuild()
+            ? 0
+            : SAM_CONSTRUCTION_TICKS,
           upgradable: true,
         };
         break;
