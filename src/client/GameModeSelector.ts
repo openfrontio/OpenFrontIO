@@ -19,11 +19,9 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   calculateServerTimeOffset,
-  getSecondsUntilServerTimestamp,
-} from "./utilities/ServerTime";
-import {
   getMapName,
   getModifierLabels,
+  getSecondsUntilServerTimestamp,
   renderDuration,
   translateText,
 } from "./Utils";

@@ -1,9 +1,12 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
+  calculateServerTimeOffset,
   getActiveModifiers,
   getGameModeLabel,
   getMapName,
+  getSecondsUntilServerTimestamp,
+  getServerNow,
   renderDuration,
   renderNumber,
   translateText,
@@ -30,11 +33,6 @@ import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
-import {
-  calculateServerTimeOffset,
-  getSecondsUntilServerTimestamp,
-  getServerNow,
-} from "./utilities/ServerTime";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
