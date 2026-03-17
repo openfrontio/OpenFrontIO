@@ -278,15 +278,27 @@ export class WorkerClient {
 
       const messageId = generateID();
 
+      const timeout = setTimeout(() => {
+        this.messageHandlers.delete(messageId);
+        reject(new Error("attack_cluster_positions request timed out"));
+      }, 5000);
+
       this.messageHandlers.set(messageId, (message) => {
-        if (message.type === "attack_cluster_positions_result") {
-          resolve(
-            message.attacks.map((a) => ({
-              id: a.id,
-              clusters: a.clusters.map((c) => new Cell(c.x, c.y)),
-            })),
+        clearTimeout(timeout);
+        if (message.type !== "attack_cluster_positions_result") {
+          reject(
+            new Error(
+              `Unexpected message type for attackClusterPositions: ${message.type}`,
+            ),
           );
+          return;
         }
+        resolve(
+          message.attacks.map((a) => ({
+            id: a.id,
+            clusters: a.clusters.map((c) => new Cell(c.x, c.y)),
+          })),
+        );
       });
 
       this.worker.postMessage({
