@@ -30,6 +30,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 7,
   Asia: 6,
   Australia: 4,
+  Australiamediterran: 8,
   Achiran: 5,
   Baikal: 5,
   BetweenTwoSeas: 5,
