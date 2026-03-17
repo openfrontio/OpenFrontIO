@@ -115,6 +115,7 @@
     "ip-anonymize": "^0.1.0",
     "jose": "^6.0.10",
     "js-yaml": "^4.1.1",
+    "limiter": "^3.0.0",
     "nanoid": "^3.3.6",
     "node-html-parser": "^7.0.2",
     "obscenity": "^0.4.3",

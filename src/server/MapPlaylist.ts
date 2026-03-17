@@ -1,3 +1,4 @@
+import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/DefaultConfig";
 import {
   Difficulty,
   Duos,
@@ -61,7 +62,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
   Svalmel: 8,
-  World: 8,
+  World: 20,
   Lemnos: 3,
   Passage: 4,
   TwoLakes: 6,
@@ -103,7 +104,9 @@ type ModifierKey =
   | "isCrowded"
   | "isHardNations"
   | "startingGold"
-  | "startingGoldHigh";
+  | "startingGoldHigh"
+  | "goldMultiplier"
+  | "isAlliancesDisabled";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
@@ -113,6 +116,8 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isHardNations"),
   ...Array<ModifierKey>(8).fill("startingGold"),
   ...Array<ModifierKey>(1).fill("startingGoldHigh"),
+  ...Array<ModifierKey>(1).fill("goldMultiplier"),
+  ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
 ];
 
 // Modifiers that cannot be active at the same time.
@@ -120,9 +125,6 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold", "startingGoldHigh"],
   ["isHardNations", "startingGoldHigh"],
 ];
-
-// Probability of hard nations modifier in HumansVsNations games.
-const HARD_NATIONS_HVN_PROBABILITY = 0.2; // 20%
 
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
@@ -155,8 +157,8 @@ export class MapPlaylist {
       isRandomSpawn = false;
     }
 
-    // Hard nations modifier only applies when nations are present
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
+    if (mode === GameMode.Team) {
       isHardNations = false;
     }
 
@@ -197,9 +199,13 @@ export class MapPlaylist {
         isCrowded,
         isHardNations,
         startingGold,
+        isAlliancesDisabled: false,
       },
       startingGold,
-      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      difficulty:
+        isHardNations || playerTeams === HumansVsNations
+          ? Difficulty.Hard
+          : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -243,29 +249,24 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // Hard nations: excluded for non-HvN team modes (no nations present).
-    // For HumansVsNations: rolled independently (not via pool).
-    // For FFA: stays in the pool for normal ticket-based selection.
-    let hardNationsFromIndependentRoll: boolean | undefined;
-    let poolCountReduction = 0;
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
+    if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
-    } else if (playerTeams === HumansVsNations) {
-      excludedModifiers.push("isHardNations");
+    }
+    if (playerTeams === HumansVsNations) {
       excludedModifiers.push("startingGoldHigh"); // Nations are disabled if that modifier is active
-      hardNationsFromIndependentRoll =
-        Math.random() < HARD_NATIONS_HVN_PROBABILITY;
-      poolCountReduction = hardNationsFromIndependentRoll ? 1 : 0;
     }
 
-    const poolResult = this.getRandomSpecialGameModifiers(
-      excludedModifiers,
-      undefined,
-      poolCountReduction,
-    );
-    let { isCrowded, startingGold, isCompact, isRandomSpawn } = poolResult;
-    let isHardNations =
-      hardNationsFromIndependentRoll ?? poolResult.isHardNations;
+    const poolResult = this.getRandomSpecialGameModifiers(excludedModifiers);
+    let {
+      isCrowded,
+      startingGold,
+      isCompact,
+      isRandomSpawn,
+      goldMultiplier,
+      isAlliancesDisabled,
+      isHardNations,
+    } = poolResult;
 
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
@@ -280,17 +281,23 @@ export class MapPlaylist {
           !isRandomSpawn &&
           !isCompact &&
           !isHardNations &&
-          startingGold === undefined
+          startingGold === undefined &&
+          goldMultiplier === undefined &&
+          !isAlliancesDisabled
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
             excludedModifiers,
             1,
-            poolCountReduction,
           );
-          ({ isRandomSpawn, isCompact, startingGold } = fallback);
-          isHardNations =
-            hardNationsFromIndependentRoll ?? fallback.isHardNations;
+          ({
+            isRandomSpawn,
+            isCompact,
+            startingGold,
+            goldMultiplier,
+            isAlliancesDisabled,
+          } = fallback);
+          ({ isHardNations } = fallback);
         }
       }
     }
@@ -321,9 +328,16 @@ export class MapPlaylist {
         isCrowded,
         isHardNations,
         startingGold,
+        goldMultiplier,
+        isAlliancesDisabled,
       },
       startingGold,
-      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      goldMultiplier,
+      disableAlliances: isAlliancesDisabled,
+      difficulty:
+        isHardNations || playerTeams === HumansVsNations
+          ? Difficulty.Hard
+          : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -478,10 +492,8 @@ export class MapPlaylist {
       isCompact: Math.random() < 0.05, // 5% chance
       isCrowded: Math.random() < 0.05, // 5% chance
       startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
-      isHardNations:
-        playerTeams === HumansVsNations
-          ? Math.random() < HARD_NATIONS_HVN_PROBABILITY
-          : Math.random() < 0.025, // 2.5% chance
+      isHardNations: Math.random() < 0.025, // 2.5% chance
+      isAlliancesDisabled: false,
     };
   }
 
@@ -530,6 +542,8 @@ export class MapPlaylist {
         : selected.has("startingGold")
           ? 5_000_000
           : undefined,
+      goldMultiplier: selected.has("goldMultiplier") ? 2 : undefined,
+      isAlliancesDisabled: selected.has("isAlliancesDisabled"),
     };
   }
 
@@ -593,8 +607,8 @@ export class MapPlaylist {
   /**
    * Centralised spawn-immunity duration logic.
    * - HumansVsNations: always 5s (nations can't benefit from longer PVP immunity)
-   * - 25M starting gold: 2:30 (extra time to compensate for high gold)
-   * - 5M starting gold: 30s
+   * - 25M starting gold: 2:30min (extra time to compensate for high gold)
+   * - 5M starting gold: SAM build time + 15s (enough to build a SAM)
    * - Default: 5s
    */
   private getSpawnImmunityDuration(
@@ -604,7 +618,7 @@ export class MapPlaylist {
     if (playerTeams === HumansVsNations) return 5 * 10;
     if (startingGold !== undefined && startingGold >= 25_000_000)
       return 150 * 10;
-    if (startingGold) return 30 * 10;
+    if (startingGold) return SAM_CONSTRUCTION_TICKS + 15 * 10;
     return 5 * 10;
   }
 

@@ -1,9 +1,12 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
+  calculateServerTimeOffset,
   getActiveModifiers,
   getGameModeLabel,
   getMapName,
+  getSecondsUntilServerTimestamp,
+  getServerNow,
   renderDuration,
   renderNumber,
   translateText,
@@ -44,6 +47,7 @@ export class JoinLobbyModal extends BaseModal {
   @state() private currentClientID: string = "";
   @state() private nationCount: number = 0;
   @state() private lobbyStartAt: number | null = null;
+  @state() private serverTimeOffset: number = 0;
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
 
@@ -77,7 +81,10 @@ export class JoinLobbyModal extends BaseModal {
     // Post-join state: show lobby info (identical for public & private)
     const secondsRemaining =
       this.lobbyStartAt !== null
-        ? Math.max(0, Math.floor((this.lobbyStartAt - Date.now()) / 1000))
+        ? getSecondsUntilServerTimestamp(
+            this.lobbyStartAt,
+            this.serverTimeOffset,
+          )
         : null;
     const statusLabel =
       secondsRemaining === null
@@ -148,7 +155,7 @@ export class JoinLobbyModal extends BaseModal {
                 class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <button
-                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
                   disabled
                 >
                   ${translateText("private_lobby.joined_waiting")}
@@ -328,6 +335,7 @@ export class JoinLobbyModal extends BaseModal {
     this.players = [];
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
@@ -377,6 +385,7 @@ export class JoinLobbyModal extends BaseModal {
     this.currentClientID = "";
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
@@ -513,6 +522,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
     this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
+    if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
+      this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
+    }
     this.lobbyStartAt = lobby.startsAt ?? null;
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
@@ -577,7 +589,7 @@ export class JoinLobbyModal extends BaseModal {
     ) {
       return;
     }
-    if (Date.now() < this.lobbyStartAt) {
+    if (getServerNow(this.serverTimeOffset) < this.lobbyStartAt) {
       return;
     }
     this.handledJoinTimeout = true;
