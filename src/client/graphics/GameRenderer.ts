@@ -21,7 +21,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
-import { InGameHeaderAd } from "./layers/InGameHeaderAd";
+import { InGamePromo } from "./layers/InGamePromo";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -262,13 +262,11 @@ export function createRenderer(
   immunityTimer.game = game;
   immunityTimer.eventBus = eventBus;
 
-  const inGameHeaderAd = document.querySelector(
-    "in-game-header-ad",
-  ) as InGameHeaderAd;
-  if (!(inGameHeaderAd instanceof InGameHeaderAd)) {
-    console.error("in-game header ad not found");
+  const inGamePromo = document.querySelector("in-game-promo") as InGamePromo;
+  if (!(inGamePromo instanceof InGamePromo)) {
+    console.error("in-game promo not found");
   }
-  inGameHeaderAd.game = game;
+  inGamePromo.game = game;
 
   const spawnVideoAd = document.querySelector("spawn-video-ad") as SpawnVideoAd;
   if (!(spawnVideoAd instanceof SpawnVideoAd)) {
@@ -321,7 +319,7 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    inGameHeaderAd,
+    inGamePromo,
     spawnVideoAd,
     alertFrame,
     performanceOverlay,
