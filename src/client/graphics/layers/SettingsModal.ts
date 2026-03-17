@@ -164,8 +164,8 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private onToggleTroopAdvantageLayerButtonClick() {
-    this.userSettings.toggleTroopAdvantageLayer();
+  private onToggleAttackingTroopsOverlayButtonClick() {
+    this.userSettings.toggleAttackingTroopsOverlay();
     this.requestUpdate();
   }
 
@@ -416,19 +416,21 @@ export class SettingsModal extends LitElement implements Layer {
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleTroopAdvantageLayerButtonClick}"
+              @click="${this.onToggleAttackingTroopsOverlayButtonClick}"
             >
               <img src=${swordIcon} alt="swordIcon" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
-                  ${translateText("user_setting.troop_advantage_label")}
+                  ${translateText(
+                    "user_setting.attacking_troops_overlay_label",
+                  )}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.troop_advantage_desc")}
+                  ${translateText("user_setting.attacking_troops_overlay_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.troopAdvantageLayer()
+                ${this.userSettings.attackingTroopsOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

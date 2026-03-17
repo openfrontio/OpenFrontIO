@@ -185,7 +185,6 @@ export class AttacksDisplay extends LitElement implements Layer {
     if (playerView !== undefined) {
       if (playerView instanceof PlayerView) {
         const averagePosition = await playerView.attackAveragePosition(
-          attack.attackerID,
           attack.id,
         );
 

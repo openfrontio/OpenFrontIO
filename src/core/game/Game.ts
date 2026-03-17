@@ -470,8 +470,7 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
-  averagePosition(): Cell | null;
-  clusterPositions(): Cell[];
+  frontLinePositions(): TileRef[];
 }
 
 export interface AllianceRequest {

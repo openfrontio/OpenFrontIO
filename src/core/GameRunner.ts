@@ -254,10 +254,10 @@ export class GameRunner {
     } as PlayerBorderTiles;
   }
 
-  public attackClusterPositions(
+  public attackFrontLinePositions(
     playerID: number,
     attackID?: string,
-  ): { id: string; clusters: { x: number; y: number }[] }[] {
+  ): { id: string; centers: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
       throw new Error(`player with id ${playerID} not found`);
@@ -271,7 +271,13 @@ export class GameRunner {
       ? allAttacks.filter((a) => a.id() === attackID)
       : allAttacks;
 
-    return attacks.map((a) => ({ id: a.id(), clusters: a.clusterPositions() }));
+    return attacks.map((a) => ({
+      id: a.id(),
+      centers: a.frontLinePositions().map((tile) => ({
+        x: this.game.map().x(tile),
+        y: this.game.map().y(tile),
+      })),
+    }));
   }
 
   public attackAveragePosition(
@@ -291,7 +297,11 @@ export class GameRunner {
       return null;
     }
 
-    return attack.averagePosition();
+    // Use the largest front line's representative tile (index 0, sorted by frontLinePositions)
+    const tiles = attack.frontLinePositions();
+    if (tiles.length === 0) return null;
+    const tile = tiles[0];
+    return new Cell(this.game.map().x(tile), this.game.map().y(tile));
   }
 
   public bestTransportShipSpawn(

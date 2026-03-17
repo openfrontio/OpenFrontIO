@@ -266,10 +266,10 @@ export class WorkerClient {
     });
   }
 
-  attackClusterPositions(
+  attackFrontLinePositions(
     playerID: number,
     attackID?: string,
-  ): Promise<{ id: string; clusters: Cell[] }[]> {
+  ): Promise<{ id: string; centers: Cell[] }[]> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -280,15 +280,15 @@ export class WorkerClient {
 
       const timeout = setTimeout(() => {
         this.messageHandlers.delete(messageId);
-        reject(new Error("attack_cluster_positions request timed out"));
+        reject(new Error("attack_front_line_positions request timed out"));
       }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
         clearTimeout(timeout);
-        if (message.type !== "attack_cluster_positions_result") {
+        if (message.type !== "attack_front_line_positions_result") {
           reject(
             new Error(
-              `Unexpected message type for attackClusterPositions: ${message.type}`,
+              `Unexpected message type for attackFrontLinePositions: ${message.type}`,
             ),
           );
           return;
@@ -296,13 +296,13 @@ export class WorkerClient {
         resolve(
           message.attacks.map((a) => ({
             id: a.id,
-            clusters: a.clusters.map((c) => new Cell(c.x, c.y)),
+            centers: a.centers.map((c) => new Cell(c.x, c.y)),
           })),
         );
       });
 
       this.worker.postMessage({
-        type: "attack_cluster_positions",
+        type: "attack_front_line_positions",
         id: messageId,
         playerID,
         attackID,
