@@ -361,16 +361,17 @@ export async function startWorker() {
         // Normalize username and clan tag before any rejoin/join handling.
         // If this connection maps to an existing lobby client, we still want
         // the latest pre-join identity to be reflected.
-        const censored = privilegeRefresher
-          .get()
-          .censor(clientMsg.username, clientMsg.clanTag ?? null);
+        const { clanTag: censoredClanTag, username: censoredUsername } =
+          privilegeRefresher
+            .get()
+            .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
         // Try to reconnect an existing client (e.g., page refresh)
         // If successful, skip all authorization
         if (
           gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censored.username,
-            clanTag: censored.clanTag,
+            username: censoredUsername,
+            clanTag: censoredClanTag,
           })
         ) {
           return;
@@ -462,8 +463,8 @@ export async function startWorker() {
           roles,
           flares,
           ip,
-          censored.username,
-          censored.clanTag,
+          censoredUsername,
+          censoredClanTag,
           ws,
           cosmeticResult.cosmetics,
         );

@@ -141,10 +141,21 @@ export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
 
 export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
 
+export const UsernameSchema = z
+  .string()
+  .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
+  .min(3)
+  .max(27);
+
+export const ClanTagSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9]{2,5}$/)
+  .nullable();
+
 const ClientInfoSchema = z.object({
   clientID: z.string(),
-  username: z.lazy(() => UsernameSchema),
-  clanTag: z.lazy(() => ClanTagSchema),
+  username: UsernameSchema,
+  clanTag: ClanTagSchema,
 });
 
 export const GameInfoSchema = z.object({
@@ -281,16 +292,6 @@ export const ID = z.string().regex(GAME_ID_REGEX);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
-export const UsernameSchema = z
-  .string()
-  .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
-  .min(3)
-  .max(27);
-
-export const ClanTagSchema = z
-  .string()
-  .regex(/^[a-zA-Z0-9]{2,5}$/)
-  .nullable();
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(

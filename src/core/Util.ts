@@ -3,7 +3,6 @@ import { customAlphabet } from "nanoid";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
-  ClientInfo,
   GameConfig,
   GameID,
   GameRecord,
@@ -346,27 +345,6 @@ export function formatPlayerDisplayName(
   clanTag?: string | null,
 ): string {
   return clanTag ? `[${clanTag}] ${username}` : username;
-}
-
-export function clientInfoListsEqual(
-  a: readonly ClientInfo[] = [],
-  b: readonly ClientInfo[] = [],
-): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  for (let i = 0; i < a.length; i++) {
-    const left = a[i];
-    const right = b[i];
-    if (
-      left.clientID !== right.clientID ||
-      left.username !== right.username ||
-      left.clanTag !== right.clanTag
-    ) {
-      return false;
-    }
-  }
-  return true;
 }
 
 const CLAN_TAG_CHARS = "a-zA-Z0-9";
