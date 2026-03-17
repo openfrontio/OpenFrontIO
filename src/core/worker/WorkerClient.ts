@@ -23,7 +23,7 @@ export class WorkerClient {
 
   constructor(
     private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
       type: "module",

@@ -217,6 +217,8 @@ export const GameConfigSchema = z.object({
       isCrowded: z.boolean(),
       isHardNations: z.boolean(),
       startingGold: z.number().int().min(0).optional(),
+      goldMultiplier: z.number().min(0.1).max(1000).optional(),
+      isAlliancesDisabled: z.boolean(),
     })
     .optional(),
   nations: z
@@ -230,6 +232,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
+  disableAlliances: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(), // In minutes
@@ -552,8 +555,9 @@ export const ServerStartGameMessageSchema = z.object({
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
   lobbyCreatedAt: z.number(),
-  // The clientID assigned to this connection by the server
-  myClientID: ID,
+  // The clientID assigned to this connection by the server.
+  // Absent for replays where the viewer has no player identity.
+  myClientID: ID.optional(),
 });
 
 export const ServerDesyncSchema = z.object({

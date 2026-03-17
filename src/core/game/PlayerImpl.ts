@@ -477,6 +477,9 @@ export class PlayerImpl implements Player {
   }
 
   canSendAllianceRequest(other: Player): boolean {
+    if (this.mg.config().disableAlliances()) {
+      return false;
+    }
     if (other === this) {
       return false;
     }
@@ -1181,16 +1184,22 @@ export class PlayerImpl implements Player {
     if (mg.isSpawnImmunityActive()) {
       return false;
     }
-    const owner = mg.owner(tile);
-    if (owner.isPlayer() && this.isOnSameTeam(owner)) {
-      return false;
+    const owner = this.mg.owner(tile);
+    // Allow nuking teammates after the game is over (aftergame fun)
+    const gameOver = mg.getWinner() !== null;
+    if (owner.isPlayer()) {
+      if (this.isOnSameTeam(owner) && !gameOver) {
+        return false;
+      }
     }
     const config = mg.config();
 
-    // Prevent launching nukes that would hit teammate structures (only in team games)
+    // Prevent launching nukes that would hit teammate structures (only in team games).
+    // Disabled after game-over so players can nuke teammates in the aftergame.
     if (
       config.gameConfig().gameMode === GameMode.Team &&
-      nukeType !== UnitType.MIRV
+      nukeType !== UnitType.MIRV &&
+      !gameOver
     ) {
       const magnitude = config.nukeMagnitudes(nukeType);
       const wouldHitTeammate = mg.anyUnitNearby(

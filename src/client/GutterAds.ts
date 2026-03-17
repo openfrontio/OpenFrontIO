@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { FOOTER_AD_MIN_HEIGHT } from "./components/HomeFooterAd";
 
 @customElement("gutter-ads")
 export class GutterAds extends LitElement {
@@ -8,6 +9,14 @@ export class GutterAds extends LitElement {
 
   @state()
   private adLoaded: boolean = false;
+
+  @state()
+  private hasFooterAd: boolean = false;
+
+  private onResize = () => {
+    const isDesktop = window.innerWidth >= 640;
+    this.hasFooterAd = isDesktop && window.innerHeight >= FOOTER_AD_MIN_HEIGHT;
+  };
 
   private leftAdType: string = "standard_iab_left2";
   private rightAdType: string = "standard_iab_rght1";
@@ -23,6 +32,8 @@ export class GutterAds extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.onResize();
+    window.addEventListener("resize", this.onResize);
     document.addEventListener("userMeResponse", () => {
       if (window.adsEnabled) {
         console.log("showing gutter ads");
@@ -110,6 +121,7 @@ export class GutterAds extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("resize", this.onResize);
   }
 
   render() {
@@ -120,8 +132,11 @@ export class GutterAds extends LitElement {
     return html`
       <!-- Left Gutter Ad -->
       <div
-        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-        style="left: calc(50% - 10cm - 230px); top: calc(50% + 10px);"
+        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center xl:[--half-content:10.5cm] 2xl:[--half-content:12.5cm]"
+        style="left: calc(50% - var(--half-content) - 208px); top: calc(50% + 10px${this
+          .hasFooterAd
+          ? " - 1.2cm"
+          : ""});"
       >
         <div
           id="${this.leftContainerId}"
@@ -131,8 +146,11 @@ export class GutterAds extends LitElement {
 
       <!-- Right Gutter Ad -->
       <div
-        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-        style="left: calc(50% + 10cm + 70px); top: calc(50% + 10px);"
+        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center xl:[--half-content:10.5cm] 2xl:[--half-content:12.5cm]"
+        style="left: calc(50% + var(--half-content) + 48px); top: calc(50% + 10px${this
+          .hasFooterAd
+          ? " - 1.2cm"
+          : ""});"
       >
         <div
           id="${this.rightContainerId}"

@@ -8,7 +8,7 @@
     />
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/x-icon" href="/images/Favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/images/Favicon.svg" />
 
     <!-- Preload styles -->
     <style>
@@ -120,12 +120,12 @@
   </head>
 
   <body
-    class="h-full select-none font-sans min-h-screen bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
+    class="h-full select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-0 bg-cover bg-center opacity-50 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
         style="
           background-image: url(&quot;/resources/images/background.webp&quot;);
         "
@@ -134,14 +134,14 @@
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
         style="
           background-image: url(&quot;/resources/images/OpenFront.webp&quot;);
-          opacity: 0.25;
+          opacity: 0.5;
         "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
         style="
           background-image: url(&quot;/resources/images/OF.webp&quot;);
-          opacity: 0.25;
+          opacity: 0.5;
         "
       ></div>
     </div>
@@ -182,78 +182,81 @@
         <matchmaking-modal
           id="page-matchmaking"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></matchmaking-modal>
         <news-modal
           id="page-news"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></news-modal>
         <single-player-modal
           id="page-single-player"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></single-player-modal>
         <host-lobby-modal
           id="page-host-lobby"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></host-lobby-modal>
         <join-lobby-modal
           id="page-join-lobby"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></join-lobby-modal>
         <territory-patterns-modal
           id="page-item-store"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></territory-patterns-modal>
         <user-setting
           id="page-settings"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></user-setting>
         <leaderboard-modal
           id="page-leaderboard"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></leaderboard-modal>
         <troubleshooting-modal
           id="page-troubleshooting"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></troubleshooting-modal>
 
         <account-modal
           id="page-account"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></account-modal>
         <help-modal
           id="page-help"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></help-modal>
         <language-modal
           id="page-language"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></language-modal>
         <flag-input-modal
           id="flag-input-modal"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></flag-input-modal>
         <ranked-modal
           id="page-ranked"
           inline
-          class="hidden w-full h-full page-content"
+          class="hidden w-full h-full page-content relative z-50"
         ></ranked-modal>
       </main-layout>
 
-      <!-- Desktop Footer -->
-      <page-footer></page-footer>
+      <!-- Ad above footer -->
+      <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
+        <home-footer-ad></home-footer-ad>
+        <page-footer></page-footer>
+      </div>
 
       <!-- Global Modals -->
       <territory-patterns-modal
@@ -264,23 +267,39 @@
     <!-- Game components -->
     <div id="app"></div>
 
+    <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
     <div
-      class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
+      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+      style="
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      "
     >
+      <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
       <div
-        class="contents sm:flex sm:flex-col sm:w-1/2 min-[1200px]:w-auto lg:max-w-[400px]"
+        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
       >
-        <attacks-display class="order-2 sm:order-none w-full"></attacks-display>
-        <control-panel class="order-4 sm:order-none w-full"></control-panel>
+        <attacks-display
+          class="w-full pointer-events-auto order-1 sm:order-none"
+        ></attacks-display>
+        <div
+          class="pointer-events-auto bg-gray-800/70 backdrop-blur-xs sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
+        >
+          <control-panel class="w-full"></control-panel>
+          <unit-display class="hidden lg:block w-full"></unit-display>
+        </div>
       </div>
+
+      <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
       <div
-        class="contents sm:flex sm:flex-col sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 sm:items-end pointer-events-none"
+        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end min-[1200px]:mr-4"
       >
         <chat-display
-          class="order-1 sm:order-none w-full sm:w-auto"
+          class="w-full sm:w-auto pointer-events-auto"
         ></chat-display>
         <events-display
-          class="order-3 sm:order-none w-full sm:w-auto"
+          class="w-full sm:w-auto pointer-events-auto"
         ></events-display>
       </div>
     </div>
@@ -290,7 +309,6 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
-    <unit-display></unit-display>
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
     >

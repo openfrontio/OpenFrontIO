@@ -58,6 +58,9 @@ export class HelpModal extends BaseModal {
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       resetGfx: "KeyR",
+      pauseGame: "KeyP",
+      gameSpeedUp: "Period",
+      gameSpeedDown: "Comma",
       ...saved,
     };
   }
@@ -75,10 +78,14 @@ export class HelpModal extends BaseModal {
       MetaLeft: "⌘",
       MetaRight: "⌘",
       Space: "Space",
+      Escape: "Esc",
+      Enter: "↵ Return",
       ArrowUp: "↑",
       ArrowDown: "↓",
       ArrowLeft: "←",
       ArrowRight: "→",
+      Period: ">",
+      Comma: "<",
     };
 
     if (specialLabels[code]) return specialLabels[code];
@@ -261,6 +268,22 @@ export class HelpModal extends BaseModal {
                 <tbody class="text-white/80">
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey("Escape")}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_esc")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey("Enter")}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_enter")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
                       ${this.renderKey(keybinds.toggleView)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
@@ -352,6 +375,25 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_center")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.pauseGame)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_pause_game")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      <div class="flex flex-wrap gap-2">
+                        ${this.renderKey(keybinds.gameSpeedDown)}
+                        ${this.renderKey(keybinds.gameSpeedUp)}
+                      </div>
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_game_speed")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">

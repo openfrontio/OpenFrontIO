@@ -136,14 +136,12 @@ export enum GameMapType {
   Hawaii = "Hawaii",
   Alps = "Alps",
   NileDelta = "Nile Delta",
+  Arctic = "Arctic",
+  SanFrancisco = "San Francisco",
+  Aegean = "Aegean",
 }
 
 export type GameMapName = keyof typeof GameMapType;
-
-/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
-export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
-}
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -189,6 +187,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Hawaii,
     GameMapType.Alps,
     GameMapType.NileDelta,
+    GameMapType.Arctic,
+    GameMapType.SanFrancisco,
+    GameMapType.Aegean,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -242,6 +243,8 @@ export interface PublicGameModifiers {
   isCrowded: boolean;
   isHardNations: boolean;
   startingGold?: number;
+  goldMultiplier?: number;
+  isAlliancesDisabled: boolean;
 }
 
 export interface UnitInfo {
@@ -505,7 +508,7 @@ export class PlayerInfo {
   constructor(
     public readonly name: string,
     public readonly playerType: PlayerType,
-    // null if bot.
+    // null if tribe.
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,

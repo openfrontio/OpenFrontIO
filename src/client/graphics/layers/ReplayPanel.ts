@@ -41,6 +41,13 @@ export class ReplayPanel extends LitElement implements Layer {
         this.visible = event.visible;
         this.isSingleplayer = event.isSingleplayer;
       });
+      this.eventBus.on(
+        ReplaySpeedChangeEvent,
+        (event: ReplaySpeedChangeEvent) => {
+          this._replaySpeedMultiplier = event.replaySpeedMultiplier;
+          this.requestUpdate();
+        },
+      );
     }
   }
 

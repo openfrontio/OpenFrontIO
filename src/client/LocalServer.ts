@@ -20,11 +20,23 @@ import {
 } from "../core/Util";
 import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { ReplaySpeedChangeEvent } from "./InputHandler";
+import {
+  GameSpeedDownIntentEvent,
+  GameSpeedUpIntentEvent,
+  ReplaySpeedChangeEvent,
+} from "./InputHandler";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
 } from "./utilities/ReplaySpeedMultiplier";
+
+// Order: 0.5, 1, 2, max (same as ReplayPanel)
+const SPEED_ORDER: ReplaySpeedMultiplier[] = [
+  ReplaySpeedMultiplier.slow,
+  ReplaySpeedMultiplier.normal,
+  ReplaySpeedMultiplier.fast,
+  ReplaySpeedMultiplier.fastest,
+];
 
 // build a small backlog so MAX can catch up.
 const MAX_REPLAY_BACKLOG_TURNS = 60;
@@ -94,6 +106,26 @@ export class LocalServer {
       this.replaySpeedMultiplier = event.replaySpeedMultiplier;
     });
 
+    if (!this.isReplay) {
+      this.eventBus.on(GameSpeedUpIntentEvent, () => {
+        const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
+        if (idx < 0 || idx >= SPEED_ORDER.length - 1) return;
+        this.replaySpeedMultiplier = SPEED_ORDER[idx + 1];
+        this.eventBus.emit(
+          new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
+        );
+      });
+
+      this.eventBus.on(GameSpeedDownIntentEvent, () => {
+        const idx = SPEED_ORDER.indexOf(this.replaySpeedMultiplier);
+        if (idx <= 0) return;
+        this.replaySpeedMultiplier = SPEED_ORDER[idx - 1];
+        this.eventBus.emit(
+          new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
+        );
+      });
+    }
+
     this.startedAt = Date.now();
     this.clientConnect();
     if (this.lobbyConfig.gameRecord) {
@@ -113,7 +145,8 @@ export class LocalServer {
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
-      myClientID: this.clientID,
+      // Don't send myClientID for replays — viewer has no player identity.
+      myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
   }
 
@@ -127,7 +160,7 @@ export class LocalServer {
         gameStartInfo: this.lobbyConfig.gameStartInfo!,
         turns: this.turns,
         lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
-        myClientID: this.clientID,
+        myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {

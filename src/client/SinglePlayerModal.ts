@@ -56,6 +56,7 @@ const DEFAULT_OPTIONS = {
   startingGold: false,
   startingGoldValue: undefined as number | undefined,
   disabledUnits: [] as UnitType[],
+  disableAlliances: false,
 } as const;
 
 @customElement("single-player-modal")
@@ -90,6 +91,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [
     ...DEFAULT_OPTIONS.disabledUnits,
   ];
+  @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -210,18 +212,18 @@ export class SinglePlayerModal extends BaseModal {
         .labelKey=${"single_modal.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
-        .inputMin=${0}
-        .inputMax=${1000000000}
-        .inputStep=${100000}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
         .inputValue=${this.startingGoldValue}
         .inputAriaLabel=${translateText("single_modal.starting_gold")}
         .inputPlaceholder=${translateText(
           "single_modal.starting_gold_placeholder",
         )}
-        .defaultInputValue=${5000000}
-        .minValidOnEnable=${0}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0.1}
         .onToggle=${this.handleStartingGoldToggle}
-        .onInput=${this.handleStartingGoldValueChanges}
+        .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
     ];
@@ -313,6 +315,10 @@ export class SinglePlayerModal extends BaseModal {
                     labelKey: "single_modal.compact_map",
                     checked: this.compactMap,
                   },
+                  {
+                    labelKey: "single_modal.disable_alliances",
+                    checked: this.disableAlliances,
+                  },
                 ],
                 inputCards,
               },
@@ -344,7 +350,7 @@ export class SinglePlayerModal extends BaseModal {
             : null}
           <button
             @click=${this.startGame}
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0"
+            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0"
           >
             ${translateText("single_modal.start")}
           </button>
@@ -383,6 +389,7 @@ export class SinglePlayerModal extends BaseModal {
       this.gameMode !== DEFAULT_OPTIONS.gameMode ||
       this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
+      this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.disabledUnits.length > 0
     );
   }
@@ -409,6 +416,7 @@ export class SinglePlayerModal extends BaseModal {
     this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
     this.startingGold = DEFAULT_OPTIONS.startingGold;
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
+    this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
   }
 
   protected onOpen(): void {
@@ -487,6 +495,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "single_modal.disable_alliances":
+        this.disableAlliances = checked;
         break;
       default:
         break;
@@ -591,12 +602,17 @@ export class SinglePlayerModal extends BaseModal {
 
   private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, {
-      min: 0,
-      max: 1000000000,
+    const value = parseBoundedFloatFromInput(input, {
+      min: 0.1,
+      max: 1000,
     });
 
-    this.startingGoldValue = value;
+    if (value === undefined) {
+      this.startingGoldValue = undefined;
+      input.value = "";
+    } else {
+      this.startingGoldValue = value;
+    }
   };
 
   private handleGameModeSelection(value: GameMode) {
@@ -685,8 +701,13 @@ export class SinglePlayerModal extends BaseModal {
                 ? { goldMultiplier: this.goldMultiplierValue }
                 : {}),
               ...(this.startingGold && this.startingGoldValue !== undefined
-                ? { startingGold: this.startingGoldValue }
+                ? {
+                    startingGold: Math.round(
+                      this.startingGoldValue * 1_000_000,
+                    ),
+                  }
                 : {}),
+              ...(this.disableAlliances ? { disableAlliances: true } : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

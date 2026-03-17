@@ -58,6 +58,7 @@ import {
 } from "./Utils";
 import "./components/DesktopNavBar";
 import "./components/Footer";
+import "./components/HomeFooterAd";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
@@ -832,10 +833,13 @@ class Client {
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
         }
+        const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
         history.pushState(
           null,
           "",
-          `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          lobbyIdHidden
+            ? "/streamer-mode"
+            : `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
         );
 
         // Store current URL for popstate confirmation
@@ -848,7 +852,10 @@ class Client {
     lobbyId: string,
     config: Awaited<ReturnType<typeof getServerConfigFromClient>>,
   ) {
-    const targetUrl = `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
+    const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
+    const targetUrl = lobbyIdHidden
+      ? "/streamer-mode"
+      : `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
     const currentUrl = window.location.pathname;
 
     if (currentUrl !== targetUrl) {

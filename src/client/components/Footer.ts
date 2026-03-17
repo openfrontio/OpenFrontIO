@@ -10,9 +10,11 @@ export class Footer extends LitElement {
   render() {
     return html`
       <footer
-        class="[.in-game_&]:hidden bg-slate-950/70 backdrop-blur-md flex flex-col items-center justify-center gap-1 pt-1 pb-3 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
+        class="[.in-game_&]:hidden bg-zinc-900/90 backdrop-blur-md flex flex-col items-center justify-center gap-1 pt-1 pb-3 text-white/50 w-full border-t border-white/10 shrink-0 relative z-50"
       >
-        <div class="flex items-center justify-center gap-4 lg:gap-6 pt-2">
+        <div
+          class="flex items-center justify-center gap-4 lg:gap-6 pt-2 w-full relative"
+        >
           <a
             href="https://github.com/openfrontio/OpenFrontIO"
             target="_blank"
@@ -72,20 +74,25 @@ export class Footer extends LitElement {
               draggable="false"
             />
           </a>
+          <lang-selector
+            class="absolute right-4 top-0 sm:top-[10px]"
+          ></lang-selector>
         </div>
-        <div class="text-xs mt-1 lg:mt-2 grid grid-cols-3 w-full px-4">
+        <div
+          class="text-xs mt-1 lg:mt-2 flex items-center justify-center gap-4 px-4"
+        >
           <a
             href="/terms-of-service.html"
             data-i18n="main.terms_of_service"
             target="_blank"
-            class="hover:text-white transition-colors text-left"
+            class="hover:text-white transition-colors"
           ></a>
-          <span data-i18n="main.copyright" class="text-center"></span>
+          <span data-i18n="main.copyright"></span>
           <a
             href="/privacy-policy.html"
             data-i18n="main.privacy_policy"
             target="_blank"
-            class="hover:text-white transition-colors text-right"
+            class="hover:text-white transition-colors"
           ></a>
         </div>
       </footer>

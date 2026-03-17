@@ -11,6 +11,7 @@ const PERSISTENT_ID_KEY = "player_persistent_id";
 
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
+let __expiresAt: number = 0;
 
 export function discordLogin() {
   const redirectUri = encodeURIComponent(window.location.href);
@@ -95,7 +96,7 @@ export async function userAuth(
     // });
 
     const payload = decodeJwt(jwt);
-    const { iss, aud, exp } = payload;
+    const { iss, aud } = payload;
 
     if (iss !== getApiBase()) {
       // JWT was not issued by the correct server
@@ -110,8 +111,7 @@ export async function userAuth(
       logOut();
       return false;
     }
-    const now = Math.floor(Date.now() / 1000);
-    if (exp !== undefined && now >= exp - 3 * 60) {
+    if (Date.now() >= __expiresAt - 3 * 60 * 1000) {
       console.log("jwt expired or about to expire");
       if (!shouldRefresh) {
         console.error("jwt expired and shouldRefresh is false");
@@ -163,7 +163,8 @@ async function doRefreshJwt(): Promise<void> {
       return;
     }
     const json = await response.json();
-    const { jwt } = json;
+    const { jwt, expiresIn } = json;
+    __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
   } catch (e) {

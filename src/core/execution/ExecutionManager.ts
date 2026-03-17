@@ -8,7 +8,6 @@ import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
-import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
@@ -26,6 +25,7 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
+import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
@@ -36,9 +36,9 @@ export class Executor {
   constructor(
     private mg: Game,
     private gameID: GameID,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
-    // Add one to avoid id collisions with bots.
+    // Add one to avoid id collisions with tribes.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
   }
 
@@ -126,8 +126,8 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): SpawnExecution[] {
-    return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
+  spawnTribes(numTribes: number): SpawnExecution[] {
+    return new TribeSpawner(this.mg, this.gameID).spawnTribes(numTribes);
   }
 
   spawnPlayers(): SpawnExecution[] {

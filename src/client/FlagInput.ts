@@ -94,7 +94,7 @@ export class FlagInput extends LitElement {
         ></span>
         ${showSelect
           ? html`<span
-              class="text-[10px] font-black text-white uppercase leading-none break-words w-full text-center px-1"
+              class="text-[10px] font-medium tracking-wider text-white uppercase leading-none break-words w-full text-center px-1"
             >
               ${translateText("flag_input.title")}
             </span>`

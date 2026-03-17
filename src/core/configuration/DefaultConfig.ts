@@ -20,7 +20,7 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
-import { assertNever, sigmoid, simpleHash, within } from "../Util";
+import { assertNever, sigmoid, simpleHash, toInt, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
@@ -201,7 +201,7 @@ export class DefaultConfig implements Config {
     return 5 - falloutRatio * 2;
   }
   SAMCooldown(): number {
-    return 75;
+    return 120;
   }
   SiloCooldown(): number {
     return 75;
@@ -240,6 +240,9 @@ export class DefaultConfig implements Config {
   disableNavMesh(): boolean {
     return this._gameConfig.disableNavMesh ?? false;
   }
+  disableAlliances(): boolean {
+    return this._gameConfig.disableAlliances ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
@@ -268,24 +271,30 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 18;
+    return (numPlayerFactories + 10) * 15;
   }
-  trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
-    const multiplier = this.goldMultiplier();
-    let baseGold: bigint;
+  trainGold(
+    rel: "self" | "team" | "ally" | "other",
+    citiesVisited: number,
+  ): Gold {
+    // No penalty for the first 10 cities.
+    citiesVisited = Math.max(0, citiesVisited - 9);
+    let baseGold: number;
     switch (rel) {
       case "ally":
-        baseGold = 35_000n;
+        baseGold = 35_000;
         break;
       case "team":
       case "other":
-        baseGold = 25_000n;
+        baseGold = 25_000;
         break;
       case "self":
-        baseGold = 10_000n;
+        baseGold = 10_000;
         break;
     }
-    return BigInt(Math.floor(Number(baseGold) * multiplier));
+    const distPenalty = citiesVisited * 5_000;
+    const gold = Math.max(5000, baseGold - distPenalty);
+    return toInt(gold * this.goldMultiplier());
   }
 
   trainStationMinRange(): number {
@@ -302,7 +311,7 @@ export class DefaultConfig implements Config {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      50_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
+      75_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
     const multiplier = this.goldMultiplier();
     return BigInt(Math.floor(baseGold * multiplier));
   }
@@ -536,7 +545,13 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    if (this._gameConfig.gameType === GameType.Singleplayer) {
+      return 100;
+    }
+    if (this.isRandomSpawn()) {
+      return 150;
+    }
+    return 300;
   }
   numBots(): number {
     return this.bots();
@@ -649,7 +664,7 @@ export class DefaultConfig implements Config {
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
       const attackerTroopLoss =
-        0.5 * currentAttackerLoss + 0.5 * altAttackerLoss;
+        0.7 * currentAttackerLoss + 0.3 * altAttackerLoss;
 
       return {
         attackerTroopLoss,
