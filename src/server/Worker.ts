@@ -50,7 +50,7 @@ export async function startWorker() {
   const server = http.createServer(app);
   const wss = new WebSocketServer({
     noServer: true,
-    maxPayload: 2 * 1024 * 1024,
+    maxPayload: 1024 * 1024, // 1MB
   });
 
   const gm = new GameManager(config, log);
