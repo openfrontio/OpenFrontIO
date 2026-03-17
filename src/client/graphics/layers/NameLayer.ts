@@ -333,17 +333,23 @@ export class NameLayer implements Layer {
     const troopsDiv = render.element.querySelector(
       ".player-troops",
     ) as HTMLDivElement;
+    const nameOpacityPercent = this.userSettings.playerNameOpacity();
+    const nameOpacity = nameOpacityPercent / 100;
+    const hideFlag = nameOpacityPercent === 0;
     nameDiv.style.fontSize = `${render.fontSize}px`;
     nameDiv.style.lineHeight = `${render.fontSize}px`;
     nameDiv.style.color = render.fontColor;
     const span = nameDiv.querySelector(".player-name-span");
     if (span) {
       span.innerHTML = render.player.name();
+      (span as HTMLElement).style.opacity = `${nameOpacity}`;
     }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
+      flagDiv.style.display = hideFlag ? "none" : "";
     }
     troopsDiv.style.fontSize = `${render.fontSize}px`;
+    troopsDiv.style.opacity = `${nameOpacity}`;
     troopsDiv.style.color = render.fontColor;
     troopsDiv.textContent = renderTroops(render.player.troops());
 
