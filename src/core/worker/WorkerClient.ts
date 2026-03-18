@@ -231,42 +231,7 @@ export class WorkerClient {
     });
   }
 
-  attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
-    return new Promise((resolve, reject) => {
-      if (!this.isInitialized) {
-        reject(new Error("Worker not initialized"));
-        return;
-      }
-
-      const messageId = generateID();
-
-      this.messageHandlers.set(messageId, (message) => {
-        if (
-          message.type === "attack_average_position_result" &&
-          message.x !== undefined &&
-          message.y !== undefined
-        ) {
-          if (message.x === null || message.y === null) {
-            resolve(null);
-          } else {
-            resolve(new Cell(message.x, message.y));
-          }
-        }
-      });
-
-      this.worker.postMessage({
-        type: "attack_average_position",
-        id: messageId,
-        playerID: playerID,
-        attackID: attackID,
-      });
-    });
-  }
-
-  attackFrontLinePositions(
+  attackClusteredPositions(
     playerID: number,
     attackID?: string,
   ): Promise<{ id: string; positions: Cell[] }[]> {
@@ -280,15 +245,15 @@ export class WorkerClient {
 
       const timeout = setTimeout(() => {
         this.messageHandlers.delete(messageId);
-        reject(new Error("attack_front_line_positions request timed out"));
+        reject(new Error("attack_clustered_positions request timed out"));
       }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
         clearTimeout(timeout);
-        if (message.type !== "attack_front_line_positions_result") {
+        if (message.type !== "attack_clustered_positions_result") {
           reject(
             new Error(
-              `Unexpected message type for attackFrontLinePositions: ${message.type}`,
+              `Unexpected message type for attackClusteredPositions: ${message.type}`,
             ),
           );
           return;
@@ -302,7 +267,7 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "attack_front_line_positions",
+        type: "attack_clustered_positions",
         id: messageId,
         playerID,
         attackID,

@@ -24,10 +24,8 @@ export type WorkerMessageType =
   | "player_profile_result"
   | "player_border_tiles"
   | "player_border_tiles_result"
-  | "attack_average_position"
-  | "attack_average_position_result"
-  | "attack_front_line_positions"
-  | "attack_front_line_positions_result"
+  | "attack_clustered_positions"
+  | "attack_clustered_positions_result"
   | "transport_ship_spawn"
   | "transport_ship_spawn_result";
 
@@ -110,27 +108,15 @@ export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
   result: PlayerBorderTiles;
 }
 
-export interface AttackAveragePositionMessage extends BaseWorkerMessage {
-  type: "attack_average_position";
-  playerID: number;
-  attackID: string;
-}
-
-export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
-  type: "attack_average_position_result";
-  x: number | null;
-  y: number | null;
-}
-
-export interface AttackFrontLinePositionsMessage extends BaseWorkerMessage {
-  type: "attack_front_line_positions";
+export interface AttackClusteredPositionsMessage extends BaseWorkerMessage {
+  type: "attack_clustered_positions";
   playerID: number;
   attackID?: string;
 }
 
-export interface AttackFrontLinePositionsResultMessage
+export interface AttackClusteredPositionsResultMessage
   extends BaseWorkerMessage {
-  type: "attack_front_line_positions_result";
+  type: "attack_clustered_positions_result";
   attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
 
@@ -153,8 +139,7 @@ export type MainThreadMessage =
   | PlayerBuildablesMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
-  | AttackAveragePositionMessage
-  | AttackFrontLinePositionsMessage
+  | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage;
 
 // Message send from worker
@@ -166,6 +151,5 @@ export type WorkerMessage =
   | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
-  | AttackAveragePositionResultMessage
-  | AttackFrontLinePositionsResultMessage
+  | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage;

@@ -6,6 +6,8 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import shieldIcon from "/images/ShieldIconWhite.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
 
 export function troopAttackColor(
   attackerTroops: number,
@@ -90,22 +92,11 @@ export class AttackingTroopsOverlay implements Layer {
       return;
     }
 
-    const outgoing = myPlayer.outgoingAttacks();
-    const incoming = myPlayer.incomingAttacks();
-    const activeIDs = new Set([
-      ...outgoing.map((a) => a.id),
-      ...incoming.map((a) => a.id),
-    ]);
-
-    for (const [id] of this.labels) {
-      if (!activeIDs.has(id)) this.removeLabel(id);
-    }
-
-    const myTroops = myPlayer.troops();
+    const activeIDs = new Set<string>();
 
     // Outgoing attacks — green if winning, amber if losing.
-    for (const attack of outgoing) {
-      // targetID === 0 means the attack is targeting sea/empty tiles; skip it.
+    for (const attack of myPlayer.outgoingAttacks()) {
+      activeIDs.add(attack.id);
       if (!attack.targetID) {
         this.removeLabel(attack.id);
         continue;
@@ -118,14 +109,19 @@ export class AttackingTroopsOverlay implements Layer {
       this.ensureLabel(attack.id, attack.troops, defender.troops(), false);
     }
 
-    // Incoming attacks — red if the attacker outnumbers my troops, orange otherwise.
-    for (const attack of incoming) {
+    // Incoming attacks — red if the attacker outnumbers the player, orange otherwise.
+    for (const attack of myPlayer.incomingAttacks()) {
+      activeIDs.add(attack.id);
       const attacker = this.game.playerBySmallID(attack.attackerID);
       if (!attacker || !attacker.isPlayer()) {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, myTroops, true);
+      this.ensureLabel(attack.id, attack.troops, myPlayer.troops(), true);
+    }
+
+    for (const [id] of this.labels) {
+      if (!activeIDs.has(id)) this.removeLabel(id);
     }
 
     // Single worker request per tick; skip if the previous one is still in flight.
@@ -133,7 +129,7 @@ export class AttackingTroopsOverlay implements Layer {
     this.inFlightRequest = true;
 
     void myPlayer
-      .attackFrontLinePositions()
+      .attackClusteredPositions()
       .then((attacks) => {
         for (const { id, positions } of attacks) {
           const lbl = this.labels.get(id);
@@ -195,7 +191,7 @@ export class AttackingTroopsOverlay implements Layer {
           continue;
         }
 
-        el.style.display = "block";
+        el.style.display = "inline-flex";
         // Centre the label on its world position and counter-scale so text
         // stays the same screen size regardless of zoom level.
         el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
@@ -203,46 +199,9 @@ export class AttackingTroopsOverlay implements Layer {
     }
   }
 
-  // Assign each existing label element to the new center closest to its current
-  // position (greedy nearest-neighbour matching). This prevents labels from
-  // swapping front-line segments when their relative sizes change between ticks,
-  // which would otherwise cause visible jumping.
   private reconcileLabelPositions(lbl: AttackLabel, positions: Cell[]) {
-    const availableCenterIndexes = positions.map((_, i) => i);
-    const updatedPositions: (Cell | null)[] = [];
-
-    for (
-      let elementIndex = 0;
-      elementIndex < lbl.elements.length && availableCenterIndexes.length > 0;
-      elementIndex++
-    ) {
-      const currentPos = lbl.positions[elementIndex];
-      if (!currentPos) {
-        // Element has no position yet — assign the first available center.
-        updatedPositions.push(positions[availableCenterIndexes.shift()!]);
-        continue;
-      }
-
-      // Find the available center closest to this element's current position.
-      let closestCenterAt = 0;
-      let closestDistance = Infinity;
-      for (let i = 0; i < availableCenterIndexes.length; i++) {
-        const candidate = positions[availableCenterIndexes[i]];
-        const dx = candidate.x - currentPos.x;
-        const dy = candidate.y - currentPos.y;
-        const squaredDistance = dx * dx + dy * dy;
-        if (squaredDistance < closestDistance) {
-          closestDistance = squaredDistance;
-          closestCenterAt = i;
-        }
-      }
-      updatedPositions.push(
-        positions[availableCenterIndexes.splice(closestCenterAt, 1)[0]],
-      );
-    }
-
-    // Create new label elements for positions that had no existing element to match.
-    for (const centerIndex of availableCenterIndexes) {
+    // Add elements for new clusters.
+    while (lbl.elements.length < positions.length) {
       lbl.elements.push(
         this.createLabelElement(
           lbl.attackerTroops,
@@ -250,15 +209,29 @@ export class AttackingTroopsOverlay implements Layer {
           lbl.isIncoming,
         ),
       );
-      updatedPositions.push(positions[centerIndex]);
+      lbl.positions.push(null);
     }
 
-    // Remove elements for front-line segments that no longer exist.
-    while (lbl.elements.length > updatedPositions.length) {
+    // Remove elements for clusters that no longer exist.
+    while (lbl.elements.length > positions.length) {
       lbl.elements.pop()!.remove();
+      lbl.positions.pop();
     }
 
-    lbl.positions = updatedPositions;
+    // Snap large jumps instantly; let the CSS transition handle small advances.
+    for (let i = 0; i < positions.length; i++) {
+      const old = lbl.positions[i];
+      const next = positions[i];
+      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 50) {
+        const el = lbl.elements[i];
+        el.style.transition = "none";
+        el.style.transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 0.2s ease-out";
+        });
+      }
+      lbl.positions[i] = next;
+    }
   }
 
   private createLabelElement(
@@ -269,6 +242,9 @@ export class AttackingTroopsOverlay implements Layer {
     const el = document.createElement("div");
     el.style.position = "absolute";
     el.style.display = "none";
+    el.style.alignItems = "center";
+    el.style.gap = "3px";
+    el.style.width = "max-content";
     el.style.whiteSpace = "nowrap";
     el.style.fontSize = "11px";
     el.style.fontWeight = "bold";
@@ -291,18 +267,21 @@ export class AttackingTroopsOverlay implements Layer {
     defenderTroops: number,
     isIncoming: boolean,
   ) {
+    const icon = document.createElement("img");
+    icon.style.width = "10px";
+    icon.style.height = "10px";
+
     const span = document.createElement("span");
     if (isIncoming) {
-      const icon = document.createElement("span");
-      icon.textContent = "🛡 ";
+      icon.src = shieldIcon;
       span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
       span.textContent = renderTroops(attackerTroops);
-      el.replaceChildren(icon, span);
     } else {
+      icon.src = swordIcon;
       span.style.color = troopAttackColor(attackerTroops, defenderTroops);
-      span.textContent = `⚔ ${renderTroops(attackerTroops)}`;
-      el.replaceChildren(span);
+      span.textContent = renderTroops(attackerTroops);
     }
+    el.replaceChildren(icon, span);
   }
 
   private removeLabel(attackID: string) {

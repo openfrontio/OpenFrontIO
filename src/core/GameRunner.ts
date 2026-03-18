@@ -5,9 +5,7 @@ import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterE
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
-  Attack,
   BuildableUnit,
-  Cell,
   Game,
   GameUpdates,
   NameViewData,
@@ -255,54 +253,23 @@ export class GameRunner {
     } as PlayerBorderTiles;
   }
 
-  public attackFrontLinePositions(
+  public attackClusteredPositions(
     playerID: number,
     attackID?: string,
   ): { id: string; positions: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
-    if (!player.isPlayer()) {
+    if (!player.isPlayer())
       throw new Error(`player with id ${playerID} not found`);
-    }
-
-    const allAttacks = [
-      ...player.outgoingAttacks(),
-      ...player.incomingAttacks(),
-    ];
-    const attacks = attackID
-      ? allAttacks.filter((a) => a.id() === attackID)
-      : allAttacks;
+    const all = [...player.outgoingAttacks(), ...player.incomingAttacks()];
+    const attacks = attackID ? all.filter((a) => a.id() === attackID) : all;
 
     return attacks.map((a) => ({
       id: a.id(),
-      positions: a.frontLinePositions().map((tile) => ({
+      positions: a.clusteredPositions().map((tile) => ({
         x: this.game.map().x(tile),
         y: this.game.map().y(tile),
       })),
     }));
-  }
-
-  public attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Cell | null {
-    const player = this.game.playerBySmallID(playerID);
-    if (!player.isPlayer()) {
-      throw new Error(`player with id ${playerID} not found`);
-    }
-
-    const condition = (a: Attack) => a.id() === attackID;
-    const attack =
-      player.outgoingAttacks().find(condition) ??
-      player.incomingAttacks().find(condition);
-    if (attack === undefined) {
-      return null;
-    }
-
-    // Use the largest front line's representative tile (index 0, sorted by frontLinePositions)
-    const tiles = attack.frontLinePositions();
-    if (tiles.length === 0) return null;
-    const tile = tiles[0];
-    return new Cell(this.game.map().x(tile), this.game.map().y(tile));
   }
 
   public bestTransportShipSpawn(
