@@ -122,7 +122,7 @@ export enum GameMapType {
   Lemnos = "Lemnos",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
-  TheBox = "The Box",
+  TheBox = "The Box PLUS",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
