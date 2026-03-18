@@ -1,6 +1,7 @@
 import * as d3 from "d3";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
@@ -505,6 +506,7 @@ export class RadialMenu implements Layer {
         this.navigationInProgress
       )
         return;
+      SoundManager.playSoundEffect(SoundEffect.Click);
 
       if (
         this.currentLevel > 0 &&
