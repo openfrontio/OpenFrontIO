@@ -178,7 +178,7 @@ export class AttackImpl implements Attack {
           // Always keep at least the largest cluster even if it falls below minSize.
           return [clusters[0].tile];
         }
-        return significant.splice(0, maxClusters).map((c) => c.tile);
+        return significant.slice(0, maxClusters).map((c) => c.tile);
       }
     }
   }

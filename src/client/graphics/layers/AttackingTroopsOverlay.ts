@@ -267,11 +267,17 @@ export class AttackingTroopsOverlay implements Layer {
     defenderTroops: number,
     isIncoming: boolean,
   ) {
-    const icon = document.createElement("img");
-    icon.style.width = "10px";
-    icon.style.height = "10px";
+    // Reuse existing children to avoid DOM churn on every tick.
+    let icon = el.querySelector("img") as HTMLImageElement | null;
+    let span = el.querySelector("span") as HTMLSpanElement | null;
+    if (!icon || !span) {
+      icon = document.createElement("img");
+      icon.style.width = "10px";
+      icon.style.height = "10px";
+      span = document.createElement("span");
+      el.replaceChildren(icon, span);
+    }
 
-    const span = document.createElement("span");
     if (isIncoming) {
       icon.src = shieldIcon;
       span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
@@ -281,7 +287,6 @@ export class AttackingTroopsOverlay implements Layer {
       span.style.color = troopAttackColor(attackerTroops, defenderTroops);
       span.textContent = renderTroops(attackerTroops);
     }
-    el.replaceChildren(icon, span);
   }
 
   private removeLabel(attackID: string) {
