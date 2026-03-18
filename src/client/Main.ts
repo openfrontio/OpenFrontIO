@@ -861,7 +861,7 @@ class Client {
     }
   }
 
-  private async handleLeaveLobby(/* event: CustomEvent */) {
+  private async handleLeaveLobby(event?: CustomEvent) {
     if (this.lobbyHandle === null) {
       return;
     }
@@ -877,6 +877,21 @@ class Client {
     }
 
     document.body.classList.remove("in-game");
+
+    if (this.joinModal.isOpen()) {
+      this.joinModal.close();
+      if (event?.detail.cause === "full-lobby") {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("public_lobby.join_timeout"),
+              color: "red",
+              duration: 3500,
+            },
+          }),
+        );
+      }
+    }
 
     crazyGamesSDK.gameplayStop();
   }
