@@ -25,6 +25,16 @@ declare global {
             },
           ) => void;
         };
+        banner: {
+          requestBanner: (options: {
+            id: string;
+            width: number;
+            height: number;
+          }) => Promise<void>;
+          requestResponsiveBanner: (containerId: string) => Promise<void>;
+          clearBanner: (containerId: string) => void;
+          clearAllBanners: () => void;
+        };
         game: {
           gameplayStart: () => Promise<void>;
           gameplayStop: () => Promise<void>;
@@ -321,6 +331,108 @@ export class CrazyGamesSDK {
       console.error(`Failed to get invite gameId:`, error);
       return null;
     }
+  }
+
+  private gutterAdContainerIds = {
+    left: "cg-gutter-ad-left",
+    right: "cg-gutter-ad-right",
+  };
+
+  // Minimum viewport width to show gutter ads (content ~720px + 160px * 2 gutters + padding)
+  private static readonly GUTTER_MIN_WIDTH = 1280;
+  private gutterAdsVisible = false;
+  private gutterResizeListener: (() => void) | null = null;
+
+  createGutterAds(): void {
+    if (!this.isReady()) {
+      console.log("[CrazyGames] SDK not ready, skipping gutter ads");
+      return;
+    }
+
+    if (!this.gutterResizeListener) {
+      this.gutterResizeListener = () => this.onGutterResize();
+      window.addEventListener("resize", this.gutterResizeListener);
+    }
+
+    this.onGutterResize();
+  }
+
+  private onGutterResize(): void {
+    const wide = window.innerWidth >= CrazyGamesSDK.GUTTER_MIN_WIDTH;
+
+    if (wide && !this.gutterAdsVisible) {
+      this.showGutterBanners();
+    } else if (!wide && this.gutterAdsVisible) {
+      this.hideGutterBanners();
+    }
+  }
+
+  private showGutterBanners(): void {
+    // Remove existing containers if any
+    for (const id of Object.values(this.gutterAdContainerIds)) {
+      document.getElementById(id)?.remove();
+    }
+
+    const createContainer = (id: string, side: "left" | "right") => {
+      const container = document.createElement("div");
+      container.id = id;
+      container.style.cssText = `
+        position: fixed;
+        top: 50%;
+        ${side}: 0;
+        transform: translateY(-50%);
+        width: 160px;
+        height: 600px;
+        z-index: 30;
+        pointer-events: auto;
+      `;
+      document.body.appendChild(container);
+      return container;
+    };
+
+    createContainer(this.gutterAdContainerIds.left, "left");
+    createContainer(this.gutterAdContainerIds.right, "right");
+
+    const requestBanner = async (containerId: string) => {
+      try {
+        await window.CrazyGames!.SDK.banner.requestResponsiveBanner(
+          containerId,
+        );
+        console.log(`[CrazyGames] Gutter banner loaded: ${containerId}`);
+      } catch (e) {
+        console.log(`[CrazyGames] Gutter banner error (${containerId}):`, e);
+      }
+    };
+
+    requestBanner(this.gutterAdContainerIds.left);
+    requestBanner(this.gutterAdContainerIds.right);
+    this.gutterAdsVisible = true;
+  }
+
+  private hideGutterBanners(): void {
+    try {
+      window.CrazyGames!.SDK.banner.clearBanner(this.gutterAdContainerIds.left);
+      window.CrazyGames!.SDK.banner.clearBanner(
+        this.gutterAdContainerIds.right,
+      );
+    } catch (e) {
+      console.error("[CrazyGames] Error clearing gutter banners:", e);
+    }
+
+    for (const id of Object.values(this.gutterAdContainerIds)) {
+      document.getElementById(id)?.remove();
+    }
+    this.gutterAdsVisible = false;
+  }
+
+  clearGutterAds(): void {
+    if (this.gutterResizeListener) {
+      window.removeEventListener("resize", this.gutterResizeListener);
+      this.gutterResizeListener = null;
+    }
+
+    if (!this.gutterAdsVisible) return;
+    this.hideGutterBanners();
   }
 
   requestMidgameAd(): Promise<void> {

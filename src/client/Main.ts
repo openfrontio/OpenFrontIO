@@ -447,6 +447,9 @@ class Client {
         ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
       console.log("ads enabled: ", hasLinkedAccount);
       window.adsEnabled = !hasLinkedAccount && !crazyGamesSDK.isOnCrazyGames();
+      if (crazyGamesSDK.isOnCrazyGames()) {
+        crazyGamesSDK.createGutterAds();
+      }
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -806,6 +809,7 @@ class Client {
         (ad as HTMLElement).style.display = "none";
       });
 
+      crazyGamesSDK.clearGutterAds();
       crazyGamesSDK.loadingStart();
 
       // show when the game loads
