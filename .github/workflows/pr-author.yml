@@ -4,6 +4,9 @@ on:
   pull_request_target:
     types: [opened, reopened]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   pull-requests: write
 
@@ -13,4 +16,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: toshimaru/auto-author-assign@7e15cd70c245ad136377c3fab3479815df10d844
+      - uses: toshimaru/auto-author-assign@4d585cc37690897bd9015942ed6e766aa7cdb97f
