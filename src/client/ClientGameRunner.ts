@@ -166,7 +166,7 @@ export function joinLobby(
       if (message.error === "full-lobby") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID },
+            detail: { lobby: lobbyConfig.gameID, cause: "full-lobby" },
             bubbles: true,
             composed: true,
           }),
