@@ -57,6 +57,13 @@ export class UserSettings {
     return this.get("settings.performanceOverlay", false);
   }
 
+  miniHoverOverlay() {
+    const raw = localStorage.getItem("settings.miniHoverOverlay");
+    if (raw === "enabled") return true;
+    if (raw === "disabled") return false;
+    return this.get("settings.miniHoverOverlay", true);
+  }
+
   alertFrame() {
     return this.get("settings.alertFrame", true);
   }
@@ -114,6 +121,10 @@ export class UserSettings {
 
   togglePerformanceOverlay() {
     this.set("settings.performanceOverlay", !this.performanceOverlay());
+  }
+
+  toggleMiniHoverOverlay() {
+    this.set("settings.miniHoverOverlay", !this.miniHoverOverlay());
   }
 
   toggleAlertFrame() {

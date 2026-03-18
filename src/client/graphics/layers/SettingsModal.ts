@@ -18,6 +18,7 @@ import mouseIcon from "/images/MouseIconWhite.svg?url";
 import ninjaIcon from "/images/NinjaIconWhite.svg?url";
 import settingsIcon from "/images/SettingIconWhite.svg?url";
 import sirenIcon from "/images/SirenIconWhite.svg?url";
+import swordIcon from "/images/SwordIcon.svg?url";
 import treeIcon from "/images/TreeIconWhite.svg?url";
 import musicIcon from "/images/music.svg?url";
 
@@ -54,6 +55,7 @@ export class SettingsModal extends LitElement implements Layer {
       this.userSettings.backgroundMusicVolume(),
     );
     SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
+    this.applyMiniHoverOverlayClass();
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
@@ -165,6 +167,19 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onTogglePerformanceOverlayButtonClick() {
     this.userSettings.togglePerformanceOverlay();
+    this.requestUpdate();
+  }
+
+  private applyMiniHoverOverlayClass() {
+    document.body.classList.toggle(
+      "mini-hover-overlay-disabled",
+      !this.userSettings.miniHoverOverlay(),
+    );
+  }
+
+  private onToggleMiniHoverOverlayButtonClick() {
+    this.userSettings.toggleMiniHoverOverlay();
+    this.applyMiniHoverOverlayClass();
     this.requestUpdate();
   }
 
@@ -493,6 +508,32 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.performanceOverlay()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onToggleMiniHoverOverlayButtonClick}"
+            >
+              <img
+                src=${swordIcon}
+                alt="miniHoverOverlay"
+                width="20"
+                height="20"
+                style="filter: brightness(0) saturate(100%) invert(72%) sepia(56%) saturate(3204%) hue-rotate(176deg) brightness(99%) contrast(101%)"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.mini_hover_overlay_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.mini_hover_overlay_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.miniHoverOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
