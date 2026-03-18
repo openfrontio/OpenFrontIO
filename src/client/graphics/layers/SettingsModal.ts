@@ -187,6 +187,26 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onFpsLimitChange(event: Event) {
+    const raw = parseInt((event.target as HTMLInputElement).value, 10);
+    // Slider steps: 30, 60, 120, 144, 240, 0 (uncapped)
+    const steps = [30, 60, 120, 144, 240, 0];
+    const value = steps[Math.min(raw, steps.length - 1)];
+    this.userSettings.setFpsLimit(value);
+    this.requestUpdate();
+  }
+
+  private fpsLimitLabel(): string {
+    const limit = this.userSettings.fpsLimit();
+    return limit === 0 ? translateText("user_setting.fps_limit_uncapped") : `${limit} FPS`;
+  }
+
+  private fpsLimitSliderIndex(): number {
+    const steps = [30, 60, 120, 144, 240, 0];
+    const idx = steps.indexOf(this.userSettings.fpsLimit());
+    return idx === -1 ? 1 : idx; // default to 60 (index 1)
+  }
+
   render() {
     if (!this.isVisible) {
       return null;
@@ -497,6 +517,37 @@ export class SettingsModal extends LitElement implements Layer {
                   : translateText("user_setting.off")}
               </div>
             </button>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <img
+                src=${settingsIcon}
+                alt="fpsLimit"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.fps_limit_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.fps_limit_desc")}
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  .value=${this.fpsLimitSliderIndex()}
+                  @input=${this.onFpsLimitChange}
+                  class="w-full border border-slate-500 rounded-lg mt-1"
+                />
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.fpsLimitLabel()}
+              </div>
+            </div>
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button

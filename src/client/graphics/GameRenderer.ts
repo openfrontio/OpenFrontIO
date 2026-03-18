@@ -335,6 +335,7 @@ export function createRenderer(
     uiState,
     layers,
     performanceOverlay,
+    userSettings,
   );
 }
 
@@ -343,6 +344,7 @@ export class GameRenderer {
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
   private renderFramesSinceLastTick: number = 0;
   private renderLayerDurationsSinceLastTick: Record<string, number> = {};
+  private lastFrameTime: number = 0;
 
   constructor(
     private game: GameView,
@@ -352,6 +354,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
+    private userSettings: UserSettings,
   ) {
     const context = canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");
@@ -399,6 +402,20 @@ export class GameRenderer {
   }
 
   renderGame() {
+    const now = performance.now();
+
+    // FPS cap: skip this frame if we're ahead of schedule.
+    // A limit of 0 means uncapped (legacy behaviour).
+    const fpsLimit = this.userSettings.fpsLimit();
+    if (fpsLimit > 0) {
+      const minFrameMs = 1000 / fpsLimit;
+      if (now - this.lastFrameTime < minFrameMs) {
+        requestAnimationFrame(() => this.renderGame());
+        return;
+      }
+    }
+    this.lastFrameTime = now;
+
     const shouldProfileFrame = FrameProfiler.isEnabled();
     if (shouldProfileFrame) {
       FrameProfiler.clear();

@@ -214,6 +214,17 @@ export class UserSettings {
     return flag;
   }
 
+  fpsLimit(): number {
+    const value = this.getFloat("settings.fpsLimit", 60);
+    // 0 means uncapped; otherwise clamp to a sensible range
+    if (value === 0) return 0;
+    return Math.max(10, Math.min(360, value));
+  }
+
+  setFpsLimit(value: number): void {
+    this.setFloat("settings.fpsLimit", value);
+  }
+
   backgroundMusicVolume(): number {
     return this.getFloat("settings.backgroundMusicVolume", 0);
   }
