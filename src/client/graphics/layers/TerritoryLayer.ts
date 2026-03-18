@@ -490,23 +490,45 @@ export class TerritoryLayer implements Layer {
     }
 
     const drawCanvasStart = FrameProfiler.start();
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
+    // Clip drawImage to the visible viewport so we don't blit the entire
+    // (potentially very large) map canvas on every frame. On large maps like
+    // Giant World Map this significantly reduces GPU upload cost.
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const cx0 = Math.max(0, topLeft.x);
+    const cy0 = Math.max(0, topLeft.y);
+    const cx1 = Math.min(this.game.width() - 1, bottomRight.x);
+    const cy1 = Math.min(this.game.height() - 1, bottomRight.y);
+    const cw = cx1 - cx0 + 1;
+    const ch = cy1 - cy0 + 1;
+    if (cw > 0 && ch > 0) {
+      context.drawImage(
+        this.canvas,
+        cx0,
+        cy0,
+        cw,
+        ch,
+        cx0 - this.game.width() / 2,
+        cy0 - this.game.height() / 2,
+        cw,
+        ch,
+      );
+    }
     FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
     if (this.game.inSpawnPhase()) {
       const highlightDrawStart = FrameProfiler.start();
-      context.drawImage(
-        this.highlightCanvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
+      if (cw > 0 && ch > 0) {
+        context.drawImage(
+          this.highlightCanvas,
+          cx0,
+          cy0,
+          cw,
+          ch,
+          cx0 - this.game.width() / 2,
+          cy0 - this.game.height() / 2,
+          cw,
+          ch,
+        );
+      }
       FrameProfiler.end(
         "TerritoryLayer:drawHighlightCanvas",
         highlightDrawStart,
