@@ -52,6 +52,7 @@ export async function createGameRunner(
       p.clientID,
       random.nextID(),
       p.isLobbyCreator ?? false,
+      p.clanTag,
     );
   });
 

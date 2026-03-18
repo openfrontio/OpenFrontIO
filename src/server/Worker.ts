@@ -48,7 +48,10 @@ export async function startWorker() {
   const app = express();
   app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 2 * 1024 * 1024,
+  });
 
   const gm = new GameManager(config, log);
 
@@ -355,20 +358,21 @@ export async function startWorker() {
           return;
         }
 
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        const { clanTag: censoredClanTag, username: censoredUsername } =
+          privilegeRefresher
+            .get()
+            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+
         // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization (but pass updated username
-        // so players can rename in the pre-game lobby)
-        const censoredUsername = privilegeRefresher
-          .get()
-          .censorUsername(clientMsg.username);
+        // If successful, skip all authorization
         if (
-          gm.rejoinClient(
-            ws,
-            persistentId,
-            clientMsg.gameID,
-            0,
-            censoredUsername,
-          )
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: censoredClanTag,
+          })
         ) {
           return;
         }
@@ -460,7 +464,7 @@ export async function startWorker() {
           flares,
           ip,
           censoredUsername,
-          clientMsg.username,
+          censoredClanTag,
           ws,
           cosmeticResult.cosmetics,
         );
