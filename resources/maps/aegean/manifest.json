@@ -1,18 +1,18 @@
 {
   "map": {
     "height": 2000,
-    "num_land_tiles": 1044110,
-    "width": 1600
+    "num_land_tiles": 1171283,
+    "width": 1700
   },
   "map16x": {
     "height": 500,
-    "num_land_tiles": 60226,
-    "width": 400
+    "num_land_tiles": 68060,
+    "width": 425
   },
   "map4x": {
     "height": 1000,
-    "num_land_tiles": 253795,
-    "width": 800
+    "num_land_tiles": 285421,
+    "width": 850
   },
   "name": "aegean",
   "nations": [
@@ -21,66 +21,62 @@
       "name": "Crete"
     },
     {
-      "coordinates": [1554, 1530],
+      "coordinates": [1598, 1550],
       "name": "Rhodes"
     },
     {
-      "coordinates": [1051, 539],
+      "coordinates": [1126, 552],
       "name": "Lesbos"
     },
     {
-      "coordinates": [1070, 820],
+      "coordinates": [1128, 812],
       "name": "Chios"
     },
     {
-      "coordinates": [1235, 1023],
+      "coordinates": [1330, 1039],
       "name": "Samos"
     },
     {
-      "coordinates": [1193, 301],
+      "coordinates": [1275, 263],
       "name": "Troy"
     },
     {
-      "coordinates": [1446, 954],
+      "coordinates": [1567, 808],
       "name": "Ephesus"
     },
     {
-      "coordinates": [1515, 1223],
+      "coordinates": [1635, 1139],
       "name": "Miletus"
     },
     {
-      "coordinates": [824, 305],
+      "coordinates": [891, 295],
       "name": "Lemnos"
     },
     {
-      "coordinates": [1312, 37],
+      "coordinates": [1382, 27],
       "name": "Thrace"
     },
     {
-      "coordinates": [1473, 509],
+      "coordinates": [1599, 431],
       "flag": "Achaemenid Empire",
       "name": "Achaemenid Empire"
     },
     {
-      "coordinates": [702, 40],
+      "coordinates": [762, 35],
       "name": "Thasos"
     },
     {
-      "coordinates": [832, 1253],
-      "name": "Cyclades"
-    },
-    {
-      "coordinates": [479, 943],
+      "coordinates": [491, 894],
       "flag": "Athens",
       "name": "Athens"
     },
     {
-      "coordinates": [110, 1157],
+      "coordinates": [222, 1183],
       "flag": "Sparta",
       "name": "Sparta"
     },
     {
-      "coordinates": [348, 56],
+      "coordinates": [446, 104],
       "flag": "Macedonia",
       "name": "Macedonia"
     },
@@ -89,8 +85,56 @@
       "name": "Thessaly"
     },
     {
-      "coordinates": [71, 742],
+      "coordinates": [71, 713],
       "name": "Aetolia"
+    },
+    {
+      "coordinates": [534, 761],
+      "name": "Eubonia"
+    },
+    {
+      "coordinates": [26, 984],
+      "name": "Olympia"
+    },
+    {
+      "coordinates": [826, 1020],
+      "name": "Andros"
+    },
+    {
+      "coordinates": [1146, 1078],
+      "name": "Icaria"
+    },
+    {
+      "coordinates": [989, 1250],
+      "name": "Naxos"
+    },
+    {
+      "coordinates": [969, 1475],
+      "name": "Thera"
+    },
+    {
+      "coordinates": [937, 1371],
+      "name": "Ios"
+    },
+    {
+      "coordinates": [1403, 1337],
+      "name": "Cos"
+    },
+    {
+      "coordinates": [688, 1377],
+      "name": "Melos"
+    },
+    {
+      "coordinates": [723, 643],
+      "name": "Scyrus"
+    },
+    {
+      "coordinates": [324, 1520],
+      "name": "Cythera"
+    },
+    {
+      "coordinates": [1416, 1755],
+      "name": "Carpathos"
     }
   ]
 }
