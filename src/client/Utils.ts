@@ -165,7 +165,7 @@ export function getActiveModifiers(
       (modifiers.startingGold / 1_000_000).toPrecision(12),
     );
     result.push({
-      labelKey: "host_modal.starting_gold",
+      labelKey: "public_game_modifier.starting_gold_label",
       badgeKey: "public_game_modifier.starting_gold",
       descriptionKey: "modifier_description.starting_gold",
       badgeParams: {
@@ -189,9 +189,10 @@ export function getActiveModifiers(
   }
   if (modifiers.isAlliancesDisabled) {
     result.push({
-      labelKey: "host_modal.disable_alliances",
+      labelKey: "public_game_modifier.disable_alliances_label",
       badgeKey: "public_game_modifier.disable_alliances",
       descriptionKey: "modifier_description.disable_alliances",
+      formattedValue: translateText("common.disabled"),
     });
   }
   return result;
@@ -636,4 +637,31 @@ export function getDiscordAvatarUrl(user: {
   }
 
   return null;
+}
+export function calculateServerTimeOffset(
+  serverTimeMs: number,
+  localNowMs: number = Date.now(),
+): number {
+  return serverTimeMs - localNowMs;
+}
+
+export function getServerNow(
+  serverTimeOffsetMs: number,
+  localNowMs: number = Date.now(),
+): number {
+  return localNowMs + serverTimeOffsetMs;
+}
+
+export function getSecondsUntilServerTimestamp(
+  targetServerTimestampMs: number,
+  serverTimeOffsetMs: number,
+  localNowMs: number = Date.now(),
+): number {
+  return Math.max(
+    0,
+    Math.floor(
+      (targetServerTimestampMs - getServerNow(serverTimeOffsetMs, localNowMs)) /
+        1000,
+    ),
+  );
 }

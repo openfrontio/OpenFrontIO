@@ -1,9 +1,12 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
+  calculateServerTimeOffset,
   getActiveModifiers,
   getGameModeLabel,
   getMapName,
+  getSecondsUntilServerTimestamp,
+  getServerNow,
   renderDuration,
   renderNumber,
   translateText,
@@ -44,6 +47,7 @@ export class JoinLobbyModal extends BaseModal {
   @state() private currentClientID: string = "";
   @state() private nationCount: number = 0;
   @state() private lobbyStartAt: number | null = null;
+  @state() private serverTimeOffset: number = 0;
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
 
@@ -77,7 +81,10 @@ export class JoinLobbyModal extends BaseModal {
     // Post-join state: show lobby info (identical for public & private)
     const secondsRemaining =
       this.lobbyStartAt !== null
-        ? Math.max(0, Math.floor((this.lobbyStartAt - Date.now()) / 1000))
+        ? getSecondsUntilServerTimestamp(
+            this.lobbyStartAt,
+            this.serverTimeOffset,
+          )
         : null;
     const statusLabel =
       secondsRemaining === null
@@ -328,6 +335,7 @@ export class JoinLobbyModal extends BaseModal {
     this.players = [];
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
@@ -377,6 +385,7 @@ export class JoinLobbyModal extends BaseModal {
     this.currentClientID = "";
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
@@ -514,6 +523,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
     this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
+    if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
+      this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
+    }
     this.lobbyStartAt = lobby.startsAt ?? null;
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
@@ -578,7 +590,7 @@ export class JoinLobbyModal extends BaseModal {
     ) {
       return;
     }
-    if (Date.now() < this.lobbyStartAt) {
+    if (getServerNow(this.serverTimeOffset) < this.lobbyStartAt) {
       return;
     }
     this.handledJoinTimeout = true;
