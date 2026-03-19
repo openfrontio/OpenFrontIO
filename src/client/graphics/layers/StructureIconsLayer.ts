@@ -49,6 +49,34 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
 }
 
+/**
+ * Returns true when the ghost structure should be cleared because the user
+ * has the nuke (atom/hydrogen bomb) ghost selected and can no longer build it
+ * (silo reloading, out of gold, etc.).
+ */
+export function shouldClearNukeGhost(
+  ghostType: PlayerBuildableUnitType,
+  unit: BuildableUnit,
+): boolean {
+  if (unit.canBuild !== false) return false;
+  return ghostType === UnitType.AtomBomb || ghostType === UnitType.HydrogenBomb;
+}
+
+/**
+ * Returns true when the layer should clear the nuke ghost in the render path
+ * (e.g. after buildables() returns). Only true when the user has already placed
+ * at least one nuke with this ghost and can no longer build another—so "press 8
+ * when you can't build" does not flash, but "launch until you can't build
+ * another" does clear the preview.
+ */
+export function shouldClearNukeGhostInRender(
+  hasPlacedNukeWithCurrentGhost: boolean,
+  ghostType: PlayerBuildableUnitType,
+  unit: BuildableUnit,
+): boolean {
+  return hasPlacedNukeWithCurrentGhost && shouldClearNukeGhost(ghostType, unit);
+}
+
 extend([a11yPlugin]);
 
 class StructureRenderInfo {
@@ -100,6 +128,8 @@ export class StructureIconsLayer implements Layer {
   private visibilityStateDirty = true;
   private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
+  /** True after placing at least one nuke with current ghost; used to clear ghost when out of gold. */
+  private hasPlacedNukeWithCurrentGhost = false;
   potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
@@ -368,6 +398,16 @@ export class StructureIconsLayer implements Layer {
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
+          if (
+            shouldClearNukeGhostInRender(
+              this.hasPlacedNukeWithCurrentGhost,
+              this.ghostUnit.buildableUnit.type,
+              unit,
+            )
+          ) {
+            this.removeGhostStructure();
+            return;
+          }
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
@@ -482,7 +522,11 @@ export class StructureIconsLayer implements Layer {
           rocketDirectionUp,
         ),
       );
-      if (!shouldPreserveGhostAfterBuild(unitType)) {
+      const keepGhostForMultiplePlacement =
+        shouldPreserveGhostAfterBuild(unitType);
+      if (keepGhostForMultiplePlacement) {
+        this.hasPlacedNukeWithCurrentGhost = true;
+      } else {
         this.removeGhostStructure();
       }
     } else {
@@ -510,6 +554,8 @@ export class StructureIconsLayer implements Layer {
     if (type === null) {
       return;
     }
+    // New ghost selection (from keybind, UnitDisplay click, or after clear); never treat as already-placed.
+    this.hasPlacedNukeWithCurrentGhost = false;
     const rect = this.transformHandler.boundingRect();
     const localX = this.mousePos.x - rect.left;
     const localY = this.mousePos.y - rect.top;
@@ -542,6 +588,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private clearGhostStructure() {
+    this.hasPlacedNukeWithCurrentGhost = false;
     this.pendingConfirm = null;
     if (this.ghostUnit) {
       this.ghostUnit.container.destroy();
