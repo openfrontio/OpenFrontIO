@@ -82,6 +82,7 @@ jobs:
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
       - name: 📝 Create deployment
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' }}
         uses: actions/github-script@v8
         id: deployment
         env:
@@ -166,8 +167,7 @@ jobs:
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: 🔄 Update deployment status
-        if: ${{ always() && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
-        uses: actions/github-script@v8
+        if: ${{ always() && github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
         env:
           FQDN: ${{ env.FQDN }}
           DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
