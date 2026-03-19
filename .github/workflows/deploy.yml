@@ -88,6 +88,7 @@ jobs:
           ENVIRONMENT: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           FQDN: ${{ env.FQDN }}
         with:
+          github-token: ${{ steps.generate-token.outputs.token }}
           script: |
             const { data: deployment } = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
@@ -157,13 +158,14 @@ jobs:
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: 🔄 Update deployment status
-        if: always()
+        if: ${{ always() && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
         uses: actions/github-script@v8
         env:
           FQDN: ${{ env.FQDN }}
           DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
           STATUS: ${{ job.status }}
         with:
+          github-token: ${{ steps.generate-token.outputs.token }}
           script: |
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
