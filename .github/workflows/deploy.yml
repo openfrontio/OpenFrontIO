@@ -90,14 +90,22 @@ jobs:
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
           script: |
-            const { data: deployment } = await github.rest.repos.createDeployment({
+            const response = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.ref,
               environment: process.env.ENVIRONMENT,
               description: 'Deployment to ' + process.env.FQDN,
-              auto_merge: false
+              auto_merge: false,
+              required_contexts: [],
+              transient_environment: process.env.ENVIRONMENT === 'staging' && context.ref !== 'refs/heads/main',
+              production_environment: process.env.ENVIRONMENT === 'prod'
             });
+            const deployment = response.data;
+            if (!deployment || !deployment.id) {
+              core.setFailed('Failed to create deployment');
+              return;
+            }
             core.setOutput('deployment_id', deployment.id);
       - name: 🔗 Log in to GHCR
         uses: docker/login-action@v4
@@ -167,10 +175,15 @@ jobs:
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
           script: |
+            const deploymentId = Number(process.env.DEPLOYMENT_ID);
+            if (!Number.isInteger(deploymentId)) {
+              core.setFailed('No valid deployment ID, skipping status update');
+              return;
+            }
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: parseInt(process.env.DEPLOYMENT_ID),
+              deployment_id: deploymentId,
               state: process.env.STATUS === 'success' ? 'success' : 'failure',
               environment_url: 'https://' + process.env.FQDN
             });
