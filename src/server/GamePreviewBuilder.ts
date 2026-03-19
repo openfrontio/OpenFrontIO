@@ -1,10 +1,12 @@
 import { z } from "zod";
-import { GameInfo } from "../core/Schemas";
+import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
+import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
-  username: z.string().optional(),
+  username: UsernameSchema.optional(),
+  clanTag: ClanTagSchema,
   stats: z.unknown().optional(),
 });
 
@@ -85,7 +87,10 @@ function parseWinner(
   if (!winnerArray || winnerArray.length < 2) return undefined;
 
   const idToName = new Map(
-    (players ?? []).map((p) => [p.clientID, p.username]),
+    (players ?? []).map((p) => [
+      p.clientID,
+      p.username ? formatPlayerDisplayName(p.username, p.clanTag) : undefined,
+    ]),
   );
 
   if (winnerArray[0] === "team" && winnerArray.length >= 3) {
@@ -228,7 +233,9 @@ export function buildPreview(
       // Show host
       const hostClient = lobby.clients?.[0];
       if (hostClient?.username) {
-        sections.push(`Host: ${hostClient.username}`);
+        sections.push(
+          `Host: ${formatPlayerDisplayName(hostClient.username, hostClient.clanTag)}`,
+        );
       }
 
       const gameOptions: string[] = [];

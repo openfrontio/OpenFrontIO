@@ -35,6 +35,10 @@ export abstract class BaseModal extends LitElement {
     return this;
   }
 
+  public isOpen(): boolean {
+    return this.isModalOpen;
+  }
+
   protected firstUpdated(): void {
     if (this.modalEl) {
       this.modalEl.onClose = () => {

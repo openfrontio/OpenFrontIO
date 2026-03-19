@@ -1,3 +1,4 @@
+import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/DefaultConfig";
 import {
   Difficulty,
   Duos,
@@ -606,8 +607,8 @@ export class MapPlaylist {
   /**
    * Centralised spawn-immunity duration logic.
    * - HumansVsNations: always 5s (nations can't benefit from longer PVP immunity)
-   * - 25M starting gold: 2:30 (extra time to compensate for high gold)
-   * - 5M starting gold: 30s
+   * - 25M starting gold: 2:30min (extra time to compensate for high gold)
+   * - 5M starting gold: SAM build time + 15s (enough to build a SAM)
    * - Default: 5s
    */
   private getSpawnImmunityDuration(
@@ -617,7 +618,7 @@ export class MapPlaylist {
     if (playerTeams === HumansVsNations) return 5 * 10;
     if (startingGold !== undefined && startingGold >= 25_000_000)
       return 150 * 10;
-    if (startingGold) return 30 * 10;
+    if (startingGold) return SAM_CONSTRUCTION_TICKS + 15 * 10;
     return 5 * 10;
   }
 

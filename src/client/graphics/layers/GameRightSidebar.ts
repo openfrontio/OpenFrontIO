@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
@@ -65,6 +66,14 @@ export class GameRightSidebar extends LitElement implements Layer {
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       this.requestUpdate();
+    });
+
+    this.eventBus.on(TogglePauseIntentEvent, () => {
+      const isReplayOrSingleplayer =
+        this._isSinglePlayer || this.game?.config()?.isReplay();
+      if (isReplayOrSingleplayer || this.isLobbyCreator) {
+        this.onPauseButtonClick();
+      }
     });
 
     this.requestUpdate();
@@ -175,7 +184,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
