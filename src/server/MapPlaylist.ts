@@ -110,7 +110,7 @@ type ModifierKey =
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
-  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(2).fill("isRandomSpawn"),
   ...Array<ModifierKey>(8).fill("isCompact"),
   ...Array<ModifierKey>(1).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
