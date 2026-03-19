@@ -35,9 +35,6 @@ on:
     branches:
       - "*"
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions: {}
 
 concurrency:

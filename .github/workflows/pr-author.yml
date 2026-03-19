@@ -4,9 +4,6 @@ on:
   pull_request_target:
     types: [opened, reopened]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   pull-requests: write
 
