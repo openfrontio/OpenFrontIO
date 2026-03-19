@@ -172,7 +172,14 @@ describe("assignTeams", () => {
 describe("computeClanTeamName", () => {
   const human = (id: string, clan?: string): PlayerInfo => {
     const name = clan ? `[${clan}]Player${id}` : `Player${id}`;
-    return new PlayerInfo(name, PlayerType.Human, null, id, false, clan ?? null);
+    return new PlayerInfo(
+      name,
+      PlayerType.Human,
+      null,
+      id,
+      false,
+      clan ?? null,
+    );
   };
 
   const bot = (id: string): PlayerInfo =>
