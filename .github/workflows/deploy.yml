@@ -82,12 +82,22 @@ jobs:
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
       - name: 📝 Create deployment
-        uses: chrnorm/deployment-action@v2
+        uses: actions/github-script@v8
         id: deployment
+        env:
+          ENVIRONMENT: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
+          FQDN: ${{ env.FQDN }}
         with:
-          token: ${{ steps.generate-token.outputs.token }}
-          environment-url: https://${{ env.FQDN }}
-          environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
+          script: |
+            const { data: deployment } = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: process.env.ENVIRONMENT,
+              description: 'Deployment to ' + process.env.FQDN,
+              auto_merge: false
+            });
+            core.setOutput('deployment_id', deployment.id);
       - name: 🔗 Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -146,14 +156,22 @@ jobs:
           done
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
-      - name: ✅ Update deployment status
-        if: success()
-        uses: chrnorm/deployment-status@v2
+      - name: 🔄 Update deployment status
+        if: always()
+        uses: actions/github-script@v8
+        env:
+          FQDN: ${{ env.FQDN }}
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          STATUS: ${{ job.status }}
         with:
-          token: ${{ steps.generate-token.outputs.token }}
-          environment-url: https://${{ env.FQDN }}
-          state: success
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: parseInt(process.env.DEPLOYMENT_ID),
+              state: process.env.STATUS === 'success' ? 'success' : 'failure',
+              environment_url: 'https://' + process.env.FQDN
+            });
       - name: ✅ Update job summary
         if: success()
         run: |
@@ -162,14 +180,6 @@ jobs:
 
           Deployed from $GITHUB_REF to $FQDN
           EOF
-      - name: ❌ Update deployment status
-        if: failure()
-        uses: chrnorm/deployment-status@v2
-        with:
-          token: ${{ steps.generate-token.outputs.token }}
-          environment-url: https://${{ env.FQDN }}
-          state: failure
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
       - name: ❌ Update job summary
         if: failure()
         run: |
