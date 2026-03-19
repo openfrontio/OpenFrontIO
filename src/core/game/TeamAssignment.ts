@@ -162,8 +162,8 @@ export function computeClanTeamName(players: PlayerInfo[]): string | null {
 
   const clanCounts = new Map<string, number>();
   for (const player of humans) {
-    if (player.clan !== null) {
-      clanCounts.set(player.clan, (clanCounts.get(player.clan) ?? 0) + 1);
+    if (player.clanTag !== null) {
+      clanCounts.set(player.clanTag, (clanCounts.get(player.clanTag) ?? 0) + 1);
     }
   }
   if (clanCounts.size === 0) return null;
