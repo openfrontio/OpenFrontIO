@@ -124,10 +124,10 @@ export class LobbyTeamView extends LitElement {
           (client) => {
             const displayName = this.getClientDisplayName(client);
             return html`<div
-              class="px-2 py-1 rounded-sm mb-1 text-xs text-white
+              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border
                 ${this.isCurrentPlayer(client)
-                ? "bg-sky-600/20 border border-sky-500/40"
-                : "bg-gray-700/70"}"
+                ? "bg-sky-600/20 border-sky-500/40"
+                : "bg-gray-700/70 border-transparent"}"
             >
               ${displayName}
             </div>`;
@@ -240,10 +240,10 @@ export class LobbyTeamView extends LitElement {
                 (p) => {
                   const displayName = this.getClientDisplayName(p);
                   return html` <div
-                    class="px-2 py-1 rounded-sm text-xs flex items-center justify-between
+                    class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border
                       ${this.isCurrentPlayer(p)
-                      ? "bg-sky-600/20 border border-sky-500/40"
-                      : "bg-gray-700/70"}"
+                      ? "bg-sky-600/20 border-sky-500/40"
+                      : "bg-gray-700/70 border-transparent"}"
                   >
                     <span class="truncate text-white">${displayName}</span>
                     ${p.clientID === this.lobbyCreatorClientID
