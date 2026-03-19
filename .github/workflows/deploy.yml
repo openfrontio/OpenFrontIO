@@ -91,7 +91,7 @@ jobs:
             const response = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: context.ref,
+              ref: process.env.GITHUB_SHA,
               environment: process.env.ENVIRONMENT,
               description: 'Deployment to ' + process.env.FQDN,
               auto_merge: false,
