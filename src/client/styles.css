@@ -302,6 +302,11 @@ label.option-card:hover {
   font-size: 14px;
 }
 
+.player-tag.current-player {
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.4);
+}
+
 #bots-count,
 #private-lobby-bots-count {
   width: 80%;

@@ -124,7 +124,10 @@ export class LobbyTeamView extends LitElement {
           (client) => {
             const displayName = this.getClientDisplayName(client);
             return html`<div
-              class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white"
+              class="px-2 py-1 rounded-sm mb-1 text-xs text-white
+                ${this.isCurrentPlayer(client)
+                ? "bg-sky-600/20 border border-sky-500/40"
+                : "bg-gray-700/70"}"
             >
               ${displayName}
             </div>`;
@@ -168,7 +171,11 @@ export class LobbyTeamView extends LitElement {
       (c) => c.clientID ?? c.username,
       (client) => {
         const displayName = this.getClientDisplayName(client);
-        return html`<span class="player-tag">
+        return html`<span
+          class="player-tag ${this.isCurrentPlayer(client)
+            ? "current-player"
+            : ""}"
+        >
           <span class="text-white">${displayName}</span>
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
@@ -204,7 +211,12 @@ export class LobbyTeamView extends LitElement {
     const teamLabel = getTranslatedPlayerTeamLabel(preview.team);
 
     return html`
-      <div class="bg-gray-800 border border-gray-700 rounded-xl flex flex-col">
+      <div
+        class="bg-gray-800 border rounded-xl flex flex-col
+          ${this.teamContainsCurrentPlayer(preview)
+          ? "border-sky-500/60"
+          : "border-gray-700"}"
+      >
         <div
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
@@ -228,7 +240,10 @@ export class LobbyTeamView extends LitElement {
                 (p) => {
                   const displayName = this.getClientDisplayName(p);
                   return html` <div
-                    class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
+                    class="px-2 py-1 rounded-sm text-xs flex items-center justify-between
+                      ${this.isCurrentPlayer(p)
+                      ? "bg-sky-600/20 border border-sky-500/40"
+                      : "bg-gray-700/70"}"
                   >
                     <span class="truncate text-white">${displayName}</span>
                     ${p.clientID === this.lobbyCreatorClientID
@@ -363,6 +378,14 @@ export class LobbyTeamView extends LitElement {
       team: t,
       players: buckets.get(t) ?? [],
     }));
+  }
+
+  private isCurrentPlayer(client: ClientInfo): boolean {
+    return !!this.currentClientID && client.clientID === this.currentClientID;
+  }
+
+  private teamContainsCurrentPlayer(preview: TeamPreviewData): boolean {
+    return preview.players.some((p) => this.isCurrentPlayer(p));
   }
 
   private getClientDisplayName(client: ClientInfo): string {
