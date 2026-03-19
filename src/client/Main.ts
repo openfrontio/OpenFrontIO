@@ -647,7 +647,7 @@ class Client {
         return;
       }
 
-      const patternName = params.get("pattern");
+      const patternName = params.get("cosmetic");
       if (!patternName) {
         alert("Something went wrong. Please contact support.");
         console.error("purchase-completed but no pattern name");
