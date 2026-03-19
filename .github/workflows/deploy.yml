@@ -168,6 +168,7 @@ jobs:
           echo "::endgroup::"
       - name: 🔄 Update deployment status
         if: ${{ always() && github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
+        uses: actions/github-script@v8
         env:
           FQDN: ${{ env.FQDN }}
           DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
