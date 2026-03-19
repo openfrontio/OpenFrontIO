@@ -110,13 +110,13 @@ type ModifierKey =
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
-  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(2).fill("isRandomSpawn"),
   ...Array<ModifierKey>(8).fill("isCompact"),
   ...Array<ModifierKey>(1).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
   ...Array<ModifierKey>(8).fill("startingGold"),
   ...Array<ModifierKey>(1).fill("startingGoldHigh"),
-  ...Array<ModifierKey>(1).fill("goldMultiplier"),
+  ...Array<ModifierKey>(4).fill("goldMultiplier"),
   ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
 ];
 
@@ -144,84 +144,35 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
-    const modifiers = this.getRandomPublicGameModifiers(playerTeams);
-    const { startingGold } = modifiers;
-    let { isCompact, isRandomSpawn, isCrowded, isHardNations } = modifiers;
-
-    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
-    if (
-      playerTeams === Duos ||
-      playerTeams === Trios ||
-      playerTeams === Quads
-    ) {
-      isRandomSpawn = false;
-    }
-
-    // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
-    if (mode === GameMode.Team) {
-      isHardNations = false;
-    }
-
-    // Check if compact map would leave every team with at least 2 players
-    if (
-      isCompact &&
-      mode === GameMode.Team &&
-      !(await this.supportsCompactMapForTeams(map, playerTeams!))
-    ) {
-      isCompact = false;
-    }
-
-    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
-    let crowdedMaxPlayers: number | undefined;
-    if (isCrowded) {
-      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
-      if (crowdedMaxPlayers === undefined) {
-        isCrowded = false;
-      } else {
-        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
-      }
-    }
-
-    // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers:
-        crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, false),
       gameType: GameType.Public,
-      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      gameMapSize: GameMapSize.Normal,
       publicGameModifiers: {
-        isCompact,
-        isRandomSpawn,
-        isCrowded,
-        isHardNations,
-        startingGold,
+        isCompact: false,
+        isRandomSpawn: false,
+        isCrowded: false,
+        isHardNations: false,
         isAlliancesDisabled: false,
       },
-      startingGold,
       difficulty:
-        isHardNations || playerTeams === HumansVsNations
-          ? Difficulty.Hard
-          : Difficulty.Medium,
+        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
-      randomSpawn: isRandomSpawn,
+      randomSpawn: false,
       nations:
         mode === GameMode.Team && playerTeams !== HumansVsNations
           ? "disabled"
           : "default",
       gameMode: mode,
       playerTeams,
-      bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: this.getSpawnImmunityDuration(
-        playerTeams,
-        startingGold,
-      ),
+      bots: 400,
+      spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -234,6 +185,7 @@ export class MapPlaylist {
 
     const excludedModifiers: ModifierKey[] = [];
 
+    // Check if compact map would leave every team with at least 2 players
     const supportsCompact =
       mode !== GameMode.Team ||
       (await this.supportsCompactMapForTeams(map, playerTeams!));
@@ -241,6 +193,7 @@ export class MapPlaylist {
       excludedModifiers.push("isCompact");
     }
 
+    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
       playerTeams === Duos ||
       playerTeams === Trios ||
@@ -268,6 +221,8 @@ export class MapPlaylist {
       isHardNations,
     } = poolResult;
 
+    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+    // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
@@ -482,19 +437,6 @@ export class MapPlaylist {
       }
     }
     return TEAM_WEIGHTS[0].config;
-  }
-
-  private getRandomPublicGameModifiers(
-    playerTeams?: TeamCountConfig,
-  ): PublicGameModifiers {
-    return {
-      isRandomSpawn: Math.random() < 0.05, // 5% chance
-      isCompact: Math.random() < 0.05, // 5% chance
-      isCrowded: Math.random() < 0.05, // 5% chance
-      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
-      isHardNations: Math.random() < 0.025, // 2.5% chance
-      isAlliancesDisabled: false,
-    };
   }
 
   private getRandomSpecialGameModifiers(
