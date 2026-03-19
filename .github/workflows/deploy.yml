@@ -96,7 +96,7 @@ jobs:
               description: 'Deployment to ' + process.env.FQDN,
               auto_merge: false,
               required_contexts: [],
-              transient_environment: process.env.ENVIRONMENT === 'staging' && context.ref !== 'refs/heads/main',
+              transient_environment: process.env.ENVIRONMENT === 'staging' && env.SUBDOMAIN !== 'main',
               production_environment: process.env.ENVIRONMENT === 'prod'
             });
             const deployment = response.data;
@@ -173,15 +173,10 @@ jobs:
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
           script: |
-            const deploymentId = Number(process.env.DEPLOYMENT_ID);
-            if (!Number.isInteger(deploymentId)) {
-              core.setFailed('No valid deployment ID, skipping status update');
-              return;
-            }
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: deploymentId,
+              deployment_id: process.env.DEPLOYMENT_ID,
               state: process.env.STATUS === 'success' ? 'success' : 'failure',
               environment_url: 'https://' + process.env.FQDN
             });
