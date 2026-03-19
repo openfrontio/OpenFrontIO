@@ -96,7 +96,7 @@ jobs:
               description: 'Deployment to ' + process.env.FQDN,
               auto_merge: false,
               required_contexts: [],
-              transient_environment: process.env.ENVIRONMENT === 'staging' && env.SUBDOMAIN !== 'main',
+              transient_environment: process.env.ENVIRONMENT === 'staging' && context.ref !== 'refs/heads/main',
               production_environment: process.env.ENVIRONMENT === 'prod'
             });
             const deployment = response.data;
