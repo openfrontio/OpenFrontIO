@@ -120,6 +120,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Tourney1 = "Tourney Map 1",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
@@ -209,6 +210,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
+    GameMapType.Tourney1,
   ],
 };
 
