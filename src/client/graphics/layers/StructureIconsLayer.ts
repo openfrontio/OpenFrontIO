@@ -102,8 +102,6 @@ export class StructureIconsLayer implements Layer {
   private hasHiddenStructure = false;
   potentialUpgrade: StructureRenderInfo | undefined;
 
-  private static readonly DEBUG_GLOBAL_KEY = "__OPENFRONT_RENDER_DEBUG__";
-
   constructor(
     private game: GameView,
     private eventBus: EventBus,
@@ -169,13 +167,13 @@ export class StructureIconsLayer implements Layer {
     this.renderer = renderer;
     this.rendererInitialized = true;
     this.pixicanvas.addEventListener("webglcontextlost", (event) => {
+      // Prevent the browser's default context-loss handling so Pixi can restore
+      // the WebGL context and we can rebuild structure renders from game state.
       event.preventDefault();
-      this.debugLog("webglcontextlost", this.captureDebugState());
     });
     this.pixicanvas.addEventListener("webglcontextrestored", () => {
-      this.debugLog("webglcontextrestored", this.captureDebugState());
       this.resizeCanvas();
-      this.rebuildAllStructuresFromState("webglcontextrestored");
+      this.rebuildAllStructuresFromState();
     });
   }
 
@@ -212,7 +210,6 @@ export class StructureIconsLayer implements Layer {
       for (const render of this.rendersByUnitId.values()) {
         this.computeNewLocation(render);
       }
-      this.debugLog("resizeCanvas", this.captureDebugState());
     }
   }
 
@@ -238,94 +235,21 @@ export class StructureIconsLayer implements Layer {
   }
 
   redraw() {
-    this.debugLog("redraw", this.captureDebugState());
     this.resizeCanvas();
-    this.rebuildAllStructuresFromState("redraw");
+    this.rebuildAllStructuresFromState();
   }
 
-  captureDebugState() {
-    return {
-      rendererInitialized: this.rendererInitialized,
-      rendersByUnitIdSize: this.rendersByUnitId.size,
-      seenUnitIdsSize: this.seenUnitIds.size,
-      dotsStageChildren: this.dotsStage?.children.length ?? 0,
-      iconsStageChildren: this.iconsStage?.children.length ?? 0,
-      levelsStageChildren: this.levelsStage?.children.length ?? 0,
-      ghostStageChildren: this.ghostStage?.children.length ?? 0,
-      canvasWidth: this.pixicanvas?.width ?? 0,
-      canvasHeight: this.pixicanvas?.height ?? 0,
-    };
-  }
-
-  rebuildAllStructuresFromState(reason = "manual") {
-    const before = this.captureDebugState();
-    this.debugLog(`rebuildAllStructuresFromState:start:${reason}`, before);
+  rebuildAllStructuresFromState() {
     this.clearAllStructureRenders();
 
-    let rebuilt = 0;
     for (const unitView of this.game.units()) {
       if (
         unitView.isActive() &&
         this.structures.has(unitView.type() as PlayerBuildableUnitType)
       ) {
         this.addNewStructure(unitView);
-        rebuilt++;
       }
     }
-
-    const after = this.captureDebugState();
-    this.debugLog(`rebuildAllStructuresFromState:end:${reason}`, {
-      rebuilt,
-      before,
-      after,
-    });
-    return after;
-  }
-
-  simulateRendererDisruption(options?: {
-    clearStages?: boolean;
-    preserveTracking?: boolean;
-    aggressiveResize?: boolean;
-    rebuildFromState?: boolean;
-  }) {
-    const {
-      clearStages = true,
-      preserveTracking = true,
-      aggressiveResize = true,
-      rebuildFromState = false,
-    } = options ?? {};
-    const before = this.captureDebugState();
-    this.debugLog("simulateRendererDisruption:start", { options, before });
-
-    if (clearStages) {
-      this.clearStageChildren(this.iconsStage);
-      this.clearStageChildren(this.levelsStage);
-      this.clearStageChildren(this.dotsStage);
-    }
-
-    if (!preserveTracking) {
-      this.rendersByUnitId.clear();
-      this.seenUnitIds.clear();
-    }
-
-    if (aggressiveResize && this.renderer) {
-      this.renderer.resize(
-        Math.max(1, Math.floor(this.pixicanvas.width / 2)),
-        Math.max(1, Math.floor(this.pixicanvas.height / 2)),
-        1,
-      );
-      this.resizeCanvas();
-    }
-
-    this.renderer?.resetState();
-
-    if (rebuildFromState) {
-      return this.rebuildAllStructuresFromState("simulateRendererDisruption");
-    }
-
-    const after = this.captureDebugState();
-    this.debugLog("simulateRendererDisruption:end", { options, before, after });
-    return after;
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
@@ -969,6 +893,11 @@ export class StructureIconsLayer implements Layer {
     this.seenUnitIds.clear();
   }
 
+  /**
+   * Deep-clears a Pixi stage after renderer disruption or before a full
+   * state-sourced rebuild. Callers must repopulate the stage immediately after
+   * this cleanup because all child display objects are destroyed recursively.
+   */
   private clearStageChildren(stage?: PIXI.Container) {
     if (!stage) {
       return;
@@ -985,17 +914,5 @@ export class StructureIconsLayer implements Layer {
     this.levelsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
     this.dotsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
     this.rootStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
-  }
-
-  private debugLog(event: string, details?: unknown) {
-    const debug = (
-      globalThis as typeof globalThis & {
-        [StructureIconsLayer.DEBUG_GLOBAL_KEY]?: { enabled?: boolean };
-      }
-    )[StructureIconsLayer.DEBUG_GLOBAL_KEY];
-    if (!debug?.enabled) {
-      return;
-    }
-    console.info(`[RenderDebug][StructureIconsLayer] ${event}`, details);
   }
 }

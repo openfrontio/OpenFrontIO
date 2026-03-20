@@ -19,7 +19,7 @@ type StructureIconsLayerTestInternals = {
   levelsStage: { children: unknown[]; removeChildren(): unknown[] };
   dotsStage: { children: unknown[]; removeChildren(): unknown[] };
   addNewStructure(unit: { id(): number }): void;
-  rebuildAllStructuresFromState(reason?: string): unknown;
+  rebuildAllStructuresFromState(): void;
 };
 
 function createStructureIconsLayerWithMockGame(units: MockStructureUnit[]) {
@@ -46,6 +46,19 @@ function createStructureIconsLayerWithMockGame(units: MockStructureUnit[]) {
     },
     transformHandler as never,
   );
+}
+
+function createMockRender(destroy: ReturnType<typeof vi.fn>, unitId: number) {
+  return {
+    unit: {
+      id() {
+        return unitId;
+      },
+    },
+    iconContainer: { destroy },
+    levelContainer: { destroy },
+    dotContainer: { destroy },
+  };
 }
 
 /**
@@ -89,39 +102,47 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
       .mockImplementation(() => undefined);
     const rebuildSpy = vi
       .spyOn(layer, "rebuildAllStructuresFromState")
-      .mockReturnValue({
-        rendererInitialized: false,
-        rendersByUnitIdSize: 0,
-        seenUnitIdsSize: 0,
-        dotsStageChildren: 0,
-        iconsStageChildren: 0,
-        levelsStageChildren: 0,
-        ghostStageChildren: 0,
-        canvasWidth: 0,
-        canvasHeight: 0,
-      });
+      .mockImplementation(() => undefined);
 
     layer.redraw();
 
     expect(resizeSpy).toHaveBeenCalledOnce();
-    expect(rebuildSpy).toHaveBeenCalledWith("redraw");
+    expect(rebuildSpy).toHaveBeenCalledOnce();
   });
 
-  test("rebuildAllStructuresFromState drops stale tracked renders and re-adds active structures from game state", () => {
+  test("rebuildAllStructuresFromState removes inactive renders and re-adds active structures", () => {
     const activeCity = {
-      id: () => 101,
-      type: () => UnitType.City,
-      isActive: () => true,
+      id() {
+        return 101;
+      },
+      type() {
+        return UnitType.City;
+      },
+      isActive() {
+        return true;
+      },
     };
     const inactiveCity = {
-      id: () => 102,
-      type: () => UnitType.City,
-      isActive: () => false,
+      id() {
+        return 102;
+      },
+      type() {
+        return UnitType.City;
+      },
+      isActive() {
+        return false;
+      },
     };
     const activeTransportShip = {
-      id: () => 103,
-      type: () => UnitType.TransportShip,
-      isActive: () => true,
+      id() {
+        return 103;
+      },
+      type() {
+        return UnitType.TransportShip;
+      },
+      isActive() {
+        return true;
+      },
     };
     const layer = createStructureIconsLayerWithMockGame([
       activeCity,
@@ -130,15 +151,14 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
     ]);
     const layerInternals = layer as unknown as StructureIconsLayerTestInternals;
     const staleDestroy = vi.fn();
-    const staleRender = {
-      unit: { id: () => 7 },
-      iconContainer: { destroy: staleDestroy },
-      levelContainer: { destroy: staleDestroy },
-      dotContainer: { destroy: staleDestroy },
-    };
+    const inactiveDestroy = vi.fn();
+    const staleRender = createMockRender(staleDestroy, 7);
+    const inactiveRender = createMockRender(inactiveDestroy, 102);
     const { seenUnitIds, rendersByUnitId } = layerInternals;
     seenUnitIds.add(7);
+    seenUnitIds.add(102);
     rendersByUnitId.set(7, staleRender);
+    rendersByUnitId.set(102, inactiveRender);
     layerInternals.iconsStage = {
       children: [],
       removeChildren: vi.fn(() => []),
@@ -155,9 +175,10 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
         rendersByUnitId.set(unit.id(), { unit });
       });
 
-    layerInternals.rebuildAllStructuresFromState("test");
+    layerInternals.rebuildAllStructuresFromState();
 
     expect(staleDestroy).toHaveBeenCalledTimes(3);
+    expect(inactiveDestroy).toHaveBeenCalledTimes(3);
     expect(addNewStructureSpy).toHaveBeenCalledTimes(1);
     expect(addNewStructureSpy).toHaveBeenCalledWith(activeCity);
     expect(Array.from(rendersByUnitId.keys())).toEqual([101]);

@@ -229,13 +229,6 @@ export function createRenderer(
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
   const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
-  const unitLayer = new UnitLayer(game, eventBus, transformHandler);
-  const structureIconsLayer = new StructureIconsLayer(
-    game,
-    eventBus,
-    uiState,
-    transformHandler,
-  );
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -285,11 +278,11 @@ export function createRenderer(
     new CoordinateGridLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
-    unitLayer,
+    new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
-    structureIconsLayer,
+    new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
@@ -326,7 +319,7 @@ export function createRenderer(
     performanceOverlay,
   ];
 
-  const renderer = new GameRenderer(
+  return new GameRenderer(
     game,
     eventBus,
     canvas,
@@ -335,71 +328,9 @@ export function createRenderer(
     layers,
     performanceOverlay,
   );
-
-  const debugApi = (
-    globalThis as typeof globalThis & {
-      __OPENFRONT_RENDER_DEBUG__?: Record<string, unknown> & {
-        enabled?: boolean;
-      };
-    }
-  ).__OPENFRONT_RENDER_DEBUG__;
-  const renderDebug = debugApi ?? { enabled: false };
-  Object.assign(renderDebug, {
-    enable() {
-      renderDebug.enabled = true;
-      return renderer.captureDebugState();
-    },
-    disable() {
-      renderDebug.enabled = false;
-      return renderer.captureDebugState();
-    },
-    snapshot() {
-      const snapshot = renderer.captureDebugState();
-      console.info("[RenderDebug] snapshot", snapshot);
-      return snapshot;
-    },
-    clearMainCanvasOnly() {
-      renderer.clearMainCanvasOnly();
-      return renderer.captureDebugState();
-    },
-    redrawAll() {
-      renderer.redraw();
-      return renderer.captureDebugState();
-    },
-    redrawStructureIcons() {
-      structureIconsLayer.redraw();
-      return structureIconsLayer.captureDebugState();
-    },
-    rebuildStructureIcons(reason = "debug-api") {
-      return structureIconsLayer.rebuildAllStructuresFromState(reason);
-    },
-    simulateStructureDisruption(
-      options?: Parameters<StructureIconsLayer["simulateRendererDisruption"]>[0],
-    ) {
-      return structureIconsLayer.simulateRendererDisruption(
-        options,
-      );
-    },
-    redrawUnits(reason = "debug-api") {
-      return unitLayer.rebuildAllUnitsFromState(reason);
-    },
-    simulateUnitCanvasReset(
-      options?: Parameters<UnitLayer["simulateCanvasReset"]>[0],
-    ) {
-      return unitLayer.simulateCanvasReset(options);
-    },
-  });
-  (
-    globalThis as typeof globalThis & {
-      __OPENFRONT_RENDER_DEBUG__?: typeof renderDebug;
-    }
-  ).__OPENFRONT_RENDER_DEBUG__ = renderDebug;
-
-  return renderer;
 }
 
 export class GameRenderer {
-  private static readonly DEBUG_GLOBAL_KEY = "__OPENFRONT_RENDER_DEBUG__";
   private context: CanvasRenderingContext2D;
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
   private renderFramesSinceLastTick: number = 0;
@@ -436,11 +367,9 @@ export class GameRenderer {
 
     let rafId = requestAnimationFrame(() => this.renderGame());
     this.canvas.addEventListener("contextlost", () => {
-      this.debugLog("contextlost", this.captureDebugState());
       cancelAnimationFrame(rafId);
     });
     this.canvas.addEventListener("contextrestored", () => {
-      this.debugLog("contextrestored", this.captureDebugState());
       this.redraw();
       rafId = requestAnimationFrame(() => this.renderGame());
     });
@@ -450,32 +379,15 @@ export class GameRenderer {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
     this.transformHandler.updateCanvasBoundingRect();
-    this.debugLog("resizeCanvas", this.captureDebugState());
     //this.redraw()
   }
 
   redraw() {
-    this.debugLog("redraw", this.captureDebugState());
     this.layers.forEach((l) => {
       if (l.redraw) {
         l.redraw();
       }
     });
-  }
-
-  clearMainCanvasOnly() {
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.debugLog("clearMainCanvasOnly", this.captureDebugState());
-  }
-
-  captureDebugState() {
-    return {
-      canvasWidth: this.canvas.width,
-      canvasHeight: this.canvas.height,
-      layerCount: this.layers.length,
-      renderFramesSinceLastTick: this.renderFramesSinceLastTick,
-      layerTickStates: this.layerTickState.size,
-    };
   }
 
   renderGame() {
@@ -600,17 +512,5 @@ export class GameRenderer {
   resize(width: number, height: number): void {
     this.canvas.width = Math.ceil(width / window.devicePixelRatio);
     this.canvas.height = Math.ceil(height / window.devicePixelRatio);
-  }
-
-  private debugLog(event: string, details?: unknown) {
-    const debug = (
-      globalThis as typeof globalThis & {
-        [GameRenderer.DEBUG_GLOBAL_KEY]?: { enabled?: boolean };
-      }
-    )[GameRenderer.DEBUG_GLOBAL_KEY];
-    if (!debug?.enabled) {
-      return;
-    }
-    console.info(`[RenderDebug][GameRenderer] ${event}`, details);
   }
 }
