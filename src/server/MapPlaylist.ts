@@ -144,15 +144,24 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
+    let isCompact = this.playlists[type].length % 3 === 0;
+    if (
+      isCompact &&
+      mode === GameMode.Team &&
+      !(await this.supportsCompactMapForTeams(map, playerTeams!))
+    ) {
+      isCompact = false;
+    }
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, false),
+      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Normal,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
-        isCompact: false,
+        isCompact,
         isRandomSpawn: false,
         isCrowded: false,
         isHardNations: false,
@@ -171,7 +180,7 @@ export class MapPlaylist {
           : "default",
       gameMode: mode,
       playerTeams,
-      bots: 400,
+      bots: isCompact ? 100 : 400,
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
     } satisfies GameConfig;
