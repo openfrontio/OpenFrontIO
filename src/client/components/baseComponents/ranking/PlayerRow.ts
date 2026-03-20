@@ -220,7 +220,7 @@ export class PlayerRow extends LitElement {
   private renderPlayerName() {
     return html`
       <div class="flex gap-1 items-center w-50 shrink-0">
-        ${this.player.tag ? this.renderTag(this.player.tag) : ""}
+        ${this.player.clanTag ? this.renderTag(this.player.clanTag) : ""}
         <div
           class="text-xs sm:text-sm font-bold tracking-wide text-white/80 text-ellipsis w-37.5 shrink-0 overflow-hidden whitespace-nowrap"
         >

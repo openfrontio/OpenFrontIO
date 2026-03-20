@@ -231,10 +231,10 @@ export class WorkerClient {
     });
   }
 
-  attackAveragePosition(
+  attackClusteredPositions(
     playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -243,25 +243,34 @@ export class WorkerClient {
 
       const messageId = generateID();
 
+      const timeout = setTimeout(() => {
+        this.messageHandlers.delete(messageId);
+        reject(new Error("attack_clustered_positions request timed out"));
+      }, 5000);
+
       this.messageHandlers.set(messageId, (message) => {
-        if (
-          message.type === "attack_average_position_result" &&
-          message.x !== undefined &&
-          message.y !== undefined
-        ) {
-          if (message.x === null || message.y === null) {
-            resolve(null);
-          } else {
-            resolve(new Cell(message.x, message.y));
-          }
+        clearTimeout(timeout);
+        if (message.type !== "attack_clustered_positions_result") {
+          reject(
+            new Error(
+              `Unexpected message type for attackClusteredPositions: ${message.type}`,
+            ),
+          );
+          return;
         }
+        resolve(
+          message.attacks.map((a) => ({
+            id: a.id,
+            positions: a.positions.map((c) => new Cell(c.x, c.y)),
+          })),
+        );
       });
 
       this.worker.postMessage({
-        type: "attack_average_position",
+        type: "attack_clustered_positions",
         id: messageId,
-        playerID: playerID,
-        attackID: attackID,
+        playerID,
+        attackID,
       });
     });
   }

@@ -84,9 +84,6 @@ export class PlayerImpl implements Player {
   public _units: Unit[] = [];
   public _tiles: Set<TileRef> = new Set();
 
-  private _name: string;
-  private _displayName: string;
-
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
 
@@ -115,10 +112,8 @@ export class PlayerImpl implements Player {
     startTroops: number,
     private readonly _team: Team | null,
   ) {
-    this._name = playerInfo.name;
     this._troops = toInt(startTroops);
     this._gold = mg.config().startingGold(playerInfo);
-    this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
 
@@ -193,10 +188,10 @@ export class PlayerImpl implements Player {
   }
 
   name(): string {
-    return this._name;
+    return this.playerInfo.name;
   }
   displayName(): string {
-    return this._displayName;
+    return this.playerInfo.displayName;
   }
 
   clientID(): ClientID | null {
@@ -209,10 +204,6 @@ export class PlayerImpl implements Player {
 
   type(): PlayerType {
     return this.playerInfo.playerType;
-  }
-
-  clan(): string | null {
-    return this.playerInfo.clan;
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -760,14 +751,14 @@ export class PlayerImpl implements Player {
       MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
       undefined,
-      { troops: renderTroops(troops), name: recipient.name() },
+      { troops: renderTroops(troops), name: recipient.displayName() },
     );
     this.mg.displayMessage(
       "events_display.received_troops_from_player",
       MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
       undefined,
-      { troops: renderTroops(troops), name: this.name() },
+      { troops: renderTroops(troops), name: this.displayName() },
     );
     return true;
   }
@@ -784,14 +775,14 @@ export class PlayerImpl implements Player {
       MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
       undefined,
-      { gold: renderNumber(gold), name: recipient.name() },
+      { gold: renderNumber(gold), name: recipient.displayName() },
     );
     this.mg.displayMessage(
       "events_display.received_gold_from_player",
       MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
       gold,
-      { gold: renderNumber(gold), name: this.name() },
+      { gold: renderNumber(gold), name: this.displayName() },
     );
     return true;
   }
