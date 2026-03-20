@@ -70,7 +70,7 @@ export class TransformHandler {
     );
   }
 
-  worldToScreenCoordinates(cell: Cell): { x: number; y: number } {
+  worldToCanvasCoordinates(cell: Cell): { x: number; y: number } {
     // Step 1: Convert from Cell coordinates to game coordinates
     // (reverse of Math.floor operation - we'll use the exact values)
     const gameX = cell.x;
@@ -90,11 +90,18 @@ export class TransformHandler {
     const canvasY =
       (centerY - this.offsetY) * this.scale + this.game.height() / 2;
 
-    // Step 4: Convert canvas coordinates back to screen coordinates
+    return { x: canvasX, y: canvasY };
+  }
+
+  worldToScreenCoordinates(cell: Cell): { x: number; y: number } {
+    // Step 1-3: Convert world coordinates to canvas coordinates in worldToCanvasCoordinates
+    // Step 4 only where needed: Convert canvas coordinates back to screen coordinates
+    const canvasCoords = this.worldToCanvasCoordinates(cell);
     const canvasRect = this.boundingRect();
-    const screenX = canvasX + canvasRect.left;
-    const screenY = canvasY + canvasRect.top;
-    return { x: screenX, y: screenY };
+    return {
+      x: canvasCoords.x + canvasRect.left,
+      y: canvasCoords.y + canvasRect.top,
+    };
   }
 
   screenToWorldCoordinates(screenX: number, screenY: number): Cell {

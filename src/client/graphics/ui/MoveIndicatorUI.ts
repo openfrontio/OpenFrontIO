@@ -35,7 +35,7 @@ export class MoveIndicatorUI implements UIElement {
     const chevronSize = this.chevronSize * scale;
 
     // Get screen coordinates
-    const screenPos = this.transformHandler.worldToScreenCoordinates(this.cell);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(this.cell);
     const centerX = screenPos.x;
     const centerY = screenPos.y;
 
