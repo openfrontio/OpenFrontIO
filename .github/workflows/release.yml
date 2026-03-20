@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   build:
     name: 🏗️ Build
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -47,7 +47,7 @@ jobs:
 
   deploy-alpha:
     name: 🧪 Deploy to alpha
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     needs: [build]
     steps:
@@ -97,7 +97,7 @@ jobs:
 
   deploy-beta:
     name: 🐞 Deploy to beta
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-beta
@@ -148,7 +148,7 @@ jobs:
 
   deploy-blue:
     name: 🔵 Deploy to blue
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-blue
@@ -199,7 +199,7 @@ jobs:
 
   deploy-green:
     name: 🟢 Deploy to green
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-green
