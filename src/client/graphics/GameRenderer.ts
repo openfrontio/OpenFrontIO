@@ -335,6 +335,23 @@ export class GameRenderer {
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
   private renderFramesSinceLastTick: number = 0;
   private renderLayerDurationsSinceLastTick: Record<string, number> = {};
+  private animationFrameId: number | null = null;
+  private disposed = false;
+  private readonly onRedrawGraphics = () => this.redraw();
+  private readonly onResize = () => this.resizeCanvas();
+  private readonly onContextLost = () => {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  };
+  private readonly onContextRestored = () => {
+    if (this.disposed) {
+      return;
+    }
+    this.redraw();
+    this.animationFrameId = requestAnimationFrame(() => this.renderGame());
+  };
 
   constructor(
     private game: GameView,
@@ -351,7 +368,7 @@ export class GameRenderer {
   }
 
   initialize() {
-    this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
+    this.eventBus.on(RedrawGraphicsEvent, this.onRedrawGraphics);
     this.layers.forEach((l) => l.init?.());
 
     // only append the canvas if it's not already in the document to avoid reparenting side-effects
@@ -359,20 +376,32 @@ export class GameRenderer {
       document.body.appendChild(this.canvas);
     }
 
-    window.addEventListener("resize", () => this.resizeCanvas());
+    window.addEventListener("resize", this.onResize);
     this.resizeCanvas();
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
 
-    let rafId = requestAnimationFrame(() => this.renderGame());
-    this.canvas.addEventListener("contextlost", () => {
-      cancelAnimationFrame(rafId);
-    });
-    this.canvas.addEventListener("contextrestored", () => {
-      this.redraw();
-      rafId = requestAnimationFrame(() => this.renderGame());
-    });
+    this.animationFrameId = requestAnimationFrame(() => this.renderGame());
+    this.canvas.addEventListener("contextlost", this.onContextLost);
+    this.canvas.addEventListener("contextrestored", this.onContextRestored);
+  }
+
+  dispose() {
+    if (this.disposed) {
+      return;
+    }
+
+    this.disposed = true;
+    this.eventBus.off(RedrawGraphicsEvent, this.onRedrawGraphics);
+    window.removeEventListener("resize", this.onResize);
+    this.canvas.removeEventListener("contextlost", this.onContextLost);
+    this.canvas.removeEventListener("contextrestored", this.onContextRestored);
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.layers.forEach((layer) => layer.dispose?.());
   }
 
   resizeCanvas() {
@@ -391,6 +420,10 @@ export class GameRenderer {
   }
 
   renderGame() {
+    if (this.disposed) {
+      return;
+    }
+
     const shouldProfileFrame = FrameProfiler.isEnabled();
     if (shouldProfileFrame) {
       FrameProfiler.clear();
@@ -442,7 +475,7 @@ export class GameRenderer {
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
 
-    requestAnimationFrame(() => this.renderGame());
+    this.animationFrameId = requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
     if (shouldProfileFrame) {

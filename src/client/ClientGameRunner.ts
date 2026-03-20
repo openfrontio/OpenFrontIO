@@ -518,6 +518,7 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    this.renderer.dispose();
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
