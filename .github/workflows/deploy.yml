@@ -91,7 +91,7 @@ jobs:
           registry: ghcr.io
           username: ${{ vars.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - name:  Create SSH private key
+      - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
