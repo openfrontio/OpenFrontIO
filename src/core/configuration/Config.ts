@@ -130,7 +130,7 @@ export interface Config {
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
-    numTradeShips: number,
+    numPlayerPorts: number,
   ): number;
   trainGold(
     rel: "self" | "team" | "ally" | "other",
