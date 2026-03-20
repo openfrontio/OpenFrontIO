@@ -30,6 +30,7 @@ enum Relationship {
 }
 
 export class UnitLayer implements Layer {
+  private static readonly DEBUG_GLOBAL_KEY = "__OPENFRONT_RENDER_DEBUG__";
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private transportShipTrailCanvas: HTMLCanvasElement;
@@ -50,6 +51,7 @@ export class UnitLayer implements Layer {
 
   // Configuration for unit selection
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
+  private skipIncrementalFrames = 0;
 
   constructor(
     private game: GameView,
@@ -65,6 +67,14 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
+    if (this.skipIncrementalFrames > 0) {
+      this.skipIncrementalFrames--;
+      this.debugLog("tick:skipped", {
+        remainingSkippedFrames: this.skipIncrementalFrames,
+      });
+      return;
+    }
+
     const updatedUnitIds =
       this.game
         .updatesSinceLastTick()
@@ -242,6 +252,8 @@ export class UnitLayer implements Layer {
   }
 
   redraw() {
+    const previousWidth = this.canvas?.width ?? 0;
+    const previousHeight = this.canvas?.height ?? 0;
     this.canvas = document.createElement("canvas");
     const context = this.canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
@@ -256,6 +268,12 @@ export class UnitLayer implements Layer {
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
 
+    this.debugLog("redraw", {
+      previousWidth,
+      previousHeight,
+      canvasWidth: this.canvas.width,
+      canvasHeight: this.canvas.height,
+    });
     this.updateUnitsSprites(this.game.units().map((unit) => unit.id()));
 
     this.unitToTrail.forEach((trail, unit) => {
@@ -273,16 +291,90 @@ export class UnitLayer implements Layer {
   }
 
   private updateUnitsSprites(unitIds: number[]) {
-    const unitsToUpdate = unitIds
-      ?.map((id) => this.game.unit(id))
-      .filter((unit) => unit !== undefined);
+    const unresolvedIds: number[] = [];
+    const unitsToUpdate =
+      unitIds
+        ?.map((id) => {
+          const unit = this.game.unit(id);
+          if (unit === undefined) {
+            unresolvedIds.push(id);
+          }
+          return unit;
+        })
+        .filter((unit) => unit !== undefined) ?? [];
 
-    if (unitsToUpdate) {
+    this.debugLog("updateUnitsSprites", {
+      inputIds: unitIds.length,
+      resolvedUnits: unitsToUpdate.length,
+      unresolvedIds,
+    });
+
+    if (unitsToUpdate.length > 0) {
       // the clearing and drawing of unit sprites need to be done in 2 passes
       // otherwise the sprite of a unit can be drawn on top of another unit
       this.clearUnitsCells(unitsToUpdate);
       this.drawUnitsCells(unitsToUpdate);
     }
+  }
+
+  captureDebugState() {
+    return {
+      canvasWidth: this.canvas?.width ?? 0,
+      canvasHeight: this.canvas?.height ?? 0,
+      trailCanvasWidth: this.transportShipTrailCanvas?.width ?? 0,
+      trailCanvasHeight: this.transportShipTrailCanvas?.height ?? 0,
+      selectedUnitId: this.selectedUnit?.id() ?? null,
+      motionPlannedUnitIds: this.game.motionPlannedUnitIds().length,
+      totalActiveUnits: this.game.units().length,
+      skipIncrementalFrames: this.skipIncrementalFrames,
+    };
+  }
+
+  rebuildAllUnitsFromState(reason = "manual") {
+    this.debugLog(`rebuildAllUnitsFromState:${reason}`, this.captureDebugState());
+    this.redraw();
+    return this.captureDebugState();
+  }
+
+  simulateCanvasReset(options?: {
+    clearCanvas?: boolean;
+    clearTrailCanvas?: boolean;
+    skipNextIncrementalFrames?: number;
+    rebuildFromState?: boolean;
+  }) {
+    const {
+      clearCanvas = true,
+      clearTrailCanvas = true,
+      skipNextIncrementalFrames = 0,
+      rebuildFromState = false,
+    } = options ?? {};
+    const before = this.captureDebugState();
+    this.debugLog("simulateCanvasReset:start", { options, before });
+
+    if (clearCanvas) {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    if (clearTrailCanvas) {
+      this.unitTrailContext.clearRect(
+        0,
+        0,
+        this.transportShipTrailCanvas.width,
+        this.transportShipTrailCanvas.height,
+      );
+    }
+
+    this.skipIncrementalFrames = Math.max(
+      this.skipIncrementalFrames,
+      skipNextIncrementalFrames,
+    );
+
+    if (rebuildFromState) {
+      return this.rebuildAllUnitsFromState("simulateCanvasReset");
+    }
+
+    const after = this.captureDebugState();
+    this.debugLog("simulateCanvasReset:end", { options, before, after });
+    return after;
   }
 
   private clearUnitsCells(unitViews: UnitView[]) {
@@ -617,5 +709,17 @@ export class UnitLayer implements Layer {
         this.context.restore();
       }
     }
+  }
+
+  private debugLog(event: string, details?: unknown) {
+    const debug = (
+      globalThis as typeof globalThis & {
+        [UnitLayer.DEBUG_GLOBAL_KEY]?: { enabled?: boolean };
+      }
+    )[UnitLayer.DEBUG_GLOBAL_KEY];
+    if (!debug?.enabled) {
+      return;
+    }
+    console.info(`[RenderDebug][UnitLayer] ${event}`, details);
   }
 }
