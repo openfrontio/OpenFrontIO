@@ -1033,7 +1033,7 @@ export class EventsDisplay extends LitElement implements Layer {
     const diplomacyBottomOffset =
       this._eventDisplayPosition === this._diplomacyPosition
         ? this._eventsPanelHeight + 8
-        : 8;
+        : 0;
 
     return html`
       ${styles}
