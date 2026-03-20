@@ -370,9 +370,7 @@ describe("Transport ship alliance rejection", () => {
     expect(playerB.incomingAllianceRequests()).toHaveLength(1);
 
     // Player B sends a transport ship toward Player A's territory
-    game.addExecution(
-      new TransportShipExecution(playerB, game.ref(7, 0), null),
-    );
+    game.addExecution(new TransportShipExecution(playerB, game.ref(7, 0), 0));
 
     // Execute a tick to process the transport ship launch
     game.executeNextTick();
