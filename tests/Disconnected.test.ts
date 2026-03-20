@@ -179,16 +179,20 @@ describe("Disconnected", () => {
 
     beforeEach(async () => {
       const player1Info = new PlayerInfo(
-        "[CLAN]Player1",
+        "Player1",
         PlayerType.Human,
         null,
         "player_1_id",
+        false,
+        "CLAN",
       );
       const player2Info = new PlayerInfo(
-        "[CLAN]Player2",
+        "Player2",
         PlayerType.Human,
         null,
         "player_2_id",
+        false,
+        "CLAN",
       );
 
       game = await setup(
