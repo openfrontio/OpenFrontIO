@@ -273,10 +273,9 @@ export class UnitLayer implements Layer {
   }
 
   private updateUnitsSprites(unitIds: number[]) {
-    const unitsToUpdate =
-      unitIds
-        ?.map((id) => this.game.unit(id))
-        .filter((unit) => unit !== undefined) ?? [];
+    const unitsToUpdate = unitIds
+      .map((id) => this.game.unit(id))
+      .filter((unit) => unit !== undefined);
 
     if (unitsToUpdate.length > 0) {
       // the clearing and drawing of unit sprites need to be done in 2 passes

@@ -3,8 +3,10 @@ import {
   shouldPreserveGhostAfterBuild,
   StructureIconsLayer,
 } from "../../../../src/client/graphics/layers/StructureIconsLayer";
-import { UnitType } from "../../../../src/core/game/Game";
+import type { TransformHandler } from "../../../../src/client/graphics/TransformHandler";
 import { EventBus } from "../../../../src/core/EventBus";
+import { UnitType } from "../../../../src/core/game/Game";
+import type { GameView } from "../../../../src/core/game/GameView";
 
 type MockStructureUnit = {
   id(): number;
@@ -12,7 +14,30 @@ type MockStructureUnit = {
   isActive(): boolean;
 };
 
+type MockGame = {
+  config(): {
+    theme(): object;
+    userSettings(): {
+      structureSprites(): boolean;
+    };
+  };
+  units(): MockStructureUnit[];
+};
+
+type MockTransformHandler = {
+  scale: number;
+  worldToScreenCoordinates(cell: { x: number; y: number }): {
+    x: number;
+    y: number;
+  };
+};
+
 type StructureIconsLayerTestInternals = {
+  pixicanvas: {
+    removeEventListener: ReturnType<typeof vi.fn>;
+  };
+  onWebGLContextLost: ((event: Event) => void) | null;
+  onWebGLContextRestored: (() => void) | null;
   seenUnitIds: Set<number>;
   rendersByUnitId: Map<number, unknown>;
   iconsStage: { children: unknown[]; removeChildren(): unknown[] };
@@ -23,19 +48,19 @@ type StructureIconsLayerTestInternals = {
 };
 
 function createStructureIconsLayerWithMockGame(units: MockStructureUnit[]) {
-  const game = {
+  const game: MockGame = {
     config: () => ({
       theme: () => ({}),
       userSettings: () => ({ structureSprites: () => true }),
     }),
     units: () => units,
   };
-  const transformHandler = {
+  const transformHandler: MockTransformHandler = {
     scale: 1,
     worldToScreenCoordinates: (cell: { x: number; y: number }) => cell,
   };
   return new StructureIconsLayer(
-    game as never,
+    game as unknown as GameView,
     new EventBus(),
     {
       attackRatio: 20,
@@ -44,7 +69,7 @@ function createStructureIconsLayerWithMockGame(units: MockStructureUnit[]) {
       ghostRailPaths: [],
       rocketDirectionUp: true,
     },
-    transformHandler as never,
+    transformHandler as unknown as TransformHandler,
   );
 }
 
@@ -59,6 +84,10 @@ function createMockRender(destroy: ReturnType<typeof vi.fn>, unitId: number) {
     levelContainer: { destroy },
     dotContainer: { destroy },
   };
+}
+
+function createMockStageChild() {
+  return { destroy: vi.fn() };
 }
 
 /**
@@ -96,6 +125,7 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
   });
 
   test("redraw resizes the canvas and rebuilds structures from authoritative state", () => {
+    // Arrange
     const layer = createStructureIconsLayerWithMockGame([]);
     const resizeSpy = vi
       .spyOn(layer, "resizeCanvas")
@@ -104,8 +134,10 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
       .spyOn(layer, "rebuildAllStructuresFromState")
       .mockImplementation(() => undefined);
 
+    // Act
     layer.redraw();
 
+    // Assert
     expect(resizeSpy).toHaveBeenCalledOnce();
     expect(rebuildSpy).toHaveBeenCalledOnce();
   });
@@ -150,10 +182,14 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
       activeTransportShip,
     ]);
     const layerInternals = layer as unknown as StructureIconsLayerTestInternals;
-    const staleDestroy = vi.fn();
-    const inactiveDestroy = vi.fn();
-    const staleRender = createMockRender(staleDestroy, 7);
-    const inactiveRender = createMockRender(inactiveDestroy, 102);
+    const staleRender = createMockRender(vi.fn(), 7);
+    const inactiveRender = createMockRender(vi.fn(), 102);
+    const iconChildA = createMockStageChild();
+    const iconChildB = createMockStageChild();
+    const levelChildA = createMockStageChild();
+    const levelChildB = createMockStageChild();
+    const dotChildA = createMockStageChild();
+    const dotChildB = createMockStageChild();
     const { seenUnitIds, rendersByUnitId } = layerInternals;
     seenUnitIds.add(7);
     seenUnitIds.add(102);
@@ -161,13 +197,16 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
     rendersByUnitId.set(102, inactiveRender);
     layerInternals.iconsStage = {
       children: [],
-      removeChildren: vi.fn(() => []),
+      removeChildren: vi.fn(() => [iconChildA, iconChildB]),
     };
     layerInternals.levelsStage = {
       children: [],
-      removeChildren: vi.fn(() => []),
+      removeChildren: vi.fn(() => [levelChildA, levelChildB]),
     };
-    layerInternals.dotsStage = { children: [], removeChildren: vi.fn(() => []) };
+    layerInternals.dotsStage = {
+      children: [],
+      removeChildren: vi.fn(() => [dotChildA, dotChildB]),
+    };
     const addNewStructureSpy = vi
       .spyOn(layerInternals, "addNewStructure")
       .mockImplementation((unit: { id(): number }) => {
@@ -177,11 +216,40 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
 
     layerInternals.rebuildAllStructuresFromState();
 
-    expect(staleDestroy).toHaveBeenCalledTimes(3);
-    expect(inactiveDestroy).toHaveBeenCalledTimes(3);
+    expect(iconChildA.destroy).toHaveBeenCalledWith({ children: true });
+    expect(iconChildB.destroy).toHaveBeenCalledWith({ children: true });
+    expect(levelChildA.destroy).toHaveBeenCalledWith({ children: true });
+    expect(levelChildB.destroy).toHaveBeenCalledWith({ children: true });
+    expect(dotChildA.destroy).toHaveBeenCalledWith({ children: true });
+    expect(dotChildB.destroy).toHaveBeenCalledWith({ children: true });
     expect(addNewStructureSpy).toHaveBeenCalledTimes(1);
     expect(addNewStructureSpy).toHaveBeenCalledWith(activeCity);
     expect(Array.from(rendersByUnitId.keys())).toEqual([101]);
     expect(Array.from(seenUnitIds)).toEqual([101]);
+  });
+
+  test("dispose removes WebGL canvas listeners and clears handler references", () => {
+    const layer = createStructureIconsLayerWithMockGame([]);
+    const layerInternals = layer as unknown as StructureIconsLayerTestInternals;
+    const removeEventListener = vi.fn();
+    const lostHandler = vi.fn();
+    const restoredHandler = vi.fn();
+
+    layerInternals.pixicanvas = { removeEventListener };
+    layerInternals.onWebGLContextLost = lostHandler;
+    layerInternals.onWebGLContextRestored = restoredHandler;
+
+    layer.dispose();
+
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "webglcontextlost",
+      lostHandler,
+    );
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "webglcontextrestored",
+      restoredHandler,
+    );
+    expect(layerInternals.onWebGLContextLost).toBeNull();
+    expect(layerInternals.onWebGLContextRestored).toBeNull();
   });
 });

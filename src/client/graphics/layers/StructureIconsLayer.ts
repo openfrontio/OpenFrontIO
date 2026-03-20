@@ -100,6 +100,18 @@ export class StructureIconsLayer implements Layer {
   private visibilityStateDirty = true;
   private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
+  private onWebGLContextLost: ((event: Event) => void) | null = null;
+  private onWebGLContextRestored: (() => void) | null = null;
+  private readonly onResize = () => this.resizeCanvas();
+  private readonly onToggleStructures = (e: ToggleStructuresEvent) =>
+    this.toggleStructures(e.structureTypes);
+  private readonly onMouseMove = (e: MouseMoveEvent) => this.moveGhost(e);
+  private readonly onMouseUp = (e: MouseUpEvent) =>
+    this.requestConfirmStructure(e);
+  private readonly onConfirmGhostStructure = () =>
+    this.requestConfirmStructure(
+      new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+    );
   potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
@@ -166,15 +178,23 @@ export class StructureIconsLayer implements Layer {
 
     this.renderer = renderer;
     this.rendererInitialized = true;
-    this.pixicanvas.addEventListener("webglcontextlost", (event) => {
+    this.onWebGLContextLost = (event) => {
       // Prevent the browser's default context-loss handling so Pixi can restore
       // the WebGL context and we can rebuild structure renders from game state.
       event.preventDefault();
-    });
-    this.pixicanvas.addEventListener("webglcontextrestored", () => {
+    };
+    this.onWebGLContextRestored = () => {
       this.resizeCanvas();
       this.rebuildAllStructuresFromState();
-    });
+    };
+    this.pixicanvas.addEventListener(
+      "webglcontextlost",
+      this.onWebGLContextLost,
+    );
+    this.pixicanvas.addEventListener(
+      "webglcontextrestored",
+      this.onWebGLContextRestored,
+    );
   }
 
   shouldTransform(): boolean {
@@ -182,21 +202,38 @@ export class StructureIconsLayer implements Layer {
   }
 
   async init() {
-    this.eventBus.on(ToggleStructuresEvent, (e) =>
-      this.toggleStructures(e.structureTypes),
-    );
-    this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
+    this.eventBus.on(ToggleStructuresEvent, this.onToggleStructures);
+    this.eventBus.on(MouseMoveEvent, this.onMouseMove);
+    this.eventBus.on(MouseUpEvent, this.onMouseUp);
+    this.eventBus.on(ConfirmGhostStructureEvent, this.onConfirmGhostStructure);
 
-    this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
-    this.eventBus.on(ConfirmGhostStructureEvent, () =>
-      this.requestConfirmStructure(
-        new MouseUpEvent(this.mousePos.x, this.mousePos.y),
-      ),
-    );
-
-    window.addEventListener("resize", () => this.resizeCanvas());
+    window.addEventListener("resize", this.onResize);
     await this.setupRenderer();
     this.redraw();
+  }
+
+  dispose() {
+    this.eventBus.off(ToggleStructuresEvent, this.onToggleStructures);
+    this.eventBus.off(MouseMoveEvent, this.onMouseMove);
+    this.eventBus.off(MouseUpEvent, this.onMouseUp);
+    this.eventBus.off(ConfirmGhostStructureEvent, this.onConfirmGhostStructure);
+    window.removeEventListener("resize", this.onResize);
+
+    if (this.onWebGLContextLost) {
+      this.pixicanvas?.removeEventListener(
+        "webglcontextlost",
+        this.onWebGLContextLost,
+      );
+    }
+    if (this.onWebGLContextRestored) {
+      this.pixicanvas?.removeEventListener(
+        "webglcontextrestored",
+        this.onWebGLContextRestored,
+      );
+    }
+
+    this.onWebGLContextLost = null;
+    this.onWebGLContextRestored = null;
   }
 
   resizeCanvas() {
@@ -883,14 +920,12 @@ export class StructureIconsLayer implements Layer {
   }
 
   private clearAllStructureRenders() {
-    for (const render of Array.from(this.rendersByUnitId.values())) {
-      this.deleteStructure(render);
-    }
     this.clearStageChildren(this.iconsStage);
     this.clearStageChildren(this.levelsStage);
     this.clearStageChildren(this.dotsStage);
     this.rendersByUnitId.clear();
     this.seenUnitIds.clear();
+    this.potentialUpgrade = undefined;
   }
 
   /**
