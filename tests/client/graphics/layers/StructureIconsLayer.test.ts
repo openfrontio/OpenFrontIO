@@ -34,10 +34,15 @@ type MockTransformHandler = {
 
 type StructureIconsLayerTestInternals = {
   pixicanvas: {
+    height?: number;
     removeEventListener: ReturnType<typeof vi.fn>;
+    width?: number;
   };
   onWebGLContextLost: ((event: Event) => void) | null;
   onWebGLContextRestored: (() => void) | null;
+  ghostUnit?: object | null;
+  renderer: object | null;
+  rendererInitialized: boolean;
   seenUnitIds: Set<number>;
   rendersByUnitId: Map<number, unknown>;
   iconsStage: { children: unknown[]; removeChildren(): unknown[] };
@@ -142,6 +147,52 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
     expect(rebuildSpy).toHaveBeenCalledOnce();
   });
 
+  test("rebuildAllStructuresFromState is a no-op before the renderer is initialized", () => {
+    const layer = createStructureIconsLayerWithMockGame([
+      {
+        id() {
+          return 101;
+        },
+        type() {
+          return UnitType.City;
+        },
+        isActive() {
+          return true;
+        },
+      },
+    ]);
+    const layerInternals = layer as unknown as StructureIconsLayerTestInternals;
+    const addNewStructureSpy = vi.spyOn(layerInternals, "addNewStructure");
+
+    expect(() => layer.rebuildAllStructuresFromState()).not.toThrow();
+    expect(addNewStructureSpy).not.toHaveBeenCalled();
+  });
+
+  test("resizeCanvas repositions the active ghost after resizing", () => {
+    const layer = createStructureIconsLayerWithMockGame([]);
+    const layerInternals = layer as unknown as StructureIconsLayerTestInternals;
+    const resize = vi.fn();
+    const moveGhostSpy = vi
+      .spyOn(
+        layer as unknown as { moveGhost(event: unknown): void },
+        "moveGhost",
+      )
+      .mockImplementation(() => undefined);
+
+    layerInternals.renderer = { resize };
+    layerInternals.ghostUnit = {};
+    layerInternals.pixicanvas = {
+      width: 0,
+      height: 0,
+      removeEventListener: vi.fn(),
+    };
+
+    layer.resizeCanvas();
+
+    expect(resize).toHaveBeenCalledOnce();
+    expect(moveGhostSpy).toHaveBeenCalledOnce();
+  });
+
   test("rebuildAllStructuresFromState removes inactive renders and re-adds active structures", () => {
     const activeCity = {
       id() {
@@ -191,6 +242,8 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
     const dotChildA = createMockStageChild();
     const dotChildB = createMockStageChild();
     const { seenUnitIds, rendersByUnitId } = layerInternals;
+    layerInternals.renderer = {};
+    layerInternals.rendererInitialized = true;
     seenUnitIds.add(7);
     seenUnitIds.add(102);
     rendersByUnitId.set(7, staleRender);

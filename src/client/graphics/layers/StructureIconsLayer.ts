@@ -184,8 +184,7 @@ export class StructureIconsLayer implements Layer {
       event.preventDefault();
     };
     this.onWebGLContextRestored = () => {
-      this.resizeCanvas();
-      this.rebuildAllStructuresFromState();
+      this.redraw();
     };
     this.pixicanvas.addEventListener(
       "webglcontextlost",
@@ -247,6 +246,9 @@ export class StructureIconsLayer implements Layer {
       for (const render of this.rendersByUnitId.values()) {
         this.computeNewLocation(render);
       }
+      if (this.ghostUnit) {
+        this.moveGhost(new MouseMoveEvent(this.mousePos.x, this.mousePos.y));
+      }
     }
   }
 
@@ -277,6 +279,10 @@ export class StructureIconsLayer implements Layer {
   }
 
   rebuildAllStructuresFromState() {
+    if (!this.rendererInitialized || !this.renderer) {
+      return;
+    }
+
     this.clearAllStructureRenders();
 
     for (const unitView of this.game.units()) {
