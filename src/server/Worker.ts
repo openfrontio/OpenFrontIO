@@ -3,6 +3,7 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
+import { RateLimiter } from "limiter";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
@@ -48,7 +49,10 @@ export async function startWorker() {
   const app = express();
   app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 1024 * 1024, // 1MB
+  });
 
   const gm = new GameManager(config, log);
 
@@ -286,6 +290,11 @@ export async function startWorker() {
         : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           forwarded || req.socket.remoteAddress || "unknown";
 
+      if (!getWsIpLimiter(ip).tryRemoveTokens(1)) {
+        ws.close(1008, "Rate limit exceeded");
+        return;
+      }
+
       try {
         // Parse and handle client messages
         const parsed = ClientMessageSchema.safeParse(
@@ -355,20 +364,21 @@ export async function startWorker() {
           return;
         }
 
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        const { clanTag: censoredClanTag, username: censoredUsername } =
+          privilegeRefresher
+            .get()
+            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+
         // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization (but pass updated username
-        // so players can rename in the pre-game lobby)
-        const censoredUsername = privilegeRefresher
-          .get()
-          .censorUsername(clientMsg.username);
+        // If successful, skip all authorization
         if (
-          gm.rejoinClient(
-            ws,
-            persistentId,
-            clientMsg.gameID,
-            0,
-            censoredUsername,
-          )
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: censoredClanTag,
+          })
         ) {
           return;
         }
@@ -460,7 +470,7 @@ export async function startWorker() {
           flares,
           ip,
           censoredUsername,
-          clientMsg.username,
+          censoredClanTag,
           ws,
           cosmeticResult.cosmetics,
         );
@@ -606,3 +616,21 @@ function generateGameIdForWorker(): GameID | null {
   log.warn(`Failed to generate game ID for worker ${workerId}`);
   return null;
 }
+
+// Per-IP rate limiter for pre-join WebSocket messages.
+// Prevents unauthenticated connections from spamming messages
+// (e.g. pings) before joining a game.
+const wsIpLimiters = new Map<string, RateLimiter>();
+function getWsIpLimiter(ip: string): RateLimiter {
+  let limiter = wsIpLimiters.get(ip);
+  if (!limiter) {
+    limiter = new RateLimiter({
+      tokensPerInterval: 5,
+      interval: "second",
+    });
+    wsIpLimiters.set(ip, limiter);
+  }
+  return limiter;
+}
+// Clean up stale IP limiters every 10 minutes
+setInterval(() => wsIpLimiters.clear(), 10 * 60 * 1000);

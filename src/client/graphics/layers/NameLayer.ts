@@ -245,7 +245,7 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = PLAYER_NAME_SPAN;
-    nameSpan.textContent = player.name();
+    nameSpan.textContent = player.displayName();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
@@ -267,7 +267,10 @@ export class NameLayer implements Layer {
   }
 
   renderPlayerInfo(render: RenderInfo) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
+    if (!render.player.nameLocation()) {
+      return;
+    }
+    if (!render.player.isAlive()) {
       this.renders = this.renders.filter((r) => r !== render);
       render.element.remove();
       return;
