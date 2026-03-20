@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -39,16 +40,28 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
-    if (!this.mg.inSpawnPhase()) {
-      this.active = false;
-      return;
-    }
-
     let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
     } else {
       player = this.mg.addPlayer(this.playerInfo);
+    }
+
+    const isSingleplayer =
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer;
+    const isSingleplayerNationSpawn =
+      this.playerInfo.playerType === PlayerType.Nation && isSingleplayer;
+    const isSingleplayerInitialHumanSpawn =
+      isSingleplayer &&
+      this.playerInfo.playerType === PlayerType.Human &&
+      !player.hasSpawned();
+
+    if (
+      !this.mg.inSpawnPhase() &&
+      !isSingleplayerNationSpawn &&
+      !isSingleplayerInitialHumanSpawn
+    ) {
+      return;
     }
 
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
@@ -76,6 +89,10 @@ export class SpawnExecution implements Execution {
     }
 
     player.setSpawnTile(spawn.center);
+
+    if (isSingleplayerInitialHumanSpawn) {
+      this.mg.endSpawnPhase();
+    }
   }
 
   isActive(): boolean {

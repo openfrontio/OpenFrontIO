@@ -21,6 +21,7 @@ import {
   Execution,
   Game,
   GameMode,
+  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -77,6 +78,9 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
+  private singleplayerStartTick: number | null = null;
+  private singleplayerSpawnPhaseCompleted = false;
+  private spawnPhaseLockedValue: boolean | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -384,8 +388,53 @@ export class GameImpl implements Game {
     this.addUpdate({ type: GameUpdateType.GamePaused, paused });
   }
 
-  inSpawnPhase(): boolean {
+  private computeInSpawnPhase(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      if (this.singleplayerSpawnPhaseCompleted) {
+        return false;
+      }
+      // Singleplayer spawn phase stays active until the first human spawn completes.
+      // When no humans exist yet, fall back to tick-based spawn phase for compatibility.
+      const hasHumans = this.allPlayers().some(
+        (player) => player.type() === PlayerType.Human,
+      );
+      if (hasHumans) {
+        return true;
+      }
+    }
     return this._ticks <= this.config().numSpawnPhaseTurns();
+  }
+
+  inSpawnPhase(): boolean {
+    if (this.spawnPhaseLockedValue !== null) {
+      return this.spawnPhaseLockedValue;
+    }
+    return this.computeInSpawnPhase();
+  }
+
+  endSpawnPhase(): void {
+    if (this.config().gameConfig().gameType !== GameType.Singleplayer) {
+      return;
+    }
+    this.singleplayerSpawnPhaseCompleted = true;
+  }
+
+  private updateSingleplayerStartTick(): void {
+    if (this.config().gameConfig().gameType !== GameType.Singleplayer) {
+      return;
+    }
+
+    const humanPlayers = this.allPlayers().filter(
+      (player) => player.type() === PlayerType.Human,
+    );
+    const hasSpawnedHuman = humanPlayers.some((player) => player.hasSpawned());
+
+    if (this.inSpawnPhase() || !hasSpawnedHuman) {
+      this.singleplayerStartTick = null;
+      return;
+    }
+
+    this.singleplayerStartTick ??= this.ticks();
   }
 
   ticks(): number {
@@ -393,6 +442,9 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
+    this.spawnPhaseLockedValue = this.computeInSpawnPhase();
+    this.updateSingleplayerStartTick();
+
     this.updates = createGameUpdatesMap();
     this.tileUpdatePairs.length = 0;
     this.execs.forEach((e) => {
@@ -429,6 +481,10 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+
+    this.spawnPhaseLockedValue = null;
+    this.updateSingleplayerStartTick();
+
     this._ticks++;
     return this.updates;
   }
@@ -784,6 +840,15 @@ export class GameImpl implements Game {
   }
 
   public isSpawnImmunityActive(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return true;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return startTick + this.config().spawnImmunityDuration() > this.ticks();
+    }
+
     return (
       this.config().numSpawnPhaseTurns() +
         this.config().spawnImmunityDuration() >
@@ -791,7 +856,31 @@ export class GameImpl implements Game {
     );
   }
 
+  public elapsedGameSeconds(): number {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return 0;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return Math.max(0, this.ticks() - startTick) / 10;
+    }
+
+    return Math.max(0, this.ticks() - this.config().numSpawnPhaseTurns()) / 10;
+  }
+
   public isNationSpawnImmunityActive(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return true;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return (
+        startTick + this.config().nationSpawnImmunityDuration() > this.ticks()
+      );
+    }
+
     return (
       this.config().numSpawnPhaseTurns() +
         this.config().nationSpawnImmunityDuration() >
