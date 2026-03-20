@@ -424,6 +424,20 @@ export class EventsDisplay extends LitElement implements Layer {
         );
         return;
       }
+
+      if (event.target2) {
+        try {
+          const target2Player = this.game.player(event.target2);
+          const target2Name = target2Player?.displayName() ?? event.target2;
+          translatedMessage = translatedMessage.replace("[P2]", target2Name);
+        } catch (e) {
+          console.warn(
+            `Failed to resolve player target2 ID '${event.target2}'`,
+            e,
+          );
+          return;
+        }
+      }
     }
 
     let otherPlayerDiplayName: string = "";

@@ -632,6 +632,8 @@
     "category": "Category",
     "phrase": "Phrase",
     "player": "Player",
+    "player_1": "Player 1",
+    "player_2": "Player 2",
     "send": "Send",
     "search": "Search player...",
     "build": "Build your message...",
@@ -711,7 +713,8 @@
       "snowballing": "[P1] is snowballing too fast!",
       "cheating": "[P1] is cheating!",
       "stop_trading": "Stop trading with [P1]!",
-      "stop_trading_all": "Please stop trading with all!"
+      "stop_trading_all": "Please stop trading with all!",
+      "teaming_with": "[P1] is teaming with [P2]!"
     }
   },
   "build_menu": {
