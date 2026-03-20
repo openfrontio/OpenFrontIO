@@ -239,7 +239,7 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "player-name-span";
-    nameSpan.textContent = player.name();
+    nameSpan.textContent = player.displayName();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
@@ -343,7 +343,7 @@ export class NameLayer implements Layer {
       ".player-name-span",
     ) as HTMLSpanElement | null;
     if (span) {
-      span.textContent = render.player.name();
+      span.textContent = render.player.displayName();
       span.style.opacity = `${nameOpacity}`;
     }
     if (flagDiv) {

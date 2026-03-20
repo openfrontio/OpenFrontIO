@@ -18,6 +18,7 @@ import mouseIcon from "/images/MouseIconWhite.svg?url";
 import ninjaIcon from "/images/NinjaIconWhite.svg?url";
 import settingsIcon from "/images/SettingIconWhite.svg?url";
 import sirenIcon from "/images/SirenIconWhite.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
 import treeIcon from "/images/TreeIconWhite.svg?url";
 import musicIcon from "/images/music.svg?url";
 
@@ -160,6 +161,11 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleCursorCostLabelButtonClick() {
     this.userSettings.toggleCursorCostLabel();
+    this.requestUpdate();
+  }
+
+  private onToggleAttackingTroopsOverlayButtonClick() {
+    this.userSettings.toggleAttackingTroopsOverlay();
     this.requestUpdate();
   }
 
@@ -409,6 +415,28 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.structureSprites()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onToggleAttackingTroopsOverlayButtonClick}"
+            >
+              <img src=${swordIcon} alt="swordIcon" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText(
+                    "user_setting.attacking_troops_overlay_label",
+                  )}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.attacking_troops_overlay_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.attackingTroopsOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
