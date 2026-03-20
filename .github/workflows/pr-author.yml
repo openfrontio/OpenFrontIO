@@ -10,7 +10,7 @@ permissions:
 jobs:
   auto-assign:
     name: Auto-assign author
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: toshimaru/auto-author-assign@4d585cc37690897bd9015942ed6e766aa7cdb97f
