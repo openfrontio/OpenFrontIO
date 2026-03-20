@@ -1,0 +1,26 @@
+<svg data-name="レイヤー_1" version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+ <!-- Generator: Adobe Illustrator 29.4.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 152)  -->
+ <defs>
+  <style>.st0 {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2px;
+      }</style>
+ </defs>
+ <path class="st0" d="m5 17h62v38h-62z"/>
+ <g transform="matrix(.078481 0 0 .072881 33.567 33.398)">
+  <rect x="-364" y="-225" width="790" height="521.4" fill="#1c5e23"/>
+  <polygon transform="translate(-363.5,-225)" points="-0.5 0 -0.5 98.966 681.44 521.4 789.5 521.4 789.5 421.77 106.9 0" fill="#fff"/>
+  <g fill="none">
+   <path d="m-8.097-174.77s32.722 19.125 7.136 60.639c0 0 49.656-81.878 114.79-41.737 65.133 40.143 14.305 121.3 14.305 121.3s25.122-40.759 57.378-20.88c32.291 19.902 7.169 60.661 7.169 60.661s49.612-81.907 114.76-41.759c65.141 40.147 15.2 119.77 15.2 119.77s23.616-39.6 56.481-19.348" stroke="#ff0" stroke-width="48"/>
+   <path d="m2.714-120.06s45.471-75.086 110.59-34.952c65.123 40.136 18.481 114.5 18.481 114.5" enable-background="new    " opacity=".25" stroke="#000" stroke-dasharray="26.7378, 32.4674" stroke-width="23.939"/>
+   <path d="m196.32-0.743s45.471-75.085 110.59-34.951c65.123 40.136 18.48 114.5 18.48 114.5" enable-background="new    " opacity=".25" stroke="#000" stroke-dasharray="26.7378, 32.4674" stroke-width="24"/>
+   <path d="m70.096 244.17s-32.721-19.125-7.135-60.641c0 0-49.656 81.881-114.79 41.737-65.134-40.143-14.306-121.3-14.306-121.3s-25.121 40.761-57.377 20.877c-32.292-19.899-7.171-60.659-7.171-60.659s-49.611 81.907-114.75 41.76c-65.142-40.148-15.202-119.77-15.202-119.77s-23.618 39.602-56.482 19.348" stroke="#ff0" stroke-width="48"/>
+   <path d="m59.285 189.47s-45.469 75.084-110.59 34.949c-65.122-40.135-18.481-114.5-18.481-114.5" enable-background="new    " opacity=".25" stroke="#000" stroke-dasharray="26.7378, 32.4674" stroke-width="24"/>
+   <path d="m-134.32 70.146s-45.472 75.086-110.59 34.95c-65.123-40.135-18.481-114.5-18.481-114.5" enable-background="new    " opacity=".25" stroke="#000" stroke-dasharray="26.7378, 32.4674" stroke-width="23.939"/>
+  </g>
+ </g>
+ <path class="st0" d="m5 17h62v38h-62z"/>
+</svg>

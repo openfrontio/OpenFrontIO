@@ -1,0 +1,80 @@
+{
+  "map": {
+    "height": 1200,
+    "num_land_tiles": 1244997,
+    "width": 3000
+  },
+  "map16x": {
+    "height": 300,
+    "num_land_tiles": 73041,
+    "width": 750
+  },
+  "map4x": {
+    "height": 600,
+    "num_land_tiles": 304593,
+    "width": 1500
+  },
+  "name": "Panama",
+  "nations": [
+    {
+      "coordinates": [791, 415],
+      "flag": "pa-4",
+      "name": "Chiriquí"
+    },
+    {
+      "coordinates": [1391, 542],
+      "flag": "pa-7",
+      "name": "Los Santos"
+    },
+    {
+      "coordinates": [982, 338],
+      "flag": "pa-nb",
+      "name": "Ngäbe-Buglé Comarca"
+    },
+    {
+      "coordinates": [1380, 407],
+      "flag": "pa-2",
+      "name": "Coclé"
+    },
+    {
+      "coordinates": [1624, 231],
+      "flag": "pa-3",
+      "name": "Colón"
+    },
+    {
+      "coordinates": [1550, 352],
+      "flag": "pa-10",
+      "name": "Panamá Oeste"
+    },
+    {
+      "coordinates": [96, 240],
+      "flag": "pa-ky",
+      "name": "Guna Yala"
+    },
+    {
+      "coordinates": [2222, 760],
+      "flag": "pa-5",
+      "name": "Darién"
+    },
+    {
+      "coordinates": [2373, 770],
+      "flag": "co-cho",
+      "name": "Chocó"
+    },
+    {
+      "coordinates": [2720, 312],
+      "flag": "co-cor",
+      "name": "Córdoba"
+    },
+    {
+      "coordinates": [264, 44],
+      "flag": "cr-h",
+      "name": "Heredia"
+    },
+    {
+      "coordinates": [428, 303],
+      "flag": "cr-p",
+      "name": "Puntarenas"
+    }
+  ]
+}
