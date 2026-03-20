@@ -58,14 +58,20 @@ function stateTextClass(active: boolean): string {
   return active ? "text-white" : "text-white/60";
 }
 
+/** Renders a styled toggle-style card button with an optional hover tooltip. */
 function renderTextCardButton(
   label: string,
   active: boolean,
   onClick: () => void,
   cardExtraClass: string,
+  tooltip?: string,
 ): TemplateResult {
   return html`
-    <button class="${cardClass(active, cardExtraClass)}" @click=${onClick}>
+    <button
+      class="${cardClass(active, cardExtraClass)}"
+      @click=${onClick}
+      data-tooltip=${tooltip ?? nothing}
+    >
       <span class="${CARD_LABEL_CLASS} ${stateTextClass(active)}">
         ${label}
       </span>
@@ -159,6 +165,8 @@ export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
+  /** Translation key for a tooltip description shown on hover */
+  descriptionKey?: string;
 }
 
 export interface GameConfigSettingsData {
@@ -265,11 +273,19 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
+    const translatedTooltip = toggle.descriptionKey
+      ? translateText(toggle.descriptionKey)
+      : undefined;
+    const tooltip =
+      translatedTooltip && translatedTooltip !== toggle.descriptionKey
+        ? translatedTooltip
+        : undefined;
     return renderTextCardButton(
       translateText(toggle.labelKey),
       toggle.checked,
       () => this.handleOptionToggle(toggle),
       "p-4 text-center",
+      tooltip,
     );
   }
 

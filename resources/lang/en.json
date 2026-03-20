@@ -495,6 +495,20 @@
     "disable_alliances": "Alliances Disabled",
     "disable_alliances_label": "Alliances"
   },
+  "modifier_description": {
+    "random_spawn": "Spawn location is chosen randomly",
+    "compact_map": "Map is 1/4 the size",
+    "crowded": "More players allowed on the map",
+    "hard_nations": "Stronger, more aggressive nation bots",
+    "starting_gold": "Start with bonus gold",
+    "gold_multiplier": "Gold income is multiplied",
+    "disable_alliances": "No alliances allowed",
+    "instant_build": "Buildings are placed instantly",
+    "infinite_gold": "Unlimited gold",
+    "infinite_troops": "Unlimited troops",
+    "donate_gold": "Send gold to other players",
+    "donate_troops": "Send troops to other players"
+  },
   "select_lang": {
     "title": "Select Language"
   },

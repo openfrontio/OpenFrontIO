@@ -1,10 +1,12 @@
-import { LitElement, TemplateResult, html } from "lit";
+import { LitElement, TemplateResult, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("lobby-config-item")
 export class LobbyConfigItem extends LitElement {
   @property({ type: String }) label = "";
   @property({ attribute: false }) value: string | TemplateResult = "";
+  /** Tooltip text shown on hover to describe the config item */
+  @property({ type: String }) tooltip?: string;
 
   createRenderRoot() {
     return this;
@@ -14,6 +16,7 @@ export class LobbyConfigItem extends LitElement {
     return html`
       <div
         class="bg-white/5 border border-white/10 rounded-lg p-3 flex flex-col items-center justify-center gap-1 text-center min-w-[100px]"
+        data-tooltip=${this.tooltip ?? nothing}
       >
         <span
           class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
