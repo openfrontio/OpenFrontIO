@@ -247,6 +247,7 @@ export class UserSettings {
   }
 
   setPlayerNameOpacity(opacity: number): void {
+    if (!Number.isFinite(opacity)) return;
     const clampedOpacity = Math.max(0, Math.min(100, Math.round(opacity)));
     this.setFloat("settings.playerNameOpacity", clampedOpacity);
   }
