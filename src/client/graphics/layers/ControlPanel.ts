@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
+import "../../components/InlineSlider";
 import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
@@ -43,7 +44,6 @@ export class ControlPanel extends LitElement implements Layer {
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
-  private _sliderDraggingPointerId: number | null = null;
 
   getTickIntervalMs() {
     return 100;
@@ -132,70 +132,25 @@ export class ControlPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private updateAttackRatioFromPointer(
-    e: PointerEvent,
-    sliderTrack: HTMLElement,
-  ) {
-    const rect = sliderTrack.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const ratio = (e.clientX - rect.left) / rect.width;
-    this.setAttackRatio(ratio);
-  }
-
-  private handleRatioSliderPointerDown = (e: PointerEvent) => {
-    const sliderTrack = e.currentTarget as HTMLElement;
-    if (e.button !== 0 && e.pointerType === "mouse") return;
-    this._sliderDraggingPointerId = e.pointerId;
-    sliderTrack.setPointerCapture(e.pointerId);
-    this.updateAttackRatioFromPointer(e, sliderTrack);
-    e.preventDefault();
+  private handleAttackRatioSliderChange = (
+    e: CustomEvent<{ value: number }>,
+  ) => {
+    this.setAttackRatio(e.detail.value);
   };
-
-  private handleRatioSliderPointerMove = (e: PointerEvent) => {
-    if (this._sliderDraggingPointerId !== e.pointerId) return;
-    const sliderTrack = e.currentTarget as HTMLElement;
-    this.updateAttackRatioFromPointer(e, sliderTrack);
-    e.preventDefault();
-  };
-
-  private handleRatioSliderPointerUp = (e: PointerEvent) => {
-    if (this._sliderDraggingPointerId !== e.pointerId) return;
-    this._sliderDraggingPointerId = null;
-    const sliderTrack = e.currentTarget as HTMLElement;
-    if (sliderTrack.hasPointerCapture(e.pointerId)) {
-      sliderTrack.releasePointerCapture(e.pointerId);
-    }
-  };
-
   private renderCustomAttackRatioSlider(compact: boolean = false) {
     const ratioPercent = Math.max(1, Math.min(100, this.attackRatio * 100));
-    const heightClass = compact ? "h-1.5" : "h-2";
-    const thumbClass = compact ? "w-3 h-3" : "w-3.5 h-3.5";
 
     return html`
-      <div class="w-full min-w-0">
-        <div
-          class="relative w-full ${heightClass} rounded-full bg-slate-700/70 border border-slate-300/25 shadow-inner cursor-pointer touch-none select-none"
-          role="slider"
-          aria-label="Attack ratio"
-          aria-valuemin="1"
-          aria-valuemax="100"
-          aria-valuenow=${Math.round(ratioPercent)}
-          @pointerdown=${this.handleRatioSliderPointerDown}
-          @pointermove=${this.handleRatioSliderPointerMove}
-          @pointerup=${this.handleRatioSliderPointerUp}
-          @pointercancel=${this.handleRatioSliderPointerUp}
-        >
-          <div
-            class="absolute left-0 top-0 h-full rounded-full bg-blue-500"
-            style="width: ${ratioPercent}%;"
-          ></div>
-          <div
-            class="absolute top-1/2 ${thumbClass} rounded-full bg-white border border-slate-300 -translate-x-1/2 -translate-y-1/2"
-            style="left: ${ratioPercent}%; box-shadow: 0 0 0 1px rgba(15,23,42,0.35), 0 1px 2px rgba(0,0,0,0.45);"
-          ></div>
-        </div>
-      </div>
+      <inline-slider
+        .value=${this.attackRatio}
+        .min=${0.01}
+        .max=${1}
+        .step=${0.01}
+        .compact=${compact}
+        .ariaLabel=${"Attack ratio"}
+        .ariaValueText=${`${Math.round(ratioPercent)}%`}
+        @value-changed=${this.handleAttackRatioSliderChange}
+      ></inline-slider>
     `;
   }
 
