@@ -4,6 +4,7 @@ import {
   Game,
   MessageType,
   Player,
+  PlayerType,
   TerraNullius,
   Unit,
   UnitType,
@@ -74,6 +75,17 @@ export class TransportShipExecution implements Execution {
       );
       this.active = false;
       return;
+    }
+
+    if (this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (
+        targetPlayer.type() !== PlayerType.Bot &&
+        this.attacker.type() !== PlayerType.Bot
+      ) {
+        targetPlayer.addEmbargo(this.attacker, true);
+        this.rejectIncomingAllianceRequests(targetPlayer);
+      }
     }
 
     if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
@@ -289,5 +301,14 @@ export class TransportShipExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private rejectIncomingAllianceRequests(target: Player) {
+    const request = this.attacker
+      .incomingAllianceRequests()
+      .find((ar) => ar.requestor() === target);
+    if (request !== undefined) {
+      request.reject();
+    }
   }
 }

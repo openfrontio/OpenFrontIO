@@ -333,6 +333,56 @@ describe("Attack race condition with alliance requests", () => {
   });
 });
 
+describe("Transport ship alliance rejection", () => {
+  beforeEach(async () => {
+    game = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+      infiniteTroops: true,
+    });
+
+    const playerAInfo = new PlayerInfo(
+      "playerA",
+      PlayerType.Human,
+      null,
+      "playerA_id",
+    );
+    // close to the water to send boats
+    playerA = addPlayerToGame(playerAInfo, game, game.ref(7, 0));
+
+    const playerBInfo = new PlayerInfo(
+      "playerB",
+      PlayerType.Human,
+      null,
+      "playerB_id",
+    );
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
+
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+  });
+
+  test("Should cancel alliance requests if the recipient sends a transport ship", async () => {
+    // Player A sends alliance request to Player B
+    const allianceRequest = playerA.createAllianceRequest(playerB);
+    expect(allianceRequest).not.toBeNull();
+    expect(playerB.incomingAllianceRequests()).toHaveLength(1);
+
+    // Player B sends a transport ship toward Player A's territory
+    game.addExecution(
+      new TransportShipExecution(playerB, game.ref(7, 0), null),
+    );
+
+    // Execute a tick to process the transport ship launch
+    game.executeNextTick();
+
+    // Alliance request should be rejected since player B sent a naval invasion
+    expect(playerA.outgoingAllianceRequests()).toHaveLength(0);
+    expect(playerB.incomingAllianceRequests()).toHaveLength(0);
+  });
+});
+
 describe("Attack immunity", () => {
   beforeEach(async () => {
     game = await setup("ocean_and_land", {
