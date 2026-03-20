@@ -83,7 +83,6 @@ export class TransportShipExecution implements Execution {
         targetPlayer.type() !== PlayerType.Bot &&
         this.attacker.type() !== PlayerType.Bot
       ) {
-        targetPlayer.addEmbargo(this.attacker, true);
         this.rejectIncomingAllianceRequests(targetPlayer);
       }
     }
