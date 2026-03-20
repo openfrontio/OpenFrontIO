@@ -291,13 +291,13 @@ export class UnitLayer implements Layer {
   }
 
   private updateUnitsSprites(unitIds: number[]) {
-    const unresolvedIds: number[] = [];
+    const missingUnitIds: number[] = [];
     const unitsToUpdate =
       unitIds
         ?.map((id) => {
           const unit = this.game.unit(id);
           if (unit === undefined) {
-            unresolvedIds.push(id);
+            missingUnitIds.push(id);
           }
           return unit;
         })
@@ -306,7 +306,7 @@ export class UnitLayer implements Layer {
     this.debugLog("updateUnitsSprites", {
       inputIds: unitIds.length,
       resolvedUnits: unitsToUpdate.length,
-      unresolvedIds,
+      missingUnitIds,
     });
 
     if (unitsToUpdate.length > 0) {

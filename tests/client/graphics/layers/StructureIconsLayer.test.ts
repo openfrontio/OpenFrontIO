@@ -6,7 +6,23 @@ import {
 import { UnitType } from "../../../../src/core/game/Game";
 import { EventBus } from "../../../../src/core/EventBus";
 
-function createLayerWithMockGame(units: Array<{ id(): number; type(): UnitType; isActive(): boolean }>) {
+type MockStructureUnit = {
+  id(): number;
+  type(): UnitType;
+  isActive(): boolean;
+};
+
+type StructureIconsLayerTestInternals = {
+  seenUnitIds: Set<number>;
+  rendersByUnitId: Map<number, unknown>;
+  iconsStage: { children: unknown[]; removeChildren(): unknown[] };
+  levelsStage: { children: unknown[]; removeChildren(): unknown[] };
+  dotsStage: { children: unknown[]; removeChildren(): unknown[] };
+  addNewStructure(unit: { id(): number }): void;
+  rebuildAllStructuresFromState(reason?: string): unknown;
+};
+
+function createStructureIconsLayerWithMockGame(units: MockStructureUnit[]) {
   const game = {
     config: () => ({
       theme: () => ({}),
@@ -67,13 +83,23 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
   });
 
   test("redraw resizes the canvas and rebuilds structures from authoritative state", () => {
-    const layer = createLayerWithMockGame([]);
+    const layer = createStructureIconsLayerWithMockGame([]);
     const resizeSpy = vi
       .spyOn(layer, "resizeCanvas")
       .mockImplementation(() => undefined);
     const rebuildSpy = vi
       .spyOn(layer, "rebuildAllStructuresFromState")
-      .mockReturnValue({} as ReturnType<StructureIconsLayer["captureDebugState"]>);
+      .mockReturnValue({
+        rendererInitialized: false,
+        rendersByUnitIdSize: 0,
+        seenUnitIdsSize: 0,
+        dotsStageChildren: 0,
+        iconsStageChildren: 0,
+        levelsStageChildren: 0,
+        ghostStageChildren: 0,
+        canvasWidth: 0,
+        canvasHeight: 0,
+      });
 
     layer.redraw();
 
@@ -97,11 +123,12 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
       type: () => UnitType.TransportShip,
       isActive: () => true,
     };
-    const layer = createLayerWithMockGame([
+    const layer = createStructureIconsLayerWithMockGame([
       activeCity,
       inactiveCity,
       activeTransportShip,
     ]);
+    const layerInternals = layer as unknown as StructureIconsLayerTestInternals;
     const staleDestroy = vi.fn();
     const staleRender = {
       unit: { id: () => 7 },
@@ -109,21 +136,26 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
       levelContainer: { destroy: staleDestroy },
       dotContainer: { destroy: staleDestroy },
     };
-    const seenUnitIds = (layer as any).seenUnitIds as Set<number>;
-    const rendersByUnitId = (layer as any).rendersByUnitId as Map<number, unknown>;
+    const { seenUnitIds, rendersByUnitId } = layerInternals;
     seenUnitIds.add(7);
     rendersByUnitId.set(7, staleRender);
-    (layer as any).iconsStage = { children: [], removeChildren: vi.fn(() => []) };
-    (layer as any).levelsStage = { children: [], removeChildren: vi.fn(() => []) };
-    (layer as any).dotsStage = { children: [], removeChildren: vi.fn(() => []) };
+    layerInternals.iconsStage = {
+      children: [],
+      removeChildren: vi.fn(() => []),
+    };
+    layerInternals.levelsStage = {
+      children: [],
+      removeChildren: vi.fn(() => []),
+    };
+    layerInternals.dotsStage = { children: [], removeChildren: vi.fn(() => []) };
     const addNewStructureSpy = vi
-      .spyOn(layer as any, "addNewStructure")
+      .spyOn(layerInternals, "addNewStructure")
       .mockImplementation((unit: { id(): number }) => {
         seenUnitIds.add(unit.id());
         rendersByUnitId.set(unit.id(), { unit });
       });
 
-    layer.rebuildAllStructuresFromState("test");
+    layerInternals.rebuildAllStructuresFromState("test");
 
     expect(staleDestroy).toHaveBeenCalledTimes(3);
     expect(addNewStructureSpy).toHaveBeenCalledTimes(1);

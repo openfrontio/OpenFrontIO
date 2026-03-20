@@ -373,20 +373,20 @@ export function createRenderer(
     rebuildStructureIcons(reason = "debug-api") {
       return structureIconsLayer.rebuildAllStructuresFromState(reason);
     },
-    simulateStructureDisruption(options?: unknown) {
+    simulateStructureDisruption(
+      options?: Parameters<StructureIconsLayer["simulateRendererDisruption"]>[0],
+    ) {
       return structureIconsLayer.simulateRendererDisruption(
-        options as Parameters<
-          StructureIconsLayer["simulateRendererDisruption"]
-        >[0],
+        options,
       );
     },
     redrawUnits(reason = "debug-api") {
       return unitLayer.rebuildAllUnitsFromState(reason);
     },
-    simulateUnitCanvasReset(options?: unknown) {
-      return unitLayer.simulateCanvasReset(
-        options as Parameters<UnitLayer["simulateCanvasReset"]>[0],
-      );
+    simulateUnitCanvasReset(
+      options?: Parameters<UnitLayer["simulateCanvasReset"]>[0],
+    ) {
+      return unitLayer.simulateCanvasReset(options);
     },
   });
   (

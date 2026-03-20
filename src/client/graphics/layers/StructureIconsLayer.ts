@@ -206,11 +206,9 @@ export class StructureIconsLayer implements Layer {
       this.pixicanvas.width = window.innerWidth;
       this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
-      this.iconsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
-      this.ghostStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
-      this.levelsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
-      this.dotsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
-      this.rootStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+      this.resizeStages();
+      // Canvas size changes affect screen-space culling and icon placement, so
+      // recompute every tracked structure location after a resize/reset.
       for (const render of this.rendersByUnitId.values()) {
         this.computeNewLocation(render);
       }
@@ -977,8 +975,16 @@ export class StructureIconsLayer implements Layer {
     }
 
     for (const child of stage.removeChildren()) {
-      child.destroy();
+      child.destroy({ children: true });
     }
+  }
+
+  private resizeStages() {
+    this.iconsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.ghostStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.levelsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.dotsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.rootStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
   }
 
   private debugLog(event: string, details?: unknown) {
