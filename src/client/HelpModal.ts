@@ -624,10 +624,11 @@ export class HelpModal extends BaseModal {
                     ${translateText("help_modal.ui_options_desc")}
                   </p>
                   <ul class="space-y-2 list-disc pl-4 text-white/60">
-                    <li>${translateText("help_modal.option_pause")}</li>
                     <li>${translateText("help_modal.option_timer")}</li>
-                    <li>${translateText("help_modal.option_exit")}</li>
+                    <li>${translateText("help_modal.option_speed")}</li>
+                    <li>${translateText("help_modal.option_pause")}</li>
                     <li>${translateText("help_modal.option_settings")}</li>
+                    <li>${translateText("help_modal.option_exit")}</li>
                   </ul>
                 </div>
               </div>
@@ -718,8 +719,7 @@ export class HelpModal extends BaseModal {
                   <li class="flex items-center gap-3">
                     <img
                       src="/images/InfoIcon.svg"
-                      class="w-5 h-5 opacity-80"
-                      loading="lazy"
+                      class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.radial_info")}</span>
                   </li>
@@ -848,14 +848,11 @@ export class HelpModal extends BaseModal {
                       <span>${translateText("help_modal.info_emoji")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="flex items-center justify-center w-8 h-8 opacity-80"
-                      >
-                        <img
-                          src="/images/helpModal/stopTrading.webp"
-                          class="w-full h-full object-contain"
-                        />
-                      </div>
+                      <img
+                        src="/images/StopIconWhite.png"
+                        class="w-8 h-8 scale-75 origin-left"
+                        loading="lazy"
+                      />
                       <span>${translateText("help_modal.info_trade")}</span>
                     </li>
                   </ul>
