@@ -36,6 +36,12 @@
     "svg": "dk"
   },
   {
+    "code": "de-CH",
+    "native": "Schweizerdeutsch",
+    "en": "Swiss-German",
+    "svg": "gsw"
+  },
+  {
     "code": "de",
     "native": "Deutsch",
     "en": "German",

@@ -184,17 +184,13 @@ export class AttacksDisplay extends LitElement implements Layer {
     const playerView = this.game.playerBySmallID(attack.attackerID);
     if (playerView !== undefined) {
       if (playerView instanceof PlayerView) {
-        const averagePosition = await playerView.attackAveragePosition(
-          attack.attackerID,
-          attack.id,
-        );
+        const attacks = await playerView.attackClusteredPositions(attack.id);
+        const pos = attacks[0]?.positions[0];
 
-        if (averagePosition === null) {
+        if (!pos) {
           this.emitGoToPlayerEvent(attack.attackerID);
         } else {
-          this.eventBus.emit(
-            new GoToPositionEvent(averagePosition.x, averagePosition.y),
-          );
+          this.eventBus.emit(new GoToPositionEvent(pos.x, pos.y));
         }
       }
     } else {
