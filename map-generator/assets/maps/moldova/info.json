@@ -1,0 +1,41 @@
+{
+  "name": "Moldova",
+  "nations": [
+    {
+      "coordinates": [484, 269],
+      "name": "Edinet",
+      "strength": 1,
+      "flag": "md"
+    },
+    {
+      "coordinates": [824, 1045],
+      "name": "Comrat",
+      "strength": 1,
+      "flag": "md"
+    },
+    {
+      "coordinates": [635, 385],
+      "name": "Balti",
+      "strength": 2,
+      "flag": "md"
+    },
+    {
+      "coordinates": [923, 724],
+      "name": "Chisinau",
+      "strength": 2,
+      "flag": "md"
+    },
+    {
+      "coordinates": [1099, 796],
+      "name": "Tiraspol",
+      "strength": 1,
+      "flag": "md"
+    },
+    {
+      "coordinates": [712, 1272],
+      "name": "Cahul",
+      "strength": 3,
+      "flag": "md"
+    }
+  ]
+}
