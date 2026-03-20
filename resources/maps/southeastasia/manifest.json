@@ -1,0 +1,146 @@
+{
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 793768,
+    "width": 3000
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 44266,
+    "width": 750
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 190631,
+    "width": 1500
+  },
+  "name": "southeastasia",
+  "nations": [
+    {
+      "coordinates": [131, 33],
+      "flag": "mm",
+      "name": "Myanmar"
+    },
+    {
+      "coordinates": [391, 269],
+      "flag": "th",
+      "name": "Thailand"
+    },
+    {
+      "coordinates": [505, 53],
+      "flag": "la",
+      "name": "Laos"
+    },
+    {
+      "coordinates": [603, 335],
+      "flag": "kh",
+      "name": "Cambodia"
+    },
+    {
+      "coordinates": [732, 246],
+      "flag": "vn",
+      "name": "Vietnam"
+    },
+    {
+      "coordinates": [841, 40],
+      "flag": "cn",
+      "name": "China"
+    },
+    {
+      "coordinates": [1480, 346],
+      "flag": "ph",
+      "name": "Philippines"
+    },
+    {
+      "coordinates": [1112, 747],
+      "flag": "bn",
+      "name": "Brunei"
+    },
+    {
+      "coordinates": [559, 903],
+      "flag": "sg",
+      "name": "Singapore"
+    },
+    {
+      "coordinates": [485, 769],
+      "flag": "my",
+      "name": "Malaysia"
+    },
+    {
+      "coordinates": [464, 1066],
+      "flag": "id",
+      "name": "Sumatra"
+    },
+    {
+      "coordinates": [1123, 995],
+      "flag": "id",
+      "name": "Kalimantan"
+    },
+    {
+      "coordinates": [1343, 1068],
+      "flag": "id",
+      "name": "Sulawesi"
+    },
+    {
+      "coordinates": [886, 1314],
+      "flag": "id",
+      "name": "Java"
+    },
+    {
+      "coordinates": [1597, 1379],
+      "flag": "tl",
+      "name": "Timor-Leste"
+    },
+    {
+      "coordinates": [2142, 1167],
+      "flag": "id",
+      "name": "West Papua"
+    },
+    {
+      "coordinates": [2427, 1229],
+      "flag": "pg",
+      "name": "Papua New Guinea"
+    },
+    {
+      "coordinates": [1761, 1110],
+      "flag": "id",
+      "name": "Maluku"
+    },
+    {
+      "coordinates": [1995, 615],
+      "flag": "pw",
+      "name": "Palau"
+    },
+    {
+      "coordinates": [2605, 586],
+      "flag": "fm",
+      "name": "Micronesia"
+    },
+    {
+      "coordinates": [2471, 336],
+      "flag": "gu",
+      "name": "Guam"
+    },
+    {
+      "coordinates": [2514, 255],
+      "flag": "mp",
+      "name": "Northern Mariana Islands"
+    },
+    {
+      "coordinates": [973, 871],
+      "flag": "my",
+      "name": "East Malaysia",
+      "strength": 1
+    },
+    {
+      "coordinates": [42, 372],
+      "flag": "in",
+      "name": "India"
+    },
+    {
+      "coordinates": [2362, 1490],
+      "flag": "au",
+      "name": "Australia"
+    }
+  ]
+}
