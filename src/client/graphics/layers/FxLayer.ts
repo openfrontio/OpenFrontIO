@@ -9,11 +9,13 @@ import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
+import { SmokeTrailFx } from "../fx/SmokeTrailFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { RailTileChangedEvent } from "./RailroadLayer";
+
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -25,6 +27,7 @@ export class FxLayer implements Layer {
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
+  private missileTrails = new Map<number, SmokeTrailFx>();
   private hasBufferedFrame = false;
 
   constructor(
@@ -59,6 +62,22 @@ export class FxLayer implements Layer {
   }
 
   onUnitEvent(unit: UnitView) {
+    if (unit.isActive() && !this.missileTrails.has(unit.id())) {
+      const type = unit.type();
+      if (
+        type === UnitType.AtomBomb ||
+        type === UnitType.HydrogenBomb ||
+        type === UnitType.MIRV ||
+        type === UnitType.MIRVWarhead ||
+        type === UnitType.SAMMissile
+      ) {
+        this.missileTrails.set(
+          unit.id(),
+          new SmokeTrailFx(this.game, unit.id()),
+        );
+      }
+    }
+
     switch (unit.type()) {
       case UnitType.AtomBomb: {
         this.onNukeEvent(unit, 70);
@@ -69,6 +88,14 @@ export class FxLayer implements Layer {
         break;
       case UnitType.HydrogenBomb: {
         this.onNukeEvent(unit, 160);
+        break;
+      }
+      case UnitType.MIRV: {
+        this.onNukeEvent(unit, 70);
+        break;
+      }
+      case UnitType.SAMMissile: {
+        this.onNukeEvent(unit, 70);
         break;
       }
       case UnitType.Warship:
@@ -256,12 +283,13 @@ export class FxLayer implements Layer {
   renderLayer(context: CanvasRenderingContext2D) {
     const nowMs = performance.now();
 
-    const hasFx = this.allFx.length > 0;
+    const hasFx = this.allFx.length > 0 || this.missileTrails.size > 0;
     if (!this.game.config().userSettings()?.fxLayer() || !hasFx) {
       if (this.hasBufferedFrame) {
         // Clear stale pixels once when fx ends/disabled so re-enabling doesn't
         // flash old frames.
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.missileTrails.clear();
         this.hasBufferedFrame = false;
       }
       this.lastRefreshMs = nowMs;
@@ -318,6 +346,12 @@ export class FxLayer implements Layer {
     for (let i = this.allFx.length - 1; i >= 0; i--) {
       if (!this.allFx[i].renderTick(duration, this.context)) {
         this.allFx.splice(i, 1);
+      }
+    }
+
+    for (const [unitId, trail] of this.missileTrails) {
+      if (!trail.renderTick(duration, this.context)) {
+        this.missileTrails.delete(unitId);
       }
     }
   }
