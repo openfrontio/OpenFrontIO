@@ -10,7 +10,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/stale@8f717f0dfca33b78d3c933452e42558e4456c8e7
+      - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f
         with:
           days-before-pr-close: 14
           days-before-pr-stale: 14
