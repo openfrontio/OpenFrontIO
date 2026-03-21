@@ -7,6 +7,8 @@
   },
   "common": {
     "close": "关闭",
+    "copy": "复制",
+    "paste": "粘贴",
     "back": "返回",
     "available": "剩余",
     "preset_max": "最大",
@@ -20,44 +22,70 @@
     "target_dead_note": "你不能向已淘汰玩家发送资源。",
     "none": "空",
     "copied": "已复制！",
-    "click_to_copy": "点击复制"
+    "click_to_copy": "点击复制",
+    "enabled": "已启用"
   },
   "main": {
     "title": "OpenFront (内测版)",
-    "join_discord": "Discord",
     "login_discord": "用 Discord 登录",
     "sign_in": "登录",
     "discord_avatar_alt": "Discord 头像",
     "user_avatar_alt": "{username} 的头像",
-    "checking_login": "正在检查登录...",
-    "logged_in": "登录成功！",
-    "log_out": "退出登录",
     "create": "创建房间",
     "join": "加入房间",
     "solo": "单人模式",
-    "instructions": "操作说明",
     "game_info": "游戏信息",
     "wiki": "游戏百科",
     "privacy_policy": "隐私政策",
     "terms_of_service": "服务条款",
     "copyright": "© OpenFront™ 和贡献者们",
-    "reddit": "Reddit",
     "play": "游戏",
     "news": "公告",
     "store": "商店",
+    "store_new_badge": "新的",
     "settings": "设置",
-    "keys": "按键",
-    "stats": "统计",
+    "leaderboard": "排行榜",
     "account": "账号",
     "help": "帮助",
     "menu": "菜单",
-    "pick_pattern": "选择一个图案！"
+    "troubleshooting": "疑难解答",
+    "go_to_troubleshooting": "移步到我们的疑难解答页面"
   },
   "news": {
     "github_link": "在 Github 上",
     "title": "发行说明"
   },
+  "troubleshooting": {
+    "title": "疑难解答",
+    "environment": "环境",
+    "rendering": "渲染",
+    "power": "电源",
+    "browser": "浏览器",
+    "platform": "平台",
+    "copied_to_clipboard": "信息已复制到剪贴板！如果你需要帮助，可以随时在我们的Discord上分享它。",
+    "os": "操作系统",
+    "device_pixel_ratio": "设备像素比",
+    "chromium_tip": "OpenFront 在基于 Chromium 的浏览器上运行最佳。",
+    "hardware_acceleration_tip": "确保在您的浏览器设置中启用硬件加速以实现最佳性能。",
+    "renderer": "渲染器",
+    "max_texture_size": "最大纹理尺寸",
+    "high_precision_shaders": "高精度阴影",
+    "gpu": "GPU",
+    "unavailable": "不可用",
+    "gpu_tip": "如果有的话，请验证这是否是独显。",
+    "battery": "电池",
+    "charging": "充电中",
+    "battery_level": "电池电量",
+    "power_saving_tip": "请确保您的浏览器没有设置为节能模式。",
+    "yes": "是",
+    "no": "否",
+    "unknown": "未知",
+    "software_rendering": "软件渲染",
+    "canvas_2d_no_gpu": "Canvas 2D (无 GPU)"
+  },
   "help_modal": {
+    "video_tutorial": "视频教程",
+    "video_tutorial_title": "OpenFront.io 教程",
     "hotkeys": "快捷键",
     "table_key": "键",
     "table_action": "动作",
@@ -77,7 +105,6 @@
     "ui_leaderboard_desc": "显示游戏中的顶尖玩家及其姓名、所占领土百分比、黄金和军队数量。点击“显示全部”可以查看所有玩家的信息。如果你不想看到排行榜，点击“隐藏”即可。",
     "ui_control": "控制面板",
     "ui_control_desc": "控制面板包括下列元素：",
-    "ui_pop": "人口 - 你拥有的单位数量、你的最大人口和你获得它们的速度。",
     "ui_gold": "黄金 - 你拥有的黄金数量和你获得它的速度。",
     "ui_attack_ratio": "攻击比例 - 攻击时使用的军队数量。你可以通过滑动条来调整攻击比例。进攻部队多于防守部队时，你在战斗中损失的部队会更少；而进攻部队少于防守部队时，你的部队会遭受更多伤害。不过，这种效果在比例超过2:1时不会继续增强。",
     "ui_events": "事件面板",
@@ -97,12 +124,10 @@
     "radial_title": "环形菜单",
     "radial_desc": "右击 (或在手机上触摸) 来打开右键菜单。右击其他地方来关闭它。在该菜单中，你可以：",
     "radial_build": "打开建造菜单。",
-    "radial_attack": "打开攻击菜单。",
     "radial_info": "打开信息菜单。",
     "radial_boat": "发送一艘运输船攻击选中的区域。仅当你与水域毗邻时才可用。",
     "radial_donate_troops": "捐赠相当于你攻击比例的军队给该盟友。",
     "radial_donate_gold": "打开黄金捐赠菜单，可快速向盟友发送黄金。",
-    "radial_close": "关闭菜单。",
     "info_title": "信息菜单",
     "info_enemy_desc": "包含以下信息：所选玩家的名称、黄金数量、军队数量、是否已停止与你贸易、是否对你发射了核弹，以及该玩家是否为叛徒。“停止贸易”表示你将无法从该玩家处获得金币，对方也无法通过商船向你发送金币。这种状态可能是手动触发（该玩家点击了“停止贸易”，此状态将持续，直到你们双方都点击“开始贸易”）或自动触发（当你背叛了联盟时，此状态会持续，直到你们重新结盟或5分钟后自动结束）。当玩家背叛并攻击其盟友时，“叛徒”状态将显示为“是”，持续30秒。下方图标表示你与该玩家的互动关系：",
     "info_chat": "发送快速聊天消息给该玩家。选择一个类别、一句话，如果句子中包含 [P1]，请选择一个玩家名字来替换它。点击发送。",
@@ -141,6 +166,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "游戏中最强大的导弹。会分裂成多个小型导弹，覆盖大范围区域。只会对你最初点击发射时所选的玩家造成伤害。从最近的导弹发射井发射，并落在你最初点击发射的位置。",
     "player_icons": "玩家图标",
+    "troubleshooting_desc": "如果您在游玩 OpenFront 时遇到性能问题、崩溃或其他问题，请访问我们的故障排除页面以帮助诊断和修复常见问题：",
     "icon_desc": "您将遇到的一些游戏内图标及其含义的示例：",
     "icon_crown": "皇冠 - 榜一玩家。这是排行榜上第一名的玩家。",
     "icon_traitor": "破损的盾牌 - 叛徒。该玩家攻击了盟友。",
@@ -149,18 +175,17 @@
     "icon_request": "信封 - 结盟请求。该玩家已向你发送结盟请求。",
     "info_enemy_panel": "敌人信息面板",
     "exit_confirmation": "确定要退出游戏吗？",
-    "bomb_direction": "原子弹 / 氢弹抛物线方向"
+    "bomb_direction": "原子弹 / 氢弹抛物线方向",
+    "icon_alt_player_leaderboard": "玩家排行榜图标",
+    "icon_alt_team_leaderboard": "团队排行榜图标"
   },
   "single_modal": {
-    "title": "单人模式",
     "random_spawn": "随机出生点",
-    "allow_alliances": "允许结盟",
     "toggle_achievements": "切换成就",
     "sign_in_for_achievements": "登录以获取成就",
     "options_title": "选项",
     "bots": "机器人： ",
     "bots_disabled": "已禁用",
-    "nations": "国家：",
     "disable_nations": "禁用国家",
     "instant_build": "立即建造",
     "infinite_gold": "无限黄金",
@@ -169,9 +194,13 @@
     "max_timer": "游戏时长（分钟）",
     "max_timer_placeholder": "分钟",
     "max_timer_invalid": "请输入一个有效的最大计时器值（1-120分钟）",
-    "disable_nukes": "禁用核弹",
     "enables_title": "启用设置",
-    "start": "开始游戏"
+    "start": "开始游戏",
+    "options_changed_no_achievements": "自定义设置 - 成就已禁用",
+    "gold_multiplier": "黄金乘数",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "开局黄金",
+    "starting_gold_placeholder": "5000000"
   },
   "token_login_modal": {
     "title": "正在登录……",
@@ -194,25 +223,31 @@
     "not_found": "未找到",
     "clear_session": "清除会话",
     "failed_to_send_recovery_email": "发送恢复邮件失败",
-    "enter_email_address": "请输入电子邮件地址"
+    "enter_email_address": "请输入电子邮件地址",
+    "personal_player_id": "个人玩家 ID："
   },
-  "stats_modal": {
-    "title": "统计",
-    "clan_stats": "军团统计",
+  "leaderboard_modal": {
+    "title": "排行榜",
+    "ranked_tab": "1v1 排位赛",
+    "clans_tab": "军团",
+    "refresh_time": "每 1 小时刷新一次",
     "loading": "正在加载……",
-    "error": "加载军团统计数据时出错",
-    "no_stats": "暂无军团统计数据",
+    "error": "加载排行榜时出错",
+    "no_stats": "暂无统计数据",
     "no_data_yet": "暂无数据",
     "clan": "军团",
+    "player": "玩家",
     "games": "游戏场数",
+    "elo": "ELO",
     "win_score": "胜者积分",
-    "win_score_tooltip": "加权胜场数基于战队参与度和比赛难度计算",
+    "win_score_tooltip": "加权胜场数基于军团参与度和比赛难度计算",
     "loss_score": "败者积分",
-    "loss_score_tooltip": "加权败场数基于战队参与度和比赛难度计算",
+    "loss_score_tooltip": "加权败场数基于军团参与度和比赛难度计算",
     "win_loss_ratio": "胜负比",
     "ratio": "比率",
     "rank": "排名",
-    "try_again": "再试一次"
+    "try_again": "再试一次",
+    "your_ranking": "你的排名"
   },
   "game_info_modal": {
     "title": "游戏信息",
@@ -224,9 +259,12 @@
     "total_gold": "总计",
     "all_gold": "总黄金",
     "trade": "交易",
+    "train_trade": "火车",
+    "naval_trade": "商船",
     "conquest_gold": "已抢夺黄金",
     "stolen_gold": "被军舰偷走",
-    "num_of_conquests": "征服的玩家数",
+    "num_of_conquests_humans": "玩家击杀数",
+    "num_of_conquests_bots": "机器人击杀数",
     "duration": "时长",
     "survival_time": "存活时长",
     "war": "战争",
@@ -239,6 +277,8 @@
   },
   "map": {
     "map": "地图",
+    "featured": "精选",
+    "all": "全部",
     "world": "世界",
     "giantworldmap": "巨型世界地图",
     "europe": "欧洲",
@@ -281,14 +321,18 @@
     "manicouagan": "马尼夸根陨石坑",
     "lemnos": "利姆诺斯岛",
     "sierpinski": "谢尔宾斯基分形",
+    "thebox": "沙盒",
     "twolakes": "双湖",
     "straitofhormuz": "霍尔木兹海峡",
     "surrounded": "环岛",
     "didier": "迪迪埃",
     "didierfrance": "迪迪埃（法国）",
-    "amazonriver": "亚马逊河"
+    "amazonriver": "亚马逊河",
+    "tradersdream": "商人之梦",
+    "hawaii": "夏威夷"
   },
   "map_categories": {
+    "featured": "精选",
     "continental": "大陆",
     "regional": "地区",
     "fantasy": "其他",
@@ -302,10 +346,7 @@
   "private_lobby": {
     "title": "加入私人房间",
     "enter_id": "输入房间 ID",
-    "player": "玩家",
-    "players": "玩家",
     "join_lobby": "加入房间",
-    "checking": "正在确认房间...",
     "not_found": "找不到房间。请检查 ID 然后重试。",
     "error": "发生错误。请再试一次或联系支持人员。",
     "joined_waiting": "房间已加入！等待房主开始游戏……",
@@ -313,18 +354,22 @@
     "disabled_units": "禁用单位"
   },
   "public_lobby": {
+    "title": "正在等待游戏开始……",
     "join": "加入下一场游戏",
-    "waiting": "等待中的玩家",
     "teams_Duos": "{team_count} 个 2 人小队",
     "teams_Trios": "{team_count} 个 3 人小队",
     "teams_Quads": "{team_count} 个 4 人小队",
     "waiting_for_players": "正在等待玩家",
+    "connecting": "正在连接到房间……",
+    "starting_in": "在 {time} 后开始",
     "starting_game": "正在启动游戏……",
     "teams_hvn": "人类 VS 国家",
     "teams_hvn_detailed": "{num} 个人类 VS {num} 个国家",
     "teams": "{num} 个队伍",
     "players_per_team": "每队 {num} 人",
-    "started": "已开始"
+    "started": "已开始",
+    "status": "状态",
+    "join_timeout": "您没有及时进入游戏。"
   },
   "matchmaking_modal": {
     "title": "1v1 排位赛（内测版）",
@@ -353,7 +398,6 @@
     "bots": "机器人： ",
     "bots_disabled": "禁用",
     "player_immunity_duration": "PVP 豁免期限（分钟）",
-    "nations": "国家：",
     "disable_nations": "禁用国家",
     "max_timer": "游戏时长（分钟）",
     "mins_placeholder": "分钟",
@@ -379,7 +423,9 @@
     "teams_Duos": "2人小队",
     "teams_Trios": "3人小队",
     "teams_Quads": "4人小队",
-    "teams_Humans Vs Nations": "人类 VS 国家"
+    "teams_Humans Vs Nations": "人类 VS 国家",
+    "starting_gold": "开局黄金",
+    "crowded": "密度修改器"
   },
   "team_colors": {
     "red": "红色",
@@ -409,7 +455,9 @@
   },
   "public_game_modifier": {
     "random_spawn": "随机出生点",
-    "compact_map": "紧凑地图"
+    "compact_map": "紧凑地图",
+    "crowded": "密度",
+    "starting_gold": "开局黄金 5M"
   },
   "select_lang": {
     "title": "选择语言"
@@ -644,19 +692,15 @@
     "exit": "退出游戏",
     "keep": "继续游戏",
     "spectate": "观战",
+    "requeue": "再玩一次",
     "wishlist": "将游戏加入 Steam 愿望单！",
-    "ofm_winter": "OpenFront 大师冬季锦标赛！",
-    "ofm_winter_description": "加入竞技比赛，与最强玩家一较高下",
-    "join_tournament": "加入比赛",
     "join_discord": "加入我们的 Discord 社区！",
     "discord_description": "与玩家交流，发现新功能，并赢取奖品！",
     "join_server": "加入服务器",
     "youtube_tutorial": "需要帮助吗？"
   },
   "leaderboard": {
-    "title": "排行榜",
     "hide": "隐藏",
-    "rank": "排名",
     "player": "玩家",
     "team": "队伍",
     "owned": "已占领",
@@ -669,36 +713,14 @@
     "show_control": "显示面板",
     "show_units": "显示单位"
   },
-  "player_info_overlay": {
-    "type": "类型",
-    "bot": "机器人",
-    "nation": "国家",
-    "player": "玩家",
-    "team": "队伍",
-    "alliance_timeout": "结盟剩余时长",
-    "troops": "军队",
-    "maxtroops": "最大军队",
-    "a_troops": "进攻军队",
-    "gold": "黄金",
-    "ports": "港口",
-    "cities": "城市",
-    "factories": "工厂",
-    "missile_launchers": "导弹发射井",
-    "sams": "防空塔",
-    "warships": "军舰",
-    "health": "生命值",
-    "attitude": "态度",
-    "levels": "等级",
-    "wilderness_title": "荒野",
-    "irradiated_wilderness_title": "受辐射的荒野"
-  },
   "events_display": {
+    "events": "事件",
     "retreating": "正在撤退",
-    "retaliate": "反击",
-    "boat": "船",
     "alliance_request_status": "{name} {status}你的联盟请求",
     "alliance_accepted": "已接受",
     "alliance_rejected": "已拒绝",
+    "alliance_nukes_destroyed_outgoing": "{count, plural, one {# 发送向 {name} 的核弹已由其盟军拦截} other {# 发送向 {name} 的核弹已由其盟军拦截}}",
+    "alliance_nukes_destroyed_incoming": "{count, plural, one {# 由 {name} 发送的核弹已被目标盟军拦截} other {# 由 {name} 发送的核弹已被目标盟军拦截}}",
     "duration_second": "1 秒",
     "betrayal_description": "你已撕毁和 {name} 的盟约，因而被标记为“叛徒”（你将获得 {durationText} 的 {malusPercent}% 防御降低惩罚）",
     "duration_seconds_plural": "{seconds} 秒",
@@ -720,6 +742,8 @@
     "attack_cancelled_retreat": "已取消进攻，在撤退时损失了 {troops} 兵力",
     "received_gold_from_captured_ship": "捕获了 {name} 的商船，获得 {gold} 黄金",
     "received_gold_from_trade": "与 {name} 贸易获得了 {gold} 黄金",
+    "received_gold_from_conquest": "征服了 {name} 并获得 {gold} 黄金",
+    "conquered_no_gold": "征服了 {name} （对方没在玩了，因此未掠夺到黄金）",
     "missile_intercepted": "已拦截导弹 {unit}",
     "mirv_warheads_intercepted": "{count, plural, one {{count} 个 MIRV 弹头被拦截} other {{count} 个 MIRV 弹头被拦截}}",
     "sent_troops_to_player": "已向 {name} 发送 {troops} 军队",
@@ -730,15 +754,6 @@
     "captured_enemy_unit": "已捕获 {name} 的 {unit}",
     "unit_destroyed": "你的 {unit} 已被摧毁",
     "no_boats_available": "无可用船，最多 {max} 个"
-  },
-  "unit_info_modal": {
-    "structure_info": "建筑信息",
-    "unit_type_unknown": "未知",
-    "close": "关闭",
-    "cooldown": "冷却时间",
-    "type": "类型",
-    "upgrade": "升级",
-    "level": "等级"
   },
   "player_type": {
     "player": "玩家",
@@ -752,11 +767,6 @@
     "friendly": "友好",
     "default": "默认"
   },
-  "control_panel": {
-    "gold": "黄金",
-    "troops": "军队",
-    "attack_ratio": "攻击比例"
-  },
   "player_panel": {
     "gold": "黄金",
     "troops": "军队",
@@ -766,30 +776,33 @@
     "active": "活跃",
     "stopped": "终止",
     "alliance_time_remaining": "结盟有效期截至",
-    "embargo": "已停止与你交易",
-    "nuke": "他们向你发射的核弹",
     "start_trade": "开启交易",
     "stop_trade": "停止交易",
     "stop_trade_all": "与所有人停止交易",
     "start_trade_all": "与所有人开展交易",
     "alliances": "盟友",
-    "flag": "旗帜",
     "chat": "聊天",
     "target": "目标",
     "break_alliance": "撕毁盟约",
-    "alliance": "结盟",
     "send_alliance": "请求结盟",
     "send_troops": "发送军队",
     "send_gold": "发送黄金",
     "emotes": "表情符号",
+    "moderation": "管理",
+    "kick": "踢出玩家",
+    "kicked": "已被踢出",
+    "kick_confirm": "要踢掉 {name} 吗？\n\n他无法再重新加入此游戏。",
     "arc_up": "向上的弧",
     "arc_down": "向下的弧",
     "flip_rocket_trajectory": "翻转火箭轨道"
   },
+  "kick_reason": {
+    "duplicate_session": "已被踢出游戏（也可能你正在另一个标签页上玩游戏）",
+    "lobby_creator": "已被房主踢出房间"
+  },
   "send_troops_modal": {
     "title_with_name": "向 {name} 发送军队",
     "available_tooltip": "你的剩余军队",
-    "min_keep": "最小保留值",
     "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "军队滑块",
     "capacity_note": "接收者现在仅能接收 {amount}。"
@@ -835,7 +848,9 @@
     "choose_spawn": "选择出生点",
     "random_spawn": "随机出生点已启用。正在为你选择出生点……",
     "singleplayer_game_paused": "游戏已暂停",
-    "multiplayer_game_paused": "游戏已被房主暂停"
+    "multiplayer_game_paused": "游戏已被房主暂停",
+    "pvp_immunity_active": "PVP 免疫生效，持续 {seconds} 秒",
+    "catching_up": "正在追赶进度……"
   },
   "territory_patterns": {
     "title": "皮肤",
@@ -844,13 +859,16 @@
     "show_only_owned": "我的皮肤",
     "all_owned": "您已拥有所有皮肤！请稍后再来查看新皮肤。",
     "not_logged_in": "未登录",
-    "blocked": {
-      "login": "您必须登录才能使用此皮肤。",
-      "purchase": "购买以解锁此皮肤。"
-    },
     "pattern": {
       "default": "默认"
     },
+    "try_me": "试试我！",
+    "trial_remaining": "剩余",
+    "trial_granted": "皮肤试用获得了批准！",
+    "trial_cooldown": "每24小时只能试用一次。请稍后再试。",
+    "trial_login_required": "必须登录才能试用皮肤",
+    "reward_countdown": "在 {seconds} 秒内获得奖励……",
+    "steam_wishlist_prompt": "请将 OpenFront 添加到 Steam 愿望单来支持我们",
     "select_skin": "选择皮肤",
     "selected": "已选择"
   },
@@ -858,15 +876,6 @@
     "title": "选择旗帜",
     "button_title": "选一个旗帜！",
     "search_flag": "搜索……"
-  },
-  "spawn_ad": {
-    "loading": "正在加载广告……"
-  },
-  "auth": {
-    "login_required": "需要登录才能访问此网站。",
-    "redirecting": "正在将您重新定向……",
-    "not_authorized": "您没有权限访问此网站。",
-    "contact_admin": "如果您认为您看到此消息有误，请与网站管理员联系。"
   },
   "radial_menu": {
     "delete_unit_title": "删除单位",
@@ -926,7 +935,6 @@
     "replay": "回放",
     "details": "详情",
     "ranking": "排行",
-    "started": "已开始",
     "map": "地图",
     "difficulty": "难度",
     "type": "类型"
@@ -934,7 +942,7 @@
   "player_stats_tree": {
     "public": "公开",
     "private": "私有",
-    "singleplayer": "单人模式",
+    "solo": "单挑",
     "mode": "模式",
     "stats_wins": "胜场数",
     "stats_losses": "败场数",

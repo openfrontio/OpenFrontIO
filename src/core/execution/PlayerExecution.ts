@@ -97,8 +97,11 @@ export class PlayerExecution implements Execution {
       }
     }
 
-    if (ticks - this.lastCalc > this.ticksPerClusterCalc) {
-      if (this.player.lastTileChange() > this.lastCalc) {
+    if (
+      ticks - this.lastCalc > this.ticksPerClusterCalc ||
+      this.player.numTilesOwned() < 100
+    ) {
+      if (this.player.lastTileChange() >= this.lastCalc) {
         this.lastCalc = ticks;
         const start = performance.now();
         this.removeClusters();
@@ -157,6 +160,12 @@ export class PlayerExecution implements Execution {
     clusterBox: { min: Cell; max: Cell },
   ): false | Player {
     const enemies = new Set<number>();
+
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+
     for (const tile of cluster) {
       let hasUnownedNeighbor = false;
       if (this.mg.isOceanShore(tile) || this.mg.isOnEdgeOfMap(tile)) {
@@ -170,6 +179,12 @@ export class PlayerExecution implements Execution {
         const ownerId = this.mg.ownerID(n);
         if (ownerId !== this.player.smallID()) {
           enemies.add(ownerId);
+          const px = this.mg.x(n);
+          const py = this.mg.y(n);
+          minX = Math.min(minX, px);
+          minY = Math.min(minY, py);
+          maxX = Math.max(maxX, px);
+          maxY = Math.max(maxY, py);
         }
       });
       if (hasUnownedNeighbor) {
@@ -182,9 +197,13 @@ export class PlayerExecution implements Execution {
     if (enemies.size !== 1) {
       return false;
     }
+
     const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
-    const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
-    if (inscribed(enemyBox, clusterBox)) {
+    const localEnemyBox = {
+      min: new Cell(minX, minY),
+      max: new Cell(maxX, maxY),
+    };
+    if (inscribed(localEnemyBox, clusterBox)) {
       return enemy;
     }
     return false;

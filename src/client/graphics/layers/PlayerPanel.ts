@@ -505,9 +505,9 @@ export class PlayerPanel extends LitElement implements Layer {
         <div class="flex-1 min-w-0">
           <h2
             class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
-            title=${other.name()}
+            title=${other.displayName()}
           >
-            ${other.name()}
+            ${other.displayName()}
           </h2>
         </div>
         ${chip
@@ -626,7 +626,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
     const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
     const alliesSorted = [...allies].sort((a, b) =>
-      nameCollator.compare(a.name(), b.name()),
+      nameCollator.compare(a.displayName(), b.displayName()),
     );
 
     return html`
@@ -669,9 +669,9 @@ export class PlayerPanel extends LitElement implements Layer {
                              rounded-md border border-white/10 bg-white/5
                              px-2.5 py-1 text-[14px] text-zinc-100
                              hover:bg-white/8 active:scale-[0.99] transition"
-                      title=${p.name()}
+                      title=${p.displayName()}
                     >
-                      <span class="truncate">${p.name()}</span>
+                      <span class="truncate">${p.displayName()}</span>
                     </li>`,
                 )}
           </ul>
