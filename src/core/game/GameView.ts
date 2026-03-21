@@ -678,7 +678,7 @@ export class GameView implements GameMap {
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
-        flag: nation.flag,
+        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
       } satisfies PlayerCosmetics);
     }
   }

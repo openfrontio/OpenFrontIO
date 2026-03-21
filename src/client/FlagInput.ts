@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderPlayerFlag } from "../core/CustomFlag";
-import { FlagSchema } from "../core/Schemas";
+import { FlagName } from "../core/Schemas";
+import { resolveFlagUrl } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 const flagKey: string = "flag";
@@ -17,16 +17,15 @@ export class FlagInput extends LitElement {
     return !flag || flag === "xx";
   }
 
-  public getCurrentFlag(): string {
-    return this.flag;
-  }
-
   private getStoredFlag(): string {
-    const storedFlag = localStorage.getItem(flagKey);
-    if (storedFlag) {
-      return storedFlag;
+    let storedFlag = localStorage.getItem(flagKey);
+    if (!storedFlag) return "";
+    // Migrate bare country codes to country: prefix
+    if (!storedFlag.startsWith("flag:") && !storedFlag.startsWith("country:")) {
+      storedFlag = `country:${storedFlag}`;
+      localStorage.setItem(flagKey, storedFlag);
     }
-    return "";
+    return storedFlag;
   }
 
   private dispatchFlagEvent() {
@@ -41,7 +40,7 @@ export class FlagInput extends LitElement {
 
   private updateFlag = (ev: Event) => {
     const e = ev as CustomEvent<{ flag: string }>;
-    if (!FlagSchema.safeParse(e.detail.flag).success) return;
+    if (!FlagName.safeParse(e.detail.flag).success) return;
     if (this.flag !== e.detail.flag) {
       this.flag = e.detail.flag;
     }
@@ -103,7 +102,7 @@ export class FlagInput extends LitElement {
     `;
   }
 
-  updated() {
+  async updated() {
     const preview = this.renderRoot.querySelector(
       "#flag-preview",
     ) as HTMLElement;
@@ -116,19 +115,17 @@ export class FlagInput extends LitElement {
 
     preview.innerHTML = "";
 
-    if (this.flag?.startsWith("!")) {
-      renderPlayerFlag(this.flag, preview);
-    } else {
-      const img = document.createElement("img");
-      img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
-      img.className = "w-full h-full object-cover pointer-events-none";
-      img.draggable = false;
-      img.onerror = () => {
-        if (!img.src.endsWith("/flags/xx.svg")) {
-          img.src = "/flags/xx.svg";
-        }
-      };
-      preview.appendChild(img);
-    }
+    const img = document.createElement("img");
+    img.src = this.flag
+      ? ((await resolveFlagUrl(this.flag)) ?? "/flags/xx.svg")
+      : "/flags/xx.svg";
+    img.className = "w-full h-full object-cover pointer-events-none";
+    img.draggable = false;
+    img.onerror = () => {
+      if (!img.src.endsWith("/flags/xx.svg")) {
+        img.src = "/flags/xx.svg";
+      }
+    };
+    preview.appendChild(img);
   }
 }

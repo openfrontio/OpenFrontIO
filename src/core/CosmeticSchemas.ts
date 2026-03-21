@@ -5,7 +5,8 @@ import { PlayerPattern } from "./Schemas";
 
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
 export type Pattern = z.infer<typeof PatternSchema>;
-export type PatternName = z.infer<typeof PatternNameSchema>;
+export type Flag = z.infer<typeof FlagSchema>;
+export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
 export type PatternData = z.infer<typeof PatternDataSchema>;
@@ -16,7 +17,7 @@ export const ProductSchema = z.object({
   price: z.string(),
 });
 
-export const PatternNameSchema = z
+export const CosmeticNameSchema = z
   .string()
   .regex(/^[a-z0-9_]+$/)
   .max(32);
@@ -51,7 +52,7 @@ export const ColorPaletteSchema = z.object({
 });
 
 export const PatternSchema = z.object({
-  name: PatternNameSchema,
+  name: CosmeticNameSchema,
   pattern: PatternDataSchema,
   colorPalettes: z
     .object({
@@ -64,29 +65,18 @@ export const PatternSchema = z.object({
   product: ProductSchema.nullable(),
 });
 
+export const FlagSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
+  affiliateCode: z.string().nullable(),
+  product: ProductSchema.nullable(),
+});
+
 // Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({
   colorPalettes: z.record(z.string(), ColorPaletteSchema).optional(),
   patterns: z.record(z.string(), PatternSchema),
-  flag: z
-    .object({
-      layers: z.record(
-        z.string(),
-        z.object({
-          name: z.string(),
-          flares: z.array(z.string()).optional(),
-        }),
-      ),
-      color: z.record(
-        z.string(),
-        z.object({
-          color: z.string(),
-          name: z.string(),
-          flares: z.array(z.string()).optional(),
-        }),
-      ),
-    })
-    .optional(),
+  flags: z.record(z.string(), FlagSchema),
 });
 
 export const DefaultPattern = {
