@@ -318,12 +318,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
-      <div class="flex items-start gap-1 lg:gap-2 p-1.5 lg:p-2">
+      <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
         <!-- Left: Gold & Troop bar -->
         <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
           <div class="flex items-center gap-1">
             <div
-              class="flex flex-1 items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
+              class="flex flex-1 items-center justify-center px-1 py-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
               translate="no"
             >
               <img src=${goldCoinIcon} width="13" height="13" />
@@ -380,7 +380,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                   />`
               : html``}
-            <span>${player.name()}</span>
+            <span>${player.displayName()}</span>
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
@@ -402,7 +402,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 >`}
             ${this.renderPlayerNameIcons(player)} ${allianceHtml ?? ""}
           </div>
-          <div class="flex gap-0.5 lg:gap-1 items-center mt-1">
+          <div class="flex gap-0.5 lg:gap-1 items-center mt-0.5">
             ${this.displayUnitCount(player, UnitType.City, cityIcon)}
             ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
             ${this.displayUnitCount(player, UnitType.Port, portIcon)}
@@ -440,7 +440,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mt-0.5 lg:mt-1 h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="h-full flex">
           ${greenPercent > 0
@@ -488,7 +488,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
-          ${unit.owner().name()}
+          ${unit.owner().displayName()}
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
@@ -518,13 +518,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-[1200px]:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="fixed top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
         style="margin-top: ${this.barOffset}px;"
         @click=${() => this.hide()}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

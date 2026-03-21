@@ -7,6 +7,7 @@ import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -21,7 +22,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
-import { InGameHeaderAd } from "./layers/InGameHeaderAd";
+import { InGamePromo } from "./layers/InGamePromo";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -36,7 +37,6 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
-import { SpawnVideoAd } from "./layers/SpawnVideoReward";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -262,19 +262,11 @@ export function createRenderer(
   immunityTimer.game = game;
   immunityTimer.eventBus = eventBus;
 
-  const inGameHeaderAd = document.querySelector(
-    "in-game-header-ad",
-  ) as InGameHeaderAd;
-  if (!(inGameHeaderAd instanceof InGameHeaderAd)) {
-    console.error("in-game header ad not found");
+  const inGamePromo = document.querySelector("in-game-promo") as InGamePromo;
+  if (!(inGamePromo instanceof InGamePromo)) {
+    console.error("in-game promo not found");
   }
-  inGameHeaderAd.game = game;
-
-  const spawnVideoAd = document.querySelector("spawn-video-ad") as SpawnVideoAd;
-  if (!(spawnVideoAd instanceof SpawnVideoAd)) {
-    console.error("spawn video ad not found");
-  }
-  spawnVideoAd.game = game;
+  inGamePromo.game = game;
 
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
@@ -293,6 +285,7 @@ export function createRenderer(
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
+    new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     attacksDisplay,
     chatDisplay,
@@ -321,8 +314,7 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    inGameHeaderAd,
-    spawnVideoAd,
+    inGamePromo,
     alertFrame,
     performanceOverlay,
   ];
