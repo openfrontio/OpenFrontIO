@@ -1,4 +1,4 @@
-import { Theme } from "../../../core/configuration/Config";
+import { Config, Theme } from "../../../core/configuration/Config";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -8,16 +8,19 @@ export class TerrainLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
   private theme: Theme;
+  private config: Config;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
-  ) {}
+  ) {
+    this.config = this.game.config();
+  }
   shouldTransform(): boolean {
     return true;
   }
   tick() {
-    if (this.game.config().theme() !== this.theme) {
+    if (this.config.theme() !== this.theme) {
       this.redraw();
     }
   }
@@ -46,7 +49,7 @@ export class TerrainLayer implements Layer {
   }
 
   initImageData() {
-    this.theme = this.game.config().theme();
+    this.theme = this.config.theme();
     this.game.forEachTile((tile) => {
       const terrainColor = this.theme.terrainColor(this.game, tile);
       // TODO: isn't tileref and index the same?

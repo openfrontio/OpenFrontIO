@@ -33,7 +33,7 @@ export class CopyButton extends LitElement {
     changedProperties: Map<string | number | symbol, unknown>,
   ) {
     if (changedProperties.has("lobbyId")) {
-      this.lobbyIdVisible = this.userSettings.get(
+      this.lobbyIdVisible = this.userSettings.getBool(
         "settings.lobbyIdVisibility",
         true,
       );
