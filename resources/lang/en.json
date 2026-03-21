@@ -1008,5 +1008,10 @@
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."
+  },
+  "draggable_panel": {
+    "unlock_to_move": "Unlock to move",
+    "lock_position": "Lock position",
+    "reset_position": "Reset position"
   }
 }

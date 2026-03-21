@@ -225,6 +225,7 @@ export class UnitDisplay extends LitElement implements Layer {
     return html`
       <div
         class="flex flex-col items-center relative"
+        data-no-drag
         @mouseenter=${() => {
           this._hoveredUnit = unitType;
           this.requestUpdate();

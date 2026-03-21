@@ -3,6 +3,7 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { DraggableManager } from "./DraggableManager";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -359,7 +360,10 @@ export class GameRenderer {
       document.body.appendChild(this.canvas);
     }
 
-    window.addEventListener("resize", () => this.resizeCanvas());
+    window.addEventListener("resize", () => {
+      this.resizeCanvas();
+      DraggableManager.instance.reclampAll();
+    });
     this.resizeCanvas();
 
     //show whole map on startup
