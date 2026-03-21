@@ -1,4 +1,3 @@
-import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
@@ -215,15 +214,10 @@ export class NameLayer implements Layer {
 
     if (player.cosmetics.flag) {
       const flag = player.cosmetics.flag;
-      if (flag !== undefined && flag !== null && flag.startsWith("!")) {
-        const flagWrapper = document.createElement("div");
-        applyFlagStyles(flagWrapper);
-        renderPlayerFlag(flag, flagWrapper);
-        nameDiv.appendChild(flagWrapper);
-      } else if (flag !== undefined && flag !== null) {
+      if (flag !== undefined && flag !== null) {
         const flagImg = document.createElement("img");
         applyFlagStyles(flagImg);
-        flagImg.src = "/flags/" + flag + ".svg";
+        flagImg.src = flag;
         nameDiv.appendChild(flagImg);
       }
     }

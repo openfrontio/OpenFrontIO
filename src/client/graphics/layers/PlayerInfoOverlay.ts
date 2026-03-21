@@ -1,7 +1,5 @@
 import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -364,21 +362,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             )}"
           >
             ${player.cosmetics.flag
-              ? player.cosmetics.flag!.startsWith("!")
-                ? html`<div
-                    class="h-6 aspect-3/4 player-flag"
-                    ${ref((el) => {
-                      if (el instanceof HTMLElement) {
-                        requestAnimationFrame(() => {
-                          renderPlayerFlag(player.cosmetics.flag!, el);
-                        });
-                      }
-                    })}
-                  ></div>`
-                : html`<img
-                    class="h-6 aspect-3/4"
-                    src=${"/flags/" + player.cosmetics.flag! + ".svg"}
-                  />`
+              ? html`<img
+                  class="h-6 aspect-3/4"
+                  src=${player.cosmetics.flag!}
+                />`
               : html``}
             <span>${player.name()}</span>
             ${playerTeam !== "" && player.type() !== PlayerType.Bot

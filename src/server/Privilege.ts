@@ -9,16 +9,20 @@ import {
   skipNonAlphabeticTransformer,
   toAsciiLowerCaseTransformer,
 } from "obscenity";
+import countries from "resources/countries.json";
+
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
-  FlagSchema,
+  FlagName,
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerPattern,
 } from "../core/Schemas";
 import { getClanTagOriginalCase, simpleHash } from "../core/Util";
+
+const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const shadowNames = [
   "UnhuggedToday",
@@ -153,14 +157,28 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     if (refs.flag) {
-      const result = FlagSchema.safeParse(refs.flag);
+      const result = FlagName.safeParse(refs.flag);
       if (!result.success) {
         return {
           type: "forbidden",
           reason: "invalid flag: " + result.error.message,
         };
       }
-      cosmetics.flag = result.data;
+      if (result.data.startsWith("flag:")) {
+        try {
+          cosmetics.flag = this.isFlagAllowed(flares, result.data);
+        } catch (e) {
+          return { type: "forbidden", reason: "invalid flag: " + e.message };
+        }
+      } else if (result.data.startsWith("country:")) {
+        const code = result.data.slice("country:".length);
+        if (!countryCodes.includes(code)) {
+          return { type: "forbidden", reason: "invalid country code" };
+        }
+        cosmetics.flag = `/flags/${code}.svg`;
+      } else {
+        return { type: "forbidden", reason: "invalid flag prefix" };
+      }
     }
 
     return { type: "allowed", cosmetics };
@@ -205,6 +223,18 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     } else {
       throw new Error(`No flares for pattern ${name}`);
     }
+  }
+
+  isFlagAllowed(flares: string[], flagRef: string): string {
+    const key = flagRef.slice("flag:".length);
+    const found = this.cosmetics.flags[key];
+    if (!found) throw new Error(`Flag ${key} not found`);
+
+    if (flares.includes("flag:*") || flares.includes(`flag:${found.name}`)) {
+      return found.url;
+    }
+
+    throw new Error(`No flares for flag ${key}`);
   }
 
   isColorAllowed(flares: string[], color: string): PlayerColor {

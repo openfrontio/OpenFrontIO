@@ -1,8 +1,13 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
+import { UserMeResponse } from "../core/ApiSchemas";
+import { Cosmetics } from "../core/CosmeticSchemas";
+import { getUserMe } from "./Api";
+import { fetchCosmetics, flagRelationship } from "./Cosmetics";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
+import "./components/FlagButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 
 @customElement("flag-input-modal")
@@ -10,10 +15,60 @@ export class FlagInputModal extends BaseModal {
   @query("#flag-input-modal") private modalRef!: HTMLElement;
 
   @state() private search = "";
+  @state() private cosmetics: Cosmetics | null = null;
+  @state() private userMe: UserMeResponse | false = false;
   public returnTo = "";
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
+  }
+
+  private renderFlags() {
+    const selectedFlag = localStorage.getItem("flag") ?? "";
+    const onSelect = (flagKey: string) => {
+      this.setFlag(flagKey);
+      this.close();
+    };
+
+    const cosmeticFlags = Object.entries(this.cosmetics?.flags ?? {})
+      .filter(([, flag]) => {
+        if (!this.includedInSearch({ name: flag.name, code: flag.name }))
+          return false;
+        return flagRelationship(flag, this.userMe, null) === "owned";
+      })
+      .map(
+        ([key, flag]) => html`
+          <flag-button
+            .flag=${{ key: `flag:${key}`, name: flag.name, url: flag.url }}
+            .selected=${selectedFlag === `flag:${key}`}
+            .onSelect=${onSelect}
+          ></flag-button>
+        `,
+      );
+
+    const countryFlags = Countries.filter(
+      (country) => !country.restricted && this.includedInSearch(country),
+    ).map(
+      (country) => html`
+        <flag-button
+          .flag=${{
+            key: `country:${country.code}`,
+            name: country.name,
+            url: `/flags/${country.code}.svg`,
+          }}
+          .selected=${selectedFlag === `country:${country.code}`}
+          .onSelect=${onSelect}
+        ></flag-button>
+      `,
+    );
+
+    return html`
+      <div
+        class="pt-2 flex flex-wrap gap-4 justify-center items-stretch content-start"
+      >
+        ${cosmeticFlags} ${countryFlags}
+      </div>
+    `;
   }
 
   render() {
@@ -44,41 +99,7 @@ export class FlagInputModal extends BaseModal {
         <div
           class="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
         >
-          <div class="pt-2 flex flex-wrap justify-center gap-4 min-h-min">
-            ${Countries.filter(
-              (country) =>
-                !country.restricted && this.includedInSearch(country),
-            ).map(
-              (country) => html`
-                <button
-                  @click=${() => {
-                    this.setFlag(country.code);
-                    this.close();
-                  }}
-                  class="group relative flex flex-col items-center gap-2 p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer
-                      w-[100px] sm:w-[120px]"
-                >
-                  <img
-                    class="w-full h-auto rounded group-hover:scale-105 transition-transform duration-200 pointer-events-none"
-                    draggable="false"
-                    src="/flags/${country.code}.svg"
-                    loading="lazy"
-                    @error=${(e: Event) => {
-                      const img = e.currentTarget as HTMLImageElement;
-                      const fallback = "/flags/xx.svg";
-                      if (img.src && !img.src.endsWith(fallback)) {
-                        img.src = fallback;
-                      }
-                    }}
-                  />
-                  <span
-                    class="text-xs font-bold text-gray-300 group-hover:text-white text-center leading-tight w-full whitespace-normal break-words"
-                    >${country.name}</span
-                  >
-                </button>
-              `,
-            )}
-          </div>
+          ${this.renderFlags()}
         </div>
       </div>
     `;
@@ -122,8 +143,11 @@ export class FlagInputModal extends BaseModal {
     );
   }
 
-  protected onOpen(): void {
-    // No custom logic needed
+  protected async onOpen(): Promise<void> {
+    [this.cosmetics, this.userMe] = await Promise.all([
+      fetchCosmetics(),
+      getUserMe().then((r) => r || (false as const)),
+    ]);
   }
 
   protected onClose(): void {

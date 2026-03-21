@@ -209,8 +209,13 @@ export class UserSettings {
   }
 
   getFlag(): string | undefined {
-    const flag = localStorage.getItem("flag");
-    if (!flag || flag === "xx") return undefined;
+    let flag = localStorage.getItem("flag");
+    if (!flag || flag === "xx" || flag === "country:xx") return undefined;
+    // Migrate bare country codes to country: prefix
+    if (!flag.startsWith("flag:") && !flag.startsWith("country:")) {
+      flag = `country:${flag}`;
+      localStorage.setItem("flag", flag);
+    }
     return flag;
   }
 

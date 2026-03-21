@@ -3,7 +3,9 @@ import {
   ColorPalette,
   Cosmetics,
   CosmeticsSchema,
+  Flag,
   Pattern,
+  Product,
 } from "../core/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
@@ -26,7 +28,7 @@ export async function handlePurchase(
 
   const url = await createCheckoutSession(
     pattern.product.priceId,
-    colorPalette?.name ?? null,
+    colorPalette?.name,
   );
   if (url === false) {
     alert("Failed to create checkout session.");
@@ -80,9 +82,57 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   return __cosmetics;
 }
 
+export async function resolveFlagUrl(
+  flagRef: string,
+): Promise<string | undefined> {
+  if (flagRef.startsWith("flag:")) {
+    const key = flagRef.slice("flag:".length);
+    const cosmetics = await fetchCosmetics();
+    const flagData = cosmetics?.flags?.[key];
+    return flagData?.url;
+  }
+  if (flagRef.startsWith("country:")) {
+    const code = flagRef.slice("country:".length);
+    return `/flags/${code}.svg`;
+  }
+  return undefined;
+}
+
 export async function getCosmeticsHash(): Promise<string | null> {
   await fetchCosmetics();
   return __cosmeticsHash;
+}
+
+export function cosmeticRelationship(
+  opts: {
+    wildcardFlare: string;
+    requiredFlare: string;
+    product: Product | null;
+    affiliateCode: string | null;
+    itemAffiliateCode: string | null;
+  },
+  userMeResponse: UserMeResponse | false,
+): "owned" | "purchasable" | "blocked" {
+  const flares =
+    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+
+  if (flares.includes(opts.wildcardFlare)) {
+    return "owned";
+  }
+
+  if (flares.includes(opts.requiredFlare)) {
+    return "owned";
+  }
+
+  if (opts.product === null) {
+    return "blocked";
+  }
+
+  if (opts.affiliateCode !== opts.itemAffiliateCode) {
+    return "blocked";
+  }
+
+  return "purchasable";
 }
 
 export function patternRelationship(
@@ -91,43 +141,74 @@ export function patternRelationship(
   userMeResponse: UserMeResponse | false,
   affiliateCode: string | null,
 ): "owned" | "purchasable" | "blocked" {
-  const flares =
-    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
-  if (flares.includes("pattern:*")) {
-    return "owned";
-  }
-
   if (colorPalette === null) {
     // For backwards compatibility only show non-colored patterns if they are owned.
-    if (flares.includes(`pattern:${pattern.name}`)) {
+    const flares =
+      userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+    if (
+      flares.includes("pattern:*") ||
+      flares.includes(`pattern:${pattern.name}`)
+    ) {
       return "owned";
     }
     return "blocked";
   }
 
-  const requiredFlare = `pattern:${pattern.name}:${colorPalette.name}`;
-
-  if (flares.includes(requiredFlare)) {
-    return "owned";
-  }
-
-  if (pattern.product === null) {
-    // We don't own it and it's not for sale, so don't show it.
+  if (colorPalette.isArchived) {
+    // Check ownership first — if owned, show it even if archived.
+    const flares =
+      userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+    if (
+      flares.includes("pattern:*") ||
+      flares.includes(`pattern:${pattern.name}:${colorPalette.name}`)
+    ) {
+      return "owned";
+    }
     return "blocked";
   }
 
-  if (colorPalette?.isArchived) {
-    // We don't own the color palette, and it's archived, so don't show it.
-    return "blocked";
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "pattern:*",
+      requiredFlare: `pattern:${pattern.name}:${colorPalette.name}`,
+      product: pattern.product,
+      affiliateCode,
+      itemAffiliateCode: pattern.affiliateCode,
+    },
+    userMeResponse,
+  );
+}
+
+export function flagRelationship(
+  flag: Flag,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "flag:*",
+      requiredFlare: `flag:${flag.name}`,
+      product: flag.product,
+      affiliateCode,
+      itemAffiliateCode: flag.affiliateCode,
+    },
+    userMeResponse,
+  );
+}
+
+export async function handleFlagPurchase(flag: Flag) {
+  if (flag.product === null) {
+    alert("This flag is not available for purchase.");
+    return;
   }
 
-  if (affiliateCode !== pattern.affiliateCode) {
-    // Pattern is for sale, but it's not the right store to show it on.
-    return "blocked";
+  const url = await createCheckoutSession(flag.product.priceId);
+  if (url === false) {
+    alert("Failed to create checkout session.");
+    return;
   }
 
-  // Patterns is for sale, and it's the right store to show it on.
-  return "purchasable";
+  window.location.href = url;
 }
 
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
@@ -154,8 +235,32 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     }
   }
 
+  let flag = userSettings.getFlag();
+  if (flag?.startsWith("flag:")) {
+    const key = flag.slice("flag:".length);
+    const flagData = cosmetics?.flags?.[key];
+    if (!flagData) {
+      // Only clear if cosmetics loaded successfully but the key is missing
+      if (cosmetics) {
+        flag = undefined;
+      }
+    } else {
+      const userMe = await getUserMe();
+      if (userMe) {
+        const flares = userMe.player.flares ?? [];
+        const hasWildcard = flares.includes("flag:*");
+        if (!hasWildcard && !flares.includes(`flag:${flagData.name}`)) {
+          flag = undefined;
+        }
+      }
+    }
+    if (flag === undefined) {
+      localStorage.removeItem("flag");
+    }
+  }
+
   return {
-    flag: userSettings.getFlag(),
+    flag,
     color: userSettings.getSelectedColor() ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
@@ -169,7 +274,7 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
   const result: PlayerCosmetics = {};
 
   if (refs.flag) {
-    result.flag = refs.flag;
+    result.flag = await resolveFlagUrl(refs.flag);
   }
 
   if (refs.color) {

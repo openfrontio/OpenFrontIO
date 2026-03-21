@@ -10,6 +10,7 @@ import {
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { PlayerPattern } from "../../core/Schemas";
 import { translateText } from "../Utils";
+import "./PurchaseButton";
 
 export const BUTTON_WIDTH = 150;
 
@@ -60,8 +61,7 @@ export class PatternButton extends LitElement {
     } satisfies PlayerPattern);
   }
 
-  private handlePurchase(e: Event) {
-    e.stopPropagation();
+  private handlePurchase() {
     if (this.pattern?.product) {
       this.onPurchase?.(this.pattern, this.colorPalette ?? null);
     }
@@ -139,18 +139,10 @@ export class PatternButton extends LitElement {
 
         ${this.requiresPurchase && this.pattern?.product
           ? html`
-              <div class="w-full mt-2">
-                <button
-                  class="w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
-                   hover:bg-green-500/30 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)]"
-                  @click=${this.handlePurchase}
-                >
-                  ${translateText("territory_patterns.purchase")}
-                  <span class="ml-1 text-white/60"
-                    >(${this.pattern.product.price})</span
-                  >
-                </button>
-              </div>
+              <purchase-button
+                .product=${this.pattern.product}
+                .onPurchase=${() => this.handlePurchase()}
+              ></purchase-button>
             `
           : null}
       </div>
