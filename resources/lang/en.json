@@ -409,7 +409,6 @@
     "title": "Create Private Lobby",
     "mode": "Mode",
     "team_count": "Number of Teams",
-    "team_type": "Team Type",
     "options_title": "Options",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
