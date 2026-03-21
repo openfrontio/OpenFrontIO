@@ -148,7 +148,7 @@ export class DraggableController {
   }
 
   private handlePointerDown(e: PointerEvent): void {
-    if (this._locked) return;
+    if (this._locked || e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("button, input, select, textarea, a, [data-no-drag]")) {
       return;
@@ -322,12 +322,16 @@ export class DraggableController {
   }
 
   private save(): void {
-    const data = {
-      locked: this._locked,
-      x: this._offsetX,
-      y: this._offsetY,
-    };
-    localStorage.setItem(this.storageKey, JSON.stringify(data));
+    try {
+      const data = {
+        locked: this._locked,
+        x: this._offsetX,
+        y: this._offsetY,
+      };
+      localStorage.setItem(this.storageKey, JSON.stringify(data));
+    } catch {
+      // Quota exceeded or storage unavailable — position won't persist
+    }
   }
 
   private load(): void {

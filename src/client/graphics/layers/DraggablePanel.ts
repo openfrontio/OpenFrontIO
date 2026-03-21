@@ -5,11 +5,8 @@ import { DraggableController } from "../DraggableController";
 
 /**
  * Non-wrapper element: place inside a panel and it renders a lock/reset
- * toolbar on the right side. Drag behaviour is applied to the nearest
+ * toolbar on the outside edge. Drag behaviour is applied to the nearest
  * ancestor with a matching `data-draggable` attribute.
- *
- * The toolbar is always visible so it contributes to the panel's bounding
- * rect for collision detection.
  */
 @customElement("draggable-panel")
 export class DraggablePanel extends LitElement {
