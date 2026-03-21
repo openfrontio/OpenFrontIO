@@ -469,7 +469,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   ) => {
     const nextVisible = !this.isVisible;
     this.setVisible(nextVisible);
-    this.userSettings.set("settings.performanceOverlay", nextVisible);
+    this.userSettings.setBool("settings.performanceOverlay", nextVisible);
   };
 
   private onTickMetricsEvent = (event: TickMetricsEvent) => {
@@ -582,7 +582,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private handleClose() {
     const nextVisible = false;
     this.setVisible(nextVisible);
-    this.userSettings.set("settings.performanceOverlay", nextVisible);
+    this.userSettings.setBool("settings.performanceOverlay", nextVisible);
   }
 
   private onDragPointerMove = (e: PointerEvent) => {
