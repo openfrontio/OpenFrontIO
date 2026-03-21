@@ -70,6 +70,7 @@ var maps = []struct {
 	{Name: "twolakes"},
 	{Name: "tourney1"},
 	{Name: "tourney2"},
+	{Name: "tourney3"},
 	{Name: "thebox"},
 	{Name: "didier"},
 	{Name: "didierfrance"},
