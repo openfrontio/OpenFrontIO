@@ -23,6 +23,7 @@ export class UsernameInput extends LitElement {
 
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
+  private _lastValidatedLang: string | null = null;
 
   // Remove static styles since we're using Tailwind
 
@@ -58,6 +59,21 @@ export class UsernameInput extends LitElement {
         this.validateAndStore();
       }
     });
+  }
+
+  protected updated(): void {
+    // Re-validate when translations become available or language changes,
+    // since initial validation may run before translations are loaded.
+    if (this.validationError) {
+      const langSelector = document.querySelector("lang-selector") as any;
+      const lang = langSelector?.currentLang as string | undefined;
+      const hasTranslations =
+        langSelector?.translations ?? langSelector?.defaultTranslations;
+      if (hasTranslations && lang !== this._lastValidatedLang) {
+        this._lastValidatedLang = lang ?? null;
+        this.validateAndStore();
+      }
+    }
   }
 
   private loadStoredUsername() {
