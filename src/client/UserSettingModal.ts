@@ -366,6 +366,15 @@ export class UserSettingModal extends BaseModal {
     }
   }
 
+  private sliderPlayerNameOpacity(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value !== "number") {
+      console.warn("Slider event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setPlayerNameOpacity(value);
+  }
+
   private changeAttackRatioIncrement(
     e: CustomEvent<{ value: number | string }>,
   ) {
@@ -920,6 +929,16 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.anonymousNames()}
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
+
+      <setting-slider
+        label="${translateText("user_setting.player_name_opacity_label")}"
+        description="${translateText("user_setting.player_name_opacity_desc")}"
+        min="0"
+        max="100"
+        .value=${this.userSettings.playerNameOpacity()}
+        .zeroLabelKey=${"user_setting.hidden"}
+        @change=${this.sliderPlayerNameOpacity}
+      ></setting-slider>
 
       <!-- 👁️ Hidden Lobby IDs -->
       <setting-toggle

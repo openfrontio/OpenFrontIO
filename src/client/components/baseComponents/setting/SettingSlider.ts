@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../Utils";
 
 @customElement("setting-slider")
 export class SettingSlider extends LitElement {
@@ -9,6 +10,7 @@ export class SettingSlider extends LitElement {
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Boolean }) easter = false;
+  @property() zeroLabelKey = "";
 
   createRenderRoot() {
     return this;
@@ -45,6 +47,10 @@ export class SettingSlider extends LitElement {
     const rainbowClass = this.easter
       ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
       : "";
+    const valueText =
+      this.value === 0 && this.zeroLabelKey
+        ? translateText(this.zeroLabelKey)
+        : `${this.value}%`;
 
     return html`
       <div
@@ -78,7 +84,7 @@ export class SettingSlider extends LitElement {
             />
             <span
               class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
-              >${this.value}%</span
+              >${valueText}</span
             >
           </div>
         </div>
