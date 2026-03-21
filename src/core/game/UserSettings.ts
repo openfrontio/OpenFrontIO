@@ -24,7 +24,7 @@ export class UserSettings {
     if (!UserSettings.cache.has(key)) {
       UserSettings.cache.set(key, localStorage.getItem(key));
     }
-    return UserSettings.cache.get(key) || null;
+    return UserSettings.cache.get(key) ?? null;
   }
 
   private setCached(key: string, value: string) {
