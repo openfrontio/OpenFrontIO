@@ -116,11 +116,14 @@ export class UserSettings {
   }
 
   attackingTroopsOverlay() {
-    return this.get("settings.attackingTroopsOverlay", true);
+    return this.getBool("settings.attackingTroopsOverlay", true);
   }
 
   toggleAttackingTroopsOverlay() {
-    this.set("settings.attackingTroopsOverlay", !this.attackingTroopsOverlay());
+    this.setBool(
+      "settings.attackingTroopsOverlay",
+      !this.attackingTroopsOverlay(),
+    );
   }
 
   cursorCostLabel() {
