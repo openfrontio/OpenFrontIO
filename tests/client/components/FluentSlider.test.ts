@@ -278,6 +278,49 @@ describe("FluentSlider", () => {
     });
   });
 
+  describe("Inline and Live Modes", () => {
+    it("should dispatch value-changed on input when live mode is enabled", async () => {
+      slider.min = 0.01;
+      slider.max = 1;
+      slider.step = 0.01;
+      slider.value = 0.2;
+      slider.live = true;
+      await slider.updateComplete;
+
+      const eventSpy = vi.fn();
+      slider.addEventListener("value-changed", eventSpy);
+
+      const rangeInput = slider.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      rangeInput.valueAsNumber = 0.42;
+      rangeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      await slider.updateComplete;
+
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      expect(
+        (eventSpy.mock.calls[0][0] as CustomEvent<{ value: number }>).detail
+          .value,
+      ).toBe(0.42);
+    });
+
+    it("should render inline mode without the editable value button", async () => {
+      slider.inline = true;
+      slider.compact = true;
+      slider.ariaLabel = "Attack ratio";
+      slider.ariaValueText = "42%";
+      await slider.updateComplete;
+
+      expect(slider.querySelector('span[role="button"]')).toBeNull();
+
+      const rangeInput = slider.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      expect(rangeInput).toBeTruthy();
+      expect(rangeInput.getAttribute("aria-label")).toBe("Attack ratio");
+      expect(rangeInput.getAttribute("aria-valuetext")).toBe("42%");
+    });
+  });
   describe("Edge Cases", () => {
     it("should handle min equal to max without NaN in style", async () => {
       slider.min = 100;

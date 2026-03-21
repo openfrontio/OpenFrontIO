@@ -1,5 +1,6 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { translateText } from "../Utils";
 
 @customElement("fluent-slider")
@@ -16,6 +17,11 @@ export class FluentSlider extends LitElement {
   @property({ type: String }) disabledKey = "";
   @property({ type: Number }) defaultValue: number | undefined = undefined;
   @property({ type: String }) defaultLabelKey = "";
+  @property({ type: Boolean }) compact = false;
+  @property({ type: Boolean }) inline = false;
+  @property({ type: Boolean }) live = false;
+  @property({ type: String, attribute: "aria-label" }) ariaLabel = "";
+  @property({ type: String, attribute: "aria-value-text" }) ariaValueText = "";
 
   @state() private isEditing = false;
 
@@ -34,12 +40,17 @@ export class FluentSlider extends LitElement {
   private handleSliderInput(e: Event) {
     const target = e.target as HTMLInputElement;
     this.value = target.valueAsNumber;
+    if (this.live) {
+      this.dispatchValueChange();
+    }
   }
 
   private handleSliderChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.value = target.valueAsNumber;
-    this.dispatchValueChange();
+    if (!this.live) {
+      this.dispatchValueChange();
+    }
   }
 
   private handleNumberInput(e: Event) {
@@ -71,30 +82,54 @@ export class FluentSlider extends LitElement {
     this.updateComplete.then(() => this.numberInput?.focus());
   }
 
-  render() {
+  private get sliderAriaLabel() {
+    if (this.ariaLabel) return this.ariaLabel;
+    if (this.labelKey) return translateText(this.labelKey);
+    return "Slider";
+  }
+
+  private renderSliderInput() {
     const percentage =
       this.max === this.min
         ? 0
         : ((this.value - this.min) / (this.max - this.min)) * 100;
+    const trackHeight = this.inline ? (this.compact ? 6 : 8) : 6;
+
+    const sliderClass = this.inline
+      ? this.compact
+        ? "w-full h-4 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 rounded-full [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-[12px] [&::-webkit-slider-thumb]:w-[12px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:-mt-[3px] [&::-webkit-slider-thumb]:shadow-[0_0_0_3px_rgba(59,130,246,0.18)] [&::-webkit-slider-thumb]:transition-all active:[&::-webkit-slider-thumb]:scale-110 [&::-moz-range-track]:w-full [&::-moz-range-track]:h-[6px] [&::-moz-range-track]:cursor-pointer [&::-moz-range-track]:bg-transparent [&::-moz-range-track]:rounded-full [&::-moz-range-thumb]:h-[12px] [&::-moz-range-thumb]:w-[12px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[0_0_0_3px_rgba(59,130,246,0.18)]"
+        : "w-full h-5 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 rounded-full [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[8px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-[14px] [&::-webkit-slider-thumb]:w-[14px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:-mt-[3px] [&::-webkit-slider-thumb]:shadow-[0_0_0_3px_rgba(59,130,246,0.18)] [&::-webkit-slider-thumb]:transition-all active:[&::-webkit-slider-thumb]:scale-110 [&::-moz-range-track]:w-full [&::-moz-range-track]:h-[8px] [&::-moz-range-track]:cursor-pointer [&::-moz-range-track]:bg-transparent [&::-moz-range-track]:rounded-full [&::-moz-range-thumb]:h-[14px] [&::-moz-range-thumb]:w-[14px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[0_0_0_3px_rgba(59,130,246,0.18)]"
+      : "w-full h-6 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-webkit-slider-thumb]:transition-all active:[&::-webkit-slider-thumb]:scale-110 active:[&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)] [&::-moz-range-track]:w-full [&::-moz-range-track]:h-[6px] [&::-moz-range-track]:cursor-pointer [&::-moz-range-track]:bg-transparent [&::-moz-range-track]:rounded-full [&::-moz-range-track]:transition-colors [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-moz-range-thumb]:transition-all active:[&::-moz-range-thumb]:scale-110 active:[&::-moz-range-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]";
+
+    return html`
+      <input
+        type="range"
+        .min=${this.min}
+        .max=${this.max}
+        .step=${this.step}
+        .valueAsNumber=${this.value}
+        aria-label=${this.sliderAriaLabel}
+        aria-valuetext=${ifDefined(this.ariaValueText || undefined)}
+        style="background: linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, rgba(255, 255, 255, 0.15) ${percentage}%, rgba(255, 255, 255, 0.15) 100%); background-size: 100% ${trackHeight}px; background-repeat: no-repeat; background-position: center; border-radius: 9999px;"
+        class=${sliderClass}
+        @input=${this.handleSliderInput}
+        @change=${this.handleSliderChange}
+      />
+    `;
+  }
+
+  render() {
+    if (this.inline) {
+      return html`<div class="w-full min-w-0">
+        ${this.renderSliderInput()}
+      </div>`;
+    }
+
     return html`
       <div
         class="flex flex-col items-center justify-center gap-1 w-full text-center"
       >
-        <input
-          type="range"
-          .min=${this.min}
-          .max=${this.max}
-          .step=${this.step}
-          .valueAsNumber=${this.value}
-          style="background: linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, rgba(255, 255, 255, 0.15) ${percentage}%, rgba(255, 255, 255, 0.15) 100%); background-size: 100% 6px; background-repeat: no-repeat; background-position: center; border-radius: 9999px;"
-          class="w-full h-6 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none 
-                 [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors
-                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-webkit-slider-thumb]:transition-all active:[&::-webkit-slider-thumb]:scale-110 active:[&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]
-                 [&::-moz-range-track]:w-full [&::-moz-range-track]:h-[6px] [&::-moz-range-track]:cursor-pointer [&::-moz-range-track]:bg-transparent [&::-moz-range-track]:rounded-full [&::-moz-range-track]:transition-colors
-                 [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-moz-range-thumb]:transition-all active:[&::-moz-range-thumb]:scale-110 active:[&::-moz-range-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]"
-          @input=${this.handleSliderInput}
-          @change=${this.handleSliderChange}
-        />
+        ${this.renderSliderInput()}
         <div
           class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight mb-1 flex flex-col items-center ${this
             .value > 0

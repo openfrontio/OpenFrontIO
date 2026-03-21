@@ -4,7 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
-import "../../components/InlineSlider";
+import "../../components/FluentSlider";
 import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
@@ -141,16 +141,18 @@ export class ControlPanel extends LitElement implements Layer {
     const ratioPercent = Math.max(1, Math.min(100, this.attackRatio * 100));
 
     return html`
-      <inline-slider
+      <fluent-slider
         .value=${this.attackRatio}
         .min=${0.01}
         .max=${1}
         .step=${0.01}
         .compact=${compact}
+        .inline=${true}
+        .live=${true}
         .ariaLabel=${"Attack ratio"}
         .ariaValueText=${`${Math.round(ratioPercent)}%`}
         @value-changed=${this.handleAttackRatioSliderChange}
-      ></inline-slider>
+      ></fluent-slider>
     `;
   }
 
