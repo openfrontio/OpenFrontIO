@@ -9,16 +9,19 @@ import {
   skipNonAlphabeticTransformer,
   toAsciiLowerCaseTransformer,
 } from "obscenity";
+import countries from "resources/countries.json";
+
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
-  FlagSchema,
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerPattern,
 } from "../core/Schemas";
 import { getClanTagOriginalCase, simpleHash } from "../core/Util";
+
+const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const shadowNames = [
   "UnhuggedToday",
@@ -153,14 +156,11 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     if (refs.flag) {
-      const result = FlagSchema.safeParse(refs.flag);
-      if (!result.success) {
-        return {
-          type: "forbidden",
-          reason: "invalid flag: " + result.error.message,
-        };
+      try {
+        cosmetics.flag = this.isFlagAllowed(flares, refs.flag);
+      } catch (e) {
+        return { type: "forbidden", reason: "invalid flag: " + e.message };
       }
-      cosmetics.flag = result.data;
     }
 
     return { type: "allowed", cosmetics };
@@ -204,6 +204,28 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       } satisfies PlayerPattern;
     } else {
       throw new Error(`No flares for pattern ${name}`);
+    }
+  }
+
+  isFlagAllowed(flares: string[], flagRef: string): string {
+    if (flagRef.startsWith("flag:")) {
+      const key = flagRef.slice("flag:".length);
+      const found = this.cosmetics.flags[key];
+      if (!found) throw new Error(`Flag ${key} not found`);
+
+      if (flares.includes("flag:*") || flares.includes(`flag:${found.name}`)) {
+        return found.url;
+      }
+
+      throw new Error(`No flares for flag ${key}`);
+    } else if (flagRef.startsWith("country:")) {
+      const code = flagRef.slice("country:".length);
+      if (!countryCodes.includes(code)) {
+        throw new Error(`invalid country code`);
+      }
+      return `/flags/${code}.svg`;
+    } else {
+      throw new Error(`invalid flag prefix`);
     }
   }
 

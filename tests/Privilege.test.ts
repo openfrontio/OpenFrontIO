@@ -18,7 +18,7 @@ const bannedWords = [
 const matcher = createMatcher(bannedWords);
 
 // Create a minimal PrivilegeCheckerImpl for testing censorUsername
-const mockCosmetics = { patterns: {}, colorPalettes: {} };
+const mockCosmetics = { patterns: {}, colorPalettes: {}, flags: {} };
 const mockDecoder = () => new Uint8Array();
 const checker = new PrivilegeCheckerImpl(
   mockCosmetics,
@@ -26,6 +26,24 @@ const checker = new PrivilegeCheckerImpl(
   bannedWords,
 );
 const emptyChecker = new PrivilegeCheckerImpl(mockCosmetics, mockDecoder, []);
+
+const flagCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {
+    cool_flag: {
+      name: "cool_flag",
+      url: "https://example.com/cool.png",
+      affiliateCode: null,
+      product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+    },
+  },
+};
+const flagChecker = new PrivilegeCheckerImpl(
+  flagCosmetics,
+  mockDecoder,
+  bannedWords,
+);
 
 describe("UsernameCensor", () => {
   describe("isProfane (via matcher.hasMatch)", () => {
@@ -143,5 +161,65 @@ describe("UsernameCensor", () => {
       const result = emptyChecker.censorUsername("fuck");
       expect(shadowNames).toContain(result);
     });
+  });
+});
+
+describe("Flag validation in isAllowed", () => {
+  test("allows valid country flag and resolves to SVG path", () => {
+    const result = flagChecker.isAllowed([], { flag: "country:us" });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.flag).toBe("/flags/us.svg");
+    }
+  });
+
+  test("rejects invalid country code", () => {
+    const result = flagChecker.isAllowed([], { flag: "country:zzzz" });
+    expect(result.type).toBe("forbidden");
+  });
+
+  test("rejects flag with no prefix", () => {
+    const result = flagChecker.isAllowed([], { flag: "us" });
+    expect(result.type).toBe("forbidden");
+  });
+
+  test("allows cosmetic flag when user has wildcard flare", () => {
+    const result = flagChecker.isAllowed(["flag:*"], {
+      flag: "flag:cool_flag",
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.flag).toBe("https://example.com/cool.png");
+    }
+  });
+
+  test("allows cosmetic flag when user has specific flare", () => {
+    const result = flagChecker.isAllowed(["flag:cool_flag"], {
+      flag: "flag:cool_flag",
+    });
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.flag).toBe("https://example.com/cool.png");
+    }
+  });
+
+  test("rejects cosmetic flag when user lacks flare", () => {
+    const result = flagChecker.isAllowed([], { flag: "flag:cool_flag" });
+    expect(result.type).toBe("forbidden");
+  });
+
+  test("rejects cosmetic flag that does not exist", () => {
+    const result = flagChecker.isAllowed(["flag:*"], {
+      flag: "flag:nonexistent",
+    });
+    expect(result.type).toBe("forbidden");
+  });
+
+  test("allows no flag", () => {
+    const result = flagChecker.isAllowed([], {});
+    expect(result.type).toBe("allowed");
+    if (result.type === "allowed") {
+      expect(result.cosmetics.flag).toBeUndefined();
+    }
   });
 });

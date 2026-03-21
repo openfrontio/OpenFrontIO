@@ -121,6 +121,11 @@ export class PlayPage extends LitElement {
                 adaptive-size
                 class="shrink-0 lg:hidden"
               ></pattern-input>
+              <flag-input
+                id="flag-input-mobile"
+                show-select-label
+                class="shrink-0 lg:hidden h-10 w-10"
+              ></flag-input>
             </div>
           </div>
 
