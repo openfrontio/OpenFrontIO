@@ -4,10 +4,7 @@ import { GameMapLoader, MapData } from "./GameMapLoader";
 export class FetchGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
 
-  public constructor(
-    private readonly prefix: string,
-    private readonly cacheBuster?: string,
-  ) {
+  public constructor(private readonly prefix: string | (() => string)) {
     this.maps = new Map<GameMapType, MapData>();
   }
 
@@ -38,16 +35,12 @@ export class FetchGameMapLoader implements GameMapLoader {
     return mapData;
   }
 
+  private getPrefix(): string {
+    return typeof this.prefix === "function" ? this.prefix() : this.prefix;
+  }
+
   private url(map: string, path: string) {
-    let url = `${this.prefix}/${map}/${path}`;
-
-    if (this.cacheBuster) {
-      url += `${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(
-        this.cacheBuster.trim(),
-      )}`;
-    }
-
-    return url;
+    return `${this.getPrefix()}/${map}/${path}`;
   }
 
   private async loadBinaryFromUrl(url: string) {

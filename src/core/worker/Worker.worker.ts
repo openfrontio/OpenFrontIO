@@ -1,4 +1,4 @@
-import version from "resources/version.txt?raw";
+import { assetUrl } from "../AssetUrls";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
@@ -16,7 +16,7 @@ import {
 
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
-const mapLoader = new FetchGameMapLoader(`/maps`, version);
+const mapLoader = new FetchGameMapLoader(() => assetUrl("maps"));
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
 // and flooding the main thread with messages during catch-up.
 const MAX_TICKS_BEFORE_YIELD = 4;

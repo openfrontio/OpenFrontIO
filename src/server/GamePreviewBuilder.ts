@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { buildAssetUrl, buildVersionedAssetBasePath } from "../core/AssetUrls";
 import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
 import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
@@ -138,6 +139,9 @@ export function buildPreview(
   lobby: GameInfo | null,
   publicInfo: ExternalGameInfo | null,
 ): PreviewMeta {
+  const assetBasePath = buildVersionedAssetBasePath(process.env.GIT_COMMIT);
+  const buildAbsoluteAssetUrl = (path: string) =>
+    new URL(buildAssetUrl(path, assetBasePath), origin).toString();
   const isFinished = !!publicInfo?.info?.end;
   const isPrivate = lobby?.gameConfig?.gameType === "Private";
 
@@ -188,9 +192,12 @@ export function buildPreview(
   const normalizedMap = map ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
 
   const mapThumbnail = normalizedMap
-    ? `${origin}/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`
+    ? buildAbsoluteAssetUrl(
+        `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
+      )
     : null;
-  const image = mapThumbnail ?? `${origin}/images/GameplayScreenshot.png`;
+  const image =
+    mapThumbnail ?? buildAbsoluteAssetUrl("images/GameplayScreenshot.png");
 
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
   const gameTypeLabel = gameType ? ` (${gameType})` : "";

@@ -1,3 +1,4 @@
+import { assetUrl } from "../AssetUrls";
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
@@ -36,7 +37,7 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         })
         .then((buf) => new Uint8Array(buf));
 
-    const mapBasePath = `/maps/${fileName}`;
+    const mapBasePath = assetUrl(`maps/${fileName}`);
 
     const mapData = {
       mapBin: this.createLazyLoader(() => loadBinary(`${mapBasePath}/map.bin`)),
