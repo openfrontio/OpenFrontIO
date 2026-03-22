@@ -29,6 +29,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -110,7 +111,16 @@ export async function startWorker() {
   // Configure MIME types for webp files
   express.static.mime.define({ "image/webp": ["webp"] });
 
-  app.use(express.static(path.join(__dirname, "../../out")));
+  app.use(
+    express.static(path.join(__dirname, "../../out"), {
+      setHeaders: (res) => {
+        applyStaticAssetCacheControl(
+          res.setHeader.bind(res),
+          res.req.originalUrl,
+        );
+      },
+    }),
+  );
   app.use(
     "/maps",
     express.static(path.join(__dirname, "../../static/maps"), {
