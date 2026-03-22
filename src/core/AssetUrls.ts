@@ -30,7 +30,21 @@ export function buildAssetUrl(
   assetManifest: AssetManifest = {},
 ): string {
   const normalizedPath = normalizeAssetPath(path);
-  return assetManifest[normalizedPath] ?? `/${encodeAssetPath(normalizedPath)}`;
+
+  const directUrl = assetManifest[normalizedPath];
+  if (directUrl) {
+    return directUrl;
+  }
+
+  const directoryPrefix = `${normalizedPath}/`;
+  const hasNestedAssets = Object.keys(assetManifest).some((manifestPath) =>
+    manifestPath.startsWith(directoryPrefix),
+  );
+  if (hasNestedAssets) {
+    return `/_assets/${encodeAssetPath(normalizedPath)}`;
+  }
+
+  return `/${encodeAssetPath(normalizedPath)}`;
 }
 
 declare global {
