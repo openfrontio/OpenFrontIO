@@ -1,0 +1,50 @@
+{
+  "name": "Reglaciated Antarctica",
+  "nations": [
+    {
+      "coordinates": [660, 500],
+      "name": "Ancient Aliens",
+      "flag": " "
+    },
+    {
+      "coordinates": [640, 100],
+      "name": "Norwegian Claim",
+      "flag": "no"
+    },
+    {
+      "coordinates": [1000, 390],
+      "name": "Upper Australian Claim",
+      "flag": "au"
+    },
+    {
+      "coordinates": [1080, 600],
+      "name": "Lower Australian Claim",
+      "flag": "au"
+    },
+    {
+      "coordinates": [200, 440],
+      "name": "Argentinian Claim",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [430, 270],
+      "name": "United Kingdom Claim",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [240, 660],
+      "name": "Chilean Claim",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [630, 800],
+      "name": "New Zealand Claim",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [800, 925],
+      "name": "French Claim",
+      "flag": "fr"
+    }
+  ]
+}
