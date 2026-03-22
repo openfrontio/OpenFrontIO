@@ -43,6 +43,36 @@ function createContentHash(filePath: string): string {
   return createHash("sha256").update(content).digest("hex").slice(0, 12);
 }
 
+function createStringHash(content: string): string {
+  return createHash("sha256").update(content).digest("hex").slice(0, 12);
+}
+
+function createHashedAssetUrl(relativePath: string, hash: string): string {
+  const parsed = path.posix.parse(toPosixPath(relativePath));
+  const hashedFileName = `${parsed.name}.${hash}${parsed.ext}`;
+  const hashedRelativePath = path.posix.join(
+    "_assets",
+    parsed.dir,
+    hashedFileName,
+  );
+  return `/${encodeAssetPath(hashedRelativePath)}`;
+}
+
+function renderWebManifest(
+  resourcesDir: string,
+  assetManifest: AssetManifest,
+): string {
+  const sourcePath = path.join(resourcesDir, "manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(sourcePath, "utf8")) as {
+    icons?: Array<{ src?: string }>;
+  };
+  manifest.icons = manifest.icons?.map((icon) => ({
+    ...icon,
+    src: buildAssetUrl(icon.src ?? "", assetManifest),
+  }));
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
 export function getResourcesDir(rootDir: string = process.cwd()): string {
   return path.join(rootDir, "resources");
 }
@@ -86,17 +116,20 @@ export function buildPublicAssetManifest(resourcesDir: string): AssetManifest {
 
   const manifest: AssetManifest = {};
   for (const relativePath of listHashedPublicAssetPaths(resourcesDir)) {
+    if (relativePath === "manifest.json") {
+      continue;
+    }
+
     const absolutePath = path.join(resourcesDir, relativePath);
-    const parsed = path.posix.parse(toPosixPath(relativePath));
     const hash = createContentHash(absolutePath);
-    const hashedFileName = `${parsed.name}.${hash}${parsed.ext}`;
-    const hashedRelativePath = path.posix.join(
-      "_assets",
-      parsed.dir,
-      hashedFileName,
-    );
-    manifest[relativePath] = `/${encodeAssetPath(hashedRelativePath)}`;
+    manifest[relativePath] = createHashedAssetUrl(relativePath, hash);
   }
+
+  const renderedWebManifest = renderWebManifest(resourcesDir, manifest);
+  manifest["manifest.json"] = createHashedAssetUrl(
+    "manifest.json",
+    createStringHash(renderedWebManifest),
+  );
 
   manifestCache.set(resourcesDir, manifest);
   return manifest;
@@ -117,14 +150,10 @@ export function createHashedPublicAssetFiles(
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
     if (relativePath === "manifest.json") {
-      const manifest = JSON.parse(fs.readFileSync(sourcePath, "utf8")) as {
-        icons?: Array<{ src?: string }>;
-      };
-      manifest.icons = manifest.icons?.map((icon) => ({
-        ...icon,
-        src: buildAssetUrl(icon.src ?? "", assetManifest),
-      }));
-      fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`);
+      fs.writeFileSync(
+        outputPath,
+        renderWebManifest(resourcesDir, assetManifest),
+      );
       continue;
     }
 
