@@ -36,4 +36,11 @@ describe("AssetUrls", () => {
       "Invalid asset path segment: %2e%2e",
     );
   });
+
+  test("rejects empty asset paths", () => {
+    expect(() => buildAssetUrl("", {})).toThrow("Asset path must not be empty");
+    expect(() => buildAssetUrl("///", {})).toThrow(
+      "Asset path must not be empty",
+    );
+  });
 });

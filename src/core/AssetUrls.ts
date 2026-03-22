@@ -30,12 +30,18 @@ export function encodeAssetPath(path: string): string {
 }
 
 export function normalizeAssetPath(path: string): string {
-  return path
+  const normalizedPath = path
     .replace(/^\/+/, "")
     .split("/")
     .filter((segment) => segment.length > 0)
     .map((segment) => assertSafeAssetSegment(segment))
     .join("/");
+
+  if (normalizedPath.length === 0) {
+    throw new Error("Asset path must not be empty");
+  }
+
+  return normalizedPath;
 }
 
 export function buildAssetUrl(
