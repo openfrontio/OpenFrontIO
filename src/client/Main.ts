@@ -169,7 +169,6 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 declare global {
   interface Window {
     GIT_COMMIT: string;
-    INSTANCE_ID: string;
     turnstile: any;
     adsEnabled: boolean;
     PageOS: {

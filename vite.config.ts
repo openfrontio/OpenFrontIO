@@ -101,7 +101,6 @@ export default defineConfig(({ mode }) => {
               inject: {
                 data: {
                   gitCommit: JSON.stringify("DEV"),
-                  instanceId: JSON.stringify("DEV_ID"),
                   ...htmlAssetData,
                 },
               },

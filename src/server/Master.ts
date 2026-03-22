@@ -11,7 +11,7 @@ import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
-import { renderHtml } from "./RenderHtml";
+import { renderAppShell } from "./RenderHtml";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 
 const config = getServerConfigFromServer();
@@ -28,11 +28,14 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 
-// Middleware to handle HTML files with EJS templating
+// Serve the shared app shell for the root document.
 app.use(async (req, res, next) => {
   if (req.path === "/") {
     try {
-      await renderHtml(res, path.join(__dirname, "../../static/index.html"));
+      await renderAppShell(
+        res,
+        path.join(__dirname, "../../static/index.html"),
+      );
     } catch (error) {
       log.error("Error rendering index.html:", error);
       res.status(500).send("Internal Server Error");
@@ -148,11 +151,17 @@ app.get("/api/health", (_req, res) => {
   }
 });
 
+app.get("/api/instance", (_req, res) => {
+  res.json({
+    instanceId: process.env.INSTANCE_ID ?? "undefined",
+  });
+});
+
 // SPA fallback route
 app.get("*", async function (_req, res) {
   try {
     const htmlPath = path.join(__dirname, "../../static/index.html");
-    await renderHtml(res, htmlPath);
+    await renderAppShell(res, htmlPath);
   } catch (error) {
     log.error("Error rendering SPA fallback:", error);
     res.status(500).send("Internal Server Error");
