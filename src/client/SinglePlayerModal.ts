@@ -56,6 +56,7 @@ const DEFAULT_OPTIONS = {
   startingGold: false,
   startingGoldValue: undefined as number | undefined,
   disabledUnits: [] as UnitType[],
+  disableAlliances: false,
 } as const;
 
 @customElement("single-player-modal")
@@ -90,6 +91,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [
     ...DEFAULT_OPTIONS.disabledUnits,
   ];
+  @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -313,6 +315,10 @@ export class SinglePlayerModal extends BaseModal {
                     labelKey: "single_modal.compact_map",
                     checked: this.compactMap,
                   },
+                  {
+                    labelKey: "single_modal.disable_alliances",
+                    checked: this.disableAlliances,
+                  },
                 ],
                 inputCards,
               },
@@ -344,7 +350,7 @@ export class SinglePlayerModal extends BaseModal {
             : null}
           <button
             @click=${this.startGame}
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0"
+            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0"
           >
             ${translateText("single_modal.start")}
           </button>
@@ -383,6 +389,7 @@ export class SinglePlayerModal extends BaseModal {
       this.gameMode !== DEFAULT_OPTIONS.gameMode ||
       this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
+      this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.disabledUnits.length > 0
     );
   }
@@ -409,6 +416,7 @@ export class SinglePlayerModal extends BaseModal {
     this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
     this.startingGold = DEFAULT_OPTIONS.startingGold;
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
+    this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
   }
 
   protected onOpen(): void {
@@ -487,6 +495,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "single_modal.disable_alliances":
+        this.disableAlliances = checked;
         break;
       default:
         break;
@@ -643,9 +654,6 @@ export class SinglePlayerModal extends BaseModal {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
-    if (!usernameInput) {
-      console.warn("Username input element not found");
-    }
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -658,7 +666,8 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getCurrentUsername(),
+                username: usernameInput.getUsername(),
+                clanTag: usernameInput.getClanTag() ?? null,
                 cosmetics: await getPlayerCosmetics(),
               },
             ],
@@ -696,6 +705,7 @@ export class SinglePlayerModal extends BaseModal {
                     ),
                   }
                 : {}),
+              ...(this.disableAlliances ? { disableAlliances: true } : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

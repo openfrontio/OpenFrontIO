@@ -123,6 +123,12 @@ export class ReplaySpeedChangeEvent implements GameEvent {
   constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
 }
 
+export class TogglePauseIntentEvent implements GameEvent {}
+
+export class GameSpeedUpIntentEvent implements GameEvent {}
+
+export class GameSpeedDownIntentEvent implements GameEvent {}
+
 export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
@@ -236,6 +242,9 @@ export class InputHandler {
       buildAtomBomb: "Digit8",
       buildHydrogenBomb: "Digit9",
       buildMIRV: "Digit0",
+      pauseGame: "KeyP",
+      gameSpeedUp: "Period",
+      gameSpeedDown: "Comma",
       ...saved,
     };
 
@@ -433,8 +442,20 @@ export class InputHandler {
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
+      if (!e.repeat && e.code === this.keybinds.pauseGame) {
+        e.preventDefault();
+        this.eventBus.emit(new TogglePauseIntentEvent());
+      }
+      if (!e.repeat && e.code === this.keybinds.gameSpeedUp) {
+        e.preventDefault();
+        this.eventBus.emit(new GameSpeedUpIntentEvent());
+      }
+      if (!e.repeat && e.code === this.keybinds.gameSpeedDown) {
+        e.preventDefault();
+        this.eventBus.emit(new GameSpeedDownIntentEvent());
+      }
+
       // Shift-D to toggle performance overlay
-      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
       if (e.code === "KeyD" && e.shiftKey) {
         e.preventDefault();
         console.log("TogglePerformanceOverlayEvent");
@@ -671,7 +692,7 @@ export class InputHandler {
     }
     if (element.tagName === "INPUT") {
       const input = element as HTMLInputElement;
-      if (input.id === "attack-ratio" && input.type === "range") {
+      if (input.type === "range") {
         return false;
       }
       return true;

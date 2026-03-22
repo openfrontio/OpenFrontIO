@@ -6,7 +6,7 @@ import { Cell } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
-import { createCanvas, renderNumber, renderTroops } from "../../Utils";
+import { renderTroops } from "../../Utils";
 import {
   computeAllianceClipPath,
   createAllianceProgressIcon,
@@ -16,10 +16,21 @@ import {
 } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import shieldIcon from "/images/ShieldIconBlack.svg?url";
+
+const PLAYER_NAME = "player-name";
+const PLAYER_NAME_SPAN = "player-name-span";
+const PLAYER_TROOPS = "player-troops";
+const PLAYER_ICONS = "player-icons";
+const PLAYER_FLAG = "player-flag";
 
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
+
+  public nameDiv: HTMLDivElement;
+  public nameSpan: HTMLSpanElement | null;
+  public troopsDiv: HTMLDivElement;
+  public flagDiv: HTMLDivElement | null;
+  public iconsDiv: HTMLDivElement;
 
   constructor(
     public player: PlayerView,
@@ -28,39 +39,41 @@ class RenderInfo {
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
-  ) {}
+  ) {
+    // Traverse the DOM once, upon creation
+    this.nameDiv = element.querySelector(`.${PLAYER_NAME}`) as HTMLDivElement;
+    this.nameSpan = element.querySelector(
+      `.${PLAYER_NAME_SPAN}`,
+    ) as HTMLSpanElement | null;
+    this.troopsDiv = element.querySelector(
+      `.${PLAYER_TROOPS}`,
+    ) as HTMLDivElement;
+    this.flagDiv = element.querySelector(
+      `.${PLAYER_FLAG}`,
+    ) as HTMLDivElement | null;
+    this.iconsDiv = element.querySelector(`.${PLAYER_ICONS}`) as HTMLDivElement;
+  }
 }
 
 export class NameLayer implements Layer {
-  private canvas: HTMLCanvasElement;
   private lastChecked = 0;
   private renderCheckRate = 100;
   private renderRefreshRate = 500;
   private rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
-  private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private lastContainerTransform: string = "";
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
-  ) {
-    this.shieldIconImage = new Image();
-    this.shieldIconImage.src = shieldIcon;
-    this.shieldIconImage = new Image();
-    this.shieldIconImage.src = shieldIcon;
-  }
-
-  resizeCanvas() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-  }
+  ) {}
 
   shouldTransform(): boolean {
     return false;
@@ -71,10 +84,6 @@ export class NameLayer implements Layer {
   }
 
   public init() {
-    this.canvas = createCanvas();
-    window.addEventListener("resize", () => this.resizeCanvas());
-    this.resizeCanvas();
-
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
     this.container.style.left = "50%";
@@ -109,12 +118,13 @@ export class NameLayer implements Layer {
     }
   }
 
-  private updateElementVisibility(render: RenderInfo) {
+  private updateElementVisibility(render: RenderInfo, baseSize?: number) {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
       return;
     }
 
-    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
+    baseSize =
+      baseSize ?? Math.max(1, Math.floor(render.player.nameLocation().size));
     const size = this.transformHandler.scale * baseSize;
     const isOnScreen = render.location
       ? this.transformHandler.isOnScreen(render.location)
@@ -160,7 +170,7 @@ export class NameLayer implements Layer {
     }
   }
 
-  public renderLayer(mainContex: CanvasRenderingContext2D) {
+  public renderLayer() {
     const screenPosOld = this.transformHandler.worldToScreenCoordinates(
       new Cell(0, 0),
     );
@@ -168,7 +178,11 @@ export class NameLayer implements Layer {
       screenPosOld.x - window.innerWidth / 2,
       screenPosOld.y - window.innerHeight / 2,
     );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    const newTransform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    if (this.lastContainerTransform !== newTransform) {
+      this.container.style.transform = newTransform;
+      this.lastContainerTransform = newTransform;
+    }
 
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
@@ -177,14 +191,6 @@ export class NameLayer implements Layer {
         this.renderPlayerInfo(render);
       }
     }
-
-    mainContex.drawImage(
-      this.canvas,
-      0,
-      0,
-      mainContex.canvas.width,
-      mainContex.canvas.height,
-    );
   }
 
   private createPlayerElement(player: PlayerView): HTMLDivElement {
@@ -196,7 +202,7 @@ export class NameLayer implements Layer {
     element.style.gap = "0px";
 
     const iconsDiv = document.createElement("div");
-    iconsDiv.classList.add("player-icons");
+    iconsDiv.classList.add(PLAYER_ICONS);
     iconsDiv.style.display = "flex";
     iconsDiv.style.gap = "4px";
     iconsDiv.style.justifyContent = "center";
@@ -207,7 +213,7 @@ export class NameLayer implements Layer {
 
     const nameDiv = document.createElement("div");
     const applyFlagStyles = (element: HTMLElement): void => {
-      element.classList.add("player-flag");
+      element.classList.add(PLAYER_FLAG);
       element.style.opacity = "0.8";
       element.style.zIndex = "1";
       element.style.aspectRatio = "3/4";
@@ -227,7 +233,7 @@ export class NameLayer implements Layer {
         nameDiv.appendChild(flagImg);
       }
     }
-    nameDiv.classList.add("player-name");
+    nameDiv.classList.add(PLAYER_NAME);
     nameDiv.style.color = this.theme.textColor(player);
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
@@ -238,13 +244,13 @@ export class NameLayer implements Layer {
     nameDiv.style.alignItems = "center";
 
     const nameSpan = document.createElement("span");
-    nameSpan.className = "player-name-span";
-    nameSpan.innerHTML = player.name();
+    nameSpan.className = PLAYER_NAME_SPAN;
+    nameSpan.textContent = player.displayName();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
     const troopsDiv = document.createElement("div");
-    troopsDiv.classList.add("player-troops");
+    troopsDiv.classList.add(PLAYER_TROOPS);
     troopsDiv.setAttribute("translate", "no");
     troopsDiv.textContent = renderTroops(player.troops());
     troopsDiv.style.color = this.theme.textColor(player);
@@ -252,33 +258,6 @@ export class NameLayer implements Layer {
     troopsDiv.style.zIndex = "3";
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
-
-    // TODO: Remove the shield icon.
-    /* eslint-disable no-constant-condition */
-    if (false) {
-      const shieldDiv = document.createElement("div");
-      shieldDiv.classList.add("player-shield");
-      shieldDiv.style.zIndex = "3";
-      shieldDiv.style.marginTop = "-5%";
-      shieldDiv.style.display = "flex";
-      shieldDiv.style.alignItems = "center";
-      shieldDiv.style.gap = "0px";
-      const shieldImg = document.createElement("img");
-      shieldImg.src = this.shieldIconImage.src;
-      shieldImg.style.width = "16px";
-      shieldImg.style.height = "16px";
-
-      const shieldSpan = document.createElement("span");
-      shieldSpan.textContent = "0";
-      shieldSpan.style.color = "black";
-      shieldSpan.style.fontSize = "10px";
-      shieldSpan.style.marginTop = "-2px";
-
-      shieldDiv.appendChild(shieldImg);
-      shieldDiv.appendChild(shieldSpan);
-      element.appendChild(shieldDiv);
-    }
-    /* eslint-enable no-constant-condition */
 
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
@@ -288,32 +267,36 @@ export class NameLayer implements Layer {
   }
 
   renderPlayerInfo(render: RenderInfo) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
+    if (!render.player.nameLocation()) {
+      return;
+    }
+    if (!render.player.isAlive()) {
       this.renders = this.renders.filter((r) => r !== render);
       render.element.remove();
       return;
     }
 
-    const oldLocation = render.location;
-    render.location = new Cell(
-      render.player.nameLocation().x,
-      render.player.nameLocation().y,
-    );
+    // Update location and size, show or hide dependent on those
+    const nameLocation = render.player.nameLocation();
+    const newX = nameLocation.x;
+    const newY = nameLocation.y;
 
-    // Calculate base size and scale
-    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.fontColor = this.theme.textColor(render.player);
+    if (
+      !render.location ||
+      render.location.x !== newX ||
+      render.location.y !== newY
+    ) {
+      render.location = new Cell(newX, newY);
+    }
 
-    // Update element visibility (handles Ctrl key, size, and screen position)
-    this.updateElementVisibility(render);
+    const baseSize = Math.max(1, Math.floor(nameLocation.size));
+    this.updateElementVisibility(render, baseSize);
 
-    // If element is hidden, don't continue with rendering
     if (render.element.style.display === "none") {
       return;
     }
 
-    // Throttle updates
+    // Throttle further updates
     const now = Date.now();
     if (now - render.lastRenderCalc <= this.renderRefreshRate) {
       return;
@@ -321,50 +304,20 @@ export class NameLayer implements Layer {
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
     // Update text sizes
-    const nameDiv = render.element.querySelector(
-      ".player-name",
-    ) as HTMLDivElement;
-    const flagDiv = render.element.querySelector(
-      ".player-flag",
-    ) as HTMLDivElement;
-    const troopsDiv = render.element.querySelector(
-      ".player-troops",
-    ) as HTMLDivElement;
-    nameDiv.style.fontSize = `${render.fontSize}px`;
-    nameDiv.style.lineHeight = `${render.fontSize}px`;
-    nameDiv.style.color = render.fontColor;
-    const span = nameDiv.querySelector(".player-name-span");
-    if (span) {
-      span.innerHTML = render.player.name();
-    }
-    if (flagDiv) {
-      flagDiv.style.height = `${render.fontSize}px`;
-    }
-    troopsDiv.style.fontSize = `${render.fontSize}px`;
-    troopsDiv.style.color = render.fontColor;
-    troopsDiv.textContent = renderTroops(render.player.troops());
+    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
+    render.fontColor = this.theme.textColor(render.player);
 
-    const density = renderNumber(
-      render.player.troops() / render.player.numTilesOwned(),
-    );
-    const shieldDiv: HTMLDivElement | null =
-      render.element.querySelector(".player-shield");
-    const shieldImg = shieldDiv?.querySelector("img");
-    const shieldNumber = shieldDiv?.querySelector("span");
-    if (shieldImg) {
-      shieldImg.style.width = `${render.fontSize * 0.8}px`;
-      shieldImg.style.height = `${render.fontSize * 0.8}px`;
+    render.nameDiv.style.fontSize = `${render.fontSize}px`;
+    render.nameDiv.style.lineHeight = `${render.fontSize}px`;
+    render.nameDiv.style.color = render.fontColor;
+    if (render.flagDiv) {
+      render.flagDiv.style.height = `${render.fontSize}px`;
     }
-    if (shieldNumber) {
-      shieldNumber.style.fontSize = `${render.fontSize * 0.6}px`;
-      shieldNumber.style.marginTop = `${-render.fontSize * 0.1}px`;
-      shieldNumber.textContent = density;
-    }
+    render.troopsDiv.style.fontSize = `${render.fontSize}px`;
+    render.troopsDiv.style.color = render.fontColor;
+    render.troopsDiv.textContent = renderTroops(render.player.troops());
 
     // Handle icons
-    const iconsDiv = render.element.querySelector(
-      ".player-icons",
-    ) as HTMLDivElement;
     const iconSize = Math.min(render.fontSize * 1.5, 48);
 
     // Compute which icons should be shown for this player using shared logic
@@ -396,7 +349,7 @@ export class NameLayer implements Layer {
           emojiDiv.style.position = "absolute";
           emojiDiv.style.top = "50%";
           emojiDiv.style.transform = "translateY(-50%)";
-          iconsDiv.appendChild(emojiDiv);
+          render.iconsDiv.appendChild(emojiDiv);
           render.icons.set(icon.id, emojiDiv);
         }
 
@@ -433,7 +386,7 @@ export class NameLayer implements Layer {
               hasExtensionRequest,
               this.userSettings.darkMode(),
             );
-            iconsDiv.appendChild(allianceWrapper);
+            render.iconsDiv.appendChild(allianceWrapper);
             render.icons.set(icon.id, allianceWrapper);
           } else {
             // Update existing alliance icon
@@ -473,7 +426,7 @@ export class NameLayer implements Layer {
 
         if (!imgElement) {
           imgElement = this.createIconElement(icon.src, iconSize, icon.center);
-          iconsDiv.appendChild(imgElement);
+          render.iconsDiv.appendChild(imgElement);
           render.icons.set(icon.id, imgElement);
         }
 
@@ -516,10 +469,11 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (render.location && render.location !== oldLocation) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
-    }
+    // Even when positionChanged is false: Scale update otherwise sometimes only happens after seconds which looks buggy.
+    // Because of sometimes overlapping delays of 20 ticks for nameLocation() (largestClusterBoundingBox in PlayerExecution)
+    // and the 500ms renderRefreshRate in NameLayer.
+    const scale = Math.min(baseSize * 0.25, 3);
+    render.element.style.transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
   }
 
   private createIconElement(

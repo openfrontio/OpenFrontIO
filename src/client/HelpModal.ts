@@ -58,6 +58,9 @@ export class HelpModal extends BaseModal {
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       resetGfx: "KeyR",
+      pauseGame: "KeyP",
+      gameSpeedUp: "Period",
+      gameSpeedDown: "Comma",
       ...saved,
     };
   }
@@ -75,10 +78,14 @@ export class HelpModal extends BaseModal {
       MetaLeft: "⌘",
       MetaRight: "⌘",
       Space: "Space",
+      Escape: "Esc",
+      Enter: "↵ Return",
       ArrowUp: "↑",
       ArrowDown: "↓",
       ArrowLeft: "←",
       ArrowRight: "→",
+      Period: ">",
+      Comma: "<",
     };
 
     if (specialLabels[code]) return specialLabels[code];
@@ -261,6 +268,22 @@ export class HelpModal extends BaseModal {
                 <tbody class="text-white/80">
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey("Escape")}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_esc")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey("Enter")}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_enter")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
                       ${this.renderKey(keybinds.toggleView)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
@@ -352,6 +375,25 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_center")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.pauseGame)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_pause_game")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      <div class="flex flex-wrap gap-2">
+                        ${this.renderKey(keybinds.gameSpeedDown)}
+                        ${this.renderKey(keybinds.gameSpeedUp)}
+                      </div>
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_game_speed")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
@@ -582,10 +624,11 @@ export class HelpModal extends BaseModal {
                     ${translateText("help_modal.ui_options_desc")}
                   </p>
                   <ul class="space-y-2 list-disc pl-4 text-white/60">
-                    <li>${translateText("help_modal.option_pause")}</li>
                     <li>${translateText("help_modal.option_timer")}</li>
-                    <li>${translateText("help_modal.option_exit")}</li>
+                    <li>${translateText("help_modal.option_speed")}</li>
+                    <li>${translateText("help_modal.option_pause")}</li>
                     <li>${translateText("help_modal.option_settings")}</li>
+                    <li>${translateText("help_modal.option_exit")}</li>
                   </ul>
                 </div>
               </div>
@@ -676,8 +719,7 @@ export class HelpModal extends BaseModal {
                   <li class="flex items-center gap-3">
                     <img
                       src="/images/InfoIcon.svg"
-                      class="w-5 h-5 opacity-80"
-                      loading="lazy"
+                      class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.radial_info")}</span>
                   </li>
@@ -806,14 +848,11 @@ export class HelpModal extends BaseModal {
                       <span>${translateText("help_modal.info_emoji")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="flex items-center justify-center w-8 h-8 opacity-80"
-                      >
-                        <img
-                          src="/images/helpModal/stopTrading.webp"
-                          class="w-full h-full object-contain"
-                        />
-                      </div>
+                      <img
+                        src="/images/StopIconWhite.png"
+                        class="w-8 h-8 scale-75 origin-left"
+                        loading="lazy"
+                      />
                       <span>${translateText("help_modal.info_trade")}</span>
                     </li>
                   </ul>

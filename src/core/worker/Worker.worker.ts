@@ -3,7 +3,7 @@ import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
-  AttackAveragePositionResultMessage,
+  AttackClusteredPositionsResultMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsResultMessage,
@@ -243,25 +243,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         throw error;
       }
       break;
-    case "attack_average_position":
+    case "attack_clustered_positions":
       if (!gameRunner) {
         throw new Error("Game runner not initialized");
       }
 
       try {
-        const averagePosition = (await gameRunner).attackAveragePosition(
+        const attacks = (await gameRunner).attackClusteredPositions(
           message.playerID,
           message.attackID,
         );
         sendMessage({
-          type: "attack_average_position_result",
+          type: "attack_clustered_positions_result",
           id: message.id,
-          x: averagePosition ? averagePosition.x : null,
-          y: averagePosition ? averagePosition.y : null,
-        } as AttackAveragePositionResultMessage);
+          attacks,
+        } as AttackClusteredPositionsResultMessage);
       } catch (error) {
-        console.error("Failed to get attack average position:", error);
-        throw error;
+        console.error("Failed to get attack front line centers:", error);
+        sendMessage({
+          type: "attack_clustered_positions_result",
+          id: message.id,
+          attacks: [],
+        } as AttackClusteredPositionsResultMessage);
       }
       break;
     case "transport_ship_spawn":
