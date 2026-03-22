@@ -66,12 +66,28 @@ export class TerrainLayer implements Layer {
     } else {
       context.imageSmoothingEnabled = false;
     }
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
+
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const vx0 = Math.max(0, Math.floor(topLeft.x));
+    const vy0 = Math.max(0, Math.floor(topLeft.y));
+    const vx1 = Math.min(this.game.width(), Math.ceil(bottomRight.x));
+    const vy1 = Math.min(this.game.height(), Math.ceil(bottomRight.y));
+
+    const w = vx1 - vx0;
+    const h = vy1 - vy0;
+
+    if (w > 0 && h > 0) {
+      context.drawImage(
+        this.canvas,
+        vx0,
+        vy0,
+        w,
+        h,
+        -this.game.width() / 2 + vx0,
+        -this.game.height() / 2 + vy0,
+        w,
+        h,
+      );
+    }
   }
 }

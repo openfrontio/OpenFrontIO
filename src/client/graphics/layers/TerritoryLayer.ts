@@ -490,23 +490,44 @@ export class TerritoryLayer implements Layer {
     }
 
     const drawCanvasStart = FrameProfiler.start();
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const cvx0 = Math.max(0, Math.floor(topLeft.x));
+    const cvy0 = Math.max(0, Math.floor(topLeft.y));
+    const cvx1 = Math.min(this.game.width(), Math.ceil(bottomRight.x));
+    const cvy1 = Math.min(this.game.height(), Math.ceil(bottomRight.y));
+
+    const cw = cvx1 - cvx0;
+    const ch = cvy1 - cvy0;
+
+    if (cw > 0 && ch > 0) {
+      context.drawImage(
+        this.canvas,
+        cvx0,
+        cvy0,
+        cw,
+        ch,
+        -this.game.width() / 2 + cvx0,
+        -this.game.height() / 2 + cvy0,
+        cw,
+        ch,
+      );
+    }
     FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
     if (this.game.inSpawnPhase()) {
       const highlightDrawStart = FrameProfiler.start();
-      context.drawImage(
-        this.highlightCanvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
+      if (cw > 0 && ch > 0) {
+        context.drawImage(
+          this.highlightCanvas,
+          cvx0,
+          cvy0,
+          cw,
+          ch,
+          -this.game.width() / 2 + cvx0,
+          -this.game.height() / 2 + cvy0,
+          cw,
+          ch,
+        );
+      }
       FrameProfiler.end(
         "TerritoryLayer:drawHighlightCanvas",
         highlightDrawStart,
