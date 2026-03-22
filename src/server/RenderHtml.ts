@@ -2,17 +2,11 @@ import ejs from "ejs";
 import type { Response } from "express";
 import fs from "fs/promises";
 import { buildAssetUrl } from "../core/AssetUrls";
-import {
-  buildPublicAssetManifest,
-  getResourcesDir,
-} from "./PublicAssetManifest";
+import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
-  const assetManifest =
-    process.env.GAME_ENV === "prod"
-      ? buildPublicAssetManifest(getResourcesDir())
-      : {};
+  const assetManifest = await getRuntimeAssetManifest();
   return ejs.render(htmlContent, {
     gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
     instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),

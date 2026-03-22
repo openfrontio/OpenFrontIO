@@ -3,10 +3,7 @@ import { buildAssetUrl } from "../core/AssetUrls";
 import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
 import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
-import {
-  buildPublicAssetManifest,
-  getResourcesDir,
-} from "./PublicAssetManifest";
+import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
@@ -136,17 +133,14 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export function buildPreview(
+export async function buildPreview(
   gameID: string,
   origin: string,
   workerPath: string,
   lobby: GameInfo | null,
   publicInfo: ExternalGameInfo | null,
-): PreviewMeta {
-  const assetManifest =
-    process.env.GAME_ENV === "prod"
-      ? buildPublicAssetManifest(getResourcesDir())
-      : {};
+): Promise<PreviewMeta> {
+  const assetManifest = await getRuntimeAssetManifest();
   const buildAbsoluteAssetUrl = (path: string) =>
     new URL(buildAssetUrl(path, assetManifest), origin).toString();
   const isFinished = !!publicInfo?.info?.end;

@@ -96,7 +96,7 @@ export function registerGamePreviewRoute(opts: {
       }
 
       const origin = requestOrigin(req, config);
-      const meta = buildPreview(
+      const meta = await buildPreview(
         gameID,
         origin,
         config.workerPath(gameID),
