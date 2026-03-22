@@ -1,0 +1,92 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 632762,
+    "width": 1148
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 39011,
+    "width": 287
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 157462,
+    "width": 574
+  },
+  "name": "Reglaciated Antarctica",
+  "nations": [
+    {
+      "coordinates": [
+        660,
+        500
+      ],
+      "flag": " ",
+      "name": "Ancient Aliens"
+    },
+    {
+      "coordinates": [
+        640,
+        100
+      ],
+      "flag": "no",
+      "name": "Norwegian Claim"
+    },
+    {
+      "coordinates": [
+        1000,
+        390
+      ],
+      "flag": "au",
+      "name": "Upper Australian Claim"
+    },
+    {
+      "coordinates": [
+        1080,
+        600
+      ],
+      "flag": "au",
+      "name": "Lower Australian Claim"
+    },
+    {
+      "coordinates": [
+        200,
+        440
+      ],
+      "flag": "ar",
+      "name": "Argentinian Claim"
+    },
+    {
+      "coordinates": [
+        430,
+        270
+      ],
+      "flag": "gb",
+      "name": "United Kingdom Claim"
+    },
+    {
+      "coordinates": [
+        240,
+        660
+      ],
+      "flag": "cl",
+      "name": "Chilean Claim"
+    },
+    {
+      "coordinates": [
+        630,
+        800
+      ],
+      "flag": "nz",
+      "name": "New Zealand Claim"
+    },
+    {
+      "coordinates": [
+        800,
+        925
+      ],
+      "flag": "fr",
+      "name": "French Claim"
+    }
+  ]
+}
