@@ -8,6 +8,19 @@ function safeDecodeAssetSegment(segment: string): string {
   }
 }
 
+function assertSafeAssetSegment(segment: string): string {
+  const decodedSegment = safeDecodeAssetSegment(segment);
+  if (
+    segment === "." ||
+    segment === ".." ||
+    decodedSegment === "." ||
+    decodedSegment === ".."
+  ) {
+    throw new Error(`Invalid asset path segment: ${segment}`);
+  }
+  return decodedSegment;
+}
+
 export function encodeAssetPath(path: string): string {
   return normalizeAssetPath(path)
     .split("/")
@@ -21,7 +34,7 @@ export function normalizeAssetPath(path: string): string {
     .replace(/^\/+/, "")
     .split("/")
     .filter((segment) => segment.length > 0)
-    .map((segment) => safeDecodeAssetSegment(segment))
+    .map((segment) => assertSafeAssetSegment(segment))
     .join("/");
 }
 

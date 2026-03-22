@@ -27,4 +27,13 @@ describe("AssetUrls", () => {
   test("falls back to the unversioned path when manifest has no match", () => {
     expect(buildAssetUrl("images/unknown.svg", {})).toBe("/images/unknown.svg");
   });
+
+  test("rejects dot segments in asset paths", () => {
+    expect(() => buildAssetUrl("../api/instance", {})).toThrow(
+      "Invalid asset path segment: ..",
+    );
+    expect(() => buildAssetUrl("images/%2e%2e/secret.svg", {})).toThrow(
+      "Invalid asset path segment: %2e%2e",
+    );
+  });
 });
