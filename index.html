@@ -7,8 +7,8 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/images/Favicon.svg" />
+    <link rel="manifest" href="<%- manifestHref %>" />
+    <link rel="icon" type="image/svg+xml" href="<%- faviconHref %>" />
 
     <!-- Preload styles -->
     <style>
@@ -50,16 +50,14 @@
       property="og:description"
       content="Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game."
     />
-    <meta
-      property="og:image"
-      content="https://openfront.io/images/GameplayScreenshot.png"
-    />
+    <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
     <!-- Injected from Server env -->
     <script>
       window.GIT_COMMIT = <%- gitCommit %>;
       window.INSTANCE_ID = <%- instanceId %>;
+      window.ASSET_BASE_PATH = <%- assetBasePath %>;
     </script>
 
     <!-- CrazyGames SDK -->
@@ -126,21 +124,19 @@
       <div
         id="background-layer"
         class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
-        style="
-          background-image: url(&quot;/resources/images/background.webp&quot;);
-        "
+        style="background-image: url(&quot;<%- backgroundImageUrl %>&quot;)"
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
         style="
-          background-image: url(&quot;/resources/images/OpenFront.webp&quot;);
+          background-image: url(&quot;<%- desktopLogoImageUrl %>&quot;);
           opacity: 0.5;
         "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
         style="
-          background-image: url(&quot;/resources/images/OF.webp&quot;);
+          background-image: url(&quot;<%- mobileLogoImageUrl %>&quot;);
           opacity: 0.5;
         "
       ></div>

@@ -1,12 +1,24 @@
 import ejs from "ejs";
 import type { Response } from "express";
 import fs from "fs/promises";
+import { buildAssetUrl, buildVersionedAssetBasePath } from "../core/AssetUrls";
 
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
+  const assetBasePath = buildVersionedAssetBasePath(process.env.GIT_COMMIT);
   return ejs.render(htmlContent, {
     gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
     instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),
+    assetBasePath: JSON.stringify(assetBasePath),
+    manifestHref: buildAssetUrl("manifest.json", assetBasePath),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetBasePath),
+    gameplayScreenshotUrl: buildAssetUrl(
+      "images/GameplayScreenshot.png",
+      assetBasePath,
+    ),
+    backgroundImageUrl: buildAssetUrl("images/background.webp", assetBasePath),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetBasePath),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetBasePath),
   });
 }
 

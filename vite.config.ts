@@ -1,10 +1,16 @@
 import tailwindcss from "@tailwindcss/vite";
+import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfigPaths from "vite-tsconfig-paths";
+import {
+  buildAssetUrl,
+  buildVersionedAssetBasePath,
+  normalizeAssetVersion,
+} from "./src/core/AssetUrls";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +19,52 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
+  const assetVersion = normalizeAssetVersion(
+    env.GIT_COMMIT ?? process.env.GIT_COMMIT,
+  );
+  const assetBasePath = buildVersionedAssetBasePath(assetVersion);
+  const htmlAssetData = {
+    assetBasePath: JSON.stringify(assetBasePath),
+    manifestHref: buildAssetUrl("manifest.json", assetBasePath),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetBasePath),
+    gameplayScreenshotUrl: buildAssetUrl(
+      "images/GameplayScreenshot.png",
+      assetBasePath,
+    ),
+    backgroundImageUrl: buildAssetUrl("images/background.webp", assetBasePath),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetBasePath),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetBasePath),
+  };
+
+  const rewriteVersionedManifest = () => ({
+    name: "rewrite-versioned-manifest",
+    apply: "build" as const,
+    async closeBundle() {
+      if (!assetVersion) {
+        return;
+      }
+
+      const manifestPath = path.join(
+        __dirname,
+        "static",
+        "_assets",
+        assetVersion,
+        "manifest.json",
+      );
+      const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as {
+        icons?: Array<{ src?: string }>;
+      };
+      manifest.icons = manifest.icons?.map((icon) => ({
+        ...icon,
+        src: buildAssetUrl(icon.src ?? "", assetBasePath),
+      }));
+      await fs.writeFile(
+        manifestPath,
+        `${JSON.stringify(manifest, null, 2)}\n`,
+      );
+    },
+  });
+
   // In dev, redirect visits to /w*/game/* to "/" so Vite serves the index.html.
   const devGameHtmlBypass = (req?: {
     url?: string;
@@ -65,22 +117,33 @@ export default defineConfig(({ mode }) => {
                 data: {
                   gitCommit: JSON.stringify("DEV"),
                   instanceId: JSON.stringify("DEV_ID"),
+                  ...htmlAssetData,
                 },
               },
             }),
           ]),
       viteStaticCopy({
         targets: [
+          ...(assetVersion
+            ? [
+                {
+                  src: "resources/**/*",
+                  dest: `_assets/${assetVersion}`,
+                },
+              ]
+            : []),
           {
             src: "proprietary/*",
             dest: ".",
           },
         ],
       }),
+      ...(isProduction ? [rewriteVersionedManifest()] : []),
       tailwindcss(),
     ],
 
     define: {
+      __ASSET_BASE_PATH__: JSON.stringify(assetBasePath),
       "process.env.WEBSOCKET_URL": JSON.stringify(
         isProduction ? "" : "localhost:3000",
       ),
