@@ -62,7 +62,7 @@ export class NewsModal extends BaseModal {
   protected onOpen(): void {
     if (!this.initialized) {
       this.initialized = true;
-      fetch(`${changelog}?v=${encodeURIComponent(version.trim())}`)
+      fetch(changelog)
         .then((response) => (response.ok ? response.text() : "Failed to load"))
         .then((markdown) => normalizeNewsMarkdown(markdown))
         .then((markdown) => (this.markdown = markdown))

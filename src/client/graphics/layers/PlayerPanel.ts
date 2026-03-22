@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -493,7 +494,7 @@ export class PlayerPanel extends LitElement implements Layer {
       <div class="flex items-center gap-2.5 flex-wrap">
         ${country && typeof flagCode === "string"
           ? html`<img
-              src="/flags/${encodeURIComponent(flagCode)}.svg"
+              src=${assetUrl(`flags/${encodeURIComponent(flagCode)}.svg`)}
               alt=${country?.name ?? "Flag"}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {

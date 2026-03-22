@@ -5,6 +5,7 @@ import {
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
@@ -274,7 +275,7 @@ export class AccountModal extends BaseModal {
               class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
             >
               <img
-                src="/images/DiscordLogo.svg"
+                src=${assetUrl("images/DiscordLogo.svg")}
                 alt="Discord"
                 class="w-6 h-6 relative z-10"
               />

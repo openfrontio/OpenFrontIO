@@ -1,3 +1,4 @@
+import { assetUrl } from "./AssetUrls";
 import { Cosmetics } from "./CosmeticSchemas";
 
 const ANIMATION_DURATIONS: Record<string, number> = {
@@ -39,7 +40,7 @@ export function renderPlayerFlag(
   for (const { layerKey, colorKey } of layers) {
     const layerName = cosmetics?.flag?.layers[layerKey]?.name ?? layerKey;
 
-    const mask = `/flags/custom/${layerName}.svg`;
+    const mask = assetUrl(`flags/custom/${layerName}.svg`);
     if (!mask) continue;
 
     const layer = document.createElement("div");
