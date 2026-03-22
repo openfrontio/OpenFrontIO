@@ -40,20 +40,11 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   }
 
   const bootstrapGameEnv = window.BOOTSTRAP_CONFIG?.gameEnv;
-  if (bootstrapGameEnv) {
-    cachedSC = getServerConfig(bootstrapGameEnv);
-    return cachedSC;
+  if (!bootstrapGameEnv) {
+    throw new Error("Missing bootstrap server config");
   }
 
-  const response = await fetch("/api/env");
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch server config: ${response.status} ${response.statusText}`,
-    );
-  }
-  const config = await response.json();
-
-  cachedSC = getServerConfig(config.game_env);
+  cachedSC = getServerConfig(bootstrapGameEnv);
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {

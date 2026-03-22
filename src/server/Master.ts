@@ -10,6 +10,7 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { renderHtml } from "./RenderHtml";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 
@@ -60,6 +61,11 @@ app.use(
     max: 20, // 20 requests per IP per second
   }),
 );
+
+app.use("/api", (_req, res, next) => {
+  setNoStoreHeaders(res);
+  next();
+});
 
 // Start the master process
 export async function startMaster() {
@@ -132,14 +138,6 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 }
-
-app.get("/api/env", async (req, res) => {
-  const envConfig = {
-    game_env: process.env.GAME_ENV,
-  };
-  if (!envConfig.game_env) return res.sendStatus(500);
-  res.json(envConfig);
-});
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;

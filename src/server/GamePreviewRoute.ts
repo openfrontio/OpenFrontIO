@@ -14,6 +14,7 @@ import {
   ExternalGameInfo,
   ExternalGameInfoSchema,
 } from "./GamePreviewBuilder";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { renderHtmlContent, setHtmlNoCacheHeaders } from "./RenderHtml";
 
 const requestOrigin = (req: Request, config: ServerConfig): string => {
@@ -151,6 +152,7 @@ export function registerGamePreviewRoute(opts: {
       }
 
       // Fallback to JSON if HTML file not found
+      setNoStoreHeaders(res);
       res.setHeader("Content-Type", "application/json");
       return res.send(JSON.stringify(lobby ?? publicInfo, replacer));
     } catch (error) {

@@ -27,6 +27,7 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -138,6 +139,11 @@ export async function startWorker() {
       max: 20, // 20 requests per IP per second
     }),
   );
+
+  app.use("/api", (_req, res, next) => {
+    setNoStoreHeaders(res);
+    next();
+  });
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;

@@ -2,6 +2,7 @@ import ejs from "ejs";
 import type { Response } from "express";
 import fs from "fs/promises";
 import { buildAssetUrl } from "../core/AssetUrls";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
@@ -25,12 +26,7 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
 }
 
 export function setHtmlNoCacheHeaders(res: Response): void {
-  res.setHeader(
-    "Cache-Control",
-    "no-store, no-cache, must-revalidate, proxy-revalidate",
-  );
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
+  setNoStoreHeaders(res);
   res.setHeader("ETag", "");
   res.setHeader("Content-Type", "text/html");
 }
