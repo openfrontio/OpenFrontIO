@@ -58,6 +58,18 @@
       window.GIT_COMMIT = <%- gitCommit %>;
       window.INSTANCE_ID = <%- instanceId %>;
       window.ASSET_MANIFEST = <%- assetManifest %>;
+      document.documentElement.style.setProperty(
+        "--background-image-url",
+        `url("<%- backgroundImageUrl %>")`,
+      );
+      document.documentElement.style.setProperty(
+        "--desktop-logo-image-url",
+        `url("<%- desktopLogoImageUrl %>")`,
+      );
+      document.documentElement.style.setProperty(
+        "--mobile-logo-image-url",
+        `url("<%- mobileLogoImageUrl %>")`,
+      );
     </script>
 
     <!-- CrazyGames SDK -->
@@ -124,21 +136,15 @@
       <div
         id="background-layer"
         class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
-        style="background-image: url(&quot;<%- backgroundImageUrl %>&quot;)"
+        style="background-image: var(--background-image-url)"
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
-        style="
-          background-image: url(&quot;<%- desktopLogoImageUrl %>&quot;);
-          opacity: 0.5;
-        "
+        style="background-image: var(--desktop-logo-image-url); opacity: 0.5"
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
-        style="
-          background-image: url(&quot;<%- mobileLogoImageUrl %>&quot;);
-          opacity: 0.5;
-        "
+        style="background-image: var(--mobile-logo-image-url); opacity: 0.5"
       ></div>
     </div>
 
