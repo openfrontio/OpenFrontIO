@@ -24,8 +24,8 @@ export type WorkerMessageType =
   | "player_profile_result"
   | "player_border_tiles"
   | "player_border_tiles_result"
-  | "attack_average_position"
-  | "attack_average_position_result"
+  | "attack_clustered_positions"
+  | "attack_clustered_positions_result"
   | "transport_ship_spawn"
   | "transport_ship_spawn_result";
 
@@ -108,16 +108,16 @@ export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
   result: PlayerBorderTiles;
 }
 
-export interface AttackAveragePositionMessage extends BaseWorkerMessage {
-  type: "attack_average_position";
+export interface AttackClusteredPositionsMessage extends BaseWorkerMessage {
+  type: "attack_clustered_positions";
   playerID: number;
-  attackID: string;
+  attackID?: string;
 }
 
-export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
-  type: "attack_average_position_result";
-  x: number | null;
-  y: number | null;
+export interface AttackClusteredPositionsResultMessage
+  extends BaseWorkerMessage {
+  type: "attack_clustered_positions_result";
+  attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
 
 export interface TransportShipSpawnMessage extends BaseWorkerMessage {
@@ -139,7 +139,7 @@ export type MainThreadMessage =
   | PlayerBuildablesMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
-  | AttackAveragePositionMessage
+  | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage;
 
 // Message send from worker
@@ -151,5 +151,5 @@ export type WorkerMessage =
   | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
-  | AttackAveragePositionResultMessage
+  | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage;
