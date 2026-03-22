@@ -40,17 +40,17 @@ import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import "./PlayerModerationModal";
 import "./SendResourceModal";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
-import stopTradingIcon from "/images/StopIconWhite.png?url";
-import targetIcon from "/images/TargetIconWhite.svg?url";
-import startTradingIcon from "/images/TradingIconWhite.png?url";
-import traitorIcon from "/images/TraitorIconLightRed.svg?url";
-import breakAllianceIcon from "/images/TraitorIconWhite.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+const stopTradingIcon = assetUrl("images/StopIconWhite.png");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const startTradingIcon = assetUrl("images/TradingIconWhite.png");
+const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
+const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {

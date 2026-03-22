@@ -3,12 +3,11 @@ import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import version from "resources/version.txt?raw";
 import { translateText } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { normalizeNewsMarkdown } from "./NewsMarkdown";
-import changelog from "/changelog.md?url";
-import megaphone from "/images/Megaphone.svg?url";
 
 @customElement("news-modal")
 export class NewsModal extends BaseModal {
@@ -62,7 +61,7 @@ export class NewsModal extends BaseModal {
   protected onOpen(): void {
     if (!this.initialized) {
       this.initialized = true;
-      fetch(changelog)
+      fetch(assetUrl("changelog.md"))
         .then((response) => (response.ok ? response.text() : "Failed to load"))
         .then((markdown) => normalizeNewsMarkdown(markdown))
         .then((markdown) => (this.markdown = markdown))
@@ -102,7 +101,7 @@ export class NewsButton extends LitElement {
       >
         <img
           class="size-[48px] dark:invert"
-          src="${megaphone}"
+          src="${assetUrl("images/Megaphone.svg")}"
           alt=${translateText("news.title")}
         />
       </button>

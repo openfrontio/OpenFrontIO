@@ -32,15 +32,15 @@ import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import allianceIcon from "/images/AllianceIcon.svg?url";
-import warshipIcon from "/images/BattleshipIconWhite.svg?url";
-import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
-import portIcon from "/images/PortIcon.svg?url";
-import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
-import soldierIcon from "/images/SoldierIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIcon.svg");
+const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+const cityIcon = assetUrl("images/CityIconWhite.svg");
+const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
+const portIcon = assetUrl("images/PortIcon.svg");
+const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
 function euclideanDistWorld(
   coord: { x: number; y: number },

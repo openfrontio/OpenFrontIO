@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -12,11 +13,11 @@ import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import exitIcon from "/images/ExitIconWhite.svg?url";
-import FastForwardIconSolid from "/images/FastForwardIconSolidWhite.svg?url";
-import pauseIcon from "/images/PauseIconWhite.svg?url";
-import playIcon from "/images/PlayIconWhite.svg?url";
-import settingsIcon from "/images/SettingIconWhite.svg?url";
+const exitIcon = assetUrl("images/ExitIconWhite.svg");
+const FastForwardIconSolid = assetUrl("images/FastForwardIconSolidWhite.svg");
+const pauseIcon = assetUrl("images/PauseIconWhite.svg");
+const playIcon = assetUrl("images/PlayIconWhite.svg");
+const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
