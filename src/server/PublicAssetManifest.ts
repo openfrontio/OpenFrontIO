@@ -141,11 +141,15 @@ export function copyRootPublicFiles(
   }
 }
 
-export function writePublicAssetManifestFile(
+export function writePublicAssetManifestModule(
   outDir: string,
   assetManifest: AssetManifest,
 ): void {
-  const manifestPath = path.join(outDir, "_assets", "asset-manifest.json");
+  const manifestPath = path.join(outDir, "_assets", "asset-manifest.mjs");
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-  fs.writeFileSync(manifestPath, `${JSON.stringify(assetManifest, null, 2)}\n`);
+  const serializedManifest = JSON.stringify(assetManifest, null, 2);
+  fs.writeFileSync(
+    manifestPath,
+    `const assetManifest = ${serializedManifest};\nexport { assetManifest };\nexport default assetManifest;\n`,
+  );
 }

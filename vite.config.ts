@@ -11,7 +11,7 @@ import {
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
   getResourcesDir,
-  writePublicAssetManifestFile,
+  writePublicAssetManifestModule,
 } from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
     closeBundle() {
       const outDir = path.join(__dirname, "static");
       copyRootPublicFiles(resourcesDir, outDir);
-      writePublicAssetManifestFile(outDir, assetManifest);
+      writePublicAssetManifestModule(outDir, assetManifest);
       createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
     },
   });

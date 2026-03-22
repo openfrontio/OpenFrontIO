@@ -1,18 +1,25 @@
-import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import type { AssetManifest } from "../core/AssetUrls";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const staticDir = path.join(__dirname, "../../static");
-const manifestPath = path.join(staticDir, "_assets", "asset-manifest.json");
+const manifestPath = path.join(staticDir, "_assets", "asset-manifest.mjs");
 
 let manifestPromise: Promise<AssetManifest> | null = null;
+let manifestVersion = 0;
 
-async function readRuntimeAssetManifest(): Promise<AssetManifest> {
-  const raw = await fs.readFile(manifestPath, "utf8");
-  return JSON.parse(raw) as AssetManifest;
+async function importRuntimeAssetManifest(
+  version: number,
+): Promise<AssetManifest> {
+  const manifestModule = (await import(
+    `${pathToFileURL(manifestPath).href}?v=${version}`
+  )) as {
+    assetManifest?: AssetManifest;
+    default?: AssetManifest;
+  };
+  return manifestModule.assetManifest ?? manifestModule.default ?? {};
 }
 
 export async function getRuntimeAssetManifest(): Promise<AssetManifest> {
@@ -20,10 +27,11 @@ export async function getRuntimeAssetManifest(): Promise<AssetManifest> {
     return {};
   }
 
-  manifestPromise ??= readRuntimeAssetManifest();
+  manifestPromise ??= importRuntimeAssetManifest(manifestVersion);
   return manifestPromise;
 }
 
 export function clearRuntimeAssetManifestCache(): void {
+  manifestVersion++;
   manifestPromise = null;
 }
