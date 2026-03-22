@@ -1,12 +1,11 @@
-import { colord, Colord } from "colord";
+import { colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 import { Cell, UnitType } from "../../../core/game/Game";
-import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { isometricDistFN } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import cityIcon from "/images/buildings/cityAlt1.png?url";
 import factoryIcon from "/images/buildings/factoryAlt1.png?url";
@@ -17,11 +16,8 @@ import SAMMissileIcon from "/images/buildings/silo4.png?url";
 
 const underConstructionColor = colord("rgb(150,150,150)");
 
-// Base radius values and scaling factor for unit borders and territories
-const BASE_BORDER_RADIUS = 16.5;
-const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
-const ZOOM_THRESHOLD = 4.3; // below this zoom level, structures are not rendered
+const ZOOM_THRESHOLD = 4.3;
 
 interface UnitRenderConfig {
   icon: string;
@@ -29,45 +25,50 @@ interface UnitRenderConfig {
   territoryRadius: number;
 }
 
+interface CachedStructureTiles {
+  border: Cell[];
+  territory: Cell[];
+}
+
 export class StructureLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, HTMLImageElement> = new Map();
   private theme: Theme;
   private tempCanvas: HTMLCanvasElement;
   private tempContext: CanvasRenderingContext2D;
 
-  // Configuration for supported unit types only
+  // Cache the computed tiles for each structure
+  private tileCache = new Map<number, CachedStructureTiles>();
+
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderRadius: 16.5 * RADIUS_SCALE_FACTOR,
+      territoryRadius: 13.5 * RADIUS_SCALE_FACTOR,
     },
     [UnitType.City]: {
       icon: cityIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderRadius: 16.5 * RADIUS_SCALE_FACTOR,
+      territoryRadius: 13.5 * RADIUS_SCALE_FACTOR,
     },
     [UnitType.Factory]: {
       icon: factoryIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderRadius: 16.5 * RADIUS_SCALE_FACTOR,
+      territoryRadius: 13.5 * RADIUS_SCALE_FACTOR,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderRadius: 16.5 * RADIUS_SCALE_FACTOR,
+      territoryRadius: 13.5 * RADIUS_SCALE_FACTOR,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderRadius: 16.5 * RADIUS_SCALE_FACTOR,
+      territoryRadius: 13.5 * RADIUS_SCALE_FACTOR,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderRadius: 16.5 * RADIUS_SCALE_FACTOR,
+      territoryRadius: 13.5 * RADIUS_SCALE_FACTOR,
     },
   };
 
@@ -84,67 +85,29 @@ export class StructureLayer implements Layer {
     this.loadIconData();
   }
 
-  private loadIcon(unitType: string, config: UnitRenderConfig) {
-    const image = new Image();
-    image.src = config.icon;
-    image.onload = () => {
-      this.unitIcons.set(unitType, image);
-      console.log(
-        `icon loaded: ${unitType}, size: ${image.width}x${image.height}`,
-      );
-    };
-    image.onerror = () => {
-      console.error(`Failed to load icon for ${unitType}: ${config.icon}`);
-    };
-  }
-
   private loadIconData() {
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
-      this.loadIcon(unitType, config);
+      const image = new Image();
+      image.src = config.icon;
+      image.onload = () => this.unitIcons.set(unitType, image);
     });
   }
 
   shouldTransform(): boolean {
     return true;
   }
-
   tick() {
-    const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    for (const u of unitUpdates) {
-      const unit = this.game.unit(u.id);
-      if (unit === undefined) continue;
-      this.handleUnitRendering(unit);
+    // Clear cache for units that are no longer in the game or inactive
+    for (const id of this.tileCache.keys()) {
+      const unit = this.game.unit(id);
+      if (!unit || !unit.isActive()) {
+        this.tileCache.delete(id);
+      }
     }
   }
-
-  init() {
-    this.redraw();
-  }
-
+  init() {}
   redraw() {
-    console.log("structure layer redrawing");
-    this.canvas = document.createElement("canvas");
-    const context = this.canvas.getContext("2d", { alpha: true });
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-
-    // Enable smooth scaling
-    this.context.imageSmoothingEnabled = true;
-    this.context.imageSmoothingQuality = "high";
-
-    this.canvas.width = this.game.width() * 2;
-    this.canvas.height = this.game.height() * 2;
-
-    Promise.all(
-      Array.from(this.unitIcons.values()).map((img) =>
-        img.decode?.().catch((err) => {
-          console.warn("Failed to decode unit icon image:", err);
-        }),
-      ),
-    ).finally(() => {
-      this.game.units().forEach((u) => this.handleUnitRendering(u));
-    });
+    this.tileCache.clear();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -154,130 +117,132 @@ export class StructureLayer implements Layer {
     ) {
       return;
     }
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
+
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const visLeft = topLeft.x - 30;
+    const visTop = topLeft.y - 30;
+    const visRight = bottomRight.x + 30;
+    const visBottom = bottomRight.y + 30;
+
+    const offsetX = -this.game.width() / 2;
+    const offsetY = -this.game.height() / 2;
+
+    for (const unit of this.game.units()) {
+      if (!this.isUnitTypeSupported(unit.type()) || !unit.isActive()) continue;
+
+      const ux = this.game.x(unit.tile());
+      const uy = this.game.y(unit.tile());
+
+      if (ux < visLeft || ux > visRight || uy < visTop || uy > visBottom)
+        continue;
+
+      this.renderStructure(context, unit, offsetX, offsetY);
+    }
   }
 
   private isUnitTypeSupported(unitType: UnitType): boolean {
     return unitType in this.unitConfigs;
   }
 
-  private drawBorder(
+  private getCachedTiles(
     unit: UnitView,
-    borderColor: Colord,
     config: UnitRenderConfig,
-  ) {
-    // Draw border and territory
-    for (const tile of this.game.bfs(
-      unit.tile(),
-      isometricDistFN(unit.tile(), config.borderRadius, true),
-    )) {
-      this.paintCell(
-        new Cell(this.game.x(tile), this.game.y(tile)),
-        borderColor,
-        255,
-      );
+  ): CachedStructureTiles {
+    if (this.tileCache.has(unit.id())) {
+      return this.tileCache.get(unit.id())!;
     }
 
-    for (const tile of this.game.bfs(
-      unit.tile(),
-      isometricDistFN(unit.tile(), config.territoryRadius, true),
-    )) {
-      this.paintCell(
-        new Cell(this.game.x(tile), this.game.y(tile)),
-        unit.isUnderConstruction()
-          ? underConstructionColor
-          : unit.owner().territoryColor(),
-        130,
-      );
-    }
+    const border: Cell[] = [];
+    const territory: Cell[] = [];
+
+    this.game
+      .bfs(unit.tile(), isometricDistFN(unit.tile(), config.borderRadius, true))
+      .forEach((t) => border.push(new Cell(this.game.x(t), this.game.y(t))));
+
+    this.game
+      .bfs(
+        unit.tile(),
+        isometricDistFN(unit.tile(), config.territoryRadius, true),
+      )
+      .forEach((t) => territory.push(new Cell(this.game.x(t), this.game.y(t))));
+
+    const cache = { border, territory };
+    this.tileCache.set(unit.id(), cache);
+    return cache;
   }
 
-  private handleUnitRendering(unit: UnitView) {
-    const unitType = unit.type();
-    const iconType = unitType;
-    if (!this.isUnitTypeSupported(unitType)) return;
+  private renderStructure(
+    context: CanvasRenderingContext2D,
+    unit: UnitView,
+    offsetX: number,
+    offsetY: number,
+  ) {
+    const config = this.unitConfigs[unit.type()]!;
+    const icon = this.unitIcons.get(unit.type());
+    if (!icon) return;
 
-    const config = this.unitConfigs[unitType];
-    let icon: HTMLImageElement | undefined;
-    let borderColor = unit.owner().borderColor();
+    const tiles = this.getCachedTiles(unit, config);
+    const borderColor = unit.isUnderConstruction()
+      ? underConstructionColor
+      : unit.owner().borderColor();
+    const territoryColor = unit.isUnderConstruction()
+      ? underConstructionColor
+      : unit.owner().territoryColor();
 
-    // Handle cooldown states and special icons
-    if (unit.isUnderConstruction()) {
-      icon = this.unitIcons.get(iconType);
-      borderColor = underConstructionColor;
-    } else {
-      icon = this.unitIcons.get(iconType);
+    context.save();
+    context.scale(0.5, 0.5);
+
+    // Draw cached border
+    context.fillStyle = borderColor.toRgbString();
+    for (const cell of tiles.border) {
+      context.fillRect((cell.x + offsetX) * 2, (cell.y + offsetY) * 2, 2, 2);
     }
 
-    if (!config || !icon) return;
-
-    // Clear previous rendering
-    for (const tile of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius + 1, true),
-    )) {
-      this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
+    // Draw cached territory
+    context.fillStyle = territoryColor.alpha(130 / 255).toRgbString();
+    for (const cell of tiles.territory) {
+      context.fillRect((cell.x + offsetX) * 2, (cell.y + offsetY) * 2, 2, 2);
     }
 
-    if (!unit.isActive()) return;
-
-    this.drawBorder(unit, borderColor, config);
-
-    // Render icon at 1/2 scale for better quality
+    // Render icon
     const scaledWidth = icon.width >> 1;
     const scaledHeight = icon.height >> 1;
-    const startX = this.game.x(unit.tile()) - (scaledWidth >> 1);
-    const startY = this.game.y(unit.tile()) - (scaledHeight >> 1);
+    const startX = this.game.x(unit.tile()) - (scaledWidth >> 1) + offsetX;
+    const startY = this.game.y(unit.tile()) - (scaledHeight >> 1) + offsetY;
 
-    this.renderIcon(icon, startX, startY - 4, scaledWidth, scaledHeight, unit);
+    this.drawIconToContext(
+      context,
+      icon,
+      startX,
+      startY - 4,
+      scaledWidth,
+      scaledHeight,
+    );
+
+    context.restore();
   }
 
-  private renderIcon(
+  private drawIconToContext(
+    ctx: CanvasRenderingContext2D,
     image: HTMLImageElement,
     startX: number,
     startY: number,
     width: number,
     height: number,
-    unit: UnitView,
   ) {
-    let color = unit.owner().borderColor();
-    if (unit.isUnderConstruction()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      color = underConstructionColor;
+    if (
+      this.tempCanvas.width !== width * 2 ||
+      this.tempCanvas.height !== height * 2
+    ) {
+      this.tempCanvas.width = width * 2;
+      this.tempCanvas.height = height * 2;
     }
-
-    // Make temp canvas at the final render size (2x scale)
-    this.tempCanvas.width = width * 2;
-    this.tempCanvas.height = height * 2;
-
-    // Enable smooth scaling
-    this.tempContext.imageSmoothingEnabled = true;
-    this.tempContext.imageSmoothingQuality = "high";
-
-    // Draw the image at final size with high quality scaling
+    this.tempContext.clearRect(0, 0, width * 2, height * 2);
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
-
-    // Restore the alpha channel
     this.tempContext.globalCompositeOperation = "destination-in";
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
+    this.tempContext.globalCompositeOperation = "source-over";
 
-    // Draw the final result to the main canvas
-    this.context.drawImage(this.tempCanvas, startX * 2, startY * 2);
-  }
-
-  paintCell(cell: Cell, color: Colord, alpha: number) {
-    this.clearCell(cell);
-    this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
-    this.context.fillRect(cell.x * 2, cell.y * 2, 2, 2);
-  }
-
-  clearCell(cell: Cell) {
-    this.context.clearRect(cell.x * 2, cell.y * 2, 2, 2);
+    ctx.drawImage(this.tempCanvas, startX * 2, startY * 2);
   }
 }

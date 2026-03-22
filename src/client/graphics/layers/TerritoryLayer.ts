@@ -3,7 +3,6 @@ import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {
-  Cell,
   ColoredTeams,
   PlayerType,
   Team,
@@ -23,12 +22,22 @@ import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+interface TerritoryChunk {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  imageData: ImageData;
+  alternativeImageData: ImageData;
+  dirty: boolean;
+  highlightCanvas: HTMLCanvasElement;
+  highlightContext: CanvasRenderingContext2D;
+}
+
 export class TerritoryLayer implements Layer {
   private userSettings: UserSettings;
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-  private imageData: ImageData;
-  private alternativeImageData: ImageData;
   private borderAnimTime = 0;
 
   private cachedTerritoryPatternsEnabled: boolean | undefined;
@@ -42,13 +51,10 @@ export class TerritoryLayer implements Layer {
   private random = new PseudoRandom(123);
   private theme: Theme;
 
-  // Used for spawn highlighting
-  private highlightCanvas: HTMLCanvasElement;
-  private highlightContext: CanvasRenderingContext2D;
-
   private highlightedTerritory: PlayerView | null = null;
 
   private alternativeView = false;
+  private alternativeViewChanged = false;
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -57,6 +63,12 @@ export class TerritoryLayer implements Layer {
   private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
+
+  // Chunking state
+  private chunks: TerritoryChunk[] = [];
+  private chunkSize = 1024;
+  private chunksX: number = 0;
+  private chunksY: number = 0;
 
   constructor(
     private game: GameView,
@@ -168,12 +180,9 @@ export class TerritoryLayer implements Layer {
       return;
     }
 
-    this.highlightContext.clearRect(
-      0,
-      0,
-      this.game.width(),
-      this.game.height(),
-    );
+    for (const chunk of this.chunks) {
+      chunk.highlightContext.clearRect(0, 0, chunk.width, chunk.height);
+    }
 
     this.drawFocusedPlayerHighlight();
 
@@ -202,7 +211,6 @@ export class TerritoryLayer implements Layer {
         color = this.theme.spawnHighlightColor();
       } else if (myPlayer !== null && myPlayer !== human) {
         // In Team games, the spawn highlight color becomes that player's team color
-        // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
         const team = human.team();
         if (team !== null && teamColors.includes(team)) {
           color = this.theme.teamColor(team);
@@ -261,10 +269,10 @@ export class TerritoryLayer implements Layer {
       maxRad,
       radius,
       baseColor, // Always draw white static semi-transparent ring
-      teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
+      teamColor, // Pass the breathing ring color
     );
 
-    // Draw breathing rings for teammates in team games (helps colorblind players identify teammates)
+    // Draw breathing rings for teammates in team games
     this.drawTeammateHighlights(minRad, maxRad, radius);
   }
 
@@ -282,7 +290,7 @@ export class TerritoryLayer implements Layer {
       .playerViews()
       .filter((p) => p !== myPlayer && myPlayer.isOnSameTeam(p));
 
-    // Smaller radius for teammates (more subtle than self highlight)
+    // Smaller radius for teammates
     const teammateMinRad = 5;
     const teammateMaxRad = 14;
     const teammateRadius =
@@ -324,7 +332,10 @@ export class TerritoryLayer implements Layer {
   init() {
     this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
     this.eventBus.on(AlternateViewEvent, (e) => {
-      this.alternativeView = e.alternateView;
+      if (this.alternativeView !== e.alternateView) {
+        this.alternativeView = e.alternateView;
+        this.alternativeViewChanged = true;
+      }
     });
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
@@ -391,42 +402,62 @@ export class TerritoryLayer implements Layer {
 
   redraw() {
     console.log("redrew territory layer");
-    this.canvas = document.createElement("canvas");
-    const context = this.canvas.getContext("2d");
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
+    this.chunks = [];
+    const width = this.game.width();
+    const height = this.game.height();
+    this.chunksX = Math.ceil(width / this.chunkSize);
+    this.chunksY = Math.ceil(height / this.chunkSize);
 
-    this.imageData = this.context.getImageData(
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-    );
-    this.alternativeImageData = this.context.getImageData(
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-    );
+    for (let cy = 0; cy < this.chunksY; cy++) {
+      for (let cx = 0; cx < this.chunksX; cx++) {
+        const x = cx * this.chunkSize;
+        const y = cy * this.chunkSize;
+        const w = Math.min(this.chunkSize, width - x);
+        const h = Math.min(this.chunkSize, height - y);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("2d context not supported");
+
+        const imageData = context.createImageData(w, h);
+        const alternativeImageData = context.createImageData(w, h);
+
+        const highlightCanvas = document.createElement("canvas");
+        highlightCanvas.width = w;
+        highlightCanvas.height = h;
+        const highlightContext = highlightCanvas.getContext("2d", {
+          alpha: true,
+        });
+        if (!highlightContext) throw new Error("2d context not supported");
+
+        this.chunks.push({
+          x,
+          y,
+          width: w,
+          height: h,
+          canvas,
+          context,
+          imageData,
+          alternativeImageData,
+          dirty: true,
+          highlightCanvas,
+          highlightContext,
+        });
+      }
+    }
+
     this.initImageData();
 
-    this.context.putImageData(
-      this.alternativeView ? this.alternativeImageData : this.imageData,
-      0,
-      0,
-    );
-
-    // Add a second canvas for highlights
-    this.highlightCanvas = document.createElement("canvas");
-    const highlightContext = this.highlightCanvas.getContext("2d", {
-      alpha: true,
-    });
-    if (highlightContext === null) throw new Error("2d context not supported");
-    this.highlightContext = highlightContext;
-    this.highlightCanvas.width = this.game.width();
-    this.highlightCanvas.height = this.game.height();
+    for (const chunk of this.chunks) {
+      chunk.context.putImageData(
+        this.alternativeView ? chunk.alternativeImageData : chunk.imageData,
+        0,
+        0,
+      );
+      chunk.dirty = false;
+    }
 
     this.game.forEachTile((t) => {
       this.paintTerritory(t);
@@ -446,15 +477,29 @@ export class TerritoryLayer implements Layer {
 
   initImageData() {
     this.game.forEachTile((tile) => {
-      const cell = new Cell(this.game.x(tile), this.game.y(tile));
-      const index = cell.y * this.game.width() + cell.x;
-      const offset = index * 4;
-      this.imageData.data[offset + 3] = 0;
-      this.alternativeImageData.data[offset + 3] = 0;
+      const tx = this.game.x(tile);
+      const ty = this.game.y(tile);
+      const cx = Math.floor(tx / this.chunkSize);
+      const cy = Math.floor(ty / this.chunkSize);
+      const chunk = this.chunks[cy * this.chunksX + cx];
+
+      const lx = tx - chunk.x;
+      const ly = ty - chunk.y;
+      const offset = (ly * chunk.width + lx) * 4;
+
+      chunk.imageData.data[offset + 3] = 0;
+      chunk.alternativeImageData.data[offset + 3] = 0;
     });
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.transformHandler.scale < 1) {
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "low";
+    } else {
+      context.imageSmoothingEnabled = false;
+    }
+
     const now = Date.now();
     if (
       now > this.lastDragTime + this.nodrawDragDuration &&
@@ -465,67 +510,68 @@ export class TerritoryLayer implements Layer {
       this.renderTerritory();
       FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
-      const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
-      const vx0 = Math.max(0, topLeft.x);
-      const vy0 = Math.max(0, topLeft.y);
-      const vx1 = Math.min(this.game.width() - 1, bottomRight.x);
-      const vy1 = Math.min(this.game.height() - 1, bottomRight.y);
-
-      const w = vx1 - vx0 + 1;
-      const h = vy1 - vy0 + 1;
-
-      if (w > 0 && h > 0) {
-        const putImageStart = FrameProfiler.start();
-        this.context.putImageData(
-          this.alternativeView ? this.alternativeImageData : this.imageData,
-          0,
-          0,
-          vx0,
-          vy0,
-          w,
-          h,
-        );
-        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
+      const putImageStart = FrameProfiler.start();
+      for (const chunk of this.chunks) {
+        if (chunk.dirty || this.alternativeViewChanged) {
+          chunk.context.putImageData(
+            this.alternativeView ? chunk.alternativeImageData : chunk.imageData,
+            0,
+            0,
+          );
+          chunk.dirty = false;
+        }
       }
+      this.alternativeViewChanged = false;
+      FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
     }
 
     const drawCanvasStart = FrameProfiler.start();
     const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
-    const cvx0 = Math.max(0, Math.floor(topLeft.x));
-    const cvy0 = Math.max(0, Math.floor(topLeft.y));
-    const cvx1 = Math.min(this.game.width(), Math.ceil(bottomRight.x));
-    const cvy1 = Math.min(this.game.height(), Math.ceil(bottomRight.y));
+    const vx0 = topLeft.x;
+    const vy0 = topLeft.y;
+    const vx1 = bottomRight.x;
+    const vy1 = bottomRight.y;
 
-    const cw = cvx1 - cvx0;
-    const ch = cvy1 - cvy0;
+    const offsetX = -this.game.width() / 2;
+    const offsetY = -this.game.height() / 2;
+    const overlap = 0.5 / this.transformHandler.scale;
 
-    if (cw > 0 && ch > 0) {
+    for (const chunk of this.chunks) {
+      if (
+        chunk.x + chunk.width < vx0 ||
+        chunk.x > vx1 ||
+        chunk.y + chunk.height < vy0 ||
+        chunk.y > vy1
+      ) {
+        continue;
+      }
       context.drawImage(
-        this.canvas,
-        cvx0,
-        cvy0,
-        cw,
-        ch,
-        -this.game.width() / 2 + cvx0,
-        -this.game.height() / 2 + cvy0,
-        cw,
-        ch,
+        chunk.canvas,
+        offsetX + chunk.x,
+        offsetY + chunk.y,
+        chunk.width + overlap,
+        chunk.height + overlap,
       );
     }
     FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
+
     if (this.game.inSpawnPhase()) {
       const highlightDrawStart = FrameProfiler.start();
-      if (cw > 0 && ch > 0) {
+      for (const chunk of this.chunks) {
+        if (
+          chunk.x + chunk.width < vx0 ||
+          chunk.x > vx1 ||
+          chunk.y + chunk.height < vy0 ||
+          chunk.y > vy1
+        ) {
+          continue;
+        }
         context.drawImage(
-          this.highlightCanvas,
-          cvx0,
-          cvy0,
-          cw,
-          ch,
-          -this.game.width() / 2 + cvx0,
-          -this.game.height() / 2 + cvy0,
-          cw,
-          ch,
+          chunk.highlightCanvas,
+          offsetX + chunk.x,
+          offsetY + chunk.y,
+          chunk.width + overlap,
+          chunk.height + overlap,
         );
       }
       FrameProfiler.end(
@@ -564,13 +610,8 @@ export class TerritoryLayer implements Layer {
 
     if (!this.game.hasOwner(tile)) {
       if (this.game.hasFallout(tile)) {
-        this.paintTile(this.imageData, tile, this.theme.falloutColor(), 150);
-        this.paintTile(
-          this.alternativeImageData,
-          tile,
-          this.theme.falloutColor(),
-          150,
-        );
+        this.paintTile(false, tile, this.theme.falloutColor(), 150);
+        this.paintTile(true, tile, this.theme.falloutColor(), 150);
         return;
       }
       this.clearTile(tile);
@@ -588,7 +629,7 @@ export class TerritoryLayer implements Layer {
       const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (myPlayer) {
         const alternativeColor = this.alternateViewColor(owner);
-        this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
+        this.paintTile(true, tile, alternativeColor, 255);
       }
       const isDefended = this.game.hasUnitNearby(
         tile,
@@ -597,17 +638,12 @@ export class TerritoryLayer implements Layer {
         owner.id(),
       );
 
-      this.paintTile(
-        this.imageData,
-        tile,
-        owner.borderColor(tile, isDefended),
-        255,
-      );
+      this.paintTile(false, tile, owner.borderColor(tile, isDefended), 255);
     } else {
       // Alternative view only shows borders.
       this.clearAlternativeTile(tile);
 
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      this.paintTile(false, tile, owner.territoryColor(tile), 150);
     }
   }
 
@@ -630,26 +666,71 @@ export class TerritoryLayer implements Layer {
 
   paintAlternateViewTile(tile: TileRef, other: PlayerView) {
     const color = this.alternateViewColor(other);
-    this.paintTile(this.alternativeImageData, tile, color, 255);
+    this.paintTile(true, tile, color, 255);
   }
 
-  paintTile(imageData: ImageData, tile: TileRef, color: Colord, alpha: number) {
-    const offset = tile * 4;
-    imageData.data[offset] = color.rgba.r;
-    imageData.data[offset + 1] = color.rgba.g;
-    imageData.data[offset + 2] = color.rgba.b;
-    imageData.data[offset + 3] = alpha;
+  paintTile(
+    isAlternative: boolean,
+    tile: TileRef,
+    color: Colord,
+    alpha: number,
+  ) {
+    const tx = this.game.x(tile);
+    const ty = this.game.y(tile);
+    const cx = Math.floor(tx / this.chunkSize);
+    const cy = Math.floor(ty / this.chunkSize);
+    const chunk = this.chunks[cy * this.chunksX + cx];
+
+    if (!chunk) return; // Prevent out of bounds exceptions on edges
+
+    const lx = tx - chunk.x;
+    const ly = ty - chunk.y;
+    const offset = (ly * chunk.width + lx) * 4;
+
+    const data = isAlternative
+      ? chunk.alternativeImageData.data
+      : chunk.imageData.data;
+    data[offset] = color.rgba.r;
+    data[offset + 1] = color.rgba.g;
+    data[offset + 2] = color.rgba.b;
+    data[offset + 3] = alpha;
+
+    chunk.dirty = true;
   }
 
   clearTile(tile: TileRef) {
-    const offset = tile * 4;
-    this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
-    this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
+    const tx = this.game.x(tile);
+    const ty = this.game.y(tile);
+    const cx = Math.floor(tx / this.chunkSize);
+    const cy = Math.floor(ty / this.chunkSize);
+    const chunk = this.chunks[cy * this.chunksX + cx];
+
+    if (!chunk) return;
+
+    const lx = tx - chunk.x;
+    const ly = ty - chunk.y;
+    const offset = (ly * chunk.width + lx) * 4;
+
+    chunk.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
+    chunk.alternativeImageData.data[offset + 3] = 0;
+    chunk.dirty = true;
   }
 
   clearAlternativeTile(tile: TileRef) {
-    const offset = tile * 4;
-    this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
+    const tx = this.game.x(tile);
+    const ty = this.game.y(tile);
+    const cx = Math.floor(tx / this.chunkSize);
+    const cy = Math.floor(ty / this.chunkSize);
+    const chunk = this.chunks[cy * this.chunksX + cx];
+
+    if (!chunk) return;
+
+    const lx = tx - chunk.x;
+    const ly = ty - chunk.y;
+    const offset = (ly * chunk.width + lx) * 4;
+
+    chunk.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0
+    chunk.dirty = true;
   }
 
   enqueueTile(tile: TileRef) {
@@ -668,16 +749,33 @@ export class TerritoryLayer implements Layer {
 
   paintHighlightTile(tile: TileRef, color: Colord, alpha: number) {
     this.clearTile(tile);
-    const x = this.game.x(tile);
-    const y = this.game.y(tile);
-    this.highlightContext.fillStyle = color.alpha(alpha / 255).toRgbString();
-    this.highlightContext.fillRect(x, y, 1, 1);
+    const tx = this.game.x(tile);
+    const ty = this.game.y(tile);
+    const cx = Math.floor(tx / this.chunkSize);
+    const cy = Math.floor(ty / this.chunkSize);
+    const chunk = this.chunks[cy * this.chunksX + cx];
+
+    if (!chunk) return;
+
+    const lx = tx - chunk.x;
+    const ly = ty - chunk.y;
+
+    chunk.highlightContext.fillStyle = color.alpha(alpha / 255).toRgbString();
+    chunk.highlightContext.fillRect(lx, ly, 1, 1);
   }
 
   clearHighlightTile(tile: TileRef) {
-    const x = this.game.x(tile);
-    const y = this.game.y(tile);
-    this.highlightContext.clearRect(x, y, 1, 1);
+    const tx = this.game.x(tile);
+    const ty = this.game.y(tile);
+    const cx = Math.floor(tx / this.chunkSize);
+    const cy = Math.floor(ty / this.chunkSize);
+    const chunk = this.chunks[cy * this.chunksX + cx];
+
+    if (!chunk) return;
+
+    const lx = tx - chunk.x;
+    const ly = ty - chunk.y;
+    chunk.highlightContext.clearRect(lx, ly, 1, 1);
   }
 
   private drawBreathingRing(
@@ -689,43 +787,77 @@ export class TerritoryLayer implements Layer {
     transparentColor: Colord,
     breathingColor: Colord,
   ) {
-    const ctx = this.highlightContext;
-    if (!ctx) return;
+    const minX = cx - maxRad;
+    const maxX = cx + maxRad;
+    const minY = cy - maxRad;
+    const maxY = cy + maxRad;
 
-    // Draw a semi-transparent ring around the starting location
-    ctx.beginPath();
-    // Transparency matches the highlight color provided
-    const transparent = transparentColor.alpha(0);
-    const radGrad = ctx.createRadialGradient(cx, cy, minRad, cx, cy, maxRad);
+    const startCX = Math.max(0, Math.floor(minX / this.chunkSize));
+    const endCX = Math.min(this.chunksX - 1, Math.floor(maxX / this.chunkSize));
+    const startCY = Math.max(0, Math.floor(minY / this.chunkSize));
+    const endCY = Math.min(this.chunksY - 1, Math.floor(maxY / this.chunkSize));
 
-    // Pixels with radius < minRad are transparent
-    radGrad.addColorStop(0, transparent.toRgbString());
-    // The ring then starts with solid highlight color
-    radGrad.addColorStop(0.01, transparentColor.toRgbString());
-    radGrad.addColorStop(0.1, transparentColor.toRgbString());
-    // The outer edge of the ring is transparent
-    radGrad.addColorStop(1, transparent.toRgbString());
+    for (let y = startCY; y <= endCY; y++) {
+      for (let x = startCX; x <= endCX; x++) {
+        const chunk = this.chunks[y * this.chunksX + x];
+        if (!chunk) continue;
+        const ctx = chunk.highlightContext;
 
-    // Draw an arc at the max radius and fill with the created radial gradient
-    ctx.arc(cx, cy, maxRad, 0, Math.PI * 2);
-    ctx.fillStyle = radGrad;
-    ctx.closePath();
-    ctx.fill();
+        ctx.save();
+        ctx.translate(-chunk.x, -chunk.y);
 
-    const breatheInner = breathingColor.alpha(0);
-    // Draw a solid ring around the starting location with outer radius = the breathing radius
-    ctx.beginPath();
-    const radGrad2 = ctx.createRadialGradient(cx, cy, minRad, cx, cy, radius);
-    // Pixels with radius < minRad are transparent
-    radGrad2.addColorStop(0, breatheInner.toRgbString());
-    // The ring then starts with solid highlight color
-    radGrad2.addColorStop(0.01, breathingColor.toRgbString());
-    // The ring is solid throughout
-    radGrad2.addColorStop(1, breathingColor.toRgbString());
+        // Draw a semi-transparent ring around the starting location
+        ctx.beginPath();
+        // Transparency matches the highlight color provided
+        const transparent = transparentColor.alpha(0);
+        const radGrad = ctx.createRadialGradient(
+          cx,
+          cy,
+          minRad,
+          cx,
+          cy,
+          maxRad,
+        );
 
-    // Draw an arc at the current breathing radius and fill with the created "gradient"
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fillStyle = radGrad2;
-    ctx.fill();
+        // Pixels with radius < minRad are transparent
+        radGrad.addColorStop(0, transparent.toRgbString());
+        // The ring then starts with solid highlight color
+        radGrad.addColorStop(0.01, transparentColor.toRgbString());
+        radGrad.addColorStop(0.1, transparentColor.toRgbString());
+        // The outer edge of the ring is transparent
+        radGrad.addColorStop(1, transparent.toRgbString());
+
+        // Draw an arc at the max radius and fill with the created radial gradient
+        ctx.arc(cx, cy, maxRad, 0, Math.PI * 2);
+        ctx.fillStyle = radGrad;
+        ctx.closePath();
+        ctx.fill();
+
+        const breatheInner = breathingColor.alpha(0);
+        // Draw a solid ring around the starting location with outer radius = the breathing radius
+        ctx.beginPath();
+        const radGrad2 = ctx.createRadialGradient(
+          cx,
+          cy,
+          minRad,
+          cx,
+          cy,
+          radius,
+        );
+        // Pixels with radius < minRad are transparent
+        radGrad2.addColorStop(0, breatheInner.toRgbString());
+        // The ring then starts with solid highlight color
+        radGrad2.addColorStop(0.01, breathingColor.toRgbString());
+        // The ring is solid throughout
+        radGrad2.addColorStop(1, breathingColor.toRgbString());
+
+        // Draw an arc at the current breathing radius and fill with the created "gradient"
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = radGrad2;
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
   }
 }

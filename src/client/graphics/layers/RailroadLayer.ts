@@ -36,8 +36,6 @@ export class RailTileChangedEvent implements GameEvent {
 }
 
 export class RailroadLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
   private alternativeView = false;
   // Save the number of railroads per tiles. Delete when it reaches 0
   private existingRailroads = new Map<TileRef, RailRef>();
@@ -127,9 +125,7 @@ export class RailroadLayer implements Layer {
       if (railRef) {
         const currentOwner = this.game.owner(tile)?.id() ?? null;
         if (railRef.lastOwnerId !== currentOwner) {
-          // Repaint only when the owner changed to keep colors in sync
           railRef.lastOwnerId = currentOwner;
-          this.paintRail(railRef.tile);
         }
       }
 
@@ -142,30 +138,11 @@ export class RailroadLayer implements Layer {
   init() {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
-      for (const { tile } of this.existingRailroads.values()) {
-        this.paintRail(tile);
-      }
     });
-    this.redraw();
   }
 
   redraw() {
-    this.canvas = document.createElement("canvas");
-    const context = this.canvas.getContext("2d", { alpha: true });
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-
-    // Enable smooth scaling
-    this.context.imageSmoothingEnabled = true;
-    this.context.imageSmoothingQuality = "high";
-
-    this.canvas.width = this.game.width() * 2;
-    this.canvas.height = this.game.height() * 2;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const [_, rail] of this.existingRailroads) {
-      this.paintRail(rail.tile);
-    }
+    // Redraw is no longer needed since we are using immediate mode rendering
   }
 
   private highlightOverlappingRailroads(context: CanvasRenderingContext2D) {
@@ -203,51 +180,94 @@ export class RailroadLayer implements Layer {
     const rawAlpha = (scale - 1) / (2 - 1); // maps 1->0, 2->1
     const alpha = Math.max(0, Math.min(1, rawAlpha));
 
+    context.save();
+    context.globalAlpha = alpha;
+
+    const offsetX = -this.game.width() / 2;
+    const offsetY = -this.game.height() / 2;
+
     const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
     const padding = 2; // small margin so edges do not pop
     const visLeft = Math.max(0, topLeft.x - padding);
     const visTop = Math.max(0, topLeft.y - padding);
     const visRight = Math.min(this.game.width(), bottomRight.x + padding);
     const visBottom = Math.min(this.game.height(), bottomRight.y + padding);
-    const visWidth = Math.max(0, visRight - visLeft);
-    const visHeight = Math.max(0, visBottom - visTop);
-    if (visWidth === 0 || visHeight === 0) {
-      return;
-    }
 
-    const srcX = visLeft * 2;
-    const srcY = visTop * 2;
-    const srcW = visWidth * 2;
-    const srcH = visHeight * 2;
+    // Apply the local scale explicitly
+    // Instead of context.scale, we do manual coordinate math to keep code simple
+    // Original canvas was drawn at WxH, but rendered as WxH/2, so the coordinates were effectively halved.
+    // However the main context is already transformed by TransformHandler.
+    // The previous code did:
+    // dstX = -width/2 + visLeft
+    // So we just draw at -width/2 + x, etc. But the rects were defined for a 2x scaled coordinate system.
 
-    const dstX = -this.game.width() / 2 + visLeft;
-    const dstY = -this.game.height() / 2 + visTop;
-
-    context.save();
-    context.globalAlpha = alpha;
-
-    this.renderGhostRailroads(context);
+    this.renderGhostRailroads(context, offsetX, offsetY);
 
     if (this.existingRailroads.size > 0) {
       this.highlightOverlappingRailroads(context);
 
-      context.drawImage(
-        this.canvas,
-        srcX,
-        srcY,
-        srcW,
-        srcH,
-        dstX,
-        dstY,
-        visWidth,
-        visHeight,
-      );
+      for (const [tileId, railRef] of this.existingRailroads.entries()) {
+        const x = this.game.x(tileId);
+        const y = this.game.y(tileId);
+
+        // Frustum culling
+        if (x < visLeft || x > visRight || y < visTop || y > visBottom) {
+          continue;
+        }
+
+        this.paintRailToContext(
+          context,
+          railRef.tile,
+          x + offsetX,
+          y + offsetY,
+        );
+      }
     }
 
     context.restore();
   }
 
-  private renderGhostRailroads(context: CanvasRenderingContext2D) {
+  private paintRailToContext(
+    context: CanvasRenderingContext2D,
+    railTile: RailTile,
+    worldX: number,
+    worldY: number,
+  ) {
+    const { tile, type } = railTile;
+
+    if (this.game.isWater(tile)) {
+      context.fillStyle = "rgb(197,69,72)";
+      const bridgeRects = getBridgeRects(type);
+      for (const [dx, dy, w, h] of bridgeRects) {
+        // Original rects were meant for a 2x scale canvas drawn at 0.5 scale
+        context.fillRect(worldX + dx / 2, worldY + dy / 2, w / 2, h / 2);
+      }
+    }
+
+    const owner = this.game.owner(tile);
+    const recipient = owner.isPlayer() ? owner : null;
+    let color = recipient
+      ? recipient.borderColor()
+      : colord("rgba(255,255,255,1)");
+
+    if (this.alternativeView && recipient?.isMe()) {
+      color = colord("#00ff00");
+    }
+
+    context.fillStyle = color.toRgbString();
+
+    const railRects = getRailroadRects(type);
+    for (const [dx, dy, w, h] of railRects) {
+      // Original rects were meant for a 2x scale canvas drawn at 0.5 scale
+      context.fillRect(worldX + dx / 2, worldY + dy / 2, w / 2, h / 2);
+    }
+  }
+
+  private renderGhostRailroads(
+    context: CanvasRenderingContext2D,
+    offsetX: number,
+    offsetY: number,
+  ) {
     if (
       this.uiState.ghostStructure !== UnitType.City &&
       this.uiState.ghostStructure !== UnitType.Port
@@ -255,8 +275,6 @@ export class RailroadLayer implements Layer {
       return;
     if (this.uiState.ghostRailPaths.length === 0) return;
 
-    const offsetX = -this.game.width() / 2;
-    const offsetY = -this.game.height() / 2;
     context.fillStyle = "rgba(0, 0, 0, 0.4)";
 
     for (const path of this.uiState.ghostRailPaths) {
@@ -329,7 +347,7 @@ export class RailroadLayer implements Layer {
 
   private drawRemainingTiles(railroad: RailroadView) {
     for (const tile of railroad.remainingTiles()) {
-      this.paintRail(tile);
+      this.paintRailTile(tile);
     }
     this.pendingRailroads.delete(railroad.id);
   }
@@ -379,7 +397,6 @@ export class RailroadLayer implements Layer {
       });
       this.railTileIndex.set(railTile.tile, this.railTileList.length);
       this.railTileList.push(railTile.tile);
-      this.paintRail(railTile);
     }
   }
 
@@ -390,22 +407,6 @@ export class RailroadLayer implements Layer {
     if (!ref || ref.numOccurence <= 0) {
       this.existingRailroads.delete(railroad);
       this.removeRailTile(railroad);
-      if (this.context === undefined) throw new Error("Not initialized");
-      if (this.game.isWater(railroad)) {
-        this.context.clearRect(
-          this.game.x(railroad) * 2 - 2,
-          this.game.y(railroad) * 2 - 2,
-          5,
-          6,
-        );
-      } else {
-        this.context.clearRect(
-          this.game.x(railroad) * 2 - 1,
-          this.game.y(railroad) * 2 - 1,
-          3,
-          3,
-        );
-      }
     }
   }
 
@@ -425,56 +426,5 @@ export class RailroadLayer implements Layer {
     if (this.nextRailIndexToCheck >= this.railTileList.length) {
       this.nextRailIndexToCheck = 0;
     }
-  }
-
-  paintRail(railTile: RailTile) {
-    if (this.context === undefined) throw new Error("Not initialized");
-    const { tile } = railTile;
-    const { type } = railTile;
-    const x = this.game.x(tile);
-    const y = this.game.y(tile);
-    // If rail tile is over water, paint a bridge underlay first
-    if (this.game.isWater(tile)) {
-      this.paintBridge(this.context, x, y, type);
-    }
-    const owner = this.game.owner(tile);
-    const recipient = owner.isPlayer() ? owner : null;
-    let color = recipient
-      ? recipient.borderColor()
-      : colord("rgba(255,255,255,1)");
-
-    if (this.alternativeView && recipient?.isMe()) {
-      color = colord("#00ff00");
-    }
-
-    this.context.fillStyle = color.toRgbString();
-    this.paintRailRects(this.context, x, y, type);
-  }
-
-  private paintRailRects(
-    context: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    direction: RailType,
-  ) {
-    const railRects = getRailroadRects(direction);
-    for (const [dx, dy, w, h] of railRects) {
-      context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
-    }
-  }
-
-  private paintBridge(
-    context: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    direction: RailType,
-  ) {
-    context.save();
-    context.fillStyle = "rgb(197,69,72)";
-    const bridgeRects = getBridgeRects(direction);
-    for (const [dx, dy, w, h] of bridgeRects) {
-      context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
-    }
-    context.restore();
   }
 }

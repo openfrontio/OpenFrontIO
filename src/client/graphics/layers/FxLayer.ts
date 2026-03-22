@@ -15,9 +15,6 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { RailTileChangedEvent } from "./RailroadLayer";
 export class FxLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-
   private lastRefreshMs: number = 0;
   private refreshRate: number = 10;
   private theme: Theme;
@@ -25,7 +22,6 @@ export class FxLayer implements Layer {
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
-  private hasBufferedFrame = false;
 
   constructor(
     private game: GameView,
@@ -244,13 +240,7 @@ export class FxLayer implements Layer {
   }
 
   redraw(): void {
-    this.canvas = document.createElement("canvas");
-    const context = this.canvas.getContext("2d");
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-    this.context.imageSmoothingEnabled = false;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
+    // Redraw is no longer needed since we are using immediate mode rendering
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -258,67 +248,38 @@ export class FxLayer implements Layer {
 
     const hasFx = this.allFx.length > 0;
     if (!this.game.config().userSettings()?.fxLayer() || !hasFx) {
-      if (this.hasBufferedFrame) {
-        // Clear stale pixels once when fx ends/disabled so re-enabling doesn't
-        // flash old frames.
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.hasBufferedFrame = false;
-      }
       this.lastRefreshMs = nowMs;
       return;
     }
 
-    const needsRefresh =
-      !this.hasBufferedFrame || nowMs > this.lastRefreshMs + this.refreshRate;
+    const needsRefresh = nowMs > this.lastRefreshMs + this.refreshRate;
+    let delta = 0;
+
     if (needsRefresh) {
-      const delta = this.hasBufferedFrame ? nowMs - this.lastRefreshMs : 0;
-      this.renderAllFx(delta);
+      delta = this.lastRefreshMs === 0 ? 0 : nowMs - this.lastRefreshMs;
       this.lastRefreshMs = nowMs;
-      this.hasBufferedFrame = true;
     }
 
-    this.drawVisibleFx(context);
+    this.drawVisibleFx(context, delta);
   }
 
-  private drawVisibleFx(context: CanvasRenderingContext2D) {
-    const mapW = this.game.width();
-    const mapH = this.game.height();
+  private drawVisibleFx(context: CanvasRenderingContext2D, duration: number) {
+    // Translate the context to the center so that FX coordinates align with the world coordinates
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.translate(-this.game.width() / 2, -this.game.height() / 2);
 
-    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
-    const pad = 2;
-
-    const left = Math.max(0, Math.floor(topLeft.x - pad));
-    const top = Math.max(0, Math.floor(topLeft.y - pad));
-    const right = Math.min(mapW, Math.ceil(bottomRight.x + pad));
-    const bottom = Math.min(mapH, Math.ceil(bottomRight.y + pad));
-
-    const width = Math.max(0, right - left);
-    const height = Math.max(0, bottom - top);
-    if (width === 0 || height === 0) return;
-
-    context.drawImage(
-      this.canvas,
-      left,
-      top,
-      width,
-      height,
-      -mapW / 2 + left,
-      -mapH / 2 + top,
-      width,
-      height,
-    );
-  }
-
-  private renderAllFx(delta: number) {
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.renderContextFx(delta);
-  }
-
-  renderContextFx(duration: number) {
     for (let i = this.allFx.length - 1; i >= 0; i--) {
-      if (!this.allFx[i].renderTick(duration, this.context)) {
+      // In immediate mode, we want to skip updating the FX if duration is 0,
+      // but still draw it. If duration > 0, we both update and draw.
+      // renderTick does both in the original code.
+      // If we need to decouple update and draw, we might need to modify Fx interface,
+      // but calling renderTick with a delta of 0 just redraws without advancing animation.
+      if (!this.allFx[i].renderTick(duration, context)) {
         this.allFx.splice(i, 1);
       }
     }
+
+    context.restore();
   }
 }
