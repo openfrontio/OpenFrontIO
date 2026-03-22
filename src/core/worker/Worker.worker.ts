@@ -15,6 +15,7 @@ import {
 } from "./WorkerMessages";
 
 const ctx: Worker = self as any;
+globalThis.__ASSET_MANIFEST__ = __ASSET_MANIFEST__;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(() => assetUrl("maps"));
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task

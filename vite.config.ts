@@ -1,16 +1,18 @@
 import tailwindcss from "@tailwindcss/vite";
-import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { type AssetManifest, buildAssetUrl } from "./src/core/AssetUrls";
 import {
-  buildAssetUrl,
-  buildVersionedAssetBasePath,
-  normalizeAssetVersion,
-} from "./src/core/AssetUrls";
+  buildPublicAssetManifest,
+  copyRootPublicFiles,
+  createHashedPublicAssetFiles,
+  getResourcesDir,
+  writePublicAssetManifestFile,
+} from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
@@ -19,49 +21,31 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
-  const assetVersion = normalizeAssetVersion(
-    env.GIT_COMMIT ?? process.env.GIT_COMMIT,
-  );
-  const assetBasePath = buildVersionedAssetBasePath(assetVersion);
+  const resourcesDir = getResourcesDir(__dirname);
+  const assetManifest: AssetManifest = isProduction
+    ? buildPublicAssetManifest(resourcesDir)
+    : {};
   const htmlAssetData = {
-    assetBasePath: JSON.stringify(assetBasePath),
-    manifestHref: buildAssetUrl("manifest.json", assetBasePath),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetBasePath),
+    assetManifest: JSON.stringify(assetManifest),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
     gameplayScreenshotUrl: buildAssetUrl(
       "images/GameplayScreenshot.png",
-      assetBasePath,
+      assetManifest,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetBasePath),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetBasePath),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetBasePath),
+    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
   };
 
-  const rewriteVersionedManifest = () => ({
-    name: "rewrite-versioned-manifest",
+  const syncHashedPublicAssets = () => ({
+    name: "sync-hashed-public-assets",
     apply: "build" as const,
-    async closeBundle() {
-      if (!assetVersion) {
-        return;
-      }
-
-      const manifestPath = path.join(
-        __dirname,
-        "static",
-        "_assets",
-        assetVersion,
-        "manifest.json",
-      );
-      const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as {
-        icons?: Array<{ src?: string }>;
-      };
-      manifest.icons = manifest.icons?.map((icon) => ({
-        ...icon,
-        src: buildAssetUrl(icon.src ?? "", assetBasePath),
-      }));
-      await fs.writeFile(
-        manifestPath,
-        `${JSON.stringify(manifest, null, 2)}\n`,
-      );
+    closeBundle() {
+      const outDir = path.join(__dirname, "static");
+      copyRootPublicFiles(resourcesDir, outDir);
+      writePublicAssetManifestFile(outDir, assetManifest);
+      createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
     },
   });
 
@@ -92,7 +76,7 @@ export default defineConfig(({ mode }) => {
     },
     root: "./",
     base: "/",
-    publicDir: "resources", // Access static assets via import or explicit copy
+    publicDir: isProduction ? false : "resources",
 
     resolve: {
       alias: {
@@ -124,26 +108,18 @@ export default defineConfig(({ mode }) => {
           ]),
       viteStaticCopy({
         targets: [
-          ...(assetVersion
-            ? [
-                {
-                  src: "resources/**/*",
-                  dest: `_assets/${assetVersion}`,
-                },
-              ]
-            : []),
           {
             src: "proprietary/*",
             dest: ".",
           },
         ],
       }),
-      ...(isProduction ? [rewriteVersionedManifest()] : []),
+      ...(isProduction ? [syncHashedPublicAssets()] : []),
       tailwindcss(),
     ],
 
     define: {
-      __ASSET_BASE_PATH__: JSON.stringify(assetBasePath),
+      __ASSET_MANIFEST__: JSON.stringify(assetManifest),
       "process.env.WEBSOCKET_URL": JSON.stringify(
         isProduction ? "" : "localhost:3000",
       ),

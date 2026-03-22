@@ -1,46 +1,53 @@
-export function normalizeAssetVersion(
-  version: string | null | undefined,
-): string | null {
-  const trimmed = version?.trim();
-  if (!trimmed || trimmed === "DEV" || trimmed === "undefined") {
-    return null;
+export type AssetManifest = Record<string, string>;
+
+function safeDecodeAssetSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
   }
-  return trimmed;
 }
 
-export function buildVersionedAssetBasePath(
-  version: string | null | undefined,
-): string {
-  const normalized = normalizeAssetVersion(version);
-  return normalized ? `/_assets/${encodeURIComponent(normalized)}` : "";
+export function encodeAssetPath(path: string): string {
+  return normalizeAssetPath(path)
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+export function normalizeAssetPath(path: string): string {
+  return path
+    .replace(/^\/+/, "")
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => safeDecodeAssetSegment(segment))
+    .join("/");
 }
 
 export function buildAssetUrl(
   path: string,
-  assetBasePath: string = "",
+  assetManifest: AssetManifest = {},
 ): string {
-  const normalizedPath = path.replace(/^\/+/, "");
-  if (!assetBasePath) {
-    return `/${normalizedPath}`;
-  }
-  return `${assetBasePath}/${normalizedPath}`;
+  const normalizedPath = normalizeAssetPath(path);
+  return assetManifest[normalizedPath] ?? `/${encodeAssetPath(normalizedPath)}`;
 }
 
 declare global {
-  var __ASSET_BASE_PATH__: string | undefined;
+  var __ASSET_MANIFEST__: AssetManifest | undefined;
 
   interface Window {
-    ASSET_BASE_PATH?: string;
+    ASSET_MANIFEST?: AssetManifest;
   }
 }
 
-export function getAssetBasePath(): string {
-  if (typeof window !== "undefined" && window.ASSET_BASE_PATH !== undefined) {
-    return window.ASSET_BASE_PATH;
+export function getAssetManifest(): AssetManifest {
+  if (typeof window !== "undefined" && window.ASSET_MANIFEST !== undefined) {
+    return window.ASSET_MANIFEST;
   }
-  return globalThis.__ASSET_BASE_PATH__ ?? "";
+  return globalThis.__ASSET_MANIFEST__ ?? {};
 }
 
 export function assetUrl(path: string): string {
-  return buildAssetUrl(path, getAssetBasePath());
+  return buildAssetUrl(path, getAssetManifest());
 }

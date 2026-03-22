@@ -1,24 +1,31 @@
 import ejs from "ejs";
 import type { Response } from "express";
 import fs from "fs/promises";
-import { buildAssetUrl, buildVersionedAssetBasePath } from "../core/AssetUrls";
+import { buildAssetUrl } from "../core/AssetUrls";
+import {
+  buildPublicAssetManifest,
+  getResourcesDir,
+} from "./PublicAssetManifest";
 
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
-  const assetBasePath = buildVersionedAssetBasePath(process.env.GIT_COMMIT);
+  const assetManifest =
+    process.env.GAME_ENV === "prod"
+      ? buildPublicAssetManifest(getResourcesDir())
+      : {};
   return ejs.render(htmlContent, {
     gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
     instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),
-    assetBasePath: JSON.stringify(assetBasePath),
-    manifestHref: buildAssetUrl("manifest.json", assetBasePath),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetBasePath),
+    assetManifest: JSON.stringify(assetManifest),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
     gameplayScreenshotUrl: buildAssetUrl(
       "images/GameplayScreenshot.png",
-      assetBasePath,
+      assetManifest,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetBasePath),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetBasePath),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetBasePath),
+    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
   });
 }
 

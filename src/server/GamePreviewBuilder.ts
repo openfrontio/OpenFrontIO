@@ -1,8 +1,12 @@
 import { z } from "zod";
-import { buildAssetUrl, buildVersionedAssetBasePath } from "../core/AssetUrls";
+import { buildAssetUrl } from "../core/AssetUrls";
 import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
 import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
+import {
+  buildPublicAssetManifest,
+  getResourcesDir,
+} from "./PublicAssetManifest";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
@@ -139,9 +143,12 @@ export function buildPreview(
   lobby: GameInfo | null,
   publicInfo: ExternalGameInfo | null,
 ): PreviewMeta {
-  const assetBasePath = buildVersionedAssetBasePath(process.env.GIT_COMMIT);
+  const assetManifest =
+    process.env.GAME_ENV === "prod"
+      ? buildPublicAssetManifest(getResourcesDir())
+      : {};
   const buildAbsoluteAssetUrl = (path: string) =>
-    new URL(buildAssetUrl(path, assetBasePath), origin).toString();
+    new URL(buildAssetUrl(path, assetManifest), origin).toString();
   const isFinished = !!publicInfo?.info?.end;
   const isPrivate = lobby?.gameConfig?.gameType === "Private";
 
