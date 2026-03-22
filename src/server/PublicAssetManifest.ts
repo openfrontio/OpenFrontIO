@@ -14,10 +14,13 @@ const HASHED_PUBLIC_ASSET_GLOBS = [
   "manifest.json",
   "cosmetics/**/*",
   "flags/**/*",
+  "fonts/**/*",
   "icons/**/*",
   "images/**/*",
   "lang/**/*",
   "maps/**/*",
+  "sounds/**/*",
+  "sprites/**/*",
 ] as const;
 
 const ROOT_PUBLIC_FILES = new Set([

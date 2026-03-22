@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import type { AssetManifest } from "../core/AssetUrls";
@@ -23,11 +24,13 @@ async function importRuntimeAssetManifest(
 }
 
 export async function getRuntimeAssetManifest(): Promise<AssetManifest> {
-  if (process.env.GAME_ENV !== "prod") {
+  if (!fs.existsSync(manifestPath)) {
     return {};
   }
 
-  manifestPromise ??= importRuntimeAssetManifest(manifestVersion);
+  manifestPromise ??= importRuntimeAssetManifest(manifestVersion).catch(
+    () => ({}),
+  );
   return manifestPromise;
 }
 
