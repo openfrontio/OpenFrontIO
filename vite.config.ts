@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => {
     : {};
   const htmlAssetData = {
     assetManifest: JSON.stringify(assetManifest),
+    gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
     gameplayScreenshotUrl: buildAssetUrl(

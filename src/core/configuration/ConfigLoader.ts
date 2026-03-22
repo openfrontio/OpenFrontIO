@@ -9,6 +9,14 @@ import { prodConfig } from "./ProdConfig";
 
 export let cachedSC: ServerConfig | null = null;
 
+declare global {
+  interface Window {
+    BOOTSTRAP_CONFIG?: {
+      gameEnv?: string;
+    };
+  }
+}
+
 export async function getConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null,
@@ -30,16 +38,20 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   if (cachedSC) {
     return cachedSC;
   }
-  const response = await fetch("/api/env");
 
+  const bootstrapGameEnv = window.BOOTSTRAP_CONFIG?.gameEnv;
+  if (bootstrapGameEnv) {
+    cachedSC = getServerConfig(bootstrapGameEnv);
+    return cachedSC;
+  }
+
+  const response = await fetch("/api/env");
   if (!response.ok) {
     throw new Error(
       `Failed to fetch server config: ${response.status} ${response.statusText}`,
     );
   }
   const config = await response.json();
-  // Log the retrieved configuration
-  console.log("Server config loaded:", config);
 
   cachedSC = getServerConfig(config.game_env);
   return cachedSC;
@@ -62,4 +74,8 @@ export function getServerConfig(gameEnv: string) {
     default:
       throw Error(`unsupported server configuration: ${gameEnv}`);
   }
+}
+
+export function clearCachedServerConfig(): void {
+  cachedSC = null;
 }

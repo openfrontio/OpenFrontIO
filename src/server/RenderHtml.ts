@@ -11,6 +11,7 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
     gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
     instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),
     assetManifest: JSON.stringify(assetManifest),
+    gameEnv: JSON.stringify(process.env.GAME_ENV ?? "dev"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
     gameplayScreenshotUrl: buildAssetUrl(

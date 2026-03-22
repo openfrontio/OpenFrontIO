@@ -58,6 +58,9 @@
       window.GIT_COMMIT = <%- gitCommit %>;
       window.INSTANCE_ID = <%- instanceId %>;
       window.ASSET_MANIFEST = <%- assetManifest %>;
+      window.BOOTSTRAP_CONFIG = {
+        gameEnv: <%- gameEnv %>,
+      };
       document.documentElement.style.setProperty(
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
