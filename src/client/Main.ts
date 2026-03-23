@@ -15,7 +15,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
-import { joinLobby } from "./ClientGameRunner";
+import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./FlagInput";
@@ -180,12 +180,17 @@ declare global {
     ramp: {
       que: Array<() => void>;
       passiveMode: boolean;
-      spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
-      destroyUnits: (adType: string) => void;
+      spaAddAds: (ads: Array<{ type: string; selectorId?: string }>) => void;
+      destroyUnits: (adType: string | string[]) => Promise<void>;
       settings?: {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      spaAds: (config?: {
+        ads?: Array<{ type: string; selectorId?: string }>;
+        countPageview?: boolean;
+        path?: string;
+      }) => void;
       // Video ad methods
       onPlayerReady: (() => void) | null;
       addUnits: (units: Array<{ type: string }>) => Promise<void>;
@@ -230,7 +235,7 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: ((force?: boolean) => boolean) | null = null;
+  private lobbyHandle: JoinLobbyResult | null = null;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -300,8 +305,8 @@ class Client {
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop(true);
+      if (this.lobbyHandle !== null) {
+        this.lobbyHandle.stop(true);
         await crazyGamesSDK.gameplayStop();
       }
     });
@@ -521,10 +526,10 @@ class Client {
     };
 
     const onPopState = () => {
-      if (this.currentUrl !== null && this.gameStop !== null) {
+      if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
 
-        if (!this.gameStop()) {
+        if (!this.lobbyHandle.stop()) {
           console.info("Player is active, ask before leaving game");
 
           const isConfirmed = confirm(
@@ -552,7 +557,7 @@ class Client {
     };
 
     const onJoinChanged = () => {
-      if (this.gameStop !== null) {
+      if (this.lobbyHandle !== null) {
         this.handleLeaveLobby();
       }
 
@@ -642,7 +647,7 @@ class Client {
         return;
       }
 
-      const patternName = params.get("pattern");
+      const patternName = params.get("cosmetic");
       if (!patternName) {
         alert("Something went wrong. Please contact support.");
         console.error("purchase-completed but no pattern name");
@@ -737,9 +742,9 @@ class Client {
     }
 
     console.log(`joining lobby ${lobby.gameID}`);
-    if (this.gameStop !== null) {
+    if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
-      this.gameStop(true);
+      this.lobbyHandle.stop(true);
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
@@ -750,106 +755,105 @@ class Client {
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
-    this.gameStop = joinLobby(
-      this.eventBus,
-      {
-        gameID: lobby.gameID,
-        serverConfig: config,
-        cosmetics: await getPlayerCosmeticsRefs(),
-        turnstileToken: await this.getTurnstileToken(lobby),
-        playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
-        playerClanTag: this.usernameInput?.getClanTag() ?? null,
-        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
-        gameRecord: lobby.gameRecord,
-      },
-      () => {
-        console.log("Closing modals");
-        document.getElementById("settings-button")?.classList.add("hidden");
-        if (this.usernameInput) {
-          // fix edge case where username-validation-error is re-rendered and hidden tag removed
-          this.usernameInput.validationError = "";
+    this.lobbyHandle = joinLobby(this.eventBus, {
+      gameID: lobby.gameID,
+      serverConfig: config,
+      cosmetics: await getPlayerCosmeticsRefs(),
+      turnstileToken: await this.getTurnstileToken(lobby),
+      playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
+      playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
+      gameRecord: lobby.gameRecord,
+    });
+
+    this.lobbyHandle.prestart.then(() => {
+      console.log("Closing modals");
+      document.getElementById("settings-button")?.classList.add("hidden");
+      if (this.usernameInput) {
+        // fix edge case where username-validation-error is re-rendered and hidden tag removed
+        this.usernameInput.validationError = "";
+      }
+      document
+        .getElementById("username-validation-error")
+        ?.classList.add("hidden");
+      this.joinModal?.closeWithoutLeaving();
+      [
+        "single-player-modal",
+        "host-lobby-modal",
+        "game-starting-modal",
+        "game-top-bar",
+        "help-modal",
+        "user-setting",
+        "troubleshooting-modal",
+        "territory-patterns-modal",
+        "language-modal",
+        "news-modal",
+        "flag-input-modal",
+        "account-button",
+        "leaderboard-button",
+        "token-login",
+        "matchmaking-modal",
+        "lang-selector",
+        "gutter-ads",
+      ].forEach((tag) => {
+        const modal = document.querySelector(tag) as HTMLElement & {
+          close?: () => void;
+          isModalOpen?: boolean;
+        };
+        if (modal?.close) {
+          modal.close();
+        } else if (modal && "isModalOpen" in modal) {
+          modal.isModalOpen = false;
         }
-        document
-          .getElementById("username-validation-error")
-          ?.classList.add("hidden");
-        this.joinModal?.closeWithoutLeaving();
-        [
-          "single-player-modal",
-          "host-lobby-modal",
-          "game-starting-modal",
-          "game-top-bar",
-          "help-modal",
-          "user-setting",
-          "troubleshooting-modal",
-          "territory-patterns-modal",
-          "language-modal",
-          "news-modal",
-          "flag-input-modal",
-          "account-button",
-          "leaderboard-button",
-          "token-login",
-          "matchmaking-modal",
-          "lang-selector",
-          "gutter-ads",
-        ].forEach((tag) => {
-          const modal = document.querySelector(tag) as HTMLElement & {
-            close?: () => void;
-            isModalOpen?: boolean;
-          };
-          if (modal?.close) {
-            modal.close();
-          } else if (modal && "isModalOpen" in modal) {
-            modal.isModalOpen = false;
-          }
-        });
-        this.gameModeSelector.stop();
-        document.querySelectorAll(".ad").forEach((ad) => {
-          (ad as HTMLElement).style.display = "none";
-        });
+      });
+      this.gameModeSelector.stop();
+      document.querySelectorAll(".ad").forEach((ad) => {
+        (ad as HTMLElement).style.display = "none";
+      });
 
-        crazyGamesSDK.loadingStart();
+      crazyGamesSDK.loadingStart();
 
-        // show when the game loads
-        const startingModal = document.querySelector(
-          "game-starting-modal",
-        ) as GameStartingModal;
-        if (startingModal && startingModal instanceof GameStartingModal) {
-          startingModal.show();
-        }
-      },
-      () => {
-        this.joinModal?.closeWithoutLeaving();
-        this.gameModeSelector.stop();
-        incrementGamesPlayed();
+      // show when the game loads
+      const startingModal = document.querySelector(
+        "game-starting-modal",
+      ) as GameStartingModal;
+      if (startingModal && startingModal instanceof GameStartingModal) {
+        startingModal.show();
+      }
+    });
 
-        document.querySelectorAll(".ad").forEach((ad) => {
-          (ad as HTMLElement).style.display = "none";
-        });
+    this.lobbyHandle.join.then(() => {
+      this.joinModal?.closeWithoutLeaving();
+      this.gameModeSelector.stop();
+      incrementGamesPlayed();
 
-        if (window.PageOS?.session?.newPageView) {
-          window.PageOS.session.newPageView();
-        }
-        crazyGamesSDK.loadingStop();
-        crazyGamesSDK.gameplayStart();
-        document.body.classList.add("in-game");
+      document.querySelectorAll(".ad").forEach((ad) => {
+        (ad as HTMLElement).style.display = "none";
+      });
 
-        // Ensure there's a homepage entry in history before adding the lobby entry
-        if (window.location.hash === "" || window.location.hash === "#") {
-          history.replaceState(null, "", window.location.origin + "#refresh");
-        }
-        const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-        history.pushState(
-          null,
-          "",
-          lobbyIdHidden
-            ? "/streamer-mode"
-            : `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
-        );
+      if (window.PageOS?.session?.newPageView) {
+        window.PageOS.session.newPageView();
+      }
+      crazyGamesSDK.loadingStop();
+      crazyGamesSDK.gameplayStart();
+      document.body.classList.add("in-game");
 
-        // Store current URL for popstate confirmation
-        this.currentUrl = window.location.href;
-      },
-    );
+      // Ensure there's a homepage entry in history before adding the lobby entry
+      if (window.location.hash === "" || window.location.hash === "#") {
+        history.replaceState(null, "", window.location.origin + "#refresh");
+      }
+      const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
+      history.pushState(
+        null,
+        "",
+        lobbyIdHidden
+          ? "/streamer-mode"
+          : `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+      );
+
+      // Store current URL for popstate confirmation
+      this.currentUrl = window.location.href;
+    });
   }
 
   private updateJoinUrlForShare(
@@ -867,13 +871,13 @@ class Client {
     }
   }
 
-  private async handleLeaveLobby(/* event: CustomEvent */) {
-    if (this.gameStop === null) {
+  private async handleLeaveLobby(event?: CustomEvent) {
+    if (this.lobbyHandle === null) {
       return;
     }
     console.log("leaving lobby, cancelling game");
-    this.gameStop(true);
-    this.gameStop = null;
+    this.lobbyHandle.stop(true);
+    this.lobbyHandle = null;
     this.currentUrl = null;
 
     try {
@@ -883,6 +887,21 @@ class Client {
     }
 
     document.body.classList.remove("in-game");
+
+    if (this.joinModal.isOpen()) {
+      this.joinModal.close();
+      if (event?.detail.cause === "full-lobby") {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("public_lobby.join_timeout"),
+              color: "red",
+              duration: 3500,
+            },
+          }),
+        );
+      }
+    }
 
     crazyGamesSDK.gameplayStop();
   }
