@@ -226,6 +226,7 @@ export class UnitImpl implements Unit {
       0n,
       toInt(this.info().maxHealth ?? 1),
     );
+    this.mg.addUpdate(this.toUpdate());
     if (this._health === 0n) {
       this.delete(true, attacker);
     }
@@ -331,14 +332,18 @@ export class UnitImpl implements Unit {
     return this._retreating;
   }
 
-  orderBoatRetreat() {
-    if (this.type() !== UnitType.TransportShip) {
-      throw new Error(`Cannot retreat ${this.type()}`);
-    }
-    if (!this._retreating) {
-      this._retreating = true;
+  setRetreating(retreating: boolean): void {
+    if (this._retreating !== retreating) {
+      this._retreating = retreating;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  orderBoatRetreat() {
+    if (this.type() !== UnitType.TransportShip) {
+      throw new Error("Cannot retreat " + this.type());
+    }
+    this.setRetreating(true);
   }
 
   isUnderConstruction(): boolean {
