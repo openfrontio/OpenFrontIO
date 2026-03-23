@@ -120,6 +120,10 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Tourney1 = "Tourney 2 Teams",
+  Tourney2 = "Tourney 3 Teams",
+  Tourney3 = "Tourney 4 Teams",
+  Tourney4 = "Tourney 8 Teams",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box PLUS",
@@ -209,6 +213,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
+  ],
+  tournament: [
+    GameMapType.Tourney1,
+    GameMapType.Tourney2,
+    GameMapType.Tourney3,
+    GameMapType.Tourney4,
   ],
 };
 
@@ -470,7 +480,7 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
-  averagePosition(): Cell | null;
+  clusteredPositions(): TileRef[];
 }
 
 export interface AllianceRequest {
