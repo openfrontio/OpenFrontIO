@@ -1,6 +1,7 @@
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -9,10 +10,12 @@ import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import leaderboardRegularIcon from "/images/LeaderboardIconRegularWhite.svg?url";
-import leaderboardSolidIcon from "/images/LeaderboardIconSolidWhite.svg?url";
-import teamRegularIcon from "/images/TeamIconRegularWhite.svg?url";
-import teamSolidIcon from "/images/TeamIconSolidWhite.svg?url";
+const leaderboardRegularIcon = assetUrl(
+  "images/LeaderboardIconRegularWhite.svg",
+);
+const leaderboardSolidIcon = assetUrl("images/LeaderboardIconSolidWhite.svg");
+const teamRegularIcon = assetUrl("images/TeamIconRegularWhite.svg");
+const teamSolidIcon = assetUrl("images/TeamIconSolidWhite.svg");
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Layer {

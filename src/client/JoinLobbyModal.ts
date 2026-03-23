@@ -8,6 +8,7 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -431,7 +432,9 @@ export class JoinLobbyModal extends BaseModal {
     const c = this.gameConfig;
     const mapName = getMapName(c.gameMap);
     const normalizedMap = normaliseMapKey(c.gameMap);
-    const thumbnailUrl = `/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`;
+    const thumbnailUrl = assetUrl(
+      `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
+    );
     const isTeam = c.gameMode === GameMode.Team;
 
     let modeSubtitle: string;

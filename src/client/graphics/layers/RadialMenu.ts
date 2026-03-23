@@ -1,4 +1,5 @@
 import * as d3 from "d3";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
 import { getSvgAspectRatio, translateText } from "../../Utils";
@@ -9,7 +10,7 @@ import {
   MenuElementParams,
   TooltipKey,
 } from "./RadialMenuElements";
-import backIcon from "/images/BackIconWhite.svg?url";
+const backIcon = assetUrl("images/BackIconWhite.svg");
 
 function resolveColor(
   item: MenuElement,

@@ -1,3 +1,4 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -6,8 +7,8 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
+const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 export function troopAttackColor(
   attackerTroops: number,

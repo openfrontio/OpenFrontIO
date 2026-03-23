@@ -1,3 +1,4 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
@@ -20,18 +21,18 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import boatIcon from "/images/BoatIconWhite.svg?url";
-import buildIcon from "/images/BuildIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import infoIcon from "/images/InfoIcon.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
-import targetIcon from "/images/TargetIconWhite.svg?url";
-import traitorIcon from "/images/TraitorIconWhite.svg?url";
-import xIcon from "/images/XIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const boatIcon = assetUrl("images/BoatIconWhite.svg");
+const buildIcon = assetUrl("images/BuildIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const infoIcon = assetUrl("images/InfoIcon.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
+const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
