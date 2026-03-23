@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { shouldPreserveGhostAfterBuild } from "../../../../src/client/graphics/layers/StructureIconsLayer";
-import { UnitType } from "../../../../src/core/game/Game";
+import {
+  shouldClearNukeGhost,
+  shouldClearNukeGhostInRender,
+  shouldPreserveGhostAfterBuild,
+} from "../../../../src/client/graphics/layers/StructureIconsLayer";
+import { BuildableUnit, UnitType } from "../../../../src/core/game/Game";
 
 /**
  * Tests for StructureIconsLayer edge cases mentioned in comments:
@@ -34,5 +38,76 @@ describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)",
       expect(shouldPreserveGhostAfterBuild(UnitType.Warship)).toBe(false);
       expect(shouldPreserveGhostAfterBuild(UnitType.MIRV)).toBe(false);
     });
+  });
+});
+
+function nukeBuildable(
+  type: UnitType.AtomBomb | UnitType.HydrogenBomb,
+  overrides: Partial<BuildableUnit> = {},
+): BuildableUnit {
+  return {
+    type,
+    canBuild: false,
+    canUpgrade: false,
+    cost: 100n,
+    overlappingRailroads: [],
+    ghostRailPaths: [],
+    ...overrides,
+  };
+}
+
+describe("shouldClearNukeGhost", () => {
+  test("returns true for atom bomb ghost when canBuild is false", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb);
+    expect(shouldClearNukeGhost(UnitType.AtomBomb, unit)).toBe(true);
+  });
+
+  test("returns true for hydrogen bomb ghost when canBuild is false", () => {
+    const unit = nukeBuildable(UnitType.HydrogenBomb);
+    expect(shouldClearNukeGhost(UnitType.HydrogenBomb, unit)).toBe(true);
+  });
+
+  test("returns false when ghost is not a nuke type", () => {
+    const unit: BuildableUnit = {
+      type: UnitType.City,
+      canBuild: false,
+      canUpgrade: false,
+      cost: 50n,
+      overlappingRailroads: [],
+      ghostRailPaths: [],
+    };
+    expect(shouldClearNukeGhost(UnitType.City, unit)).toBe(false);
+  });
+
+  test("returns false when unit canBuild is not false (e.g. can place)", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb, {
+      canBuild: 0 as BuildableUnit["canBuild"],
+    });
+    expect(shouldClearNukeGhost(UnitType.AtomBomb, unit)).toBe(false);
+  });
+});
+
+describe("shouldClearNukeGhostInRender", () => {
+  test("does not clear when user has not placed a nuke yet (press 8 when can't build → no flash)", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb);
+    expect(shouldClearNukeGhostInRender(false, UnitType.AtomBomb, unit)).toBe(
+      false,
+    );
+  });
+
+  test("clears when user has placed at least one nuke and can no longer build", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb);
+    expect(shouldClearNukeGhostInRender(true, UnitType.AtomBomb, unit)).toBe(
+      true,
+    );
+  });
+
+  test("does not clear when user has placed a nuke but can still build another", () => {
+    const unit = nukeBuildable(UnitType.AtomBomb, {
+      canBuild: 0 as BuildableUnit["canBuild"],
+    });
+    expect(shouldClearNukeGhostInRender(true, UnitType.AtomBomb, unit)).toBe(
+      false,
+    );
   });
 });
