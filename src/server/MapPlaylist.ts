@@ -159,7 +159,7 @@ export class MapPlaylist {
       gameMap: map,
       maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Normal,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
         isCompact,
         isRandomSpawn: false,
