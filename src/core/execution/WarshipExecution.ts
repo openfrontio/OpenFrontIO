@@ -20,6 +20,10 @@ export class WarshipExecution implements Execution {
   private pathfinder: SteppingPathFinder<TileRef>;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
+  private retreatPortTile: TileRef | undefined;
+  private retreatingForRepair = false;
+  private lastManualMoveTickRetreatDisabled = 0; // Tick when last manual move occurred
+  private lastObservedPatrolTile: TileRef | undefined;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -48,6 +52,7 @@ export class WarshipExecution implements Execution {
         this.input,
       );
     }
+    this.lastObservedPatrolTile = this.warship.patrolTile();
   }
 
   tick(ticks: number): void {
@@ -55,24 +60,250 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
+    const healthBeforeHealing = this.warship.health();
 
-    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
-    if (hasPort) {
-      this.warship.modifyHealth(1);
+    this.healWarship();
+    this.handleManualPatrolOverride();
+
+    if (this.handleRepairRetreat()) {
+      return;
+    }
+
+    // Priority 1: Check if need to heal before doing anything else
+    if (this.shouldStartRepairRetreat(healthBeforeHealing)) {
+      this.startRepairRetreat();
+      if (this.handleRepairRetreat()) {
+        return;
+      }
     }
 
     this.warship.setTargetUnit(this.findTargetUnit());
+
+    // Always patrol for movement
+    this.patrol();
+
+    // Priority 1: Fight enemy warship if in range
+    if (this.warship.targetUnit()?.type() === UnitType.Warship) {
+      this.shootTarget();
+      return;
+    }
+
+    // Priority 2: Shoot transport ship if in range
+    if (this.warship.targetUnit()?.type() === UnitType.TransportShip) {
+      this.shootTarget();
+      return;
+    }
+
+    // Priority 3: Hunt trade ship only if not healing and no enemy warship
     if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
       this.huntDownTradeShip();
       return;
     }
+  }
 
-    this.patrol();
-
-    if (this.warship.targetUnit() !== undefined) {
-      this.shootTarget();
-      return;
+  private healWarship(): void {
+    if (this.warship.owner().unitCount(UnitType.Port) > 0) {
+      this.warship.modifyHealth(1);
     }
+  }
+
+  private isFullyHealed(): boolean {
+    const maxHealth = this.mg.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      return true;
+    }
+    return this.warship.health() >= maxHealth;
+  }
+
+  private shouldStartRepairRetreat(
+    healthBeforeHealing = this.warship.health(),
+  ): boolean {
+    if (this.retreatingForRepair) {
+      return false;
+    }
+    // If a manual move was issued, don't retreat for 5 seconds (50 ticks at 10 ticks/second)
+    const manualMoveRetreaDisabledDuration = 50;
+    if (
+      this.mg.ticks() - this.lastManualMoveTickRetreatDisabled <
+      manualMoveRetreaDisabledDuration
+    ) {
+      return false;
+    }
+    if (
+      healthBeforeHealing >= this.mg.config().warshipRetreatHealthThreshold()
+    ) {
+      return false;
+    }
+    if (this.warship.owner().unitCount(UnitType.Port) === 0) {
+      return false;
+    }
+    if (this.hasNearbyEnemyWarship()) {
+      return false;
+    }
+    // Only retreat if there's a friendly port
+    const ports = this.warship.owner().units(UnitType.Port);
+    return ports.length > 0;
+  }
+
+  private findNearestPort(): TileRef | undefined {
+    const ports = this.warship.owner().units(UnitType.Port);
+    if (ports.length === 0) {
+      return undefined;
+    }
+
+    const warshipTile = this.warship.tile();
+    const warshipComponent = this.mg.getWaterComponent(warshipTile);
+
+    // Find nearest port (without capacity constraint)
+    let bestTile: TileRef | undefined = undefined;
+    let bestDistance = Infinity;
+    for (const port of ports) {
+      const portTile = port.tile();
+      if (
+        warshipComponent !== null &&
+        !this.mg.hasWaterComponent(portTile, warshipComponent)
+      ) {
+        continue;
+      }
+
+      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestTile = portTile;
+      }
+    }
+
+    // If we found a port, use it
+    if (bestTile !== undefined) {
+      return bestTile;
+    }
+
+    // Fallback if component filtering leaves no options
+    bestDistance = Infinity;
+    for (const port of ports) {
+      const portTile = port.tile();
+      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestTile = portTile;
+      }
+    }
+
+    return bestTile;
+  }
+
+  private hasNearbyEnemyWarship(): boolean {
+    const owner = this.warship.owner();
+    return this.mg.anyUnitNearby(
+      this.warship.tile(),
+      this.mg.config().warshipTargettingRange(),
+      [UnitType.Warship],
+      (unit) =>
+        unit !== this.warship &&
+        unit.owner() !== owner &&
+        owner.canAttackPlayer(unit.owner(), true),
+    );
+  }
+
+  private startRepairRetreat(): void {
+    this.retreatingForRepair = true;
+    this.warship.setRetreating(true);
+    // Find nearest port (ANY port, even if full - we'll wait near it if needed)
+    this.retreatPortTile = this.findNearestPort();
+    this.warship.setTargetUnit(undefined);
+    if (this.retreatPortTile === undefined) {
+      this.cancelRepairRetreat();
+    }
+  }
+
+  private cancelRepairRetreat(clearTargetTile = true): void {
+    this.retreatingForRepair = false;
+    this.warship.setRetreating(false);
+    this.retreatPortTile = undefined;
+    if (clearTargetTile) {
+      this.warship.setTargetTile(undefined);
+    }
+  }
+
+  private handleManualPatrolOverride(): void {
+    const patrolTile = this.warship.patrolTile();
+    if (
+      this.lastObservedPatrolTile !== undefined &&
+      patrolTile !== this.lastObservedPatrolTile
+    ) {
+      this.lastManualMoveTickRetreatDisabled = this.mg.ticks();
+      if (this.retreatingForRepair) {
+        this.cancelRepairRetreat(false);
+      }
+    }
+    this.lastObservedPatrolTile = patrolTile;
+  }
+
+  private handleRepairRetreat(): boolean {
+    if (!this.retreatingForRepair) {
+      return false;
+    }
+
+    // If enemy warship appears nearby during retreat, cancel and fight
+    if (this.hasNearbyEnemyWarship()) {
+      this.cancelRepairRetreat(false);
+      return false;
+    }
+
+    if (this.isFullyHealed()) {
+      this.cancelRepairRetreat();
+      return false;
+    }
+
+    this.warship.setTargetUnit(undefined);
+
+    const retreatPortTile = this.retreatPortTile;
+    if (retreatPortTile === undefined) {
+      return false;
+    }
+
+    if (this.warship.tile() === retreatPortTile) {
+      this.warship.setTargetTile(undefined);
+      return true;
+    }
+
+    this.warship.setTargetTile(retreatPortTile);
+    const result = this.pathfinder.next(this.warship.tile(), retreatPortTile);
+    switch (result.status) {
+      case PathStatus.COMPLETE:
+        this.warship.move(result.node);
+        if (result.node === retreatPortTile) {
+          this.warship.setTargetTile(undefined);
+        }
+        break;
+      case PathStatus.NEXT:
+        this.warship.move(result.node);
+        break;
+      case PathStatus.NOT_FOUND:
+        this.retreatPortTile = this.findNearestPort();
+        if (this.retreatPortTile === undefined) {
+          this.cancelRepairRetreat();
+        }
+        break;
+    }
+
+    return true;
+  }
+
+  private refreshRetreatPortTile(): boolean {
+    const ports = this.warship.owner().units(UnitType.Port);
+    if (ports.length === 0) {
+      return false;
+    }
+
+    if (
+      this.retreatPortTile === undefined ||
+      !ports.some((port) => port.tile() === this.retreatPortTile)
+    ) {
+      this.retreatPortTile = this.findNearestPort();
+    }
+
+    return this.retreatPortTile !== undefined;
   }
 
   private findTargetUnit(): Unit | undefined {
@@ -123,7 +354,7 @@ export class WarshipExecution implements Execution {
       }
 
       const typePriority =
-        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
+        type === UnitType.Warship ? 0 : type === UnitType.TransportShip ? 1 : 2;
 
       if (bestUnit === undefined) {
         bestUnit = unit;
@@ -133,7 +364,7 @@ export class WarshipExecution implements Execution {
       }
 
       // Match existing `sort()` semantics:
-      // - Lower priority is better (TransportShip < Warship < TradeShip).
+      // - Lower priority is better (Warship < TransportShip < TradeShip).
       // - For same type, smaller distance is better.
       // - For exact ties, keep the first encountered (stable sort behavior).
       if (
@@ -229,6 +460,10 @@ export class WarshipExecution implements Execution {
     return this.warship?.isActive();
   }
 
+  isDocked(): boolean {
+    return false;
+  }
+
   activeDuringSpawnPhase(): boolean {
     return false;
   }
@@ -291,4 +526,5 @@ export class WarshipExecution implements Execution {
     }
     return undefined;
   }
+
 }
