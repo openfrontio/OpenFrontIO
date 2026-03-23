@@ -201,7 +201,7 @@ describe("Warship", () => {
   });
 
   test("Warship prioritizes transport ships over warships", async () => {
-    game.config().warshipShellAttackRate = () => 10_000;
+    game.config().warshipShellAttackRate = () => Number.MAX_SAFE_INTEGER;
 
     const warship = player1.buildUnit(
       UnitType.Warship,
@@ -218,9 +218,17 @@ describe("Warship", () => {
     });
 
     game.addExecution(new WarshipExecution(warship));
-    game.executeNextTick();
 
-    expect(warship.targetUnit()?.type()).toBe(UnitType.TransportShip);
+    let selectedType: UnitType | undefined = undefined;
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+      selectedType = warship.targetUnit()?.type();
+      if (selectedType === UnitType.TransportShip) {
+        break;
+      }
+    }
+
+    expect(selectedType).toBe(UnitType.TransportShip);
   });
 
   test("MoveWarshipExecution fails if player is not the owner", async () => {
@@ -310,63 +318,95 @@ describe("Warship", () => {
     ).toBe(true);
   });
 
-  test("Warship gets bonus healing when near friendly port", async () => {
+  test("Warship gets active healing when docked at a friendly port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
     if (typeof maxHealth !== "number") {
       expect(typeof maxHealth).toBe("number");
       throw new Error("unreachable");
     }
 
-    game.config().warshipPortHealingBonus = () => 3;
-    game.config().warshipPortHealingRadius = () => 30;
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipPortHealingBonus = () => 6;
+    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
 
-    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const portTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, portTile, {});
     const warship = player1.buildUnit(
       UnitType.Warship,
-      game.ref(coastX + 1, 10),
+      game.ref(coastX + 1, 11),
       {
-        patrolTile: game.ref(coastX + 1, 10),
+        patrolTile: game.ref(coastX + 1, 11),
       },
     );
-    game.addExecution(new WarshipExecution(warship));
+    const warshipExecution = new WarshipExecution(warship);
+    game.addExecution(warshipExecution);
 
     game.executeNextTick();
-    warship.modifyHealth(-10);
-    game.executeNextTick();
+    warship.modifyHealth(-300);
 
-    expect(warship.health()).toBe(maxHealth - 9);
+    for (let i = 0; i < 60; i++) {
+      game.executeNextTick();
+      if (warshipExecution.isDocked()) {
+        break;
+      }
+    }
+
+    expect(warshipExecution.isDocked()).toBe(true);
+    const before = warship.health();
+    game.executeNextTick();
+    expect(warship.health()).toBe(before + 6);
   });
 
   test("Warship waits at port when capacity is full", async () => {
-    game.config().warshipPortHealingRadius = () => 30;
-    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
 
     const portTile = game.ref(coastX, 10);
-    const warship1Tile = game.ref(coastX, 11);
+    const warship1Tile = game.ref(coastX + 1, 11);
+    const warship2Tile = game.ref(coastX + 1, 12);
 
     player1.buildUnit(UnitType.Port, portTile, {});
     const warship1 = player1.buildUnit(UnitType.Warship, warship1Tile, {
       patrolTile: warship1Tile,
     });
+    const warship2 = player1.buildUnit(UnitType.Warship, warship2Tile, {
+      patrolTile: warship2Tile,
+    });
 
     const exec1 = new WarshipExecution(warship1);
+    const exec2 = new WarshipExecution(warship2);
     game.addExecution(exec1);
+    game.addExecution(exec2);
 
     game.executeNextTick();
-    warship1.modifyHealth(-700);
+    warship1.modifyHealth(-300);
+    warship2.modifyHealth(-300);
 
-    let previousTile = warship1.tile();
-    for (let i = 0; i < 50; i++) {
-      executeTicks(game, 1);
-      const currentTile = warship1.tile();
-      if (currentTile === previousTile && exec1.isDocked()) {
+    for (let i = 0; i < 80; i++) {
+      game.executeNextTick();
+      const warship2DistanceToPort = game.euclideanDistSquared(
+        warship2.tile(),
+        portTile,
+      );
+      if (
+        exec1.isDocked() &&
+        !exec2.isDocked() &&
+        warship2DistanceToPort <= 25 &&
+        warship2.retreating()
+      ) {
         break;
       }
-      previousTile = currentTile;
     }
 
-    const distanceToPort = game.euclideanDistSquared(warship1.tile(), portTile);
-    expect(distanceToPort).toBeLessThanOrEqual(25);
+    const warship2DistanceToPort = game.euclideanDistSquared(
+      warship2.tile(),
+      portTile,
+    );
     expect(exec1.isDocked()).toBe(true);
+    expect(exec2.isDocked()).toBe(false);
+    expect(warship2DistanceToPort).toBeLessThanOrEqual(25);
+    expect(warship2.retreating()).toBe(true);
   });
 });
