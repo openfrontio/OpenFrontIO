@@ -1,3 +1,4 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -229,7 +230,7 @@ export class NameLayer implements Layer {
       } else if (flag !== undefined && flag !== null) {
         const flagImg = document.createElement("img");
         applyFlagStyles(flagImg);
-        flagImg.src = "/flags/" + flag + ".svg";
+        flagImg.src = assetUrl(`flags/${flag}.svg`);
         nameDiv.appendChild(flagImg);
       }
     }

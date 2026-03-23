@@ -144,15 +144,24 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
+    let isCompact = this.playlists[type].length % 3 === 0;
+    if (
+      isCompact &&
+      mode === GameMode.Team &&
+      !(await this.supportsCompactMapForTeams(map, playerTeams!))
+    ) {
+      isCompact = false;
+    }
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, false),
+      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Normal,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
-        isCompact: false,
+        isCompact,
         isRandomSpawn: false,
         isCrowded: false,
         isHardNations: false,
@@ -171,7 +180,7 @@ export class MapPlaylist {
           : "default",
       gameMode: mode,
       playerTeams,
-      bots: 400,
+      bots: isCompact ? 100 : 400,
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
     } satisfies GameConfig;
@@ -444,19 +453,11 @@ export class MapPlaylist {
     count?: number,
     countReduction: number = 0,
   ): PublicGameModifiers {
-    // Roll how many modifiers to pick: 30% → 1, 40% → 2, 20% → 3, 10% → 4
-    const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
-    const k = Math.max(
-      0,
-      (count ??
-        (modifierCountRoll <= 3
-          ? 1
-          : modifierCountRoll <= 7
-            ? 2
-            : modifierCountRoll <= 9
-              ? 3
-              : 4)) - countReduction,
-    );
+    // Roll how many modifiers to pick: 30% → 1, 50% → 2, 20% → 3
+    const modifierCounts = [1, 1, 1, 2, 2, 2, 2, 2, 3, 3];
+    const rolled =
+      modifierCounts[Math.floor(Math.random() * modifierCounts.length)];
+    const k = Math.max(0, (count ?? rolled) - countReduction);
 
     // Shuffle the pool, then pick the first k unique modifier keys.
     const pool = SPECIAL_MODIFIER_POOL.filter(

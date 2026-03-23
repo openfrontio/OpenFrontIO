@@ -1,13 +1,14 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PlayerType } from "../../../core/game/Game";
 import { PlayerView } from "../../../core/game/GameView";
 import { actionButton } from "../../components/ui/ActionButton";
 import { SendKickPlayerIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
-import kickIcon from "/images/ExitIconWhite.svg?url";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
+const kickIcon = assetUrl("images/ExitIconWhite.svg");
+const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 
 @customElement("player-moderation-modal")
 export class PlayerModerationModal extends LitElement {

@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -527,7 +528,7 @@ export class HelpModal extends BaseModal {
                     >${translateText("help_modal.ui_leaderboard")}</span
                   >
                   <img
-                    src="/images/helpModal/leaderboard2.webp"
+                    src=${assetUrl("images/helpModal/leaderboard2.webp")}
                     alt="Leaderboard"
                     class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                     loading="lazy"
@@ -550,7 +551,7 @@ export class HelpModal extends BaseModal {
                     >${translateText("help_modal.ui_control")}</span
                   >
                   <img
-                    src="/images/helpModal/controlPanel.webp"
+                    src=${assetUrl("images/helpModal/controlPanel.webp")}
                     alt="Control Panel"
                     class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                     loading="lazy"
@@ -578,13 +579,13 @@ export class HelpModal extends BaseModal {
                   >
                   <div class="flex flex-col gap-2">
                     <img
-                      src="/images/helpModal/eventsPanel.webp"
+                      src=${assetUrl("images/helpModal/eventsPanel.webp")}
                       alt="Events"
                       class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                       loading="lazy"
                     />
                     <img
-                      src="/images/helpModal/eventsPanelAttack.webp"
+                      src=${assetUrl("images/helpModal/eventsPanelAttack.webp")}
                       alt="Events Attack"
                       class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                       loading="lazy"
@@ -613,7 +614,7 @@ export class HelpModal extends BaseModal {
                     >${translateText("help_modal.ui_options")}</span
                   >
                   <img
-                    src="/images/helpModal/options2.webp"
+                    src=${assetUrl("images/helpModal/options2.webp")}
                     alt="Options"
                     class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                     loading="lazy"
@@ -643,7 +644,7 @@ export class HelpModal extends BaseModal {
                     >${translateText("help_modal.ui_playeroverlay")}</span
                   >
                   <img
-                    src="/images/helpModal/playerInfoOverlay.webp"
+                    src=${assetUrl("images/helpModal/playerInfoOverlay.webp")}
                     alt="Player Info"
                     class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                     loading="lazy"
@@ -692,13 +693,13 @@ export class HelpModal extends BaseModal {
             >
               <div class="flex flex-col gap-4 shrink-0">
                 <img
-                  src="/images/helpModal/radialMenu2.webp"
+                  src=${assetUrl("images/helpModal/radialMenu2.webp")}
                   alt="Radial Menu"
                   class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                   loading="lazy"
                 />
                 <img
-                  src="/images/helpModal/radialMenuAlly.webp"
+                  src=${assetUrl("images/helpModal/radialMenuAlly.webp")}
                   alt="Radial Menu Ally"
                   class="rounded-lg shadow-lg border border-white/20 max-w-[200px]"
                   loading="lazy"
@@ -711,42 +712,42 @@ export class HelpModal extends BaseModal {
                 <ul class="space-y-3">
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/BuildIconWhite.svg"
+                      src=${assetUrl("images/BuildIconWhite.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.radial_build")}</span>
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/InfoIcon.svg"
+                      src=${assetUrl("images/InfoIcon.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.radial_info")}</span>
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/BoatIconWhite.svg"
+                      src=${assetUrl("images/BoatIconWhite.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.radial_boat")}</span>
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/AllianceIconWhite.svg"
+                      src=${assetUrl("images/AllianceIconWhite.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.info_alliance")}</span>
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/TraitorIconWhite.svg"
+                      src=${assetUrl("images/TraitorIconWhite.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.ally_betray")}</span>
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/DonateTroopIconWhite.svg"
+                      src=${assetUrl("images/DonateTroopIconWhite.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span
@@ -755,7 +756,7 @@ export class HelpModal extends BaseModal {
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src="/images/DonateGoldIconWhite.svg"
+                      src=${assetUrl("images/DonateGoldIconWhite.svg")}
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span
@@ -808,7 +809,7 @@ export class HelpModal extends BaseModal {
                     >${translateText("help_modal.info_enemy_panel")}</span
                   >
                   <img
-                    src="/images/helpModal/infoMenu2.webp"
+                    src=${assetUrl("images/helpModal/infoMenu2.webp")}
                     alt="Enemy Info"
                     class="rounded-lg shadow-lg border border-white/20 max-w-[240px]"
                     loading="lazy"
@@ -821,35 +822,35 @@ export class HelpModal extends BaseModal {
                   <ul class="space-y-3">
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/ChatIconWhite.svg"
+                        src=${assetUrl("images/ChatIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_chat")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/TargetIconWhite.svg"
+                        src=${assetUrl("images/TargetIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_target")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/AllianceIconWhite.svg"
+                        src=${assetUrl("images/AllianceIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_alliance")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/EmojiIconWhite.svg"
+                        src=${assetUrl("images/EmojiIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_emoji")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/StopIconWhite.png"
+                        src=${assetUrl("images/StopIconWhite.png")}
                         class="w-8 h-8 scale-75 origin-left"
                         loading="lazy"
                       />
@@ -869,7 +870,7 @@ export class HelpModal extends BaseModal {
                     >${translateText("help_modal.info_ally_panel")}</span
                   >
                   <img
-                    src="/images/helpModal/infoMenu2Ally.webp"
+                    src=${assetUrl("images/helpModal/infoMenu2Ally.webp")}
                     alt="Ally Info"
                     class="rounded-lg shadow-lg border border-white/20 max-w-[240px]"
                     loading="lazy"
@@ -882,21 +883,21 @@ export class HelpModal extends BaseModal {
                   <ul class="space-y-3">
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/TraitorIconWhite.svg"
+                        src=${assetUrl("images/TraitorIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.ally_betray")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/DonateTroopIconWhite.svg"
+                        src=${assetUrl("images/DonateTroopIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.ally_donate")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/DonateGoldIconWhite.svg"
+                        src=${assetUrl("images/DonateGoldIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span
@@ -971,7 +972,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/CityIconWhite.svg"
+                        src=${assetUrl("images/CityIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -987,7 +988,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/ShieldIconWhite.svg"
+                        src=${assetUrl("images/ShieldIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1003,7 +1004,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/PortIcon.svg"
+                        src=${assetUrl("images/PortIcon.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1019,7 +1020,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/FactoryIconWhite.svg"
+                        src=${assetUrl("images/FactoryIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1035,7 +1036,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/BattleshipIconWhite.svg"
+                        src=${assetUrl("images/BattleshipIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1051,7 +1052,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/MissileSiloIconWhite.svg"
+                        src=${assetUrl("images/MissileSiloIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1067,7 +1068,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/SamLauncherIconWhite.svg"
+                        src=${assetUrl("images/SamLauncherIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1083,7 +1084,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/NukeIconWhite.svg"
+                        src=${assetUrl("images/NukeIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1099,7 +1100,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/MushroomCloudIconWhite.svg"
+                        src=${assetUrl("images/MushroomCloudIconWhite.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1115,7 +1116,7 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5">
                       <img
-                        src="/images/MIRVIcon.svg"
+                        src=${assetUrl("images/MIRVIcon.svg")}
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
@@ -1169,7 +1170,7 @@ export class HelpModal extends BaseModal {
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
                 <img
-                  src="/images/helpModal/crown.webp"
+                  src=${assetUrl("images/helpModal/crown.webp")}
                   alt="Rank 1"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
@@ -1186,7 +1187,7 @@ export class HelpModal extends BaseModal {
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
                 <img
-                  src="/images/helpModal/traitor2.webp"
+                  src=${assetUrl("images/helpModal/traitor2.webp")}
                   alt="Traitor"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
@@ -1203,7 +1204,7 @@ export class HelpModal extends BaseModal {
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
                 <img
-                  src="/images/helpModal/ally2.webp"
+                  src=${assetUrl("images/helpModal/ally2.webp")}
                   alt="Ally"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
@@ -1220,7 +1221,7 @@ export class HelpModal extends BaseModal {
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
                 <img
-                  src="/images/helpModal/embargo.webp"
+                  src=${assetUrl("images/helpModal/embargo.webp")}
                   alt="Embargo"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
@@ -1237,7 +1238,7 @@ export class HelpModal extends BaseModal {
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
                 <img
-                  src="/images/helpModal/allianceRequest.webp"
+                  src=${assetUrl("images/helpModal/allianceRequest.webp")}
                   alt="Request"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"

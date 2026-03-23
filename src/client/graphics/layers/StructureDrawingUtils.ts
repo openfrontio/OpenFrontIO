@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { Theme } from "../../../core/configuration/Config";
 import {
   Cell,
@@ -7,12 +8,12 @@ import {
 } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
-import anchorIcon from "/images/AnchorIcon.png?url";
-import cityIcon from "/images/CityIcon.png?url";
-import factoryIcon from "/images/FactoryUnit.png?url";
-import missileSiloIcon from "/images/MissileSiloUnit.png?url";
-import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
-import shieldIcon from "/images/ShieldIcon.png?url";
+const anchorIcon = assetUrl("images/AnchorIcon.png");
+const cityIcon = assetUrl("images/CityIcon.png");
+const factoryIcon = assetUrl("images/FactoryUnit.png");
+const missileSiloIcon = assetUrl("images/MissileSiloUnit.png");
+const SAMMissileIcon = assetUrl("images/SamLauncherUnit.png");
+const shieldIcon = assetUrl("images/ShieldIcon.png");
 
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",
