@@ -46,11 +46,11 @@ export class GameManager {
     persistentID: string,
     gameID: GameID,
     lastTurn: number = 0,
-    newUsername?: string,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn, newUsername);
+    return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
   }
 
   createGame(
@@ -71,7 +71,7 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Medium,
+        difficulty: Difficulty.Easy,
         nations: "default",
         infiniteGold: false,
         infiniteTroops: false,
