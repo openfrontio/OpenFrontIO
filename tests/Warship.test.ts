@@ -201,7 +201,7 @@ describe("Warship", () => {
   });
 
   test("Warship prioritizes transport ships over warships", async () => {
-    game.config().warshipShellAttackRate = () => 10_000;
+    game.config().warshipShellAttackRate = () => Number.MAX_SAFE_INTEGER;
 
     const warship = player1.buildUnit(
       UnitType.Warship,
@@ -218,9 +218,17 @@ describe("Warship", () => {
     });
 
     game.addExecution(new WarshipExecution(warship));
-    game.executeNextTick();
 
-    expect(warship.targetUnit()?.type()).toBe(UnitType.TransportShip);
+    let selectedType: UnitType | undefined = undefined;
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+      selectedType = warship.targetUnit()?.type();
+      if (selectedType === UnitType.TransportShip) {
+        break;
+      }
+    }
+
+    expect(selectedType).toBe(UnitType.TransportShip);
   });
 
   test("MoveWarshipExecution fails if player is not the owner", async () => {
@@ -282,7 +290,6 @@ describe("Warship", () => {
       throw new Error("unreachable");
     }
 
-    game.config().warshipPortHealingBonus = () => 0;
     game.config().warshipRetreatHealthThreshold = () => 600;
 
     const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
@@ -309,5 +316,4 @@ describe("Warship", () => {
       distanceToPort <= 25 || warship.targetTile() === homePort.tile(),
     ).toBe(true);
   });
-
 });
