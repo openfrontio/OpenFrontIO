@@ -200,6 +200,29 @@ describe("Warship", () => {
     expect(tradeShip.owner().id()).toBe(player2.id());
   });
 
+  test("Warship prioritizes transport ships over warships", async () => {
+    game.config().warshipShellAttackRate = () => 10_000;
+
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      {
+        patrolTile: game.ref(coastX + 1, 10),
+      },
+    );
+    player2.buildUnit(UnitType.Warship, game.ref(coastX + 2, 10), {
+      patrolTile: game.ref(coastX + 2, 10),
+    });
+    player2.buildUnit(UnitType.TransportShip, game.ref(coastX + 1, 11), {
+      targetTile: game.ref(coastX + 1, 11),
+    });
+
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    expect(warship.targetUnit()?.type()).toBe(UnitType.TransportShip);
+  });
+
   test("MoveWarshipExecution fails if player is not the owner", async () => {
     const originalPatrolTile = game.ref(coastX + 1, 10);
     const warship = player1.buildUnit(
