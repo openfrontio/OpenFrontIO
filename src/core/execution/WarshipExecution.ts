@@ -122,9 +122,6 @@ export class WarshipExecution implements Execution {
     ) {
       return false;
     }
-    if (this.warship.owner().unitCount(UnitType.Port) === 0) {
-      return false;
-    }
     // Only retreat if there's a friendly port
     const ports = this.warship.owner().units(UnitType.Port);
     return ports.length > 0;
@@ -240,22 +237,6 @@ export class WarshipExecution implements Execution {
     }
 
     return true;
-  }
-
-  private refreshRetreatPortTile(): boolean {
-    const ports = this.warship.owner().units(UnitType.Port);
-    if (ports.length === 0) {
-      return false;
-    }
-
-    if (
-      this.retreatPortTile === undefined ||
-      !ports.some((port) => port.tile() === this.retreatPortTile)
-    ) {
-      this.retreatPortTile = this.findNearestPort();
-    }
-
-    return this.retreatPortTile !== undefined;
   }
 
   private findTargetUnit(): Unit | undefined {
@@ -410,10 +391,6 @@ export class WarshipExecution implements Execution {
 
   isActive(): boolean {
     return this.warship?.isActive();
-  }
-
-  isDocked(): boolean {
-    return false;
   }
 
   activeDuringSpawnPhase(): boolean {
