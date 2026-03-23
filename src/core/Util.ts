@@ -208,7 +208,10 @@ export function createPartialGameRecord(
 
   // Use start time as lobby creation time for singleplayer
   const actualLobbyCreatedAt = lobbyCreatedAt ?? start;
-  const lobbyFillTime = start - (visibleAt ?? start);
+  const lobbyFillTime = Math.max(
+    0,
+    start - (visibleAt ?? actualLobbyCreatedAt),
+  );
 
   const record: PartialGameRecord = {
     info: {

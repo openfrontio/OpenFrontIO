@@ -98,6 +98,9 @@ export class GameServer {
     private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+    if (startsAt !== undefined) {
+      this.visibleAt = Date.now();
+    }
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
