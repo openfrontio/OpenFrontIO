@@ -78,14 +78,14 @@ export class WarshipExecution implements Execution {
     // Always patrol for movement
     this.patrol();
 
-    // Priority 1: Fight enemy warship if in range
-    if (this.warship.targetUnit()?.type() === UnitType.Warship) {
+    // Priority 1: Shoot transport ship if in range
+    if (this.warship.targetUnit()?.type() === UnitType.TransportShip) {
       this.shootTarget();
       return;
     }
 
-    // Priority 2: Shoot transport ship if in range
-    if (this.warship.targetUnit()?.type() === UnitType.TransportShip) {
+    // Priority 2: Fight enemy warship if in range
+    if (this.warship.targetUnit()?.type() === UnitType.Warship) {
       this.shootTarget();
       return;
     }
@@ -306,7 +306,7 @@ export class WarshipExecution implements Execution {
       }
 
       const typePriority =
-        type === UnitType.Warship ? 0 : type === UnitType.TransportShip ? 1 : 2;
+        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
 
       if (bestUnit === undefined) {
         bestUnit = unit;
@@ -316,7 +316,7 @@ export class WarshipExecution implements Execution {
       }
 
       // Match existing `sort()` semantics:
-      // - Lower priority is better (Warship < TransportShip < TradeShip).
+      // - Lower priority is better (TransportShip < Warship < TradeShip).
       // - For same type, smaller distance is better.
       // - For exact ties, keep the first encountered (stable sort behavior).
       if (
