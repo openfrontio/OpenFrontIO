@@ -2,6 +2,7 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
@@ -42,7 +43,7 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
-import bitmapFont from "/fonts/round_6x6_modified.xml?url";
+const bitmapFont = assetUrl("fonts/round_6x6_modified.xml");
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {

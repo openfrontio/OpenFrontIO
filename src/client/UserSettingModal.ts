@@ -47,6 +47,9 @@ const DefaultKeybinds: Record<string, string> = {
   moveRight: "KeyD",
   modifierKey: isMac ? "MetaLeft" : "ControlLeft",
   altKey: "AltLeft",
+  pauseGame: "KeyP",
+  gameSpeedUp: "Period",
+  gameSpeedDown: "Comma",
 };
 
 @customElement("user-setting")
@@ -631,6 +634,36 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${DefaultKeybinds.altKey}
         .value=${this.getKeyValue("altKey")}
         .display=${this.getKeyChar("altKey")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="pauseGame"
+        label=${translateText("user_setting.pause_game")}
+        description=${translateText("user_setting.pause_game_desc")}
+        .defaultKey=${DefaultKeybinds.pauseGame}
+        .value=${this.getKeyValue("pauseGame")}
+        .display=${this.getKeyChar("pauseGame")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="gameSpeedUp"
+        label=${translateText("user_setting.game_speed_up")}
+        description=${translateText("user_setting.game_speed_up_desc")}
+        .defaultKey=${DefaultKeybinds.gameSpeedUp}
+        .value=${this.getKeyValue("gameSpeedUp")}
+        .display=${this.getKeyChar("gameSpeedUp")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="gameSpeedDown"
+        label=${translateText("user_setting.game_speed_down")}
+        description=${translateText("user_setting.game_speed_down_desc")}
+        .defaultKey=${DefaultKeybinds.gameSpeedDown}
+        .value=${this.getKeyValue("gameSpeedDown")}
+        .display=${this.getKeyChar("gameSpeedDown")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

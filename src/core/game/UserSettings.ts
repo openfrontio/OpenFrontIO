@@ -89,6 +89,14 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  attackingTroopsOverlay() {
+    return this.get("settings.attackingTroopsOverlay", true);
+  }
+
+  toggleAttackingTroopsOverlay() {
+    this.set("settings.attackingTroopsOverlay", !this.attackingTroopsOverlay());
+  }
+
   cursorCostLabel() {
     const legacy = this.get("settings.ghostPricePill", true);
     return this.get("settings.cursorCostLabel", legacy);

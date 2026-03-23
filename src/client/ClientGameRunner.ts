@@ -56,6 +56,7 @@ export interface LobbyConfig {
   serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
+  playerClanTag: string | null;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -64,14 +65,23 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
+export interface JoinLobbyResult {
+  stop: (force?: boolean) => boolean;
+  prestart: Promise<void>;
+  join: Promise<void>;
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
-  onPrestart: () => void,
-  onJoin: () => void,
-): (force?: boolean) => boolean {
+): JoinLobbyResult {
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
+
+  let resolvePrestart: () => void;
+  let resolveJoin: () => void;
+  const prestartPromise = new Promise<void>((r) => (resolvePrestart = r));
+  const joinPromise = new Promise<void>((r) => (resolveJoin = r));
 
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
@@ -105,17 +115,17 @@ export function joinLobby(
         message.gameMapSize,
         terrainMapFileLoader,
       );
-      onPrestart();
+      resolvePrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
-      onPrestart();
+      resolvePrestart();
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
-      onJoin();
+      resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
       createClientGame(
@@ -157,7 +167,7 @@ export function joinLobby(
       if (message.error === "full-lobby") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID },
+            detail: { lobby: lobbyConfig.gameID, cause: "full-lobby" },
             bubbles: true,
             composed: true,
           }),
@@ -176,19 +186,19 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return (force: boolean = false) => {
-    if (!force && currentGameRunner?.shouldPreventWindowClose()) {
-      console.log("Player is active, prevent leaving game");
-
-      return false;
-    }
-
-    console.log("leaving game");
-
-    currentGameRunner = null;
-    transport.leaveGame();
-
-    return true;
+  return {
+    stop: (force: boolean = false) => {
+      if (!force && currentGameRunner?.shouldPreventWindowClose()) {
+        console.log("Player is active, prevent leaving game");
+        return false;
+      }
+      console.log("leaving game");
+      currentGameRunner = null;
+      transport.leaveGame();
+      return true;
+    },
+    prestart: prestartPromise,
+    join: joinPromise,
   };
 }
 
@@ -228,6 +238,7 @@ async function createClientGame(
     gameMap,
     clientID,
     lobbyConfig.playerName,
+    lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
   );
@@ -301,6 +312,7 @@ export class ClientGameRunner {
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
+        clanTag: this.lobby.playerClanTag ?? null,
         clientID: this.clientID,
         stats: update.allPlayersStats[this.clientID],
       },

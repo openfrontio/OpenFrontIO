@@ -1,17 +1,18 @@
 import { Colord } from "colord";
+import { assetUrl } from "../../core/AssetUrls";
 import { Theme } from "../../core/configuration/Config";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
-import atomBombSprite from "/sprites/atombomb.png?url";
-import hydrogenBombSprite from "/sprites/hydrogenbomb.png?url";
-import mirvSprite from "/sprites/mirv2.png?url";
-import samMissileSprite from "/sprites/samMissile.png?url";
-import tradeShipSprite from "/sprites/tradeship.png?url";
-import trainCarriageSprite from "/sprites/trainCarriage.png?url";
-import trainLoadedCarriageSprite from "/sprites/trainCarriageLoaded.png?url";
-import trainEngineSprite from "/sprites/trainEngine.png?url";
-import transportShipSprite from "/sprites/transportship.png?url";
-import warshipSprite from "/sprites/warship.png?url";
+const atomBombSprite = assetUrl("sprites/atombomb.png");
+const hydrogenBombSprite = assetUrl("sprites/hydrogenbomb.png");
+const mirvSprite = assetUrl("sprites/mirv2.png");
+const samMissileSprite = assetUrl("sprites/samMissile.png");
+const tradeShipSprite = assetUrl("sprites/tradeship.png");
+const trainCarriageSprite = assetUrl("sprites/trainCarriage.png");
+const trainLoadedCarriageSprite = assetUrl("sprites/trainCarriageLoaded.png");
+const trainEngineSprite = assetUrl("sprites/trainEngine.png");
+const transportShipSprite = assetUrl("sprites/transportship.png");
+const warshipSprite = assetUrl("sprites/warship.png");
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {

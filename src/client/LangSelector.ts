@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../core/AssetUrls";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
 import { formatDebugTranslation } from "./Utils";
@@ -118,7 +119,9 @@ export class LangSelector extends LitElement {
     }
 
     try {
-      const response = await fetch(`/lang/${encodeURIComponent(lang)}.json`);
+      const response = await fetch(
+        assetUrl(`lang/${encodeURIComponent(lang)}.json`),
+      );
       if (!response.ok) {
         throw new Error(`Failed to fetch language ${lang}: ${response.status}`);
       }
@@ -354,7 +357,7 @@ export class LangSelector extends LitElement {
         <img
           id="lang-flag"
           class="object-contain pointer-events-none transition-all w-[40px] h-[40px] lg:w-[48px] lg:h-[48px]"
-          src="/flags/${currentLang.svg}.svg"
+          src=${assetUrl(`flags/${currentLang.svg}.svg`)}
           alt="flag"
           draggable="false"
         />

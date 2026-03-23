@@ -22,13 +22,16 @@ GET https://api.openfront.io/public/games
 - `start` (required): ISO 8601 timestamp
 - `end` (required): ISO 8601 timestamp
 - `type` (optional): Game type, must be one of `[Private, Public, Singleplayer]`
+- `mode` (optional): Game mode, must be one of `[Free For All, Team]`
+- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1]`
+- `playerTeams` (optional): Player team configuration (e.g. `Duos`)
 - `limit` (optional): Number of results (max 1000, default 50)
 - `offset` (optional): Pagination offset
 
 **Example Request:**
 
 ```bash
-curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&type=Singleplayer&limit=10&offset=5"
+curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&type=Public&mode=Team&rankedType=unranked&limit=10&offset=5"
 ```
 
 **Response:**
@@ -39,9 +42,14 @@ curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-
     "game": "ABSgwin6",
     "start": "2025-10-25T00:00:10.526Z",
     "end": "2025-10-25T00:19:45.187Z",
-    "type": "Singleplayer",
-    "mode": "Free For All",
-    "difficulty": "Medium"
+    "type": "Public",
+    "mode": "Team",
+    "difficulty": "Medium",
+    "numPlayers": 6,
+    "maxPlayers": 8,
+    "lobbyFillTime": 45000,
+    "playerTeams": "Duos",
+    "rankedType": "unranked"
   }
 ]
 ```

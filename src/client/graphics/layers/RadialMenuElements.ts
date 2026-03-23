@@ -1,3 +1,4 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
@@ -20,18 +21,18 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import boatIcon from "/images/BoatIconWhite.svg?url";
-import buildIcon from "/images/BuildIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import infoIcon from "/images/InfoIcon.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
-import targetIcon from "/images/TargetIconWhite.svg?url";
-import traitorIcon from "/images/TraitorIconWhite.svg?url";
-import xIcon from "/images/XIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const boatIcon = assetUrl("images/BoatIconWhite.svg");
+const buildIcon = assetUrl("images/BuildIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const infoIcon = assetUrl("images/InfoIcon.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
+const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -82,32 +83,32 @@ export interface CenterButtonElement {
 }
 
 export const COLORS = {
-  build: "#ebe250",
-  building: "#2c2c2c",
-  boat: "#3f6ab1",
-  ally: "#53ac75",
-  breakAlly: "#c74848",
-  breakAllyNoDebuff: "#d4882b",
-  delete: "#ff0000",
-  info: "#64748B",
-  target: "#ff0000",
-  attack: "#ff0000",
+  build: "#e6c74a",
+  building: "#1e3a5f",
+  boat: "#2a82c9",
+  ally: "#4ade80",
+  breakAlly: "#dc2626",
+  breakAllyNoDebuff: "#d97706",
+  delete: "#ef4444",
+  info: "#475569",
+  target: "#ef4444",
+  attack: "#ef4444",
   infoDetails: "#7f8c8d",
-  infoEmoji: "#f1c40f",
-  trade: "#008080",
-  embargo: "#6600cc",
+  infoEmoji: "#fbbf24",
+  trade: "#0891b2",
+  embargo: "#7c3aed",
   tooltip: {
-    cost: "#ffd700",
-    count: "#aaa",
+    cost: "#f59e0b",
+    count: "#94a3b8",
   },
   chat: {
-    default: "#66c",
-    help: "#4caf50",
-    attack: "#f44336",
-    defend: "#2196f3",
-    greet: "#ff9800",
-    misc: "#9c27b0",
-    warnings: "#e3c532",
+    default: "#6366f1",
+    help: "#22c55e",
+    attack: "#ef4444",
+    defend: "#3b82f6",
+    greet: "#f97316",
+    misc: "#a855f7",
+    warnings: "#fbbf24",
   },
 };
 
@@ -484,7 +485,7 @@ const donateGoldRadialElement: MenuElement = {
     params.game.inSpawnPhase() ||
     !params.playerActions?.interaction?.canDonateGold,
   icon: donateGoldIcon,
-  color: "#EAB308",
+  color: "#f59e0b",
   action: (params: MenuElementParams) => {
     if (!params.selected) return;
     params.playerPanel.openSendGoldModal(
