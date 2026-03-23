@@ -247,4 +247,44 @@ describe("Warship", () => {
 
     expect(exec.isActive()).toBe(false);
   });
+
+  test("Warship retreats when pre-heal health is below threshold", async () => {
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      expect(typeof maxHealth).toBe("number");
+      throw new Error("unreachable");
+    }
+    if (maxHealth <= 599) {
+      expect(maxHealth).toBeGreaterThan(599);
+      throw new Error("unreachable");
+    }
+
+    game.config().warshipPortHealingBonus = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    game.executeNextTick();
+    warship.modifyHealth(-(maxHealth - 599));
+
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(true);
+    const distanceToPort = game.euclideanDistSquared(
+      warship.tile(),
+      homePort.tile(),
+    );
+    expect(
+      distanceToPort <= 25 || warship.targetTile() === homePort.tile(),
+    ).toBe(true);
+  });
+
 });
