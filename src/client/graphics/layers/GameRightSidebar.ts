@@ -7,6 +7,7 @@ import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import "./DraggablePanel";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -184,11 +185,16 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
-          this._isVisible ? "translate-x-0" : "translate-x-full"
+        class=${`relative w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white ${
+          this._isVisible ? "" : "hidden"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
+        <draggable-panel
+          key="right-sidebar"
+          class="hidden sm:contents"
+          .visible=${this._isVisible}
+        ></draggable-panel>
         <!-- In-game time -->
         <div class=${timerColor}>${this.secondsToHms(this.timer)}</div>
 

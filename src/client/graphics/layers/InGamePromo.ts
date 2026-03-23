@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
+import "./DraggablePanel";
 import { Layer } from "./Layer";
 
 const AD_TYPE = "standard_iab_left1";
@@ -140,7 +141,13 @@ export class InGamePromo extends LitElement implements Layer {
         id="${AD_CONTAINER_ID}"
         class="fixed left-0 z-[100] pointer-events-auto"
         style="bottom: -0.7cm"
-      ></div>
+        data-draggable="ad-promo"
+      >
+        <draggable-panel
+          key="ad-promo"
+          class="hidden sm:contents"
+        ></draggable-panel>
+      </div>
     `;
   }
 }

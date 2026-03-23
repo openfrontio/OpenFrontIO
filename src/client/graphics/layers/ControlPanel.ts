@@ -7,6 +7,7 @@ import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
+import "./DraggablePanel";
 import { Layer } from "./Layer";
 import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import soldierIcon from "/images/SoldierIcon.svg?url";
@@ -383,11 +384,15 @@ export class ControlPanel extends LitElement implements Layer {
   render() {
     return html`
       <div
-        class="relative pointer-events-auto ${this._isVisible
-          ? "relative w-full text-sm px-2 py-1"
+        class="pointer-events-auto ${this._isVisible
+          ? "w-full text-sm px-2 py-1"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
+        <draggable-panel
+          key="bottom-hud"
+          class="hidden sm:contents"
+        ></draggable-panel>
         <div class="lg:hidden">${this.renderMobile()}</div>
         <div class="hidden lg:block">${this.renderDesktop()}</div>
       </div>

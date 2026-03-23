@@ -267,39 +267,42 @@
     <!-- Game components -->
     <div id="app"></div>
 
-    <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:contents"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
       "
     >
-      <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
+      <!-- Bottom HUD: contents on mobile, fixed on desktop -->
       <div
-        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
+        class="contents sm:flex sm:fixed sm:bottom-0 sm:inset-x-0 sm:mx-auto sm:z-[200] sm:flex-col sm:pointer-events-none sm:w-[500px] min-[1200px]:mb-4"
+        data-draggable="bottom-hud"
+        style="padding-bottom: env(safe-area-inset-bottom)"
       >
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
         <div
-          class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
+          class="relative pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
         >
           <control-panel class="w-full"></control-panel>
           <unit-display class="hidden lg:block w-full"></unit-display>
         </div>
       </div>
 
-      <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
+      <!-- Events/Chat: contents on mobile, fixed on desktop -->
       <div
-        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end min-[1200px]:mr-4"
+        class="contents sm:flex sm:fixed sm:bottom-0 sm:right-0 sm:z-[200] sm:flex-col sm:pointer-events-none sm:items-end min-[1200px]:right-4 min-[1200px]:mb-4"
+        data-draggable="events-chat"
+        style="padding-bottom: env(safe-area-inset-bottom)"
       >
         <chat-display
-          class="w-full sm:w-auto pointer-events-auto"
+          class="w-full sm:w-auto pointer-events-auto order-2 sm:order-none"
         ></chat-display>
         <events-display
-          class="w-full sm:w-auto pointer-events-auto"
+          class="w-full sm:w-auto pointer-events-auto order-2 sm:order-none"
         ></events-display>
       </div>
     </div>
@@ -311,6 +314,7 @@
     <game-starting-modal></game-starting-modal>
     <div
       class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
+      data-draggable="right-sidebar"
     >
       <game-right-sidebar></game-right-sidebar>
       <replay-panel></replay-panel>

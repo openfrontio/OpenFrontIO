@@ -6,6 +6,7 @@ import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Platform } from "../../Platform";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
+import "./DraggablePanel";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
@@ -101,95 +102,104 @@ export class GameLeftSidebar extends LitElement implements Layer {
 
   render() {
     return html`
-      <aside
-        class=${`fixed top-0 min-[1200px]:top-4 left-0 min-[1200px]:left-4 z-900 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-br-lg ${this.isLeaderboardShow || this.isTeamLeaderboardShow ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
-          this.isVisible ? "translate-x-0" : "hidden"
+      <div
+        class=${`relative fixed top-0 min-[1200px]:top-4 left-0 min-[1200px]:left-4 z-900 ${
+          this.isVisible ? "" : "hidden"
         }`}
         style="margin-top: ${this.barOffset}px;"
+        data-draggable="left-sidebar"
       >
-        <div class="flex items-center gap-4 xl:gap-6 text-white">
-          <div
-            class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-            @click=${this.toggleLeaderboard}
-            role="button"
-            tabindex="0"
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter" || e.key === " " || e.code === "Space") {
-                e.preventDefault();
-                this.toggleLeaderboard();
-              }
-            }}
-          >
-            <img
-              src=${this.isLeaderboardShow
-                ? leaderboardSolidIcon
-                : leaderboardRegularIcon}
-              alt=${translateText("help_modal.icon_alt_player_leaderboard") ||
-              "Player Leaderboard Icon"}
-              width="20"
-              height="20"
-            />
+        <draggable-panel
+          key="left-sidebar"
+          class="hidden sm:contents"
+        ></draggable-panel>
+        <aside
+          class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-br-lg ${this.isLeaderboardShow || this.isTeamLeaderboardShow ? "max-[400px]:w-full max-[400px]:rounded-none" : ""}`}
+        >
+          <div class="flex items-center gap-4 xl:gap-6 text-white">
+            <div
+              class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+              @click=${this.toggleLeaderboard}
+              role="button"
+              tabindex="0"
+              @keydown=${(e: KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                  e.preventDefault();
+                  this.toggleLeaderboard();
+                }
+              }}
+            >
+              <img
+                src=${this.isLeaderboardShow
+                  ? leaderboardSolidIcon
+                  : leaderboardRegularIcon}
+                alt=${translateText("help_modal.icon_alt_player_leaderboard") ||
+                "Player Leaderboard Icon"}
+                width="20"
+                height="20"
+              />
+            </div>
+            ${this.isTeamGame
+              ? html`
+                  <div
+                    class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+                    @click=${this.toggleTeamLeaderboard}
+                    role="button"
+                    tabindex="0"
+                    @keydown=${(e: KeyboardEvent) => {
+                      if (
+                        e.key === "Enter" ||
+                        e.key === " " ||
+                        e.code === "Space"
+                      ) {
+                        e.preventDefault();
+                        this.toggleTeamLeaderboard();
+                      }
+                    }}
+                  >
+                    <img
+                      src=${this.isTeamLeaderboardShow
+                        ? teamSolidIcon
+                        : teamRegularIcon}
+                      alt=${translateText(
+                        "help_modal.icon_alt_team_leaderboard",
+                      ) || "Team Leaderboard Icon"}
+                      width="20"
+                      height="20"
+                    />
+                  </div>
+                `
+              : null}
           </div>
-          ${this.isTeamGame
+          ${this.isPlayerTeamLabelVisible
             ? html`
                 <div
-                  class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-                  @click=${this.toggleTeamLeaderboard}
-                  role="button"
-                  tabindex="0"
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (
-                      e.key === "Enter" ||
-                      e.key === " " ||
-                      e.code === "Space"
-                    ) {
-                      e.preventDefault();
-                      this.toggleTeamLeaderboard();
-                    }
-                  }}
+                  class="flex items-center w-full text-white mt-2"
+                  @contextmenu=${(e: Event) => e.preventDefault()}
                 >
-                  <img
-                    src=${this.isTeamLeaderboardShow
-                      ? teamSolidIcon
-                      : teamRegularIcon}
-                    alt=${translateText(
-                      "help_modal.icon_alt_team_leaderboard",
-                    ) || "Team Leaderboard Icon"}
-                    width="20"
-                    height="20"
-                  />
+                  ${translateText("help_modal.ui_your_team")}
+                  <span
+                    style="--color: ${this.playerColor.toRgbString()}"
+                    class="text-(--color)"
+                  >
+                    &nbsp;${getTranslatedPlayerTeamLabel(this.playerTeam)}
+                    &#10687;
+                  </span>
                 </div>
               `
             : null}
-        </div>
-        ${this.isPlayerTeamLabelVisible
-          ? html`
-              <div
-                class="flex items-center w-full text-white mt-2"
-                @contextmenu=${(e: Event) => e.preventDefault()}
-              >
-                ${translateText("help_modal.ui_your_team")}
-                <span
-                  style="--color: ${this.playerColor.toRgbString()}"
-                  class="text-(--color)"
-                >
-                  &nbsp;${getTranslatedPlayerTeamLabel(this.playerTeam)}
-                  &#10687;
-                </span>
-              </div>
-            `
-          : null}
-        <div
-          class=${`block lg:flex flex-wrap overflow-x-auto min-w-0 w-full ${this.isLeaderboardShow && this.isTeamLeaderboardShow ? "gap-2" : ""}`}
-        >
-          <leader-board .visible=${this.isLeaderboardShow}></leader-board>
-          <team-stats
-            class="flex-1"
-            .visible=${this.isTeamLeaderboardShow && this.isTeamGame}
-          ></team-stats>
-        </div>
-        <slot></slot>
-      </aside>
+          <div
+            class=${`block lg:flex flex-wrap overflow-x-auto min-w-0 w-full ${this.isLeaderboardShow && this.isTeamLeaderboardShow ? "gap-2" : ""}`}
+          >
+            <leader-board .visible=${this.isLeaderboardShow}></leader-board>
+            <team-stats
+              class="flex-1"
+              .visible=${this.isTeamLeaderboardShow && this.isTeamGame}
+            ></team-stats>
+          </div>
+          <slot></slot>
+        </aside>
+      </div>
     `;
   }
 }

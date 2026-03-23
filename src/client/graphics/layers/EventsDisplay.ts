@@ -37,6 +37,7 @@ import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
+import "./DraggablePanel";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
@@ -790,6 +791,10 @@ export class EventsDisplay extends LitElement implements Layer {
     });
 
     return html`
+      <draggable-panel
+        key="events-chat"
+        class="hidden sm:contents"
+      ></draggable-panel>
       ${styles}
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
