@@ -116,8 +116,11 @@ export class UnitView {
     return this.data.troops;
   }
   retreating(): boolean {
-    if (this.type() !== UnitType.TransportShip) {
-      throw Error("Must be a transport ship");
+    if (
+      this.type() !== UnitType.TransportShip &&
+      this.type() !== UnitType.Warship
+    ) {
+      throw Error("Must be a transport ship or warship");
     }
     return this.data.retreating;
   }
