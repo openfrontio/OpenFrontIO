@@ -331,6 +331,7 @@ export class ClientGameRunner {
       Date.now(),
       update.winner,
       this.lobby.gameStartInfo.lobbyCreatedAt,
+      this.lobby.gameStartInfo.visibleAt,
     );
     endGame(record);
   }

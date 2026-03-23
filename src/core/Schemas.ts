@@ -526,6 +526,7 @@ export const PlayerSchema = z.object({
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: z.number(),
+  visibleAt: z.number().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
 });

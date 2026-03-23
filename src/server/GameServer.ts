@@ -556,8 +556,11 @@ export class GameServer {
     }
   }
 
+  private visibleAt?: number;
+
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
+    this.visibleAt ??= Date.now();
   }
 
   public numClients(): number {
@@ -656,6 +659,7 @@ export class GameServer {
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
+      visibleAt: this.visibleAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -1001,6 +1005,7 @@ export class GameServer {
           Date.now(),
           this.winner?.winner,
           this.createdAt,
+          this.visibleAt,
         ),
       ),
     );
