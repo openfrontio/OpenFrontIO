@@ -23,6 +23,8 @@ export class WarshipExecution implements Execution {
   private retreatPortTile: TileRef | undefined;
   private retreatingForRepair = false;
   private docked = false;
+  private lastManualMoveTickRetreatDisabled = 0;
+  private lastObservedPatrolTile: TileRef | undefined;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -51,6 +53,7 @@ export class WarshipExecution implements Execution {
         this.input,
       );
     }
+    this.lastObservedPatrolTile = this.warship.patrolTile();
   }
 
   tick(ticks: number): void {
@@ -61,6 +64,7 @@ export class WarshipExecution implements Execution {
     const healthBeforeHealing = this.warship.health();
 
     this.healWarship();
+    this.handleManualPatrolOverride();
 
     if (this.docked) {
       if (this.isFullyHealed()) {
@@ -167,12 +171,22 @@ export class WarshipExecution implements Execution {
     if (this.retreatingForRepair) {
       return false;
     }
+    const manualMoveRetreaDisabledDuration = 50;
+    if (
+      this.mg.ticks() - this.lastManualMoveTickRetreatDisabled <
+      manualMoveRetreaDisabledDuration
+    ) {
+      return false;
+    }
     if (
       healthBeforeHealing >= this.mg.config().warshipRetreatHealthThreshold()
     ) {
       return false;
     }
     if (this.warship.owner().unitCount(UnitType.Port) === 0) {
+      return false;
+    }
+    if (this.hasNearbyEnemyWarship()) {
       return false;
     }
     // Only retreat if there's a friendly port
@@ -226,6 +240,19 @@ export class WarshipExecution implements Execution {
     return bestTile;
   }
 
+  private hasNearbyEnemyWarship(): boolean {
+    const owner = this.warship.owner();
+    return this.mg.anyUnitNearby(
+      this.warship.tile(),
+      this.mg.config().warshipTargettingRange(),
+      [UnitType.Warship],
+      (unit) =>
+        unit !== this.warship &&
+        unit.owner() !== owner &&
+        owner.canAttackPlayer(unit.owner(), true),
+    );
+  }
+
   private startRepairRetreat(): void {
     this.retreatingForRepair = true;
     this.warship.setRetreating(true);
@@ -245,8 +272,27 @@ export class WarshipExecution implements Execution {
     }
   }
 
+  private handleManualPatrolOverride(): void {
+    const patrolTile = this.warship.patrolTile();
+    if (
+      this.lastObservedPatrolTile !== undefined &&
+      patrolTile !== this.lastObservedPatrolTile
+    ) {
+      this.lastManualMoveTickRetreatDisabled = this.mg.ticks();
+      if (this.retreatingForRepair) {
+        this.cancelRepairRetreat(false);
+      }
+    }
+    this.lastObservedPatrolTile = patrolTile;
+  }
+
   private handleRepairRetreat(): boolean {
     if (!this.retreatingForRepair) {
+      return false;
+    }
+
+    if (this.hasNearbyEnemyWarship()) {
+      this.cancelRepairRetreat(false);
       return false;
     }
 
