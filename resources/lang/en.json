@@ -919,6 +919,9 @@
     "select_skin": "Select Skin",
     "selected": "selected"
   },
+  "cosmetics": {
+    "artist_label": "Artist:"
+  },
   "flag_input": {
     "title": "Select Flag",
     "button_title": "Pick a flag!",

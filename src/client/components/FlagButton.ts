@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
 import { translateCosmetic } from "../Cosmetics";
+import "./ArtistInfo";
 import "./PurchaseButton";
 
 export interface FlagItem {
@@ -9,6 +10,7 @@ export interface FlagItem {
   name: string;
   url: string;
   product?: Product | null;
+  artist?: string;
 }
 
 @customElement("flag-button")
@@ -39,7 +41,7 @@ export class FlagButton extends LitElement {
   render() {
     return html`
       <div
-        class="flex flex-col items-center justify-between gap-1 p-2 bg-white/5 backdrop-blur-sm border rounded-lg w-36 h-full transition-all duration-200 ${this
+        class="flex flex-col items-center justify-between gap-1 p-1.5 bg-white/5 backdrop-blur-sm border rounded-lg w-36 h-full transition-all duration-200 ${this
           .selected
           ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
           : "hover:bg-white/10 hover:border-white/20 hover:shadow-xl border-white/10"}"
@@ -50,17 +52,17 @@ export class FlagButton extends LitElement {
           ?disabled=${this.requiresPurchase}
           @click=${this.handleClick}
         >
-          <div class="flex flex-col items-center w-full">
-            <div
-              class="text-[10px] font-bold text-white uppercase tracking-wider mb-0.5 text-center truncate w-full ${this
-                .requiresPurchase
-                ? "opacity-50"
-                : ""}"
-              title="${translateCosmetic("flags", this.flag.name)}"
-            >
-              ${translateCosmetic("flags", this.flag.name)}
-            </div>
-            <div class="h-[14px] mb-1 w-full"></div>
+          <artist-info .artist=${this.flag.artist}></artist-info>
+          <div
+            class="text-[10px] font-bold text-white uppercase tracking-wider mt-1 ${this
+              .flag.artist
+              ? "pr-5"
+              : ""} text-center truncate w-full ${this.requiresPurchase
+              ? "opacity-50"
+              : ""}"
+            title="${translateCosmetic("flags", this.flag.name)}"
+          >
+            ${translateCosmetic("flags", this.flag.name)}
           </div>
 
           <div

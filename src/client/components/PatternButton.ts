@@ -11,6 +11,7 @@ import { PatternDecoder } from "../../core/PatternDecoder";
 import { PlayerPattern } from "../../core/Schemas";
 import { translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
+import "./ArtistInfo";
 import "./PurchaseButton";
 
 export const BUTTON_WIDTH = 150;
@@ -72,10 +73,13 @@ export class PatternButton extends LitElement {
           ?disabled=${this.requiresPurchase}
           @click=${this.handleClick}
         >
+          <artist-info .artist=${this.pattern?.artist}></artist-info>
           <div class="flex flex-col items-center w-full">
             <div
-              class="text-xs font-bold text-white uppercase tracking-wider mb-1 text-center truncate w-full ${this
-                .requiresPurchase
+              class="text-xs font-bold text-white uppercase tracking-wider mb-1 ${this
+                .pattern?.artist
+                ? "pr-5"
+                : ""} text-center truncate w-full ${this.requiresPurchase
                 ? "opacity-50"
                 : ""}"
               title="${isDefaultPattern
