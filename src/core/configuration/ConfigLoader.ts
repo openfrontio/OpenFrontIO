@@ -9,14 +9,6 @@ import { prodConfig } from "./ProdConfig";
 
 export let cachedSC: ServerConfig | null = null;
 
-declare global {
-  interface Window {
-    BOOTSTRAP_CONFIG?: {
-      gameEnv?: string;
-    };
-  }
-}
-
 export async function getConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null,
@@ -39,12 +31,13 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
     return cachedSC;
   }
 
-  const bootstrapGameEnv = window.BOOTSTRAP_CONFIG?.gameEnv;
-  if (!bootstrapGameEnv) {
-    throw new Error("Missing bootstrap server config");
+  // Vite replaces this in browser and worker bundles at build time.
+  const gameEnv = process.env.GAME_ENV;
+  if (!gameEnv) {
+    throw new Error("Missing client server config");
   }
 
-  cachedSC = getServerConfig(bootstrapGameEnv);
+  cachedSC = getServerConfig(gameEnv);
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {
