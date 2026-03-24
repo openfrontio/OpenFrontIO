@@ -225,13 +225,17 @@ export const GameConfigSchema = z.object({
   gameMapSize: z.enum(GameMapSize),
   publicGameModifiers: z
     .object({
-      isCompact: z.boolean(),
-      isRandomSpawn: z.boolean(),
-      isCrowded: z.boolean(),
-      isHardNations: z.boolean(),
+      isCompact: z.boolean().optional(),
+      isRandomSpawn: z.boolean().optional(),
+      isCrowded: z.boolean().optional(),
+      isHardNations: z.boolean().optional(),
       startingGold: z.number().int().min(0).optional(),
       goldMultiplier: z.number().min(0.1).max(1000).optional(),
-      isAlliancesDisabled: z.boolean(),
+      isAlliancesDisabled: z.boolean().optional(),
+      isPortsDisabled: z.boolean().optional(),
+      isNukesDisabled: z.boolean().optional(),
+      isSAMsDisabled: z.boolean().optional(),
+      isPeaceTime: z.boolean().optional(),
     })
     .optional(),
   nations: z

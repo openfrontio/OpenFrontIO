@@ -500,7 +500,15 @@
     "starting_gold_label": "Starting Gold",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "disable_alliances": "Alliances Disabled",
-    "disable_alliances_label": "Alliances"
+    "disable_alliances_label": "Alliances",
+    "ports_disabled": "Ports Disabled",
+    "ports_disabled_label": "Ports",
+    "nukes_disabled": "Nukes Disabled",
+    "nukes_disabled_label": "Nukes",
+    "sams_disabled": "SAMs Disabled",
+    "sams_disabled_label": "SAMs",
+    "peace_time": "4min Peace",
+    "peace_time_label": "PVP Immunity"
   },
   "select_lang": {
     "title": "Select Language"
