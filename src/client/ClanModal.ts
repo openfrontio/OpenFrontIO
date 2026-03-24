@@ -21,6 +21,12 @@ interface FakeMember {
   role: "leader" | "officer" | "member";
 }
 
+interface FakeJoinRequest {
+  publicId: string;
+  displayName: string;
+  requestedAt: string;
+}
+
 interface FakeMyClan {
   clan: FakeClan;
   role: "leader" | "officer" | "member";
@@ -203,6 +209,60 @@ const FAKE_MEMBERS: Record<string, FakeMember[]> = {
     "TowerShield",
     "You",
   ]),
+  c5: generateFakeMembers(12, [
+    "You",
+    "AlphaWolf",
+    "BravoSix",
+    "CharlieHorse",
+    "DeltaForce",
+    "EchoStrike",
+    "FoxtrotDancer",
+    "GolfSwing",
+    "HotelCalifornia",
+    "IndigoChild",
+    "JulietRose",
+    "KiloWatt",
+  ]),
+};
+
+const FAKE_JOIN_REQUESTS: Record<string, FakeJoinRequest[]> = {
+  c5: [
+    {
+      publicId: "p_req_001",
+      displayName: "NeonSamurai",
+      requestedAt: "2026-03-22T14:30:00Z",
+    },
+    {
+      publicId: "p_req_002",
+      displayName: "QuantumLeap",
+      requestedAt: "2026-03-22T18:15:00Z",
+    },
+    {
+      publicId: "p_req_003",
+      displayName: "ZeroGravity",
+      requestedAt: "2026-03-23T09:45:00Z",
+    },
+    {
+      publicId: "p_req_004",
+      displayName: "PixelStorm",
+      requestedAt: "2026-03-23T11:20:00Z",
+    },
+    {
+      publicId: "p_req_005",
+      displayName: "TurboCharged",
+      requestedAt: "2026-03-23T16:00:00Z",
+    },
+    {
+      publicId: "p_req_006",
+      displayName: "HyperNova",
+      requestedAt: "2026-03-24T01:10:00Z",
+    },
+    {
+      publicId: "p_req_007",
+      displayName: "CrypticWolf",
+      requestedAt: "2026-03-24T08:30:00Z",
+    },
+  ],
 };
 
 const FAKE_CLANS: FakeClan[] = [
@@ -242,15 +302,25 @@ const FAKE_CLANS: FakeClan[] = [
     isOpen: false,
     description: "Elite defensive strategists. Application required.",
   },
+  {
+    id: "c5",
+    name: "Vanguard Protocol",
+    tag: "VGP",
+    leaderPublicId: "p_000000",
+    members: 12,
+    isOpen: false,
+    description: "Closed strike team. Recruitment by request only.",
+  },
 ];
 
 const FAKE_MY_CLANS: FakeMyClan[] = [
   { clan: FAKE_CLANS[0], role: "leader" },
   { clan: FAKE_CLANS[3], role: "member" },
+  { clan: FAKE_CLANS[4], role: "leader" },
 ];
 
 type Tab = "my-clans" | "browse" | "create";
-type View = "list" | "detail" | "manage" | "transfer";
+type View = "list" | "detail" | "manage" | "transfer" | "requests";
 
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
@@ -325,6 +395,9 @@ export class ClanModal extends BaseModal {
       }
       if (this.view === "transfer") {
         return this.renderTransfer(this.selectedClan);
+      }
+      if (this.view === "requests") {
+        return this.renderRequests(this.selectedClan);
       }
       if (this.view === "detail") {
         return this.renderClanDetail(this.selectedClan);
@@ -753,6 +826,70 @@ export class ClanModal extends BaseModal {
               </button>
             </div>
 
+            <!-- Join Requests -->
+            ${!clan.isOpen && (FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0) > 0
+              ? html`
+                  <button
+                    @click=${() => {
+                      this.view = "requests";
+                    }}
+                    class="w-full flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/15 rounded-2xl border border-amber-500/20 p-5 transition-all cursor-pointer group"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="w-5 h-5 text-amber-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                          />
+                        </svg>
+                      </div>
+                      <div class="text-left">
+                        <span class="text-amber-400 text-sm font-bold">
+                          ${translateText("clan_modal.join_requests")}
+                        </span>
+                        <span class="text-amber-400/60 text-xs block">
+                          ${translateText("clan_modal.pending_requests_count", {
+                            count: FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      >
+                        ${FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0}
+                      </span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-5 h-5 text-amber-400/40 group-hover:text-amber-400/70 transition-colors"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+                `
+              : ""}
+
             <!-- Member Management -->
             <div
               class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4"
@@ -960,6 +1097,85 @@ export class ClanModal extends BaseModal {
                 : translateText("clan_modal.select_new_leader")}
             </button>
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderRequests(clan: FakeClan) {
+    const requests = FAKE_JOIN_REQUESTS[clan.id] ?? [];
+
+    return html`
+      <div class="${this.modalContainerClass}">
+        ${modalHeader({
+          title: translateText("clan_modal.join_requests"),
+          onBack: () => (this.view = "manage"),
+          ariaLabel: translateText("common.back"),
+          rightContent: html`
+            <span
+              class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
+            >
+              ${requests.length}
+            </span>
+          `,
+        })}
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
+          ${requests.length === 0
+            ? html`
+                <div
+                  class="flex flex-col items-center justify-center p-12 text-center"
+                >
+                  <p class="text-white/40 text-sm">
+                    ${translateText("clan_modal.no_requests")}
+                  </p>
+                </div>
+              `
+            : html`
+                <div class="space-y-3">
+                  ${requests.map(
+                    (req) => html`
+                      <div
+                        class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
+                      >
+                        <div
+                          class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-sm font-bold shrink-0"
+                        >
+                          ${req.displayName.charAt(0)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <span
+                            class="text-white text-sm font-medium truncate block"
+                            >${req.displayName}</span
+                          >
+                          <copy-button
+                            compact
+                            .copyText=${req.publicId}
+                            .displayText=${req.publicId}
+                            .showVisibilityToggle=${false}
+                            .showCopyIcon=${false}
+                          ></copy-button>
+                          <span class="text-white/30 text-[10px]">
+                            ${new Date(req.requestedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                          <button
+                            class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all"
+                          >
+                            ${translateText("clan_modal.approve")}
+                          </button>
+                          <button
+                            class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all"
+                          >
+                            ${translateText("clan_modal.deny")}
+                          </button>
+                        </div>
+                      </div>
+                    `,
+                  )}
+                </div>
+              `}
         </div>
       </div>
     `;
