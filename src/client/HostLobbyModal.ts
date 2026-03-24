@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -113,7 +113,7 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
@@ -823,7 +823,7 @@ export class HostLobbyModal extends BaseModal {
     // If the modal closes as part of starting the game, do not leave the lobby
     this.leaveLobbyOnClose = false;
 
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
@@ -871,7 +871,7 @@ export class HostLobbyModal extends BaseModal {
 }
 
 async function createLobby(gameID: string): Promise<GameInfo> {
-  const config = await getServerConfigFromClient();
+  const config = await getRuntimeClientServerConfig();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();

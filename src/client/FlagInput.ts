@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { assetUrl } from "../core/AssetUrls";
 import { renderPlayerFlag } from "../core/CustomFlag";
 import { FlagSchema } from "../core/Schemas";
 import { translateText } from "./Utils";
@@ -120,12 +121,15 @@ export class FlagInput extends LitElement {
       renderPlayerFlag(this.flag, preview);
     } else {
       const img = document.createElement("img");
-      img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
+      const fallbackFlagUrl = assetUrl("flags/xx.svg");
+      img.src = this.flag
+        ? assetUrl(`flags/${this.flag}.svg`)
+        : fallbackFlagUrl;
       img.className = "w-full h-full object-cover pointer-events-none";
       img.draggable = false;
       img.onerror = () => {
-        if (!img.src.endsWith("/flags/xx.svg")) {
-          img.src = "/flags/xx.svg";
+        if (!img.src.endsWith(fallbackFlagUrl)) {
+          img.src = fallbackFlagUrl;
         }
       };
       preview.appendChild(img);

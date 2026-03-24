@@ -9,7 +9,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
@@ -169,7 +169,6 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 declare global {
   interface Window {
     GIT_COMMIT: string;
-    INSTANCE_ID: string;
     turnstile: any;
     adsEnabled: boolean;
     PageOS: {
@@ -750,7 +749,7 @@ class Client {
     if (lobby.source === "public") {
       this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
@@ -858,7 +857,7 @@ class Client {
 
   private updateJoinUrlForShare(
     lobbyId: string,
-    config: Awaited<ReturnType<typeof getServerConfigFromClient>>,
+    config: Awaited<ReturnType<typeof getRuntimeClientServerConfig>>,
   ) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     const targetUrl = lobbyIdHidden
@@ -931,7 +930,7 @@ class Client {
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
   ): Promise<string | null> {
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     if (
       config.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
@@ -1009,7 +1008,7 @@ async function getTurnstileToken(): Promise<{
     throw new Error("Failed to load Turnstile script");
   }
 
-  const config = await getServerConfigFromClient();
+  const config = await getRuntimeClientServerConfig();
   const widgetId = window.turnstile.render("#turnstile-container", {
     sitekey: config.turnstileSiteKey(),
     size: "normal",
