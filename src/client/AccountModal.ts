@@ -6,7 +6,7 @@ import {
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -217,7 +217,7 @@ export class AccountModal extends BaseModal {
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const encodedGameId = encodeURIComponent(gameId);
     const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
 
