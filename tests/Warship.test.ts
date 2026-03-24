@@ -409,4 +409,89 @@ describe("Warship", () => {
     expect(warship2DistanceToPort).toBeLessThanOrEqual(25);
     expect(warship2.retreating()).toBe(true);
   });
+
+  test("Warship cancels docking if its retreat port is destroyed", async () => {
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipPortHealingBonus = () => 0;
+    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    const warshipExecution = new WarshipExecution(warship);
+    game.addExecution(warshipExecution);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+
+    for (let i = 0; i < 60; i++) {
+      game.executeNextTick();
+      if (warshipExecution.isDocked()) {
+        break;
+      }
+    }
+
+    expect(warshipExecution.isDocked()).toBe(true);
+
+    homePort.delete();
+    game.executeNextTick();
+
+    expect(warshipExecution.isDocked()).toBe(false);
+    expect(warship.retreating()).toBe(false);
+  });
+
+  test("Warship drops a stale target after patrol movement changes range", async () => {
+    game.config().warshipTargettingRange = () => 1;
+    game.config().warshipShellAttackRate = () => Number.MAX_SAFE_INTEGER;
+
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      {
+        patrolTile: game.ref(coastX + 1, 10),
+        targetTile: game.ref(coastX + 1, 12),
+      },
+    );
+    player2.buildUnit(UnitType.TransportShip, game.ref(coastX + 2, 10), {
+      targetTile: game.ref(coastX + 2, 10),
+    });
+
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    expect(warship.tile()).toBe(game.ref(coastX + 1, 11));
+    expect(warship.targetUnit()).toBeUndefined();
+  });
+
+  test("Warship cancels retreat if no friendly port is reachable by water", async () => {
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    const warshipTile = warship.tile();
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile) =>
+      tile === warshipTile ? 1 : 2,
+    );
+    vi.spyOn(game, "hasWaterComponent").mockReturnValue(false);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(false);
+  });
 });
