@@ -223,9 +223,66 @@ const FAKE_MEMBERS: Record<string, FakeMember[]> = {
     "JulietRose",
     "KiloWatt",
   ]),
+  c6: [
+    {
+      publicId: "p_000000",
+      displayName: "IronCommander",
+      role: "leader",
+    },
+    {
+      publicId: "p_000001",
+      displayName: "You",
+      role: "officer",
+    },
+    {
+      publicId: "p_000002",
+      displayName: "SteelTitan",
+      role: "officer",
+    },
+    ...[
+      "HeavyMetal",
+      "ArmorPlate",
+      "TankBuster",
+      "WarMachine",
+      "BulletProof",
+      "Juggernaut",
+      "Ironside",
+      "ShieldWall",
+      "FortressX",
+      "ChromeHeart",
+      "MetalStorm",
+      "CopperKing",
+      "BronzeAge",
+      "TinSoldier",
+      "GoldRush",
+      "SilverLining",
+      "PlatinumEdge",
+    ].map((name, i) => ({
+      publicId: `p_${(i + 3).toString(16).padStart(6, "0")}`,
+      displayName: name,
+      role: "member" as const,
+    })),
+  ],
 };
 
 const FAKE_JOIN_REQUESTS: Record<string, FakeJoinRequest[]> = {
+  c6: [
+    {
+      publicId: "p_req_010",
+      displayName: "RocketFuel",
+      requestedAt: "2026-03-23T10:00:00Z",
+    },
+    {
+      publicId: "p_req_011",
+      displayName: "LaserBeam",
+      requestedAt: "2026-03-24T07:45:00Z",
+    },
+    {
+      publicId: "p_req_012",
+      displayName: "TitanFall",
+      requestedAt: "2026-03-24T12:30:00Z",
+    },
+  ],
   c5: [
     {
       publicId: "p_req_001",
@@ -311,12 +368,22 @@ const FAKE_CLANS: FakeClan[] = [
     isOpen: false,
     description: "Closed strike team. Recruitment by request only.",
   },
+  {
+    id: "c6",
+    name: "Iron Legion",
+    tag: "IRON",
+    leaderPublicId: "p_000000",
+    members: 20,
+    isOpen: false,
+    description: "Heavy hitters only. Coordinated warfare division.",
+  },
 ];
 
 const FAKE_MY_CLANS: FakeMyClan[] = [
   { clan: FAKE_CLANS[0], role: "leader" },
   { clan: FAKE_CLANS[3], role: "member" },
   { clan: FAKE_CLANS[4], role: "leader" },
+  { clan: FAKE_CLANS[5], role: "officer" },
 ];
 
 type Tab = "my-clans" | "browse" | "create";
