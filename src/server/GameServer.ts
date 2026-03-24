@@ -87,6 +87,8 @@ export class GameServer {
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
+  private visibleAt?: number;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -559,10 +561,9 @@ export class GameServer {
     }
   }
 
-  private visibleAt?: number;
-
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
+    // Record when the lobby first became visible to players, used to measure lobby fill time.
     this.visibleAt ??= Date.now();
   }
 
