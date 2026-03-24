@@ -257,7 +257,12 @@
     "confirm_transfer": "Transfer leadership to {name}",
     "select_new_leader": "Select a new leader",
     "search_members_placeholder": "Search by name or ID...",
-    "per_page": "Per page"
+    "per_page": "Per page",
+    "join_requests": "Join Requests",
+    "no_requests": "No pending join requests.",
+    "pending_requests_count": "{count, plural, one {# pending request} other {# pending requests}}",
+    "approve": "Approve",
+    "deny": "Deny"
   },
   "account_modal": {
     "title": "Account",
