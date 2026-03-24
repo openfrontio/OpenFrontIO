@@ -969,6 +969,10 @@ export class DefaultConfig implements Config {
     return 20;
   }
 
+  warshipRetreatHealthThreshold(): number {
+    return 750;
+  }
+
   defensePostShellAttackRate(): number {
     return 100;
   }
