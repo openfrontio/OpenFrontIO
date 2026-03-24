@@ -325,6 +325,10 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "tourney1": "Tourney 2 Teams",
+    "tourney2": "Tourney 3 Teams",
+    "tourney3": "Tourney 4 Teams",
+    "tourney4": "Tourney 8 Teams",
     "passage": "Passage",
     "sierpinski": "Sierpinski",
     "thebox": "The Box",
@@ -349,6 +353,7 @@
     "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
+    "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
     "arcade": "Arcade"
