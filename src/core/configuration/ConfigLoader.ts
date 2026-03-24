@@ -1,13 +1,18 @@
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
-import { Config, GameEnv, ServerConfig } from "./Config";
+import { Config, ServerConfig } from "./Config";
 import { DefaultConfig } from "./DefaultConfig";
 import { DevConfig, DevServerConfig } from "./DevConfig";
 import { Env } from "./Env";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
 
-export let cachedSC: ServerConfig | null = null;
+export enum GameLogicEnv {
+  Dev = "dev",
+  Default = "default",
+}
+
+export let cachedRuntimeClientServerConfig: ServerConfig | null = null;
 
 declare global {
   interface Window {
@@ -17,35 +22,77 @@ declare global {
   }
 }
 
-export async function getConfig(
+export async function getGameLogicConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null,
   isReplay: boolean = false,
 ): Promise<Config> {
-  const sc = await getServerConfigFromClient();
-  switch (sc.env()) {
-    case GameEnv.Dev:
-      return new DevConfig(sc, gameConfig, userSettings, isReplay);
-    case GameEnv.Preprod:
-    case GameEnv.Prod:
-      console.log("using prod config");
-      return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
+  const gameLogicEnv = getBuildTimeGameLogicEnv();
+  const serverConfig = getServerConfigForGameLogicEnv(gameLogicEnv);
+
+  switch (gameLogicEnv) {
+    case GameLogicEnv.Dev:
+      return new DevConfig(serverConfig, gameConfig, userSettings, isReplay);
+    case GameLogicEnv.Default:
+      return new DefaultConfig(
+        serverConfig,
+        gameConfig,
+        userSettings,
+        isReplay,
+      );
     default:
-      throw Error(`unsupported server configuration: ${Env.GAME_ENV}`);
+      throw Error(`unsupported game logic environment: ${gameLogicEnv}`);
   }
 }
-export async function getServerConfigFromClient(): Promise<ServerConfig> {
-  if (cachedSC) {
-    return cachedSC;
+
+export function getBuildTimeGameLogicEnv(): GameLogicEnv {
+  const bundledGameEnv = process.env.GAME_ENV;
+
+  switch (bundledGameEnv) {
+    case "dev":
+      return GameLogicEnv.Dev;
+    case "staging":
+    case "prod":
+      return GameLogicEnv.Default;
+    case undefined:
+      throw new Error("Missing bundled game logic env");
+    default:
+      throw Error(`unsupported bundled game logic env: ${bundledGameEnv}`);
+  }
+}
+
+export function getServerConfigForGameLogicEnv(
+  gameLogicEnv: GameLogicEnv,
+): ServerConfig {
+  switch (gameLogicEnv) {
+    case GameLogicEnv.Dev:
+      return new DevServerConfig();
+    case GameLogicEnv.Default:
+      console.log("using default game logic config");
+      return prodConfig;
+    default:
+      throw Error(`unsupported game logic environment: ${gameLogicEnv}`);
+  }
+}
+
+export async function getRuntimeClientServerConfig(): Promise<ServerConfig> {
+  if (cachedRuntimeClientServerConfig) {
+    return cachedRuntimeClientServerConfig;
   }
 
-  const bootstrapGameEnv = window.BOOTSTRAP_CONFIG?.gameEnv;
-  if (!bootstrapGameEnv) {
-    throw new Error("Missing bootstrap server config");
+  if (typeof window === "undefined") {
+    throw new Error(
+      "Runtime client server config is only available on the browser main thread",
+    );
   }
 
-  cachedSC = getServerConfig(bootstrapGameEnv);
-  return cachedSC;
+  const runtimeClientEnv = window.BOOTSTRAP_CONFIG?.gameEnv;
+  if (!runtimeClientEnv) {
+    throw new Error("Missing runtime client server config");
+  }
+
+  cachedRuntimeClientServerConfig = getServerConfig(runtimeClientEnv);
+  return cachedRuntimeClientServerConfig;
 }
 export function getServerConfigFromServer(): ServerConfig {
   const gameEnv = Env.GAME_ENV;
@@ -67,6 +114,6 @@ export function getServerConfig(gameEnv: string) {
   }
 }
 
-export function clearCachedServerConfig(): void {
-  cachedSC = null;
+export function clearCachedRuntimeClientServerConfig(): void {
+  cachedRuntimeClientServerConfig = null;
 }

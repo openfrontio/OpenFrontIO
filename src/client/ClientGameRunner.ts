@@ -10,9 +10,9 @@ import {
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createPartialGameRecord, replacer } from "../core/Util";
+import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
+import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
@@ -214,7 +214,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getConfig(
+  const config = await getGameLogicConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
@@ -634,15 +634,15 @@ export class ClientGameRunner {
       }
 
       if (upgradeUnits.length > 0) {
-        upgradeUnits.sort((a, b) => a.distance - b.distance);
-        const bestUpgrade = upgradeUnits[0];
-
-        this.eventBus.emit(
-          new SendUpgradeStructureIntentEvent(
-            bestUpgrade.unitId,
-            bestUpgrade.unitType,
-          ),
-        );
+        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+        if (bestUpgrade) {
+          this.eventBus.emit(
+            new SendUpgradeStructureIntentEvent(
+              bestUpgrade.unitId,
+              bestUpgrade.unitType,
+            ),
+          );
+        }
       }
     });
   }

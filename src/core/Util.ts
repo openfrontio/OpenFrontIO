@@ -61,6 +61,60 @@ export function distSortUnit(
   };
 }
 
+/**
+ * Finds minimum, by score, with single pass search
+ * Faster than array.reduce()
+ */
+export function findMinimumBy<T>(
+  values: readonly T[],
+  score: (value: T) => number,
+  isCandidate?: (value: T) => boolean,
+): T | null {
+  let best: T | null = null;
+  let bestScore = Infinity;
+
+  if (isCandidate === undefined) {
+    for (let i = 0, len = values.length; i < len; i++) {
+      const value = values[i];
+      const currentScore = score(value);
+      if (currentScore < bestScore) {
+        bestScore = currentScore;
+        best = value;
+      }
+    }
+    return best;
+  }
+
+  for (let i = 0, len = values.length; i < len; i++) {
+    const value = values[i];
+    if (!isCandidate(value)) continue;
+
+    const currentScore = score(value);
+    if (currentScore < bestScore) {
+      bestScore = currentScore;
+      best = value;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Finds closest by fast. Example usage:
+ * findClosestBy(
+ *       this.units(UnitType.MissileSilo),
+ *       (silo) => mg.manhattanDist(silo.tile(), tile),
+ *       (silo) => !silo.isInCooldown() && !silo.isUnderConstruction(),
+ *     )
+ */
+export function findClosestBy<T>(
+  values: readonly T[],
+  distance: (value: T) => number,
+  isCandidate?: (value: T) => boolean,
+): T | null {
+  return findMinimumBy(values, distance, isCandidate);
+}
+
 export function simpleHash(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

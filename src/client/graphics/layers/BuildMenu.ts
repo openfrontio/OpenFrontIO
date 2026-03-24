@@ -147,9 +147,6 @@ export class BuildMenu extends LitElement implements Layer {
         e.x,
         e.y,
       );
-      if (clickedCell === null) {
-        return;
-      }
       if (!this.game.isValidCoord(clickedCell.x, clickedCell.y)) {
         return;
       }
