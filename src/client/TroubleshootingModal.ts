@@ -1,5 +1,6 @@
 import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { assetUrl } from "../core/AssetUrls";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/baseComponents/Modal";
@@ -8,7 +9,7 @@ import {
   collectGraphicsDiagnostics,
   GraphicsDiagnostics,
 } from "./utilities/Diagnostic";
-import infoIcon from "/images/InfoIcon.svg?url";
+const infoIcon = assetUrl("images/InfoIcon.svg");
 
 @customElement("troubleshooting-modal")
 export class TroubleshootingModal extends BaseModal {

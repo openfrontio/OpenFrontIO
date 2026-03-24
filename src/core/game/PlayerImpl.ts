@@ -3,7 +3,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  distSortUnit,
+  findClosestBy,
   minInt,
   simpleHash,
   toInt,
@@ -994,14 +994,18 @@ export class PlayerImpl implements Player {
     type: UnitType,
     targetTile: TileRef,
   ): Unit | false {
-    const range = this.mg.config().structureMinDist();
-    const existing = this.mg
-      .nearbyUnits(targetTile, range, type, undefined, true)
-      .sort((a, b) => a.distSquared - b.distSquared);
-    if (existing.length === 0) {
-      return false;
-    }
-    return existing[0].unit;
+    const closest = findClosestBy(
+      this.mg.nearbyUnits(
+        targetTile,
+        this.mg.config().structureMinDist(),
+        type,
+        undefined,
+        true,
+      ),
+      (entry) => entry.distSquared,
+    );
+
+    return closest?.unit ?? false;
   }
 
   private canBuildUnitType(
@@ -1167,27 +1171,29 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
-    if (this.mg.isSpawnImmunityActive()) {
+    const mg = this.mg;
+    if (mg.isSpawnImmunityActive()) {
       return false;
     }
     const owner = this.mg.owner(tile);
     // Allow nuking teammates after the game is over (aftergame fun)
-    const gameOver = this.mg.getWinner() !== null;
+    const gameOver = mg.getWinner() !== null;
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner) && !gameOver) {
         return false;
       }
     }
+    const config = mg.config();
 
     // Prevent launching nukes that would hit teammate structures (only in team games).
     // Disabled after game-over so players can nuke teammates in the aftergame.
     if (
-      this.mg.config().gameConfig().gameMode === GameMode.Team &&
+      config.gameConfig().gameMode === GameMode.Team &&
       nukeType !== UnitType.MIRV &&
       !gameOver
     ) {
-      const magnitude = this.mg.config().nukeMagnitudes(nukeType);
-      const wouldHitTeammate = this.mg.anyUnitNearby(
+      const magnitude = config.nukeMagnitudes(nukeType);
+      const wouldHitTeammate = mg.anyUnitNearby(
         tile,
         magnitude.outer,
         Structures.types,
@@ -1199,15 +1205,14 @@ export class PlayerImpl implements Player {
     }
 
     // only get missilesilos that are not on cooldown and not under construction
-    const spawns = this.units(UnitType.MissileSilo)
-      .filter((silo) => {
-        return !silo.isInCooldown() && !silo.isUnderConstruction();
-      })
-      .sort(distSortUnit(this.mg, tile));
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+    const bestSilo = findClosestBy(
+      this.units(UnitType.MissileSilo),
+      (silo) => mg.manhattanDist(silo.tile(), tile),
+      (silo) =>
+        silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
+    );
+
+    return bestSilo?.tile() ?? false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
@@ -1237,15 +1242,14 @@ export class PlayerImpl implements Player {
     if (!this.mg.isOcean(tile)) {
       return false;
     }
-    const spawns = this.units(UnitType.Port).sort(
-      (a, b) =>
-        this.mg.manhattanDist(a.tile(), tile) -
-        this.mg.manhattanDist(b.tile(), tile),
+
+    const bestPort = findClosestBy(
+      this.units(UnitType.Port),
+      (port) => this.mg.manhattanDist(port.tile(), tile),
+      (port) => port.isActive() && !port.isUnderConstruction(),
     );
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+
+    return bestPort?.tile() ?? false;
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {

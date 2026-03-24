@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../core/AssetUrls";
 
 @customElement("page-footer")
 export class Footer extends LitElement {
@@ -22,7 +23,7 @@ export class Footer extends LitElement {
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
           >
             <img
-              src="/icons/github-mark-white.svg"
+              src=${assetUrl("icons/github-mark-white.svg")}
               data-i18n-alt="news.github_link"
               class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
               draggable="false"
@@ -68,7 +69,7 @@ export class Footer extends LitElement {
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
           >
             <img
-              src="/icons/wiki-logo.svg"
+              src=${assetUrl("icons/wiki-logo.svg")}
               data-i18n-alt="main.wiki"
               class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
               draggable="false"

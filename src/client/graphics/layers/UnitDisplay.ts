@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
@@ -16,17 +17,17 @@ import {
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import warshipIcon from "/images/BattleshipIconWhite.svg?url";
-import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import mirvIcon from "/images/MIRVIcon.svg?url";
-import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
-import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
-import atomBombIcon from "/images/NukeIconWhite.svg?url";
-import portIcon from "/images/PortIcon.svg?url";
-import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
-import defensePostIcon from "/images/ShieldIconWhite.svg?url";
+const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+const cityIcon = assetUrl("images/CityIconWhite.svg");
+const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const mirvIcon = assetUrl("images/MIRVIcon.svg");
+const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
+const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
+const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
+const portIcon = assetUrl("images/PortIcon.svg");
+const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
+const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {

@@ -27,8 +27,10 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -110,7 +112,16 @@ export async function startWorker() {
   // Configure MIME types for webp files
   express.static.mime.define({ "image/webp": ["webp"] });
 
-  app.use(express.static(path.join(__dirname, "../../out")));
+  app.use(
+    express.static(path.join(__dirname, "../../out"), {
+      setHeaders: (res) => {
+        applyStaticAssetCacheControl(
+          res.setHeader.bind(res),
+          res.req.originalUrl,
+        );
+      },
+    }),
+  );
   app.use(
     "/maps",
     express.static(path.join(__dirname, "../../static/maps"), {
@@ -128,6 +139,11 @@ export async function startWorker() {
       max: 20, // 20 requests per IP per second
     }),
   );
+
+  app.use("/api", (_req, res, next) => {
+    setNoStoreHeaders(res);
+    next();
+  });
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;

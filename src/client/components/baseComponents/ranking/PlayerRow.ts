@@ -5,6 +5,7 @@ import {
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
 } from "src/core/StatsSchemas";
+import { assetUrl } from "../../../../core/AssetUrls";
 import { renderNumber } from "../../../Utils";
 import { PlayerInfo, RankType } from "./GameInfoRanking";
 
@@ -54,7 +55,7 @@ export class PlayerRow extends LitElement {
   private renderCrownIcon() {
     return html`
       <img
-        src="/images/CrownIcon.svg"
+        src=${assetUrl("images/CrownIcon.svg")}
         class="absolute -top-0.75 left-4 size-3.75 sm:-top-1.75 sm:left-7.5 sm:size-5"
       />
     `;
@@ -192,7 +193,10 @@ export class PlayerRow extends LitElement {
         >
           ${renderNumber(this.score)}
         </div>
-        <img src="/images/GoldCoinIcon.svg" class="size-3.5 sm:size-5 m-auto" />
+        <img
+          src=${assetUrl("images/GoldCoinIcon.svg")}
+          class="size-3.5 sm:size-5 m-auto"
+        />
       </div>
     `;
   }
@@ -211,7 +215,10 @@ export class PlayerRow extends LitElement {
           <div class="rounded-md text-sm leading-[1.9rem] text-center w-full">
             ${this.renderAllTrades()}
           </div>
-          <img src="/images/GoldCoinIcon.svg" class="w-5 size-3.5 sm:size-5" />
+          <img
+            src=${assetUrl("images/GoldCoinIcon.svg")}
+            class="w-5 size-3.5 sm:size-5"
+          />
         </div>
       </div>
     `;
@@ -249,7 +256,7 @@ export class PlayerRow extends LitElement {
       </div>`;
     } else if (this.player.flag) {
       return html`<img
-        src="/flags/${this.player.flag}.svg"
+        src=${assetUrl(`flags/${this.player.flag}.svg`)}
         class="min-w-7.5 h-7.5 sm:min-w-10 sm:h-10 shrink-0"
       />`;
     }
@@ -259,7 +266,7 @@ export class PlayerRow extends LitElement {
         class="size-7.5 leading-1.25 shrink-0 rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-3.5 border border-gray-200 text-center bg-slate-500"
       >
         <img
-          src="/images/ProfileIcon.svg"
+          src=${assetUrl("images/ProfileIcon.svg")}
           class="size-5 mt-0.5 sm:size-6.25 sm:-mt-1.25 m-auto"
         />
       </div>
