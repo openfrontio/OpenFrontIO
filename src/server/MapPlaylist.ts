@@ -138,6 +138,7 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold25M", "startingGold1M"],
   ["isHardNations", "startingGold25M"],
   ["isNukesDisabled", "isSAMsDisabled"],
+  ["startingGold25M", "isPeaceTime"],
 ];
 
 export class MapPlaylist {
