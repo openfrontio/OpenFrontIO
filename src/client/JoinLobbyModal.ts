@@ -369,6 +369,11 @@ export class JoinLobbyModal extends BaseModal {
     );
   }
 
+  public confirmBeforeClose(): boolean {
+    if (!this.currentLobbyId) return true;
+    return confirm(translateText("host_modal.leave_confirmation"));
+  }
+
   protected onClose(): void {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
