@@ -1,4 +1,3 @@
-import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
@@ -210,22 +209,14 @@ export class NameLayer implements Layer {
       element.classList.add("player-flag");
       element.style.opacity = "0.8";
       element.style.zIndex = "1";
-      element.style.aspectRatio = "3/4";
+      element.style.objectFit = "contain";
     };
 
     if (player.cosmetics.flag) {
-      const flag = player.cosmetics.flag;
-      if (flag !== undefined && flag !== null && flag.startsWith("!")) {
-        const flagWrapper = document.createElement("div");
-        applyFlagStyles(flagWrapper);
-        renderPlayerFlag(flag, flagWrapper);
-        nameDiv.appendChild(flagWrapper);
-      } else if (flag !== undefined && flag !== null) {
-        const flagImg = document.createElement("img");
-        applyFlagStyles(flagImg);
-        flagImg.src = "/flags/" + flag + ".svg";
-        nameDiv.appendChild(flagImg);
-      }
+      const flagImg = document.createElement("img");
+      applyFlagStyles(flagImg);
+      flagImg.src = player.cosmetics.flag;
+      nameDiv.appendChild(flagImg);
     }
     nameDiv.classList.add("player-name");
     nameDiv.style.color = this.theme.textColor(player);
