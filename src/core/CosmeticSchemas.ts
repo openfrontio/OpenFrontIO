@@ -63,6 +63,7 @@ export const PatternSchema = z.object({
     .optional(),
   affiliateCode: z.string().nullable(),
   product: ProductSchema.nullable(),
+  artist: z.string().optional(),
 });
 
 export const FlagSchema = z.object({
@@ -70,6 +71,7 @@ export const FlagSchema = z.object({
   url: z.string(),
   affiliateCode: z.string().nullable(),
   product: ProductSchema.nullable(),
+  artist: z.string().optional(),
 });
 
 // Schema for resources/cosmetics/cosmetics.json

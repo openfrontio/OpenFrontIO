@@ -188,6 +188,7 @@ export class StoreModal extends BaseModal {
             name: flag.name,
             url: flag.url,
             product: flag.product,
+            artist: flag.artist,
           }}
           .selected=${selectedFlag === `flag:${key}`}
           .requiresPurchase=${rel === "purchasable"}

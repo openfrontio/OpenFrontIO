@@ -39,7 +39,12 @@ export class FlagInputModal extends BaseModal {
       .map(
         ([key, flag]) => html`
           <flag-button
-            .flag=${{ key: `flag:${key}`, name: flag.name, url: flag.url }}
+            .flag=${{
+              key: `flag:${key}`,
+              name: flag.name,
+              url: flag.url,
+              artist: flag.artist,
+            }}
             .selected=${selectedFlag === `flag:${key}`}
             .onSelect=${onSelect}
           ></flag-button>
