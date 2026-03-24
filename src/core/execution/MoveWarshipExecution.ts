@@ -25,8 +25,7 @@ export class MoveWarshipExecution implements Execution {
       return;
     }
     warship.setPatrolTile(this.position);
-    warship.setTargetTile(this.position);
-    warship.setRetreating(false);
+    warship.setTargetTile(undefined);
   }
 
   tick(ticks: number): void {}
