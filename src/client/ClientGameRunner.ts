@@ -12,7 +12,7 @@ import {
 } from "../core/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
+import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
@@ -214,7 +214,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getConfig(
+  const config = await getGameLogicConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
