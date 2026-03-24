@@ -172,6 +172,15 @@ export function joinLobby(
             composed: true,
           }),
         );
+      } else if (message.error === "kick_reason.host_left") {
+        alert(translateText("kick_reason.host_left"));
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+            bubbles: true,
+            composed: true,
+          }),
+        );
       } else {
         showErrorModal(
           message.error,

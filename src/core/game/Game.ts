@@ -248,13 +248,17 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
   goldMultiplier?: number;
-  isAlliancesDisabled: boolean;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
 }
 
 export interface UnitInfo {
