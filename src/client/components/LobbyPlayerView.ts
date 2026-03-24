@@ -69,9 +69,13 @@ export class LobbyTeamView extends LitElement {
       this.showTeamColors = teamsList.length <= 7;
     }
     // Cache the current player's clan tag for display logic in getClientDisplayName
-    if (changedProperties.has("clients") || changedProperties.has("currentClientID")) {
+    if (
+      changedProperties.has("clients") ||
+      changedProperties.has("currentClientID")
+    ) {
       this.currentClientClanTag =
-        this.clients.find((c) => c.clientID === this.currentClientID)?.clanTag ?? null;
+        this.clients.find((c) => c.clientID === this.currentClientID)
+          ?.clanTag ?? null;
     }
   }
 
