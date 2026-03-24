@@ -69,11 +69,17 @@ export class WarshipExecution implements Execution {
     this.syncExternalRetreatOrder();
 
     if (this.docked) {
+      if (this.currentRetreatPort() === undefined) {
+        this.docked = false;
+        this.cancelRepairRetreat();
+      }
       if (this.isFullyHealed()) {
         this.docked = false;
         this.cancelRepairRetreat();
       }
-      return;
+      if (this.docked) {
+        return;
+      }
     }
 
     if (this.handleRepairRetreat()) {
@@ -92,6 +98,9 @@ export class WarshipExecution implements Execution {
 
     // Always patrol for movement
     this.patrol();
+
+    // Movement can change what is actually in range, so recompute before acting.
+    this.warship.setTargetUnit(this.findTargetUnit());
 
     // Priority 1: Shoot transport ship if in range
     if (this.warship.targetUnit()?.type() === UnitType.TransportShip) {
@@ -194,22 +203,6 @@ export class WarshipExecution implements Execution {
         continue;
       }
 
-      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTile = portTile;
-      }
-    }
-
-    // If we found a port, use it
-    if (bestTile !== undefined) {
-      return bestTile;
-    }
-
-    // Fallback if component filtering leaves no options
-    bestDistance = Infinity;
-    for (const port of ports) {
-      const portTile = port.tile();
       const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
       if (distance < bestDistance) {
         bestDistance = distance;
@@ -466,14 +459,7 @@ export class WarshipExecution implements Execution {
   }
 
   private applyActiveDockedHealing(): void {
-    if (this.retreatPortTile === undefined) {
-      return;
-    }
-
-    const dockedPort = this.warship
-      .owner()
-      .units(UnitType.Port)
-      .find((port) => port.tile() === this.retreatPortTile);
+    const dockedPort = this.currentRetreatPort();
     if (!dockedPort) {
       return;
     }
@@ -499,6 +485,17 @@ export class WarshipExecution implements Execution {
 
     this.activeHealingRemainder -= integerHealing;
     this.warship.modifyHealth(integerHealing);
+  }
+
+  private currentRetreatPort(): Unit | undefined {
+    if (this.retreatPortTile === undefined) {
+      return undefined;
+    }
+
+    return this.warship
+      .owner()
+      .units(UnitType.Port)
+      .find((port) => port.tile() === this.retreatPortTile);
   }
 
   private findNearestAvailablePort(): TileRef | undefined {
@@ -610,27 +607,6 @@ export class WarshipExecution implements Execution {
         continue;
       }
 
-      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTile = portTile;
-      }
-    }
-
-    // If we found an available port, return it
-    if (bestTile !== undefined) {
-      return bestTile;
-    }
-
-    // Fallback: try without component filtering
-    bestDistance = Infinity;
-    for (const port of ports) {
-      // Skip ports that are at capacity
-      if (this.isPortFullOfHealing(port, this.warship)) {
-        continue;
-      }
-
-      const portTile = port.tile();
       const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
       if (distance < bestDistance) {
         bestDistance = distance;

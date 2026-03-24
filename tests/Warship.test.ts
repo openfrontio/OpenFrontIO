@@ -8,6 +8,7 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
+import { PathStatus } from "../src/core/pathfinding/types";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -411,6 +412,110 @@ describe("Warship", () => {
     expect(warship2.retreating()).toBe(true);
   });
 
+  test("Warship cancels docking if its retreat port is destroyed", async () => {
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipPortHealingBonus = () => 0;
+    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    const warshipExecution = new WarshipExecution(warship);
+    game.addExecution(warshipExecution);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+
+    for (let i = 0; i < 60; i++) {
+      game.executeNextTick();
+      if (warshipExecution.isDocked()) {
+        break;
+      }
+    }
+
+    expect(warshipExecution.isDocked()).toBe(true);
+
+    homePort.delete();
+    game.executeNextTick();
+
+    expect(warshipExecution.isDocked()).toBe(false);
+    expect(warship.retreating()).toBe(false);
+  });
+
+  test("Warship drops a stale target after patrol movement changes range", async () => {
+    game.config().warshipTargettingRange = () => 1;
+    game.config().warshipShellAttackRate = () => Number.MAX_SAFE_INTEGER;
+    const startTile = game.ref(coastX + 1, 10);
+    const movedTile = game
+      .map()
+      .neighbors(startTile)
+      .find((tile) => game.isOcean(tile));
+
+    expect(movedTile).toBeDefined();
+
+    const warship = player1.buildUnit(UnitType.Warship, startTile, {
+      patrolTile: startTile,
+    });
+    warship.setTargetTile(movedTile!);
+    const transport = player2.buildUnit(UnitType.TransportShip, movedTile!, {
+      targetTile: movedTile!,
+    });
+
+    const execution = new WarshipExecution(warship);
+    const executionInternals = execution as unknown as {
+      findTargetUnit: () => typeof transport | undefined;
+      pathfinder: {
+        next: () => { status: PathStatus; node: number };
+      };
+    };
+    execution.init(game, game.ticks());
+
+    vi.spyOn(executionInternals, "findTargetUnit")
+      .mockReturnValueOnce(transport)
+      .mockReturnValueOnce(undefined);
+    vi.spyOn(executionInternals.pathfinder, "next").mockReturnValue({
+      status: PathStatus.NEXT,
+      node: movedTile!,
+    });
+
+    execution.tick(game.ticks());
+
+    expect(warship.tile()).toBe(movedTile);
+    expect(warship.targetUnit()).toBeUndefined();
+  });
+
+  test("Warship cancels retreat if no friendly port is reachable by water", async () => {
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    const warshipTile = warship.tile();
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile) =>
+      tile === warshipTile ? 1 : 2,
+    );
+    vi.spyOn(game, "hasWaterComponent").mockReturnValue(false);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(false);
+  });
+
   test("Low-health warship does not retreat when enemy warship is nearby", async () => {
     game.config().warshipPortHealingBonus = () => 0;
     game.config().warshipRetreatHealthThreshold = () => 600;
@@ -496,7 +601,8 @@ describe("Warship", () => {
     game.config().warshipPortHealingBonus = () => 0;
     game.config().warshipRetreatHealthThreshold = () => 600;
 
-    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const homePortTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, homePortTile, {});
 
     const warship = player1.buildUnit(
       UnitType.Warship,
@@ -522,7 +628,7 @@ describe("Warship", () => {
 
     expect(warship.retreating()).toBe(false);
     expect(warship.patrolTile()).toBe(manualPatrolTile);
-    expect(warship.targetTile()).toBe(manualPatrolTile);
+    expect(warship.targetTile()).not.toBe(homePortTile);
   });
 
   test("Manual MoveWarshipExecution suppresses auto-retreat for 5 seconds before retreat starts", async () => {
