@@ -411,7 +411,7 @@ export class LobbyTeamView extends LitElement {
     if (this.currentClientID && client.clientID === this.currentClientID) {
       return full;
     }
-    // Keep clan tag visible while anonymizing only the username.
+    // Anonymize the username; clan tag visibility follows the same rule as above.
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
     return formatPlayerDisplayName(anonymizedUsername, visibleClanTag);
