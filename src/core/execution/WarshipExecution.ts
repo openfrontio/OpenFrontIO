@@ -155,10 +155,10 @@ export class WarshipExecution implements Execution {
     if (this.retreatingForRepair) {
       return false;
     }
-    const manualMoveRetreaDisabledDuration = 50;
+    const manualMoveRetreatDisabledDuration = 50;
     if (
       this.mg.ticks() - this.lastManualMoveTickRetreatDisabled <
-      manualMoveRetreaDisabledDuration
+      manualMoveRetreatDisabledDuration
     ) {
       return false;
     }
@@ -303,7 +303,8 @@ export class WarshipExecution implements Execution {
       return;
     }
 
-    const orderedPortTile = this.warship.targetTile() ?? this.warship.patrolTile();
+    const orderedPortTile =
+      this.warship.targetTile() ?? this.warship.patrolTile();
     if (orderedPortTile === undefined) {
       return;
     }
