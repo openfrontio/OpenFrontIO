@@ -87,6 +87,8 @@ export class GameServer {
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
+  private visibleAt?: number;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -98,6 +100,9 @@ export class GameServer {
     private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+    if (startsAt !== undefined) {
+      this.visibleAt = Date.now();
+    }
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -558,6 +563,8 @@ export class GameServer {
 
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
+    // Record when the lobby first became visible to players, used to measure lobby fill time.
+    this.visibleAt ??= Date.now();
   }
 
   public numClients(): number {
@@ -656,6 +663,7 @@ export class GameServer {
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
+      visibleAt: this.visibleAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -1001,6 +1009,7 @@ export class GameServer {
           Date.now(),
           this.winner?.winner,
           this.createdAt,
+          this.visibleAt,
         ),
       ),
     );
