@@ -43,8 +43,8 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
     typeof window !== "undefined"
       ? window.BOOTSTRAP_CONFIG?.gameEnv
       : undefined;
-  const bundledGameEnv =
-    typeof process !== "undefined" ? process.env?.GAME_ENV : undefined;
+  // Vite replaces this at build time for browser and worker bundles.
+  const bundledGameEnv = process.env.GAME_ENV;
   const gameEnv = bootstrapGameEnv ?? bundledGameEnv;
   if (!gameEnv) {
     throw new Error("Missing client server config");
