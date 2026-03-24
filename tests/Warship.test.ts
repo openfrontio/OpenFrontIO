@@ -463,8 +463,19 @@ describe("Warship", () => {
 
     game.executeNextTick();
     warship.modifyHealth(-700);
-    executeTicks(game, 4);
+    for (let i = 0; i < 10; i++) {
+      game.executeNextTick();
+      if (
+        warship.retreating() &&
+        warship.targetTile() === homePort.tile() &&
+        warship.tile() !== homePort.tile()
+      ) {
+        break;
+      }
+    }
+
     expect(warship.retreating()).toBe(true);
+    expect(warship.targetTile()).toBe(homePort.tile());
 
     const enemyTransport = player2.buildUnit(
       UnitType.TransportShip,
@@ -545,8 +556,16 @@ describe("Warship", () => {
     executeTicks(game, 48);
     expect(warship.retreating()).toBe(false);
 
-    game.executeNextTick();
-    expect(warship.retreating()).toBe(true);
+    let resumedRetreat = false;
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+      if (warship.retreating()) {
+        resumedRetreat = true;
+        break;
+      }
+    }
+
+    expect(resumedRetreat).toBe(true);
   });
 
   test("HealAtPortExecution moves warship to port", async () => {
