@@ -40,6 +40,7 @@ export class LobbyTeamView extends LitElement {
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
   private userSettings: UserSettings = new UserSettings();
+  private currentClientClanTag: string | null = null;
 
   /**
    * For public HumansVsNations games, nation count always matches human count
@@ -66,6 +67,11 @@ export class LobbyTeamView extends LitElement {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
       this.showTeamColors = teamsList.length <= 7;
+    }
+    // Cache the current player's clan tag for display logic in getClientDisplayName
+    if (changedProperties.has("clients") || changedProperties.has("currentClientID")) {
+      this.currentClientClanTag =
+        this.clients.find((c) => c.clientID === this.currentClientID)?.clanTag ?? null;
     }
   }
 
@@ -389,7 +395,12 @@ export class LobbyTeamView extends LitElement {
   }
 
   private getClientDisplayName(client: ClientInfo): string {
-    const full = formatPlayerDisplayName(client.username, client.clanTag);
+    // Only show a clan tag if the current player shares the same tag.
+    const visibleClanTag =
+      this.currentClientClanTag && this.currentClientClanTag === client.clanTag
+        ? client.clanTag
+        : null;
+    const full = formatPlayerDisplayName(client.username, visibleClanTag);
     if (!this.userSettings.anonymousNames()) {
       return full;
     }
@@ -399,6 +410,6 @@ export class LobbyTeamView extends LitElement {
     // Keep clan tag visible while anonymizing only the username.
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
-    return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
+    return formatPlayerDisplayName(anonymizedUsername, visibleClanTag);
   }
 }
