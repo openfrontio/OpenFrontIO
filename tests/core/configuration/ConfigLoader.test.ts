@@ -6,9 +6,12 @@ import {
 } from "../../../src/core/configuration/ConfigLoader";
 
 describe("ConfigLoader", () => {
+  const originalGameEnv = process.env.GAME_ENV;
+
   beforeEach(() => {
     vi.restoreAllMocks();
     window.BOOTSTRAP_CONFIG = undefined;
+    process.env.GAME_ENV = originalGameEnv;
     clearCachedServerConfig();
   });
 
@@ -20,5 +23,13 @@ describe("ConfigLoader", () => {
 
     expect(config.env()).toBe(GameEnv.Prod);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("falls back to bundled env when bootstrap config is unavailable", async () => {
+    process.env.GAME_ENV = "prod";
+
+    const config = await getServerConfigFromClient();
+
+    expect(config.env()).toBe(GameEnv.Prod);
   });
 });
