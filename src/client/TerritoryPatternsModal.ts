@@ -25,7 +25,6 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
-  private isActive = false;
   private userMeResponse: UserMeResponse | false = false;
 
   private _onPatternSelected = async () => {
@@ -137,21 +136,25 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   render() {
-    if (!this.isActive && !this.inline) return html``;
-
     const content = html`
       <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("territory_patterns.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-          rightContent: !hasLinkedAccount(this.userMeResponse)
-            ? html`<div class="flex items-center">
-                ${this.renderNotLoggedInWarning()}
-              </div>`
-            : undefined,
-        })}
-        <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
+        <div
+          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
+        >
+          ${modalHeader({
+            title: translateText("territory_patterns.title"),
+            onBack: () => this.close(),
+            ariaLabel: translateText("common.back"),
+            rightContent: !hasLinkedAccount(this.userMeResponse)
+              ? html`<div class="flex items-center">
+                  ${this.renderNotLoggedInWarning()}
+                </div>`
+              : undefined,
+          })}
+        </div>
+        <div
+          class="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
+        >
           ${this.renderPatternGrid()}
         </div>
       </div>
@@ -174,15 +177,8 @@ export class TerritoryPatternsModal extends BaseModal {
     `;
   }
 
-  public async open() {
-    this.isActive = true;
+  protected async onOpen(): Promise<void> {
     await this.refresh();
-    super.open();
-  }
-
-  public close() {
-    this.isActive = false;
-    super.close();
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
