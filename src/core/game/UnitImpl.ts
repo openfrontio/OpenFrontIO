@@ -221,11 +221,18 @@ export class UnitImpl implements Unit {
   }
 
   modifyHealth(delta: number, attacker?: Player): void {
-    this._health = withinInt(
+    const previousHealth = this._health;
+    const nextHealth = withinInt(
       this._health + toInt(delta),
       0n,
       toInt(this.info().maxHealth ?? 1),
     );
+
+    if (nextHealth === previousHealth) {
+      return;
+    }
+
+    this._health = nextHealth;
     this.mg.addUpdate(this.toUpdate());
     if (this._health === 0n) {
       this.delete(true, attacker);
