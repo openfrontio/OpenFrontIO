@@ -1,3 +1,4 @@
+import { HealAtPortExecution } from "../src/core/execution/HealAtPortExecution";
 import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
@@ -345,5 +346,45 @@ describe("Warship", () => {
     const distanceToPort = game.euclideanDistSquared(warship1.tile(), portTile);
     expect(distanceToPort).toBeLessThanOrEqual(25);
     expect(exec1.isDocked()).toBe(true);
+  });
+
+  test("HealAtPortExecution moves warship to port", async () => {
+    const portTile = game.ref(coastX, 10);
+    const warshipTile = game.ref(coastX + 1, 10);
+
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+
+    game.addExecution(new WarshipExecution(warship));
+    game.addExecution(new HealAtPortExecution(player1, warship.id(), portTile));
+
+    game.executeNextTick();
+
+    expect(warship.patrolTile()).toBe(portTile);
+    expect(warship.targetTile()).toBe(portTile);
+    expect(warship.retreating()).toBe(true);
+  });
+
+  test("HealAtPortExecution ignores enemy port targets", async () => {
+    const portTile = game.ref(coastX, 10);
+    const warshipTile = game.ref(coastX + 1, 10);
+
+    player2.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+    const initialPatrolTile = warship.patrolTile();
+    const initialTargetTile = warship.targetTile();
+
+    game.addExecution(new WarshipExecution(warship));
+    game.addExecution(new HealAtPortExecution(player1, warship.id(), portTile));
+
+    game.executeNextTick();
+
+    expect(warship.patrolTile()).toBe(initialPatrolTile);
+    expect(warship.targetTile()).toBe(initialTargetTile);
+    expect(warship.retreating()).toBe(false);
   });
 });
