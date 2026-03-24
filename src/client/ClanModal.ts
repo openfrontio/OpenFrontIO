@@ -640,6 +640,72 @@ export class ClanModal extends BaseModal {
               )}
             </div>
 
+            <!-- Join Requests (leader/officer of invite-only clan) -->
+            ${(isLeader || myClan?.role === "officer") &&
+            !clan.isOpen &&
+            (FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0) > 0
+              ? html`
+                  <button
+                    @click=${() => {
+                      this.view = "requests";
+                    }}
+                    class="w-full flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/15 rounded-xl border border-amber-500/20 p-4 transition-all cursor-pointer group"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="w-5 h-5 text-amber-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                          />
+                        </svg>
+                      </div>
+                      <div class="text-left">
+                        <span class="text-amber-400 text-sm font-bold">
+                          ${translateText("clan_modal.join_requests")}
+                        </span>
+                        <span class="text-amber-400/60 text-xs block">
+                          ${translateText("clan_modal.pending_requests_count", {
+                            count: FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      >
+                        ${FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0}
+                      </span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-5 h-5 text-amber-400/40 group-hover:text-amber-400/70 transition-colors"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+                `
+              : ""}
+
             <!-- Members Preview -->
             <div
               class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3"
@@ -707,15 +773,6 @@ export class ClanModal extends BaseModal {
                       class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
                     >
                       ${translateText("clan_modal.manage_clan")}
-                    </button>
-                    <button
-                      @click=${() => {
-                        this.transferTarget = null;
-                        this.view = "transfer";
-                      }}
-                      class="px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-amber-600/30 hover:bg-amber-600/50 rounded-xl transition-all border border-amber-500/30"
-                    >
-                      ${translateText("clan_modal.transfer_leadership")}
                     </button>
                   `
                 : ""}
@@ -826,70 +883,6 @@ export class ClanModal extends BaseModal {
               </button>
             </div>
 
-            <!-- Join Requests -->
-            ${!clan.isOpen && (FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0) > 0
-              ? html`
-                  <button
-                    @click=${() => {
-                      this.view = "requests";
-                    }}
-                    class="w-full flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/15 rounded-2xl border border-amber-500/20 p-5 transition-all cursor-pointer group"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="w-5 h-5 text-amber-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                          />
-                        </svg>
-                      </div>
-                      <div class="text-left">
-                        <span class="text-amber-400 text-sm font-bold">
-                          ${translateText("clan_modal.join_requests")}
-                        </span>
-                        <span class="text-amber-400/60 text-xs block">
-                          ${translateText("clan_modal.pending_requests_count", {
-                            count: FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0,
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span
-                        class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                      >
-                        ${FAKE_JOIN_REQUESTS[clan.id]?.length ?? 0}
-                      </span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="w-5 h-5 text-amber-400/40 group-hover:text-amber-400/70 transition-colors"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                `
-              : ""}
-
             <!-- Member Management -->
             <div
               class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4"
@@ -922,6 +915,17 @@ export class ClanModal extends BaseModal {
               >
                 ${translateText("clan_modal.danger_zone")}
               </h3>
+              <button
+                @click=${() => {
+                  this.transferTarget = null;
+                  this.memberPage = 0;
+                  this.memberSearch = "";
+                  this.view = "transfer";
+                }}
+                class="w-full px-6 py-3 text-sm font-bold text-amber-400 uppercase tracking-wider bg-amber-600/20 hover:bg-amber-600/30 rounded-xl transition-all border border-amber-500/30"
+              >
+                ${translateText("clan_modal.transfer_leadership")}
+              </button>
               <button
                 class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30"
               >
@@ -1005,7 +1009,7 @@ export class ClanModal extends BaseModal {
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("clan_modal.transfer_leadership"),
-          onBack: () => (this.view = "detail"),
+          onBack: () => (this.view = "manage"),
           ariaLabel: translateText("common.back"),
         })}
 
@@ -1109,7 +1113,7 @@ export class ClanModal extends BaseModal {
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("clan_modal.join_requests"),
-          onBack: () => (this.view = "manage"),
+          onBack: () => (this.view = "detail"),
           ariaLabel: translateText("common.back"),
           rightContent: html`
             <span
