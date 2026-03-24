@@ -251,6 +251,8 @@ export function createPartialGameRecord(
   winner: Winner,
   // lobby creation time (ms). Defaults to start time for singleplayer.
   lobbyCreatedAt?: number,
+  // Time the lobby became visible to players (ms).
+  visibleAt?: number,
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -262,13 +264,14 @@ export function createPartialGameRecord(
   const actualLobbyCreatedAt = lobbyCreatedAt ?? start;
   const lobbyFillTime = Math.max(
     0,
-    start - Math.min(actualLobbyCreatedAt, start),
+    start - (visibleAt ?? actualLobbyCreatedAt),
   );
 
   const record: PartialGameRecord = {
     info: {
       gameID,
       lobbyCreatedAt: actualLobbyCreatedAt,
+      visibleAt,
       lobbyFillTime,
       config,
       players,
