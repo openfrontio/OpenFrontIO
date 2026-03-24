@@ -2,8 +2,7 @@ import { Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 
 /**
- * Forces a warship to move to a friendly port and heal.
- * If the warship is already at full health, it will still move to the port.
+ * Orders a warship to retreat toward a friendly port for healing.
  * Only works with friendly ports owned by the same player.
  */
 export class HealAtPortExecution implements Execution {

@@ -970,7 +970,7 @@ export class DefaultConfig implements Config {
   }
 
   warshipPortHealingRadius(): number {
-    return 10;
+    return 5;
   }
 
   warshipPortHealingBonus(): number {
