@@ -186,7 +186,7 @@ export class WarshipExecution implements Execution {
     if (this.warship.owner().unitCount(UnitType.Port) === 0) {
       return false;
     }
-    if (this.hasNearbyEnemyWarship()) {
+    if (this.findRetreatAggroTarget() !== undefined) {
       return false;
     }
     // Only retreat if there's a friendly port
@@ -240,17 +240,46 @@ export class WarshipExecution implements Execution {
     return bestTile;
   }
 
-  private hasNearbyEnemyWarship(): boolean {
+  private findRetreatAggroTarget(): Unit | undefined {
     const owner = this.warship.owner();
-    return this.mg.anyUnitNearby(
+    const ships = this.mg.nearbyUnits(
       this.warship.tile(),
       this.mg.config().warshipTargettingRange(),
-      [UnitType.Warship],
-      (unit) =>
-        unit !== this.warship &&
-        unit.owner() !== owner &&
-        owner.canAttackPlayer(unit.owner(), true),
+      [UnitType.TransportShip, UnitType.Warship],
     );
+
+    let bestUnit: Unit | undefined = undefined;
+    let bestTypePriority = 0;
+    let bestDistSquared = 0;
+    for (const { unit, distSquared } of ships) {
+      if (
+        unit === this.warship ||
+        unit.owner() === owner ||
+        !owner.canAttackPlayer(unit.owner(), true) ||
+        this.alreadySentShell.has(unit)
+      ) {
+        continue;
+      }
+
+      const typePriority = unit.type() === UnitType.TransportShip ? 0 : 1;
+      if (bestUnit === undefined) {
+        bestUnit = unit;
+        bestTypePriority = typePriority;
+        bestDistSquared = distSquared;
+        continue;
+      }
+
+      if (
+        typePriority < bestTypePriority ||
+        (typePriority === bestTypePriority && distSquared < bestDistSquared)
+      ) {
+        bestUnit = unit;
+        bestTypePriority = typePriority;
+        bestDistSquared = distSquared;
+      }
+    }
+
+    return bestUnit;
   }
 
   private startRepairRetreat(): void {
@@ -291,9 +320,11 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
-    if (this.hasNearbyEnemyWarship()) {
-      this.cancelRepairRetreat(false);
-      return false;
+    const retreatAggroTarget = this.findRetreatAggroTarget();
+    if (retreatAggroTarget) {
+      this.warship.setTargetUnit(retreatAggroTarget);
+      this.shootTarget();
+      return true;
     }
 
     if (this.isFullyHealed()) {

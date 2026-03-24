@@ -405,6 +405,42 @@ describe("Warship", () => {
     expect(warship.retreating()).toBe(false);
   });
 
+  test("Retreating warship aggroes nearby enemy transport before continuing retreat", async () => {
+    game.config().warshipPortHealingBonus = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipTargettingRange = () => 5;
+    game.config().warshipShellAttackRate = () => 10_000;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 6, 12),
+      {
+        patrolTile: game.ref(coastX + 6, 12),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    game.executeNextTick();
+    warship.modifyHealth(-700);
+    executeTicks(game, 4);
+    expect(warship.retreating()).toBe(true);
+
+    const enemyTransport = player2.buildUnit(
+      UnitType.TransportShip,
+      game.ref(coastX + 5, 12),
+      {
+        targetTile: game.ref(coastX + 5, 12),
+      },
+    );
+
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(true);
+    expect(warship.targetTile()).toBe(homePort.tile());
+    expect(warship.targetUnit()).toBe(enemyTransport);
+  });
+
   test("Manual MoveWarshipExecution cancels retreat and keeps manual order", async () => {
     game.config().warshipPortHealingBonus = () => 0;
     game.config().warshipRetreatHealthThreshold = () => 600;
