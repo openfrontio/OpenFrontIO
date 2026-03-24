@@ -399,9 +399,11 @@ export class LobbyTeamView extends LitElement {
   }
 
   private getClientDisplayName(client: ClientInfo): string {
-    // Only show a clan tag if the current player shares the same tag.
+    // In public games, only show a clan tag if the current player shares the same tag.
     const visibleClanTag =
-      this.currentClientClanTag && this.currentClientClanTag === client.clanTag
+      !this.isPublicGame ||
+      (this.currentClientClanTag &&
+        this.currentClientClanTag === client.clanTag)
         ? client.clanTag
         : null;
     const full = formatPlayerDisplayName(client.username, visibleClanTag);
