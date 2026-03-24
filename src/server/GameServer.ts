@@ -630,17 +630,31 @@ export class GameServer {
   }
 
   private broadcastLobbyInfo() {
-    const lobbyInfo = this.gameInfo();
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
         const msg = JSON.stringify({
           type: "lobby_info",
-          lobby: lobbyInfo,
+          lobby: this.gameInfoForClient(c.clanTag ?? null),
           myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
       }
     });
+  }
+
+  private gameInfoForClient(recipientClanTag: string | null): GameInfo {
+    const isPublic = this.gameConfig.gameType === GameType.Public;
+    return {
+      ...this.gameInfo(),
+      clients: this.activeClients.map((c) => ({
+        username: c.username,
+        clanTag:
+          !isPublic || (recipientClanTag && c.clanTag === recipientClanTag)
+            ? (c.clanTag ?? null)
+            : null,
+        clientID: c.clientID,
+      })),
+    };
   }
 
   public start() {
