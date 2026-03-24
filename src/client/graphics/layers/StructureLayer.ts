@@ -1,4 +1,5 @@
 import { colord, Colord } from "colord";
+import { assetUrl } from "../../../core/AssetUrls";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { TransformHandler } from "../TransformHandler";
@@ -8,12 +9,12 @@ import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import cityIcon from "/images/buildings/cityAlt1.png?url";
-import factoryIcon from "/images/buildings/factoryAlt1.png?url";
-import shieldIcon from "/images/buildings/fortAlt3.png?url";
-import anchorIcon from "/images/buildings/port1.png?url";
-import missileSiloIcon from "/images/buildings/silo1.png?url";
-import SAMMissileIcon from "/images/buildings/silo4.png?url";
+const cityIcon = assetUrl("images/buildings/cityAlt1.png");
+const factoryIcon = assetUrl("images/buildings/factoryAlt1.png");
+const shieldIcon = assetUrl("images/buildings/fortAlt3.png");
+const anchorIcon = assetUrl("images/buildings/port1.png");
+const missileSiloIcon = assetUrl("images/buildings/silo1.png");
+const SAMMissileIcon = assetUrl("images/buildings/silo4.png");
 
 const underConstructionColor = colord("rgb(150,150,150)");
 

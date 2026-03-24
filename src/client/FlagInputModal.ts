@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
+import { assetUrl } from "../core/AssetUrls";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -61,11 +62,11 @@ export class FlagInputModal extends BaseModal {
                   <img
                     class="w-full h-auto rounded group-hover:scale-105 transition-transform duration-200 pointer-events-none"
                     draggable="false"
-                    src="/flags/${country.code}.svg"
+                    src=${assetUrl(`flags/${country.code}.svg`)}
                     loading="lazy"
                     @error=${(e: Event) => {
                       const img = e.currentTarget as HTMLImageElement;
-                      const fallback = "/flags/xx.svg";
+                      const fallback = assetUrl("flags/xx.svg");
                       if (img.src && !img.src.endsWith(fallback)) {
                         img.src = fallback;
                       }

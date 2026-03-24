@@ -178,6 +178,7 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
 
   if (refs.patternName && cosmetics) {
     const pattern = cosmetics.patterns[refs.patternName];
+
     if (pattern) {
       result.pattern = {
         name: refs.patternName,
@@ -185,6 +186,16 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
         colorPalette: refs.patternColorPaletteName
           ? cosmetics.colorPalettes?.[refs.patternColorPaletteName]
           : undefined,
+      };
+    }
+  } else {
+    const devPattern = new UserSettings().getDevOnlyPattern();
+
+    if (devPattern) {
+      result.pattern = {
+        name: devPattern.name,
+        patternData: devPattern.patternData,
+        colorPalette: devPattern.colorPalette,
       };
     }
   }

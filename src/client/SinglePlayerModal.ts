@@ -2,6 +2,7 @@ import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import {
   Difficulty,
   GameMapSize,
@@ -244,7 +245,7 @@ export class SinglePlayerModal extends BaseModal {
                   : "text-white/60"}"
               >
                 <img
-                  src="/images/MedalIconWhite.svg"
+                  src=${assetUrl("images/MedalIconWhite.svg")}
                   class="w-4 h-4 opacity-80 shrink-0"
                   style="${this.showAchievements
                     ? ""
