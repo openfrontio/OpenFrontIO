@@ -22,6 +22,7 @@ export class WarshipExecution implements Execution {
   private alreadySentShell = new Set<Unit>();
   private retreatPortTile: TileRef | undefined;
   private retreatingForRepair = false;
+  private docked = false;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -61,6 +62,14 @@ export class WarshipExecution implements Execution {
 
     this.healWarship();
 
+    if (this.docked) {
+      if (this.isFullyHealed()) {
+        this.docked = false;
+        this.cancelRepairRetreat();
+      }
+      return;
+    }
+
     if (this.handleRepairRetreat()) {
       return;
     }
@@ -98,8 +107,49 @@ export class WarshipExecution implements Execution {
   }
 
   private healWarship(): void {
-    if (this.warship.owner().unitCount(UnitType.Port) > 0) {
-      this.warship.modifyHealth(1);
+    const owner = this.warship.owner();
+    const passiveHealing = this.mg.config().warshipPassiveHealing();
+    const passiveHealingRange = this.mg.config().warshipPassiveHealingRange();
+    const passiveHealingRangeSquared =
+      passiveHealingRange * passiveHealingRange;
+    const warshipTile = this.warship.tile();
+
+    let isNearPort = false;
+    for (const port of owner.units(UnitType.Port)) {
+      const distSquared = this.mg.euclideanDistSquared(
+        warshipTile,
+        port.tile(),
+      );
+      if (distSquared <= passiveHealingRangeSquared) {
+        isNearPort = true;
+        break;
+      }
+    }
+
+    if (isNearPort) {
+      this.warship.modifyHealth(passiveHealing);
+    }
+
+    if (this.docked) {
+      const bonus = this.mg.config().warshipPortHealingBonus();
+      const dockedPort = owner
+        .units(UnitType.Port)
+        .find((p) => p.tile() === this.retreatPortTile);
+      if (dockedPort) {
+        const portTile = dockedPort.tile();
+        const dockingRadius = 5;
+        const dockingRadiusSq = dockingRadius * dockingRadius;
+        const dockedShips = owner.units(UnitType.Warship).filter((ship) => {
+          const shipTile = ship.tile();
+          return (
+            this.mg.euclideanDistSquared(shipTile, portTile) <= dockingRadiusSq
+          );
+        }).length;
+
+        const healingPool = dockedPort.level() * bonus;
+        const activeHealing = dockedShips > 0 ? healingPool / dockedShips : 0;
+        this.warship.modifyHealth(activeHealing);
+      }
     }
   }
 
@@ -139,7 +189,6 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
 
-    // Find nearest port (without capacity constraint)
     let bestTile: TileRef | undefined = undefined;
     let bestDistance = Infinity;
     for (const port of ports) {
@@ -180,7 +229,6 @@ export class WarshipExecution implements Execution {
   private startRepairRetreat(): void {
     this.retreatingForRepair = true;
     this.warship.setRetreating(true);
-    // Find nearest port (ANY port, even if full - we'll wait near it if needed)
     this.retreatPortTile = this.findNearestPort();
     this.warship.setTargetUnit(undefined);
     if (this.retreatPortTile === undefined) {
@@ -207,6 +255,11 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
+    if (!this.refreshRetreatPortTile()) {
+      this.cancelRepairRetreat();
+      return false;
+    }
+
     this.warship.setTargetUnit(undefined);
 
     const retreatPortTile = this.retreatPortTile;
@@ -214,9 +267,28 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
-    if (this.warship.tile() === retreatPortTile) {
-      this.warship.setTargetTile(undefined);
-      return true;
+    const dockingRadius = 5;
+    const dockingRadiusSq = dockingRadius * dockingRadius;
+    const distToPort = this.mg.euclideanDistSquared(
+      this.warship.tile(),
+      retreatPortTile,
+    );
+
+    if (distToPort <= dockingRadiusSq) {
+      // Check if the port has capacity available (excluding this warship from capacity check)
+      const port = this.warship
+        .owner()
+        .units(UnitType.Port)
+        .find((p) => p.tile() === retreatPortTile);
+      if (port && !this.isPortFullOfHealing(port, this.warship)) {
+        // Port has capacity - dock here
+        this.warship.setTargetTile(undefined);
+        this.docked = true;
+        return true;
+      } else {
+        // Port is full - don't cancel retreat, keep waiting near port
+        return true;
+      }
     }
 
     this.warship.setTargetTile(retreatPortTile);
@@ -232,7 +304,7 @@ export class WarshipExecution implements Execution {
         this.warship.move(result.node);
         break;
       case PathStatus.NOT_FOUND:
-        this.retreatPortTile = this.findNearestPort();
+        this.retreatPortTile = this.findNearestAvailablePortTile();
         if (this.retreatPortTile === undefined) {
           this.cancelRepairRetreat();
         }
@@ -248,14 +320,200 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
-    if (
-      this.retreatPortTile === undefined ||
-      !ports.some((port) => port.tile() === this.retreatPortTile)
-    ) {
-      this.retreatPortTile = this.findNearestPort();
+    // Check if current retreat port still exists
+    const currentPortExists =
+      this.retreatPortTile !== undefined &&
+      ports.some((port) => port.tile() === this.retreatPortTile);
+
+    if (!currentPortExists) {
+      this.retreatPortTile = this.findNearestAvailablePortTile();
+      return this.retreatPortTile !== undefined;
     }
 
-    return this.retreatPortTile !== undefined;
+    // Check if current port is now full of healing (not counting arrived warships)
+    const currentPort = ports.find((p) => p.tile() === this.retreatPortTile);
+    if (currentPort && this.isPortFullOfHealing(currentPort)) {
+      // Current port is at healing capacity, look for alternatives
+      const alternativePort = this.findNearestAvailablePort();
+      if (alternativePort) {
+        this.retreatPortTile = alternativePort;
+      }
+      return this.retreatPortTile !== undefined;
+    }
+
+    // Check if a significantly closer port is available
+    const closerPort = this.findBetterPortTile();
+    if (closerPort && closerPort !== this.retreatPortTile) {
+      this.retreatPortTile = closerPort;
+      return true;
+    }
+
+    return true;
+  }
+
+  private isPortFullOfHealing(port: Unit, excludeShip?: Unit): boolean {
+    const portLevel = port.level();
+    const maxShipsHealing = portLevel;
+
+    // Count how many warships are ACTIVELY healing at this port
+    const portTile = port.tile();
+    const radius = this.mg.config().warshipPortHealingRadius();
+    const radiusSquared = radius * radius;
+
+    const healingShips = this.warship
+      .owner()
+      .units(UnitType.Warship)
+      .filter((ship) => {
+        if (excludeShip && ship === excludeShip) return false;
+        if (!ship.retreating()) return false;
+        const shipTile = ship.tile();
+        // Count ships actually at the port
+        return (
+          this.mg.euclideanDistSquared(shipTile, portTile) <= radiusSquared
+        );
+      }).length;
+
+    return healingShips >= maxShipsHealing;
+  }
+
+  private findNearestAvailablePort(): TileRef | undefined {
+    const ports = this.warship.owner().units(UnitType.Port);
+    const warshipTile = this.warship.tile();
+    const warshipComponent = this.mg.getWaterComponent(warshipTile);
+
+    // Find a port that's not at healing capacity
+    let bestTile: TileRef | undefined = undefined;
+    let bestDistance = Infinity;
+
+    for (const port of ports) {
+      // Skip ports that are at healing capacity
+      if (this.isPortFullOfHealing(port)) {
+        continue;
+      }
+
+      const portTile = port.tile();
+      if (
+        warshipComponent !== null &&
+        !this.mg.hasWaterComponent(portTile, warshipComponent)
+      ) {
+        continue;
+      }
+
+      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestTile = portTile;
+      }
+    }
+
+    return bestTile;
+  }
+
+  private findBetterPortTile(): TileRef | undefined {
+    const ports = this.warship.owner().units(UnitType.Port);
+    const warshipTile = this.warship.tile();
+    const warshipComponent = this.mg.getWaterComponent(warshipTile);
+
+    // Get current distance to retreat port
+    let currentDistance = Infinity;
+    if (this.retreatPortTile) {
+      currentDistance = this.mg.euclideanDistSquared(
+        warshipTile,
+        this.retreatPortTile,
+      );
+    }
+
+    // Find closest port with healing capacity available
+    let bestTile: TileRef | undefined = undefined;
+    let bestDistance = Infinity;
+
+    for (const port of ports) {
+      // Prefer ports that have healing capacity available
+      if (this.isPortFullOfHealing(port)) {
+        continue;
+      }
+
+      const portTile = port.tile();
+      if (
+        warshipComponent !== null &&
+        !this.mg.hasWaterComponent(portTile, warshipComponent)
+      ) {
+        continue;
+      }
+
+      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestTile = portTile;
+      }
+    }
+
+    // Switch to better port only if significantly closer (use config threshold)
+    if (
+      bestTile &&
+      bestDistance <
+        currentDistance * this.mg.config().warshipPortSwitchThreshold()
+    ) {
+      return bestTile;
+    }
+
+    return undefined;
+  }
+
+  private findNearestAvailablePortTile(): TileRef | undefined {
+    const ports = this.warship.owner().units(UnitType.Port);
+    if (ports.length === 0) {
+      return undefined;
+    }
+
+    const warshipTile = this.warship.tile();
+    const warshipComponent = this.mg.getWaterComponent(warshipTile);
+
+    let bestTile: TileRef | undefined = undefined;
+    let bestDistance = Infinity;
+    for (const port of ports) {
+      // Skip ports that are at capacity
+      if (this.isPortFullOfHealing(port, this.warship)) {
+        continue;
+      }
+
+      const portTile = port.tile();
+      if (
+        warshipComponent !== null &&
+        !this.mg.hasWaterComponent(portTile, warshipComponent)
+      ) {
+        continue;
+      }
+
+      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestTile = portTile;
+      }
+    }
+
+    // If we found an available port, return it
+    if (bestTile !== undefined) {
+      return bestTile;
+    }
+
+    // Fallback: try without component filtering
+    bestDistance = Infinity;
+    for (const port of ports) {
+      // Skip ports that are at capacity
+      if (this.isPortFullOfHealing(port, this.warship)) {
+        continue;
+      }
+
+      const portTile = port.tile();
+      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestTile = portTile;
+      }
+    }
+
+    return bestTile;
   }
 
   private findTargetUnit(): Unit | undefined {
@@ -413,7 +671,7 @@ export class WarshipExecution implements Execution {
   }
 
   isDocked(): boolean {
-    return false;
+    return this.docked;
   }
 
   activeDuringSpawnPhase(): boolean {
