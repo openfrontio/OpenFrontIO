@@ -39,12 +39,18 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
     return cachedSC;
   }
 
-  const bootstrapGameEnv = window.BOOTSTRAP_CONFIG?.gameEnv;
-  if (!bootstrapGameEnv) {
-    throw new Error("Missing bootstrap server config");
+  const bootstrapGameEnv =
+    typeof window !== "undefined"
+      ? window.BOOTSTRAP_CONFIG?.gameEnv
+      : undefined;
+  const bundledGameEnv =
+    typeof process !== "undefined" ? process.env?.GAME_ENV : undefined;
+  const gameEnv = bootstrapGameEnv ?? bundledGameEnv;
+  if (!gameEnv) {
+    throw new Error("Missing client server config");
   }
 
-  cachedSC = getServerConfig(bootstrapGameEnv);
+  cachedSC = getServerConfig(gameEnv);
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {
