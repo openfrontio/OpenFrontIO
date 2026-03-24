@@ -138,7 +138,6 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold25M", "startingGold1M"],
   ["isHardNations", "startingGold25M"],
   ["isNukesDisabled", "isSAMsDisabled"],
-  ["startingGold25M", "isPeaceTime"],
 ];
 
 export class MapPlaylist {
@@ -228,7 +227,8 @@ export class MapPlaylist {
       excludedModifiers.push("isHardNations");
     }
     if (playerTeams === HumansVsNations) {
-      excludedModifiers.push("startingGold25M"); // Nations are disabled if that modifier is active
+      excludedModifiers.push("startingGold25M"); // Nations are disabled if that modifier is active (Because of PVP immunity)
+      excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
     }
 
     const poolResult = this.getRandomSpecialGameModifiers(excludedModifiers);
@@ -322,7 +322,8 @@ export class MapPlaylist {
     }
 
     // 3min peace = 180s = 1800 ticks
-    const peaceTimeDuration = isPeaceTime ? 180 * 10 : undefined;
+    // 4min peace = 240s = 2400 ticks
+    const peaceTimeDuration = isPeaceTime ? 240 * 10 : undefined;
 
     return {
       donateGold: mode === GameMode.Team,
