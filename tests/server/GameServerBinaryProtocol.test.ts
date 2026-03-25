@@ -237,6 +237,38 @@ describe("GameServer binary gameplay protocol", () => {
     );
   });
 
+  it("kicks malformed binary gameplay messages after start", () => {
+    const logger = createMockLogger();
+    const game = new GameServer(
+      "TEST0004",
+      logger as any,
+      Date.now(),
+      {
+        turnIntervalMs: () => 100,
+        env: () => 0,
+      } as any,
+      createGameConfig(),
+    );
+
+    const clientA = createClient(
+      "P0000001",
+      "55555555-5555-4555-8555-555555555555",
+      "Alice",
+    );
+
+    expect(game.joinClient(clientA.client)).toBe("joined");
+    game.start();
+
+    clientA.ws.sent.length = 0;
+    clientA.ws.emit("message", new Uint8Array([99, 1, 0, 0]), true);
+
+    expect(clientA.ws.sent).toEqual([
+      expect.stringContaining('"error":"kick_reason.invalid_message"'),
+    ]);
+    expect(clientA.ws.readyState).toBe(3);
+    expect(game.activeClients).toHaveLength(0);
+  });
+
   it("accepts JSON rejoin after start and responds with JSON start", () => {
     const logger = createMockLogger();
     const game = new GameServer(

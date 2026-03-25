@@ -336,10 +336,20 @@ export class GameServer {
             return;
           }
 
-          const clientMsg = decodeBinaryClientGameplayMessage(
-            rawDataToUint8Array(message),
-            this.binaryContext,
-          );
+          let clientMsg;
+          try {
+            clientMsg = decodeBinaryClientGameplayMessage(
+              rawDataToUint8Array(message),
+              this.binaryContext,
+            );
+          } catch (e) {
+            this.log.warn(`Failed to parse client binary message, kicking`, {
+              clientID: client.clientID,
+              error: String(e),
+            });
+            this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+            return;
+          }
           if (!this.checkRateLimit(client, clientMsg.type, bytes)) {
             return;
           }
