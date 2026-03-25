@@ -1,0 +1,56 @@
+{
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 513018,
+    "width": 1500
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 30961,
+    "width": 375
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 126764,
+    "width": 750
+  },
+  "name": "Moldova",
+  "nations": [
+    {
+      "coordinates": [484, 269],
+      "flag": "md",
+      "name": "Edinet",
+      "strength": 1
+    },
+    {
+      "coordinates": [824, 1045],
+      "flag": "md",
+      "name": "Comrat",
+      "strength": 1
+    },
+    {
+      "coordinates": [635, 385],
+      "flag": "md",
+      "name": "Balti",
+      "strength": 2
+    },
+    {
+      "coordinates": [923, 724],
+      "flag": "md",
+      "name": "Chisinau",
+      "strength": 2
+    },
+    {
+      "coordinates": [1099, 796],
+      "flag": "md",
+      "name": "Tiraspol",
+      "strength": 1
+    },
+    {
+      "coordinates": [712, 1272],
+      "flag": "md",
+      "name": "Cahul",
+      "strength": 3
+    }
+  ]
+}
