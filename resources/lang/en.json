@@ -938,6 +938,7 @@
     "pattern": {
       "default": "Default"
     },
+    "random_skin": "Random",
     "select_skin": "Select Skin",
     "selected": "selected"
   },
