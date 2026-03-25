@@ -69,7 +69,7 @@
     {
       "coordinates": [1797, 1315],
       "flag": "in",
-      "name": "Andamar \u0026 Nicobar Islands"
+      "name": "Andaman \u0026 Nicobar Islands"
     },
     {
       "coordinates": [675, 1467],
@@ -214,7 +214,7 @@
     {
       "coordinates": [1087, 290],
       "flag": "in",
-      "name": "Uttaranchal"
+      "name": "Uttarakhand"
     },
     {
       "coordinates": [979, 149],
@@ -223,6 +223,7 @@
     },
     {
       "coordinates": [804, 16],
+      "flag": "",
       "name": "Kashmir"
     },
     {
