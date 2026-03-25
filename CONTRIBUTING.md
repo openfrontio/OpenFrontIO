@@ -16,7 +16,7 @@ We welcome contributions from everyone. By participating in this project, you ag
 ### Prerequisites
 
 - **Node.js**: Ensure you have a recent version installed.
-- **npm**: Version 10.9.2 or higher.
+- **pnpm**: Version 10 or higher (Corepack recommended).
 - **Git**: For version control.
 
 ### Installation
@@ -28,9 +28,9 @@ We welcome contributions from everyone. By participating in this project, you ag
    cd OpenFrontIO
    ```
 3. **Install dependencies**:
-   > **Important**: Use `npm run inst` instead of `npm install`. This runs `npm ci --ignore-scripts` to ensure a consistent and secure environment.
+   > **Important**: Use `pnpm run inst` instead of `pnpm install`. This runs `pnpm install --frozen-lockfile --ignore-scripts` to ensure a consistent and secure environment.
    ```bash
-   npm run inst
+   pnpm run inst
    ```
 
 ### Running the Game
@@ -38,7 +38,7 @@ We welcome contributions from everyone. By participating in this project, you ag
 - **Full Development Mode** (Client + Server):
 
   ```bash
-  npm run dev
+  pnpm run dev
   ```
 
   This starts the webpack dev server and the game server, and opens your browser.
@@ -46,12 +46,12 @@ We welcome contributions from everyone. By participating in this project, you ag
 - **Client Only**:
 
   ```bash
-  npm run start:client
+  pnpm run start:client
   ```
 
 - **Server Only**:
   ```bash
-  npm run start:server-dev
+  pnpm run start:server-dev
   ```
 
 ## Development Workflow
@@ -72,15 +72,15 @@ We enforce code quality using ESLint and Prettier.
 
 - **Format Code**:
   ```bash
-  npm run format
+  pnpm run format
   ```
 - **Lint Code**:
   ```bash
-  npm run lint
+  pnpm run lint
   ```
 - **Lint & Fix**:
   ```bash
-  npm run lint:fix
+  pnpm run lint:fix
   ```
 
 ### Testing
@@ -89,11 +89,11 @@ All new features and bug fixes should include relevant tests. We use **Vitest**.
 
 - **Run Tests**:
   ```bash
-  npm test
+  pnpm test
   ```
 - **Run Coverage**:
   ```bash
-  npm run test:coverage
+  pnpm run test:coverage
   ```
 
 **Note**: All code changes in `src/core` **MUST** be tested to ensure game logic stability.
@@ -128,7 +128,7 @@ Before submitting, ensure you have:
 - [ ] Added screenshots for any UI changes.
 - [ ] Processed text through `translateText()` and added strings to `en.json`.
 - [ ] Added/Updated tests in the `tests/` directory.
-- [ ] Verified that `npm test` passes.
+- [ ] Verified that `pnpm test` passes.
 - [ ] Provided your Discord username in the PR description for communication.
 
 ## Translations
