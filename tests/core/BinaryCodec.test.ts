@@ -40,6 +40,14 @@ const clientIntentMessages: ClientIntentMessage[] = [
     type: "intent",
     intent: {
       type: "attack",
+      targetID: "kli0dx59",
+      troops: 18,
+    },
+  },
+  {
+    type: "intent",
+    intent: {
+      type: "attack",
       targetID: null,
       troops: null,
     },
@@ -291,6 +299,26 @@ describe("BinaryCodec", () => {
             recipient: AllPlayers,
             emoji: 2,
             clientID: "P0000002",
+          },
+        ],
+      },
+    };
+    const encoded = encodeBinaryServerGameplayMessage(message, context);
+    const decoded = decodeBinaryServerGameplayMessage(encoded, context);
+    expect(decoded).toEqual(message);
+  });
+
+  it("round-trips server turn messages with non-lobby target ids", () => {
+    const message: ServerTurnMessage = {
+      type: "turn",
+      turn: {
+        turnNumber: 6,
+        intents: [
+          {
+            type: "attack",
+            targetID: "kli0dx59",
+            troops: 9,
+            clientID: "P0000001",
           },
         ],
       },

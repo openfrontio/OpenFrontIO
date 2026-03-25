@@ -16,6 +16,7 @@ export const BINARY_PROTOCOL_VERSION = 1;
 export const BINARY_HEADER_SIZE = 4;
 export const NO_PLAYER_INDEX = 0xffff;
 export const ALL_PLAYERS_INDEX = 0xfffe;
+export const INLINE_PLAYER_ID_INDEX = 0xfffd;
 
 export enum BinaryMessageType {
   Intent = 1,

@@ -163,6 +163,80 @@ describe("GameServer binary gameplay protocol", () => {
     );
   });
 
+  it("round-trips binary attacks that target bot-style ids", () => {
+    const logger = createMockLogger();
+    const game = new GameServer(
+      "TEST0003",
+      logger as any,
+      Date.now(),
+      {
+        turnIntervalMs: () => 100,
+        env: () => 0,
+      } as any,
+      createGameConfig(),
+    );
+
+    const clientA = createClient(
+      "P0000001",
+      "44444444-4444-4444-8444-444444444444",
+      "Alice",
+    );
+
+    expect(game.joinClient(clientA.client)).toBe("joined");
+    game.start();
+
+    const startPayload = clientA.ws.sent.find(
+      (message): message is string =>
+        typeof message === "string" && message.includes('"type":"start"'),
+    );
+    expect(startPayload).toBeDefined();
+
+    const binaryContext = binaryContextFromGameStartInfo(
+      JSON.parse(startPayload!).gameStartInfo,
+    );
+    const attackMessage = encodeBinaryClientGameplayMessage(
+      {
+        type: "intent",
+        intent: {
+          type: "attack",
+          targetID: "kli0dx59",
+          troops: 25,
+        },
+      },
+      binaryContext,
+    );
+
+    clientA.ws.emit("message", attackMessage, true);
+    (game as any).endTurn();
+
+    const binaryTurn = [...clientA.ws.sent]
+      .reverse()
+      .find(
+        (message): message is Uint8Array =>
+          message instanceof Uint8Array && message[1] === 2,
+      );
+    expect(binaryTurn).toBeDefined();
+
+    const decodedTurn = decodeBinaryServerGameplayMessage(
+      binaryTurn!,
+      binaryContext,
+    );
+    expect(decodedTurn.type).toBe("turn");
+    if (decodedTurn.type !== "turn") {
+      throw new Error("Expected binary turn message");
+    }
+    expect(decodedTurn.turn.intents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "attack",
+          targetID: "kli0dx59",
+          troops: 25,
+          clientID: "P0000001",
+        }),
+      ]),
+    );
+  });
+
   it("accepts JSON rejoin after start and responds with JSON start", () => {
     const logger = createMockLogger();
     const game = new GameServer(

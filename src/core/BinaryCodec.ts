@@ -5,6 +5,7 @@ import {
   BinaryMessageType,
   BinaryProtocolContext,
   BinaryServerGameplayMessage,
+  INLINE_PLAYER_ID_INDEX,
   INTENT_FLAG_OPTION_A,
   INTENT_FLAG_OPTION_B,
   createBinaryProtocolContext,
@@ -29,7 +30,7 @@ import {
   ServerTurnMessage,
   StampedIntent,
 } from "./Schemas";
-import { UnitType } from "./game/Game";
+import { AllPlayers, UnitType } from "./game/Game";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -460,7 +461,7 @@ function encodeIntent(
   switch (intent.type) {
     case "attack":
       if (intent.targetID !== null) {
-        writer.writeUint16(playerIdToIndex(intent.targetID, context));
+        writePlayerRef(writer, intent.targetID, context);
       }
       if (intent.troops !== null) {
         writer.writeFloat64(intent.troops);
@@ -473,7 +474,7 @@ function encodeIntent(
       writer.writeUint32(intent.tile);
       return;
     case "mark_disconnected":
-      writer.writeUint16(playerIdToIndex(intent.clientID, context));
+      writeRequiredPlayerRef(writer, intent.clientID, context);
       writer.writeBoolean(intent.isDisconnected);
       return;
     case "boat":
@@ -484,23 +485,23 @@ function encodeIntent(
       writer.writeUint32(intent.unitID);
       return;
     case "allianceRequest":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writeRequiredPlayerRef(writer, intent.recipient, context);
       return;
     case "allianceReject":
-      writer.writeUint16(playerIdToIndex(intent.requestor, context));
+      writeRequiredPlayerRef(writer, intent.requestor, context);
       return;
     case "breakAlliance":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writeRequiredPlayerRef(writer, intent.recipient, context);
       return;
     case "targetPlayer":
-      writer.writeUint16(playerIdToIndex(intent.target, context));
+      writeRequiredPlayerRef(writer, intent.target, context);
       return;
     case "emoji":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writePlayerRef(writer, intent.recipient, context);
       writer.writeUint16(intent.emoji);
       return;
     case "donate_gold":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writeRequiredPlayerRef(writer, intent.recipient, context);
       if (intent.gold === null) {
         writer.writeBoolean(false);
       } else {
@@ -509,7 +510,7 @@ function encodeIntent(
       }
       return;
     case "donate_troops":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writeRequiredPlayerRef(writer, intent.recipient, context);
       if (intent.troops === null) {
         writer.writeBoolean(false);
       } else {
@@ -526,7 +527,7 @@ function encodeIntent(
       writer.writeUint32(intent.unitId);
       return;
     case "embargo":
-      writer.writeUint16(playerIdToIndex(intent.targetID, context));
+      writeRequiredPlayerRef(writer, intent.targetID, context);
       writer.writeBoolean(intent.action === "start");
       return;
     case "embargo_all":
@@ -537,14 +538,14 @@ function encodeIntent(
       writer.writeUint32(intent.tile);
       return;
     case "quick_chat":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writeRequiredPlayerRef(writer, intent.recipient, context);
       writer.writeString(intent.quickChatKey);
       if (intent.target !== undefined) {
-        writer.writeUint16(playerIdToIndex(intent.target, context));
+        writeRequiredPlayerRef(writer, intent.target, context);
       }
       return;
     case "allianceExtension":
-      writer.writeUint16(playerIdToIndex(intent.recipient, context));
+      writeRequiredPlayerRef(writer, intent.recipient, context);
       return;
     case "delete_unit":
       writer.writeUint32(intent.unitId);
@@ -576,9 +577,7 @@ function decodeIntent(
       const hasTroops = (flags & INTENT_FLAG_OPTION_B) !== 0;
       return {
         type: "attack",
-        targetID: hasTarget
-          ? requireClientId(reader.readUint16(), context)
-          : null,
+        targetID: hasTarget ? readRequiredPlayerRef(reader, context) : null,
         troops: hasTroops ? reader.readFloat64() : null,
       };
     }
@@ -598,7 +597,7 @@ function decodeIntent(
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "mark_disconnected",
-        clientID: requireClientId(reader.readUint16(), context),
+        clientID: readRequiredPlayerRef(reader, context),
         isDisconnected: reader.readBoolean(),
       };
     case "boat":
@@ -618,29 +617,29 @@ function decodeIntent(
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "allianceRequest",
-        recipient: requireClientId(reader.readUint16(), context),
+        recipient: readRequiredPlayerRef(reader, context),
       };
     case "allianceReject":
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "allianceReject",
-        requestor: requireClientId(reader.readUint16(), context),
+        requestor: readRequiredPlayerRef(reader, context),
       };
     case "breakAlliance":
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "breakAlliance",
-        recipient: requireClientId(reader.readUint16(), context),
+        recipient: readRequiredPlayerRef(reader, context),
       };
     case "targetPlayer":
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "targetPlayer",
-        target: requireClientId(reader.readUint16(), context),
+        target: readRequiredPlayerRef(reader, context),
       };
     case "emoji": {
       assertIntentFlags(intentType, flags, 0);
-      const recipient = playerIndexToId(reader.readUint16(), context);
+      const recipient = readPlayerRef(reader, context);
       if (recipient === null) {
         throw new Error("Emoji recipient cannot be null");
       }
@@ -652,7 +651,7 @@ function decodeIntent(
     }
     case "donate_gold": {
       assertIntentFlags(intentType, flags, 0);
-      const recipient = requireClientId(reader.readUint16(), context);
+      const recipient = readRequiredPlayerRef(reader, context);
       const hasGold = reader.readBoolean();
       return {
         type: "donate_gold",
@@ -662,7 +661,7 @@ function decodeIntent(
     }
     case "donate_troops": {
       assertIntentFlags(intentType, flags, 0);
-      const recipient = requireClientId(reader.readUint16(), context);
+      const recipient = readRequiredPlayerRef(reader, context);
       const hasTroops = reader.readBoolean();
       return {
         type: "donate_troops",
@@ -699,7 +698,7 @@ function decodeIntent(
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "embargo",
-        targetID: requireClientId(reader.readUint16(), context),
+        targetID: readRequiredPlayerRef(reader, context),
         action: reader.readBoolean() ? "start" : "stop",
       };
     case "embargo_all":
@@ -717,11 +716,11 @@ function decodeIntent(
       };
     case "quick_chat": {
       assertIntentFlags(intentType, flags, INTENT_FLAG_OPTION_A);
-      const recipient = requireClientId(reader.readUint16(), context);
+      const recipient = readRequiredPlayerRef(reader, context);
       const quickChatKey = reader.readString();
       const target =
         (flags & INTENT_FLAG_OPTION_A) !== 0
-          ? requireClientId(reader.readUint16(), context)
+          ? readRequiredPlayerRef(reader, context)
           : undefined;
       if (!QuickChatKeySchema.safeParse(quickChatKey).success) {
         throw new Error(`Invalid quick chat key: ${quickChatKey}`);
@@ -737,7 +736,7 @@ function decodeIntent(
       assertIntentFlags(intentType, flags, 0);
       return {
         type: "allianceExtension",
-        recipient: requireClientId(reader.readUint16(), context),
+        recipient: readRequiredPlayerRef(reader, context),
       };
     case "delete_unit":
       assertIntentFlags(intentType, flags, 0);
@@ -771,6 +770,54 @@ function assertIntentFlags(
       `Unsupported flags ${invalidFlags} for binary intent type ${intentType}`,
     );
   }
+}
+
+function writePlayerRef(
+  writer: BinaryWriter,
+  playerId: string | null | typeof AllPlayers,
+  context: BinaryProtocolContext,
+) {
+  if (playerId === null || playerId === AllPlayers) {
+    writer.writeUint16(playerIdToIndex(playerId, context));
+    return;
+  }
+  const mappedIndex = context.playerIdToIndex.get(playerId);
+  if (mappedIndex !== undefined) {
+    writer.writeUint16(mappedIndex);
+    return;
+  }
+  writer.writeUint16(INLINE_PLAYER_ID_INDEX);
+  writer.writeString(playerId);
+}
+
+function writeRequiredPlayerRef(
+  writer: BinaryWriter,
+  playerId: string,
+  context: BinaryProtocolContext,
+) {
+  writePlayerRef(writer, playerId, context);
+}
+
+function readPlayerRef(
+  reader: BinaryReader,
+  context: BinaryProtocolContext,
+): string | null | typeof AllPlayers {
+  const playerIndex = reader.readUint16();
+  if (playerIndex === INLINE_PLAYER_ID_INDEX) {
+    return reader.readString();
+  }
+  return playerIndexToId(playerIndex, context);
+}
+
+function readRequiredPlayerRef(
+  reader: BinaryReader,
+  context: BinaryProtocolContext,
+): string {
+  const playerId = readPlayerRef(reader, context);
+  if (playerId === null || playerId === AllPlayers) {
+    throw new Error(`Expected player ID, received ${String(playerId)}`);
+  }
+  return playerId;
 }
 
 export function isBinaryGameplayClientMessage(
