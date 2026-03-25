@@ -1,0 +1,120 @@
+{
+  "name": "Strait of Florida",
+  "nations": [
+    {
+      "name": "La Habana",
+      "coordinates": [700, 1314],
+      "flag": "cu-lh"
+    },
+    {
+      "name": "Guantanamo Bay",
+      "coordinates": [2649, 2038],
+      "flag": "us"
+    },
+    {
+      "name": "Cruces",
+      "coordinates": [1165, 1422],
+      "flag": "cu-cruces"
+    },
+    {
+      "name": "Santa Clara",
+      "coordinates": [1313, 1379],
+      "flag": "cu-sc"
+    },
+    {
+      "name": "Bayamo",
+      "coordinates": [2197, 1936],
+      "flag": "cu-bayamo"
+    },
+    {
+      "name": "Trinidad",
+      "coordinates": [1350, 1519],
+      "flag": "cu-trinidad"
+    },
+    {
+      "name": "Tampa",
+      "coordinates": [812, 46],
+      "flag": "fl-tampa"
+    },
+    {
+      "name": "Sarasota",
+      "coordinates": [835, 170],
+      "flag": "fl-sarasota"
+    },
+    {
+      "name": "Orlando",
+      "coordinates": [1071, 20],
+      "flag": "fl-orlando"
+    },
+    {
+      "name": "Key West",
+      "coordinates": [996, 914],
+      "flag": "fl-kw"
+    },
+    {
+      "name": "Okeechobee",
+      "coordinates": [1184, 260],
+      "flag": "fl-okeechobee"
+    },
+    {
+      "name": "Miami",
+      "coordinates": [1373, 609],
+      "flag": "fl-miami"
+    },
+    {
+      "name": "Fort Lauderdale",
+      "coordinates": [1400, 452],
+      "flag": "fl-fl"
+    },
+    {
+      "name": "Jupiter",
+      "coordinates": [1402, 311],
+      "flag": "fl-jupiter"
+    },
+    {
+      "name": "Nassau",
+      "coordinates": [2072, 795],
+      "flag": "bs-nassau"
+    },
+    {
+      "name": "Cayman Islands",
+      "coordinates": [1480, 2100],
+      "flag": "ky"
+    },
+    {
+      "name": "Everglades Gators",
+      "coordinates": [1138, 543],
+      "flag": "fl-everglades"
+    },
+    {
+      "name": "Pinar del Río",
+      "coordinates": [460, 1460],
+      "flag": "cu-pr"
+    },
+    {
+      "name": "Matanzas",
+      "coordinates": [1052, 1280],
+      "flag": "cu-matanzas"
+    },
+    {
+      "name": "Camagüey",
+      "coordinates": [1948, 1687],
+      "flag": "cu-camaguey"
+    },
+    {
+      "name": "Holguín",
+      "coordinates": [2405, 1811],
+      "flag": "cu-holguin"
+    },
+    {
+      "name": "Santiago de Cuba",
+      "coordinates": [2447, 2011],
+      "flag": "cu-santiago"
+    },
+    {
+      "name": "Sancti Spíritus",
+      "coordinates": [1633, 1540],
+      "flag": "cu-ss"
+    }
+  ]
+}

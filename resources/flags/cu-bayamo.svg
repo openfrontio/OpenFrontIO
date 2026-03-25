@@ -1,0 +1,19 @@
+<svg data-name="レイヤー_1" version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+ <!-- Generator: Adobe Illustrator 29.4.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 152)  -->
+ <defs>
+  <style>.st0 {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2px;
+      }</style>
+ </defs>
+ <g transform="matrix(.26037 0 0 .24567 5 16.5)" fill-rule="evenodd">
+  <path d="m0 0h119.06v79.375h-119.06z" fill="#f00"/>
+  <path d="m119.06 0h119.06v79.375h-119.06z" fill="#fff"/>
+  <path d="m1.91e-6 79.375h238.12v79.375h-238.12z" fill="#0070bb"/>
+ </g>
+ <path d="m13.611 24.792h13.778l-11.145 7.6421 4.2616-12.368 4.2616 12.368z" fill="#fff" stroke-width=".25291"/>
+ <path class="st0" d="m5 17h62v38h-62z"/>
+</svg>

@@ -1,0 +1,135 @@
+{
+  "map": {
+    "height": 2148,
+    "num_land_tiles": 987582,
+    "width": 3000
+  },
+  "map16x": {
+    "height": 537,
+    "num_land_tiles": 56386,
+    "width": 750
+  },
+  "map4x": {
+    "height": 1074,
+    "num_land_tiles": 239114,
+    "width": 1500
+  },
+  "name": "Strait of Florida",
+  "nations": [
+    {
+      "coordinates": [700, 1314],
+      "flag": "cu-lh",
+      "name": "La Habana"
+    },
+    {
+      "coordinates": [2649, 2038],
+      "flag": "us",
+      "name": "Guantanamo Bay"
+    },
+    {
+      "coordinates": [1165, 1422],
+      "flag": "cu-cruces",
+      "name": "Cruces"
+    },
+    {
+      "coordinates": [1313, 1379],
+      "flag": "cu-sc",
+      "name": "Santa Clara"
+    },
+    {
+      "coordinates": [2197, 1936],
+      "flag": "cu-bayamo",
+      "name": "Bayamo"
+    },
+    {
+      "coordinates": [1350, 1519],
+      "flag": "cu-trinidad",
+      "name": "Trinidad"
+    },
+    {
+      "coordinates": [812, 46],
+      "flag": "fl-tampa",
+      "name": "Tampa"
+    },
+    {
+      "coordinates": [835, 170],
+      "flag": "fl-sarasota",
+      "name": "Sarasota"
+    },
+    {
+      "coordinates": [1071, 20],
+      "flag": "fl-orlando",
+      "name": "Orlando"
+    },
+    {
+      "coordinates": [996, 914],
+      "flag": "fl-kw",
+      "name": "Key West"
+    },
+    {
+      "coordinates": [1184, 260],
+      "flag": "fl-okeechobee",
+      "name": "Okeechobee"
+    },
+    {
+      "coordinates": [1373, 609],
+      "flag": "fl-miami",
+      "name": "Miami"
+    },
+    {
+      "coordinates": [1400, 452],
+      "flag": "fl-fl",
+      "name": "Fort Lauderdale"
+    },
+    {
+      "coordinates": [1402, 311],
+      "flag": "fl-jupiter",
+      "name": "Jupiter"
+    },
+    {
+      "coordinates": [2072, 795],
+      "flag": "bs-nassau",
+      "name": "Nassau"
+    },
+    {
+      "coordinates": [1480, 2100],
+      "flag": "ky",
+      "name": "Cayman Islands"
+    },
+    {
+      "coordinates": [1138, 543],
+      "flag": "fl-everglades",
+      "name": "Everglades Gators"
+    },
+    {
+      "coordinates": [460, 1460],
+      "flag": "cu-pr",
+      "name": "Pinar del Río"
+    },
+    {
+      "coordinates": [1052, 1280],
+      "flag": "cu-matanzas",
+      "name": "Matanzas"
+    },
+    {
+      "coordinates": [1948, 1687],
+      "flag": "cu-camaguey",
+      "name": "Camagüey"
+    },
+    {
+      "coordinates": [2405, 1811],
+      "flag": "cu-holguin",
+      "name": "Holguín"
+    },
+    {
+      "coordinates": [2447, 2011],
+      "flag": "cu-santiago",
+      "name": "Santiago de Cuba"
+    },
+    {
+      "coordinates": [1633, 1540],
+      "flag": "cu-ss",
+      "name": "Sancti Spíritus"
+    }
+  ]
+}

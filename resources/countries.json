@@ -236,6 +236,11 @@
     "name": "Basque Country"
   },
   {
+    "code": "cu-bayamo",
+    "continent": "North America",
+    "name": "Bayamo"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -353,6 +358,11 @@
     "code": "California",
     "continent": "North America",
     "name": "California"
+  },
+  {
+    "code": "cu-camaguey",
+    "continent": "North America",
+    "name": "Camagüey"
   },
   {
     "code": "kh",
@@ -521,6 +531,11 @@
     "code": "hr",
     "continent": "Europe",
     "name": "Croatia"
+  },
+  {
+    "code": "cu-cruces",
+    "continent": "North America",
+    "name": "Cruces"
   },
   {
     "code": "Cthulhu Republic",
@@ -692,6 +707,11 @@
     "name": "Europe"
   },
   {
+    "code": "fl-everglades",
+    "continent": "North America",
+    "name": "Everglades Gators"
+  },
+  {
     "code": "fk",
     "continent": "South America",
     "name": "Falkland Islands"
@@ -731,6 +751,11 @@
     "code": "Florida",
     "continent": "North America",
     "name": "Florida"
+  },
+  {
+    "code": "fl-fl",
+    "continent": "North America",
+    "name": "Fort Lauderdale"
   },
   {
     "code": "1_Fortriu",
@@ -887,6 +912,11 @@
     "name": "Guyana"
   },
   {
+    "code": "cu-lh",
+    "continent": "North America",
+    "name": "La Habana"
+  },
+  {
     "code": "Habsburg Austria",
     "continent": "Europe",
     "name": "Habsburg Austria"
@@ -904,6 +934,11 @@
   {
     "code": "hm",
     "name": "Heard Island and McDonald Islands"
+  },
+  {
+    "code": "cu-holguin",
+    "continent": "North America",
+    "name": "Holguín"
   },
   {
     "code": "va",
@@ -1031,6 +1066,11 @@
     "name": "Jordan"
   },
   {
+    "code": "fl-jupiter",
+    "continent": "North America",
+    "name": "Jupiter"
+  },
+  {
     "code": "Kansas",
     "continent": "North America",
     "name": "Kansas"
@@ -1059,6 +1099,11 @@
     "code": "Kentucky",
     "continent": "North America",
     "name": "Kentucky"
+  },
+  {
+    "code": "fl-kw",
+    "continent": "North America",
+    "name": "Key West"
   },
   {
     "code": "Khemet",
@@ -1277,6 +1322,11 @@
     "name": "Maryland"
   },
   {
+    "code": "cu-matanzas",
+    "continent": "North America",
+    "name": "Matanzas"
+  },
+  {
     "code": "mr",
     "continent": "Africa",
     "name": "Mauritania"
@@ -1305,6 +1355,11 @@
     "code": "mx",
     "continent": "North America",
     "name": "Mexico"
+  },
+  {
+    "code": "fl-miami",
+    "continent": "North America",
+    "name": "Miami"
   },
   {
     "code": "Michigan",
@@ -1390,6 +1445,11 @@
     "code": "na",
     "continent": "Africa",
     "name": "Namibia"
+  },
+  {
+    "code": "bs-nassau",
+    "continent": "North America",
+    "name": "Nassau"
   },
   {
     "code": "NATO",
@@ -1545,6 +1605,11 @@
     "name": "Ohio"
   },
   {
+    "code": "fl-okeechobee",
+    "continent": "North America",
+    "name": "Okeechobee"
+  },
+  {
     "code": "Oklahoma",
     "continent": "North America",
     "name": "Oklahoma"
@@ -1558,6 +1623,11 @@
     "code": "Oregon",
     "continent": "North America",
     "name": "Oregon"
+  },
+  {
+    "code": "fl-orlando",
+    "continent": "North America",
+    "name": "Orlando"
   },
   {
     "code": "Ottoman Empire",
@@ -1628,6 +1698,11 @@
     "code": "Phrygia",
     "continent": "Asia",
     "name": "Phrygia"
+  },
+  {
+    "code": "cu-pr",
+    "continent": "North America",
+    "name": "Pinar del Río"
   },
   {
     "code": "pn",
@@ -1808,6 +1883,11 @@
     "name": "Samoa"
   },
   {
+    "code": "cu-ss",
+    "continent": "North America",
+    "name": "Sancti Spíritus"
+  },
+  {
     "code": "sm",
     "continent": "Europe",
     "name": "San Marino"
@@ -1818,8 +1898,23 @@
     "name": "Santa Cruz"
   },
   {
+    "code": "cu-sc",
+    "continent": "North America",
+    "name": "Santa Clara"
+  },
+  {
     "code": "santa_claus",
     "name": "Santa Claus"
+  },
+  {
+    "code": "cu-santiago",
+    "continent": "North America",
+    "name": "Santiago de Cuba"
+  },
+  {
+    "code": "fl-sarasota",
+    "continent": "North America",
+    "name": "Sarasota"
   },
   {
     "code": "st",
@@ -2060,6 +2155,11 @@
     "name": "Tajikistan"
   },
   {
+    "code": "fl-tampa",
+    "continent": "North America",
+    "name": "Tampa"
+  },
+  {
     "code": "tz",
     "continent": "Africa",
     "name": "Tanzania"
@@ -2103,6 +2203,11 @@
     "code": "to",
     "continent": "Oceania",
     "name": "Tonga"
+  },
+  {
+    "code": "cu-trinidad",
+    "continent": "North America",
+    "name": "Trinidad (Cuba)"
   },
   {
     "code": "tt",
