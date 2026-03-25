@@ -2,6 +2,7 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { UserMeResponse } from "src/core/ApiSchemas";
+import { assetUrl } from "src/core/AssetUrls";
 import { Cosmetics } from "src/core/CosmeticSchemas";
 import { UserSettings } from "src/core/game/UserSettings";
 import { getUserMe } from "./Api";
@@ -58,7 +59,7 @@ export class FlagInputModal extends BaseModal {
             .flag=${{
               key: "country:xx",
               name: "None",
-              url: "/flags/xx.svg",
+              url: assetUrl("/flags/xx.svg"),
             }}
             .selected=${selectedFlag === "" || selectedFlag === "country:xx"}
             .onSelect=${onSelect}
@@ -76,7 +77,7 @@ export class FlagInputModal extends BaseModal {
           .flag=${{
             key: `country:${country.code}`,
             name: country.name,
-            url: `/flags/${country.code}.svg`,
+            url: assetUrl(`/flags/${country.code}.svg`),
           }}
           .selected=${selectedFlag === `country:${country.code}`}
           .onSelect=${onSelect}
