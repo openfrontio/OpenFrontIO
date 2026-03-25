@@ -2,7 +2,7 @@ import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { getClanTag } from "../Util";
+import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -120,6 +120,10 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Tourney1 = "Tourney 2 Teams",
+  Tourney2 = "Tourney 3 Teams",
+  Tourney3 = "Tourney 4 Teams",
+  Tourney4 = "Tourney 8 Teams",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
@@ -136,14 +140,12 @@ export enum GameMapType {
   Hawaii = "Hawaii",
   Alps = "Alps",
   NileDelta = "Nile Delta",
+  Arctic = "Arctic",
+  SanFrancisco = "San Francisco",
+  Aegean = "Aegean",
 }
 
 export type GameMapName = keyof typeof GameMapType;
-
-/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
-export function hasUnusualThumbnailSize(map: GameMapType): boolean {
-  return map === GameMapType.AmazonRiver || map === GameMapType.Passage;
-}
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -189,6 +191,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Hawaii,
     GameMapType.Alps,
     GameMapType.NileDelta,
+    GameMapType.Arctic,
+    GameMapType.SanFrancisco,
+    GameMapType.Aegean,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -208,6 +213,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
+  ],
+  tournament: [
+    GameMapType.Tourney1,
+    GameMapType.Tourney2,
+    GameMapType.Tourney3,
+    GameMapType.Tourney4,
   ],
 };
 
@@ -237,11 +248,17 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
+  goldMultiplier?: number;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
 }
 
 export interface UnitInfo {
@@ -250,6 +267,15 @@ export interface UnitInfo {
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
+}
+
+function unitTypeGroup<T extends readonly UnitType[]>(types: T) {
+  return {
+    types,
+    has(type: UnitType): type is T[number] {
+      return (types as readonly UnitType[]).includes(type);
+    },
+  };
 }
 
 export enum UnitType {
@@ -277,20 +303,40 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
+export const Nukes = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRVWarhead,
+  UnitType.MIRV,
+] as const);
+
+export const BuildableAttacks = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.Warship,
+] as const);
+
+export const Structures = unitTypeGroup([
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
-]);
+] as const);
 
-export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+export const BuildMenus = unitTypeGroup([
+  ...Structures.types,
+  ...BuildableAttacks.types,
+] as const);
 
-export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
-}
+export const PlayerBuildable = unitTypeGroup([
+  ...BuildMenus.types,
+  UnitType.TransportShip,
+] as const);
+
+export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
 
 export interface OwnerComp {
   owner: Player;
@@ -360,13 +406,6 @@ export interface UnitParamsMap {
 export type UnitParams<T extends UnitType> = UnitParamsMap[T];
 
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
-
-export const nukeTypes = [
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRVWarhead,
-  UnitType.MIRV,
-] as UnitType[];
 
 export enum Relation {
   Hostile = 0,
@@ -445,7 +484,7 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
-  averagePosition(): Cell | null;
+  clusteredPositions(): TileRef[];
 }
 
 export interface AllianceRequest {
@@ -478,18 +517,19 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
-  public readonly clan: string | null;
+  public readonly displayName: string;
 
   constructor(
     public readonly name: string,
     public readonly playerType: PlayerType,
-    // null if bot.
+    // null if tribe.
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
+    public readonly clanTag: string | null = null,
   ) {
-    this.clan = getClanTag(name);
+    this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
 }
 
@@ -646,8 +686,15 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
-  canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
+  buildableUnits(
+    tile: TileRef | null,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[];
+  canBuild(
+    type: UnitType,
+    targetTile: TileRef,
+    validTiles?: TileRef[] | null,
+  ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
@@ -674,7 +721,6 @@ export interface Player {
   // Either allied or on same team.
   isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
-  clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
@@ -875,7 +921,7 @@ export interface BuildableUnit {
   canBuild: TileRef | false;
   // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
   canUpgrade: number | false;
-  type: UnitType;
+  type: PlayerBuildableUnitType;
   cost: Gold;
   overlappingRailroads: number[];
   ghostRailPaths: TileRef[][];

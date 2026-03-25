@@ -5,7 +5,7 @@ import {
   Player,
   PlayerType,
   Relation,
-  StructureTypes,
+  Structures,
   Unit,
   UnitType,
 } from "../../game/Game";
@@ -356,7 +356,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(...StructureTypes).length / tilesOwned
+      ? this.player.units(...Structures.types).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 
@@ -697,7 +697,10 @@ export class NationStructureBehavior {
       unitToCluster.set(station.unit, station.getCluster());
     }
 
-    const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
+    const maxTradeGold = Math.max(
+      Number(game.config().trainGold("ally", 0)),
+      1,
+    );
     const result: Array<{
       tile: TileRef;
       cluster: Cluster | null;
@@ -705,7 +708,8 @@ export class NationStructureBehavior {
     }> = [];
 
     // Own structures — weighted by "self" trade gold.
-    const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
+    const selfWeight =
+      Number(game.config().trainGold("self", 0)) / maxTradeGold;
     for (const unit of player.units(
       UnitType.City,
       UnitType.Port,
@@ -730,7 +734,7 @@ export class NationStructureBehavior {
         : player.isAlliedWith(neighbor)
           ? "ally"
           : "other";
-      const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
+      const weight = Number(game.config().trainGold(relType, 0)) / maxTradeGold;
       for (const unit of neighbor.units(
         UnitType.City,
         UnitType.Port,

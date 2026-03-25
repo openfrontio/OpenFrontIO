@@ -1,9 +1,9 @@
 import {
   Execution,
   Game,
-  isStructureType,
   MessageType,
   Player,
+  Structures,
   TerraNullius,
   TrajectoryTile,
   Unit,
@@ -150,7 +150,7 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             // TODO TranslateText
-            `${this.player.name()} - atom bomb inbound`,
+            `${this.player.displayName()} - atom bomb inbound`,
             MessageType.NUKE_INBOUND,
             target.id(),
           );
@@ -158,7 +158,7 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             // TODO TranslateText
-            `${this.player.name()} - hydrogen bomb inbound`,
+            `${this.player.displayName()} - hydrogen bomb inbound`,
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
@@ -346,7 +346,7 @@ export class NukeExecution implements Execution {
   private redrawBuildings(range: number) {
     const rangeSquared = range * range;
     for (const unit of this.mg.units()) {
-      if (isStructureType(unit.type())) {
+      if (Structures.has(unit.type())) {
         if (
           this.mg.euclideanDistSquared(this.dst, unit.tile()) < rangeSquared
         ) {

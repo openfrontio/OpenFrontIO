@@ -2,24 +2,26 @@ import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
 import { PauseGameIntentEvent } from "src/client/Transport";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
-import structureIcon from "/images/CityIconWhite.svg?url";
-import cursorPriceIcon from "/images/CursorPriceIconWhite.svg?url";
-import darkModeIcon from "/images/DarkModeIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import exitIcon from "/images/ExitIconWhite.svg?url";
-import explosionIcon from "/images/ExplosionIconWhite.svg?url";
-import mouseIcon from "/images/MouseIconWhite.svg?url";
-import ninjaIcon from "/images/NinjaIconWhite.svg?url";
-import settingsIcon from "/images/SettingIconWhite.svg?url";
-import sirenIcon from "/images/SirenIconWhite.svg?url";
-import treeIcon from "/images/TreeIconWhite.svg?url";
-import musicIcon from "/images/music.svg?url";
+const structureIcon = assetUrl("images/CityIconWhite.svg");
+const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
+const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const exitIcon = assetUrl("images/ExitIconWhite.svg");
+const explosionIcon = assetUrl("images/ExplosionIconWhite.svg");
+const mouseIcon = assetUrl("images/MouseIconWhite.svg");
+const ninjaIcon = assetUrl("images/NinjaIconWhite.svg");
+const settingsIcon = assetUrl("images/SettingIconWhite.svg");
+const sirenIcon = assetUrl("images/SirenIconWhite.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const treeIcon = assetUrl("images/TreeIconWhite.svg");
+const musicIcon = assetUrl("images/music.svg");
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -160,6 +162,11 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleCursorCostLabelButtonClick() {
     this.userSettings.toggleCursorCostLabel();
+    this.requestUpdate();
+  }
+
+  private onToggleAttackingTroopsOverlayButtonClick() {
+    this.userSettings.toggleAttackingTroopsOverlay();
     this.requestUpdate();
   }
 
@@ -403,6 +410,28 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.structureSprites()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onToggleAttackingTroopsOverlayButtonClick}"
+            >
+              <img src=${swordIcon} alt="swordIcon" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText(
+                    "user_setting.attacking_troops_overlay_label",
+                  )}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.attacking_troops_overlay_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.attackingTroopsOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -71,6 +71,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
+  @state() private disableAlliances: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -112,7 +113,7 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
@@ -174,16 +175,16 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleSpawnImmunityDurationKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.gold_multiplier"}
+        .labelKey=${"host_modal.gold_multiplier"}
         .checked=${this.goldMultiplier}
         .inputId=${"gold-multiplier-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.goldMultiplierValue}
-        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
+        .inputAriaLabel=${translateText("host_modal.gold_multiplier")}
         .inputPlaceholder=${translateText(
-          "single_modal.gold_multiplier_placeholder",
+          "host_modal.gold_multiplier_placeholder",
         )}
         .defaultInputValue=${2}
         .minValidOnEnable=${0.1}
@@ -192,21 +193,21 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.starting_gold"}
+        .labelKey=${"host_modal.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
-        .inputMin=${0}
-        .inputMax=${1000000000}
-        .inputStep=${100000}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
         .inputValue=${this.startingGoldValue}
-        .inputAriaLabel=${translateText("single_modal.starting_gold")}
+        .inputAriaLabel=${translateText("host_modal.starting_gold")}
         .inputPlaceholder=${translateText(
-          "single_modal.starting_gold_placeholder",
+          "host_modal.starting_gold_placeholder",
         )}
-        .defaultInputValue=${5000000}
-        .minValidOnEnable=${0}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0.1}
         .onToggle=${this.handleStartingGoldToggle}
-        .onInput=${this.handleStartingGoldValueChanges}
+        .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
     ];
@@ -294,6 +295,10 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.compact_map",
                     checked: this.compactMap,
                   },
+                  {
+                    labelKey: "host_modal.disable_alliances",
+                    checked: this.disableAlliances,
+                  },
                 ],
                 inputCards,
               },
@@ -328,7 +333,7 @@ export class HostLobbyModal extends BaseModal {
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <button
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
             @click=${this.startGame}
             ?disabled=${this.clients.length < 2}
           >
@@ -406,6 +411,10 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
+  public confirmBeforeClose(): boolean {
+    return confirm(translateText("host_modal.leave_confirmation"));
+  }
+
   protected onClose(): void {
     console.log("Closing host lobby modal");
     this.stopLobbyUpdates();
@@ -453,6 +462,7 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+    this.disableAlliances = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -528,6 +538,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "host_modal.disable_alliances":
+        this.disableAlliances = checked;
+        this.putGameConfig();
         break;
       default:
         break;
@@ -646,12 +660,17 @@ export class HostLobbyModal extends BaseModal {
 
   private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, {
-      min: 0,
-      max: 1000000000,
+    const value = parseBoundedFloatFromInput(input, {
+      min: 0.1,
+      max: 1000,
     });
 
-    this.startingGoldValue = value;
+    if (value === undefined) {
+      this.startingGoldValue = undefined;
+      input.value = "";
+    } else {
+      this.startingGoldValue = value;
+    }
     this.putGameConfig();
   };
 
@@ -783,7 +802,10 @@ export class HostLobbyModal extends BaseModal {
                 ? this.goldMultiplierValue
                 : undefined,
             startingGold:
-              this.startingGold === true ? this.startingGoldValue : undefined,
+              this.startingGold === true && this.startingGoldValue !== undefined
+                ? Math.round(this.startingGoldValue * 1_000_000)
+                : undefined,
+            disableAlliances: this.disableAlliances || undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
@@ -801,7 +823,7 @@ export class HostLobbyModal extends BaseModal {
     // If the modal closes as part of starting the game, do not leave the lobby
     this.leaveLobbyOnClose = false;
 
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
@@ -849,7 +871,7 @@ export class HostLobbyModal extends BaseModal {
 }
 
 async function createLobby(gameID: string): Promise<GameInfo> {
-  const config = await getServerConfigFromClient();
+  const config = await getRuntimeClientServerConfig();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();

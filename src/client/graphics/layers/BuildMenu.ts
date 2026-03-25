@@ -1,11 +1,13 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
+  BuildMenus,
   Gold,
-  PlayerActions,
+  PlayerBuildableUnitType,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -24,20 +26,20 @@ import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import warshipIcon from "/images/BattleshipIconWhite.svg?url";
-import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import mirvIcon from "/images/MIRVIcon.svg?url";
-import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
-import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
-import atomBombIcon from "/images/NukeIconWhite.svg?url";
-import portIcon from "/images/PortIcon.svg?url";
-import samlauncherIcon from "/images/SamLauncherIconWhite.svg?url";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
+const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+const cityIcon = assetUrl("images/CityIconWhite.svg");
+const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const mirvIcon = assetUrl("images/MIRVIcon.svg");
+const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
+const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
+const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
+const portIcon = assetUrl("images/PortIcon.svg");
+const samlauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
+const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 
 export interface BuildItemDisplay {
-  unitType: UnitType;
+  unitType: PlayerBuildableUnitType;
   icon: string;
   description?: string;
   key?: string;
@@ -127,7 +129,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   public uiState: UIState;
   private clickedTile: TileRef;
-  public playerActions: PlayerActions | null = null;
+  public playerBuildables: BuildableUnit[] | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
@@ -145,9 +147,6 @@ export class BuildMenu extends LitElement implements Layer {
         e.x,
         e.y,
       );
-      if (clickedCell === null) {
-        return;
-      }
       if (!this.game.isValidCoord(clickedCell.x, clickedCell.y)) {
         return;
       }
@@ -358,20 +357,15 @@ export class BuildMenu extends LitElement implements Layer {
   private _hidden = true;
 
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
-    if (this.game?.myPlayer() === null || this.playerActions === null) {
+    if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
     }
-    const unit = this.playerActions.buildableUnits.filter(
-      (u) => u.type === item.unitType,
-    );
-    if (unit.length === 0) {
-      return false;
-    }
-    return unit[0].canBuild !== false || unit[0].canUpgrade !== false;
+    const unit = this.playerBuildables.find((u) => u.type === item.unitType);
+    return unit ? unit.canBuild !== false || unit.canUpgrade !== false : false;
   }
 
   public cost(item: BuildItemDisplay): Gold {
-    for (const bu of this.playerActions?.buildableUnits ?? []) {
+    for (const bu of this.playerBuildables ?? []) {
       if (bu.type === item.unitType) {
         return bu.cost;
       }
@@ -419,7 +413,7 @@ export class BuildMenu extends LitElement implements Layer {
           (row) => html`
             <div class="build-row">
               ${row.map((item) => {
-                const buildableUnit = this.playerActions?.buildableUnits.find(
+                const buildableUnit = this.playerBuildables?.find(
                   (bu) => bu.type === item.unitType,
                 );
                 if (buildableUnit === undefined) {
@@ -492,9 +486,9 @@ export class BuildMenu extends LitElement implements Layer {
   private refresh() {
     this.game
       .myPlayer()
-      ?.actions(this.clickedTile)
-      .then((actions) => {
-        this.playerActions = actions;
+      ?.buildables(this.clickedTile, BuildMenus.types)
+      .then((buildables) => {
+        this.playerBuildables = buildables;
         this.requestUpdate();
       });
 

@@ -16,21 +16,21 @@ print_header() {
 # Check command line arguments
 if [ $# -ne 4 ]; then
     echo "Error: Please specify environment, host, version tag, and subdomain"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain]"
+    echo "Usage: $0 [prod|staging] [nbg1|staging|masters|falk2] [version_tag] [subdomain]"
     exit 1
 fi
 
 # Validate first argument (environment)
 if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain]"
+    echo "Usage: $0 [prod|staging] [nbg1|staging|masters|falk2] [version_tag] [subdomain]"
     exit 1
 fi
 
 # Validate second argument (host)
-if [ "$2" != "falk1" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
-    echo "Error: Second argument must be either 'falk1', 'nbg1', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain]"
+if [ "$2" != "falk2" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
+    echo "Error: Second argument must be either 'falk2', 'nbg1', 'staging', or 'masters'"
+    echo "Usage: $0 [prod|staging] [nbg1|staging|masters|falk2] [version_tag] [subdomain]"
     exit 1
 fi
 
@@ -75,9 +75,9 @@ elif [ "$HOST" == "nbg1" ]; then
 elif [ "$HOST" == "masters" ]; then
     print_header "DEPLOYING TO MASTERS HOST"
     SERVER_HOST=$SERVER_HOST_MASTERS
-else
-    print_header "DEPLOYING TO FALK1 HOST"
-    SERVER_HOST=$SERVER_HOST_FALK1
+elif [ "$HOST" == "falk2" ]; then
+    print_header "DEPLOYING TO FALK2 HOST"
+    SERVER_HOST=$SERVER_HOST_FALK2
 fi
 
 # Check required environment variables

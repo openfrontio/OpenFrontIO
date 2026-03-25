@@ -1,11 +1,11 @@
-import { Execution, Game, isStructureType, Player } from "../game/Game";
+﻿import { Execution, Game, Player, Structures } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
-export class BotExecution implements Execution {
+export class TribeExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
   private mg: Game;
@@ -18,8 +18,8 @@ export class BotExecution implements Execution {
   private reserveRatio: number;
   private expandRatio: number;
 
-  constructor(private bot: Player) {
-    this.random = new PseudoRandom(simpleHash(bot.id()));
+  constructor(private tribe: Player) {
+    this.random = new PseudoRandom(simpleHash(tribe.id()));
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
@@ -38,8 +38,8 @@ export class BotExecution implements Execution {
   tick(ticks: number) {
     if (ticks % this.attackRate !== this.attackTick) return;
 
-    if (!this.bot.isAlive()) {
-      //removeOnDeath is called from bot's PlayerExecution
+    if (!this.tribe.isAlive()) {
+      //removeOnDeath is called from tribe's PlayerExecution
       this.active = false;
       return;
     }
@@ -48,7 +48,7 @@ export class BotExecution implements Execution {
       this.attackBehavior = new AiAttackBehavior(
         this.random,
         this.mg,
-        this.bot,
+        this.tribe,
         this.triggerRatio,
         this.reserveRatio,
         this.expandRatio,
@@ -66,27 +66,27 @@ export class BotExecution implements Execution {
 
   private acceptAllAllianceRequests() {
     // Accept all alliance requests
-    for (const req of this.bot.incomingAllianceRequests()) {
+    for (const req of this.tribe.incomingAllianceRequests()) {
       req.accept();
     }
 
     // Accept all alliance extension requests
-    for (const alliance of this.bot.alliances()) {
+    for (const alliance of this.tribe.alliances()) {
       // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
-      // Skip if no expiration yet/ ally didn't request extension yet / bot already agreed to extend
+      // Skip if no expiration yet/ ally didn't request extension yet / tribe already agreed to extend
       if (!alliance.onlyOneAgreedToExtend()) continue;
 
-      const human = alliance.other(this.bot);
+      const human = alliance.other(this.tribe);
       this.mg.addExecution(
-        new AllianceExtensionExecution(this.bot, human.id()),
+        new AllianceExtensionExecution(this.tribe, human.id()),
       );
     }
   }
 
   private deleteAllStructures() {
-    for (const unit of this.bot.units()) {
-      if (isStructureType(unit.type()) && this.bot.canDeleteUnit()) {
-        this.mg.addExecution(new DeleteUnitExecution(this.bot, unit.id()));
+    for (const unit of this.tribe.units()) {
+      if (Structures.has(unit.type()) && this.tribe.canDeleteUnit()) {
+        this.mg.addExecution(new DeleteUnitExecution(this.tribe, unit.id()));
       }
     }
   }
@@ -97,13 +97,13 @@ export class BotExecution implements Execution {
     }
     const toAttack = this.attackBehavior.getNeighborTraitorToAttack();
     if (toAttack !== null) {
-      const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
+      const odds = this.tribe.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
         // Check and break alliance before attacking if needed
-        const alliance = this.bot.allianceWith(toAttack);
+        const alliance = this.tribe.allianceWith(toAttack);
 
         if (alliance !== null) {
-          this.bot.breakAlliance(alliance);
+          this.tribe.breakAlliance(alliance);
         }
 
         this.attackBehavior.sendAttack(toAttack);
@@ -112,7 +112,7 @@ export class BotExecution implements Execution {
     }
 
     if (this.neighborsTerraNullius) {
-      if (this.bot.neighbors().some((n) => !n.isPlayer())) {
+      if (this.tribe.neighbors().some((n) => !n.isPlayer())) {
         this.attackBehavior.sendAttack(this.mg.terraNullius());
         return;
       }
