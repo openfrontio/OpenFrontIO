@@ -20,6 +20,7 @@ export class TransformHandler {
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
+  private targetScale: number | null = null;
   private intervalID: NodeJS.Timeout | null = null;
   private changed = false;
 
@@ -183,6 +184,7 @@ export class TransformHandler {
       return;
     }
     this.target = new Cell(nameLocation.x, nameLocation.y);
+    this.targetScale = event.zoom ?? null;
     this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
@@ -214,10 +216,12 @@ export class TransformHandler {
 
     if (this.target === null) throw new Error("null target");
 
-    if (
-      Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) <
-      2
-    ) {
+    const positionClose =
+      Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) < 2;
+    const scaleClose =
+      this.targetScale === null ||
+      Math.abs(this.scale - this.targetScale) < 0.01;
+    if (positionClose && scaleClose) {
       this.clearTarget();
       return;
     }
@@ -241,6 +245,12 @@ export class TransformHandler {
       Math.min((this.target.y - screenY) * r, CAMERA_MAX_SPEED),
       -CAMERA_MAX_SPEED,
     );
+
+    if (this.targetScale !== null) {
+      const zoomSmoothing = 0.3;
+      const zoomR = 1 - Math.pow(zoomSmoothing, dt / 1000);
+      this.scale += (this.targetScale - this.scale) * zoomR;
+    }
 
     this.changed = true;
   }
@@ -321,6 +331,7 @@ export class TransformHandler {
       this.intervalID = null;
     }
     this.target = null;
+    this.targetScale = null;
   }
 
   override(x: number = 0, y: number = 0, s: number = 1) {

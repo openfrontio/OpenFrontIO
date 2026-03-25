@@ -411,6 +411,8 @@ export class ClientGameRunner {
       console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);
     };
+
+    let hasGoneToPlayer = false;
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
@@ -442,7 +444,7 @@ export class ClientGameRunner {
               return;
             }
 
-            this.eventBus.emit(new GoToPlayerEvent(myPlayer));
+            this.eventBus.emit(new GoToPlayerEvent(myPlayer, 5));
           };
 
           goToPlayer();
@@ -489,6 +491,16 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "turn") {
+        if (
+          !this.gameView.inSpawnPhase() &&
+          !hasGoneToPlayer &&
+          this.gameView.myPlayer()
+        ) {
+          console.log("going to player");
+          hasGoneToPlayer = true;
+          this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 5));
+        }
+
         // Track when we receive the turn to calculate delay
         const now = Date.now();
         if (this.lastTickReceiveTime > 0) {
