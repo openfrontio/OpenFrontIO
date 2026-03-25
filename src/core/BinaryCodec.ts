@@ -9,6 +9,7 @@ import {
   INTENT_FLAG_OPTION_A,
   INTENT_FLAG_OPTION_B,
   createBinaryProtocolContext,
+  hasBinaryIntentOpcode,
   intentTypeToOpcode,
   opcodeToIntentType,
   opcodeToUnitType,
@@ -554,6 +555,8 @@ function encodeIntent(
       writer.writeBoolean(intent.paused);
       return;
     case "kick_player":
+      writeRequiredPlayerRef(writer, intent.target, context);
+      return;
     case "update_game_config":
       throw new Error(`Unsupported binary intent type: ${intent.type}`);
   }
@@ -750,6 +753,12 @@ function decodeIntent(
         type: "toggle_pause",
         paused: reader.readBoolean(),
       };
+    case "kick_player":
+      assertIntentFlags(intentType, flags, 0);
+      return {
+        type: "kick_player",
+        target: readRequiredPlayerRef(reader, context),
+      };
   }
 
   throw new Error(`Unhandled binary intent type: ${intentType}`);
@@ -824,7 +833,7 @@ export function isBinaryGameplayClientMessage(
   message: ClientMessage,
 ): message is BinaryClientGameplayMessage {
   return (
-    message.type === "intent" ||
+    (message.type === "intent" && hasBinaryIntentOpcode(message.intent.type)) ||
     message.type === "hash" ||
     message.type === "ping"
   );

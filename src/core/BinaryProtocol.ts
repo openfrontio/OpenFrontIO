@@ -49,6 +49,7 @@ export enum BinaryIntentType {
   AllianceExtension = 20,
   DeleteUnit = 21,
   TogglePause = 22,
+  KickPlayer = 23,
 }
 
 export const INTENT_FLAG_OPTION_A = 1 << 0;
@@ -88,7 +89,7 @@ const INTENT_TYPE_TO_OPCODE: Record<
   quick_chat: BinaryIntentType.QuickChat,
   allianceExtension: BinaryIntentType.AllianceExtension,
   delete_unit: BinaryIntentType.DeleteUnit,
-  kick_player: undefined,
+  kick_player: BinaryIntentType.KickPlayer,
   toggle_pause: BinaryIntentType.TogglePause,
   update_game_config: undefined,
 };
@@ -116,6 +117,7 @@ const OPCODE_TO_INTENT_TYPE: Record<BinaryIntentType, Intent["type"]> = {
   [BinaryIntentType.AllianceExtension]: "allianceExtension",
   [BinaryIntentType.DeleteUnit]: "delete_unit",
   [BinaryIntentType.TogglePause]: "toggle_pause",
+  [BinaryIntentType.KickPlayer]: "kick_player",
 };
 
 const UNIT_TYPE_TO_OPCODE = new Map<UnitType, number>(
@@ -153,6 +155,10 @@ export function intentTypeToOpcode(
     throw new Error(`Unsupported binary intent type: ${intentType}`);
   }
   return opcode;
+}
+
+export function hasBinaryIntentOpcode(intentType: Intent["type"]): boolean {
+  return INTENT_TYPE_TO_OPCODE[intentType] !== undefined;
 }
 
 export function opcodeToIntentType(opcode: number): Intent["type"] {

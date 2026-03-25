@@ -5,6 +5,7 @@ import {
   decodeBinaryServerGameplayMessage,
   encodeBinaryClientGameplayMessage,
   encodeBinaryServerGameplayMessage,
+  isBinaryGameplayClientMessage,
 } from "../../src/core/BinaryCodec";
 import { BINARY_PROTOCOL_VERSION } from "../../src/core/BinaryProtocol";
 import {
@@ -251,6 +252,13 @@ const clientIntentMessages: ClientIntentMessage[] = [
       paused: true,
     },
   },
+  {
+    type: "intent",
+    intent: {
+      type: "kick_player",
+      target: "P0000002",
+    },
+  },
 ];
 
 describe("BinaryCodec", () => {
@@ -281,6 +289,28 @@ describe("BinaryCodec", () => {
     const encoded = encodeBinaryClientGameplayMessage(message, context);
     const decoded = decodeBinaryClientGameplayMessage(encoded, context);
     expect(decoded).toEqual(message);
+  });
+
+  it("only classifies supported intents as binary gameplay messages", () => {
+    expect(
+      isBinaryGameplayClientMessage({
+        type: "intent",
+        intent: {
+          type: "kick_player",
+          target: "P0000002",
+        },
+      } as ClientIntentMessage),
+    ).toBe(true);
+
+    expect(
+      isBinaryGameplayClientMessage({
+        type: "intent",
+        intent: {
+          type: "update_game_config",
+          config: {},
+        },
+      } as ClientIntentMessage),
+    ).toBe(false);
   });
 
   it("round-trips server turn messages", () => {

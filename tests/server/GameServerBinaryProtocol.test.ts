@@ -237,6 +237,65 @@ describe("GameServer binary gameplay protocol", () => {
     );
   });
 
+  it("supports host kicks via binary gameplay intents after start", () => {
+    const logger = createMockLogger();
+    const hostPersistentId = "66666666-6666-4666-8666-666666666666";
+    const game = new GameServer(
+      "TEST0005",
+      logger as any,
+      Date.now(),
+      {
+        turnIntervalMs: () => 100,
+        env: () => 0,
+      } as any,
+      createGameConfig(),
+      hostPersistentId,
+    );
+
+    const host = createClient("P0000001", hostPersistentId, "Host");
+    const target = createClient(
+      "P0000002",
+      "77777777-7777-4777-8777-777777777777",
+      "Target",
+    );
+
+    expect(game.joinClient(host.client)).toBe("joined");
+    expect(game.joinClient(target.client)).toBe("joined");
+    game.start();
+
+    const startPayload = host.ws.sent.find(
+      (message): message is string =>
+        typeof message === "string" && message.includes('"type":"start"'),
+    );
+    expect(startPayload).toBeDefined();
+
+    const binaryContext = binaryContextFromGameStartInfo(
+      JSON.parse(startPayload!).gameStartInfo,
+    );
+    const kickMessage = encodeBinaryClientGameplayMessage(
+      {
+        type: "intent",
+        intent: {
+          type: "kick_player",
+          target: "P0000002",
+        },
+      },
+      binaryContext,
+    );
+
+    host.ws.emit("message", kickMessage, true);
+
+    expect(target.ws.sent).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('"error":"kick_reason.lobby_creator"'),
+      ]),
+    );
+    expect(target.ws.readyState).toBe(3);
+    expect(game.activeClients.map((client) => client.clientID)).toEqual([
+      "P0000001",
+    ]);
+  });
+
   it("kicks malformed binary gameplay messages after start", () => {
     const logger = createMockLogger();
     const game = new GameServer(
