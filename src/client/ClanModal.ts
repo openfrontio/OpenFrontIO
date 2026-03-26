@@ -386,7 +386,7 @@ const FAKE_MY_CLANS: FakeMyClan[] = [
   { clan: FAKE_CLANS[5], role: "officer" },
 ];
 
-type Tab = "my-clans" | "browse" | "create";
+type Tab = "my-clans" | "browse";
 type View = "list" | "detail" | "manage" | "transfer" | "requests";
 
 @customElement("clan-modal")
@@ -395,10 +395,6 @@ export class ClanModal extends BaseModal {
   @state() private view: View = "list";
   @state() private selectedClan: FakeClan | null = null;
   @state() private searchQuery = "";
-  @state() private createName = "";
-  @state() private createTag = "";
-  @state() private createDescription = "";
-  @state() private createIsOpen = true;
   @state() private manageName = "";
   @state() private manageDescription = "";
   @state() private manageIsOpen = true;
@@ -482,9 +478,7 @@ export class ClanModal extends BaseModal {
         <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
           ${this.activeTab === "my-clans"
             ? this.renderMyClans()
-            : this.activeTab === "browse"
-              ? this.renderBrowse()
-              : this.renderCreate()}
+            : this.renderBrowse()}
         </div>
       </div>
     `;
@@ -494,7 +488,6 @@ export class ClanModal extends BaseModal {
     const tabs: { key: Tab; label: string }[] = [
       { key: "my-clans", label: translateText("clan_modal.my_clans") },
       { key: "browse", label: translateText("clan_modal.browse") },
-      { key: "create", label: translateText("clan_modal.create") },
     ];
 
     return html`
@@ -1405,101 +1398,6 @@ export class ClanModal extends BaseModal {
         >
           ${member.role}
         </span>
-      </div>
-    `;
-  }
-
-  private renderCreate() {
-    return html`
-      <div class="p-4 lg:p-6">
-        <div
-          class="w-full max-w-lg mx-auto bg-white/5 rounded-2xl border border-white/10 p-6 space-y-5"
-        >
-          <div>
-            <label
-              class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
-              >${translateText("clan_modal.clan_name")}</label
-            >
-            <input
-              type="text"
-              .value=${this.createName}
-              @input=${(e: Event) =>
-                (this.createName = (e.target as HTMLInputElement).value)}
-              maxlength="24"
-              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm"
-              placeholder="${translateText("clan_modal.clan_name_placeholder")}"
-            />
-          </div>
-
-          <div>
-            <label
-              class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
-              >${translateText("clan_modal.clan_tag")}</label
-            >
-            <input
-              type="text"
-              .value=${this.createTag}
-              @input=${(e: Event) =>
-                (this.createTag = (
-                  e.target as HTMLInputElement
-                ).value.toUpperCase())}
-              maxlength="5"
-              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm uppercase"
-              placeholder="${translateText("clan_modal.clan_tag_placeholder")}"
-            />
-          </div>
-
-          <div>
-            <label
-              class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
-              >${translateText("clan_modal.description")}</label
-            >
-            <textarea
-              .value=${this.createDescription}
-              @input=${(e: Event) =>
-                (this.createDescription = (
-                  e.target as HTMLTextAreaElement
-                ).value)}
-              maxlength="200"
-              rows="3"
-              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm resize-none"
-              placeholder="${translateText(
-                "clan_modal.description_placeholder",
-              )}"
-            ></textarea>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-white text-sm font-bold">
-                ${translateText("clan_modal.open_clan")}
-              </div>
-              <div class="text-white/40 text-xs">
-                ${translateText("clan_modal.open_clan_desc")}
-              </div>
-            </div>
-            <button
-              @click=${() => (this.createIsOpen = !this.createIsOpen)}
-              class="relative w-12 h-7 rounded-full transition-all ${this
-                .createIsOpen
-                ? "bg-blue-500"
-                : "bg-white/20"}"
-            >
-              <div
-                class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${this
-                  .createIsOpen
-                  ? "left-6"
-                  : "left-1"}"
-              ></div>
-            </button>
-          </div>
-
-          <button
-            class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5"
-          >
-            ${translateText("clan_modal.create_clan")}
-          </button>
-        </div>
       </div>
     `;
   }
