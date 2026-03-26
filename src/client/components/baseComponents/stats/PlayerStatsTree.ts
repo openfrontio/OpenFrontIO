@@ -5,6 +5,7 @@ import {
   Difficulty,
   GameMode,
   GameType,
+  RankedType,
   isDifficulty,
   isGameMode,
   isGameType,
@@ -17,11 +18,11 @@ import "./PlayerStatsTable";
 @customElement("player-stats-tree-view")
 export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
-  @state() selectedType: GameType = GameType.Public;
+  @state() selectedType: GameType | "Ranked" = GameType.Public;
   @state() selectedMode: GameMode = GameMode.FFA;
   @state() selectedDifficulty: Difficulty = Difficulty.Medium;
-
   private get typeNode() {
+    if (this.selectedType === "Ranked") return undefined;
     return this.statsTree?.[this.selectedType];
   }
 
@@ -33,9 +34,13 @@ export class PlayerStatsTreeView extends LitElement {
     return this.selectedType === GameType.Public;
   }
 
-  private get availableTypes(): GameType[] {
+  private get availableTypes(): (GameType | "Ranked")[] {
     if (!this.statsTree) return [];
-    return Object.keys(this.statsTree).filter(isGameType);
+    const types: (GameType | "Ranked")[] = Object.keys(this.statsTree).filter(
+      isGameType,
+    );
+    if (this.statsTree.Ranked) types.push("Ranked");
+    return types;
   }
 
   private get availableModes(): GameMode[] {
@@ -59,6 +64,10 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
+    if (this.selectedType === "Ranked") {
+      return this.statsTree?.Ranked?.[RankedType.OneVOne] ?? null;
+    }
+
     const modeNode = this.modeNode;
     if (!modeNode) return null;
 
@@ -91,9 +100,10 @@ export class PlayerStatsTreeView extends LitElement {
 
   private syncSelection(): void {
     const types = this.availableTypes;
-    if (types.length && !types.includes(this.selectedType)) {
+    if (types.length && !types.includes(this.selectedType as GameType)) {
       this.selectedType = types[0];
     }
+    if (this.selectedType === "Ranked") return;
     const modes = this.availableModes;
     if (modes.length && !modes.includes(this.selectedMode)) {
       this.selectedMode = modes[0];
@@ -119,7 +129,7 @@ export class PlayerStatsTreeView extends LitElement {
     }
   }
 
-  private setGameType(t: GameType) {
+  private setGameType(t: GameType | "Ranked") {
     if (this.selectedType === t) return;
     this.selectedType = t;
     this.requestUpdate();
@@ -239,11 +249,13 @@ export class PlayerStatsTreeView extends LitElement {
                     : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"}"
                   @click=${() => this.setGameType(t)}
                 >
-                  ${t === GameType.Public
-                    ? translateText("player_stats_tree.public")
-                    : t === GameType.Private
-                      ? translateText("player_stats_tree.private")
-                      : translateText("player_stats_tree.solo")}
+                  ${t === "Ranked"
+                    ? translateText("player_stats_tree.ranked")
+                    : t === GameType.Public
+                      ? translateText("player_stats_tree.public")
+                      : t === GameType.Private
+                        ? translateText("player_stats_tree.private")
+                        : translateText("player_stats_tree.solo")}
                 </button>
               `,
             )}
