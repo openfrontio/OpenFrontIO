@@ -2,7 +2,7 @@ import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { getClanTag } from "../Util";
+import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -120,6 +120,10 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Tourney1 = "Tourney 2 Teams",
+  Tourney2 = "Tourney 3 Teams",
+  Tourney3 = "Tourney 4 Teams",
+  Tourney4 = "Tourney 8 Teams",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
@@ -210,6 +214,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
   ],
+  tournament: [
+    GameMapType.Tourney1,
+    GameMapType.Tourney2,
+    GameMapType.Tourney3,
+    GameMapType.Tourney4,
+  ],
 };
 
 export enum GameType {
@@ -238,13 +248,17 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
   goldMultiplier?: number;
-  isAlliancesDisabled: boolean;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
 }
 
 export interface UnitInfo {
@@ -470,7 +484,7 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
-  averagePosition(): Cell | null;
+  clusteredPositions(): TileRef[];
 }
 
 export interface AllianceRequest {
@@ -503,7 +517,7 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
-  public readonly clan: string | null;
+  public readonly displayName: string;
 
   constructor(
     public readonly name: string,
@@ -513,8 +527,9 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
+    public readonly clanTag: string | null = null,
   ) {
-    this.clan = getClanTag(name);
+    this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
 }
 
@@ -706,7 +721,6 @@ export interface Player {
   // Either allied or on same team.
   isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
-  clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];

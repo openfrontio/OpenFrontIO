@@ -106,18 +106,9 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     }
 
     // Convert mouse position to world coordinates
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) {
-      this.trajectoryPoints = [];
-      this.cachedSpawnTile = null;
-      return;
-    }
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
     const worldCoords = this.transformHandler.screenToWorldCoordinates(
-      localX,
-      localY,
+      this.mousePos.x,
+      this.mousePos.y,
     );
 
     if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
@@ -192,17 +183,9 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     }
 
     // Convert mouse position to world coordinates
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) {
-      this.trajectoryPoints = [];
-      return;
-    }
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
     const worldCoords = this.transformHandler.screenToWorldCoordinates(
-      localX,
-      localY,
+      this.mousePos.x,
+      this.mousePos.y,
     );
 
     if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
