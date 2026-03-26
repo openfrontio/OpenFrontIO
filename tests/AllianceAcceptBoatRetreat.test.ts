@@ -36,7 +36,10 @@ describe("Alliance acceptance retreats in-flight transport ships", () => {
     player1 = addPlayer("p1", 7, 0);
     player2 = addPlayer("p2", 7, 15);
 
+    const maxTicks = 1000;
+    let ticks = 0;
     while (game.inSpawnPhase()) {
+      if (++ticks > maxTicks) throw new Error("Spawn phase did not end");
       game.executeNextTick();
     }
   });
@@ -85,8 +88,9 @@ describe("Alliance acceptance retreats in-flight transport ships", () => {
 
     // Form alliance between player1 and player2
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick(); // creates request
     game.addExecution(new AllianceRequestExecution(player2, player1.id()));
-    game.executeNextTick(); // auto-accepts
+    game.executeNextTick(); // counter-request auto-accepts
 
     expect(player1.isAlliedWith(player2)).toBe(true);
 
@@ -135,8 +139,9 @@ describe("Alliance acceptance retreats in-flight transport ships", () => {
 
     // Form alliance
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick(); // creates request
     game.addExecution(new AllianceRequestExecution(player2, player1.id()));
-    game.executeNextTick(); // auto-accepts
+    game.executeNextTick(); // counter-request auto-accepts
 
     expect(player1.isAlliedWith(player2)).toBe(true);
 
