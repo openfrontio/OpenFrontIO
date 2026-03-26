@@ -21,6 +21,7 @@ export class PlayerStatsTreeView extends LitElement {
   @state() selectedType: GameType | "Ranked" = GameType.Public;
   @state() selectedMode: GameMode = GameMode.FFA;
   @state() selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() selectedRankedType: RankedType = RankedType.OneVOne;
   private get typeNode() {
     if (this.selectedType === "Ranked") return undefined;
     return this.statsTree?.[this.selectedType];
@@ -37,15 +38,29 @@ export class PlayerStatsTreeView extends LitElement {
   private get availableTypes(): (GameType | "Ranked")[] {
     if (!this.statsTree) return [];
     const types: (GameType | "Ranked")[] = Object.keys(this.statsTree).filter(
-      isGameType,
+      (k): k is GameType =>
+        isGameType(k) &&
+        Object.keys(this.statsTree![k as GameType] ?? {}).length > 0,
     );
-    if (this.statsTree.Ranked) types.push("Ranked");
+    if (
+      this.statsTree.Ranked &&
+      Object.keys(this.statsTree.Ranked).length > 0
+    ) {
+      types.push("Ranked");
+    }
     return types;
   }
 
   private get availableModes(): GameMode[] {
     if (!this.typeNode) return [];
     return Object.keys(this.typeNode).filter(isGameMode);
+  }
+
+  private get availableRankedTypes(): RankedType[] {
+    if (!this.statsTree?.Ranked) return [];
+    return Object.keys(this.statsTree.Ranked).filter((k): k is RankedType =>
+      Object.values(RankedType).includes(k as RankedType),
+    );
   }
 
   private get availableDifficulties(): Difficulty[] {
@@ -65,7 +80,7 @@ export class PlayerStatsTreeView extends LitElement {
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
     if (this.selectedType === "Ranked") {
-      return this.statsTree?.Ranked?.[RankedType.OneVOne] ?? null;
+      return this.statsTree?.Ranked?.[this.selectedRankedType] ?? null;
     }
 
     const modeNode = this.modeNode;
@@ -103,7 +118,16 @@ export class PlayerStatsTreeView extends LitElement {
     if (types.length && !types.includes(this.selectedType as GameType)) {
       this.selectedType = types[0];
     }
-    if (this.selectedType === "Ranked") return;
+    if (this.selectedType === "Ranked") {
+      const rankedTypes = this.availableRankedTypes;
+      if (
+        rankedTypes.length &&
+        !rankedTypes.includes(this.selectedRankedType)
+      ) {
+        this.selectedRankedType = rankedTypes[0];
+      }
+      return;
+    }
     const modes = this.availableModes;
     if (modes.length && !modes.includes(this.selectedMode)) {
       this.selectedMode = modes[0];
@@ -123,7 +147,8 @@ export class PlayerStatsTreeView extends LitElement {
       changedProperties.has("statsTree") ||
       changedProperties.has("selectedType") ||
       changedProperties.has("selectedMode") ||
-      changedProperties.has("selectedDifficulty")
+      changedProperties.has("selectedDifficulty") ||
+      changedProperties.has("selectedRankedType")
     ) {
       this.syncSelection();
     }
@@ -138,6 +163,12 @@ export class PlayerStatsTreeView extends LitElement {
   private setMode(m: GameMode) {
     if (this.selectedMode === m) return;
     this.selectedMode = m;
+    this.requestUpdate();
+  }
+
+  private setRankedType(r: RankedType) {
+    if (this.selectedRankedType === r) return;
+    this.selectedRankedType = r;
     this.requestUpdate();
   }
 
@@ -225,6 +256,7 @@ export class PlayerStatsTreeView extends LitElement {
     const types = this.availableTypes;
     const modes = this.availableModes;
     const diffs = this.availableDifficulties;
+    const rankedTypes = this.availableRankedTypes;
     const leaf = this.getSelectedLeaf();
     const wlr = leaf
       ? leaf.losses === 0n
@@ -262,6 +294,27 @@ export class PlayerStatsTreeView extends LitElement {
           </div>
 
           <div class="flex gap-2">
+            <!-- Ranked type selector -->
+            ${this.selectedType === "Ranked" && rankedTypes.length
+              ? html`<div
+                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
+                >
+                  ${rankedTypes.map(
+                    (r) => html`
+                      <button
+                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
+                          .selectedRankedType === r
+                          ? "bg-white/20 text-white font-bold"
+                          : "text-gray-400 hover:text-white"}"
+                        @click=${() => this.setRankedType(r)}
+                      >
+                        ${r}
+                      </button>
+                    `,
+                  )}
+                </div>`
+              : html``}
+
             <!-- Mode selector -->
             ${modes.length
               ? html`<div
