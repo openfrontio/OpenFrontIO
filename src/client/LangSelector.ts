@@ -227,6 +227,7 @@ export class LangSelector extends LitElement {
       "o-modal",
       "o-button",
       "territory-patterns-modal",
+      "store-modal",
       "pattern-input",
       "fluent-slider",
       "news-modal",
