@@ -66,9 +66,7 @@ describe("Alliance acceptance retreats in-flight transport ships", () => {
 
   test("accepting alliance only retreats boats targeting the new ally", () => {
     // Player 1 sends a boat toward Player 2's territory
-    game.addExecution(
-      new TransportShipExecution(player1, game.ref(7, 15), 50),
-    );
+    game.addExecution(new TransportShipExecution(player1, game.ref(7, 15), 50));
     game.executeNextTick(); // init: spawns transport ship heading to player2
 
     const boatToAlly = player1.units(UnitType.TransportShip)[0];
@@ -127,13 +125,9 @@ describe("Alliance acceptance retreats in-flight transport ships", () => {
 
   test("boats from both players retreat when alliance accepted", () => {
     // Player 1 sends a boat toward Player 2
-    game.addExecution(
-      new TransportShipExecution(player1, game.ref(7, 15), 50),
-    );
+    game.addExecution(new TransportShipExecution(player1, game.ref(7, 15), 50));
     // Player 2 sends a boat toward Player 1
-    game.addExecution(
-      new TransportShipExecution(player2, game.ref(7, 0), 50),
-    );
+    game.addExecution(new TransportShipExecution(player2, game.ref(7, 0), 50));
     game.executeNextTick(); // init: spawns both transport ships
 
     expect(player1.units(UnitType.TransportShip)).toHaveLength(1);
