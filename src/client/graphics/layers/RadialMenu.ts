@@ -616,6 +616,10 @@ export class RadialMenu implements Layer {
             );
           }
         } else if (d.data.text) {
+          const resolvedText =
+            typeof d.data.text === "function"
+              ? d.data.text(this.params!)
+              : d.data.text;
           content
             .append("text")
             .attr("text-anchor", "middle")
@@ -626,7 +630,7 @@ export class RadialMenu implements Layer {
             .attr("font-size", d.data.fontSize ?? "12px")
             .attr("font-family", "Arial, sans-serif")
             .style("opacity", disabled ? 0.5 : 1)
-            .text(d.data.text);
+            .text(resolvedText);
         } else {
           const imgSel = content
             .append("image")

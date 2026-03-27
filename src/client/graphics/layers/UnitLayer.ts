@@ -15,6 +15,7 @@ import {
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { TargetSelectionMode } from "./TargetSelectionMode";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
@@ -127,6 +128,7 @@ export class UnitLayer implements Layer {
     clickRef?: TileRef,
     nearbyWarships?: UnitView[],
   ) {
+    if (TargetSelectionMode.getInstance().active) return;
     if (clickRef === undefined) {
       // Convert screen coordinates to world coordinates
       const cell = this.transformHandler.screenToWorldCoordinates(
@@ -157,6 +159,7 @@ export class UnitLayer implements Layer {
   }
 
   private onTouch(event: TouchEvent) {
+    if (TargetSelectionMode.getInstance().active) return;
     const cell = this.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,

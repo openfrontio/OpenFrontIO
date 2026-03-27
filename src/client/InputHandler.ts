@@ -54,6 +54,8 @@ export class ContextMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
+    /** true when triggered by a genuine right-click / long-press */
+    public readonly isRightClick: boolean = false,
   ) {}
 }
 
@@ -596,7 +598,7 @@ export class InputHandler {
       this.setGhostStructure(null);
       return;
     }
-    this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
+    this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY, true));
   }
 
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
