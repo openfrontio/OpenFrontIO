@@ -194,6 +194,12 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onPlayerNameOpacityChange(event: Event) {
+    const opacity = parseFloat((event.target as HTMLInputElement).value);
+    this.userSettings.setPlayerNameOpacity(opacity);
+    this.requestUpdate();
+  }
+
   render() {
     if (!this.isVisible) {
       return null;
@@ -481,6 +487,38 @@ export class SettingsModal extends LitElement implements Layer {
                   : translateText("user_setting.off")}
               </div>
             </button>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <img
+                src=${settingsIcon}
+                alt="nameOpacity"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.player_name_opacity_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.player_name_opacity_desc")}
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  .value=${this.userSettings.playerNameOpacity()}
+                  @input=${this.onPlayerNameOpacityChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.playerNameOpacity() === 0
+                  ? translateText("user_setting.hidden")
+                  : `${this.userSettings.playerNameOpacity()}%`}
+              </div>
+            </div>
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"

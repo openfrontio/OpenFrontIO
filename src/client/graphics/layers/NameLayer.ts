@@ -296,17 +296,26 @@ export class NameLayer implements Layer {
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
-    // Update text sizes
+    // Update text sizes and opacity
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
     render.fontColor = this.theme.textColor(render.player);
+    const nameOpacityPercent = this.userSettings.playerNameOpacity();
+    const nameOpacity = nameOpacityPercent / 100;
+    const hideFlag = nameOpacityPercent === 0;
 
     render.nameDiv.style.fontSize = `${render.fontSize}px`;
     render.nameDiv.style.lineHeight = `${render.fontSize}px`;
     render.nameDiv.style.color = render.fontColor;
+    if (render.nameSpan) {
+      render.nameSpan.textContent = render.player.displayName();
+      render.nameSpan.style.opacity = `${nameOpacity}`;
+    }
     if (render.flagDiv) {
       render.flagDiv.style.height = `${render.fontSize}px`;
+      render.flagDiv.style.display = hideFlag ? "none" : "";
     }
     render.troopsDiv.style.fontSize = `${render.fontSize}px`;
+    render.troopsDiv.style.opacity = `${nameOpacity}`;
     render.troopsDiv.style.color = render.fontColor;
     render.troopsDiv.textContent = renderTroops(render.player.troops());
 

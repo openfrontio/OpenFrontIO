@@ -265,4 +265,18 @@ export class UserSettings {
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
+
+  playerNameOpacity(): number {
+    const opacity = Math.round(
+      this.getFloat("settings.playerNameOpacity", 100),
+    );
+    if (!Number.isFinite(opacity)) return 100;
+    return Math.max(0, Math.min(100, opacity));
+  }
+
+  setPlayerNameOpacity(opacity: number): void {
+    if (!Number.isFinite(opacity)) return;
+    const clampedOpacity = Math.max(0, Math.min(100, Math.round(opacity)));
+    this.setFloat("settings.playerNameOpacity", clampedOpacity);
+  }
 }
