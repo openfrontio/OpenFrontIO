@@ -265,4 +265,21 @@ export class UserSettings {
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
+
+  uiScale(): number {
+    return this.getFloat("settings.uiScale", 100);
+  }
+
+  setUiScale(scale: number): void {
+    const clamped = Math.max(50, Math.min(200, scale));
+    this.setFloat("settings.uiScale", clamped);
+    this.applyUiScale(clamped);
+  }
+
+  applyUiScale(scale?: number): void {
+    const value = scale ?? this.uiScale();
+    if (typeof document !== "undefined") {
+      document.documentElement.style.zoom = (value / 100).toString();
+    }
+  }
 }
