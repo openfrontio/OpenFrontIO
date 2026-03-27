@@ -991,6 +991,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
