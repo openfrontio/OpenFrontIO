@@ -194,6 +194,9 @@ export class Transport {
   public readonly isLocal: boolean;
   private binaryGameplayActive = false;
   private binaryContext?: ReturnType<typeof binaryContextFromGameStartInfo>;
+  private pendingGameplayMessages: Array<
+    ClientHashMessage | ClientIntentMessage | ClientPingMessage
+  > = [];
 
   constructor(
     private lobbyConfig: LobbyConfig,
@@ -374,6 +377,9 @@ export class Transport {
             this.activateBinaryGameplay(result.data.gameStartInfo);
           }
           this.onmessage(result.data);
+          if (result.data.type === "start") {
+            this.flushPendingGameplayMessages();
+          }
           return;
         }
 
@@ -450,6 +456,7 @@ export class Transport {
       return;
     }
     this.stopPing();
+    this.pendingGameplayMessages = [];
     if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
@@ -693,6 +700,9 @@ export class Transport {
       // Forward message to local server
       this.localServer.onMessage(msg);
       return;
+    } else if (this.shouldQueueBinaryGameplayMessage(msg)) {
+      this.pendingGameplayMessages.push(msg);
+      return;
     } else if (this.socket === null) {
       // Socket missing, do nothing
       return;
@@ -726,6 +736,32 @@ export class Transport {
   ) {
     this.binaryContext = binaryContextFromGameStartInfo(gameStartInfo);
     this.binaryGameplayActive = true;
+  }
+
+  private shouldQueueBinaryGameplayMessage(
+    msg: ClientMessage,
+  ): msg is ClientHashMessage | ClientIntentMessage | ClientPingMessage {
+    return (
+      this.binaryContext !== undefined &&
+      !this.binaryGameplayActive &&
+      isBinaryGameplayClientMessage(msg)
+    );
+  }
+
+  private flushPendingGameplayMessages() {
+    if (
+      this.pendingGameplayMessages.length === 0 ||
+      this.socket === null ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
+
+    const pendingMessages = this.pendingGameplayMessages;
+    this.pendingGameplayMessages = [];
+    for (const message of pendingMessages) {
+      this.sendMsg(message);
+    }
   }
 
   private killExistingSocket(): void {
