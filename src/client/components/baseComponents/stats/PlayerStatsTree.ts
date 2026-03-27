@@ -74,6 +74,13 @@ export class PlayerStatsTreeView extends LitElement {
       : translateText("game_mode.teams");
   }
 
+  private labelForRankedType(r: RankedType) {
+    switch (r) {
+      case RankedType.OneVOne:
+        return translateText("player_stats_tree.ranked_1v1");
+    }
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -308,7 +315,7 @@ export class PlayerStatsTreeView extends LitElement {
                           : "text-gray-400 hover:text-white"}"
                         @click=${() => this.setRankedType(r)}
                       >
-                        ${r}
+                        ${this.labelForRankedType(r)}
                       </button>
                     `,
                   )}
