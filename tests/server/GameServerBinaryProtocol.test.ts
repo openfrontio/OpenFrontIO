@@ -11,6 +11,7 @@ import {
   decodeBinaryServerGameplayMessage,
   encodeBinaryClientGameplayMessage,
 } from "../../src/core/BinaryCodec";
+import { BinaryMessageType } from "../../src/core/BinaryProtocol";
 import {
   Difficulty,
   GameMapSize,
@@ -140,7 +141,7 @@ describe("GameServer binary gameplay protocol", () => {
 
     const binaryTurn = clientA.ws.sent.find(
       (message): message is Uint8Array =>
-        message instanceof Uint8Array && message[1] === 2,
+        message instanceof Uint8Array && message[1] === BinaryMessageType.Turn,
     );
     expect(binaryTurn).toBeDefined();
 
@@ -213,7 +214,8 @@ describe("GameServer binary gameplay protocol", () => {
       .reverse()
       .find(
         (message): message is Uint8Array =>
-          message instanceof Uint8Array && message[1] === 2,
+          message instanceof Uint8Array &&
+          message[1] === BinaryMessageType.Turn,
       );
     expect(binaryTurn).toBeDefined();
 

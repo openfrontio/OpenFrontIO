@@ -10,11 +10,16 @@ import {
 import { BINARY_PROTOCOL_VERSION } from "../../src/core/BinaryProtocol";
 import {
   ClientHashMessage,
+  ClientHashSchema,
   ClientIntentMessage,
+  ClientIntentMessageSchema,
   ClientPingMessage,
+  ClientPingMessageSchema,
   QuickChatKeySchema,
   ServerDesyncMessage,
+  ServerDesyncSchema,
   ServerTurnMessage,
+  ServerTurnMessageSchema,
 } from "../../src/core/Schemas";
 import { AllPlayers, UnitType } from "../../src/core/game/Game";
 
@@ -267,6 +272,7 @@ describe("BinaryCodec", () => {
     (message) => {
       const encoded = encodeBinaryClientGameplayMessage(message, context);
       const decoded = decodeBinaryClientGameplayMessage(encoded, context);
+      expect(ClientIntentMessageSchema.parse(decoded)).toEqual(message);
       expect(decoded).toEqual(message);
     },
   );
@@ -279,6 +285,7 @@ describe("BinaryCodec", () => {
     };
     const encoded = encodeBinaryClientGameplayMessage(message, context);
     const decoded = decodeBinaryClientGameplayMessage(encoded, context);
+    expect(ClientHashSchema.parse(decoded)).toEqual(message);
     expect(decoded).toEqual(message);
   });
 
@@ -288,6 +295,7 @@ describe("BinaryCodec", () => {
     };
     const encoded = encodeBinaryClientGameplayMessage(message, context);
     const decoded = decodeBinaryClientGameplayMessage(encoded, context);
+    expect(ClientPingMessageSchema.parse(decoded)).toEqual(message);
     expect(decoded).toEqual(message);
   });
 
@@ -335,6 +343,7 @@ describe("BinaryCodec", () => {
     };
     const encoded = encodeBinaryServerGameplayMessage(message, context);
     const decoded = decodeBinaryServerGameplayMessage(encoded, context);
+    expect(ServerTurnMessageSchema.parse(decoded)).toEqual(message);
     expect(decoded).toEqual(message);
   });
 
@@ -355,6 +364,7 @@ describe("BinaryCodec", () => {
     };
     const encoded = encodeBinaryServerGameplayMessage(message, context);
     const decoded = decodeBinaryServerGameplayMessage(encoded, context);
+    expect(ServerTurnMessageSchema.parse(decoded)).toEqual(message);
     expect(decoded).toEqual(message);
   });
 
@@ -368,6 +378,7 @@ describe("BinaryCodec", () => {
     };
     const encoded = encodeBinaryServerGameplayMessage(message, context);
     const decoded = decodeBinaryServerGameplayMessage(encoded, context);
+    expect(ServerDesyncSchema.parse(decoded)).toEqual(message);
     expect(decoded).toEqual(message);
   });
 

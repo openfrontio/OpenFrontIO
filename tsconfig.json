@@ -32,6 +32,7 @@
     "proprietary/**/*",
     "generated/**/*",
     "tests/**/*",
+    "scripts/**/*",
     "src/scripts",
     "vite.config.ts"
   ],
