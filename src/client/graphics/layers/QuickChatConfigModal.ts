@@ -1,12 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "../../Utils";
 import { quickChatPhrases } from "./ChatModal";
 import {
   DEFAULT_PRESETS,
   PresetSlot,
   QuickChatPresetService,
 } from "./QuickChatPresetService";
-import { translateText } from "../../Utils";
 
 const MAX_SLOTS = 5;
 
@@ -159,35 +159,43 @@ export class QuickChatConfigModal extends LitElement {
     return html`
       <o-modal title="${translateText("quick_chat.configure_presets")}">
         <div class="chat-columns">
-
           <!-- Column 1: preset slots -->
           <div class="chat-column">
-            <div class="column-title">${translateText("quick_chat.preset_label")}</div>
+            <div class="column-title">
+              ${translateText("quick_chat.preset_label")}
+            </div>
 
             ${this.slots.map(
               (slot, i) => html`
                 <div style="display:flex;gap:4px;">
                   <button
-                    class="chat-option-button ${this.editingIndex === i ? "selected" : ""}"
+                    class="chat-option-button ${this.editingIndex === i
+                      ? "selected"
+                      : ""}"
                     style="flex:1;"
                     @click=${() => this.selectSlot(i)}
-                  >${i + 1}. ${this.slotLabel(slot)}</button>
+                  >
+                    ${i + 1}. ${this.slotLabel(slot)}
+                  </button>
                   ${this.slots.length > 1
                     ? html`<button
                         class="chat-option-button"
                         style="padding:8px 10px;"
-                        @click=${(e: Event) => { e.stopPropagation(); this.removeSlot(i); }}
-                      >✕</button>`
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          this.removeSlot(i);
+                        }}
+                      >
+                        ✕
+                      </button>`
                     : null}
                 </div>
               `,
             )}
-
             ${this.slots.length < MAX_SLOTS
-              ? html`<button
-                  class="chat-option-button"
-                  @click=${this.addSlot}
-                >${translateText("quick_chat.add_preset")}</button>`
+              ? html`<button class="chat-option-button" @click=${this.addSlot}>
+                  ${translateText("quick_chat.add_preset")}
+                </button>`
               : null}
           </div>
 
@@ -195,28 +203,45 @@ export class QuickChatConfigModal extends LitElement {
           ${editing !== null
             ? html`
                 <div class="chat-column">
-                  <div class="column-title">${translateText("chat.category")}</div>
+                  <div class="column-title">
+                    ${translateText("chat.category")}
+                  </div>
 
                   ${categories.map(
                     (cat) => html`
                       <button
-                        class="chat-option-button ${this.selectedCategory === cat ? "selected" : ""}"
+                        class="chat-option-button ${this.selectedCategory ===
+                        cat
+                          ? "selected"
+                          : ""}"
                         @click=${() => this.selectCategory(cat)}
-                      >${translateText(`chat.cat.${cat}`)}</button>
+                      >
+                        ${translateText(`chat.cat.${cat}`)}
+                      </button>
                     `,
                   )}
 
-                  <div class="column-title" style="margin-top:8px;">${translateText("quick_chat.actions")}</div>
+                  <div class="column-title" style="margin-top:8px;">
+                    ${translateText("quick_chat.actions")}
+                  </div>
 
                   <button
-                    class="chat-option-button ${editing.type === "emoji" ? "selected" : ""}"
+                    class="chat-option-button ${editing.type === "emoji"
+                      ? "selected"
+                      : ""}"
                     @click=${() => this.assignSpecial("emoji")}
-                  >${translateText("quick_chat.emoji_panel")}</button>
+                  >
+                    ${translateText("quick_chat.emoji_panel")}
+                  </button>
 
                   <button
-                    class="chat-option-button ${editing.type === "trade" ? "selected" : ""}"
+                    class="chat-option-button ${editing.type === "trade"
+                      ? "selected"
+                      : ""}"
                     @click=${() => this.assignSpecial("trade")}
-                  >${translateText("quick_chat.trade_toggle")}</button>
+                  >
+                    ${translateText("quick_chat.trade_toggle")}
+                  </button>
                 </div>
               `
             : null}
@@ -225,7 +250,9 @@ export class QuickChatConfigModal extends LitElement {
           ${editing !== null && this.selectedCategory
             ? html`
                 <div class="chat-column">
-                  <div class="column-title">${translateText("chat.phrase")}</div>
+                  <div class="column-title">
+                    ${translateText("chat.phrase")}
+                  </div>
                   <div class="phrase-scroll-area">
                     ${(quickChatPhrases[this.selectedCategory] ?? []).map(
                       (phrase) => {
@@ -238,7 +265,9 @@ export class QuickChatConfigModal extends LitElement {
                           editing.key === phrase.key;
                         return html`
                           <button
-                            class="chat-option-button ${isActive ? "selected" : ""}"
+                            class="chat-option-button ${isActive
+                              ? "selected"
+                              : ""}"
                             @click=${() =>
                               this.assignQcPhrase(
                                 this.selectedCategory!,
@@ -247,7 +276,10 @@ export class QuickChatConfigModal extends LitElement {
                           >
                             ${label}
                             ${phrase.requiresPlayer
-                              ? html`<span style="font-size:10px;opacity:0.4;margin-left:4px;">[needs target]</span>`
+                              ? html`<span
+                                  style="font-size:10px;opacity:0.4;margin-left:4px;"
+                                  >[needs target]</span
+                                >`
                               : null}
                           </button>
                         `;
@@ -261,7 +293,9 @@ export class QuickChatConfigModal extends LitElement {
 
         <div class="chat-preview" style="font-size:12px;color:#aaa;">
           ${editing !== null
-            ? translateText("quick_chat.editing_hint", { n: (this.editingIndex ?? 0) + 1 })
+            ? translateText("quick_chat.editing_hint", {
+                n: (this.editingIndex ?? 0) + 1,
+              })
             : translateText("quick_chat.select_hint")}
         </div>
 
@@ -273,9 +307,11 @@ export class QuickChatConfigModal extends LitElement {
             class="chat-option-button"
             style="${this.confirmReset ? "color:#f87171;" : "opacity:0.45;"}"
             @click=${this.reset}
-          >${this.confirmReset
-            ? translateText("quick_chat.confirm_reset")
-            : translateText("quick_chat.reset_defaults")}</button>
+          >
+            ${this.confirmReset
+              ? translateText("quick_chat.confirm_reset")
+              : translateText("quick_chat.reset_defaults")}
+          </button>
         </div>
       </o-modal>
     `;

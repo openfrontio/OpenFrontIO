@@ -32,6 +32,7 @@ import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer"
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { QuickChatConfigModal } from "./layers/QuickChatConfigModal";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
@@ -39,6 +40,7 @@ import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
+import { TargetSelectionLayer } from "./layers/TargetSelectionLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
@@ -46,8 +48,6 @@ import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
-import { QuickChatConfigModal } from "./layers/QuickChatConfigModal";
-import { TargetSelectionLayer } from "./layers/TargetSelectionLayer";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,

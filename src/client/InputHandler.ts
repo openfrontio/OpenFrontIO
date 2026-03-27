@@ -598,7 +598,9 @@ export class InputHandler {
       this.setGhostStructure(null);
       return;
     }
-    this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY, true));
+    this.eventBus.emit(
+      new ContextMenuEvent(event.clientX, event.clientY, true),
+    );
   }
 
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
