@@ -2,6 +2,7 @@ import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import {
   Difficulty,
   GameMapSize,
@@ -244,7 +245,7 @@ export class SinglePlayerModal extends BaseModal {
                   : "text-white/60"}"
               >
                 <img
-                  src="/images/MedalIconWhite.svg"
+                  src=${assetUrl("images/MedalIconWhite.svg")}
                   class="w-4 h-4 opacity-80 shrink-0"
                   style="${this.showAchievements
                     ? ""
@@ -654,9 +655,6 @@ export class SinglePlayerModal extends BaseModal {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
-    if (!usernameInput) {
-      console.warn("Username input element not found");
-    }
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -669,7 +667,8 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getCurrentUsername(),
+                username: usernameInput.getUsername(),
+                clanTag: usernameInput.getClanTag() ?? null,
                 cosmetics: await getPlayerCosmetics(),
               },
             ],

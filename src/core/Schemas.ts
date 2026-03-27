@@ -1,10 +1,9 @@
-import countries from "resources/countries.json";
 import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
 import {
   ColorPaletteSchema,
+  CosmeticNameSchema,
   PatternDataSchema,
-  PatternNameSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
 import {
@@ -132,7 +131,6 @@ export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
-export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -141,9 +139,21 @@ export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
 
 export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
 
+export const UsernameSchema = z
+  .string()
+  .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
+  .min(3)
+  .max(27);
+
+export const ClanTagSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9]{2,5}$/)
+  .nullable();
+
 const ClientInfoSchema = z.object({
   clientID: z.string(),
-  username: z.string(),
+  username: UsernameSchema,
+  clanTag: ClanTagSchema,
 });
 
 export const GameInfoSchema = z.object({
@@ -179,6 +189,7 @@ export class LobbyInfoEvent implements GameEvent {
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
+  clanTag: string | null;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -212,13 +223,17 @@ export const GameConfigSchema = z.object({
   gameMapSize: z.enum(GameMapSize),
   publicGameModifiers: z
     .object({
-      isCompact: z.boolean(),
-      isRandomSpawn: z.boolean(),
-      isCrowded: z.boolean(),
-      isHardNations: z.boolean(),
+      isCompact: z.boolean().optional(),
+      isRandomSpawn: z.boolean().optional(),
+      isCrowded: z.boolean().optional(),
+      isHardNations: z.boolean().optional(),
       startingGold: z.number().int().min(0).optional(),
       goldMultiplier: z.number().min(0.1).max(1000).optional(),
-      isAlliancesDisabled: z.boolean(),
+      isAlliancesDisabled: z.boolean().optional(),
+      isPortsDisabled: z.boolean().optional(),
+      isNukesDisabled: z.boolean().optional(),
+      isSAMsDisabled: z.boolean().optional(),
+      isPeaceTime: z.boolean().optional(),
     })
     .optional(),
   nations: z
@@ -278,13 +293,6 @@ export const isValidGameID = (value: string): boolean =>
 export const ID = z.string().regex(GAME_ID_REGEX);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
-
-export const UsernameSchema = z
-  .string()
-  .regex(/^[a-zA-Z0-9_ [\]üÜ.]+$/u)
-  .min(3)
-  .max(27);
-const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -471,28 +479,23 @@ export const TurnSchema = z.object({
   hash: z.number().nullable().optional(),
 });
 
-export const FlagSchema = z
+export const FlagName = z
   .string()
   .max(128)
-  .optional()
   .refine(
     (val) => {
       if (val === undefined || val === "") return true;
-      if (val.startsWith("!")) return true;
-      return countryCodes.includes(val);
+      return val.startsWith("flag:") || val.startsWith("country:");
     },
-    { message: "Invalid flag: must be a valid country code or start with !" },
+    {
+      message: "Invalid flag: must start with country: or flag:",
+    },
   );
 
-export const PlayerCosmeticRefsSchema = z.object({
-  flag: FlagSchema.optional(),
-  color: z.string().optional(),
-  patternName: PatternNameSchema.optional(),
-  patternColorPaletteName: z.string().optional(),
-});
+export const FlagSchema = z.string();
 
 export const PlayerPatternSchema = z.object({
-  name: PatternNameSchema,
+  name: CosmeticNameSchema,
   patternData: PatternDataSchema,
   colorPalette: ColorPaletteSchema.optional(),
 });
@@ -501,6 +504,16 @@ export const PlayerColorSchema = z.object({
   color: z.string(),
 });
 
+// Refs contain cosmetics names, will be replaced by the actual
+// content in the server
+export const PlayerCosmeticRefsSchema = z.object({
+  flag: FlagName.optional(),
+  color: z.string().optional(),
+  patternName: CosmeticNameSchema.optional(),
+  patternColorPaletteName: z.string().optional(),
+});
+
+// Server converts refs to the actual cosmetics here
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
@@ -510,6 +523,7 @@ export const PlayerCosmeticsSchema = z.object({
 export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
+  clanTag: ClanTagSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
 });
@@ -517,6 +531,7 @@ export const PlayerSchema = z.object({
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: z.number(),
+  visibleAt: z.number().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
 });
@@ -630,6 +645,7 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII - server extracts persistentID from this
   gameID: ID,
   username: UsernameSchema,
+  clanTag: ClanTagSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
@@ -659,7 +675,6 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
-  clanTag: z.string().optional(),
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;

@@ -1,7 +1,20 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import { ClanTagSchema } from "./Schemas";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { Difficulty, GameMode, GameType, RankedType } from "./game/Game";
+
+function stripClanTagFromUsername(username: string): string {
+  return username.replace(/^\s*\[[a-zA-Z0-9]{2,5}\]\s*/u, "").trim();
+}
+
+// Historical leaderboard rows can include legacy usernames
+// that predate current strict join-time validation rules.
+const LeaderboardUsernameSchema = z
+  .string()
+  .transform(stripClanTagFromUsername)
+  .pipe(z.string().min(1).max(64));
+const LeaderboardClanTagSchema = ClanTagSchema.unwrap();
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -85,13 +98,17 @@ export const PlayerStatsLeafSchema = z.object({
 });
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
-export const PlayerStatsTreeSchema = z.partialRecord(
-  z.enum(GameType),
-  z.partialRecord(
-    z.enum(GameMode),
-    z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
-  ),
+const GameModeStatsSchema = z.partialRecord(
+  z.enum(GameMode),
+  z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
 );
+
+export const PlayerStatsTreeSchema = z.object({
+  Singleplayer: GameModeStatsSchema.optional(),
+  Public: GameModeStatsSchema.optional(),
+  Private: GameModeStatsSchema.optional(),
+  Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
+});
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
 export const PlayerGameSchema = z.object({
@@ -114,7 +131,7 @@ export const PlayerProfileSchema = z.object({
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
 export const ClanLeaderboardEntrySchema = z.object({
-  clanTag: z.string(),
+  clanTag: LeaderboardClanTagSchema,
   games: z.number(),
   wins: z.number(),
   losses: z.number(),
@@ -137,8 +154,8 @@ export type ClanLeaderboardResponse = z.infer<
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
-  username: z.string(),
-  clanTag: z.string().optional(),
+  username: LeaderboardUsernameSchema,
+  clanTag: LeaderboardClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
@@ -166,8 +183,8 @@ export const RankedLeaderboardEntrySchema = z.object({
   total: z.number(),
   public_id: z.string(),
   user: DiscordUserSchema.nullable().optional(),
-  username: z.string(),
-  clanTag: z.string().nullable().optional(),
+  username: LeaderboardUsernameSchema,
+  clanTag: LeaderboardClanTagSchema.nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema

@@ -41,6 +41,13 @@ export class ReplayPanel extends LitElement implements Layer {
         this.visible = event.visible;
         this.isSingleplayer = event.isSingleplayer;
       });
+      this.eventBus.on(
+        ReplaySpeedChangeEvent,
+        (event: ReplaySpeedChangeEvent) => {
+          this._replaySpeedMultiplier = event.replaySpeedMultiplier;
+          this.requestUpdate();
+        },
+      );
     }
   }
 
@@ -68,7 +75,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="p-2 bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg rounded-l-lg"
+        class="p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-l-lg"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-2 text-white" translate="no">

@@ -3,7 +3,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  distSortUnit,
+  findClosestBy,
   minInt,
   simpleHash,
   toInt,
@@ -84,9 +84,6 @@ export class PlayerImpl implements Player {
   public _units: Unit[] = [];
   public _tiles: Set<TileRef> = new Set();
 
-  private _name: string;
-  private _displayName: string;
-
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
   private _expiredAlliances: Alliance[] = [];
 
@@ -115,10 +112,8 @@ export class PlayerImpl implements Player {
     startTroops: number,
     private readonly _team: Team | null,
   ) {
-    this._name = playerInfo.name;
     this._troops = toInt(startTroops);
     this._gold = mg.config().startingGold(playerInfo);
-    this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
 
@@ -193,10 +188,10 @@ export class PlayerImpl implements Player {
   }
 
   name(): string {
-    return this._name;
+    return this.playerInfo.name;
   }
   displayName(): string {
-    return this._displayName;
+    return this.playerInfo.displayName;
   }
 
   clientID(): ClientID | null {
@@ -209,10 +204,6 @@ export class PlayerImpl implements Player {
 
   type(): PlayerType {
     return this.playerInfo.playerType;
-  }
-
-  clan(): string | null {
-    return this.playerInfo.clan;
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -760,14 +751,14 @@ export class PlayerImpl implements Player {
       MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
       undefined,
-      { troops: renderTroops(troops), name: recipient.name() },
+      { troops: renderTroops(troops), name: recipient.displayName() },
     );
     this.mg.displayMessage(
       "events_display.received_troops_from_player",
       MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
       undefined,
-      { troops: renderTroops(troops), name: this.name() },
+      { troops: renderTroops(troops), name: this.displayName() },
     );
     return true;
   }
@@ -784,14 +775,14 @@ export class PlayerImpl implements Player {
       MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
       undefined,
-      { gold: renderNumber(gold), name: recipient.name() },
+      { gold: renderNumber(gold), name: recipient.displayName() },
     );
     this.mg.displayMessage(
       "events_display.received_gold_from_player",
       MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
       gold,
-      { gold: renderNumber(gold), name: this.name() },
+      { gold: renderNumber(gold), name: this.displayName() },
     );
     return true;
   }
@@ -1003,14 +994,18 @@ export class PlayerImpl implements Player {
     type: UnitType,
     targetTile: TileRef,
   ): Unit | false {
-    const range = this.mg.config().structureMinDist();
-    const existing = this.mg
-      .nearbyUnits(targetTile, range, type, undefined, true)
-      .sort((a, b) => a.distSquared - b.distSquared);
-    if (existing.length === 0) {
-      return false;
-    }
-    return existing[0].unit;
+    const closest = findClosestBy(
+      this.mg.nearbyUnits(
+        targetTile,
+        this.mg.config().structureMinDist(),
+        type,
+        undefined,
+        true,
+      ),
+      (entry) => entry.distSquared,
+    );
+
+    return closest?.unit ?? false;
   }
 
   private canBuildUnitType(
@@ -1176,23 +1171,29 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
-    if (this.mg.isSpawnImmunityActive()) {
+    const mg = this.mg;
+    if (mg.isSpawnImmunityActive()) {
       return false;
     }
     const owner = this.mg.owner(tile);
+    // Allow nuking teammates after the game is over (aftergame fun)
+    const gameOver = mg.getWinner() !== null;
     if (owner.isPlayer()) {
-      if (this.isOnSameTeam(owner)) {
+      if (this.isOnSameTeam(owner) && !gameOver) {
         return false;
       }
     }
+    const config = mg.config();
 
-    // Prevent launching nukes that would hit teammate structures (only in team games)
+    // Prevent launching nukes that would hit teammate structures (only in team games).
+    // Disabled after game-over so players can nuke teammates in the aftergame.
     if (
-      this.mg.config().gameConfig().gameMode === GameMode.Team &&
-      nukeType !== UnitType.MIRV
+      config.gameConfig().gameMode === GameMode.Team &&
+      nukeType !== UnitType.MIRV &&
+      !gameOver
     ) {
-      const magnitude = this.mg.config().nukeMagnitudes(nukeType);
-      const wouldHitTeammate = this.mg.anyUnitNearby(
+      const magnitude = config.nukeMagnitudes(nukeType);
+      const wouldHitTeammate = mg.anyUnitNearby(
         tile,
         magnitude.outer,
         Structures.types,
@@ -1204,15 +1205,14 @@ export class PlayerImpl implements Player {
     }
 
     // only get missilesilos that are not on cooldown and not under construction
-    const spawns = this.units(UnitType.MissileSilo)
-      .filter((silo) => {
-        return !silo.isInCooldown() && !silo.isUnderConstruction();
-      })
-      .sort(distSortUnit(this.mg, tile));
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+    const bestSilo = findClosestBy(
+      this.units(UnitType.MissileSilo),
+      (silo) => mg.manhattanDist(silo.tile(), tile),
+      (silo) =>
+        silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
+    );
+
+    return bestSilo?.tile() ?? false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
@@ -1242,15 +1242,14 @@ export class PlayerImpl implements Player {
     if (!this.mg.isOcean(tile)) {
       return false;
     }
-    const spawns = this.units(UnitType.Port).sort(
-      (a, b) =>
-        this.mg.manhattanDist(a.tile(), tile) -
-        this.mg.manhattanDist(b.tile(), tile),
+
+    const bestPort = findClosestBy(
+      this.units(UnitType.Port),
+      (port) => this.mg.manhattanDist(port.tile(), tile),
+      (port) => port.isActive() && !port.isUnderConstruction(),
     );
-    if (spawns.length === 0) {
-      return false;
-    }
-    return spawns[0].tile();
+
+    return bestPort?.tile() ?? false;
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
