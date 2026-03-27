@@ -338,7 +338,9 @@ export function createRenderer(
     inGamePromo,
     alertFrame,
     performanceOverlay,
-    targetSelectionLayer,
+    ...(targetSelectionLayer instanceof TargetSelectionLayer
+      ? [targetSelectionLayer]
+      : []),
   ];
 
   return new GameRenderer(

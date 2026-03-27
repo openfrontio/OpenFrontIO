@@ -969,7 +969,9 @@
     "editing_hint": "Editing preset {n} — pick a category and phrase, or choose an action",
     "select_hint": "Click a preset to edit it",
     "actions": "Actions",
-    "select_target": "Select a player"
+    "select_target": "Select a player",
+    "player_info": "Player Info",
+    "needs_target": "[needs target]"
   },
   "discord_user_header": {
     "avatar_alt": "Avatar"

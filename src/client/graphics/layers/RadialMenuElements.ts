@@ -502,7 +502,9 @@ export const infoMenuElement: MenuElement = {
       disabled: () => false,
       icon: infoIcon,
       color: COLORS.info,
-      tooltipItems: [{ text: "Player Info", className: "title" }],
+      tooltipItems: [
+        { text: translateText("quick_chat.player_info"), className: "title" },
+      ],
       action: (p: MenuElementParams) => {
         p.playerPanel.show(p.playerActions, p.tile);
       },

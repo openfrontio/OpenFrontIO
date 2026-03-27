@@ -278,7 +278,9 @@ export class QuickChatConfigModal extends LitElement {
                             ${phrase.requiresPlayer
                               ? html`<span
                                   style="font-size:10px;opacity:0.4;margin-left:4px;"
-                                  >[needs target]</span
+                                  >${translateText(
+                                    "quick_chat.needs_target",
+                                  )}</span
                                 >`
                               : null}
                           </button>
