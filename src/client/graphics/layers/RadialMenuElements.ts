@@ -502,7 +502,10 @@ export const infoMenuElement: MenuElement = {
     if (params === undefined || !params.selected) return [];
 
     const recipient = params.selected;
-    const presets = QuickChatPresetService.getInstance().load();
+    const isSelf = params.selected === params.myPlayer;
+
+    // On own territory: skip chat presets, just show Info and Configure
+    const presets = isSelf ? [] : QuickChatPresetService.getInstance().load();
 
     const presetItems = presets.map((slot) => buildPresetItem(slot, recipient));
 
