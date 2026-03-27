@@ -351,7 +351,8 @@
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
-    "milkyway": "Milky Way"
+    "milkyway": "Milky Way",
+    "mediterranean": "Mediterranean"
   },
   "map_categories": {
     "featured": "Featured",
