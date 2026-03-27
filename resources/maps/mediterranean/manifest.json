@@ -113,7 +113,8 @@
     },
     {
       "coordinates": [2428, 200],
-      "name": "Bosporan Kingdom"
+      "name": "Bosporan Kingdom",
+      "flag": ""
     },
     {
       "coordinates": [2065, 690],
