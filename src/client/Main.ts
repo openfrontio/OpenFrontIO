@@ -9,7 +9,7 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
@@ -41,6 +41,8 @@ import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
 import "./SinglePlayerModal";
+import { StoreModal } from "./Store";
+import "./TerritoryPatternsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -169,7 +171,6 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 declare global {
   interface Window {
     GIT_COMMIT: string;
-    INSTANCE_ID: string;
     turnstile: any;
     adsEnabled: boolean;
     PageOS: {
@@ -247,7 +248,7 @@ class Client {
   private joinModal: JoinLobbyModal;
   private gameModeSelector: GameModeSelector;
   private userSettings: UserSettings = new UserSettings();
-  private patternsModal: TerritoryPatternsModal;
+  private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
 
@@ -361,30 +362,22 @@ class Client {
       });
     });
 
-    this.patternsModal = document.getElementById(
+    this.storeModal = document.getElementById("page-item-store") as StoreModal;
+    if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
+      console.warn("Store modal element not found");
+    }
+
+    const patternsModal = document.getElementById(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
-    if (
-      !this.patternsModal ||
-      !(this.patternsModal instanceof TerritoryPatternsModal)
-    ) {
-      console.warn("Territory patterns modal element not found");
+    if (!patternsModal || !(patternsModal instanceof TerritoryPatternsModal)) {
+      console.warn("Patterns modal element not found");
     }
 
     // Attach listener to any pattern-input component
     document.querySelectorAll("pattern-input").forEach((patternInput) => {
       patternInput.addEventListener("pattern-input-click", () => {
-        // Open the Store page which contains the patterns UI
-        window.showPage?.("page-item-store");
-        const skinStoreModal = document.getElementById(
-          "page-item-store",
-        ) as HTMLElement & { open?: (opts: any) => void };
-        if (skinStoreModal) {
-          skinStoreModal.classList.remove("hidden");
-          if (typeof skinStoreModal.open === "function") {
-            skinStoreModal.open({ showOnlyOwned: true });
-          }
-        }
+        patternsModal.open();
       });
     });
 
@@ -393,29 +386,20 @@ class Client {
       if (mobilePat) mobilePat.style.display = "none";
     }
 
-    if (
-      !this.patternsModal ||
-      !(this.patternsModal instanceof TerritoryPatternsModal)
-    ) {
-      console.warn("Territory patterns modal element not found");
+    if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
+      console.warn("Store modal element not found");
     }
 
     // We no longer need to manually manage the preview button as PatternInput handles it component-side.
     // However, we still want to ensure the modal can be opened.
     // The setupPatternInput above handles the click event for the new buttons.
 
-    this.patternsModal.refresh();
-
-    // Listen for pattern selection to update any other listeners if needed,
-    // though PatternInput handles its own updates via window event.
-    this.patternsModal.addEventListener("pattern-selected", () => {
-      // PatternInput components will update themselves.
-    });
+    this.storeModal.refresh();
 
     window.addEventListener("showPage", (e: any) => {
       if (typeof e?.detail === "string" && e.detail === "page-play") {
         setTimeout(() => {
-          this.patternsModal.refresh();
+          this.storeModal.refresh();
         }, 50);
       }
     });
@@ -647,14 +631,20 @@ class Client {
         return;
       }
 
-      const patternName = params.get("cosmetic");
-      if (!patternName) {
+      const cosmeticName = params.get("cosmetic");
+      if (!cosmeticName) {
         alert("Something went wrong. Please contact support.");
         console.error("purchase-completed but no pattern name");
         return;
       }
 
-      this.userSettings.setSelectedPatternName(patternName);
+      const setCosmetic = () => {
+        if (cosmeticName.startsWith("pattern:")) {
+          this.userSettings.setSelectedPatternName(cosmeticName);
+        } else if (cosmeticName.startsWith("flag:")) {
+          this.userSettings.setFlag(cosmeticName);
+        }
+      };
       const token = params.get("login-token");
 
       if (token) {
@@ -662,12 +652,13 @@ class Client {
         window.addEventListener("beforeunload", () => {
           // The page reloads after token login, so we need to save the pattern name
           // in case it is unset during reload.
-          this.userSettings.setSelectedPatternName(patternName);
+          setCosmetic();
         });
         this.tokenLoginModal.openWithToken(token);
       } else {
-        alertAndStrip(`purchase succeeded: ${patternName}`);
-        this.patternsModal.refresh();
+        alertAndStrip(`purchase succeeded: ${cosmeticName}`);
+        setCosmetic();
+        this.storeModal.refresh();
       }
       return;
     }
@@ -702,7 +693,7 @@ class Client {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.patternsModal?.open(affiliateCode);
+        this.storeModal?.open(affiliateCode);
       }
     }
     if (decodedHash.startsWith("#refresh")) {
@@ -750,7 +741,7 @@ class Client {
     if (lobby.source === "public") {
       this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
@@ -786,6 +777,7 @@ class Client {
         "user-setting",
         "troubleshooting-modal",
         "territory-patterns-modal",
+        "store-modal",
         "language-modal",
         "news-modal",
         "flag-input-modal",
@@ -858,7 +850,7 @@ class Client {
 
   private updateJoinUrlForShare(
     lobbyId: string,
-    config: Awaited<ReturnType<typeof getServerConfigFromClient>>,
+    config: Awaited<ReturnType<typeof getRuntimeClientServerConfig>>,
   ) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     const targetUrl = lobbyIdHidden
@@ -931,7 +923,7 @@ class Client {
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
   ): Promise<string | null> {
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     if (
       config.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
@@ -1009,7 +1001,7 @@ async function getTurnstileToken(): Promise<{
     throw new Error("Failed to load Turnstile script");
   }
 
-  const config = await getServerConfigFromClient();
+  const config = await getRuntimeClientServerConfig();
   const widgetId = window.turnstile.render("#turnstile-container", {
     sitekey: config.turnstileSiteKey(),
     size: "normal",
