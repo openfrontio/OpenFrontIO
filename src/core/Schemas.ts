@@ -1,10 +1,9 @@
-import countries from "resources/countries.json";
 import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
 import {
   ColorPaletteSchema,
+  CosmeticNameSchema,
   PatternDataSchema,
-  PatternNameSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
 import {
@@ -132,7 +131,6 @@ export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
-export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -295,8 +293,6 @@ export const isValidGameID = (value: string): boolean =>
 export const ID = z.string().regex(GAME_ID_REGEX);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
-
-const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -483,28 +479,23 @@ export const TurnSchema = z.object({
   hash: z.number().nullable().optional(),
 });
 
-export const FlagSchema = z
+export const FlagName = z
   .string()
   .max(128)
-  .optional()
   .refine(
     (val) => {
       if (val === undefined || val === "") return true;
-      if (val.startsWith("!")) return true;
-      return countryCodes.includes(val);
+      return val.startsWith("flag:") || val.startsWith("country:");
     },
-    { message: "Invalid flag: must be a valid country code or start with !" },
+    {
+      message: "Invalid flag: must start with country: or flag:",
+    },
   );
 
-export const PlayerCosmeticRefsSchema = z.object({
-  flag: FlagSchema.optional(),
-  color: z.string().optional(),
-  patternName: PatternNameSchema.optional(),
-  patternColorPaletteName: z.string().optional(),
-});
+export const FlagSchema = z.string();
 
 export const PlayerPatternSchema = z.object({
-  name: PatternNameSchema,
+  name: CosmeticNameSchema,
   patternData: PatternDataSchema,
   colorPalette: ColorPaletteSchema.optional(),
 });
@@ -513,6 +504,16 @@ export const PlayerColorSchema = z.object({
   color: z.string(),
 });
 
+// Refs contain cosmetics names, will be replaced by the actual
+// content in the server
+export const PlayerCosmeticRefsSchema = z.object({
+  flag: FlagName.optional(),
+  color: z.string().optional(),
+  patternName: CosmeticNameSchema.optional(),
+  patternColorPaletteName: z.string().optional(),
+});
+
+// Server converts refs to the actual cosmetics here
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),

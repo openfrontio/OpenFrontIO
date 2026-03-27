@@ -352,6 +352,7 @@
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
     "india": "India"
+    "milkyway": "Milky Way"
   },
   "map_categories": {
     "featured": "Featured",
@@ -929,18 +930,25 @@
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "catching_up": "Catching up..."
   },
+  "store": {
+    "title": "Store",
+    "patterns": "Skins",
+    "flags": "Flags",
+    "no_flags": "No flags available. Check back later for new items.",
+    "no_skins": "No skins available. Check back later for new items."
+  },
   "territory_patterns": {
     "title": "Skins",
-    "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "My Skins",
-    "all_owned": "All skins owned! Check back later for new items.",
     "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
     "selected": "selected"
+  },
+  "cosmetics": {
+    "artist_label": "Artist:"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1011,6 +1019,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
