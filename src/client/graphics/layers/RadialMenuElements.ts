@@ -488,7 +488,7 @@ export const infoMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams): MenuElement[] => {
-    if (!params.selected) return [];
+    if (params === undefined || !params.selected) return [];
 
     const recipient = params.selected;
     const presets = QuickChatPresetService.getInstance().load();
