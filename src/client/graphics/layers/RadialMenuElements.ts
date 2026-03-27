@@ -440,7 +440,11 @@ function buildPresetItem(slot: PresetSlot, recipient: PlayerView): MenuElement {
     return {
       id: "preset-trade-toggle",
       name: "trade",
-      disabled: (p: MenuElementParams) => p.selected === null,
+      disabled: (p: MenuElementParams) =>
+        p.selected === null ||
+        p.selected === p.myPlayer ||
+        (!p.playerActions?.interaction?.canEmbargo &&
+          !p.playerActions?.interaction?.canDonateGold),
       color: (p: MenuElementParams) =>
         p.playerActions?.interaction?.canEmbargo
           ? COLORS.embargo
@@ -453,9 +457,16 @@ function buildPresetItem(slot: PresetSlot, recipient: PlayerView): MenuElement {
       },
       fontSize: "10px",
       action: (p: MenuElementParams) => {
+        if (
+          p.selected === null ||
+          p.selected === p.myPlayer ||
+          (!p.playerActions?.interaction?.canEmbargo &&
+            !p.playerActions?.interaction?.canDonateGold)
+        )
+          return;
         const canEmbargo = !!p.playerActions?.interaction?.canEmbargo;
         p.playerActionHandler.handleEmbargo(
-          p.selected!,
+          p.selected,
           canEmbargo ? "start" : "stop",
         );
         p.closeMenu();
