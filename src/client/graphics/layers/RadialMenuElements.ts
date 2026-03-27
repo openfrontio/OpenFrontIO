@@ -442,7 +442,7 @@ function buildPresetItem(slot: PresetSlot, recipient: PlayerView): MenuElement {
       name: "trade",
       disabled: (p: MenuElementParams) =>
         p.selected === null ||
-        p.selected === p.myPlayer ||
+        p.selected?.id() === p.myPlayer?.id() ||
         (!p.playerActions?.interaction?.canEmbargo &&
           !p.playerActions?.interaction?.canDonateGold),
       color: (p: MenuElementParams) =>
@@ -459,7 +459,7 @@ function buildPresetItem(slot: PresetSlot, recipient: PlayerView): MenuElement {
       action: (p: MenuElementParams) => {
         if (
           p.selected === null ||
-          p.selected === p.myPlayer ||
+          p.selected?.id() === p.myPlayer?.id() ||
           (!p.playerActions?.interaction?.canEmbargo &&
             !p.playerActions?.interaction?.canDonateGold)
         )
@@ -502,7 +502,7 @@ export const infoMenuElement: MenuElement = {
     if (params === undefined || !params.selected) return [];
 
     const recipient = params.selected;
-    const isSelf = params.selected === params.myPlayer;
+    const isSelf = params.selected?.id() === params.myPlayer?.id();
 
     // On own territory: skip chat presets, just show Info and Configure
     const presets = isSelf ? [] : QuickChatPresetService.getInstance().load();
