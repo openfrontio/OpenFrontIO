@@ -115,6 +115,10 @@ export class DoBoatAttackEvent implements GameEvent {}
 
 export class DoGroundAttackEvent implements GameEvent {}
 
+export class DoRequestAllianceEvent implements GameEvent {}
+
+export class DoBreakAllianceEvent implements GameEvent {}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
@@ -242,6 +246,8 @@ export class InputHandler {
       buildAtomBomb: "Digit8",
       buildHydrogenBomb: "Digit9",
       buildMIRV: "Digit0",
+      requestAlliance: "KeyK",
+      breakAlliance: "KeyL",
       pauseGame: "KeyP",
       gameSpeedUp: "Period",
       gameSpeedDown: "Comma",
@@ -434,6 +440,16 @@ export class InputHandler {
       if (matchedBuild !== null) {
         e.preventDefault();
         this.setGhostStructure(matchedBuild);
+      }
+
+      if (e.code === this.keybinds.requestAlliance) {
+        e.preventDefault();
+        this.eventBus.emit(new DoRequestAllianceEvent());
+      }
+
+      if (e.code === this.keybinds.breakAlliance) {
+        e.preventDefault();
+        this.eventBus.emit(new DoBreakAllianceEvent());
       }
 
       if (e.code === this.keybinds.swapDirection) {
