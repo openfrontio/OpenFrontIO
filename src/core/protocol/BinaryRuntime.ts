@@ -57,6 +57,11 @@ export interface BinaryProtocolContext {
   readonly playerIdToIndex: ReadonlyMap<ClientID, number>;
 }
 
+export interface BinaryFrameHeader {
+  readonly messageType: number;
+  readonly flags: number;
+}
+
 export function createBinaryProtocolContext(
   gameStartInfo: Pick<GameStartInfo, "players">,
 ): BinaryProtocolContext {
@@ -177,7 +182,7 @@ export class BinaryReader {
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
 
-  readHeader(expectedType: number) {
+  readFrameHeader(): BinaryFrameHeader {
     if (this.bytes.byteLength < BINARY_HEADER_SIZE) {
       throw new Error("Binary frame too short");
     }
@@ -186,14 +191,19 @@ export class BinaryReader {
       throw new Error(`Unsupported binary protocol version: ${version}`);
     }
     const messageType = this.readUint8();
+    const flags = this.readUint16();
+    if (flags !== 0) {
+      throw new Error(`Unsupported binary header flags: ${flags}`);
+    }
+    return { messageType, flags };
+  }
+
+  readHeader(expectedType: number) {
+    const { messageType } = this.readFrameHeader();
     if (messageType !== expectedType) {
       throw new Error(
         `Unexpected binary message type: expected ${expectedType}, received ${messageType}`,
       );
-    }
-    const flags = this.readUint16();
-    if (flags !== 0) {
-      throw new Error(`Unsupported binary header flags: ${flags}`);
     }
   }
 
@@ -537,6 +547,39 @@ export function decodeDefinedFields(
     output[field.name] = readScalar(reader, field, context);
   }
   return output;
+}
+
+export function encodeAutoEnvelope(
+  definition: BinaryMessageDefinition,
+  source: Record<string, unknown>,
+  context: BinaryProtocolContext,
+): Uint8Array {
+  const writer = new BinaryWriter();
+  return writer.writeFrame(definition.messageType, () => {
+    if (definition.allowedFlags !== 0) {
+      writer.writeUint16(
+        encodeFlags(definition.type, definition.fields, source),
+      );
+    }
+    encodeDefinedFields(writer, definition.fields, source, context);
+  });
+}
+
+export function decodeAutoEnvelope(
+  reader: BinaryReader,
+  definition: BinaryMessageDefinition,
+  context: BinaryProtocolContext,
+): Record<string, unknown> & { type: string } {
+  const flags = definition.allowedFlags !== 0 ? reader.readUint16() : 0;
+  assertFlags(
+    `binary message type ${definition.type}`,
+    flags,
+    definition.allowedFlags,
+  );
+  return {
+    type: definition.type,
+    ...decodeDefinedFields(reader, definition.fields, flags, context),
+  };
 }
 
 export function playerIndexToId(
