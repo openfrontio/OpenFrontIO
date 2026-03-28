@@ -330,6 +330,59 @@ describe("GameServer binary gameplay protocol", () => {
     expect(game.activeClients).toHaveLength(0);
   });
 
+  it("kicks schema-invalid binary gameplay messages after start", () => {
+    const logger = createMockLogger();
+    const game = new GameServer(
+      "TEST0006",
+      logger as any,
+      Date.now(),
+      {
+        turnIntervalMs: () => 100,
+        env: () => 0,
+      } as any,
+      createGameConfig(),
+    );
+
+    const clientA = createClient(
+      "P0000001",
+      "88888888-8888-4888-8888-888888888888",
+      "Alice",
+    );
+
+    expect(game.joinClient(clientA.client)).toBe("joined");
+    game.start();
+
+    const startPayload = clientA.ws.sent.find(
+      (message): message is string =>
+        typeof message === "string" && message.includes('"type":"start"'),
+    );
+    expect(startPayload).toBeDefined();
+
+    const binaryContext = binaryContextFromGameStartInfo(
+      JSON.parse(startPayload!).gameStartInfo,
+    );
+    clientA.ws.sent.length = 0;
+    const invalidMessage = encodeBinaryClientGameplayMessage(
+      {
+        type: "intent",
+        intent: {
+          type: "attack",
+          targetID: "bad",
+          troops: 10,
+        },
+      } as any,
+      binaryContext,
+    );
+
+    clientA.ws.emit("message", invalidMessage, true);
+
+    expect(clientA.ws.sent).toEqual([
+      expect.stringContaining('"error":"kick_reason.invalid_message"'),
+    ]);
+    expect(clientA.ws.readyState).toBe(3);
+    expect(game.activeClients).toHaveLength(0);
+  });
+
   it("accepts JSON rejoin after start and responds with JSON start", () => {
     const logger = createMockLogger();
     const game = new GameServer(

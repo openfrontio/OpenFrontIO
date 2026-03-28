@@ -24,11 +24,16 @@ import {
 } from "./protocol/BinaryRuntime";
 import {
   ClientHashMessage,
+  ClientHashSchema,
   ClientIntentMessage,
+  ClientIntentMessageSchema,
   ClientPingMessage,
+  ClientPingMessageSchema,
   Intent,
   ServerDesyncMessage,
+  ServerDesyncSchema,
   ServerTurnMessage,
+  ServerTurnMessageSchema,
   StampedIntent,
 } from "./Schemas";
 
@@ -119,6 +124,7 @@ function decodeAutoMessage<T extends { type: string }>(
   data: ArrayBuffer | Uint8Array,
   definition: typeof hashMessageDefinition,
   context: BinaryProtocolContext,
+  parse: (value: unknown) => T,
 ): T {
   const reader = new BinaryReader(toUint8Array(data));
   reader.readHeader(definition.messageType);
@@ -131,9 +137,9 @@ function decodeAutoMessage<T extends { type: string }>(
   const decoded = {
     type: definition.type,
     ...decodeDefinedFields(reader, definition.fields, flags, context),
-  } as T;
+  };
   reader.ensureFinished();
-  return decoded;
+  return parse(decoded);
 }
 
 export {
@@ -224,10 +230,10 @@ export function decodeClientIntentMessage(
   reader.readHeader(BinaryMessageType.Intent);
   const intent = decodeIntentPayload(reader, context);
   reader.ensureFinished();
-  return {
+  return ClientIntentMessageSchema.parse({
     type: "intent",
     intent,
-  };
+  });
 }
 
 export function encodeClientHashMessage(
@@ -250,6 +256,7 @@ export function decodeClientHashMessage(
     data,
     hashMessageDefinition,
     context,
+    (value) => ClientHashSchema.parse(value),
   );
 }
 
@@ -273,6 +280,7 @@ export function decodeClientPingMessage(
     data,
     pingMessageDefinition,
     context,
+    (value) => ClientPingMessageSchema.parse(value),
   );
 }
 
@@ -310,13 +318,13 @@ export function decodeServerTurnMessage(
     } as StampedIntent);
   }
   reader.ensureFinished();
-  return {
+  return ServerTurnMessageSchema.parse({
     type: "turn",
     turn: {
       turnNumber,
       intents,
     },
-  };
+  });
 }
 
 export function encodeServerDesyncMessage(
@@ -339,5 +347,6 @@ export function decodeServerDesyncMessage(
     data,
     desyncMessageDefinition,
     context,
+    (value) => ServerDesyncSchema.parse(value),
   );
 }

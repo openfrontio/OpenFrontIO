@@ -435,6 +435,44 @@ describe("BinaryCodec", () => {
     );
   });
 
+  it("rejects client binary messages that violate semantic schemas", () => {
+    const encoded = encodeBinaryClientGameplayMessage(
+      {
+        type: "intent",
+        intent: {
+          type: "attack",
+          targetID: "bad",
+          troops: 10,
+        },
+      } as any,
+      context,
+    );
+
+    expect(() => decodeBinaryClientGameplayMessage(encoded, context)).toThrow();
+  });
+
+  it("rejects server binary messages that violate semantic schemas", () => {
+    const encoded = encodeBinaryServerGameplayMessage(
+      {
+        type: "turn",
+        turn: {
+          turnNumber: 1,
+          intents: [
+            {
+              type: "attack",
+              targetID: "bad",
+              troops: 3,
+              clientID: "P0000001",
+            },
+          ],
+        },
+      } as any,
+      context,
+    );
+
+    expect(() => decodeBinaryServerGameplayMessage(encoded, context)).toThrow();
+  });
+
   it("rejects truncated frames", () => {
     const encoded = encodeBinaryServerGameplayMessage(
       {
