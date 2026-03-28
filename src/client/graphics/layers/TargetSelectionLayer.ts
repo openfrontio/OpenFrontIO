@@ -24,12 +24,15 @@ export class TargetSelectionLayer extends LitElement implements Layer {
 
   private _mouseHandler: ((e: MouseOverEvent) => void) | null = null;
 
+  /** Uses light DOM so the layer shares global game CSS. */
   createRenderRoot() {
     return this;
   }
 
+  /** No-op — subscriptions are set up lazily in tick() when mode activates. */
   init() {}
 
+  /** Polls TargetSelectionMode each frame; subscribes/unsubscribes the mouse-over handler as mode changes. */
   tick() {
     const mode = TargetSelectionMode.getInstance();
     const wasActive = this.isActive;
@@ -54,6 +57,7 @@ export class TargetSelectionLayer extends LitElement implements Layer {
     }
   }
 
+  /** Renders a floating badge that follows the cursor while target-selection mode is active. */
   render() {
     if (!this.isActive) return html``;
 

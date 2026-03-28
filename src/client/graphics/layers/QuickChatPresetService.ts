@@ -19,9 +19,11 @@ const STORAGE_KEY = "quickchat.presets.v4";
 const MIN_SLOTS = 1;
 const MAX_SLOTS = 5;
 
+/** Singleton service that persists and retrieves quick-chat preset configuration from localStorage. */
 export class QuickChatPresetService {
   private static instance: QuickChatPresetService;
 
+  /** Returns the singleton instance, creating it on first call. */
   static getInstance(): QuickChatPresetService {
     if (!QuickChatPresetService.instance) {
       QuickChatPresetService.instance = new QuickChatPresetService();
@@ -29,6 +31,7 @@ export class QuickChatPresetService {
     return QuickChatPresetService.instance;
   }
 
+  /** Returns saved presets from localStorage, falling back to DEFAULT_PRESETS if missing or invalid. */
   load(): PresetSlot[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -45,6 +48,7 @@ export class QuickChatPresetService {
     }
   }
 
+  /** Persists the given preset slots to localStorage. Throws if count is out of range. */
   save(slots: PresetSlot[]): void {
     if (slots.length < MIN_SLOTS || slots.length > MAX_SLOTS) {
       throw new Error(
@@ -54,6 +58,7 @@ export class QuickChatPresetService {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
   }
 
+  /** Returns true if the slot has a valid type and all required fields for that type. */
   isValidSlot(slot: PresetSlot): boolean {
     if (!slot?.type) return false;
     if (slot.type === "quickchat") {
