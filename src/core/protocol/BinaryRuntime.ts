@@ -85,37 +85,39 @@ export function toUint8Array(data: ArrayBuffer | Uint8Array): Uint8Array {
 }
 
 export class BinaryWriter {
-  private readonly chunks: Uint8Array[] = [];
-  private totalLength = 0;
+  private buffer = new ArrayBuffer(128);
+  private bytes = new Uint8Array(this.buffer);
+  private view = new DataView(this.buffer);
+  private length = 0;
 
   writeUint8(value: number) {
-    const chunk = new Uint8Array(1);
-    chunk[0] = value;
-    this.push(chunk);
+    this.ensureCapacity(1);
+    this.view.setUint8(this.length, value);
+    this.length += 1;
   }
 
   writeUint16(value: number) {
-    const chunk = new Uint8Array(2);
-    new DataView(chunk.buffer).setUint16(0, value, true);
-    this.push(chunk);
+    this.ensureCapacity(2);
+    this.view.setUint16(this.length, value, true);
+    this.length += 2;
   }
 
   writeUint32(value: number) {
-    const chunk = new Uint8Array(4);
-    new DataView(chunk.buffer).setUint32(0, value, true);
-    this.push(chunk);
+    this.ensureCapacity(4);
+    this.view.setUint32(this.length, value, true);
+    this.length += 4;
   }
 
   writeInt32(value: number) {
-    const chunk = new Uint8Array(4);
-    new DataView(chunk.buffer).setInt32(0, value, true);
-    this.push(chunk);
+    this.ensureCapacity(4);
+    this.view.setInt32(this.length, value, true);
+    this.length += 4;
   }
 
   writeFloat64(value: number) {
-    const chunk = new Uint8Array(8);
-    new DataView(chunk.buffer).setFloat64(0, value, true);
-    this.push(chunk);
+    this.ensureCapacity(8);
+    this.view.setFloat64(this.length, value, true);
+    this.length += 8;
   }
 
   writeBoolean(value: boolean) {
@@ -129,8 +131,11 @@ export class BinaryWriter {
         `Binary string too long: ${encoded.length} bytes exceeds 65535`,
       );
     }
-    this.writeUint16(encoded.length);
-    this.push(encoded);
+    this.ensureCapacity(2 + encoded.length);
+    this.view.setUint16(this.length, encoded.length, true);
+    this.length += 2;
+    this.bytes.set(encoded, this.length);
+    this.length += encoded.length;
   }
 
   writeFrame(messageType: number, writePayload: () => void): Uint8Array {
@@ -142,18 +147,25 @@ export class BinaryWriter {
   }
 
   finish(): Uint8Array {
-    const output = new Uint8Array(this.totalLength);
-    let offset = 0;
-    for (const chunk of this.chunks) {
-      output.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return output;
+    return this.bytes.subarray(0, this.length);
   }
 
-  private push(chunk: Uint8Array) {
-    this.chunks.push(chunk);
-    this.totalLength += chunk.length;
+  private ensureCapacity(additionalBytes: number) {
+    const requiredLength = this.length + additionalBytes;
+    if (requiredLength <= this.bytes.byteLength) {
+      return;
+    }
+
+    let nextCapacity = this.bytes.byteLength;
+    while (nextCapacity < requiredLength) {
+      nextCapacity *= 2;
+    }
+
+    const nextBytes = new Uint8Array(nextCapacity);
+    nextBytes.set(this.bytes.subarray(0, this.length));
+    this.buffer = nextBytes.buffer;
+    this.bytes = nextBytes;
+    this.view = new DataView(this.buffer);
   }
 }
 
