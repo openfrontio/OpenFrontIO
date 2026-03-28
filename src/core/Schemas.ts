@@ -282,7 +282,10 @@ const TokenSchema = zb
     },
   );
 
-export const EmojiSchema = zb.u16().max(flattenedEmojiTable.length - 1);
+export const EmojiSchema = zb
+  .u16()
+  .max(flattenedEmojiTable.length - 1)
+  .schema();
 
 export const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
 
@@ -301,61 +304,65 @@ export const QuickChatKeySchema = zb.enum(
   ) as [string, ...string[]],
 );
 
+// Helper-bearing zb constructors such as zb.u32(), zb.f64(), and zb.playerRef()
+// return builders, not Zod schemas directly. Call .schema() at the end of the
+// chain to materialize the real Zod schema with its binary helper metadata.
+
 //
 // Intents
 //
 
 export const AllianceExtensionIntentSchema = zb.object({
   type: zb.literal("allianceExtension"),
-  recipient: zb.playerRef(),
+  recipient: zb.playerRef().schema(),
 });
 
 export const AttackIntentSchema = zb.object({
   type: zb.literal("attack"),
-  targetID: zb.playerRef().nullable(),
-  troops: zb.f64().nonnegative().nullable(),
+  targetID: zb.playerRef().nullable().schema(),
+  troops: zb.f64().nonnegative().nullable().schema(),
 });
 
 export const SpawnIntentSchema = zb.object({
   type: zb.literal("spawn"),
-  tile: zb.u32(),
+  tile: zb.u32().schema(),
 });
 
 export const BoatAttackIntentSchema = zb.object({
   type: zb.literal("boat"),
-  troops: zb.f64().nonnegative(),
-  dst: zb.u32(),
+  troops: zb.f64().nonnegative().schema(),
+  dst: zb.u32().schema(),
 });
 
 export const AllianceRequestIntentSchema = zb.object({
   type: zb.literal("allianceRequest"),
-  recipient: zb.playerRef(),
+  recipient: zb.playerRef().schema(),
 });
 
 export const AllianceRejectIntentSchema = zb.object({
   type: zb.literal("allianceReject"),
-  requestor: zb.playerRef(),
+  requestor: zb.playerRef().schema(),
 });
 
 export const BreakAllianceIntentSchema = zb.object({
   type: zb.literal("breakAlliance"),
-  recipient: zb.playerRef(),
+  recipient: zb.playerRef().schema(),
 });
 
 export const TargetPlayerIntentSchema = zb.object({
   type: zb.literal("targetPlayer"),
-  target: zb.playerRef(),
+  target: zb.playerRef().schema(),
 });
 
 export const EmojiIntentSchema = zb.object({
   type: zb.literal("emoji"),
-  recipient: zb.broadcastPlayerRef(),
+  recipient: zb.broadcastPlayerRef().schema(),
   emoji: EmojiSchema,
 });
 
 export const EmbargoIntentSchema = zb.object({
   type: zb.literal("embargo"),
-  targetID: zb.playerRef(),
+  targetID: zb.playerRef().schema(),
   action: zb.union([zb.literal("start"), zb.literal("stop")]),
 });
 
@@ -366,27 +373,27 @@ export const EmbargoAllIntentSchema = zb.object({
 
 export const DonateGoldIntentSchema = zb.object({
   type: zb.literal("donate_gold"),
-  recipient: zb.playerRef(),
-  gold: zb.f64().nonnegative().nullable(),
+  recipient: zb.playerRef().schema(),
+  gold: zb.f64().nonnegative().nullable().schema(),
 });
 
 export const DonateTroopIntentSchema = zb.object({
   type: zb.literal("donate_troops"),
-  recipient: zb.playerRef(),
-  troops: zb.f64().nonnegative().nullable(),
+  recipient: zb.playerRef().schema(),
+  troops: zb.f64().nonnegative().nullable().schema(),
 });
 
 export const BuildUnitIntentSchema = zb.object({
   type: zb.literal("build_unit"),
   unit: zb.enum(UnitType),
-  tile: zb.u32(),
+  tile: zb.u32().schema(),
   rocketDirectionUp: zb.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = zb.object({
   type: zb.literal("upgrade_structure"),
   unit: zb.enum(UnitType),
-  unitId: zb.u32(),
+  unitId: zb.u32().schema(),
 });
 
 export const CancelAttackIntentSchema = zb.object({
@@ -396,36 +403,36 @@ export const CancelAttackIntentSchema = zb.object({
 
 export const CancelBoatIntentSchema = zb.object({
   type: zb.literal("cancel_boat"),
-  unitID: zb.u32(),
+  unitID: zb.u32().schema(),
 });
 
 export const MoveWarshipIntentSchema = zb.object({
   type: zb.literal("move_warship"),
-  unitId: zb.u32(),
-  tile: zb.u32(),
+  unitId: zb.u32().schema(),
+  tile: zb.u32().schema(),
 });
 
 export const DeleteUnitIntentSchema = zb.object({
   type: zb.literal("delete_unit"),
-  unitId: zb.u32(),
+  unitId: zb.u32().schema(),
 });
 
 export const QuickChatIntentSchema = zb.object({
   type: zb.literal("quick_chat"),
-  recipient: zb.playerRef(),
+  recipient: zb.playerRef().schema(),
   quickChatKey: QuickChatKeySchema,
-  target: zb.playerRef().optional(),
+  target: zb.playerRef().optional().schema(),
 });
 
 export const MarkDisconnectedIntentSchema = zb.object({
   type: zb.literal("mark_disconnected"),
-  clientID: zb.playerRef(),
+  clientID: zb.playerRef().schema(),
   isDisconnected: zb.boolean(),
 });
 
 export const KickPlayerIntentSchema = zb.object({
   type: zb.literal("kick_player"),
-  target: zb.playerRef(),
+  target: zb.playerRef().schema(),
 });
 
 export const TogglePauseIntentSchema = zb.object({
@@ -433,12 +440,12 @@ export const TogglePauseIntentSchema = zb.object({
   paused: zb.boolean().default(false),
 });
 
-export const UpdateGameConfigIntentSchema = zb
-  .object({
+export const UpdateGameConfigIntentSchema = zb.jsonOnlyIntent(
+  zb.object({
     type: zb.literal("update_game_config"),
     config: GameConfigSchema.partial(),
-  })
-  .jsonOnlyIntent();
+  }),
+);
 
 // Gameplay intents are binary by default when they are part of AllIntentSchema.
 // jsonOnlyIntent() is the explicit opt-out for intent variants that must stay JSON.
@@ -480,10 +487,10 @@ export type StampedIntent = Intent & { clientID: ClientID };
 //
 
 export const TurnSchema = zb.object({
-  turnNumber: zb.u32(),
+  turnNumber: zb.u32().schema(),
   intents: StampedIntentSchema.array(),
   // The hash of the game state at the end of the turn.
-  hash: zb.i32().nullable().optional().binaryOmit(),
+  hash: zb.binaryOmit(zb.i32().nullable().optional().schema()),
 });
 
 export const FlagSchema = zb
@@ -579,11 +586,11 @@ export const ServerStartGameMessageSchema = zb.object({
 
 export const ServerDesyncSchema = zb.object({
   type: zb.literal("desync"),
-  turn: zb.u32(),
-  correctHash: zb.i32().nullable(),
-  clientsWithCorrectHash: zb.u16(),
-  totalActiveClients: zb.u16(),
-  yourHash: zb.i32().optional().binaryOmit(),
+  turn: zb.u32().schema(),
+  correctHash: zb.i32().nullable().schema(),
+  clientsWithCorrectHash: zb.u16().schema(),
+  totalActiveClients: zb.u16().schema(),
+  yourHash: zb.binaryOmit(zb.i32().optional().schema()),
 });
 
 export const ServerErrorSchema = zb.object({
@@ -630,8 +637,8 @@ export const ClientSendWinnerSchema = zb.object({
 
 export const ClientHashSchema = zb.object({
   type: zb.literal("hash"),
-  hash: zb.i32(),
-  turnNumber: zb.u32(),
+  hash: zb.i32().schema(),
+  turnNumber: zb.u32().schema(),
 });
 
 export const ClientLogMessageSchema = zb.object({

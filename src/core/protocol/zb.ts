@@ -1,182 +1,127 @@
 import { z } from "zod";
 import { AllPlayers } from "../game/Game";
 import {
+  type BinaryFieldHelper,
+  type BinaryNumericWireType,
   binaryField,
-  binaryFieldRegistry,
-  binaryIntentRegistry,
   binaryNumber,
   binaryOmit,
-  getBinaryFieldHelper,
-  isJsonOnlyIntentSchema,
   jsonOnlyIntent,
   playerRef as playerRefHelper,
 } from "./BinaryWire";
 
 const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
-const ZB_PATCHED = Symbol.for("openfront.protocol.zb.patched");
-const ZB_WRAPPED = Symbol.for("openfront.protocol.zb.wrapped");
 
-declare module "zod" {
-  interface ZodType<
-    out Output = unknown,
-    out Input = unknown,
-    out Internals extends z.core.$ZodTypeInternals<
-      Output,
-      Input
-    > = z.core.$ZodTypeInternals<Output, Input>,
-  > {
-    readonly _zbInternalsHint?: Internals | undefined;
-    binaryOmit(): this;
-    jsonOnlyIntent(): this;
-  }
+// Helper-bearing zb constructors return lightweight builders, not Zod schemas.
+// Call .schema() at the end of the chain to materialize the real Zod schema and
+// attach the binary helper metadata exactly once on the final schema instance.
+interface FieldSchemaBuilder<T extends z.ZodTypeAny> {
+  optional(): FieldSchemaBuilder<z.ZodOptional<T>>;
+  nullable(): FieldSchemaBuilder<z.ZodNullable<T>>;
+  schema(): T;
 }
 
-function copyBinaryMetadata(source: z.ZodTypeAny, target: z.ZodTypeAny) {
-  const fieldHelper = getBinaryFieldHelper(source);
-  if (fieldHelper !== undefined) {
-    (target as any).register(binaryFieldRegistry, fieldHelper);
-  }
-
-  if (isJsonOnlyIntentSchema(source)) {
-    (target as any).register(binaryIntentRegistry, {
-      kind: "intent",
-      jsonOnly: true,
-    });
-  }
+interface NumberSchemaBuilder<T extends z.ZodTypeAny> {
+  optional(): NumberSchemaBuilder<z.ZodOptional<T>>;
+  nullable(): NumberSchemaBuilder<z.ZodNullable<T>>;
+  max(
+    this: NumberSchemaBuilder<z.ZodNumber>,
+    value: number,
+  ): NumberSchemaBuilder<z.ZodNumber>;
+  nonnegative(
+    this: NumberSchemaBuilder<z.ZodNumber>,
+  ): NumberSchemaBuilder<z.ZodNumber>;
+  schema(): T;
 }
 
-function decorateBinaryAwareSchema<T extends z.ZodTypeAny>(schema: T): T {
-  const instance = schema as z.ZodTypeAny & Record<PropertyKey, unknown>;
-  if ((instance as any)[ZB_WRAPPED]) {
-    return schema;
-  }
+function createFieldBuilder<T extends z.ZodTypeAny>(
+  schema: T,
+  helper: BinaryFieldHelper,
+): FieldSchemaBuilder<T> {
+  return {
+    optional() {
+      return createFieldBuilder(schema.optional(), helper);
+    },
+    nullable() {
+      return createFieldBuilder(schema.nullable(), helper);
+    },
+    schema() {
+      return binaryField(schema, helper);
+    },
+  };
+}
 
-  for (const methodName of [
-    "optional",
-    "nullable",
-    "default",
-    "refine",
-    "gt",
-    "gte",
-    "min",
-    "lt",
-    "lte",
-    "max",
-    "positive",
-    "negative",
-    "nonpositive",
-    "nonnegative",
-    "multipleOf",
-    "step",
-    "finite",
-    "safe",
-    "int",
-  ]) {
-    const original = instance[methodName];
-    if (typeof original !== "function" || (original as any)[ZB_WRAPPED]) {
-      continue;
-    }
-
-    const wrapped = function (this: z.ZodTypeAny, ...args: unknown[]) {
-      const result = (original as (...methodArgs: unknown[]) => unknown).apply(
-        this,
-        args,
+function createNumberBuilder<T extends z.ZodTypeAny>(
+  schema: T,
+  wireType: BinaryNumericWireType,
+): NumberSchemaBuilder<T> {
+  return {
+    optional() {
+      return createNumberBuilder(schema.optional(), wireType);
+    },
+    nullable() {
+      return createNumberBuilder(schema.nullable(), wireType);
+    },
+    max(value) {
+      return createNumberBuilder(
+        (schema as unknown as z.ZodNumber).max(value),
+        wireType,
       );
-      if (result instanceof z.ZodType) {
-        copyBinaryMetadata(this, result);
-        return decorateBinaryAwareSchema(result);
-      }
-      return result;
-    };
-
-    Object.defineProperty(wrapped, ZB_WRAPPED, {
-      value: true,
-      configurable: false,
-      enumerable: false,
-      writable: false,
-    });
-    instance[methodName] = wrapped;
-  }
-
-  Object.defineProperty(instance, ZB_WRAPPED, {
-    value: true,
-    configurable: false,
-    enumerable: false,
-    writable: false,
-  });
-  return schema;
-}
-
-function installZbPrototypeMethods() {
-  const proto = z.ZodType.prototype as any;
-  if (proto[ZB_PATCHED]) {
-    return;
-  }
-
-  proto.binaryOmit = function () {
-    return binaryOmit(this as z.ZodTypeAny);
+    },
+    nonnegative() {
+      return createNumberBuilder(
+        (schema as unknown as z.ZodNumber).nonnegative(),
+        wireType,
+      );
+    },
+    schema() {
+      return binaryNumber(schema, wireType);
+    },
   };
-  proto.jsonOnlyIntent = function () {
-    return jsonOnlyIntent(this as z.ZodTypeAny);
-  };
-
-  Object.defineProperty(proto, ZB_PATCHED, {
-    value: true,
-    configurable: false,
-    enumerable: false,
-    writable: false,
-  });
 }
-
-installZbPrototypeMethods();
 
 export const zb = {
   array: z.array,
+  binaryOmit,
   boolean: z.boolean,
   discriminatedUnion: z.discriminatedUnion,
   enum: z.enum,
+  f64() {
+    return createNumberBuilder(z.number(), "f64");
+  },
+  i32() {
+    return createNumberBuilder(
+      z.number().int().min(-0x80000000).max(0x7fffffff),
+      "i32",
+    );
+  },
+  jsonOnlyIntent,
   jwt: z.jwt,
   lazy: z.lazy,
   literal: z.literal,
   number: z.number,
   object: z.object,
+  playerRef() {
+    return createFieldBuilder(
+      z.string().regex(GAME_ID_REGEX),
+      playerRefHelper({ inlineFallback: true }),
+    );
+  },
   record: z.record,
   string: z.string,
   tuple: z.tuple,
-  union: z.union,
-  uuid: z.uuid,
   u16() {
-    return decorateBinaryAwareSchema(
-      binaryNumber(z.number().int().min(0).max(0xffff), "u16"),
-    );
+    return createNumberBuilder(z.number().int().min(0).max(0xffff), "u16");
   },
   u32() {
-    return decorateBinaryAwareSchema(
-      binaryNumber(z.number().int().min(0).max(0xffffffff), "u32"),
-    );
+    return createNumberBuilder(z.number().int().min(0).max(0xffffffff), "u32");
   },
-  i32() {
-    return decorateBinaryAwareSchema(
-      binaryNumber(z.number().int().min(-0x80000000).max(0x7fffffff), "i32"),
-    );
-  },
-  f64() {
-    return decorateBinaryAwareSchema(binaryNumber(z.number(), "f64"));
-  },
-  playerRef() {
-    return decorateBinaryAwareSchema(
-      binaryField(
-        z.string().regex(GAME_ID_REGEX),
-        playerRefHelper({ inlineFallback: true }),
-      ),
-    );
-  },
+  union: z.union,
+  uuid: z.uuid,
   broadcastPlayerRef() {
-    return decorateBinaryAwareSchema(
-      binaryField(
-        z.union([z.string().regex(GAME_ID_REGEX), z.literal(AllPlayers)]),
-        playerRefHelper({ allowAllPlayers: true, inlineFallback: true }),
-      ),
+    return createFieldBuilder(
+      z.union([z.string().regex(GAME_ID_REGEX), z.literal(AllPlayers)]),
+      playerRefHelper({ allowAllPlayers: true, inlineFallback: true }),
     );
   },
 } as const;

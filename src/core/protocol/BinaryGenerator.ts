@@ -11,7 +11,11 @@ import type {
   BinaryIntentDefinition,
   BinaryMessageDefinition,
 } from "./BinaryRuntime";
-import { getBinaryFieldHelper, isJsonOnlyIntentSchema } from "./BinaryWire";
+import {
+  getBinaryFieldHelper,
+  isBinaryOmittedSchema,
+  isJsonOnlyIntentSchema,
+} from "./BinaryWire";
 
 interface GeneratedBinaryModel {
   readonly intentDefinitions: readonly BinaryIntentDefinition[];
@@ -93,6 +97,7 @@ function analyzeFieldSchema(
   let current = schema;
   let optional = false;
   let nullable = false;
+  const omit = isBinaryOmittedSchema(current);
   let helper = getBinaryFieldHelper(current);
 
   while (true) {
@@ -126,22 +131,10 @@ function analyzeFieldSchema(
     name: fieldName,
     wireType: "string",
   };
-
-  if (helper?.kind === "omit") {
-    const innerDefinition = analyzeFieldSchema(fieldName, current);
-    return {
-      ...innerDefinition,
-      name: fieldName,
-      omit: true,
-      optional: false,
-      nullable: false,
-      presenceBit: undefined,
-      valueBit: undefined,
-    };
-  }
+  let definition: BinaryFieldDefinition;
 
   if (helper?.kind === "playerRef") {
-    return {
+    definition = {
       ...definitionBase,
       wireType: "playerRef",
       optional,
@@ -153,47 +146,37 @@ function analyzeFieldSchema(
         ? { inlineFallback: helper.inlineFallback }
         : {}),
     };
-  }
-
-  if (helper?.kind === "number") {
-    return {
+  } else if (helper?.kind === "number") {
+    definition = {
       ...definitionBase,
       wireType: helper.wireType,
       optional,
       nullable,
     };
-  }
-
-  if (current instanceof z.ZodBoolean) {
-    return {
+  } else if (current instanceof z.ZodBoolean) {
+    definition = {
       ...definitionBase,
       wireType: "bool",
       optional,
       nullable,
     };
-  }
-
-  if (current instanceof z.ZodString) {
-    return {
+  } else if (current instanceof z.ZodString) {
+    definition = {
       ...definitionBase,
       wireType: "string",
       optional,
       nullable,
     };
-  }
-
-  if (current instanceof z.ZodNumber) {
-    return {
+  } else if (current instanceof z.ZodNumber) {
+    definition = {
       ...definitionBase,
       wireType: "f64",
       optional,
       nullable,
     };
-  }
-
-  if (current instanceof z.ZodEnum) {
+  } else if (current instanceof z.ZodEnum) {
     const enumValues = [...(current as any).options] as (string | number)[];
-    return {
+    definition = {
       ...definitionBase,
       wireType: "enum",
       optional,
@@ -201,11 +184,9 @@ function analyzeFieldSchema(
       enumValues,
       enumWireType: pickEnumWireType(enumValues.length),
     };
-  }
-
-  if (current instanceof z.ZodUnion) {
+  } else if (current instanceof z.ZodUnion) {
     const literalValues = getLiteralUnionValues(current);
-    return {
+    definition = {
       ...definitionBase,
       wireType: "enum",
       optional,
@@ -213,11 +194,24 @@ function analyzeFieldSchema(
       enumValues: literalValues,
       enumWireType: pickEnumWireType(literalValues.length),
     };
+  } else {
+    throw new Error(
+      `Unsupported binary field ${fieldName} with schema ${current.constructor.name}`,
+    );
   }
 
-  throw new Error(
-    `Unsupported binary field ${fieldName} with schema ${current.constructor.name}`,
-  );
+  if (!omit) {
+    return definition;
+  }
+
+  return {
+    ...definition,
+    omit: true,
+    optional: false,
+    nullable: false,
+    presenceBit: undefined,
+    valueBit: undefined,
+  };
 }
 
 function getLiteralUnionValues(schema: z.ZodUnion<any>): (string | number)[] {

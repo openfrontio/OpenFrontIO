@@ -14,14 +14,11 @@ export interface NumericWireHelper extends Record<string, unknown> {
   readonly wireType: BinaryNumericWireType;
 }
 
-export interface OmitWireHelper extends Record<string, unknown> {
+export interface BinaryOmitMeta extends Record<string, unknown> {
   readonly kind: "omit";
 }
 
-export type BinaryFieldHelper =
-  | PlayerRefWireHelper
-  | NumericWireHelper
-  | OmitWireHelper;
+export type BinaryFieldHelper = PlayerRefWireHelper | NumericWireHelper;
 
 export interface BinaryIntentMeta extends Record<string, unknown> {
   readonly kind: "intent";
@@ -29,6 +26,7 @@ export interface BinaryIntentMeta extends Record<string, unknown> {
 }
 
 export const binaryFieldRegistry = z.registry<BinaryFieldHelper>();
+export const binaryOmitRegistry = z.registry<BinaryOmitMeta>();
 export const binaryIntentRegistry = z.registry<BinaryIntentMeta>();
 
 function cloneSchema<T extends z.ZodTypeAny>(schema: T): T {
@@ -64,9 +62,15 @@ export function binaryNumber<T extends z.ZodTypeAny>(
 }
 
 export function binaryOmit<T extends z.ZodTypeAny>(schema: T): T {
-  return binaryField(schema, {
+  const cloned = cloneSchema(schema);
+  const existingFieldHelper = getBinaryFieldHelper(schema);
+  if (existingFieldHelper !== undefined) {
+    (cloned as any).register(binaryFieldRegistry, existingFieldHelper);
+  }
+  (cloned as any).register(binaryOmitRegistry, {
     kind: "omit",
   });
+  return cloned;
 }
 
 export function jsonOnlyIntent<T extends z.ZodTypeAny>(schema: T): T {
@@ -84,6 +88,10 @@ export function getBinaryFieldHelper(
   schema: z.ZodTypeAny,
 ): BinaryFieldHelper | undefined {
   return binaryFieldRegistry.get(schema);
+}
+
+export function isBinaryOmittedSchema(schema: z.ZodTypeAny): boolean {
+  return binaryOmitRegistry.has(schema);
 }
 
 export function isJsonOnlyIntentSchema(schema: z.ZodTypeAny): boolean {
