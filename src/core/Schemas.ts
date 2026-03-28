@@ -290,9 +290,6 @@ export const isValidGameID = (value: string): boolean =>
   GAME_ID_REGEX.test(value);
 
 export const ID = zb.string().regex(GAME_ID_REGEX);
-export const PlayerRefSchema = zb.playerRef();
-export const NullablePlayerRefSchema = zb.playerRef().nullable();
-export const BroadcastPlayerRefSchema = zb.broadcastPlayerRef();
 
 export const AllPlayersStatsSchema = zb.record(ID, PlayerStatsSchema);
 
@@ -315,7 +312,7 @@ export const AllianceExtensionIntentSchema = zb.object({
 
 export const AttackIntentSchema = zb.object({
   type: zb.literal("attack"),
-  targetID: NullablePlayerRefSchema,
+  targetID: zb.playerRef().nullable(),
   troops: zb.f64().nonnegative().nullable(),
 });
 
@@ -332,33 +329,33 @@ export const BoatAttackIntentSchema = zb.object({
 
 export const AllianceRequestIntentSchema = zb.object({
   type: zb.literal("allianceRequest"),
-  recipient: PlayerRefSchema,
+  recipient: zb.playerRef(),
 });
 
 export const AllianceRejectIntentSchema = zb.object({
   type: zb.literal("allianceReject"),
-  requestor: PlayerRefSchema,
+  requestor: zb.playerRef(),
 });
 
 export const BreakAllianceIntentSchema = zb.object({
   type: zb.literal("breakAlliance"),
-  recipient: PlayerRefSchema,
+  recipient: zb.playerRef(),
 });
 
 export const TargetPlayerIntentSchema = zb.object({
   type: zb.literal("targetPlayer"),
-  target: PlayerRefSchema,
+  target: zb.playerRef(),
 });
 
 export const EmojiIntentSchema = zb.object({
   type: zb.literal("emoji"),
-  recipient: BroadcastPlayerRefSchema,
+  recipient: zb.broadcastPlayerRef(),
   emoji: EmojiSchema,
 });
 
 export const EmbargoIntentSchema = zb.object({
   type: zb.literal("embargo"),
-  targetID: PlayerRefSchema,
+  targetID: zb.playerRef(),
   action: zb.union([zb.literal("start"), zb.literal("stop")]),
 });
 
@@ -369,13 +366,13 @@ export const EmbargoAllIntentSchema = zb.object({
 
 export const DonateGoldIntentSchema = zb.object({
   type: zb.literal("donate_gold"),
-  recipient: PlayerRefSchema,
+  recipient: zb.playerRef(),
   gold: zb.f64().nonnegative().nullable(),
 });
 
 export const DonateTroopIntentSchema = zb.object({
   type: zb.literal("donate_troops"),
-  recipient: PlayerRefSchema,
+  recipient: zb.playerRef(),
   troops: zb.f64().nonnegative().nullable(),
 });
 
@@ -415,20 +412,20 @@ export const DeleteUnitIntentSchema = zb.object({
 
 export const QuickChatIntentSchema = zb.object({
   type: zb.literal("quick_chat"),
-  recipient: PlayerRefSchema,
+  recipient: zb.playerRef(),
   quickChatKey: QuickChatKeySchema,
-  target: PlayerRefSchema.optional(),
+  target: zb.playerRef().optional(),
 });
 
 export const MarkDisconnectedIntentSchema = zb.object({
   type: zb.literal("mark_disconnected"),
-  clientID: PlayerRefSchema,
+  clientID: zb.playerRef(),
   isDisconnected: zb.boolean(),
 });
 
 export const KickPlayerIntentSchema = zb.object({
   type: zb.literal("kick_player"),
-  target: PlayerRefSchema,
+  target: zb.playerRef(),
 });
 
 export const TogglePauseIntentSchema = zb.object({

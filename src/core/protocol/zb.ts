@@ -26,12 +26,12 @@ declare module "zod" {
   interface ZodType<
     out Output = unknown,
     out Input = unknown,
-    out _Internals extends z.core.$ZodTypeInternals<
+    out Internals extends z.core.$ZodTypeInternals<
       Output,
       Input
     > = z.core.$ZodTypeInternals<Output, Input>,
   > {
-    readonly _zbInternalsHint?: _Internals | undefined;
+    readonly _zbInternalsHint?: Internals | undefined;
     binaryOmit(): this;
     jsonOnlyIntent(): this;
     clientGameplayMessage(): this;
