@@ -1,20 +1,14 @@
 import { z } from "zod";
 import { AllPlayers } from "../game/Game";
 import {
-  binaryClientGameplayMessage,
   binaryField,
   binaryFieldRegistry,
-  binaryIntentEnvelope,
   binaryIntentRegistry,
-  binaryMessageRegistry,
   binaryNumber,
   binaryOmit,
-  binaryServerGameplayMessage,
   getBinaryFieldHelper,
-  getBinaryMessageMeta,
   isJsonOnlyIntentSchema,
   jsonOnlyIntent,
-  packedTurnMessage,
   playerRef as playerRefHelper,
 } from "./BinaryWire";
 
@@ -34,10 +28,6 @@ declare module "zod" {
     readonly _zbInternalsHint?: Internals | undefined;
     binaryOmit(): this;
     jsonOnlyIntent(): this;
-    clientGameplayMessage(): this;
-    serverGameplayMessage(): this;
-    intentEnvelope(): this;
-    packedTurnMessage(): this;
   }
 }
 
@@ -45,11 +35,6 @@ function copyBinaryMetadata(source: z.ZodTypeAny, target: z.ZodTypeAny) {
   const fieldHelper = getBinaryFieldHelper(source);
   if (fieldHelper !== undefined) {
     (target as any).register(binaryFieldRegistry, fieldHelper);
-  }
-
-  const messageMeta = getBinaryMessageMeta(source);
-  if (messageMeta !== undefined) {
-    (target as any).register(binaryMessageRegistry, messageMeta);
   }
 
   if (isJsonOnlyIntentSchema(source)) {
@@ -122,71 +107,10 @@ function decorateBinaryAwareSchema<T extends z.ZodTypeAny>(schema: T): T {
   return schema;
 }
 
-function wrapMethodWithBinaryMetadata(
-  proto: Record<PropertyKey, unknown>,
-  methodName: PropertyKey,
-) {
-  const original = proto[methodName];
-  if (typeof original !== "function" || (original as any)[ZB_WRAPPED]) {
-    return;
-  }
-
-  const wrapped = function (this: z.ZodTypeAny, ...args: unknown[]) {
-    const result = (original as (...methodArgs: unknown[]) => unknown).apply(
-      this,
-      args,
-    );
-    if (result instanceof z.ZodType) {
-      copyBinaryMetadata(this, result);
-    }
-    return result;
-  };
-
-  Object.defineProperty(wrapped, ZB_WRAPPED, {
-    value: true,
-    configurable: false,
-    enumerable: false,
-    writable: false,
-  });
-  proto[methodName] = wrapped;
-}
-
 function installZbPrototypeMethods() {
   const proto = z.ZodType.prototype as any;
   if (proto[ZB_PATCHED]) {
     return;
-  }
-
-  const originalClone = proto.clone as (...args: unknown[]) => z.ZodTypeAny;
-  proto.clone = function (...args: unknown[]) {
-    const cloned = originalClone.apply(this, args);
-    copyBinaryMetadata(this as z.ZodTypeAny, cloned);
-    return cloned;
-  };
-  wrapMethodWithBinaryMetadata(proto, "optional");
-  wrapMethodWithBinaryMetadata(proto, "nullable");
-  wrapMethodWithBinaryMetadata(proto, "default");
-  wrapMethodWithBinaryMetadata(proto, "refine");
-
-  const numberProto = z.ZodNumber.prototype as Record<PropertyKey, unknown>;
-  for (const methodName of [
-    "gt",
-    "gte",
-    "min",
-    "lt",
-    "lte",
-    "max",
-    "positive",
-    "negative",
-    "nonpositive",
-    "nonnegative",
-    "multipleOf",
-    "step",
-    "finite",
-    "safe",
-    "int",
-  ]) {
-    wrapMethodWithBinaryMetadata(numberProto, methodName);
   }
 
   proto.binaryOmit = function () {
@@ -194,18 +118,6 @@ function installZbPrototypeMethods() {
   };
   proto.jsonOnlyIntent = function () {
     return jsonOnlyIntent(this as z.ZodTypeAny);
-  };
-  proto.clientGameplayMessage = function () {
-    return binaryClientGameplayMessage(this as z.ZodTypeAny);
-  };
-  proto.serverGameplayMessage = function () {
-    return binaryServerGameplayMessage(this as z.ZodTypeAny);
-  };
-  proto.intentEnvelope = function () {
-    return binaryIntentEnvelope(this as z.ZodTypeAny);
-  };
-  proto.packedTurnMessage = function () {
-    return packedTurnMessage(this as z.ZodTypeAny);
   };
 
   Object.defineProperty(proto, ZB_PATCHED, {

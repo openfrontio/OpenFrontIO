@@ -28,22 +28,8 @@ export interface BinaryIntentMeta extends Record<string, unknown> {
   readonly jsonOnly: true;
 }
 
-export type BinaryMessageDirection = "client" | "server";
-export type BinaryMessageEnvelope = "auto" | "intent" | "packedTurn";
-
-export interface BinaryMessageMeta extends Record<string, unknown> {
-  readonly kind: "message";
-  readonly direction: BinaryMessageDirection;
-  readonly envelope: BinaryMessageEnvelope;
-  readonly order: number;
-}
-
 export const binaryFieldRegistry = z.registry<BinaryFieldHelper>();
 export const binaryIntentRegistry = z.registry<BinaryIntentMeta>();
-export const binaryMessageRegistry = z.registry<BinaryMessageMeta>();
-
-const orderedBinaryMessages: z.ZodTypeAny[] = [];
-let messageRegistrationOrder = 0;
 
 function cloneSchema<T extends z.ZodTypeAny>(schema: T): T {
   return schema.meta(schema.meta() ?? {}) as T;
@@ -85,6 +71,8 @@ export function binaryOmit<T extends z.ZodTypeAny>(schema: T): T {
 
 export function jsonOnlyIntent<T extends z.ZodTypeAny>(schema: T): T {
   const cloned = cloneSchema(schema);
+  // Intents are binary by default when they participate in AllIntentSchema.
+  // This marker is the schema-level opt-out used by the generator.
   (cloned as any).register(binaryIntentRegistry, {
     kind: "intent",
     jsonOnly: true,
@@ -92,56 +80,10 @@ export function jsonOnlyIntent<T extends z.ZodTypeAny>(schema: T): T {
   return cloned;
 }
 
-function registerBinaryMessage<T extends z.ZodTypeAny>(
-  schema: T,
-  direction: BinaryMessageDirection,
-  envelope: BinaryMessageEnvelope,
-): T {
-  const cloned = cloneSchema(schema);
-  (cloned as any).register(binaryMessageRegistry, {
-    kind: "message",
-    direction,
-    envelope,
-    order: messageRegistrationOrder++,
-  });
-  orderedBinaryMessages.push(cloned);
-  return cloned;
-}
-
-export function binaryClientGameplayMessage<T extends z.ZodTypeAny>(
-  schema: T,
-): T {
-  return registerBinaryMessage(schema, "client", "auto");
-}
-
-export function binaryServerGameplayMessage<T extends z.ZodTypeAny>(
-  schema: T,
-): T {
-  return registerBinaryMessage(schema, "server", "auto");
-}
-
-export function binaryIntentEnvelope<T extends z.ZodTypeAny>(schema: T): T {
-  return registerBinaryMessage(schema, "client", "intent");
-}
-
-export function packedTurnMessage<T extends z.ZodTypeAny>(schema: T): T {
-  return registerBinaryMessage(schema, "server", "packedTurn");
-}
-
 export function getBinaryFieldHelper(
   schema: z.ZodTypeAny,
 ): BinaryFieldHelper | undefined {
   return binaryFieldRegistry.get(schema);
-}
-
-export function getBinaryMessageMeta(
-  schema: z.ZodTypeAny,
-): BinaryMessageMeta | undefined {
-  return binaryMessageRegistry.get(schema);
-}
-
-export function getBinaryGameplayMessageSchemas(): readonly z.ZodTypeAny[] {
-  return orderedBinaryMessages;
 }
 
 export function isJsonOnlyIntentSchema(schema: z.ZodTypeAny): boolean {

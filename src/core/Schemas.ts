@@ -440,6 +440,8 @@ export const UpdateGameConfigIntentSchema = zb
   })
   .jsonOnlyIntent();
 
+// Gameplay intents are binary by default when they are part of AllIntentSchema.
+// jsonOnlyIntent() is the explicit opt-out for intent variants that must stay JSON.
 export const AllIntentSchema = zb.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -549,12 +551,10 @@ export type Winner = z.infer<typeof WinnerSchema>;
 // Server
 //
 
-export const ServerTurnMessageSchema = zb
-  .object({
-    type: zb.literal("turn"),
-    turn: TurnSchema,
-  })
-  .packedTurnMessage();
+export const ServerTurnMessageSchema = zb.object({
+  type: zb.literal("turn"),
+  turn: TurnSchema,
+});
 
 export const ServerPingMessageSchema = zb.object({
   type: zb.literal("ping"),
@@ -577,16 +577,14 @@ export const ServerStartGameMessageSchema = zb.object({
   myClientID: ID.optional(),
 });
 
-export const ServerDesyncSchema = zb
-  .object({
-    type: zb.literal("desync"),
-    turn: zb.u32(),
-    correctHash: zb.i32().nullable(),
-    clientsWithCorrectHash: zb.u16(),
-    totalActiveClients: zb.u16(),
-    yourHash: zb.i32().optional().binaryOmit(),
-  })
-  .serverGameplayMessage();
+export const ServerDesyncSchema = zb.object({
+  type: zb.literal("desync"),
+  turn: zb.u32(),
+  correctHash: zb.i32().nullable(),
+  clientsWithCorrectHash: zb.u16(),
+  totalActiveClients: zb.u16(),
+  yourHash: zb.i32().optional().binaryOmit(),
+});
 
 export const ServerErrorSchema = zb.object({
   type: zb.literal("error"),
@@ -601,6 +599,15 @@ export const ServerLobbyInfoMessageSchema = zb.object({
   myClientID: ID,
 });
 
+// Only the live gameplay server-message subset participates in the binary protocol.
+// Setup/control messages such as start, prestart, error, and lobby_info stay JSON.
+export const BinaryServerGameplayMessageSchema = zb.discriminatedUnion("type", [
+  ServerTurnMessageSchema,
+  ServerDesyncSchema,
+]);
+
+// All server messages, including the binary gameplay subset above and the JSON-only
+// setup/control path, are part of the semantic protocol union.
 export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -621,13 +628,11 @@ export const ClientSendWinnerSchema = zb.object({
   allPlayersStats: AllPlayersStatsSchema,
 });
 
-export const ClientHashSchema = zb
-  .object({
-    type: zb.literal("hash"),
-    hash: zb.i32(),
-    turnNumber: zb.u32(),
-  })
-  .clientGameplayMessage();
+export const ClientHashSchema = zb.object({
+  type: zb.literal("hash"),
+  hash: zb.i32(),
+  turnNumber: zb.u32(),
+});
 
 export const ClientLogMessageSchema = zb.object({
   type: zb.literal("log"),
@@ -635,18 +640,14 @@ export const ClientLogMessageSchema = zb.object({
   log: ID,
 });
 
-export const ClientPingMessageSchema = zb
-  .object({
-    type: zb.literal("ping"),
-  })
-  .clientGameplayMessage();
+export const ClientPingMessageSchema = zb.object({
+  type: zb.literal("ping"),
+});
 
-export const ClientIntentMessageSchema = zb
-  .object({
-    type: zb.literal("intent"),
-    intent: AllIntentSchema,
-  })
-  .intentEnvelope();
+export const ClientIntentMessageSchema = zb.object({
+  type: zb.literal("intent"),
+  intent: AllIntentSchema,
+});
 
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
@@ -669,6 +670,16 @@ export const ClientRejoinMessageSchema = zb.object({
   token: TokenSchema,
 });
 
+// Only the live gameplay client-message subset participates in the binary protocol.
+// Join/rejoin/winner/log stay JSON even though they share the top-level client union.
+export const BinaryClientGameplayMessageSchema = zb.discriminatedUnion("type", [
+  ClientPingMessageSchema,
+  ClientIntentMessageSchema,
+  ClientHashSchema,
+]);
+
+// All client messages, including the binary gameplay subset above and the JSON-only
+// setup/control path, are part of the semantic protocol union.
 export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,

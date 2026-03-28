@@ -6,11 +6,12 @@ import {
   hasBinaryIntentOpcode,
 } from "../../src/core/__generated__/binary/generated";
 import { collectGeneratedBinaryModel } from "../../src/core/protocol/BinaryGenerator";
+import { isJsonOnlyIntentSchema } from "../../src/core/protocol/BinaryWire";
 import {
-  getBinaryGameplayMessageSchemas,
-  isJsonOnlyIntentSchema,
-} from "../../src/core/protocol/BinaryWire";
-import { AllIntentSchema } from "../../src/core/Schemas";
+  AllIntentSchema,
+  BinaryClientGameplayMessageSchema,
+  BinaryServerGameplayMessageSchema,
+} from "../../src/core/Schemas";
 
 function getLiteralValue(
   schema: z.ZodLiteral<any>,
@@ -84,11 +85,15 @@ describe("BinaryGenerator", () => {
     expect(hasBinaryIntentOpcode("update_game_config")).toBe(false);
   });
 
-  it("derives gameplay message ids from schema registration order", () => {
-    const expectedTypes = getBinaryGameplayMessageSchemas().map(
-      getDiscriminantLiteral,
-    );
-
+  it("derives gameplay message ids from inferred gameplay message roles", () => {
+    const expectedTypes = [
+      ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema).map(
+        getDiscriminantLiteral,
+      ),
+      ...getDiscriminatedUnionOptions(BinaryClientGameplayMessageSchema).map(
+        getDiscriminantLiteral,
+      ),
+    ];
     expect(
       BINARY_MESSAGE_DEFINITIONS.map((definition) => definition.type),
     ).toEqual(expectedTypes);

@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  ClientHashSchema,
-  ClientIntentMessageSchema,
-  ServerDesyncSchema,
-  ServerTurnMessageSchema,
-  UpdateGameConfigIntentSchema,
-} from "../../src/core/Schemas";
+import { UpdateGameConfigIntentSchema } from "../../src/core/Schemas";
 import {
   getBinaryFieldHelper,
-  getBinaryMessageMeta,
   isJsonOnlyIntentSchema,
 } from "../../src/core/protocol/BinaryWire";
 import { zb } from "../../src/core/protocol/zb";
@@ -57,37 +50,5 @@ describe("zb", () => {
 
   it("registers jsonOnly intents from terminal decorators", () => {
     expect(isJsonOnlyIntentSchema(UpdateGameConfigIntentSchema)).toBe(true);
-  });
-
-  it("registers client gameplay auto envelopes from terminal decorators", () => {
-    expect(getBinaryMessageMeta(ClientHashSchema)).toMatchObject({
-      kind: "message",
-      direction: "client",
-      envelope: "auto",
-    });
-  });
-
-  it("registers server gameplay auto envelopes from terminal decorators", () => {
-    expect(getBinaryMessageMeta(ServerDesyncSchema)).toMatchObject({
-      kind: "message",
-      direction: "server",
-      envelope: "auto",
-    });
-  });
-
-  it("registers intent envelopes from terminal decorators", () => {
-    expect(getBinaryMessageMeta(ClientIntentMessageSchema)).toMatchObject({
-      kind: "message",
-      direction: "client",
-      envelope: "intent",
-    });
-  });
-
-  it("registers packed-turn envelopes from terminal decorators", () => {
-    expect(getBinaryMessageMeta(ServerTurnMessageSchema)).toMatchObject({
-      kind: "message",
-      direction: "server",
-      envelope: "packedTurn",
-    });
   });
 });

@@ -1,18 +1,17 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { AllIntentSchema } from "../Schemas";
+import {
+  AllIntentSchema,
+  BinaryClientGameplayMessageSchema,
+  BinaryServerGameplayMessageSchema,
+} from "../Schemas";
 import type {
   BinaryFieldDefinition,
   BinaryIntentDefinition,
   BinaryMessageDefinition,
 } from "./BinaryRuntime";
-import {
-  getBinaryFieldHelper,
-  getBinaryGameplayMessageSchemas,
-  getBinaryMessageMeta,
-  isJsonOnlyIntentSchema,
-} from "./BinaryWire";
+import { getBinaryFieldHelper, isJsonOnlyIntentSchema } from "./BinaryWire";
 
 interface GeneratedBinaryModel {
   readonly intentDefinitions: readonly BinaryIntentDefinition[];
@@ -308,6 +307,7 @@ function buildIntentDefinitions(): BinaryIntentDefinition[] {
       continue;
     }
 
+    // Every non-jsonOnly variant in AllIntentSchema is part of the binary gameplay protocol.
     const shape = getObjectShape(option);
     const rawFields = Object.entries(shape)
       .filter(([name]) => name !== "type")
@@ -326,18 +326,19 @@ function buildIntentDefinitions(): BinaryIntentDefinition[] {
 
 function buildMessageDefinitions(): BinaryMessageDefinition[] {
   const seenTypes = new Set<string>();
-  return getBinaryGameplayMessageSchemas().map((schema, index) => {
-    const meta = getBinaryMessageMeta(schema);
-    if (!meta) {
-      throw new Error("Binary message schema missing metadata");
-    }
+  // Top-level gameplay message support is defined by the dedicated binary gameplay unions
+  // in Schemas.ts, while framing is still inferred from the message discriminant.
+  const inferredSchemas = inferBinaryGameplayMessageSchemas();
+
+  return inferredSchemas.map((schema, index) => {
     const type = getDiscriminantLiteral(schema);
     if (seenTypes.has(type)) {
       throw new Error(`Duplicate binary message type ${type}`);
     }
     seenTypes.add(type);
+    const inferredMeta = inferBinaryMessageMeta(type);
     const fieldAnalysis =
-      meta.envelope === "auto"
+      inferredMeta.envelope === "auto"
         ? assignPresenceBits(
             Object.entries(getObjectShape(schema))
               .filter(([name]) => name !== "type")
@@ -349,12 +350,51 @@ function buildMessageDefinitions(): BinaryMessageDefinition[] {
     return {
       type,
       messageType: index + 1,
-      direction: meta.direction,
-      envelope: meta.envelope,
+      direction: inferredMeta.direction,
+      envelope: inferredMeta.envelope,
       fields: fieldAnalysis.fields,
       allowedFlags: fieldAnalysis.allowedFlags,
     };
   });
+}
+
+function inferBinaryGameplayMessageSchemas(): z.ZodTypeAny[] {
+  const inferredSchemas = [
+    // Message ids follow the declaration order of the explicit binary gameplay unions.
+    ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema),
+    ...getDiscriminatedUnionOptions(BinaryClientGameplayMessageSchema),
+  ];
+
+  const inferredTypes = inferredSchemas.map(getDiscriminantLiteral);
+  for (const type of ["turn", "desync", "hash", "ping", "intent"]) {
+    if (!inferredTypes.includes(type)) {
+      throw new Error(
+        `Missing inferred binary gameplay message schema for ${type}`,
+      );
+    }
+  }
+
+  return inferredSchemas;
+}
+
+function inferBinaryMessageMeta(
+  type: string,
+): Pick<BinaryMessageDefinition, "direction" | "envelope"> {
+  // Message framing is inferred from the top-level message type:
+  // turn => packed turn envelope, intent => intent envelope, others => auto fields.
+  switch (type) {
+    case "turn":
+      return { direction: "server", envelope: "packedTurn" };
+    case "desync":
+      return { direction: "server", envelope: "auto" };
+    case "hash":
+    case "ping":
+      return { direction: "client", envelope: "auto" };
+    case "intent":
+      return { direction: "client", envelope: "intent" };
+    default:
+      throw new Error(`Unsupported inferred binary message type ${type}`);
+  }
 }
 
 export function collectGeneratedBinaryModel(): GeneratedBinaryModel {
