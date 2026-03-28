@@ -266,6 +266,9 @@ export class InputHandler {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
     });
+    // Clear all tracked keys when the window loses focus so keys that had
+    // their keyup swallowed by the browser (e.g. cmd+zoom) don't stay stuck.
+    window.addEventListener("blur", () => this.activeKeys.clear());
     this.pointers.clear();
 
     this.moveInterval = setInterval(() => {
@@ -358,7 +361,14 @@ export class InputHandler {
         this.eventBus.emit(new ConfirmGhostStructureEvent());
       }
 
+      // Don't track zoom keys when a meta/ctrl modifier is held — that means
+      // the browser is handling its own zoom (cmd+/cmd-) and the keyup will
+      // never fire, which would leave the key stuck in activeKeys forever.
+      const isBrowserZoomCombo =
+        (e.metaKey || e.ctrlKey) && (e.code === "Minus" || e.code === "Equal");
+
       if (
+        !isBrowserZoomCombo &&
         [
           this.keybinds.moveUp,
           this.keybinds.moveDown,
