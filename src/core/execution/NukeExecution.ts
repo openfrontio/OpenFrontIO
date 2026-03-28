@@ -267,8 +267,9 @@ export class NukeExecution implements Execution {
         tilesPerPlayers.set(owner, (tilesPerPlayers.get(owner) ?? 0) + 1);
       }
 
+      // Queue land tiles for batched water conversion
       if (mg.isLand(tile)) {
-        mg.setFallout(tile, true);
+        mg.queueWaterConversion(tile);
       }
     }
 

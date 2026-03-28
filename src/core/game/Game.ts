@@ -905,6 +905,12 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+
+  /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
+  queueWaterConversion(tile: TileRef): void;
+
+  /** Fix up shoreline bits, propagate ocean, update minimap and rebuild water graph after batch terrain changes. */
+  finalizeWaterChanges(convertedTiles: Iterable<TileRef>): void;
 }
 
 export interface PlayerActions {

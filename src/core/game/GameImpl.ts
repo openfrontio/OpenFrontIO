@@ -113,6 +113,10 @@ export class GameImpl implements Game {
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
+  // Batched water conversion: tiles queued by nuke detonations, flushed every N ticks
+  private static readonly WATER_FLUSH_INTERVAL = 5;
+  private _pendingWaterTiles: Set<TileRef> = new Set();
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -267,6 +271,185 @@ export class GameImpl implements Game {
     }
     this._map.setFallout(tile, value);
     this.recordTileUpdate(tile);
+  }
+
+  setWater(tile: TileRef): void {
+    if (!this.isLand(tile)) return;
+    if (this.hasOwner(tile)) {
+      throw Error(`cannot set water, tile ${tile} has owner`);
+    }
+    // Clear fallout if present (water tiles shouldn't have fallout)
+    if (this._map.hasFallout(tile)) {
+      this._map.setFallout(tile, false);
+    }
+    this._map.setWater(tile);
+    this.recordTileUpdate(tile);
+  }
+
+  queueWaterConversion(tile: TileRef): void {
+    if (!this.isLand(tile)) return;
+    if (this.hasOwner(tile)) {
+      throw Error(`cannot queue water conversion, tile ${tile} has owner`);
+    }
+    this._pendingWaterTiles.add(tile);
+  }
+
+  finalizeWaterChanges(convertedTiles: Iterable<TileRef>): void {
+    const converted = new Set<TileRef>(convertedTiles);
+    if (converted.size === 0) return;
+
+    // 1. Propagate ocean bit: seed from new water tiles adjacent to existing ocean
+    const oceanQueue: TileRef[] = [];
+    for (const tile of converted) {
+      for (const n of this.neighbors(tile)) {
+        if (!converted.has(n) && this.isOcean(n)) {
+          this._map.setOcean(tile);
+          oceanQueue.push(tile);
+          break;
+        }
+      }
+    }
+    while (oceanQueue.length > 0) {
+      const tile = oceanQueue.pop()!;
+      for (const n of this.neighbors(tile)) {
+        if (converted.has(n) && !this.isOcean(n)) {
+          this._map.setOcean(n);
+          oceanQueue.push(n);
+        }
+      }
+    }
+
+    // 2. Recompute magnitude for water tiles affected by the terrain change.
+    //    BFS from remaining land outward. Stops when the computed magnitude
+    //    matches the tile's existing magnitude (convergence with surrounding
+    //    unaffected ocean).  Only records tile updates for tiles that changed.
+    const distMap = new Map<TileRef, number>();
+    const magQueue: TileRef[] = [];
+    // Seed candidates: converted tiles + their immediate water neighbors
+    const seedCandidates = new Set<TileRef>(converted);
+    for (const tile of converted) {
+      for (const n of this.neighbors(tile)) {
+        if (this.isWater(n) && !converted.has(n)) {
+          seedCandidates.add(n);
+        }
+      }
+    }
+    // Seed: water tiles adjacent to remaining land get distance 0
+    for (const tile of seedCandidates) {
+      for (const n of this.neighbors(tile)) {
+        if (this.isLand(n)) {
+          if (!distMap.has(tile)) {
+            distMap.set(tile, 0);
+            if (this.magnitude(tile) !== 0) {
+              this._map.setMagnitude(tile, 0);
+            }
+            magQueue.push(tile);
+          }
+          break;
+        }
+      }
+    }
+    // BFS outward through water tiles, stopping at convergence
+    while (magQueue.length > 0) {
+      const tile = magQueue.shift()!;
+      const dist = distMap.get(tile)!;
+      const nextDist = dist + 1;
+      const nextMag = Math.min(Math.ceil(nextDist / 2), 31);
+      for (const n of this.neighbors(tile)) {
+        if (!this.isWater(n) || distMap.has(n)) continue;
+        const oldMag = this.magnitude(n);
+        // Converged: existing magnitude already matches what we'd assign
+        if (oldMag === nextMag) continue;
+        distMap.set(n, nextDist);
+        this._map.setMagnitude(n, nextMag);
+        magQueue.push(n);
+      }
+    }
+    // Unreached water tiles in the affected area get deep ocean magnitude
+    for (const tile of seedCandidates) {
+      if (!distMap.has(tile) && this.isWater(tile)) {
+        this._map.setMagnitude(tile, 20);
+      }
+    }
+
+    // 3. Fix shoreline bits for all tiles whose land/water neighborhood changed.
+    //    This includes converted tiles, all tiles touched by the magnitude BFS
+    //    (which may extend past the blast zone), and their immediate neighbors.
+    //    Only record tile updates for tiles that actually changed.
+    const tilesToCheck = new Set<TileRef>();
+    for (const tile of converted) {
+      tilesToCheck.add(tile);
+      for (const n of this.neighbors(tile)) {
+        tilesToCheck.add(n);
+      }
+    }
+    // Also check neighbors of every tile whose magnitude was updated,
+    // since those magnitude changes may border remaining land.
+    for (const tile of distMap.keys()) {
+      tilesToCheck.add(tile);
+      for (const n of this.neighbors(tile)) {
+        tilesToCheck.add(n);
+      }
+    }
+    for (const tile of tilesToCheck) {
+      const tileIsLand = this.isLand(tile);
+      const hasOpposite = this.neighbors(tile).some(
+        (n) => this.isLand(n) !== tileIsLand,
+      );
+      const oldShoreline = this.isShoreline(tile);
+      if (hasOpposite) {
+        if (!oldShoreline) this._map.setShorelineBit(tile);
+      } else {
+        if (oldShoreline) this._map.clearShorelineBit(tile);
+      }
+      // Only send update if terrain actually changed from original
+      if (
+        converted.has(tile) ||
+        distMap.has(tile) ||
+        oldShoreline !== this.isShoreline(tile)
+      ) {
+        this.recordTileUpdate(tile);
+      }
+    }
+
+    // 4. Update minimap terrain
+    const miniTilesToCheck = new Set<TileRef>();
+    for (const tile of converted) {
+      const miniX = Math.floor(this.x(tile) / 2);
+      const miniY = Math.floor(this.y(tile) / 2);
+      if (this.miniGameMap.isValidCoord(miniX, miniY)) {
+        miniTilesToCheck.add(this.miniGameMap.ref(miniX, miniY));
+      }
+    }
+    for (const miniTile of miniTilesToCheck) {
+      if (!this.miniGameMap.isLand(miniTile)) continue;
+      const fx = this.miniGameMap.x(miniTile) * 2;
+      const fy = this.miniGameMap.y(miniTile) * 2;
+      let waterCount = 0;
+      let total = 0;
+      for (let dy = 0; dy < 2; dy++) {
+        for (let dx = 0; dx < 2; dx++) {
+          if (this._map.isValidCoord(fx + dx, fy + dy)) {
+            total++;
+            if (this.isWater(this._map.ref(fx + dx, fy + dy))) waterCount++;
+          }
+        }
+      }
+      if (waterCount > total / 2) {
+        this.miniGameMap.setWater(miniTile);
+      }
+    }
+
+    // 5. Rebuild water navigation graph
+    if (!this._config.disableNavMesh()) {
+      const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
+      this._miniWaterGraph = graphBuilder.build();
+      this._miniWaterHPA = new AStarWaterHierarchical(
+        this.miniGameMap,
+        this._miniWaterGraph,
+        { cachePaths: true },
+      );
+    }
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -429,12 +612,33 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+    // Flush pending water conversions in batch
+    if (
+      this._pendingWaterTiles.size > 0 &&
+      this._ticks % GameImpl.WATER_FLUSH_INTERVAL === 0
+    ) {
+      const converted: TileRef[] = [];
+      for (const tile of this._pendingWaterTiles) {
+        // Tile may have been conquered between queueing and flushing
+        if (this.isLand(tile) && !this.hasOwner(tile)) {
+          this.setWater(tile);
+          converted.push(tile);
+        }
+      }
+      this._pendingWaterTiles.clear();
+      if (converted.length > 0) {
+        this.finalizeWaterChanges(converted);
+      }
+    }
     this._ticks++;
     return this.updates;
   }
 
   private recordTileUpdate(tile: TileRef): void {
-    this.tileUpdatePairs.push(tile, this._map.tileState(tile));
+    this.tileUpdatePairs.push(
+      tile,
+      this._map.tileState(tile) | (this._map.terrainByte(tile) << 16),
+    );
   }
 
   drainPackedTileUpdates(): Uint32Array {
@@ -645,7 +849,7 @@ export class GameImpl implements Game {
 
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
-      throw Error(`cannot conquer water`);
+      return;
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
@@ -1033,6 +1237,21 @@ export class GameImpl implements Game {
   }
   magnitude(ref: TileRef): number {
     return this._map.magnitude(ref);
+  }
+  terrainByte(ref: TileRef): number {
+    return this._map.terrainByte(ref);
+  }
+  setShorelineBit(ref: TileRef): void {
+    this._map.setShorelineBit(ref);
+  }
+  clearShorelineBit(ref: TileRef): void {
+    this._map.clearShorelineBit(ref);
+  }
+  setOcean(ref: TileRef): void {
+    this._map.setOcean(ref);
+  }
+  setMagnitude(ref: TileRef, value: number): void {
+    this._map.setMagnitude(ref, value);
   }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);
