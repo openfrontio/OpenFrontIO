@@ -1,7 +1,7 @@
 {
   "name": "openfront-client",
   "scripts": {
-    "gen:binary-gameplay": "node node_modules/tsx/dist/cli.mjs scripts/gen-binary-gameplay.ts",
+    "gen:binary-gameplay": "tsx scripts/gen-binary-gameplay.ts",
     "pretypecheck": "npm run gen:binary-gameplay",
     "typecheck": "tsc --noEmit",
     "prebuild-dev": "npm run gen:binary-gameplay",
