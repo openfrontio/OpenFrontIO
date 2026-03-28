@@ -3,18 +3,20 @@ import path from "node:path";
 import { z } from "zod";
 import {
   AllIntentSchema,
-  BinaryClientGameplayMessageRouting,
-  BinaryClientGameplayMessageSchema,
-  BinaryServerGameplayMessageRouting,
-  BinaryServerGameplayMessageSchema,
+  ClientMessageSchema,
+  ServerMessageSchema,
 } from "../Schemas";
 import type {
-  BinaryFieldDefinition,
   BinaryIntentDefinition,
   BinaryMessageDefinition,
+  BinaryObjectFieldDefinition,
+  BinaryObjectValueDefinition,
+  BinaryValueDefinition,
 } from "./BinaryRuntime";
 import {
+  binaryGameplayMessageRegistry,
   getBinaryFieldHelper,
+  getBinaryGameplayMessageMeta,
   isBinaryOmittedSchema,
   isJsonOnlyIntentSchema,
 } from "./BinaryWire";
@@ -28,12 +30,24 @@ interface BinaryGameplayMessageRegistration {
   readonly schema: z.ZodTypeAny;
   readonly type: string;
   readonly direction: BinaryMessageDefinition["direction"];
-  readonly envelope: BinaryMessageDefinition["envelope"];
 }
 
-type BinaryGameplayMessageRouting = Readonly<
-  Record<string, BinaryMessageDefinition["envelope"]>
->;
+interface BinaryCompileState {
+  readonly cache: Map<z.ZodTypeAny, BinaryValueDefinition>;
+}
+
+interface UnwrappedFieldSchema {
+  readonly schema: z.ZodTypeAny;
+  readonly helper: ReturnType<typeof getBinaryFieldHelper>;
+  readonly omit: boolean;
+  readonly optional: boolean;
+  readonly nullable: boolean;
+  readonly defaultValue?: unknown;
+}
+
+function createCompileState(): BinaryCompileState {
+  return { cache: new Map() };
+}
 
 function getDiscriminantLiteral(schema: z.ZodTypeAny): string {
   const shape = getObjectShape(schema);
@@ -93,6 +107,17 @@ function getDiscriminatedUnionOptions(schema: z.ZodTypeAny): z.ZodTypeAny[] {
   throw new Error("Unable to inspect discriminated union options");
 }
 
+function getArrayElementSchema(schema: z.ZodArray<any>): z.ZodTypeAny {
+  const element =
+    (schema as any).element ??
+    (schema as any)._def?.element ??
+    (schema as any)._def?.type;
+  if (!element || typeof element !== "object") {
+    throw new Error("Unable to inspect array element schema");
+  }
+  return element as z.ZodTypeAny;
+}
+
 function pascalCase(value: string): string {
   return value
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -103,127 +128,55 @@ function pascalCase(value: string): string {
     .join("");
 }
 
-function analyzeFieldSchema(
-  fieldName: string,
-  schema: z.ZodTypeAny,
-): BinaryFieldDefinition {
+function resolveDefaultValue(schema: z.ZodDefault<any>): unknown {
+  const getter = (schema as any)._def?.defaultValue;
+  return typeof getter === "function" ? getter() : getter;
+}
+
+function unwrapFieldSchema(schema: z.ZodTypeAny): UnwrappedFieldSchema {
   let current = schema;
+  let helper = getBinaryFieldHelper(current);
+  let omit = isBinaryOmittedSchema(current);
   let optional = false;
   let nullable = false;
-  const omit = isBinaryOmittedSchema(current);
-  let helper = getBinaryFieldHelper(current);
+  let defaultValue: unknown = undefined;
 
   while (true) {
     if (current instanceof z.ZodDefault) {
+      defaultValue = resolveDefaultValue(current);
       current = (current as any)._def.innerType;
       helper ??= getBinaryFieldHelper(current);
+      omit ||= isBinaryOmittedSchema(current);
       continue;
     }
     if (current instanceof z.ZodOptional) {
       optional = true;
       current = (current as any)._def.innerType;
       helper ??= getBinaryFieldHelper(current);
+      omit ||= isBinaryOmittedSchema(current);
       continue;
     }
     if (current instanceof z.ZodNullable) {
       nullable = true;
       current = (current as any)._def.innerType;
       helper ??= getBinaryFieldHelper(current);
+      omit ||= isBinaryOmittedSchema(current);
       continue;
     }
     break;
   }
 
-  if (optional && nullable) {
-    throw new Error(
-      `Field ${fieldName} cannot be both optional and nullable on binary path`,
-    );
-  }
-
-  const definitionBase: BinaryFieldDefinition = {
-    name: fieldName,
-    wireType: "string",
-  };
-  let definition: BinaryFieldDefinition;
-
-  if (helper?.kind === "playerRef") {
-    definition = {
-      ...definitionBase,
-      wireType: "playerRef",
-      optional,
-      nullable,
-      ...(helper.allowAllPlayers !== undefined
-        ? { allowAllPlayers: helper.allowAllPlayers }
-        : {}),
-      ...(helper.inlineFallback !== undefined
-        ? { inlineFallback: helper.inlineFallback }
-        : {}),
-    };
-  } else if (helper?.kind === "number") {
-    definition = {
-      ...definitionBase,
-      wireType: helper.wireType,
-      optional,
-      nullable,
-    };
-  } else if (current instanceof z.ZodBoolean) {
-    definition = {
-      ...definitionBase,
-      wireType: "bool",
-      optional,
-      nullable,
-    };
-  } else if (current instanceof z.ZodString) {
-    definition = {
-      ...definitionBase,
-      wireType: "string",
-      optional,
-      nullable,
-    };
-  } else if (current instanceof z.ZodNumber) {
-    definition = {
-      ...definitionBase,
-      wireType: "f64",
-      optional,
-      nullable,
-    };
-  } else if (current instanceof z.ZodEnum) {
-    const enumValues = [...(current as any).options] as (string | number)[];
-    definition = {
-      ...definitionBase,
-      wireType: "enum",
-      optional,
-      nullable,
-      enumValues,
-      enumWireType: pickEnumWireType(enumValues.length),
-    };
-  } else if (current instanceof z.ZodUnion) {
-    const literalValues = getLiteralUnionValues(current);
-    definition = {
-      ...definitionBase,
-      wireType: "enum",
-      optional,
-      nullable,
-      enumValues: literalValues,
-      enumWireType: pickEnumWireType(literalValues.length),
-    };
-  } else {
-    throw new Error(
-      `Unsupported binary field ${fieldName} with schema ${current.constructor.name}`,
-    );
-  }
-
-  if (!omit) {
-    return definition;
+  if (defaultValue !== undefined) {
+    optional = false;
   }
 
   return {
-    ...definition,
-    omit: true,
-    optional: false,
-    nullable: false,
-    presenceBit: undefined,
-    valueBit: undefined,
+    schema: current,
+    helper,
+    omit,
+    optional,
+    nullable,
+    ...(defaultValue !== undefined ? { defaultValue } : {}),
   };
 }
 
@@ -234,7 +187,9 @@ function getLiteralUnionValues(schema: z.ZodUnion<any>): (string | number)[] {
   }
   return options.map((option) => {
     if (!(option instanceof z.ZodLiteral)) {
-      throw new Error("Only literal unions are supported on binary path");
+      throw new Error(
+        `Only literal unions are supported on binary path, received ${option.constructor.name}`,
+      );
     }
     const literalValue = getLiteralValue(option);
     if (typeof literalValue !== "string" && typeof literalValue !== "number") {
@@ -244,9 +199,24 @@ function getLiteralUnionValues(schema: z.ZodUnion<any>): (string | number)[] {
   });
 }
 
-function pickEnumWireType(
-  valueCount: number,
-): BinaryFieldDefinition["enumWireType"] {
+function isObjectDiscriminantUnion(schema: z.ZodUnion<any>): boolean {
+  const options = (schema as any)._def?.options as z.ZodTypeAny[] | undefined;
+  if (!options || options.length === 0) {
+    return false;
+  }
+  return options.every((option) => {
+    if (!(option instanceof z.ZodObject)) {
+      return false;
+    }
+    try {
+      return typeof getDiscriminantLiteral(option) === "string";
+    } catch {
+      return false;
+    }
+  });
+}
+
+function pickOrdinalWireType(valueCount: number): "u8" | "u16" | "u32" {
   if (valueCount <= 0xff) {
     return "u8";
   }
@@ -256,32 +226,29 @@ function pickEnumWireType(
   return "u32";
 }
 
-function assignPresenceBits(fields: readonly BinaryFieldDefinition[]): {
-  readonly fields: readonly BinaryFieldDefinition[];
-  readonly allowedFlags: number;
-} {
+function stripAssignedBits(
+  field: BinaryObjectFieldDefinition,
+): BinaryObjectFieldDefinition {
+  return { ...field, presenceBit: undefined, valueBit: undefined };
+}
+
+function assignPresenceBits(fields: readonly BinaryObjectFieldDefinition[]) {
   let nextBit = 0;
   let allowedFlags = 0;
   const withBits = fields.map((field) => {
-    if (field.omit) {
-      return field;
-    }
-    if (field.optional && field.wireType === "bool") {
-      const updated = {
-        ...field,
-        presenceBit: nextBit,
-        valueBit: nextBit + 1,
-      };
+    if (
+      field.optional &&
+      field.value.kind === "scalar" &&
+      field.value.wireType === "bool"
+    ) {
+      const updated = { ...field, presenceBit: nextBit, valueBit: nextBit + 1 };
       allowedFlags |= 1 << nextBit;
       allowedFlags |= 1 << (nextBit + 1);
       nextBit += 2;
       return updated;
     }
     if (field.optional || field.nullable) {
-      const updated = {
-        ...field,
-        presenceBit: nextBit,
-      };
+      const updated = { ...field, presenceBit: nextBit };
       allowedFlags |= 1 << nextBit;
       nextBit += 1;
       return updated;
@@ -290,144 +257,354 @@ function assignPresenceBits(fields: readonly BinaryFieldDefinition[]): {
   });
   if (nextBit > 16) {
     throw new Error(
-      `More than 16 presence bits are not supported yet on binary path`,
+      "More than 16 presence bits are not supported yet on binary path",
     );
   }
+  return { fields: withBits, allowedFlags };
+}
+
+function mergeObjectDefinitions(
+  left: BinaryObjectValueDefinition,
+  right: BinaryObjectValueDefinition,
+): BinaryObjectValueDefinition {
+  const mergedByName = new Map<string, BinaryObjectFieldDefinition>();
+  for (const field of left.fields.map(stripAssignedBits)) {
+    mergedByName.set(field.name, field);
+  }
+  for (const field of right.fields.map(stripAssignedBits)) {
+    // Right-side fields override left-side fields. This matches the current
+    // stamped-intent behavior where the stamped sender clientID wins over any
+    // same-named field carried by the base intent payload.
+    mergedByName.set(field.name, field);
+  }
+  const mergedFields = [...mergedByName.values()];
+  const { fields, allowedFlags } = assignPresenceBits(mergedFields);
+  return { kind: "object", fields, allowedFlags };
+}
+
+function compileObjectFields(
+  entries: readonly [string, z.ZodTypeAny][],
+  state: BinaryCompileState,
+): BinaryObjectValueDefinition {
+  const rawFields: BinaryObjectFieldDefinition[] = [];
+  for (const [fieldName, fieldSchema] of entries) {
+    const unwrapped = unwrapFieldSchema(fieldSchema);
+    if (unwrapped.omit) {
+      continue;
+    }
+    if (unwrapped.optional && unwrapped.nullable) {
+      throw new Error(
+        `Field ${fieldName} cannot be both optional and nullable on binary path`,
+      );
+    }
+    rawFields.push({
+      name: fieldName,
+      value: compileValueSchema(unwrapped.schema, state),
+      optional: unwrapped.optional || undefined,
+      nullable: unwrapped.nullable || undefined,
+      ...(unwrapped.defaultValue !== undefined
+        ? { defaultValue: unwrapped.defaultValue }
+        : {}),
+    });
+  }
+  const { fields, allowedFlags } = assignPresenceBits(rawFields);
+  return { kind: "object", fields, allowedFlags };
+}
+
+function compileObjectSchema(
+  schema: z.ZodObject<any>,
+  state: BinaryCompileState,
+  omitFieldName?: string,
+): BinaryObjectValueDefinition {
+  const entries = Object.entries(getObjectShape(schema)).filter(
+    ([name]) => name !== omitFieldName,
+  );
+  return compileObjectFields(entries, state);
+}
+
+function compileDiscriminatedUnionSchema(
+  schema: z.ZodTypeAny,
+  state: BinaryCompileState,
+) {
+  const options = getDiscriminatedUnionOptions(schema).filter(
+    (option) => !isJsonOnlyIntentSchema(option),
+  );
+  const seenTypes = new Set<string>();
+  const variants = options.map((option, index) => {
+    const type = getDiscriminantLiteral(option);
+    if (seenTypes.has(type)) {
+      throw new Error(`Duplicate discriminated union variant ${type}`);
+    }
+    seenTypes.add(type);
+    return {
+      type,
+      tag: index + 1,
+      value: compileObjectSchema(option as z.ZodObject<any>, state, "type"),
+    };
+  });
   return {
-    fields: withBits,
-    allowedFlags,
+    kind: "discriminatedUnion" as const,
+    discriminant: "type",
+    tagWireType: pickOrdinalWireType(variants.length),
+    variants,
   };
 }
 
-function buildIntentDefinitions(): BinaryIntentDefinition[] {
-  const seenTypes = new Set<string>();
-  const definitions: BinaryIntentDefinition[] = [];
+function compileIntersectionSchema(
+  schema: z.ZodIntersection<any, any>,
+  state: BinaryCompileState,
+): BinaryValueDefinition {
+  const leftSchema = (schema as any)._def.left as z.ZodTypeAny;
+  const rightSchema = (schema as any)._def.right as z.ZodTypeAny;
+  const leftValue = compileValueSchema(leftSchema, state);
+  const rightValue = compileValueSchema(rightSchema, state);
 
-  for (const option of getDiscriminatedUnionOptions(AllIntentSchema)) {
-    const type = getDiscriminantLiteral(option);
-    if (seenTypes.has(type)) {
-      throw new Error(`Duplicate intent type ${type}`);
-    }
-    seenTypes.add(type);
-
-    if (isJsonOnlyIntentSchema(option)) {
-      continue;
-    }
-
-    // Every non-jsonOnly variant in AllIntentSchema is part of the binary gameplay protocol.
-    const shape = getObjectShape(option);
-    const rawFields = Object.entries(shape)
-      .filter(([name]) => name !== "type")
-      .map(([name, fieldSchema]) => analyzeFieldSchema(name, fieldSchema));
-    const { fields, allowedFlags } = assignPresenceBits(rawFields);
-    definitions.push({
-      type,
-      opcode: definitions.length + 1,
-      fields,
-      allowedFlags,
-    });
+  if (leftValue.kind === "object" && rightValue.kind === "object") {
+    return mergeObjectDefinitions(leftValue, rightValue);
   }
-
-  return definitions;
+  if (leftValue.kind === "discriminatedUnion" && rightValue.kind === "object") {
+    return {
+      ...leftValue,
+      variants: leftValue.variants.map((variant) => ({
+        ...variant,
+        value: mergeObjectDefinitions(
+          variant.value as BinaryObjectValueDefinition,
+          rightValue,
+        ),
+      })),
+    };
+  }
+  if (leftValue.kind === "object" && rightValue.kind === "discriminatedUnion") {
+    return {
+      ...rightValue,
+      variants: rightValue.variants.map((variant) => ({
+        ...variant,
+        value: mergeObjectDefinitions(
+          leftValue,
+          variant.value as BinaryObjectValueDefinition,
+        ),
+      })),
+    };
+  }
+  throw new Error(
+    `Unsupported binary intersection between ${leftSchema.constructor.name} and ${rightSchema.constructor.name}`,
+  );
 }
 
-function buildMessageDefinitions(): BinaryMessageDefinition[] {
+function compileLeafSchema(
+  schema: z.ZodTypeAny,
+  helper: ReturnType<typeof getBinaryFieldHelper>,
+  state: BinaryCompileState,
+): BinaryValueDefinition {
+  if (helper?.kind === "playerRef") {
+    return {
+      kind: "projectedScalar",
+      wireType: "playerRef",
+      ...(helper.allowAllPlayers !== undefined
+        ? { allowAllPlayers: helper.allowAllPlayers }
+        : {}),
+      ...(helper.inlineFallback !== undefined
+        ? { inlineFallback: helper.inlineFallback }
+        : {}),
+    };
+  }
+  if (helper?.kind === "clientIndex") {
+    return { kind: "projectedScalar", wireType: "clientIndex" };
+  }
+  if (helper?.kind === "number") {
+    return { kind: "scalar", wireType: helper.wireType };
+  }
+  if (schema instanceof z.ZodBoolean) {
+    return { kind: "scalar", wireType: "bool" };
+  }
+  if (schema instanceof z.ZodString) {
+    return { kind: "scalar", wireType: "string" };
+  }
+  if (schema instanceof z.ZodNumber) {
+    return { kind: "scalar", wireType: "f64" };
+  }
+  if (schema instanceof z.ZodEnum) {
+    const enumValues = [...(schema as any).options] as (string | number)[];
+    return {
+      kind: "scalar",
+      wireType: "enum",
+      enumValues,
+      enumWireType: pickOrdinalWireType(enumValues.length),
+    };
+  }
+  if (schema instanceof z.ZodLiteral) {
+    const literalValue = getLiteralValue(schema);
+    if (typeof literalValue !== "string" && typeof literalValue !== "number") {
+      throw new Error(
+        `Unsupported binary literal ${String(literalValue)} on binary path`,
+      );
+    }
+    return {
+      kind: "scalar",
+      wireType: "enum",
+      enumValues: [literalValue],
+      enumWireType: "u8",
+    };
+  }
+  if (
+    (schema as any)._def?.typeName === "ZodDiscriminatedUnion" ||
+    (schema as any).discriminator !== undefined
+  ) {
+    return compileDiscriminatedUnionSchema(schema, state);
+  }
+  if (schema instanceof z.ZodUnion) {
+    if (isObjectDiscriminantUnion(schema)) {
+      return compileDiscriminatedUnionSchema(schema, state);
+    }
+    const literalValues = getLiteralUnionValues(schema);
+    return {
+      kind: "scalar",
+      wireType: "enum",
+      enumValues: literalValues,
+      enumWireType: pickOrdinalWireType(literalValues.length),
+    };
+  }
+  if (schema instanceof z.ZodObject) {
+    return compileObjectSchema(schema, state);
+  }
+  if (schema instanceof z.ZodArray) {
+    return {
+      kind: "array",
+      lengthWireType: "u16",
+      element: compileValueSchema(getArrayElementSchema(schema), state),
+    };
+  }
+  if (schema instanceof z.ZodIntersection) {
+    return compileIntersectionSchema(schema, state);
+  }
+  throw new Error(
+    `Unsupported binary schema ${schema.constructor.name} on binary path`,
+  );
+}
+
+function compileValueSchema(
+  schema: z.ZodTypeAny,
+  state: BinaryCompileState,
+): BinaryValueDefinition {
+  const cached = state.cache.get(schema);
+  if (cached) {
+    return cached;
+  }
+
+  let current = schema;
+  let helper = getBinaryFieldHelper(current);
+  while (
+    current instanceof z.ZodDefault ||
+    current instanceof z.ZodOptional ||
+    current instanceof z.ZodNullable
+  ) {
+    current = (current as any)._def.innerType;
+    helper ??= getBinaryFieldHelper(current);
+  }
+
+  const compiled = compileLeafSchema(current, helper, state);
+  state.cache.set(schema, compiled);
+  if (schema !== current) {
+    state.cache.set(current, compiled);
+  }
+  return compiled;
+}
+
+function buildIntentDefinitions(state: BinaryCompileState) {
+  const compiled = compileValueSchema(AllIntentSchema, state);
+  if (compiled.kind !== "discriminatedUnion") {
+    throw new Error("AllIntentSchema must compile to a discriminated union");
+  }
+  return compiled.variants.map((variant) => ({
+    type: variant.type,
+    opcode: variant.tag,
+    payload: variant.value,
+  }));
+}
+
+function buildMessageDefinitions(state: BinaryCompileState) {
   const seenTypes = new Set<string>();
   const registrations = collectBinaryGameplayMessageRegistrations();
-
   return registrations.map((registration, index) => {
-    const { schema, type, direction, envelope } = registration;
+    const { schema, type, direction } = registration;
     if (seenTypes.has(type)) {
       throw new Error(`Duplicate binary message type ${type}`);
     }
     seenTypes.add(type);
-    const fieldAnalysis =
-      envelope === "auto"
-        ? assignPresenceBits(
-            Object.entries(getObjectShape(schema))
-              .filter(([name]) => name !== "type")
-              .map(([name, fieldSchema]) =>
-                analyzeFieldSchema(name, fieldSchema),
-              ),
-          )
-        : { fields: [], allowedFlags: 0 };
+    if (!(schema instanceof z.ZodObject)) {
+      throw new Error(
+        `Expected binary top-level message ${type} to be a ZodObject`,
+      );
+    }
     return {
       type,
       messageType: index + 1,
       direction,
-      envelope,
-      fields: fieldAnalysis.fields,
-      allowedFlags: fieldAnalysis.allowedFlags,
+      payload: compileObjectSchema(schema, state, "type"),
     };
   });
 }
 
 function collectBinaryGameplayMessageRegistrations(): BinaryGameplayMessageRegistration[] {
-  return [
+  const seenSchemas = new Set<z.ZodTypeAny>();
+  const registrations = [
     ...collectBinaryGameplayMessageRegistrationsForDirection(
       "server",
-      BinaryServerGameplayMessageSchema,
-      BinaryServerGameplayMessageRouting,
+      ServerMessageSchema,
+      seenSchemas,
     ),
     ...collectBinaryGameplayMessageRegistrationsForDirection(
       "client",
-      BinaryClientGameplayMessageSchema,
-      BinaryClientGameplayMessageRouting,
+      ClientMessageSchema,
+      seenSchemas,
     ),
   ];
+  validateNoOrphanBinaryGameplayMessageMetadata(seenSchemas);
+  return registrations;
 }
 
 function collectBinaryGameplayMessageRegistrationsForDirection(
   direction: BinaryMessageDefinition["direction"],
   schema: z.ZodTypeAny,
-  routing: BinaryGameplayMessageRouting,
+  seenSchemas: Set<z.ZodTypeAny>,
 ): BinaryGameplayMessageRegistration[] {
   const schemas = getDiscriminatedUnionOptions(schema);
-  const schemaTypes = schemas.map(getDiscriminantLiteral);
-
-  validateBinaryGameplayMessageRouting(direction, schemaTypes, routing);
-
-  return schemas.map((messageSchema) => {
-    const type = getDiscriminantLiteral(messageSchema);
-    return {
-      schema: messageSchema,
-      type,
-      direction,
-      envelope: routing[type]!,
-    };
+  return schemas.flatMap((messageSchema) => {
+    if (!getBinaryGameplayMessageMeta(messageSchema)) {
+      return [];
+    }
+    seenSchemas.add(messageSchema);
+    return [
+      {
+        schema: messageSchema,
+        type: getDiscriminantLiteral(messageSchema),
+        direction,
+      },
+    ];
   });
 }
 
-function validateBinaryGameplayMessageRouting(
-  direction: BinaryMessageDefinition["direction"],
-  schemaTypes: readonly string[],
-  routing: BinaryGameplayMessageRouting,
+function validateNoOrphanBinaryGameplayMessageMetadata(
+  seenSchemas: ReadonlySet<z.ZodTypeAny>,
 ) {
-  const routingTypes = Object.keys(routing);
-  for (const type of schemaTypes) {
-    if (!(type in routing)) {
+  for (const rawSchema of binaryGameplayMessageRegistry._map.keys()) {
+    const schema = rawSchema as z.ZodTypeAny;
+    if (!seenSchemas.has(schema)) {
+      const type = safeSchemaDiscriminant(schema);
       throw new Error(
-        `Missing ${direction} binary gameplay routing entry for ${type}`,
-      );
-    }
-    const envelope = routing[type];
-    if (
-      envelope !== "auto" &&
-      envelope !== "intent" &&
-      envelope !== "packedTurn"
-    ) {
-      throw new Error(
-        `Unsupported ${direction} binary gameplay envelope ${String(envelope)} for ${type}`,
+        type
+          ? `Binary gameplay message metadata is registered on unreachable schema ${type}`
+          : "Binary gameplay message metadata is registered on a schema that is not reachable from ClientMessageSchema or ServerMessageSchema",
       );
     }
   }
+}
 
-  for (const type of routingTypes) {
-    if (!schemaTypes.includes(type)) {
-      throw new Error(
-        `Unexpected ${direction} binary gameplay routing entry for ${type}`,
-      );
-    }
+function safeSchemaDiscriminant(schema: z.ZodTypeAny): string | undefined {
+  try {
+    return getDiscriminantLiteral(schema);
+  } catch {
+    return undefined;
   }
 }
 
@@ -439,9 +616,10 @@ function renderStringLiteralUnion(values: readonly string[]): string {
 }
 
 export function collectGeneratedBinaryModel(): GeneratedBinaryModel {
+  const state = createCompileState();
   return {
-    intentDefinitions: buildIntentDefinitions(),
-    messageDefinitions: buildMessageDefinitions(),
+    intentDefinitions: buildIntentDefinitions(state),
+    messageDefinitions: buildMessageDefinitions(state),
   };
 }
 
@@ -487,6 +665,9 @@ export function generateBinaryGameplaySource(): string {
     key: pascalCase(definition.type),
     value: definition.opcode,
   }));
+  const binaryIntentTypes = model.intentDefinitions.map(
+    (definition) => definition.type,
+  );
 
   return `/* This file is auto-generated by scripts/gen-binary-gameplay.ts. Do not edit manually. */
 import type {
@@ -523,8 +704,8 @@ export const BINARY_MESSAGE_DEFINITION_BY_MESSAGE_TYPE = new Map(
 );
 
 export type BinaryClientGameplayMessageType = ${renderStringLiteralUnion(clientMessageTypes)};
-
 export type BinaryServerGameplayMessageType = ${renderStringLiteralUnion(serverMessageTypes)};
+export type BinaryIntentGameplayType = ${renderStringLiteralUnion(binaryIntentTypes)};
 
 export type BinaryClientGameplayMessage = Extract<
   ClientMessage,
@@ -566,23 +747,6 @@ export function opcodeToIntentType(opcode: number): Intent["type"] {
     throw new Error(\`Unknown binary intent opcode: \${opcode}\`);
   }
   return definition.type as Intent["type"];
-}
-
-export function isBinaryGameplayClientMessage(
-  message: ClientMessage,
-): message is BinaryClientGameplayMessage {
-  switch (message.type) {
-${clientMessageDefinitions
-  .map((definition) => {
-    if (definition.envelope === "intent") {
-      return `    case ${JSON.stringify(definition.type)}:\n      return hasBinaryIntentOpcode(message.intent.type);`;
-    }
-    return `    case ${JSON.stringify(definition.type)}:\n      return true;`;
-  })
-  .join("\n")}
-    default:
-      return false;
-  }
 }
 `;
 }

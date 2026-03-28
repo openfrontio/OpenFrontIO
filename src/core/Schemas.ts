@@ -476,9 +476,11 @@ export const AllIntentSchema = zb.discriminatedUnion("type", [
   UpdateGameConfigIntentSchema,
 ]);
 
-// StampedIntent = Intent with server-stamped clientID (used in turns and execution)
+// StampedIntent = Intent with server-stamped clientID (used in turns and execution).
+// clientIndexRef() keeps the semantic value as clientID while projecting it onto the
+// compact binary player-index representation inside recursive payload compilation.
 export const StampedIntentSchema = AllIntentSchema.and(
-  zb.object({ clientID: ID }),
+  zb.object({ clientID: zb.clientIndexRef().schema() }),
 );
 export type StampedIntent = Intent & { clientID: ClientID };
 
@@ -558,10 +560,12 @@ export type Winner = z.infer<typeof WinnerSchema>;
 // Server
 //
 
-export const ServerTurnMessageSchema = zb.object({
-  type: zb.literal("turn"),
-  turn: TurnSchema,
-});
+export const ServerTurnMessageSchema = zb.binaryGameplayMessage(
+  zb.object({
+    type: zb.literal("turn"),
+    turn: TurnSchema,
+  }),
+);
 
 export const ServerPingMessageSchema = zb.object({
   type: zb.literal("ping"),
@@ -584,14 +588,16 @@ export const ServerStartGameMessageSchema = zb.object({
   myClientID: ID.optional(),
 });
 
-export const ServerDesyncSchema = zb.object({
-  type: zb.literal("desync"),
-  turn: zb.u32().schema(),
-  correctHash: zb.i32().nullable().schema(),
-  clientsWithCorrectHash: zb.u16().schema(),
-  totalActiveClients: zb.u16().schema(),
-  yourHash: zb.binaryOmit(zb.i32().optional().schema()),
-});
+export const ServerDesyncSchema = zb.binaryGameplayMessage(
+  zb.object({
+    type: zb.literal("desync"),
+    turn: zb.u32().schema(),
+    correctHash: zb.i32().nullable().schema(),
+    clientsWithCorrectHash: zb.u16().schema(),
+    totalActiveClients: zb.u16().schema(),
+    yourHash: zb.binaryOmit(zb.i32().optional().schema()),
+  }),
+);
 
 export const ServerErrorSchema = zb.object({
   type: zb.literal("error"),
@@ -606,23 +612,9 @@ export const ServerLobbyInfoMessageSchema = zb.object({
   myClientID: ID,
 });
 
-// Only the live gameplay server-message subset participates in the binary protocol.
-// Setup/control messages such as start, prestart, error, and lobby_info stay JSON.
-export const BinaryServerGameplayMessageSchema = zb.discriminatedUnion("type", [
-  ServerTurnMessageSchema,
-  ServerDesyncSchema,
-]);
-
-// Top-level live gameplay routing stays schema-adjacent: the binary subset unions
-// declare membership, and these configs declare which envelope each binary message
-// uses on the wire.
-export const BinaryServerGameplayMessageRouting = {
-  turn: "packedTurn",
-  desync: "auto",
-} as const satisfies Record<string, "auto" | "intent" | "packedTurn">;
-
-// All server messages, including the binary gameplay subset above and the JSON-only
-// setup/control path, are part of the semantic protocol union.
+// Top-level binary gameplay participation is declared inline on the annotated
+// variants above. Setup/control messages such as start, prestart, error, and
+// lobby_info stay JSON.
 export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -643,11 +635,13 @@ export const ClientSendWinnerSchema = zb.object({
   allPlayersStats: AllPlayersStatsSchema,
 });
 
-export const ClientHashSchema = zb.object({
-  type: zb.literal("hash"),
-  hash: zb.i32().schema(),
-  turnNumber: zb.u32().schema(),
-});
+export const ClientHashSchema = zb.binaryGameplayMessage(
+  zb.object({
+    type: zb.literal("hash"),
+    hash: zb.i32().schema(),
+    turnNumber: zb.u32().schema(),
+  }),
+);
 
 export const ClientLogMessageSchema = zb.object({
   type: zb.literal("log"),
@@ -655,14 +649,18 @@ export const ClientLogMessageSchema = zb.object({
   log: ID,
 });
 
-export const ClientPingMessageSchema = zb.object({
-  type: zb.literal("ping"),
-});
+export const ClientPingMessageSchema = zb.binaryGameplayMessage(
+  zb.object({
+    type: zb.literal("ping"),
+  }),
+);
 
-export const ClientIntentMessageSchema = zb.object({
-  type: zb.literal("intent"),
-  intent: AllIntentSchema,
-});
+export const ClientIntentMessageSchema = zb.binaryGameplayMessage(
+  zb.object({
+    type: zb.literal("intent"),
+    intent: AllIntentSchema,
+  }),
+);
 
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
@@ -685,22 +683,9 @@ export const ClientRejoinMessageSchema = zb.object({
   token: TokenSchema,
 });
 
-// Only the live gameplay client-message subset participates in the binary protocol.
-// Join/rejoin/winner/log stay JSON even though they share the top-level client union.
-export const BinaryClientGameplayMessageSchema = zb.discriminatedUnion("type", [
-  ClientPingMessageSchema,
-  ClientIntentMessageSchema,
-  ClientHashSchema,
-]);
-
-export const BinaryClientGameplayMessageRouting = {
-  ping: "auto",
-  intent: "intent",
-  hash: "auto",
-} as const satisfies Record<string, "auto" | "intent" | "packedTurn">;
-
-// All client messages, including the binary gameplay subset above and the JSON-only
-// setup/control path, are part of the semantic protocol union.
+// Top-level binary gameplay participation is declared inline on the annotated
+// variants above. Join/rejoin/winner/log stay JSON even though they share the
+// top-level client union.
 export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,

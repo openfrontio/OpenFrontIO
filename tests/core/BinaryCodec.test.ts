@@ -456,7 +456,7 @@ describe("BinaryCodec", () => {
       },
       context,
     );
-    encoded[10] = 99;
+    encoded[15] = 99;
     expect(() => decodeBinaryServerGameplayMessage(encoded, context)).toThrow(
       /Invalid player index/,
     );
@@ -467,8 +467,9 @@ describe("BinaryCodec", () => {
       {
         type: "intent",
         intent: {
-          type: "spawn",
-          tile: 1,
+          type: "attack",
+          targetID: "P0000002",
+          troops: 1,
         },
       },
       context,

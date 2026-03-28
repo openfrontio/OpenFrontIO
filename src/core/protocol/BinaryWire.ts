@@ -14,20 +14,33 @@ export interface NumericWireHelper extends Record<string, unknown> {
   readonly wireType: BinaryNumericWireType;
 }
 
+export interface ClientIndexWireHelper extends Record<string, unknown> {
+  readonly kind: "clientIndex";
+}
+
 export interface BinaryOmitMeta extends Record<string, unknown> {
   readonly kind: "omit";
 }
 
-export type BinaryFieldHelper = PlayerRefWireHelper | NumericWireHelper;
+export type BinaryFieldHelper =
+  | PlayerRefWireHelper
+  | NumericWireHelper
+  | ClientIndexWireHelper;
 
 export interface BinaryIntentMeta extends Record<string, unknown> {
   readonly kind: "intent";
   readonly jsonOnly: true;
 }
 
+export interface BinaryGameplayMessageMeta extends Record<string, unknown> {
+  readonly kind: "message";
+}
+
 export const binaryFieldRegistry = z.registry<BinaryFieldHelper>();
 export const binaryOmitRegistry = z.registry<BinaryOmitMeta>();
 export const binaryIntentRegistry = z.registry<BinaryIntentMeta>();
+export const binaryGameplayMessageRegistry =
+  z.registry<BinaryGameplayMessageMeta>();
 
 function cloneSchema<T extends z.ZodTypeAny>(schema: T): T {
   return schema.meta(schema.meta() ?? {}) as T;
@@ -39,6 +52,12 @@ export function playerRef(
   return {
     kind: "playerRef",
     ...options,
+  };
+}
+
+export function clientIndexRef(): ClientIndexWireHelper {
+  return {
+    kind: "clientIndex",
   };
 }
 
@@ -84,6 +103,14 @@ export function jsonOnlyIntent<T extends z.ZodTypeAny>(schema: T): T {
   return cloned;
 }
 
+export function binaryGameplayMessage<T extends z.ZodTypeAny>(schema: T): T {
+  const cloned = cloneSchema(schema);
+  (cloned as any).register(binaryGameplayMessageRegistry, {
+    kind: "message",
+  });
+  return cloned;
+}
+
 export function getBinaryFieldHelper(
   schema: z.ZodTypeAny,
 ): BinaryFieldHelper | undefined {
@@ -96,4 +123,10 @@ export function isBinaryOmittedSchema(schema: z.ZodTypeAny): boolean {
 
 export function isJsonOnlyIntentSchema(schema: z.ZodTypeAny): boolean {
   return binaryIntentRegistry.has(schema);
+}
+
+export function getBinaryGameplayMessageMeta(
+  schema: z.ZodTypeAny,
+): BinaryGameplayMessageMeta | undefined {
+  return binaryGameplayMessageRegistry.get(schema);
 }

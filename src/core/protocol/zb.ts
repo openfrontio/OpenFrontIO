@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { AllPlayers } from "../game/Game";
 import {
-  type BinaryFieldHelper,
-  type BinaryNumericWireType,
   binaryField,
+  type BinaryFieldHelper,
+  binaryGameplayMessage,
   binaryNumber,
+  type BinaryNumericWireType,
   binaryOmit,
+  clientIndexRef as clientIndexRefHelper,
   jsonOnlyIntent,
   playerRef as playerRefHelper,
 } from "./BinaryWire";
@@ -82,6 +84,7 @@ function createNumberBuilder<T extends z.ZodTypeAny>(
 
 export const zb = {
   array: z.array,
+  binaryGameplayMessage,
   binaryOmit,
   boolean: z.boolean,
   discriminatedUnion: z.discriminatedUnion,
@@ -105,6 +108,12 @@ export const zb = {
     return createFieldBuilder(
       z.string().regex(GAME_ID_REGEX),
       playerRefHelper({ inlineFallback: true }),
+    );
+  },
+  clientIndexRef() {
+    return createFieldBuilder(
+      z.string().regex(GAME_ID_REGEX),
+      clientIndexRefHelper(),
     );
   },
   record: z.record,

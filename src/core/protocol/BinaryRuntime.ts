@@ -19,37 +19,77 @@ export type BinaryScalarWireType =
   | "u16"
   | "u32"
   | "i32"
-  | "enum"
-  | "playerRef";
+  | "enum";
 
-export interface BinaryFieldDefinition {
-  readonly name: string;
+export type BinaryProjectedWireType = "playerRef" | "clientIndex";
+
+export interface BinaryScalarValueDefinition {
+  readonly kind: "scalar";
   readonly wireType: BinaryScalarWireType;
-  readonly optional?: boolean;
-  readonly nullable?: boolean;
-  readonly omit?: boolean;
-  readonly presenceBit?: number;
-  readonly valueBit?: number;
   readonly enumValues?: readonly (string | number)[];
   readonly enumWireType?: "u8" | "u16" | "u32";
+}
+
+export interface BinaryProjectedScalarDefinition {
+  readonly kind: "projectedScalar";
+  readonly wireType: BinaryProjectedWireType;
   readonly allowAllPlayers?: boolean;
   readonly inlineFallback?: boolean;
 }
 
+export interface BinaryObjectFieldDefinition {
+  readonly name: string;
+  readonly value: BinaryValueDefinition;
+  readonly optional?: boolean;
+  readonly nullable?: boolean;
+  readonly presenceBit?: number;
+  readonly valueBit?: number;
+  readonly defaultValue?: unknown;
+}
+
+export interface BinaryObjectValueDefinition {
+  readonly kind: "object";
+  readonly fields: readonly BinaryObjectFieldDefinition[];
+  readonly allowedFlags: number;
+}
+
+export interface BinaryArrayValueDefinition {
+  readonly kind: "array";
+  readonly lengthWireType: "u16";
+  readonly element: BinaryValueDefinition;
+}
+
+export interface BinaryDiscriminatedUnionVariantDefinition {
+  readonly type: string;
+  readonly tag: number;
+  readonly value: BinaryValueDefinition;
+}
+
+export interface BinaryDiscriminatedUnionValueDefinition {
+  readonly kind: "discriminatedUnion";
+  readonly discriminant: string;
+  readonly tagWireType: "u8" | "u16" | "u32";
+  readonly variants: readonly BinaryDiscriminatedUnionVariantDefinition[];
+}
+
+export type BinaryValueDefinition =
+  | BinaryScalarValueDefinition
+  | BinaryProjectedScalarDefinition
+  | BinaryObjectValueDefinition
+  | BinaryArrayValueDefinition
+  | BinaryDiscriminatedUnionValueDefinition;
+
 export interface BinaryIntentDefinition {
   readonly type: string;
   readonly opcode: number;
-  readonly fields: readonly BinaryFieldDefinition[];
-  readonly allowedFlags: number;
+  readonly payload: BinaryValueDefinition;
 }
 
 export interface BinaryMessageDefinition {
   readonly type: string;
   readonly messageType: number;
   readonly direction: "client" | "server";
-  readonly envelope: "auto" | "intent" | "packedTurn";
-  readonly fields: readonly BinaryFieldDefinition[];
-  readonly allowedFlags: number;
+  readonly payload: BinaryValueDefinition;
 }
 
 export interface BinaryProtocolContext {
@@ -275,11 +315,60 @@ export class BinaryReader {
   }
 }
 
-function writeScalar(
+function isBinaryRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBooleanScalarDefinition(
+  definition: BinaryValueDefinition,
+): definition is BinaryScalarValueDefinition {
+  return definition.kind === "scalar" && definition.wireType === "bool";
+}
+
+function writeOrdinal(
   writer: BinaryWriter,
-  definition: BinaryFieldDefinition,
+  wireType: "u8" | "u16" | "u32",
+  value: number,
+  definitionName: string,
+) {
+  if (value <= 0) {
+    throw new Error(`Invalid ordinal ${value} for ${definitionName}`);
+  }
+  switch (wireType) {
+    case "u8":
+      writer.writeUint8(value);
+      return;
+    case "u16":
+      writer.writeUint16(value);
+      return;
+    case "u32":
+      writer.writeUint32(value);
+      return;
+  }
+}
+
+function readOrdinal(
+  reader: BinaryReader,
+  wireType: "u8" | "u16" | "u32",
+  definitionName: string,
+): number {
+  const ordinal =
+    wireType === "u8"
+      ? reader.readUint8()
+      : wireType === "u16"
+        ? reader.readUint16()
+        : reader.readUint32();
+  if (ordinal <= 0) {
+    throw new Error(`Invalid ordinal ${ordinal} for ${definitionName}`);
+  }
+  return ordinal;
+}
+
+function writeScalarValue(
+  writer: BinaryWriter,
+  definition: BinaryScalarValueDefinition,
   value: unknown,
-  context: BinaryProtocolContext,
+  definitionName: string,
 ) {
   switch (definition.wireType) {
     case "bool":
@@ -306,43 +395,29 @@ function writeScalar(
     case "enum": {
       const enumValues = definition.enumValues;
       if (!enumValues) {
-        throw new Error(`Enum values missing for field ${definition.name}`);
+        throw new Error(`Enum values missing for ${definitionName}`);
       }
       const enumIndex = enumValues.indexOf(value as string | number);
       if (enumIndex === -1) {
         throw new Error(
-          `Unknown enum value ${String(value)} for field ${definition.name}`,
+          `Unknown enum value ${String(value)} for ${definitionName}`,
         );
       }
       writeOrdinal(
         writer,
         definition.enumWireType ?? "u8",
         enumIndex + 1,
-        definition.name,
+        definitionName,
       );
       return;
     }
-    case "playerRef":
-      if (value === null && !definition.nullable) {
-        throw new Error(`Field ${definition.name} cannot be null`);
-      }
-      if (value === AllPlayers && !definition.allowAllPlayers) {
-        throw new Error(`Field ${definition.name} cannot target AllPlayers`);
-      }
-      writePlayerRef(
-        writer,
-        value as string | null | typeof AllPlayers,
-        context,
-        definition.inlineFallback ?? false,
-      );
-      return;
   }
 }
 
-function readScalar(
+function readScalarValue(
   reader: BinaryReader,
-  definition: BinaryFieldDefinition,
-  context: BinaryProtocolContext,
+  definition: BinaryScalarValueDefinition,
+  definitionName: string,
 ): unknown {
   switch (definition.wireType) {
     case "bool":
@@ -362,85 +437,93 @@ function readScalar(
     case "enum": {
       const enumValues = definition.enumValues;
       if (!enumValues) {
-        throw new Error(`Enum values missing for field ${definition.name}`);
+        throw new Error(`Enum values missing for ${definitionName}`);
       }
       const ordinal = readOrdinal(
         reader,
         definition.enumWireType ?? "u8",
-        definition.name,
+        definitionName,
       );
       const value = enumValues[ordinal - 1];
       if (value === undefined) {
         throw new Error(
-          `Invalid enum ordinal ${ordinal} for field ${definition.name}`,
+          `Invalid enum ordinal ${ordinal} for ${definitionName}`,
         );
       }
       return value;
     }
-    case "playerRef": {
-      const playerId = readPlayerRef(reader, context);
-      if (playerId === null && !definition.nullable) {
-        throw new Error(`Field ${definition.name} cannot be null`);
+  }
+}
+
+function writeProjectedScalarValue(
+  writer: BinaryWriter,
+  definition: BinaryProjectedScalarDefinition,
+  value: unknown,
+  context: BinaryProtocolContext,
+  definitionName: string,
+) {
+  switch (definition.wireType) {
+    case "playerRef":
+      if (value === AllPlayers && !definition.allowAllPlayers) {
+        throw new Error(`${definitionName} cannot target AllPlayers`);
       }
-      if (playerId === AllPlayers && !definition.allowAllPlayers) {
-        throw new Error(`Field ${definition.name} cannot target AllPlayers`);
+      writePlayerRef(
+        writer,
+        value as string | null | typeof AllPlayers,
+        context,
+        definition.inlineFallback ?? false,
+      );
+      return;
+    case "clientIndex": {
+      const index = context.playerIdToIndex.get(value as ClientID);
+      if (index === undefined) {
+        throw new Error(`Unknown stamped client ID: ${String(value)}`);
       }
-      return playerId;
+      writer.writeUint16(index);
+      return;
     }
   }
 }
 
-function writeOrdinal(
-  writer: BinaryWriter,
-  wireType: "u8" | "u16" | "u32",
-  value: number,
-  fieldName: string,
-) {
-  if (value <= 0) {
-    throw new Error(`Invalid ordinal ${value} for field ${fieldName}`);
-  }
-  switch (wireType) {
-    case "u8":
-      writer.writeUint8(value);
-      return;
-    case "u16":
-      writer.writeUint16(value);
-      return;
-    case "u32":
-      writer.writeUint32(value);
-      return;
-  }
-}
-
-function readOrdinal(
+function readProjectedScalarValue(
   reader: BinaryReader,
-  wireType: "u8" | "u16" | "u32",
-  fieldName: string,
-): number {
-  const ordinal =
-    wireType === "u8"
-      ? reader.readUint8()
-      : wireType === "u16"
-        ? reader.readUint16()
-        : reader.readUint32();
-  if (ordinal <= 0) {
-    throw new Error(`Invalid ordinal ${ordinal} for field ${fieldName}`);
+  definition: BinaryProjectedScalarDefinition,
+  context: BinaryProtocolContext,
+  definitionName: string,
+): unknown {
+  switch (definition.wireType) {
+    case "playerRef": {
+      const playerId = readPlayerRef(reader, context);
+      if (playerId === AllPlayers && !definition.allowAllPlayers) {
+        throw new Error(`${definitionName} cannot target AllPlayers`);
+      }
+      return playerId;
+    }
+    case "clientIndex":
+      return requireClientId(reader.readUint16(), context);
   }
-  return ordinal;
 }
 
-export function encodeFlags(
+function resolveFieldInputValue(
+  field: BinaryObjectFieldDefinition,
+  source: Record<string, unknown>,
+): unknown {
+  const value = source[field.name];
+  if (value === undefined && field.defaultValue !== undefined) {
+    return field.defaultValue;
+  }
+  return value;
+}
+
+function encodeObjectFlags(
   definitionName: string,
-  fields: readonly BinaryFieldDefinition[],
+  fields: readonly BinaryObjectFieldDefinition[],
   source: Record<string, unknown>,
 ): number {
   let flags = 0;
   for (const field of fields) {
-    if (field.omit) {
-      continue;
-    }
-    const value = source[field.name];
-    if (field.optional && field.wireType === "bool") {
+    const value = resolveFieldInputValue(field, source);
+    if (field.optional && isBooleanScalarDefinition(field.value)) {
       if (value !== undefined) {
         if (field.presenceBit === undefined || field.valueBit === undefined) {
           throw new Error(`Boolean flag bits missing for ${definitionName}`);
@@ -473,55 +556,49 @@ export function encodeFlags(
   return flags;
 }
 
-export function encodeDefinedFields(
+function encodeObjectFields(
   writer: BinaryWriter,
-  fields: readonly BinaryFieldDefinition[],
+  fields: readonly BinaryObjectFieldDefinition[],
   source: Record<string, unknown>,
   context: BinaryProtocolContext,
 ) {
   for (const field of fields) {
-    if (field.omit) {
-      continue;
-    }
-    const value = source[field.name];
-    if (field.optional && field.wireType === "bool") {
+    const value = resolveFieldInputValue(field, source);
+    if (field.optional && isBooleanScalarDefinition(field.value)) {
       continue;
     }
     if (field.optional) {
       if (value !== undefined) {
-        writeScalar(writer, field, value, context);
+        encodeBinaryValue(writer, field.value, value, context, field.name);
       }
       continue;
     }
     if (field.nullable) {
       if (value !== null) {
-        writeScalar(writer, field, value, context);
+        encodeBinaryValue(writer, field.value, value, context, field.name);
       }
       continue;
     }
-    writeScalar(writer, field, value, context);
+    encodeBinaryValue(writer, field.value, value, context, field.name);
   }
 }
 
-export function decodeDefinedFields(
+function decodeObjectFields(
   reader: BinaryReader,
-  fields: readonly BinaryFieldDefinition[],
+  fields: readonly BinaryObjectFieldDefinition[],
   flags: number,
   context: BinaryProtocolContext,
 ): Record<string, unknown> {
   const output: Record<string, unknown> = {};
   for (const field of fields) {
-    if (field.omit) {
-      continue;
-    }
-    if (field.optional && field.wireType === "bool") {
+    if (field.optional && isBooleanScalarDefinition(field.value)) {
       if (field.presenceBit === undefined || field.valueBit === undefined) {
         throw new Error(`Boolean flag bits missing for ${field.name}`);
       }
       output[field.name] =
         (flags & (1 << field.presenceBit)) !== 0
           ? (flags & (1 << field.valueBit)) !== 0
-          : undefined;
+          : field.defaultValue;
       continue;
     }
     if (field.optional) {
@@ -530,8 +607,8 @@ export function decodeDefinedFields(
       }
       output[field.name] =
         (flags & (1 << field.presenceBit)) !== 0
-          ? readScalar(reader, field, context)
-          : undefined;
+          ? decodeBinaryValue(reader, field.value, context, field.name)
+          : field.defaultValue;
       continue;
     }
     if (field.nullable) {
@@ -540,46 +617,274 @@ export function decodeDefinedFields(
       }
       output[field.name] =
         (flags & (1 << field.presenceBit)) !== 0
-          ? readScalar(reader, field, context)
+          ? decodeBinaryValue(reader, field.value, context, field.name)
           : null;
       continue;
     }
-    output[field.name] = readScalar(reader, field, context);
+    output[field.name] = decodeBinaryValue(
+      reader,
+      field.value,
+      context,
+      field.name,
+    );
   }
   return output;
 }
 
-export function encodeAutoEnvelope(
-  definition: BinaryMessageDefinition,
-  source: Record<string, unknown>,
+function encodeArrayValue(
+  writer: BinaryWriter,
+  definition: BinaryArrayValueDefinition,
+  value: unknown,
   context: BinaryProtocolContext,
-): Uint8Array {
-  const writer = new BinaryWriter();
-  return writer.writeFrame(definition.messageType, () => {
-    if (definition.allowedFlags !== 0) {
-      writer.writeUint16(
-        encodeFlags(definition.type, definition.fields, source),
-      );
-    }
-    encodeDefinedFields(writer, definition.fields, source, context);
+  definitionName: string,
+) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected array for ${definitionName}`);
+  }
+  if (definition.lengthWireType !== "u16") {
+    throw new Error(
+      `Unsupported array length wire type ${definition.lengthWireType} for ${definitionName}`,
+    );
+  }
+  if (value.length > 0xffff) {
+    throw new RangeError(
+      `Binary array too long: ${value.length} elements exceeds 65535 for ${definitionName}`,
+    );
+  }
+  writer.writeUint16(value.length);
+  value.forEach((entry, index) => {
+    encodeBinaryValue(
+      writer,
+      definition.element,
+      entry,
+      context,
+      `${definitionName}[${index}]`,
+    );
   });
 }
 
-export function decodeAutoEnvelope(
+function decodeArrayValue(
   reader: BinaryReader,
-  definition: BinaryMessageDefinition,
+  definition: BinaryArrayValueDefinition,
   context: BinaryProtocolContext,
-): Record<string, unknown> & { type: string } {
-  const flags = definition.allowedFlags !== 0 ? reader.readUint16() : 0;
-  assertFlags(
-    `binary message type ${definition.type}`,
-    flags,
-    definition.allowedFlags,
+  definitionName: string,
+): unknown[] {
+  if (definition.lengthWireType !== "u16") {
+    throw new Error(
+      `Unsupported array length wire type ${definition.lengthWireType} for ${definitionName}`,
+    );
+  }
+  const length = reader.readUint16();
+  return Array.from({ length }, (_, index) =>
+    decodeBinaryValue(
+      reader,
+      definition.element,
+      context,
+      `${definitionName}[${index}]`,
+    ),
   );
+}
+
+function findDiscriminatedUnionVariant(
+  definition: BinaryDiscriminatedUnionValueDefinition,
+  type: string,
+) {
+  return definition.variants.find((variant) => variant.type === type);
+}
+
+function isObjectLikeValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function encodeDiscriminatedUnionValue(
+  writer: BinaryWriter,
+  definition: BinaryDiscriminatedUnionValueDefinition,
+  value: unknown,
+  context: BinaryProtocolContext,
+  definitionName: string,
+) {
+  if (!isObjectLikeValue(value)) {
+    throw new Error(`Expected object for ${definitionName}`);
+  }
+  const discriminantValue = value[definition.discriminant];
+  if (typeof discriminantValue !== "string") {
+    throw new Error(
+      `Expected string discriminant ${definition.discriminant} on ${definitionName}`,
+    );
+  }
+  const variant = findDiscriminatedUnionVariant(definition, discriminantValue);
+  if (!variant) {
+    throw new Error(
+      `Unsupported ${definitionName} variant ${discriminantValue} on binary path`,
+    );
+  }
+  writeOrdinal(writer, definition.tagWireType, variant.tag, definitionName);
+  encodeBinaryValue(
+    writer,
+    variant.value,
+    value,
+    context,
+    `${definitionName}.${variant.type}`,
+  );
+}
+
+function decodeDiscriminatedUnionValue(
+  reader: BinaryReader,
+  definition: BinaryDiscriminatedUnionValueDefinition,
+  context: BinaryProtocolContext,
+  definitionName: string,
+): Record<string, unknown> {
+  const tag = readOrdinal(reader, definition.tagWireType, definitionName);
+  const variant = definition.variants.find(
+    (candidate) => candidate.tag === tag,
+  );
+  if (!variant) {
+    throw new Error(`Unknown ${definitionName} tag: ${tag}`);
+  }
+  const decoded = decodeBinaryValue(
+    reader,
+    variant.value,
+    context,
+    `${definitionName}.${variant.type}`,
+  );
+  if (!isBinaryRecord(decoded)) {
+    throw new Error(
+      `Expected object payload for ${definitionName}.${variant.type}`,
+    );
+  }
   return {
-    type: definition.type,
-    ...decodeDefinedFields(reader, definition.fields, flags, context),
+    [definition.discriminant]: variant.type,
+    ...decoded,
   };
+}
+
+export function encodeBinaryValue(
+  writer: BinaryWriter,
+  definition: BinaryValueDefinition,
+  value: unknown,
+  context: BinaryProtocolContext,
+  definitionName = "binary value",
+) {
+  switch (definition.kind) {
+    case "scalar":
+      writeScalarValue(writer, definition, value, definitionName);
+      return;
+    case "projectedScalar":
+      writeProjectedScalarValue(
+        writer,
+        definition,
+        value,
+        context,
+        definitionName,
+      );
+      return;
+    case "object":
+      if (!isBinaryRecord(value)) {
+        throw new Error(`Expected object for ${definitionName}`);
+      }
+      if (definition.allowedFlags !== 0) {
+        writer.writeUint16(
+          encodeObjectFlags(definitionName, definition.fields, value),
+        );
+      }
+      encodeObjectFields(writer, definition.fields, value, context);
+      return;
+    case "array":
+      encodeArrayValue(writer, definition, value, context, definitionName);
+      return;
+    case "discriminatedUnion":
+      encodeDiscriminatedUnionValue(
+        writer,
+        definition,
+        value,
+        context,
+        definitionName,
+      );
+      return;
+  }
+}
+
+export function decodeBinaryValue(
+  reader: BinaryReader,
+  definition: BinaryValueDefinition,
+  context: BinaryProtocolContext,
+  definitionName = "binary value",
+): unknown {
+  switch (definition.kind) {
+    case "scalar":
+      return readScalarValue(reader, definition, definitionName);
+    case "projectedScalar":
+      return readProjectedScalarValue(
+        reader,
+        definition,
+        context,
+        definitionName,
+      );
+    case "object": {
+      const flags = definition.allowedFlags !== 0 ? reader.readUint16() : 0;
+      assertFlags(definitionName, flags, definition.allowedFlags);
+      return decodeObjectFields(reader, definition.fields, flags, context);
+    }
+    case "array":
+      return decodeArrayValue(reader, definition, context, definitionName);
+    case "discriminatedUnion":
+      return decodeDiscriminatedUnionValue(
+        reader,
+        definition,
+        context,
+        definitionName,
+      );
+  }
+}
+
+export function canEncodeBinaryValue(
+  definition: BinaryValueDefinition,
+  value: unknown,
+): boolean {
+  switch (definition.kind) {
+    case "scalar":
+    case "projectedScalar":
+      return true;
+    case "object":
+      if (!isBinaryRecord(value)) {
+        return true;
+      }
+      return definition.fields.every((field) => {
+        const fieldValue =
+          value[field.name] === undefined && field.defaultValue !== undefined
+            ? field.defaultValue
+            : value[field.name];
+        if (fieldValue === undefined || fieldValue === null) {
+          return true;
+        }
+        return canEncodeBinaryValue(field.value, fieldValue);
+      });
+    case "array":
+      if (!Array.isArray(value)) {
+        return true;
+      }
+      return value.every((entry) =>
+        canEncodeBinaryValue(definition.element, entry),
+      );
+    case "discriminatedUnion":
+      if (!isObjectLikeValue(value)) {
+        return true;
+      }
+      if (typeof value[definition.discriminant] !== "string") {
+        return true;
+      }
+      return (
+        definition.variants.some(
+          (variant) => variant.type === value[definition.discriminant],
+        ) &&
+        canEncodeBinaryValue(
+          definition.variants.find(
+            (variant) => variant.type === value[definition.discriminant],
+          )!.value,
+          value,
+        )
+      );
+  }
 }
 
 export function playerIndexToId(

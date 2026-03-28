@@ -1,9 +1,6 @@
 import {
-  BINARY_INTENT_DEFINITION_BY_OPCODE,
-  BINARY_INTENT_DEFINITION_BY_TYPE,
   BINARY_MESSAGE_DEFINITION_BY_MESSAGE_TYPE,
   BINARY_MESSAGE_DEFINITION_BY_TYPE,
-  isBinaryGameplayClientMessage,
 } from "./__generated__/binary/generated";
 import {
   BinaryClientGameplayMessage,
@@ -11,83 +8,21 @@ import {
   type BinaryProtocolContext,
 } from "./BinaryProtocol";
 import {
-  assertFlags,
   binaryContextFromGameStartInfo,
   BinaryReader,
   BinaryWriter,
-  decodeAutoEnvelope,
-  decodeDefinedFields,
-  encodeAutoEnvelope,
-  encodeDefinedFields,
-  encodeFlags,
-  requireClientId,
-  stampedIntentClientIndex,
+  canEncodeBinaryValue,
+  decodeBinaryValue,
+  encodeBinaryValue,
   toUint8Array,
   type BinaryMessageDefinition,
 } from "./protocol/BinaryRuntime";
-import {
-  ClientIntentMessage,
-  ClientMessageSchema,
-  Intent,
-  ServerTurnMessage,
-  StampedIntent,
-} from "./Schemas";
+import { ClientMessage, ClientMessageSchema } from "./Schemas";
 
 type BinaryWireMessage = Record<string, unknown> & { type: string };
-type EnvelopeEncoder = (
-  message: BinaryWireMessage,
-  definition: BinaryMessageDefinition,
-  context: BinaryProtocolContext,
-) => Uint8Array;
-type EnvelopeDecoder = (
-  reader: BinaryReader,
-  definition: BinaryMessageDefinition,
-  context: BinaryProtocolContext,
-) => BinaryWireMessage;
 
-function encodeIntentPayload(
-  writer: BinaryWriter,
-  intent: Intent,
-  context: BinaryProtocolContext,
-) {
-  const definition = BINARY_INTENT_DEFINITION_BY_TYPE.get(intent.type);
-  if (!definition) {
-    throw new Error(`Unsupported binary intent type: ${intent.type}`);
-  }
-  writer.writeUint8(definition.opcode);
-  const flags = encodeFlags(
-    `binary intent type ${intent.type}`,
-    definition.fields,
-    intent as Record<string, unknown>,
-  );
-  writer.writeUint16(flags);
-  encodeDefinedFields(
-    writer,
-    definition.fields,
-    intent as Record<string, unknown>,
-    context,
-  );
-}
-
-function decodeIntentPayload(
-  reader: BinaryReader,
-  context: BinaryProtocolContext,
-): Intent {
-  const opcode = reader.readUint8();
-  const definition = BINARY_INTENT_DEFINITION_BY_OPCODE.get(opcode);
-  if (!definition) {
-    throw new Error(`Unknown binary intent opcode: ${opcode}`);
-  }
-  const flags = reader.readUint16();
-  assertFlags(
-    `binary intent type ${definition.type}`,
-    flags,
-    definition.allowedFlags,
-  );
-  return {
-    type: definition.type,
-    ...decodeDefinedFields(reader, definition.fields, flags, context),
-  } as Intent;
+function isBinaryRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function requireBinaryMessageDefinitionByType(
@@ -120,35 +55,21 @@ function requireBinaryMessageDefinitionByMessageType(
   return definition;
 }
 
-const ENVELOPE_ENCODERS = {
-  auto: (message, definition, context) =>
-    encodeAutoEnvelope(definition, message, context),
-  intent: (message, definition, context) =>
-    encodeIntentEnvelopeMessage(
-      message as ClientIntentMessage,
-      definition,
-      context,
-    ),
-  packedTurn: (message, definition, context) =>
-    encodePackedTurnEnvelopeMessage(
-      message as ServerTurnMessage,
-      definition,
-      context,
-    ),
-} satisfies Record<BinaryMessageDefinition["envelope"], EnvelopeEncoder>;
-
-const ENVELOPE_DECODERS = {
-  auto: decodeAutoEnvelope,
-  intent: decodeIntentEnvelopeMessage,
-  packedTurn: decodePackedTurnEnvelopeMessage,
-} satisfies Record<BinaryMessageDefinition["envelope"], EnvelopeDecoder>;
-
 function encodeBinaryMessageWithDefinition(
   message: BinaryWireMessage,
   definition: BinaryMessageDefinition,
   context: BinaryProtocolContext,
 ): Uint8Array {
-  return ENVELOPE_ENCODERS[definition.envelope](message, definition, context);
+  const writer = new BinaryWriter();
+  return writer.writeFrame(definition.messageType, () => {
+    encodeBinaryValue(
+      writer,
+      definition.payload,
+      message,
+      context,
+      `binary message type ${definition.type}`,
+    );
+  });
 }
 
 function decodeBinaryMessageWithDefinition(
@@ -156,14 +77,28 @@ function decodeBinaryMessageWithDefinition(
   definition: BinaryMessageDefinition,
   context: BinaryProtocolContext,
 ): BinaryWireMessage {
-  return ENVELOPE_DECODERS[definition.envelope](reader, definition, context);
+  const decoded = decodeBinaryValue(
+    reader,
+    definition.payload,
+    context,
+    `binary message type ${definition.type}`,
+  );
+  if (!isBinaryRecord(decoded)) {
+    throw new Error(
+      `Expected object payload for binary message type ${definition.type}`,
+    );
+  }
+  return {
+    type: definition.type,
+    ...decoded,
+  };
 }
 
 function parseDecodedClientBinaryMessage(
   decoded: BinaryWireMessage,
 ): BinaryClientGameplayMessage {
-  // Client decode is the semantic validation boundary: after envelope-level wire
-  // decoding succeeds, validate the full client message exactly once here.
+  // Client decode is the semantic validation boundary: after wire decoding
+  // succeeds, validate the full client message exactly once here.
   return ClientMessageSchema.parse(decoded) as BinaryClientGameplayMessage;
 }
 
@@ -175,11 +110,17 @@ function finalizeDecodedServerBinaryMessage(
   return decoded as BinaryServerGameplayMessage;
 }
 
-export {
-  binaryContextFromGameStartInfo,
-  isBinaryGameplayClientMessage,
-  toUint8Array,
-};
+export { binaryContextFromGameStartInfo, toUint8Array };
+
+export function isBinaryGameplayClientMessage(
+  message: ClientMessage,
+): message is BinaryClientGameplayMessage {
+  const definition = BINARY_MESSAGE_DEFINITION_BY_TYPE.get(message.type);
+  if (!definition || definition.direction !== "client") {
+    return false;
+  }
+  return canEncodeBinaryValue(definition.payload, message);
+}
 
 export function encodeBinaryClientGameplayMessage(
   message: BinaryClientGameplayMessage,
@@ -239,69 +180,4 @@ export function decodeBinaryServerGameplayMessage(
   );
   reader.ensureFinished();
   return finalizeDecodedServerBinaryMessage(decoded);
-}
-
-function encodeIntentEnvelopeMessage(
-  message: ClientIntentMessage,
-  definition: BinaryMessageDefinition,
-  context: BinaryProtocolContext,
-): Uint8Array {
-  const writer = new BinaryWriter();
-  return writer.writeFrame(definition.messageType, () => {
-    encodeIntentPayload(writer, message.intent, context);
-  });
-}
-
-function decodeIntentEnvelopeMessage(
-  reader: BinaryReader,
-  definition: BinaryMessageDefinition,
-  context: BinaryProtocolContext,
-): ClientIntentMessage {
-  const intent = decodeIntentPayload(reader, context);
-  return {
-    type: definition.type as ClientIntentMessage["type"],
-    intent,
-  };
-}
-
-function encodePackedTurnEnvelopeMessage(
-  message: ServerTurnMessage,
-  definition: BinaryMessageDefinition,
-  context: BinaryProtocolContext,
-): Uint8Array {
-  const writer = new BinaryWriter();
-  return writer.writeFrame(definition.messageType, () => {
-    writer.writeUint32(message.turn.turnNumber);
-    writer.writeUint16(message.turn.intents.length);
-    for (const intent of message.turn.intents) {
-      writer.writeUint16(stampedIntentClientIndex(intent, context));
-      encodeIntentPayload(writer, intent, context);
-    }
-  });
-}
-
-function decodePackedTurnEnvelopeMessage(
-  reader: BinaryReader,
-  definition: BinaryMessageDefinition,
-  context: BinaryProtocolContext,
-): ServerTurnMessage {
-  const turnNumber = reader.readUint32();
-  const intentCount = reader.readUint16();
-  const intents: StampedIntent[] = [];
-  for (let i = 0; i < intentCount; i++) {
-    const clientIndex = reader.readUint16();
-    const clientID = requireClientId(clientIndex, context);
-    const intent = decodeIntentPayload(reader, context);
-    intents.push({
-      ...intent,
-      clientID,
-    } as StampedIntent);
-  }
-  return {
-    type: definition.type as ServerTurnMessage["type"],
-    turn: {
-      turnNumber,
-      intents,
-    },
-  };
 }

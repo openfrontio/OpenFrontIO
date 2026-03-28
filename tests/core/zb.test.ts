@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UpdateGameConfigIntentSchema } from "../../src/core/Schemas";
 import {
   getBinaryFieldHelper,
+  getBinaryGameplayMessageMeta,
   isBinaryOmittedSchema,
   isJsonOnlyIntentSchema,
 } from "../../src/core/protocol/BinaryWire";
@@ -55,5 +56,23 @@ describe("zb", () => {
 
   it("registers jsonOnly intent exclusions through the helper", () => {
     expect(isJsonOnlyIntentSchema(UpdateGameConfigIntentSchema)).toBe(true);
+  });
+
+  it("registers top-level binary gameplay message metadata through the helper", () => {
+    const schema = zb.binaryGameplayMessage(
+      zb.object({
+        type: zb.literal("ping"),
+      }),
+    );
+
+    expect(getBinaryGameplayMessageMeta(schema)).toEqual({
+      kind: "message",
+    });
+  });
+
+  it("registers clientIndex projections through the helper", () => {
+    expect(getBinaryFieldHelper(zb.clientIndexRef().schema())).toEqual({
+      kind: "clientIndex",
+    });
   });
 });

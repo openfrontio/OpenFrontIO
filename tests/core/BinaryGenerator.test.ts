@@ -6,13 +6,16 @@ import {
   hasBinaryIntentOpcode,
 } from "../../src/core/__generated__/binary/generated";
 import { collectGeneratedBinaryModel } from "../../src/core/protocol/BinaryGenerator";
-import { isJsonOnlyIntentSchema } from "../../src/core/protocol/BinaryWire";
+import {
+  binaryGameplayMessageRegistry,
+  getBinaryGameplayMessageMeta,
+  isJsonOnlyIntentSchema,
+} from "../../src/core/protocol/BinaryWire";
 import {
   AllIntentSchema,
-  BinaryClientGameplayMessageRouting,
-  BinaryClientGameplayMessageSchema,
-  BinaryServerGameplayMessageRouting,
-  BinaryServerGameplayMessageSchema,
+  ClientMessageSchema,
+  ServerMessageSchema,
+  ServerPingMessageSchema,
 } from "../../src/core/Schemas";
 
 function getLiteralValue(
@@ -73,6 +76,27 @@ function getDiscriminatedUnionOptions(schema: z.ZodTypeAny): z.ZodTypeAny[] {
 }
 
 describe("BinaryGenerator", () => {
+  function getExpectedBinaryGameplayMessages() {
+    return [
+      ...getDiscriminatedUnionOptions(ServerMessageSchema)
+        .filter((schema) => getBinaryGameplayMessageMeta(schema) !== undefined)
+        .map((schema) => {
+          return {
+            type: getDiscriminantLiteral(schema),
+            direction: "server" as const,
+          };
+        }),
+      ...getDiscriminatedUnionOptions(ClientMessageSchema)
+        .filter((schema) => getBinaryGameplayMessageMeta(schema) !== undefined)
+        .map((schema) => {
+          return {
+            type: getDiscriminantLiteral(schema),
+            direction: "client" as const,
+          };
+        }),
+    ];
+  }
+
   it("derives intent opcodes from AllIntentSchema order while excluding json-only intents", () => {
     const expectedTypes = getDiscriminatedUnionOptions(AllIntentSchema)
       .filter((schema) => !isJsonOnlyIntentSchema(schema))
@@ -87,15 +111,10 @@ describe("BinaryGenerator", () => {
     expect(hasBinaryIntentOpcode("update_game_config")).toBe(false);
   });
 
-  it("derives gameplay message ids from the explicit binary gameplay unions", () => {
-    const expectedTypes = [
-      ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema).map(
-        getDiscriminantLiteral,
-      ),
-      ...getDiscriminatedUnionOptions(BinaryClientGameplayMessageSchema).map(
-        getDiscriminantLiteral,
-      ),
-    ];
+  it("derives gameplay message ids from the annotated top-level gameplay variants", () => {
+    const expectedTypes = getExpectedBinaryGameplayMessages().map(
+      (message) => message.type,
+    );
     expect(
       BINARY_MESSAGE_DEFINITIONS.map((definition) => definition.type),
     ).toEqual(expectedTypes);
@@ -104,43 +123,13 @@ describe("BinaryGenerator", () => {
     ).toEqual(expectedTypes.map((_, index) => index + 1));
   });
 
-  it("keeps binary gameplay routing in sync with the schema-adjacent routing config", () => {
-    const expectedRouting = [
-      ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema).map(
-        (schema) => {
-          const type = getDiscriminantLiteral(schema);
-          return {
-            type,
-            direction: "server" as const,
-            envelope:
-              BinaryServerGameplayMessageRouting[
-                type as keyof typeof BinaryServerGameplayMessageRouting
-              ],
-          };
-        },
-      ),
-      ...getDiscriminatedUnionOptions(BinaryClientGameplayMessageSchema).map(
-        (schema) => {
-          const type = getDiscriminantLiteral(schema);
-          return {
-            type,
-            direction: "client" as const,
-            envelope:
-              BinaryClientGameplayMessageRouting[
-                type as keyof typeof BinaryClientGameplayMessageRouting
-              ],
-          };
-        },
-      ),
-    ];
-
+  it("keeps binary gameplay message discovery in sync with the annotated top-level gameplay variants", () => {
     expect(
       BINARY_MESSAGE_DEFINITIONS.map((definition) => ({
         type: definition.type,
         direction: definition.direction,
-        envelope: definition.envelope,
       })),
-    ).toEqual(expectedRouting);
+    ).toEqual(getExpectedBinaryGameplayMessages());
   });
 
   it("keeps the generated manifest in sync with the live generator model", () => {
@@ -156,12 +145,102 @@ describe("BinaryGenerator", () => {
     );
 
     expect(definition).toBeDefined();
-    expect(definition?.fields).toEqual([
+    expect(definition?.payload).toEqual(
       expect.objectContaining({
-        name: "recipient",
-        wireType: "playerRef",
-        inlineFallback: true,
+        kind: "object",
+        fields: [
+          expect.objectContaining({
+            name: "recipient",
+            value: expect.objectContaining({
+              kind: "projectedScalar",
+              wireType: "playerRef",
+              inlineFallback: true,
+            }),
+          }),
+        ],
       }),
-    ]);
+    );
+  });
+
+  it("rejects duplicate annotated binary message types across top-level unions", () => {
+    binaryGameplayMessageRegistry.add(ServerPingMessageSchema, {
+      kind: "message",
+    });
+
+    try {
+      expect(() => collectGeneratedBinaryModel()).toThrow(
+        /Duplicate binary message type ping/,
+      );
+    } finally {
+      binaryGameplayMessageRegistry.remove(ServerPingMessageSchema);
+    }
+  });
+
+  it("rejects orphan top-level binary message metadata", () => {
+    const orphanSchema = z.object({
+      type: z.literal("orphan"),
+    });
+
+    binaryGameplayMessageRegistry.add(orphanSchema, {
+      kind: "message",
+    });
+
+    try {
+      expect(() => collectGeneratedBinaryModel()).toThrow(
+        /unreachable schema orphan/,
+      );
+    } finally {
+      binaryGameplayMessageRegistry.remove(orphanSchema);
+    }
+  });
+
+  it("compiles turn payloads through recursive arrays and projected client indexes", () => {
+    const turnDefinition = BINARY_MESSAGE_DEFINITIONS.find(
+      (definition) => definition.type === "turn",
+    );
+
+    expect(turnDefinition?.payload).toEqual(
+      expect.objectContaining({
+        kind: "object",
+        fields: [
+          expect.objectContaining({
+            name: "turn",
+            value: expect.objectContaining({
+              kind: "object",
+              fields: expect.arrayContaining([
+                expect.objectContaining({
+                  name: "intents",
+                  value: expect.objectContaining({
+                    kind: "array",
+                    element: expect.objectContaining({
+                      kind: "discriminatedUnion",
+                    }),
+                  }),
+                }),
+              ]),
+            }),
+          }),
+        ],
+      }),
+    );
+
+    const intentsField = (turnDefinition?.payload as any).fields
+      .find((field: any) => field.name === "turn")
+      .value.fields.find((field: any) => field.name === "intents").value;
+    const spawnVariant = intentsField.element.variants.find(
+      (variant: any) => variant.type === "spawn",
+    );
+
+    expect(spawnVariant.value.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "clientID",
+          value: expect.objectContaining({
+            kind: "projectedScalar",
+            wireType: "clientIndex",
+          }),
+        }),
+      ]),
+    );
   });
 });
