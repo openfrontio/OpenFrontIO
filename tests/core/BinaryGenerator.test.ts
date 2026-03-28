@@ -103,4 +103,19 @@ describe("BinaryGenerator", () => {
     expect(model.intentDefinitions).toEqual(BINARY_INTENT_DEFINITIONS);
     expect(model.messageDefinitions).toEqual(BINARY_MESSAGE_DEFINITIONS);
   });
+
+  it("encodes allianceExtension recipients as player refs", () => {
+    const definition = BINARY_INTENT_DEFINITIONS.find(
+      (candidate) => candidate.type === "allianceExtension",
+    );
+
+    expect(definition).toBeDefined();
+    expect(definition?.fields).toEqual([
+      expect.objectContaining({
+        name: "recipient",
+        wireType: "playerRef",
+        inlineFallback: true,
+      }),
+    ]);
+  });
 });

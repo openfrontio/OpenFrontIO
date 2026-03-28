@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type BinaryNumericWireType = "u16" | "u32" | "i32";
+export type BinaryNumericWireType = "u16" | "u32" | "i32" | "f64";
 
 export interface PlayerRefWireHelper extends Record<string, unknown> {
   readonly kind: "playerRef";

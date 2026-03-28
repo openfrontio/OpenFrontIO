@@ -8,7 +8,6 @@ import {
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
 import {
-  AllPlayers,
   Difficulty,
   Duos,
   GameMapSize,
@@ -21,17 +20,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
-import {
-  binaryClientGameplayMessage,
-  binaryField,
-  binaryIntentEnvelope,
-  binaryNumber,
-  binaryOmit,
-  binaryServerGameplayMessage,
-  jsonOnlyIntent,
-  packedTurnMessage,
-  playerRef,
-} from "./protocol/BinaryWire";
+import { zb } from "./protocol/zb";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
@@ -150,46 +139,46 @@ export type PublicGames = z.infer<typeof PublicGamesSchema>;
 export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
 export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
 
-export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
+export const PublicGameTypeSchema = zb.enum(["ffa", "team", "special"]);
 
-export const UsernameSchema = z
+export const UsernameSchema = zb
   .string()
   .regex(/^(?=.*\S)[a-zA-Z0-9_ üÜ.]+$/u)
   .min(3)
   .max(27);
 
-export const ClanTagSchema = z
+export const ClanTagSchema = zb
   .string()
   .regex(/^[a-zA-Z0-9]{2,5}$/)
   .nullable();
 
-const ClientInfoSchema = z.object({
-  clientID: z.string(),
+const ClientInfoSchema = zb.object({
+  clientID: zb.string(),
   username: UsernameSchema,
   clanTag: ClanTagSchema,
 });
 
-export const GameInfoSchema = z.object({
-  gameID: z.string(),
-  clients: z.array(ClientInfoSchema).optional(),
-  lobbyCreatorClientID: z.string().optional(),
-  startsAt: z.number().optional(),
-  serverTime: z.number(),
-  gameConfig: z.lazy(() => GameConfigSchema).optional(),
+export const GameInfoSchema = zb.object({
+  gameID: zb.string(),
+  clients: zb.array(ClientInfoSchema).optional(),
+  lobbyCreatorClientID: zb.string().optional(),
+  startsAt: zb.number().optional(),
+  serverTime: zb.number(),
+  gameConfig: zb.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
 });
 
-export const PublicGameInfoSchema = z.object({
-  gameID: z.string(),
-  numClients: z.number(),
-  startsAt: z.number().optional(),
-  gameConfig: z.lazy(() => GameConfigSchema).optional(),
+export const PublicGameInfoSchema = zb.object({
+  gameID: zb.string(),
+  numClients: zb.number(),
+  startsAt: zb.number().optional(),
+  gameConfig: zb.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
 });
 
-export const PublicGamesSchema = z.object({
-  serverTime: z.number(),
-  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+export const PublicGamesSchema = zb.object({
+  serverTime: zb.number(),
+  games: zb.record(PublicGameTypeSchema, zb.array(PublicGameInfoSchema)),
 });
 
 export class LobbyInfoEvent implements GameEvent {
@@ -216,73 +205,73 @@ export enum LogSeverity {
 // Utility types
 //
 
-const TeamCountConfigSchema = z.union([
-  z.number(),
-  z.literal(Duos),
-  z.literal(Trios),
-  z.literal(Quads),
-  z.literal(HumansVsNations),
+const TeamCountConfigSchema = zb.union([
+  zb.number(),
+  zb.literal(Duos),
+  zb.literal(Trios),
+  zb.literal(Quads),
+  zb.literal(HumansVsNations),
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
-export const GameConfigSchema = z.object({
-  gameMap: z.enum(GameMapType),
-  difficulty: z.enum(Difficulty),
-  donateGold: z.boolean(), // Configures donations to humans only
-  donateTroops: z.boolean(), // Configures donations to humans only
-  gameType: z.enum(GameType),
-  gameMode: z.enum(GameMode),
-  rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
-  gameMapSize: z.enum(GameMapSize),
-  publicGameModifiers: z
+export const GameConfigSchema = zb.object({
+  gameMap: zb.enum(GameMapType),
+  difficulty: zb.enum(Difficulty),
+  donateGold: zb.boolean(), // Configures donations to humans only
+  donateTroops: zb.boolean(), // Configures donations to humans only
+  gameType: zb.enum(GameType),
+  gameMode: zb.enum(GameMode),
+  rankedType: zb.enum(RankedType).optional(), // Only set for ranked games.
+  gameMapSize: zb.enum(GameMapSize),
+  publicGameModifiers: zb
     .object({
-      isCompact: z.boolean().optional(),
-      isRandomSpawn: z.boolean().optional(),
-      isCrowded: z.boolean().optional(),
-      isHardNations: z.boolean().optional(),
-      startingGold: z.number().int().min(0).optional(),
-      goldMultiplier: z.number().min(0.1).max(1000).optional(),
-      isAlliancesDisabled: z.boolean().optional(),
-      isPortsDisabled: z.boolean().optional(),
-      isNukesDisabled: z.boolean().optional(),
-      isSAMsDisabled: z.boolean().optional(),
-      isPeaceTime: z.boolean().optional(),
+      isCompact: zb.boolean().optional(),
+      isRandomSpawn: zb.boolean().optional(),
+      isCrowded: zb.boolean().optional(),
+      isHardNations: zb.boolean().optional(),
+      startingGold: zb.number().int().min(0).optional(),
+      goldMultiplier: zb.number().min(0.1).max(1000).optional(),
+      isAlliancesDisabled: zb.boolean().optional(),
+      isPortsDisabled: zb.boolean().optional(),
+      isNukesDisabled: zb.boolean().optional(),
+      isSAMsDisabled: zb.boolean().optional(),
+      isPeaceTime: zb.boolean().optional(),
     })
     .optional(),
-  nations: z
+  nations: zb
     .number()
     .int()
     .min(1)
     .max(400)
-    .or(z.enum(["default", "disabled"])),
-  bots: z.number().int().min(0).max(400),
-  infiniteGold: z.boolean(),
-  infiniteTroops: z.boolean(),
-  instantBuild: z.boolean(),
-  disableNavMesh: z.boolean().optional(),
-  disableAlliances: z.boolean().optional(),
-  randomSpawn: z.boolean(),
-  maxPlayers: z.number().optional(),
-  maxTimerValue: z.number().int().min(1).max(120).optional(), // In minutes
-  spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
-  disabledUnits: z.enum(UnitType).array().optional(),
+    .or(zb.enum(["default", "disabled"])),
+  bots: zb.number().int().min(0).max(400),
+  infiniteGold: zb.boolean(),
+  infiniteTroops: zb.boolean(),
+  instantBuild: zb.boolean(),
+  disableNavMesh: zb.boolean().optional(),
+  disableAlliances: zb.boolean().optional(),
+  randomSpawn: zb.boolean(),
+  maxPlayers: zb.number().optional(),
+  maxTimerValue: zb.number().int().min(1).max(120).optional(), // In minutes
+  spawnImmunityDuration: zb.number().int().min(0).optional(), // In ticks
+  disabledUnits: zb.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  goldMultiplier: z.number().min(0.1).max(1000).optional(),
-  startingGold: z.number().int().min(0).max(1000000000).optional(),
+  goldMultiplier: zb.number().min(0.1).max(1000).optional(),
+  startingGold: zb.number().int().min(0).max(1000000000).optional(),
 });
 
-export const TeamSchema = z.string();
+export const TeamSchema = zb.string();
 
-export const SafeString = z
+export const SafeString = zb
   .string()
   .regex(
     /^([a-zA-Z0-9\s.,!?@#$%&*()\-_+=[\]{}|;:"'/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[üÜ])*$/u,
   )
   .max(1000);
 
-export const PersistentIdSchema = z.uuid();
-const JwtTokenSchema = z.jwt();
-const TokenSchema = z
+export const PersistentIdSchema = zb.uuid();
+const JwtTokenSchema = zb.jwt();
+const TokenSchema = zb
   .string()
   .refine(
     (v) =>
@@ -293,52 +282,23 @@ const TokenSchema = z
     },
   );
 
-export const UInt16Schema = binaryNumber(
-  z.number().int().min(0).max(0xffff),
-  "u16",
-);
-export const UInt32Schema = binaryNumber(
-  z.number().int().min(0).max(0xffffffff),
-  "u32",
-);
-export const Int32Schema = binaryNumber(
-  z.number().int().min(-0x80000000).max(0x7fffffff),
-  "i32",
-);
-
-export const EmojiSchema = binaryNumber(
-  z
-    .number()
-    .int()
-    .nonnegative()
-    .max(flattenedEmojiTable.length - 1),
-  "u16",
-);
+export const EmojiSchema = zb.u16().max(flattenedEmojiTable.length - 1);
 
 export const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
 
 export const isValidGameID = (value: string): boolean =>
   GAME_ID_REGEX.test(value);
 
-export const ID = z.string().regex(GAME_ID_REGEX);
-export const PlayerRefSchema = binaryField(
-  ID,
-  playerRef({ inlineFallback: true }),
-);
-export const NullablePlayerRefSchema = binaryField(
-  ID.nullable(),
-  playerRef({ nullable: true, inlineFallback: true }),
-);
-export const BroadcastPlayerRefSchema = binaryField(
-  z.union([ID, z.literal(AllPlayers)]),
-  playerRef({ allowAllPlayers: true, inlineFallback: true }),
-);
+export const ID = zb.string().regex(GAME_ID_REGEX);
+export const PlayerRefSchema = zb.playerRef();
+export const NullablePlayerRefSchema = zb.playerRef().nullable();
+export const BroadcastPlayerRefSchema = zb.broadcastPlayerRef();
 
-export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
+export const AllPlayersStatsSchema = zb.record(ID, PlayerStatsSchema);
 
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
-export const QuickChatKeySchema = z.enum(
+export const QuickChatKeySchema = zb.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
     entries.map((entry) => `${category}.${entry.key}`),
   ) as [string, ...string[]],
@@ -348,142 +308,142 @@ export const QuickChatKeySchema = z.enum(
 // Intents
 //
 
-export const AllianceExtensionIntentSchema = z.object({
-  type: z.literal("allianceExtension"),
-  recipient: ID,
+export const AllianceExtensionIntentSchema = zb.object({
+  type: zb.literal("allianceExtension"),
+  recipient: zb.playerRef(),
 });
 
-export const AttackIntentSchema = z.object({
-  type: z.literal("attack"),
+export const AttackIntentSchema = zb.object({
+  type: zb.literal("attack"),
   targetID: NullablePlayerRefSchema,
-  troops: z.number().nonnegative().nullable(),
+  troops: zb.f64().nonnegative().nullable(),
 });
 
-export const SpawnIntentSchema = z.object({
-  type: z.literal("spawn"),
-  tile: UInt32Schema,
+export const SpawnIntentSchema = zb.object({
+  type: zb.literal("spawn"),
+  tile: zb.u32(),
 });
 
-export const BoatAttackIntentSchema = z.object({
-  type: z.literal("boat"),
-  troops: z.number().nonnegative(),
-  dst: UInt32Schema,
+export const BoatAttackIntentSchema = zb.object({
+  type: zb.literal("boat"),
+  troops: zb.f64().nonnegative(),
+  dst: zb.u32(),
 });
 
-export const AllianceRequestIntentSchema = z.object({
-  type: z.literal("allianceRequest"),
+export const AllianceRequestIntentSchema = zb.object({
+  type: zb.literal("allianceRequest"),
   recipient: PlayerRefSchema,
 });
 
-export const AllianceRejectIntentSchema = z.object({
-  type: z.literal("allianceReject"),
+export const AllianceRejectIntentSchema = zb.object({
+  type: zb.literal("allianceReject"),
   requestor: PlayerRefSchema,
 });
 
-export const BreakAllianceIntentSchema = z.object({
-  type: z.literal("breakAlliance"),
+export const BreakAllianceIntentSchema = zb.object({
+  type: zb.literal("breakAlliance"),
   recipient: PlayerRefSchema,
 });
 
-export const TargetPlayerIntentSchema = z.object({
-  type: z.literal("targetPlayer"),
+export const TargetPlayerIntentSchema = zb.object({
+  type: zb.literal("targetPlayer"),
   target: PlayerRefSchema,
 });
 
-export const EmojiIntentSchema = z.object({
-  type: z.literal("emoji"),
+export const EmojiIntentSchema = zb.object({
+  type: zb.literal("emoji"),
   recipient: BroadcastPlayerRefSchema,
   emoji: EmojiSchema,
 });
 
-export const EmbargoIntentSchema = z.object({
-  type: z.literal("embargo"),
+export const EmbargoIntentSchema = zb.object({
+  type: zb.literal("embargo"),
   targetID: PlayerRefSchema,
-  action: z.union([z.literal("start"), z.literal("stop")]),
+  action: zb.union([zb.literal("start"), zb.literal("stop")]),
 });
 
-export const EmbargoAllIntentSchema = z.object({
-  type: z.literal("embargo_all"),
-  action: z.union([z.literal("start"), z.literal("stop")]),
+export const EmbargoAllIntentSchema = zb.object({
+  type: zb.literal("embargo_all"),
+  action: zb.union([zb.literal("start"), zb.literal("stop")]),
 });
 
-export const DonateGoldIntentSchema = z.object({
-  type: z.literal("donate_gold"),
+export const DonateGoldIntentSchema = zb.object({
+  type: zb.literal("donate_gold"),
   recipient: PlayerRefSchema,
-  gold: z.number().nonnegative().nullable(),
+  gold: zb.f64().nonnegative().nullable(),
 });
 
-export const DonateTroopIntentSchema = z.object({
-  type: z.literal("donate_troops"),
+export const DonateTroopIntentSchema = zb.object({
+  type: zb.literal("donate_troops"),
   recipient: PlayerRefSchema,
-  troops: z.number().nonnegative().nullable(),
+  troops: zb.f64().nonnegative().nullable(),
 });
 
-export const BuildUnitIntentSchema = z.object({
-  type: z.literal("build_unit"),
-  unit: z.enum(UnitType),
-  tile: UInt32Schema,
-  rocketDirectionUp: z.boolean().optional(),
+export const BuildUnitIntentSchema = zb.object({
+  type: zb.literal("build_unit"),
+  unit: zb.enum(UnitType),
+  tile: zb.u32(),
+  rocketDirectionUp: zb.boolean().optional(),
 });
 
-export const UpgradeStructureIntentSchema = z.object({
-  type: z.literal("upgrade_structure"),
-  unit: z.enum(UnitType),
-  unitId: UInt32Schema,
+export const UpgradeStructureIntentSchema = zb.object({
+  type: zb.literal("upgrade_structure"),
+  unit: zb.enum(UnitType),
+  unitId: zb.u32(),
 });
 
-export const CancelAttackIntentSchema = z.object({
-  type: z.literal("cancel_attack"),
-  attackID: z.string(),
+export const CancelAttackIntentSchema = zb.object({
+  type: zb.literal("cancel_attack"),
+  attackID: zb.string(),
 });
 
-export const CancelBoatIntentSchema = z.object({
-  type: z.literal("cancel_boat"),
-  unitID: UInt32Schema,
+export const CancelBoatIntentSchema = zb.object({
+  type: zb.literal("cancel_boat"),
+  unitID: zb.u32(),
 });
 
-export const MoveWarshipIntentSchema = z.object({
-  type: z.literal("move_warship"),
-  unitId: UInt32Schema,
-  tile: UInt32Schema,
+export const MoveWarshipIntentSchema = zb.object({
+  type: zb.literal("move_warship"),
+  unitId: zb.u32(),
+  tile: zb.u32(),
 });
 
-export const DeleteUnitIntentSchema = z.object({
-  type: z.literal("delete_unit"),
-  unitId: UInt32Schema,
+export const DeleteUnitIntentSchema = zb.object({
+  type: zb.literal("delete_unit"),
+  unitId: zb.u32(),
 });
 
-export const QuickChatIntentSchema = z.object({
-  type: z.literal("quick_chat"),
+export const QuickChatIntentSchema = zb.object({
+  type: zb.literal("quick_chat"),
   recipient: PlayerRefSchema,
   quickChatKey: QuickChatKeySchema,
   target: PlayerRefSchema.optional(),
 });
 
-export const MarkDisconnectedIntentSchema = z.object({
-  type: z.literal("mark_disconnected"),
+export const MarkDisconnectedIntentSchema = zb.object({
+  type: zb.literal("mark_disconnected"),
   clientID: PlayerRefSchema,
-  isDisconnected: z.boolean(),
+  isDisconnected: zb.boolean(),
 });
 
-export const KickPlayerIntentSchema = z.object({
-  type: z.literal("kick_player"),
+export const KickPlayerIntentSchema = zb.object({
+  type: zb.literal("kick_player"),
   target: PlayerRefSchema,
 });
 
-export const TogglePauseIntentSchema = z.object({
-  type: z.literal("toggle_pause"),
-  paused: z.boolean().default(false),
+export const TogglePauseIntentSchema = zb.object({
+  type: zb.literal("toggle_pause"),
+  paused: zb.boolean().default(false),
 });
 
-export const UpdateGameConfigIntentSchema = jsonOnlyIntent(
-  z.object({
-    type: z.literal("update_game_config"),
+export const UpdateGameConfigIntentSchema = zb
+  .object({
+    type: zb.literal("update_game_config"),
     config: GameConfigSchema.partial(),
-  }),
-);
+  })
+  .jsonOnlyIntent();
 
-export const AllIntentSchema = z.discriminatedUnion("type", [
+export const AllIntentSchema = zb.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
@@ -512,7 +472,7 @@ export const AllIntentSchema = z.discriminatedUnion("type", [
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
 export const StampedIntentSchema = AllIntentSchema.and(
-  z.object({ clientID: ID }),
+  zb.object({ clientID: ID }),
 );
 export type StampedIntent = Intent & { clientID: ClientID };
 
@@ -520,14 +480,14 @@ export type StampedIntent = Intent & { clientID: ClientID };
 // Server utility types
 //
 
-export const TurnSchema = z.object({
-  turnNumber: UInt32Schema,
+export const TurnSchema = zb.object({
+  turnNumber: zb.u32(),
   intents: StampedIntentSchema.array(),
   // The hash of the game state at the end of the turn.
-  hash: binaryOmit(Int32Schema.nullable().optional()),
+  hash: zb.i32().nullable().optional().binaryOmit(),
 });
 
-export const FlagSchema = z
+export const FlagSchema = zb
   .string()
   .max(128)
   .optional()
@@ -540,50 +500,50 @@ export const FlagSchema = z
     { message: "Invalid flag: must be a valid country code or start with !" },
   );
 
-export const PlayerCosmeticRefsSchema = z.object({
+export const PlayerCosmeticRefsSchema = zb.object({
   flag: FlagSchema.optional(),
-  color: z.string().optional(),
+  color: zb.string().optional(),
   patternName: PatternNameSchema.optional(),
-  patternColorPaletteName: z.string().optional(),
+  patternColorPaletteName: zb.string().optional(),
 });
 
-export const PlayerPatternSchema = z.object({
+export const PlayerPatternSchema = zb.object({
   name: PatternNameSchema,
   patternData: PatternDataSchema,
   colorPalette: ColorPaletteSchema.optional(),
 });
 
-export const PlayerColorSchema = z.object({
-  color: z.string(),
+export const PlayerColorSchema = zb.object({
+  color: zb.string(),
 });
 
-export const PlayerCosmeticsSchema = z.object({
+export const PlayerCosmeticsSchema = zb.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
 });
 
-export const PlayerSchema = z.object({
+export const PlayerSchema = zb.object({
   clientID: ID,
   username: UsernameSchema,
   clanTag: ClanTagSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
-  isLobbyCreator: z.boolean().optional(),
+  isLobbyCreator: zb.boolean().optional(),
 });
 
-export const GameStartInfoSchema = z.object({
+export const GameStartInfoSchema = zb.object({
   gameID: ID,
-  lobbyCreatedAt: z.number(),
-  visibleAt: z.number().optional(),
+  lobbyCreatedAt: zb.number(),
+  visibleAt: zb.number().optional(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
 });
 
-export const WinnerSchema = z
+export const WinnerSchema = zb
   .union([
-    z.tuple([z.literal("player"), ID]).rest(ID),
-    z.tuple([z.literal("team"), SafeString]).rest(ID),
-    z.tuple([z.literal("nation"), SafeString]).rest(ID),
+    zb.tuple([zb.literal("player"), ID]).rest(ID),
+    zb.tuple([zb.literal("team"), SafeString]).rest(ID),
+    zb.tuple([zb.literal("nation"), SafeString]).rest(ID),
   ])
   .optional();
 export type Winner = z.infer<typeof WinnerSchema>;
@@ -592,59 +552,59 @@ export type Winner = z.infer<typeof WinnerSchema>;
 // Server
 //
 
-export const ServerTurnMessageSchema = packedTurnMessage(
-  z.object({
-    type: z.literal("turn"),
+export const ServerTurnMessageSchema = zb
+  .object({
+    type: zb.literal("turn"),
     turn: TurnSchema,
-  }),
-);
+  })
+  .packedTurnMessage();
 
-export const ServerPingMessageSchema = z.object({
-  type: z.literal("ping"),
+export const ServerPingMessageSchema = zb.object({
+  type: zb.literal("ping"),
 });
 
-export const ServerPrestartMessageSchema = z.object({
-  type: z.literal("prestart"),
-  gameMap: z.enum(GameMapType),
-  gameMapSize: z.enum(GameMapSize),
+export const ServerPrestartMessageSchema = zb.object({
+  type: zb.literal("prestart"),
+  gameMap: zb.enum(GameMapType),
+  gameMapSize: zb.enum(GameMapSize),
 });
 
-export const ServerStartGameMessageSchema = z.object({
-  type: z.literal("start"),
+export const ServerStartGameMessageSchema = zb.object({
+  type: zb.literal("start"),
   // Turns the client missed if they are late to the game.
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
-  lobbyCreatedAt: z.number(),
+  lobbyCreatedAt: zb.number(),
   // The clientID assigned to this connection by the server.
   // Absent for replays where the viewer has no player identity.
   myClientID: ID.optional(),
 });
 
-export const ServerDesyncSchema = binaryServerGameplayMessage(
-  z.object({
-    type: z.literal("desync"),
-    turn: UInt32Schema,
-    correctHash: Int32Schema.nullable(),
-    clientsWithCorrectHash: UInt16Schema,
-    totalActiveClients: UInt16Schema,
-    yourHash: binaryOmit(Int32Schema.optional()),
-  }),
-);
+export const ServerDesyncSchema = zb
+  .object({
+    type: zb.literal("desync"),
+    turn: zb.u32(),
+    correctHash: zb.i32().nullable(),
+    clientsWithCorrectHash: zb.u16(),
+    totalActiveClients: zb.u16(),
+    yourHash: zb.i32().optional().binaryOmit(),
+  })
+  .serverGameplayMessage();
 
-export const ServerErrorSchema = z.object({
-  type: z.literal("error"),
-  error: z.string(),
-  message: z.string().optional(),
+export const ServerErrorSchema = zb.object({
+  type: zb.literal("error"),
+  error: zb.string(),
+  message: zb.string().optional(),
 });
 
-export const ServerLobbyInfoMessageSchema = z.object({
-  type: z.literal("lobby_info"),
+export const ServerLobbyInfoMessageSchema = zb.object({
+  type: zb.literal("lobby_info"),
   lobby: GameInfoSchema,
   // The clientID assigned to this connection by the server
   myClientID: ID,
 });
 
-export const ServerMessageSchema = z.discriminatedUnion("type", [
+export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
@@ -658,61 +618,61 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 // Client
 //
 
-export const ClientSendWinnerSchema = z.object({
-  type: z.literal("winner"),
+export const ClientSendWinnerSchema = zb.object({
+  type: zb.literal("winner"),
   winner: WinnerSchema,
   allPlayersStats: AllPlayersStatsSchema,
 });
 
-export const ClientHashSchema = binaryClientGameplayMessage(
-  z.object({
-    type: z.literal("hash"),
-    hash: Int32Schema,
-    turnNumber: UInt32Schema,
-  }),
-);
+export const ClientHashSchema = zb
+  .object({
+    type: zb.literal("hash"),
+    hash: zb.i32(),
+    turnNumber: zb.u32(),
+  })
+  .clientGameplayMessage();
 
-export const ClientLogMessageSchema = z.object({
-  type: z.literal("log"),
-  severity: z.enum(LogSeverity),
+export const ClientLogMessageSchema = zb.object({
+  type: zb.literal("log"),
+  severity: zb.enum(LogSeverity),
   log: ID,
 });
 
-export const ClientPingMessageSchema = binaryClientGameplayMessage(
-  z.object({
-    type: z.literal("ping"),
-  }),
-);
+export const ClientPingMessageSchema = zb
+  .object({
+    type: zb.literal("ping"),
+  })
+  .clientGameplayMessage();
 
-export const ClientIntentMessageSchema = binaryIntentEnvelope(
-  z.object({
-    type: z.literal("intent"),
+export const ClientIntentMessageSchema = zb
+  .object({
+    type: zb.literal("intent"),
     intent: AllIntentSchema,
-  }),
-);
+  })
+  .intentEnvelope();
 
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
-export const ClientJoinMessageSchema = z.object({
-  type: z.literal("join"),
+export const ClientJoinMessageSchema = zb.object({
+  type: zb.literal("join"),
   token: TokenSchema, // WARNING: PII - server extracts persistentID from this
   gameID: ID,
   username: UsernameSchema,
   clanTag: ClanTagSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
-  turnstileToken: z.string().nullable(),
+  turnstileToken: zb.string().nullable(),
 });
 
-export const ClientRejoinMessageSchema = z.object({
-  type: z.literal("rejoin"),
+export const ClientRejoinMessageSchema = zb.object({
+  type: zb.literal("rejoin"),
   gameID: ID,
   // Note: clientID is NOT sent - server looks it up from persistentID in token
-  lastTurn: z.number(),
+  lastTurn: zb.number(),
   token: TokenSchema,
 });
 
-export const ClientMessageSchema = z.discriminatedUnion("type", [
+export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
@@ -734,23 +694,23 @@ export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 
 export const GameEndInfoSchema = GameStartInfoSchema.extend({
   players: PlayerRecordSchema.array(),
-  start: z.number(),
-  end: z.number(),
-  duration: z.number().nonnegative(),
-  num_turns: z.number(),
+  start: zb.number(),
+  end: zb.number(),
+  duration: zb.number().nonnegative(),
+  num_turns: zb.number(),
   winner: WinnerSchema,
-  lobbyFillTime: z.number().nonnegative(),
+  lobbyFillTime: zb.number().nonnegative(),
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
-const GitCommitSchema = z
+const GitCommitSchema = zb
   .string()
   .regex(/^[0-9a-fA-F]{40}$/)
-  .or(z.literal("DEV"));
+  .or(zb.literal("DEV"));
 
-export const PartialAnalyticsRecordSchema = z.object({
+export const PartialAnalyticsRecordSchema = zb.object({
   info: GameEndInfoSchema,
-  version: z.literal("v0.0.2"),
+  version: zb.literal("v0.0.2"),
 });
 export type ClientAnalyticsRecord = z.infer<
   typeof PartialAnalyticsRecordSchema
@@ -758,8 +718,8 @@ export type ClientAnalyticsRecord = z.infer<
 
 export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   gitCommit: GitCommitSchema,
-  subdomain: z.string(),
-  domain: z.string(),
+  subdomain: zb.string(),
+  domain: zb.string(),
 });
 
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;

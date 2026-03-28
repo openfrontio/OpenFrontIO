@@ -147,8 +147,12 @@ function analyzeFieldSchema(
       wireType: "playerRef",
       optional,
       nullable,
-      allowAllPlayers: helper.allowAllPlayers,
-      inlineFallback: helper.inlineFallback,
+      ...(helper.allowAllPlayers !== undefined
+        ? { allowAllPlayers: helper.allowAllPlayers }
+        : {}),
+      ...(helper.inlineFallback !== undefined
+        ? { inlineFallback: helper.inlineFallback }
+        : {}),
     };
   }
 
