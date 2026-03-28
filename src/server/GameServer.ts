@@ -3,12 +3,12 @@ import { Logger } from "winston";
 import WebSocket, { RawData } from "ws";
 import { z } from "zod";
 import {
-  binaryContextFromGameStartInfo,
   decodeBinaryClientGameplayMessage,
   encodeBinaryServerGameplayMessage,
 } from "../core/BinaryCodec";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
+import { binaryContextFromGameStartInfo } from "../core/protocol/BinaryRuntime";
 import {
   ClientID,
   ClientMessage,

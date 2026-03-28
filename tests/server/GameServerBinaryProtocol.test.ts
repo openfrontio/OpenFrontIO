@@ -6,12 +6,11 @@ vi.mock("../../src/server/Archive", () => ({
   finalizeGameRecord: vi.fn((record) => record),
 }));
 
+import { BinaryMessageType } from "../../src/core/__generated__/binary/generated";
 import {
-  binaryContextFromGameStartInfo,
   decodeBinaryServerGameplayMessage,
   encodeBinaryClientGameplayMessage,
 } from "../../src/core/BinaryCodec";
-import { BinaryMessageType } from "../../src/core/BinaryProtocol";
 import {
   Difficulty,
   GameMapSize,
@@ -19,6 +18,7 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
+import { binaryContextFromGameStartInfo } from "../../src/core/protocol/BinaryRuntime";
 import type { GameConfig } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";

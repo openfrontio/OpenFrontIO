@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UpdateGameConfigIntentSchema } from "../../src/core/Schemas";
 import {
   getBinaryFieldHelper,
-  getBinaryGameplayMessageMeta,
+  isBinaryGameplayMessageSchema,
   isBinaryOmittedSchema,
   isJsonOnlyIntentSchema,
 } from "../../src/core/protocol/BinaryWire";
@@ -65,9 +65,7 @@ describe("zb", () => {
       }),
     );
 
-    expect(getBinaryGameplayMessageMeta(schema)).toEqual({
-      kind: "message",
-    });
+    expect(isBinaryGameplayMessageSchema(schema)).toBe(true);
   });
 
   it("registers clientIndex projections through the helper", () => {

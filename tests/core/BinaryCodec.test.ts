@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  binaryContextFromGameStartInfo,
   decodeBinaryClientGameplayMessage,
   decodeBinaryServerGameplayMessage,
   encodeBinaryClientGameplayMessage,
   encodeBinaryServerGameplayMessage,
   isBinaryGameplayClientMessage,
 } from "../../src/core/BinaryCodec";
-import { BINARY_PROTOCOL_VERSION } from "../../src/core/BinaryProtocol";
+import { AllPlayers, UnitType } from "../../src/core/game/Game";
+import {
+  BINARY_PROTOCOL_VERSION,
+  binaryContextFromGameStartInfo,
+} from "../../src/core/protocol/BinaryRuntime";
 import {
   ClientHashMessage,
   ClientHashSchema,
@@ -21,7 +24,6 @@ import {
   ServerTurnMessage,
   ServerTurnMessageSchema,
 } from "../../src/core/Schemas";
-import { AllPlayers, UnitType } from "../../src/core/game/Game";
 
 const quickChatKey = QuickChatKeySchema.options[0];
 

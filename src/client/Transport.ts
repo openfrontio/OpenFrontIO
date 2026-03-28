@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  binaryContextFromGameStartInfo,
   decodeBinaryServerGameplayMessage,
   encodeBinaryClientGameplayMessage,
   isBinaryGameplayClientMessage,
@@ -16,6 +15,7 @@ import {
 } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { PlayerView } from "../core/game/GameView";
+import { binaryContextFromGameStartInfo } from "../core/protocol/BinaryRuntime";
 import {
   AllPlayersStats,
   ClientHashMessage,

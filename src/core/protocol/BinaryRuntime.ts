@@ -2,11 +2,11 @@ import { ClientID, GameStartInfo, StampedIntent } from "../Schemas";
 import { AllPlayers } from "../game/Game";
 
 export const BINARY_PROTOCOL_VERSION = 1;
-export const BINARY_HEADER_SIZE = 4;
+const BINARY_HEADER_SIZE = 4;
 
-export const NO_PLAYER_INDEX = 0xffff;
-export const ALL_PLAYERS_INDEX = 0xfffe;
-export const INLINE_PLAYER_ID_INDEX = 0xfffd;
+const NO_PLAYER_INDEX = 0xffff;
+const ALL_PLAYERS_INDEX = 0xfffe;
+const INLINE_PLAYER_ID_INDEX = 0xfffd;
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -102,7 +102,7 @@ export interface BinaryFrameHeader {
   readonly flags: number;
 }
 
-export function createBinaryProtocolContext(
+export function binaryContextFromGameStartInfo(
   gameStartInfo: Pick<GameStartInfo, "players">,
 ): BinaryProtocolContext {
   const playerIds = gameStartInfo.players.map((player) => player.clientID);
@@ -114,12 +114,6 @@ export function createBinaryProtocolContext(
     playerIds,
     playerIdToIndex,
   };
-}
-
-export function binaryContextFromGameStartInfo(
-  gameStartInfo: Pick<GameStartInfo, "players">,
-): BinaryProtocolContext {
-  return createBinaryProtocolContext(gameStartInfo);
 }
 
 export function toUint8Array(data: ArrayBuffer | Uint8Array): Uint8Array {
@@ -887,7 +881,7 @@ export function canEncodeBinaryValue(
   }
 }
 
-export function playerIndexToId(
+function playerIndexToId(
   playerIndex: number,
   context: BinaryProtocolContext,
 ): ClientID | null | typeof AllPlayers {
@@ -961,17 +955,6 @@ export function readPlayerRef(
     return reader.readString();
   }
   return playerIndexToId(playerIndex, context);
-}
-
-export function readRequiredPlayerRef(
-  reader: BinaryReader,
-  context: BinaryProtocolContext,
-): string {
-  const playerId = readPlayerRef(reader, context);
-  if (playerId === null || playerId === AllPlayers) {
-    throw new Error(`Expected player ID, received ${String(playerId)}`);
-  }
-  return playerId;
 }
 
 export function assertFlags(name: string, flags: number, allowedFlags: number) {

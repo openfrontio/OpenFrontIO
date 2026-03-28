@@ -8,7 +8,7 @@ import {
 import { collectGeneratedBinaryModel } from "../../src/core/protocol/BinaryGenerator";
 import {
   binaryGameplayMessageRegistry,
-  getBinaryGameplayMessageMeta,
+  isBinaryGameplayMessageSchema,
   isJsonOnlyIntentSchema,
 } from "../../src/core/protocol/BinaryWire";
 import {
@@ -79,7 +79,7 @@ describe("BinaryGenerator", () => {
   function getExpectedBinaryGameplayMessages() {
     return [
       ...getDiscriminatedUnionOptions(ServerMessageSchema)
-        .filter((schema) => getBinaryGameplayMessageMeta(schema) !== undefined)
+        .filter((schema) => isBinaryGameplayMessageSchema(schema))
         .map((schema) => {
           return {
             type: getDiscriminantLiteral(schema),
@@ -87,7 +87,7 @@ describe("BinaryGenerator", () => {
           };
         }),
       ...getDiscriminatedUnionOptions(ClientMessageSchema)
-        .filter((schema) => getBinaryGameplayMessageMeta(schema) !== undefined)
+        .filter((schema) => isBinaryGameplayMessageSchema(schema))
         .map((schema) => {
           return {
             type: getDiscriminantLiteral(schema),
@@ -163,9 +163,7 @@ describe("BinaryGenerator", () => {
   });
 
   it("rejects duplicate annotated binary message types across top-level unions", () => {
-    binaryGameplayMessageRegistry.add(ServerPingMessageSchema, {
-      kind: "message",
-    });
+    binaryGameplayMessageRegistry.add(ServerPingMessageSchema, {});
 
     try {
       expect(() => collectGeneratedBinaryModel()).toThrow(
@@ -181,9 +179,7 @@ describe("BinaryGenerator", () => {
       type: z.literal("orphan"),
     });
 
-    binaryGameplayMessageRegistry.add(orphanSchema, {
-      kind: "message",
-    });
+    binaryGameplayMessageRegistry.add(orphanSchema, {});
 
     try {
       expect(() => collectGeneratedBinaryModel()).toThrow(

@@ -4,15 +4,8 @@ import {
   SendHashEvent,
   Transport,
 } from "../../src/client/Transport";
-import {
-  binaryContextFromGameStartInfo,
-  decodeBinaryClientGameplayMessage,
-} from "../../src/core/BinaryCodec";
+import { decodeBinaryClientGameplayMessage } from "../../src/core/BinaryCodec";
 import { EventBus } from "../../src/core/EventBus";
-import type {
-  GameConfig,
-  ServerStartGameMessage,
-} from "../../src/core/Schemas";
 import {
   Difficulty,
   GameMapSize,
@@ -20,6 +13,11 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/Game";
+import { binaryContextFromGameStartInfo } from "../../src/core/protocol/BinaryRuntime";
+import type {
+  GameConfig,
+  ServerStartGameMessage,
+} from "../../src/core/Schemas";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;

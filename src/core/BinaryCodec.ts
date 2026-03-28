@@ -1,14 +1,10 @@
 import {
   BINARY_MESSAGE_DEFINITION_BY_MESSAGE_TYPE,
   BINARY_MESSAGE_DEFINITION_BY_TYPE,
+  type BinaryClientGameplayMessage,
+  type BinaryServerGameplayMessage,
 } from "./__generated__/binary/generated";
 import {
-  BinaryClientGameplayMessage,
-  BinaryServerGameplayMessage,
-  type BinaryProtocolContext,
-} from "./BinaryProtocol";
-import {
-  binaryContextFromGameStartInfo,
   BinaryReader,
   BinaryWriter,
   canEncodeBinaryValue,
@@ -16,6 +12,7 @@ import {
   encodeBinaryValue,
   toUint8Array,
   type BinaryMessageDefinition,
+  type BinaryProtocolContext,
 } from "./protocol/BinaryRuntime";
 import { ClientMessage, ClientMessageSchema } from "./Schemas";
 
@@ -94,24 +91,6 @@ function decodeBinaryMessageWithDefinition(
   };
 }
 
-function parseDecodedClientBinaryMessage(
-  decoded: BinaryWireMessage,
-): BinaryClientGameplayMessage {
-  // Client decode is the semantic validation boundary: after wire decoding
-  // succeeds, validate the full client message exactly once here.
-  return ClientMessageSchema.parse(decoded) as BinaryClientGameplayMessage;
-}
-
-function finalizeDecodedServerBinaryMessage(
-  decoded: BinaryWireMessage,
-): BinaryServerGameplayMessage {
-  // Server decode intentionally stops at wire validation so replay/debug tooling can
-  // inspect messages that are structurally valid on the wire but fail semantic parse.
-  return decoded as BinaryServerGameplayMessage;
-}
-
-export { binaryContextFromGameStartInfo, toUint8Array };
-
 export function isBinaryGameplayClientMessage(
   message: ClientMessage,
 ): message is BinaryClientGameplayMessage {
@@ -149,7 +128,9 @@ export function decodeBinaryClientGameplayMessage(
     context,
   );
   reader.ensureFinished();
-  return parseDecodedClientBinaryMessage(decoded);
+  // Client decode is the semantic validation boundary: after wire decoding
+  // succeeds, validate the full client message exactly once here.
+  return ClientMessageSchema.parse(decoded) as BinaryClientGameplayMessage;
 }
 
 export function encodeBinaryServerGameplayMessage(
@@ -179,5 +160,7 @@ export function decodeBinaryServerGameplayMessage(
     context,
   );
   reader.ensureFinished();
-  return finalizeDecodedServerBinaryMessage(decoded);
+  // Server decode intentionally stops at wire validation so replay/debug tooling can
+  // inspect messages that are structurally valid on the wire but fail semantic parse.
+  return decoded as BinaryServerGameplayMessage;
 }

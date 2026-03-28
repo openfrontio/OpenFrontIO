@@ -4,7 +4,6 @@ export type BinaryNumericWireType = "u16" | "u32" | "i32" | "f64";
 
 export interface PlayerRefWireHelper extends Record<string, unknown> {
   readonly kind: "playerRef";
-  readonly nullable?: boolean;
   readonly allowAllPlayers?: boolean;
   readonly inlineFallback?: boolean;
 }
@@ -18,29 +17,18 @@ export interface ClientIndexWireHelper extends Record<string, unknown> {
   readonly kind: "clientIndex";
 }
 
-export interface BinaryOmitMeta extends Record<string, unknown> {
-  readonly kind: "omit";
-}
-
 export type BinaryFieldHelper =
   | PlayerRefWireHelper
   | NumericWireHelper
   | ClientIndexWireHelper;
 
-export interface BinaryIntentMeta extends Record<string, unknown> {
-  readonly kind: "intent";
-  readonly jsonOnly: true;
-}
-
-export interface BinaryGameplayMessageMeta extends Record<string, unknown> {
-  readonly kind: "message";
-}
+type BinaryPresenceMarker = Record<never, never>;
+const BINARY_PRESENCE_MARKER: BinaryPresenceMarker = {};
 
 export const binaryFieldRegistry = z.registry<BinaryFieldHelper>();
-export const binaryOmitRegistry = z.registry<BinaryOmitMeta>();
-export const binaryIntentRegistry = z.registry<BinaryIntentMeta>();
-export const binaryGameplayMessageRegistry =
-  z.registry<BinaryGameplayMessageMeta>();
+export const binaryOmitRegistry = z.registry<BinaryPresenceMarker>();
+export const binaryIntentRegistry = z.registry<BinaryPresenceMarker>();
+export const binaryGameplayMessageRegistry = z.registry<BinaryPresenceMarker>();
 
 function cloneSchema<T extends z.ZodTypeAny>(schema: T): T {
   return schema.meta(schema.meta() ?? {}) as T;
@@ -86,9 +74,7 @@ export function binaryOmit<T extends z.ZodTypeAny>(schema: T): T {
   if (existingFieldHelper !== undefined) {
     (cloned as any).register(binaryFieldRegistry, existingFieldHelper);
   }
-  (cloned as any).register(binaryOmitRegistry, {
-    kind: "omit",
-  });
+  (cloned as any).register(binaryOmitRegistry, BINARY_PRESENCE_MARKER);
   return cloned;
 }
 
@@ -96,18 +82,16 @@ export function jsonOnlyIntent<T extends z.ZodTypeAny>(schema: T): T {
   const cloned = cloneSchema(schema);
   // Intents are binary by default when they participate in AllIntentSchema.
   // This marker is the schema-level opt-out used by the generator.
-  (cloned as any).register(binaryIntentRegistry, {
-    kind: "intent",
-    jsonOnly: true,
-  });
+  (cloned as any).register(binaryIntentRegistry, BINARY_PRESENCE_MARKER);
   return cloned;
 }
 
 export function binaryGameplayMessage<T extends z.ZodTypeAny>(schema: T): T {
   const cloned = cloneSchema(schema);
-  (cloned as any).register(binaryGameplayMessageRegistry, {
-    kind: "message",
-  });
+  (cloned as any).register(
+    binaryGameplayMessageRegistry,
+    BINARY_PRESENCE_MARKER,
+  );
   return cloned;
 }
 
@@ -125,8 +109,6 @@ export function isJsonOnlyIntentSchema(schema: z.ZodTypeAny): boolean {
   return binaryIntentRegistry.has(schema);
 }
 
-export function getBinaryGameplayMessageMeta(
-  schema: z.ZodTypeAny,
-): BinaryGameplayMessageMeta | undefined {
-  return binaryGameplayMessageRegistry.get(schema);
+export function isBinaryGameplayMessageSchema(schema: z.ZodTypeAny): boolean {
+  return binaryGameplayMessageRegistry.has(schema);
 }
