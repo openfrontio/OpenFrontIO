@@ -1,4 +1,4 @@
-import { simpleHash, toInt, withinInt } from "../Util";
+import { hashAdd32, hashMul32, simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
@@ -353,7 +353,7 @@ export class UnitImpl implements Unit {
   }
 
   hash(): number {
-    return this.tile() + simpleHash(this.type()) * this._id;
+    return hashAdd32(this.tile(), hashMul32(simpleHash(this.type()), this._id));
   }
 
   toString(): string {

@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  binaryContextFromGameStartInfo,
+  decodeBinaryServerGameplayMessage,
+  encodeBinaryClientGameplayMessage,
+  isBinaryGameplayClientMessage,
+} from "../core/BinaryCodec";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -20,6 +26,7 @@ import {
   ClientRejoinMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameStartInfo,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -178,13 +185,18 @@ export class Transport {
 
   private localServer: LocalServer;
 
-  private buffer: string[] = [];
+  private buffer: Array<string | Uint8Array> = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+  private binaryGameplayActive = false;
+  private binaryContext?: ReturnType<typeof binaryContextFromGameStartInfo>;
+  private pendingGameplayMessages: Array<
+    ClientHashMessage | ClientIntentMessage | ClientPingMessage
+  > = [];
 
   constructor(
     private lobbyConfig: LobbyConfig,
@@ -324,12 +336,14 @@ export class Transport {
   ) {
     this.startPing();
     this.killExistingSocket();
+    this.binaryGameplayActive = false;
     const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
     this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    this.socket.binaryType = "arraybuffer";
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -351,14 +365,34 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
-        const parsed = JSON.parse(event.data);
-        const result = ServerMessageSchema.safeParse(parsed);
-        if (!result.success) {
-          const error = z.prettifyError(result.error);
-          console.error("Error parsing server message", error);
+        if (typeof event.data === "string") {
+          const parsed = JSON.parse(event.data);
+          const result = ServerMessageSchema.safeParse(parsed);
+          if (!result.success) {
+            const error = z.prettifyError(result.error);
+            console.error("Error parsing server message", error);
+            return;
+          }
+          if (result.data.type === "start") {
+            this.activateBinaryGameplay(result.data.gameStartInfo);
+          }
+          this.onmessage(result.data);
+          if (result.data.type === "start") {
+            this.flushPendingGameplayMessages();
+          }
           return;
         }
-        this.onmessage(result.data);
+
+        if (!this.binaryContext) {
+          console.error("Received binary gameplay message before start");
+          return;
+        }
+
+        const message = decodeBinaryServerGameplayMessage(
+          event.data as ArrayBuffer,
+          this.binaryContext,
+        );
+        this.onmessage(message);
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
         return;
@@ -422,6 +456,7 @@ export class Transport {
       return;
     }
     this.stopPing();
+    this.pendingGameplayMessages = [];
     if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
@@ -665,21 +700,67 @@ export class Transport {
       // Forward message to local server
       this.localServer.onMessage(msg);
       return;
+    } else if (this.shouldQueueBinaryGameplayMessage(msg)) {
+      this.pendingGameplayMessages.push(msg);
+      return;
     } else if (this.socket === null) {
       // Socket missing, do nothing
       return;
     }
-    const str = JSON.stringify(msg, replacer);
+    const payload = this.serializeMessage(msg);
     if (this.socket.readyState === WebSocket.CLOSED) {
       // Buffer message
       console.warn("socket not ready, closing and trying later");
       this.socket.close();
       this.socket = null;
       this.connectRemote(this.onconnect, this.onmessage);
-      this.buffer.push(str);
+      this.buffer.push(payload);
     } else {
       // Send the message directly
-      this.socket.send(str);
+      this.socket.send(payload);
+    }
+  }
+
+  private serializeMessage(msg: ClientMessage): string | Uint8Array {
+    if (this.binaryGameplayActive && isBinaryGameplayClientMessage(msg)) {
+      if (!this.binaryContext) {
+        throw new Error("Binary gameplay active without context");
+      }
+      return encodeBinaryClientGameplayMessage(msg, this.binaryContext);
+    }
+    return JSON.stringify(msg, replacer);
+  }
+
+  private activateBinaryGameplay(
+    gameStartInfo: Pick<GameStartInfo, "players">,
+  ) {
+    this.binaryContext = binaryContextFromGameStartInfo(gameStartInfo);
+    this.binaryGameplayActive = true;
+  }
+
+  private shouldQueueBinaryGameplayMessage(
+    msg: ClientMessage,
+  ): msg is ClientHashMessage | ClientIntentMessage | ClientPingMessage {
+    return (
+      this.binaryContext !== undefined &&
+      !this.binaryGameplayActive &&
+      isBinaryGameplayClientMessage(msg)
+    );
+  }
+
+  private flushPendingGameplayMessages() {
+    if (
+      this.pendingGameplayMessages.length === 0 ||
+      this.socket === null ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
+
+    const pendingMessages = this.pendingGameplayMessages;
+    this.pendingGameplayMessages = [];
+    for (const message of pendingMessages) {
+      this.sendMsg(message);
     }
   }
 
