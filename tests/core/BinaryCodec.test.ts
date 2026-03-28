@@ -435,6 +435,21 @@ describe("BinaryCodec", () => {
     );
   });
 
+  it("rejects oversized binary strings during encoding", () => {
+    expect(() =>
+      encodeBinaryClientGameplayMessage(
+        {
+          type: "intent",
+          intent: {
+            type: "cancel_attack",
+            attackID: "a".repeat(0x10000),
+          },
+        },
+        context,
+      ),
+    ).toThrow(/Binary string too long/);
+  });
+
   it("rejects client binary messages that violate semantic schemas", () => {
     const encoded = encodeBinaryClientGameplayMessage(
       {

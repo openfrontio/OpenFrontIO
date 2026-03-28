@@ -124,6 +124,11 @@ export class BinaryWriter {
 
   writeString(value: string) {
     const encoded = textEncoder.encode(value);
+    if (encoded.length > 0xffff) {
+      throw new RangeError(
+        `Binary string too long: ${encoded.length} bytes exceeds 65535`,
+      );
+    }
     this.writeUint16(encoded.length);
     this.push(encoded);
   }
