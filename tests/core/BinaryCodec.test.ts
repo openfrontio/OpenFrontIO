@@ -466,7 +466,7 @@ describe("BinaryCodec", () => {
     expect(() => decodeBinaryClientGameplayMessage(encoded, context)).toThrow();
   });
 
-  it("rejects server binary messages that violate semantic schemas", () => {
+  it("returns server binary messages after wire validation without client-side schema parsing", () => {
     const encoded = encodeBinaryServerGameplayMessage(
       {
         type: "turn",
@@ -485,7 +485,23 @@ describe("BinaryCodec", () => {
       context,
     );
 
-    expect(() => decodeBinaryServerGameplayMessage(encoded, context)).toThrow();
+    const decoded = decodeBinaryServerGameplayMessage(encoded, context);
+
+    expect(decoded).toEqual({
+      type: "turn",
+      turn: {
+        turnNumber: 1,
+        intents: [
+          {
+            type: "attack",
+            targetID: "bad",
+            troops: 3,
+            clientID: "P0000001",
+          },
+        ],
+      },
+    });
+    expect(() => ServerTurnMessageSchema.parse(decoded)).toThrow();
   });
 
   it("rejects truncated frames", () => {

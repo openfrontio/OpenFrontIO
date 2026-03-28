@@ -31,9 +31,7 @@ import {
   ClientPingMessageSchema,
   Intent,
   ServerDesyncMessage,
-  ServerDesyncSchema,
   ServerTurnMessage,
-  ServerTurnMessageSchema,
   StampedIntent,
 } from "./Schemas";
 
@@ -318,13 +316,13 @@ export function decodeServerTurnMessage(
     } as StampedIntent);
   }
   reader.ensureFinished();
-  return ServerTurnMessageSchema.parse({
+  return {
     type: "turn",
     turn: {
       turnNumber,
       intents,
     },
-  });
+  };
 }
 
 export function encodeServerDesyncMessage(
@@ -347,6 +345,6 @@ export function decodeServerDesyncMessage(
     data,
     desyncMessageDefinition,
     context,
-    (value) => ServerDesyncSchema.parse(value),
+    (value) => value as ServerDesyncMessage,
   );
 }
