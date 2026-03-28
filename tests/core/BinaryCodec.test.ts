@@ -395,6 +395,50 @@ describe("BinaryCodec", () => {
     );
   });
 
+  it("rejects unknown client binary message types", () => {
+    const encoded = encodeBinaryClientGameplayMessage(
+      {
+        type: "ping",
+      },
+      context,
+    );
+    encoded[1] = 0xff;
+
+    expect(() => decodeBinaryClientGameplayMessage(encoded, context)).toThrow(
+      /Unknown client binary message type: 255/,
+    );
+  });
+
+  it("rejects wrong-direction messages at top-level codec entrypoints", () => {
+    expect(() =>
+      encodeBinaryClientGameplayMessage(
+        {
+          type: "desync",
+          turn: 4,
+          correctHash: null,
+          clientsWithCorrectHash: 1,
+          totalActiveClients: 2,
+        } as any,
+        context,
+      ),
+    ).toThrow(/Unexpected client binary message type: desync/);
+
+    const encoded = encodeBinaryServerGameplayMessage(
+      {
+        type: "desync",
+        turn: 4,
+        correctHash: null,
+        clientsWithCorrectHash: 1,
+        totalActiveClients: 2,
+      },
+      context,
+    );
+
+    expect(() => decodeBinaryClientGameplayMessage(encoded, context)).toThrow(
+      /Unexpected client binary message type: desync/,
+    );
+  });
+
   it("rejects invalid player indexes", () => {
     const encoded = encodeBinaryServerGameplayMessage(
       {

@@ -9,7 +9,9 @@ import { collectGeneratedBinaryModel } from "../../src/core/protocol/BinaryGener
 import { isJsonOnlyIntentSchema } from "../../src/core/protocol/BinaryWire";
 import {
   AllIntentSchema,
+  BinaryClientGameplayMessageRouting,
   BinaryClientGameplayMessageSchema,
+  BinaryServerGameplayMessageRouting,
   BinaryServerGameplayMessageSchema,
 } from "../../src/core/Schemas";
 
@@ -85,7 +87,7 @@ describe("BinaryGenerator", () => {
     expect(hasBinaryIntentOpcode("update_game_config")).toBe(false);
   });
 
-  it("derives gameplay message ids from inferred gameplay message roles", () => {
+  it("derives gameplay message ids from the explicit binary gameplay unions", () => {
     const expectedTypes = [
       ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema).map(
         getDiscriminantLiteral,
@@ -100,6 +102,45 @@ describe("BinaryGenerator", () => {
     expect(
       BINARY_MESSAGE_DEFINITIONS.map((definition) => definition.messageType),
     ).toEqual(expectedTypes.map((_, index) => index + 1));
+  });
+
+  it("keeps binary gameplay routing in sync with the schema-adjacent routing config", () => {
+    const expectedRouting = [
+      ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema).map(
+        (schema) => {
+          const type = getDiscriminantLiteral(schema);
+          return {
+            type,
+            direction: "server" as const,
+            envelope:
+              BinaryServerGameplayMessageRouting[
+                type as keyof typeof BinaryServerGameplayMessageRouting
+              ],
+          };
+        },
+      ),
+      ...getDiscriminatedUnionOptions(BinaryClientGameplayMessageSchema).map(
+        (schema) => {
+          const type = getDiscriminantLiteral(schema);
+          return {
+            type,
+            direction: "client" as const,
+            envelope:
+              BinaryClientGameplayMessageRouting[
+                type as keyof typeof BinaryClientGameplayMessageRouting
+              ],
+          };
+        },
+      ),
+    ];
+
+    expect(
+      BINARY_MESSAGE_DEFINITIONS.map((definition) => ({
+        type: definition.type,
+        direction: definition.direction,
+        envelope: definition.envelope,
+      })),
+    ).toEqual(expectedRouting);
   });
 
   it("keeps the generated manifest in sync with the live generator model", () => {

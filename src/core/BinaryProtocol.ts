@@ -1,10 +1,3 @@
-import type {
-  ClientHashMessage,
-  ClientIntentMessage,
-  ClientPingMessage,
-  ServerDesyncMessage,
-  ServerTurnMessage,
-} from "./Schemas";
 import {
   BinaryIntentType,
   BinaryMessageType,
@@ -44,13 +37,8 @@ export {
   stampedIntentClientIndex,
 };
 
+export type {
+  BinaryClientGameplayMessage,
+  BinaryServerGameplayMessage,
+} from "./__generated__/binary/generated";
 export type { BinaryProtocolContext };
-
-export type BinaryClientGameplayMessage =
-  | ClientIntentMessage
-  | ClientHashMessage
-  | ClientPingMessage;
-
-export type BinaryServerGameplayMessage =
-  | ServerTurnMessage
-  | ServerDesyncMessage;

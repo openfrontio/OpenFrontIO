@@ -613,6 +613,14 @@ export const BinaryServerGameplayMessageSchema = zb.discriminatedUnion("type", [
   ServerDesyncSchema,
 ]);
 
+// Top-level live gameplay routing stays schema-adjacent: the binary subset unions
+// declare membership, and these configs declare which envelope each binary message
+// uses on the wire.
+export const BinaryServerGameplayMessageRouting = {
+  turn: "packedTurn",
+  desync: "auto",
+} as const satisfies Record<string, "auto" | "intent" | "packedTurn">;
+
 // All server messages, including the binary gameplay subset above and the JSON-only
 // setup/control path, are part of the semantic protocol union.
 export const ServerMessageSchema = zb.discriminatedUnion("type", [
@@ -684,6 +692,12 @@ export const BinaryClientGameplayMessageSchema = zb.discriminatedUnion("type", [
   ClientIntentMessageSchema,
   ClientHashSchema,
 ]);
+
+export const BinaryClientGameplayMessageRouting = {
+  ping: "auto",
+  intent: "intent",
+  hash: "auto",
+} as const satisfies Record<string, "auto" | "intent" | "packedTurn">;
 
 // All client messages, including the binary gameplay subset above and the JSON-only
 // setup/control path, are part of the semantic protocol union.

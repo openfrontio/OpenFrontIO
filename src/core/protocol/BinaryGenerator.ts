@@ -3,7 +3,9 @@ import path from "node:path";
 import { z } from "zod";
 import {
   AllIntentSchema,
+  BinaryClientGameplayMessageRouting,
   BinaryClientGameplayMessageSchema,
+  BinaryServerGameplayMessageRouting,
   BinaryServerGameplayMessageSchema,
 } from "../Schemas";
 import type {
@@ -21,6 +23,17 @@ interface GeneratedBinaryModel {
   readonly intentDefinitions: readonly BinaryIntentDefinition[];
   readonly messageDefinitions: readonly BinaryMessageDefinition[];
 }
+
+interface BinaryGameplayMessageRegistration {
+  readonly schema: z.ZodTypeAny;
+  readonly type: string;
+  readonly direction: BinaryMessageDefinition["direction"];
+  readonly envelope: BinaryMessageDefinition["envelope"];
+}
+
+type BinaryGameplayMessageRouting = Readonly<
+  Record<string, BinaryMessageDefinition["envelope"]>
+>;
 
 function getDiscriminantLiteral(schema: z.ZodTypeAny): string {
   const shape = getObjectShape(schema);
@@ -320,19 +333,16 @@ function buildIntentDefinitions(): BinaryIntentDefinition[] {
 
 function buildMessageDefinitions(): BinaryMessageDefinition[] {
   const seenTypes = new Set<string>();
-  // Top-level gameplay message support is defined by the dedicated binary gameplay unions
-  // in Schemas.ts, while framing is still inferred from the message discriminant.
-  const inferredSchemas = inferBinaryGameplayMessageSchemas();
+  const registrations = collectBinaryGameplayMessageRegistrations();
 
-  return inferredSchemas.map((schema, index) => {
-    const type = getDiscriminantLiteral(schema);
+  return registrations.map((registration, index) => {
+    const { schema, type, direction, envelope } = registration;
     if (seenTypes.has(type)) {
       throw new Error(`Duplicate binary message type ${type}`);
     }
     seenTypes.add(type);
-    const inferredMeta = inferBinaryMessageMeta(type);
     const fieldAnalysis =
-      inferredMeta.envelope === "auto"
+      envelope === "auto"
         ? assignPresenceBits(
             Object.entries(getObjectShape(schema))
               .filter(([name]) => name !== "type")
@@ -344,51 +354,88 @@ function buildMessageDefinitions(): BinaryMessageDefinition[] {
     return {
       type,
       messageType: index + 1,
-      direction: inferredMeta.direction,
-      envelope: inferredMeta.envelope,
+      direction,
+      envelope,
       fields: fieldAnalysis.fields,
       allowedFlags: fieldAnalysis.allowedFlags,
     };
   });
 }
 
-function inferBinaryGameplayMessageSchemas(): z.ZodTypeAny[] {
-  const inferredSchemas = [
-    // Message ids follow the declaration order of the explicit binary gameplay unions.
-    ...getDiscriminatedUnionOptions(BinaryServerGameplayMessageSchema),
-    ...getDiscriminatedUnionOptions(BinaryClientGameplayMessageSchema),
+function collectBinaryGameplayMessageRegistrations(): BinaryGameplayMessageRegistration[] {
+  return [
+    ...collectBinaryGameplayMessageRegistrationsForDirection(
+      "server",
+      BinaryServerGameplayMessageSchema,
+      BinaryServerGameplayMessageRouting,
+    ),
+    ...collectBinaryGameplayMessageRegistrationsForDirection(
+      "client",
+      BinaryClientGameplayMessageSchema,
+      BinaryClientGameplayMessageRouting,
+    ),
   ];
+}
 
-  const inferredTypes = inferredSchemas.map(getDiscriminantLiteral);
-  for (const type of ["turn", "desync", "hash", "ping", "intent"]) {
-    if (!inferredTypes.includes(type)) {
+function collectBinaryGameplayMessageRegistrationsForDirection(
+  direction: BinaryMessageDefinition["direction"],
+  schema: z.ZodTypeAny,
+  routing: BinaryGameplayMessageRouting,
+): BinaryGameplayMessageRegistration[] {
+  const schemas = getDiscriminatedUnionOptions(schema);
+  const schemaTypes = schemas.map(getDiscriminantLiteral);
+
+  validateBinaryGameplayMessageRouting(direction, schemaTypes, routing);
+
+  return schemas.map((messageSchema) => {
+    const type = getDiscriminantLiteral(messageSchema);
+    return {
+      schema: messageSchema,
+      type,
+      direction,
+      envelope: routing[type]!,
+    };
+  });
+}
+
+function validateBinaryGameplayMessageRouting(
+  direction: BinaryMessageDefinition["direction"],
+  schemaTypes: readonly string[],
+  routing: BinaryGameplayMessageRouting,
+) {
+  const routingTypes = Object.keys(routing);
+  for (const type of schemaTypes) {
+    if (!(type in routing)) {
       throw new Error(
-        `Missing inferred binary gameplay message schema for ${type}`,
+        `Missing ${direction} binary gameplay routing entry for ${type}`,
+      );
+    }
+    const envelope = routing[type];
+    if (
+      envelope !== "auto" &&
+      envelope !== "intent" &&
+      envelope !== "packedTurn"
+    ) {
+      throw new Error(
+        `Unsupported ${direction} binary gameplay envelope ${String(envelope)} for ${type}`,
       );
     }
   }
 
-  return inferredSchemas;
+  for (const type of routingTypes) {
+    if (!schemaTypes.includes(type)) {
+      throw new Error(
+        `Unexpected ${direction} binary gameplay routing entry for ${type}`,
+      );
+    }
+  }
 }
 
-function inferBinaryMessageMeta(
-  type: string,
-): Pick<BinaryMessageDefinition, "direction" | "envelope"> {
-  // Message framing is inferred from the top-level message type:
-  // turn => packed turn envelope, intent => intent envelope, others => auto fields.
-  switch (type) {
-    case "turn":
-      return { direction: "server", envelope: "packedTurn" };
-    case "desync":
-      return { direction: "server", envelope: "auto" };
-    case "hash":
-    case "ping":
-      return { direction: "client", envelope: "auto" };
-    case "intent":
-      return { direction: "client", envelope: "intent" };
-    default:
-      throw new Error(`Unsupported inferred binary message type ${type}`);
+function renderStringLiteralUnion(values: readonly string[]): string {
+  if (values.length === 0) {
+    return "never";
   }
+  return values.map((value) => JSON.stringify(value)).join(" | ");
 }
 
 export function collectGeneratedBinaryModel(): GeneratedBinaryModel {
@@ -420,6 +467,18 @@ function renderDefinitions(
 
 export function generateBinaryGameplaySource(): string {
   const model = collectGeneratedBinaryModel();
+  const clientMessageDefinitions = model.messageDefinitions.filter(
+    (definition) => definition.direction === "client",
+  );
+  const serverMessageDefinitions = model.messageDefinitions.filter(
+    (definition) => definition.direction === "server",
+  );
+  const clientMessageTypes = clientMessageDefinitions.map(
+    (definition) => definition.type,
+  );
+  const serverMessageTypes = serverMessageDefinitions.map(
+    (definition) => definition.type,
+  );
   const messageConstants = model.messageDefinitions.map((definition) => ({
     key: pascalCase(definition.type),
     value: definition.messageType,
@@ -431,11 +490,9 @@ export function generateBinaryGameplaySource(): string {
 
   return `/* This file is auto-generated by scripts/gen-binary-gameplay.ts. Do not edit manually. */
 import type {
-  ClientHashMessage,
-  ClientIntentMessage,
   ClientMessage,
-  ClientPingMessage,
   Intent,
+  ServerMessage,
 } from "../../Schemas";
 import type {
   BinaryIntentDefinition,
@@ -464,6 +521,20 @@ export const BINARY_MESSAGE_DEFINITION_BY_MESSAGE_TYPE = new Map(
     (definition) => [definition.messageType, definition],
   ),
 );
+
+export type BinaryClientGameplayMessageType = ${renderStringLiteralUnion(clientMessageTypes)};
+
+export type BinaryServerGameplayMessageType = ${renderStringLiteralUnion(serverMessageTypes)};
+
+export type BinaryClientGameplayMessage = Extract<
+  ClientMessage,
+  { type: BinaryClientGameplayMessageType }
+>;
+
+export type BinaryServerGameplayMessage = Extract<
+  ServerMessage,
+  { type: BinaryServerGameplayMessageType }
+>;
 
 export const BINARY_INTENT_DEFINITION_BY_TYPE = new Map(
   (BINARY_INTENT_DEFINITIONS as readonly BinaryIntentDefinition[]).map(
@@ -499,12 +570,19 @@ export function opcodeToIntentType(opcode: number): Intent["type"] {
 
 export function isBinaryGameplayClientMessage(
   message: ClientMessage,
-): message is ClientIntentMessage | ClientHashMessage | ClientPingMessage {
-  return (
-    (message.type === "intent" && hasBinaryIntentOpcode(message.intent.type)) ||
-    message.type === "hash" ||
-    message.type === "ping"
-  );
+): message is BinaryClientGameplayMessage {
+  switch (message.type) {
+${clientMessageDefinitions
+  .map((definition) => {
+    if (definition.envelope === "intent") {
+      return `    case ${JSON.stringify(definition.type)}:\n      return hasBinaryIntentOpcode(message.intent.type);`;
+    }
+    return `    case ${JSON.stringify(definition.type)}:\n      return true;`;
+  })
+  .join("\n")}
+    default:
+      return false;
+  }
 }
 `;
 }
