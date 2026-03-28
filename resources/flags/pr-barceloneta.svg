@@ -1,0 +1,35 @@
+<svg data-name="レイヤー_1" version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <!-- Generator: Adobe Illustrator 29.4.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 152)  -->
+ <defs>
+  <style>.st0 {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2px;
+      }</style>
+  <clipPath id="clipPath118">
+   <path class="st0" d="m6.6428 0h587.37v360h-587.37z"/>
+  </clipPath>
+ </defs>
+ <g transform="matrix(.10556 0 0 .10556 4.2988 17)" clip-path="url(#clipPath118)">
+  <rect x=".302" width="600" height="360" fill="#003d8f"/>
+  <rect x=".302" width="300" height="180" fill="#ffd42a"/>
+  <rect x=".302" width="150" height="180" fill="#fff"/>
+  <path d="m78.294 0v180" stroke="#f00" stroke-width="9"/>
+  <rect x="300.3" y="180" width="300" height="180" fill="#ffd42a"/>
+  <rect x="300.64" y="180" width="150" height="180" fill="#fff"/>
+  <path d="m375.3 360" fill="#f00"/>
+  <g fill="#ce0f25">
+   <rect y="78" width="150.6" height="26.163"/>
+   <rect x="63.148" width="24.807" height="179.92"/>
+   <rect x="300" y="257" width="150.6" height="26.162"/>
+   <rect x="363.54" y="180.04" width="24.807" height="179.92"/>
+   <rect x="482.18" y="180.24" width="29.256" height="179.52"/>
+   <rect x="541.9" y="180.24" width="29.256" height="179.52"/>
+   <rect x="181.16" y=".239" width="29.256" height="179.52"/>
+   <rect x="240.88" y=".239" width="29.256" height="179.52"/>
+  </g>
+ </g>
+ <path class="st0" d="M5,17h62v38H5V17Z"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg data-name="レイヤー_1" version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+ <!-- Generator: Adobe Illustrator 29.4.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 152)  -->
+ <defs>
+  <style>.st0 {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2px;
+      }</style>
+  <clipPath id="clipPath62">
+   <path class="st0" d="m7.1429 28.571h885.71v542.86h-885.71z"/>
+  </clipPath>
+ </defs>
+ <g transform="matrix(.07 0 0 .07 4.5 15)" clip-path="url(#clipPath62)">
+  <rect width="300" height="600" fill="#c00"/>
+  <rect x="300" width="300" height="600" fill="#fff"/>
+  <rect x="600" width="300" height="600" fill="#078930"/>
+  <g stroke="#000" stroke-width="10">
+   <path transform="matrix(.49 0 0 .49 448.91 340.45)" d="m-82.012 174.44-67.197-47.38-66.241 48.794 24.296-78.55-66.875-47.921 82.213-1.1664 24.91-78.411 26.514 77.829 82.271-0.53931-65.826 49.267z"/>
+   <path transform="matrix(.49 0 0 .49 598.21 340.45)" d="m-82.012 174.44-67.197-47.38-66.241 48.794 24.296-78.55-66.875-47.921 82.213-1.1664 24.91-78.411 26.514 77.829 82.271-0.53931-65.826 49.267z"/>
+   <path transform="matrix(.49 0 0 .49 523.56 185.63)" d="m-82.012 174.44-67.197-47.38-66.241 48.794 24.296-78.55-66.875-47.921 82.213-1.1664 24.91-78.411 26.514 77.829 82.271-0.53931-65.826 49.267z"/>
+  </g>
+ </g>
+ <path class="st0" d="M5,17h62v38H5V17Z"/>
+</svg>

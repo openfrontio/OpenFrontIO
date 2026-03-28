@@ -1,0 +1,72 @@
+<svg data-name="レイヤー_1" version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+ <!-- Generator: Adobe Illustrator 29.4.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 152)  -->
+ <defs>
+  <style>.st0 {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2px;
+      }</style>
+ </defs>
+ <path class="st0" d="m5 17h62v38h-62z"/>
+ <g transform="matrix(.068416 0 0 .06137 5.707 18.803)">
+  <rect width="900" height="600" fill="#fff"/>
+  <g id="document" transform="matrix(.21997 0 0 .21995 436.1 281.16)">
+   <g>
+    <path d="m-1275.6-917.86-224.12 61.384 185.14 141.44-10.92 232.21 190.93-132.27 217.38 81.844-67.09-222.58 145.16-182.23-232.33-5.009-127.6-194.04z" fill="#fff"/>
+    <path d="m-3.7118 229.13h-2044.3v1136.5h2044.3z" fill="#f00000"/>
+    <path d="m-227.67-1365.6h-1820.5v1138h1820.5z" fill="#87cefa"/>
+    <path d="m2048 227.53h-2177l40.465 1138.1h2136.6z" fill="#f00000"/>
+    <path d="m-869.9-428.06-94.358-310.77 259.48-196.92h-326.95l-105.86-314.87-107.47 314.87h-325.35l259.48 196.92-94.35 310.77 267.69-185.64z" fill="#fff"/>
+   </g>
+   <path d="m-218.24-238.67v-1113.8" fill="none" stroke="#fff" stroke-linecap="square" stroke-width="23.04"/>
+   <path d="m240.67-239.97v-1113.4" fill="none" stroke="#afdbf5" stroke-linecap="square" stroke-width="23.04"/>
+   <path d="m2048.1-1365.6h-1820.5v1138h1820.5z" fill="#87cefa"/>
+   <g fill="none" stroke-linecap="square" stroke-width="23.04">
+    <g stroke="#d81bdd">
+     <path d="m11.522-1041.5h204.66"/>
+     <path d="m-195.19-1187.1h204.67"/>
+     <path d="m-216.16-1041.5h204.64"/>
+     <path d="m-195.19-1210.1h204.64"/>
+    </g>
+    <path d="m240.18 239.34h1796.3" stroke="#f00000"/>
+    <path d="m239.38 239.25v1114.9" stroke="#bb1515"/>
+    <path d="m-240.8 239.38v1114.9" stroke="#bb1515"/>
+    <path d="m-263.84 239.38h-1772.6" stroke="#f00000"/>
+    <path d="m1218.2-122.19v205.22" stroke="#d81bdd"/>
+   </g>
+   <g>
+    <path d="m228.66-227.96h1820.6v-0.485h-1820.6z" fill="#afdbf5"/>
+    <path d="m228.66-227.95h1820.6v-0.484h-1820.6z" fill="#00bfff"/>
+    <path d="m-2048 227.87h1818.7v-0.484h-1818.7z" fill="#f00000"/>
+   </g>
+   <path d="m-442.16 216.21h1114.9" fill="none" stroke="#4d4d4d" stroke-linecap="square" stroke-width="23.04"/>
+   <g>
+    <path d="m1604.5 193.95v-387.83h-1373.5v-1171.7h-458.9v1168.9h-1376.7v390.56h1373.5v1171.7h458.9v-1171.7z" fill="#fff" stroke-width=".92254"/>
+    <path d="m228.66 227.86h1819.3v-0.484h-1819.3z" fill="#f00000"/>
+    <path d="m-229.76-1365.3v1136.9h0.484v-1136.9z" fill="#afdbf5"/>
+    <path d="m228.66-1365.3v1136.9h0.484v-1136.9z" fill="#afdbf5"/>
+   </g>
+   <g fill="none" stroke-linecap="square">
+    <g stroke="#fff" stroke-width="23.04">
+     <path d="m-216.14-226.95v-1114"/>
+     <path d="m240.54 216.21h1795.9"/>
+     <path d="m240.57 204.69h1795.9"/>
+     <path d="m-896.67 204.69h1795.9"/>
+     <path d="m-2036.8 216.21h2541.4"/>
+    </g>
+    <g stroke="#f00000" stroke-width="23.04">
+     <path d="m239.14 239.25v1115"/>
+     <path d="m250.9 239.25v1115"/>
+     <path d="m-239.18 239.25v1115"/>
+     <path d="m-252.32 239.38v1115"/>
+    </g>
+    <path d="m-226.67-813.45v993" stroke="#fff" stroke-width="2"/>
+   </g>
+   <path d="m-227.66 227.73h-1820.5v1138h1820.5z" fill="#ce0000"/>
+   <path d="m2048.1 227.73h-1820.5v1138h1820.5z" fill="#ce0000"/>
+  </g>
+ </g>
+ <path class="st0" d="M5,17h62v38H5V17Z" fill="none"/>
+</svg>
