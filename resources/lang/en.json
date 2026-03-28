@@ -350,7 +350,8 @@
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
-    "aegean": "Aegean"
+    "aegean": "Aegean",
+    "milkyway": "Milky Way"
   },
   "map_categories": {
     "featured": "Featured",
@@ -1033,6 +1034,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
