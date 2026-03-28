@@ -125,6 +125,20 @@ export function simpleHash(str: string): number {
   return Math.abs(hash);
 }
 
+/**
+ * Deterministic signed 32-bit addition for gameplay/desync hashes.
+ */
+export function hashAdd32(a: number, b: number): number {
+  return (a + b) | 0;
+}
+
+/**
+ * Deterministic signed 32-bit multiplication for gameplay/desync hashes.
+ */
+export function hashMul32(a: number, b: number): number {
+  return Math.imul(a, b);
+}
+
 export function calculateBoundingBox(
   gm: GameMap,
   borderTiles: ReadonlySet<TileRef>,

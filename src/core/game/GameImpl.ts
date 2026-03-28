@@ -8,7 +8,7 @@ import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHie
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { ATTACK_INDEX_SENT } from "../StatsSchemas";
-import { simpleHash } from "../Util";
+import { hashAdd32, simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
@@ -490,7 +490,7 @@ export class GameImpl implements Game {
   private hash(): number {
     let hash = 1;
     this._players.forEach((p) => {
-      hash += p.hash();
+      hash = hashAdd32(hash, p.hash());
     });
     return hash;
   }

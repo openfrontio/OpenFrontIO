@@ -4,6 +4,8 @@ import { ClientID } from "../Schemas";
 import {
   assertNever,
   findClosestBy,
+  hashAdd32,
+  hashMul32,
   minInt,
   simpleHash,
   toInt,
@@ -1325,10 +1327,14 @@ export class PlayerImpl implements Player {
   }
 
   hash(): number {
-    return (
-      simpleHash(this.id()) * (this.troops() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
+    let hash = hashMul32(
+      simpleHash(this.id()),
+      this.troops() + this.numTilesOwned(),
     );
+    for (const unit of this._units) {
+      hash = hashAdd32(hash, unit.hash());
+    }
+    return hash;
   }
   toString(): string {
     return `Player:{name:${this.info().name},clientID:${
