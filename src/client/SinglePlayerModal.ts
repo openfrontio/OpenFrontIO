@@ -151,7 +151,12 @@ export class SinglePlayerModal extends BaseModal {
 
     const completions =
       achievements.find(
-        (achievement) => achievement?.type === "singleplayer-map",
+        (
+          achievement,
+        ): achievement is {
+          type: "singleplayer-map";
+          data: { mapName: string; difficulty: string }[];
+        } => achievement?.type === "singleplayer-map",
       )?.data ?? [];
 
     const winsMap = new Map<GameMapType, Set<Difficulty>>();

@@ -60,6 +60,29 @@ const SingleplayerMapAchievementSchema = z.object({
   difficulty: z.enum(Difficulty),
 });
 
+const PlayerAchievementSchema = z.object({
+  achievement: z.string(),
+  achievedAt: z.string().nullable(),
+  gameId: z.number().nullable(),
+});
+
+const AchievementGroupSchema = z.union([
+  z.object({
+    type: z.literal("singleplayer-map"),
+    data: z.array(SingleplayerMapAchievementSchema),
+  }),
+  z.object({
+    type: z.literal("player"),
+    data: z.array(PlayerAchievementSchema),
+  }),
+  // Forward-compatible catch-all for achievement types not yet
+  // recognized by the frontend.
+  z.object({
+    type: z.string(),
+    data: z.unknown(),
+  }),
+]);
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -69,14 +92,7 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
-    achievements: z
-      .array(
-        z.object({
-          type: z.literal("singleplayer-map"), // TODO: change the shape to be more flexible when we have more achievements
-          data: z.array(SingleplayerMapAchievementSchema),
-        }),
-      )
-      .optional(),
+    achievements: z.array(AchievementGroupSchema).optional(),
     leaderboard: z
       .object({
         oneVone: z
