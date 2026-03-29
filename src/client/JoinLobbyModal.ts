@@ -8,6 +8,7 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -18,7 +19,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -373,6 +374,11 @@ export class JoinLobbyModal extends BaseModal {
     );
   }
 
+  public confirmBeforeClose(): boolean {
+    if (!this.currentLobbyId) return true;
+    return confirm(translateText("host_modal.leave_confirmation"));
+  }
+
   protected onClose(): void {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
@@ -431,7 +437,9 @@ export class JoinLobbyModal extends BaseModal {
     const c = this.gameConfig;
     const mapName = getMapName(c.gameMap);
     const normalizedMap = normaliseMapKey(c.gameMap);
-    const thumbnailUrl = `/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`;
+    const thumbnailUrl = assetUrl(
+      `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
+    );
     const isTeam = c.gameMode === GameMode.Team;
 
     let modeSubtitle: string;
@@ -894,7 +902,7 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {

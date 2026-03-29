@@ -352,6 +352,7 @@
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
     "dyslexdria": "Dyslexdria"
+    "milkyway": "Milky Way"
   },
   "map_categories": {
     "featured": "Featured",
@@ -501,7 +502,15 @@
     "starting_gold_label": "Starting Gold",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "disable_alliances": "Alliances Disabled",
-    "disable_alliances_label": "Alliances"
+    "disable_alliances_label": "Alliances",
+    "ports_disabled": "Ports Disabled",
+    "ports_disabled_label": "Ports",
+    "nukes_disabled": "Nukes Disabled",
+    "nukes_disabled_label": "Nukes",
+    "sams_disabled": "SAMs Disabled",
+    "sams_disabled_label": "SAMs",
+    "peace_time": "4min Peace",
+    "peace_time_label": "PVP Immunity"
   },
   "select_lang": {
     "title": "Select Language"
@@ -856,7 +865,8 @@
   },
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "host_left": "The host has left the lobby."
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
@@ -920,18 +930,25 @@
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "catching_up": "Catching up..."
   },
+  "store": {
+    "title": "Store",
+    "patterns": "Skins",
+    "flags": "Flags",
+    "no_flags": "No flags available. Check back later for new items.",
+    "no_skins": "No skins available. Check back later for new items."
+  },
   "territory_patterns": {
     "title": "Skins",
-    "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "My Skins",
-    "all_owned": "All skins owned! Check back later for new items.",
     "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
     "selected": "selected"
+  },
+  "cosmetics": {
+    "artist_label": "Artist:"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1002,6 +1019,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",

@@ -144,6 +144,7 @@ export enum GameMapType {
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
   Dyslexdria = "Dyslexdria",
+  MilkyWay = "MilkyWay",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -209,6 +210,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TradersDream,
     GameMapType.Passage,
     GameMapType.Dyslexdria,
+    GameMapType.MilkyWay,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -250,13 +252,17 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
   goldMultiplier?: number;
-  isAlliancesDisabled: boolean;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
 }
 
 export interface UnitInfo {

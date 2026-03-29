@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
 import {
@@ -22,8 +23,8 @@ import {
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
-import soldierIcon from "/images/SoldierIcon.svg?url";
-import swordIcon from "/images/SwordIcon.svg?url";
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
+const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("attacks-display")
 export class AttacksDisplay extends LitElement implements Layer {

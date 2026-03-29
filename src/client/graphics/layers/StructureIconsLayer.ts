@@ -2,6 +2,7 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
@@ -42,7 +43,7 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
-import bitmapFont from "/fonts/round_6x6_modified.xml?url";
+const bitmapFont = assetUrl("fonts/round_6x6_modified.xml");
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
@@ -264,14 +265,12 @@ export class StructureIconsLayer implements Layer {
     if (now - this.lastGhostQueryAt < 50) {
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
     this.lastGhostQueryAt = now;
     let tileRef: TileRef | undefined;
-    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
+    const tile = this.transformHandler.screenToWorldCoordinates(
+      this.mousePos.x,
+      this.mousePos.y,
+    );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
     }
@@ -456,11 +455,7 @@ export class StructureIconsLayer implements Layer {
       this.removeGhostStructure();
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-    const x = e.x - rect.left;
-    const y = e.y - rect.top;
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
@@ -495,13 +490,9 @@ export class StructureIconsLayer implements Layer {
     this.mousePos.y = e.y;
 
     if (!this.ghostUnit) return;
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-
-    const localX = e.x - rect.left;
-    const localY = e.y - rect.top;
-    this.ghostUnit.container.position.set(localX, localY);
-    this.ghostUnit.range?.position.set(localX, localY);
+    const local = this.transformHandler.screenToCanvasCoordinates(e.x, e.y);
+    this.ghostUnit.container.position.set(local.x, local.y);
+    this.ghostUnit.range?.position.set(local.x, local.y);
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {
@@ -510,13 +501,14 @@ export class StructureIconsLayer implements Layer {
     if (type === null) {
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
+    const local = this.transformHandler.screenToCanvasCoordinates(
+      this.mousePos.x,
+      this.mousePos.y,
+    );
     const ghost = this.factory.createGhostContainer(
       player,
       this.ghostStage,
-      { x: localX, y: localY },
+      { x: local.x, y: local.y },
       type,
     );
     this.ghostUnit = {
@@ -748,7 +740,7 @@ export class StructureIconsLayer implements Layer {
   private computeNewLocation(render: StructureRenderInfo) {
     const tile = render.unit.tile();
     const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
-    const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(worldPos);
     screenPos.x = Math.round(screenPos.x);
 
     const scale = this.transformHandler.scale;

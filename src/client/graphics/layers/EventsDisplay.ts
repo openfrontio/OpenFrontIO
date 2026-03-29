@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -37,11 +38,11 @@ import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import nukeIcon from "/images/NukeIconWhite.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const nukeIcon = assetUrl("images/NukeIconWhite.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 interface GameEvent {
   description: string;

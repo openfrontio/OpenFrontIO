@@ -5,6 +5,14 @@ import { defineConfig, loadEnv } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { type AssetManifest, buildAssetUrl } from "./src/core/AssetUrls";
+import {
+  buildPublicAssetManifest,
+  copyRootPublicFiles,
+  createHashedPublicAssetFiles,
+  getResourcesDir,
+  writePublicAssetManifestModule,
+} from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +21,35 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
+  const resourcesDir = getResourcesDir(__dirname);
+  const assetManifest: AssetManifest = isProduction
+    ? buildPublicAssetManifest(resourcesDir)
+    : {};
+  const htmlAssetData = {
+    assetManifest: JSON.stringify(assetManifest),
+    gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
+    gameplayScreenshotUrl: buildAssetUrl(
+      "images/GameplayScreenshot.png",
+      assetManifest,
+    ),
+    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+  };
+
+  const syncHashedPublicAssets = () => ({
+    name: "sync-hashed-public-assets",
+    apply: "build" as const,
+    closeBundle() {
+      const outDir = path.join(__dirname, "static");
+      copyRootPublicFiles(resourcesDir, outDir);
+      writePublicAssetManifestModule(outDir, assetManifest);
+      createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+    },
+  });
+
   // In dev, redirect visits to /w*/game/* to "/" so Vite serves the index.html.
   const devGameHtmlBypass = (req?: {
     url?: string;
@@ -40,7 +77,7 @@ export default defineConfig(({ mode }) => {
     },
     root: "./",
     base: "/",
-    publicDir: "resources", // Access static assets via import or explicit copy
+    publicDir: isProduction ? false : "resources",
 
     resolve: {
       alias: {
@@ -64,7 +101,7 @@ export default defineConfig(({ mode }) => {
               inject: {
                 data: {
                   gitCommit: JSON.stringify("DEV"),
-                  instanceId: JSON.stringify("DEV_ID"),
+                  ...htmlAssetData,
                 },
               },
             }),
@@ -77,10 +114,12 @@ export default defineConfig(({ mode }) => {
           },
         ],
       }),
+      ...(isProduction ? [syncHashedPublicAssets()] : []),
       tailwindcss(),
     ],
 
     define: {
+      __ASSET_MANIFEST__: JSON.stringify(assetManifest),
       "process.env.WEBSOCKET_URL": JSON.stringify(
         isProduction ? "" : "localhost:3000",
       ),

@@ -1,3 +1,4 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
@@ -9,7 +10,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
@@ -20,18 +21,18 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import boatIcon from "/images/BoatIconWhite.svg?url";
-import buildIcon from "/images/BuildIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import infoIcon from "/images/InfoIcon.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
-import targetIcon from "/images/TargetIconWhite.svg?url";
-import traitorIcon from "/images/TraitorIconWhite.svg?url";
-import xIcon from "/images/XIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const boatIcon = assetUrl("images/BoatIconWhite.svg");
+const buildIcon = assetUrl("images/BuildIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const infoIcon = assetUrl("images/InfoIcon.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
+const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -554,14 +555,11 @@ export const deleteUnitElement: MenuElement = {
           DELETE_SELECTION_RADIUS,
       );
 
-    if (myUnits.length > 0) {
-      myUnits.sort(
-        (a, b) =>
-          params.game.manhattanDist(a.tile(), params.tile) -
-          params.game.manhattanDist(b.tile(), params.tile),
-      );
-
-      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
+    const closestUnit = findClosestBy(myUnits, (unit) =>
+      params.game.manhattanDist(unit.tile(), params.tile),
+    );
+    if (closestUnit) {
+      params.playerActionHandler.handleDeleteUnit(closestUnit.id());
     }
 
     params.closeMenu();

@@ -35,6 +35,7 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
@@ -87,6 +88,8 @@ export class GameServer {
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
+  private visibleAt?: number;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -98,6 +101,9 @@ export class GameServer {
     private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+    if (startsAt !== undefined) {
+      this.visibleAt = Date.now();
+    }
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -537,6 +543,20 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Close lobby when host leaves before game starts
+      if (
+        !this._hasStarted &&
+        !this.isPublic() &&
+        client.persistentID === this.creatorPersistentID
+      ) {
+        this.log.info("Host left, closing lobby", {
+          gameID: this.id,
+        });
+        for (const c of [...this.activeClients]) {
+          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+        }
+        this._hasEnded = true;
+      }
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -558,6 +578,8 @@ export class GameServer {
 
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
+    // Record when the lobby first became visible to players, used to measure lobby fill time.
+    this.visibleAt ??= Date.now();
   }
 
   public numClients(): number {
@@ -656,6 +678,7 @@ export class GameServer {
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
+      visibleAt: this.visibleAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -839,6 +862,8 @@ export class GameServer {
         } else {
           return GamePhase.Active;
         }
+      } else if (this._hasEnded) {
+        return GamePhase.Finished;
       } else {
         return GamePhase.Lobby;
       }
@@ -1001,6 +1026,7 @@ export class GameServer {
           Date.now(),
           this.winner?.winner,
           this.createdAt,
+          this.visibleAt,
         ),
       ),
     );

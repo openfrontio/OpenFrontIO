@@ -98,13 +98,17 @@ export const PlayerStatsLeafSchema = z.object({
 });
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
-export const PlayerStatsTreeSchema = z.partialRecord(
-  z.enum(GameType),
-  z.partialRecord(
-    z.enum(GameMode),
-    z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
-  ),
+const GameModeStatsSchema = z.partialRecord(
+  z.enum(GameMode),
+  z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
 );
+
+export const PlayerStatsTreeSchema = z.object({
+  Singleplayer: GameModeStatsSchema.optional(),
+  Public: GameModeStatsSchema.optional(),
+  Private: GameModeStatsSchema.optional(),
+  Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
+});
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
 export const PlayerGameSchema = z.object({

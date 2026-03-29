@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getServerConfigFromClient } from "src/core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "src/core/configuration/ConfigLoader";
 import {
   Duos,
   GameMapType,
@@ -58,7 +58,7 @@ export class GameModeSelector extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    getServerConfigFromClient().then((config) => {
+    getRuntimeClientServerConfig().then((config) => {
       this.defaultLobbyTime = config.gameCreationRate() / 1000;
     });
   }
@@ -147,21 +147,17 @@ export class GameModeSelector extends LitElement {
           class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
         >
           <!-- Left col: main card (desktop only) -->
-          ${special
+          ${ffa
             ? html`<div class="hidden sm:block">
-                ${this.renderSpecialLobbyCard(special)}
+                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
               </div>`
-            : ffa
-              ? html`<div class="hidden sm:block">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                </div>`
-              : nothing}
+            : nothing}
 
-          <!-- Right col: FFA + teams (desktop only) -->
+          <!-- Right col: special + teams (desktop only) -->
           <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special && ffa
+            ${special
               ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                  ${this.renderSpecialLobbyCard(special)}
                 </div>`
               : nothing}
             ${teams
