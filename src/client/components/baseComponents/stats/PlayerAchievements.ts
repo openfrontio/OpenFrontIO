@@ -95,13 +95,13 @@ export class PlayerAchievements extends LitElement {
   }
 
   private resolveTitle(achievementKey: string): string {
-    const translationKey = `achivements.${achievementKey}`;
+    const translationKey = `achievements.${achievementKey}`;
     const translated = translateText(translationKey);
     return translated === translationKey ? achievementKey : translated;
   }
 
   private resolveDescription(achievementKey: string): string | null {
-    const translationKey = `achivements.${achievementKey}_desc`;
+    const translationKey = `achievements.${achievementKey}_desc`;
     const translated = translateText(translationKey);
     return translated === translationKey ? null : translated;
   }
