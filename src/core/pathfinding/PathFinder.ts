@@ -1,10 +1,11 @@
-import { Game } from "../game/Game";
+import { Game, PlayerID } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { TrainStation } from "../game/TrainStation";
 import { AStarRail } from "./algorithms/AStar.Rail";
 import { AStarWater } from "./algorithms/AStar.Water";
 import { AirPathFinder } from "./PathFinder.Air";
 import {
+  BouncingParabolaUniversalPathFinder,
   ParabolaOptions,
   ParabolaUniversalPathFinder,
 } from "./PathFinder.Parabola";
@@ -26,6 +27,14 @@ export class UniversalPathFinding {
     options?: ParabolaOptions,
   ): ParabolaUniversalPathFinder {
     return new ParabolaUniversalPathFinder(gameMap, options);
+  }
+
+  static BouncingParabola(
+    mg: Game,
+    playerId: PlayerID,
+    options?: ParabolaOptions,
+  ): BouncingParabolaUniversalPathFinder {
+    return new BouncingParabolaUniversalPathFinder(mg, playerId, options);
   }
 }
 
