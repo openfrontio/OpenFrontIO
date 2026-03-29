@@ -27,6 +27,10 @@ import {
 
 const quickChatKey = QuickChatKeySchema.options[0];
 
+function toHex(bytes: Uint8Array): string {
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
+}
+
 const context = binaryContextFromGameStartInfo({
   players: [
     { clientID: "P0000001" },
@@ -301,6 +305,57 @@ describe("BinaryCodec", () => {
     expect(decoded).toEqual(message);
   });
 
+  it("keeps ping wire bytes stable", () => {
+    const encoded = encodeBinaryClientGameplayMessage(
+      {
+        type: "ping",
+      },
+      context,
+    );
+    expect(toHex(encoded)).toBe("01 03 00 00");
+  });
+
+  it("keeps hash wire bytes stable", () => {
+    const encoded = encodeBinaryClientGameplayMessage(
+      {
+        type: "hash",
+        turnNumber: 7,
+        hash: 123456,
+      },
+      context,
+    );
+    expect(toHex(encoded)).toBe("01 05 00 00 40 e2 01 00 07 00 00 00");
+  });
+
+  it("keeps spawn intent wire bytes stable", () => {
+    const encoded = encodeBinaryClientGameplayMessage(
+      {
+        type: "intent",
+        intent: {
+          type: "spawn",
+          tile: 42,
+        },
+      },
+      context,
+    );
+    expect(toHex(encoded)).toBe("01 04 00 00 03 2a 00 00 00");
+  });
+
+  it("keeps nullable attack intent wire bytes stable", () => {
+    const encoded = encodeBinaryClientGameplayMessage(
+      {
+        type: "intent",
+        intent: {
+          type: "attack",
+          targetID: null,
+          troops: null,
+        },
+      },
+      context,
+    );
+    expect(toHex(encoded)).toBe("01 04 00 00 01 00 00");
+  });
+
   it("only classifies supported intents as binary gameplay messages", () => {
     expect(
       isBinaryGameplayClientMessage({
@@ -382,6 +437,50 @@ describe("BinaryCodec", () => {
     const decoded = decodeBinaryServerGameplayMessage(encoded, context);
     expect(ServerDesyncSchema.parse(decoded)).toEqual(message);
     expect(decoded).toEqual(message);
+  });
+
+  it("keeps server turn wire bytes stable", () => {
+    const encoded = encodeBinaryServerGameplayMessage(
+      {
+        type: "turn",
+        turn: {
+          turnNumber: 5,
+          intents: [
+            {
+              type: "spawn",
+              tile: 10,
+              clientID: "P0000001",
+            },
+            {
+              type: "emoji",
+              recipient: AllPlayers,
+              emoji: 2,
+              clientID: "P0000002",
+            },
+          ],
+        },
+      },
+      context,
+    );
+    expect(toHex(encoded)).toBe(
+      "01 01 00 00 05 00 00 00 02 00 03 0a 00 00 00 00 00 0b fe ff 02 00 01 00",
+    );
+  });
+
+  it("keeps server desync wire bytes stable", () => {
+    const encoded = encodeBinaryServerGameplayMessage(
+      {
+        type: "desync",
+        turn: 9,
+        correctHash: 777,
+        clientsWithCorrectHash: 3,
+        totalActiveClients: 4,
+      },
+      context,
+    );
+    expect(toHex(encoded)).toBe(
+      "01 02 00 00 01 00 09 00 00 00 00 00 00 00 00 48 88 40 03 00 04 00",
+    );
   });
 
   it("rejects unknown protocol versions", () => {

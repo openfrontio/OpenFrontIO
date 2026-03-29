@@ -6,13 +6,6 @@ import {
   ClientMessageSchema,
   ServerMessageSchema,
 } from "../Schemas";
-import type {
-  BinaryIntentDefinition,
-  BinaryMessageDefinition,
-  BinaryObjectFieldDefinition,
-  BinaryObjectValueDefinition,
-  BinaryValueDefinition,
-} from "./BinaryRuntime";
 import {
   binaryGameplayMessageRegistry,
   getBinaryFieldHelper,
@@ -21,7 +14,91 @@ import {
   isJsonOnlyIntentSchema,
 } from "./BinaryWire";
 
-interface GeneratedBinaryModel {
+type BinaryDirection = "client" | "server";
+
+type BinaryScalarWireType =
+  | "bool"
+  | "f64"
+  | "string"
+  | "u8"
+  | "u16"
+  | "u32"
+  | "i32"
+  | "enum";
+
+type BinaryProjectedWireType = "playerRef" | "clientIndex";
+
+interface BinaryScalarValueDefinition {
+  readonly kind: "scalar";
+  readonly wireType: BinaryScalarWireType;
+  readonly enumValues?: readonly (string | number)[];
+  readonly enumWireType?: "u8" | "u16" | "u32";
+}
+
+interface BinaryProjectedScalarDefinition {
+  readonly kind: "projectedScalar";
+  readonly wireType: BinaryProjectedWireType;
+  readonly allowAllPlayers?: boolean;
+  readonly inlineFallback?: boolean;
+}
+
+interface BinaryObjectFieldDefinition {
+  readonly name: string;
+  readonly value: BinaryValueDefinition;
+  readonly optional?: boolean;
+  readonly nullable?: boolean;
+  readonly presenceBit?: number;
+  readonly valueBit?: number;
+  readonly defaultValue?: unknown;
+}
+
+interface BinaryObjectValueDefinition {
+  readonly kind: "object";
+  readonly fields: readonly BinaryObjectFieldDefinition[];
+  readonly allowedFlags: number;
+}
+
+interface BinaryArrayValueDefinition {
+  readonly kind: "array";
+  readonly lengthWireType: "u16";
+  readonly element: BinaryValueDefinition;
+}
+
+interface BinaryDiscriminatedUnionVariantDefinition {
+  readonly type: string;
+  readonly tag: number;
+  readonly value: BinaryValueDefinition;
+}
+
+interface BinaryDiscriminatedUnionValueDefinition {
+  readonly kind: "discriminatedUnion";
+  readonly discriminant: string;
+  readonly tagWireType: "u8" | "u16" | "u32";
+  readonly variants: readonly BinaryDiscriminatedUnionVariantDefinition[];
+}
+
+type BinaryValueDefinition =
+  | BinaryScalarValueDefinition
+  | BinaryProjectedScalarDefinition
+  | BinaryObjectValueDefinition
+  | BinaryArrayValueDefinition
+  | BinaryDiscriminatedUnionValueDefinition;
+
+interface BinaryIntentDefinition {
+  readonly type: string;
+  readonly opcode: number;
+  readonly payload: BinaryValueDefinition;
+}
+
+interface BinaryMessageDefinition {
+  readonly type: string;
+  readonly messageType: number;
+  readonly direction: BinaryDirection;
+  readonly payload: BinaryValueDefinition;
+}
+
+export interface GeneratedBinaryModel {
+  readonly intentUnion: BinaryDiscriminatedUnionValueDefinition;
   readonly intentDefinitions: readonly BinaryIntentDefinition[];
   readonly messageDefinitions: readonly BinaryMessageDefinition[];
 }
@@ -29,7 +106,7 @@ interface GeneratedBinaryModel {
 interface BinaryGameplayMessageRegistration {
   readonly schema: z.ZodTypeAny;
   readonly type: string;
-  readonly direction: BinaryMessageDefinition["direction"];
+  readonly direction: BinaryDirection;
 }
 
 interface BinaryCompileState {
@@ -94,28 +171,6 @@ function getObjectShape(schema: z.ZodTypeAny): Record<string, z.ZodTypeAny> {
     );
   }
   return shape;
-}
-
-function getDiscriminatedUnionOptions(schema: z.ZodTypeAny): z.ZodTypeAny[] {
-  const options = (schema as any).options ?? (schema as any)._def?.options;
-  if (Array.isArray(options)) {
-    return options;
-  }
-  if (options instanceof Map) {
-    return [...options.values()];
-  }
-  throw new Error("Unable to inspect discriminated union options");
-}
-
-function getArrayElementSchema(schema: z.ZodArray<any>): z.ZodTypeAny {
-  const element =
-    (schema as any).element ??
-    (schema as any)._def?.element ??
-    (schema as any)._def?.type;
-  if (!element || typeof element !== "object") {
-    throw new Error("Unable to inspect array element schema");
-  }
-  return element as z.ZodTypeAny;
 }
 
 function pascalCase(value: string): string {
@@ -272,9 +327,6 @@ function mergeObjectDefinitions(
     mergedByName.set(field.name, field);
   }
   for (const field of right.fields.map(stripAssignedBits)) {
-    // Right-side fields override left-side fields. This matches the current
-    // stamped-intent behavior where the stamped sender clientID wins over any
-    // same-named field carried by the base intent payload.
     mergedByName.set(field.name, field);
   }
   const mergedFields = [...mergedByName.values()];
@@ -325,10 +377,17 @@ function compileObjectSchema(
 function compileDiscriminatedUnionSchema(
   schema: z.ZodTypeAny,
   state: BinaryCompileState,
-) {
-  const options = getDiscriminatedUnionOptions(schema).filter(
-    (option) => !isJsonOnlyIntentSchema(option),
-  );
+): BinaryDiscriminatedUnionValueDefinition {
+  const rawOptions = (schema as any).options ?? (schema as any)._def?.options;
+  const options = (
+    Array.isArray(rawOptions)
+      ? rawOptions
+      : rawOptions instanceof Map
+        ? [...rawOptions.values()]
+        : (() => {
+            throw new Error("Unable to inspect discriminated union options");
+          })()
+  ).filter((option) => !isJsonOnlyIntentSchema(option));
   const seenTypes = new Set<string>();
   const variants = options.map((option, index) => {
     const type = getDiscriminantLiteral(option);
@@ -343,7 +402,7 @@ function compileDiscriminatedUnionSchema(
     };
   });
   return {
-    kind: "discriminatedUnion" as const,
+    kind: "discriminatedUnion",
     discriminant: "type",
     tagWireType: pickOrdinalWireType(variants.length),
     variants,
@@ -468,10 +527,17 @@ function compileLeafSchema(
     return compileObjectSchema(schema, state);
   }
   if (schema instanceof z.ZodArray) {
+    const element =
+      (schema as any).element ??
+      (schema as any)._def?.element ??
+      (schema as any)._def?.type;
+    if (!element || typeof element !== "object") {
+      throw new Error("Unable to inspect array element schema");
+    }
     return {
       kind: "array",
       lengthWireType: "u16",
-      element: compileValueSchema(getArrayElementSchema(schema), state),
+      element: compileValueSchema(element as z.ZodTypeAny, state),
     };
   }
   if (schema instanceof z.ZodIntersection) {
@@ -510,11 +576,9 @@ function compileValueSchema(
   return compiled;
 }
 
-function buildIntentDefinitions(state: BinaryCompileState) {
-  const compiled = compileValueSchema(AllIntentSchema, state);
-  if (compiled.kind !== "discriminatedUnion") {
-    throw new Error("AllIntentSchema must compile to a discriminated union");
-  }
+function buildIntentDefinitions(
+  compiled: BinaryDiscriminatedUnionValueDefinition,
+): readonly BinaryIntentDefinition[] {
   return compiled.variants.map((variant) => ({
     type: variant.type,
     opcode: variant.tag,
@@ -564,11 +628,18 @@ function collectBinaryGameplayMessageRegistrations(): BinaryGameplayMessageRegis
 }
 
 function collectBinaryGameplayMessageRegistrationsForDirection(
-  direction: BinaryMessageDefinition["direction"],
+  direction: BinaryDirection,
   schema: z.ZodTypeAny,
   seenSchemas: Set<z.ZodTypeAny>,
 ): BinaryGameplayMessageRegistration[] {
-  const schemas = getDiscriminatedUnionOptions(schema);
+  const rawOptions = (schema as any).options ?? (schema as any)._def?.options;
+  const schemas = Array.isArray(rawOptions)
+    ? rawOptions
+    : rawOptions instanceof Map
+      ? [...rawOptions.values()]
+      : (() => {
+          throw new Error("Unable to inspect discriminated union options");
+        })();
   return schemas.flatMap((messageSchema) => {
     if (!isBinaryGameplayMessageSchema(messageSchema)) {
       return [];
@@ -615,14 +686,6 @@ function renderStringLiteralUnion(values: readonly string[]): string {
   return values.map((value) => JSON.stringify(value)).join(" | ");
 }
 
-export function collectGeneratedBinaryModel(): GeneratedBinaryModel {
-  const state = createCompileState();
-  return {
-    intentDefinitions: buildIntentDefinitions(state),
-    messageDefinitions: buildMessageDefinitions(state),
-  };
-}
-
 function renderConstObject(
   exportName: string,
   items: readonly { readonly key: string; readonly value: number }[],
@@ -632,15 +695,668 @@ function renderConstObject(
     .join("\n")}\n} as const;\n`;
 }
 
-function renderDefinitions(
-  exportName: string,
-  definitions: readonly object[],
+function renderLiteral(value: unknown): string {
+  return value === undefined ? "undefined" : JSON.stringify(value);
+}
+
+function nestedHelperName(parentName: string, suffix: string): string {
+  return `${parentName}${pascalCase(suffix)}`;
+}
+
+function renderOrdinalWrite(
+  wireType: "u8" | "u16" | "u32",
+  valueExpression: string,
 ): string {
-  return `export const ${exportName} = ${JSON.stringify(
-    definitions,
-    null,
-    2,
-  )} as const;\n`;
+  switch (wireType) {
+    case "u8":
+      return `writer.writeUint8(${valueExpression});`;
+    case "u16":
+      return `writer.writeUint16(${valueExpression});`;
+    case "u32":
+      return `writer.writeUint32(${valueExpression});`;
+  }
+}
+
+function renderOrdinalRead(
+  wireType: "u8" | "u16" | "u32",
+  targetName: string,
+): string {
+  switch (wireType) {
+    case "u8":
+      return `const ${targetName} = reader.readUint8();`;
+    case "u16":
+      return `const ${targetName} = reader.readUint16();`;
+    case "u32":
+      return `const ${targetName} = reader.readUint32();`;
+  }
+}
+
+function renderScalarHelpers(
+  name: string,
+  definition: BinaryScalarValueDefinition,
+): string {
+  const encodeLines = [
+    `function encode_${name}(`,
+    "  writer: BinaryWriter,",
+    "  value: unknown,",
+    "  _context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    ") {",
+  ];
+  const decodeLines = [
+    `function decode_${name}(`,
+    "  reader: BinaryReader,",
+    "  _context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    "): unknown {",
+  ];
+  switch (definition.wireType) {
+    case "bool":
+      encodeLines.push("  writer.writeBoolean(value as boolean);");
+      decodeLines.push("  return reader.readBoolean();");
+      break;
+    case "f64":
+      encodeLines.push("  writer.writeFloat64(value as number);");
+      decodeLines.push("  return reader.readFloat64();");
+      break;
+    case "string":
+      encodeLines.push("  writer.writeString(value as string);");
+      decodeLines.push("  return reader.readString();");
+      break;
+    case "u8":
+      encodeLines.push("  writer.writeUint8(value as number);");
+      decodeLines.push("  return reader.readUint8();");
+      break;
+    case "u16":
+      encodeLines.push("  writer.writeUint16(value as number);");
+      decodeLines.push("  return reader.readUint16();");
+      break;
+    case "u32":
+      encodeLines.push("  writer.writeUint32(value as number);");
+      decodeLines.push("  return reader.readUint32();");
+      break;
+    case "i32":
+      encodeLines.push("  writer.writeInt32(value as number);");
+      decodeLines.push("  return reader.readInt32();");
+      break;
+    case "enum":
+      encodeLines.push(
+        `  const enumValues = ${JSON.stringify(definition.enumValues ?? [])} as const;`,
+      );
+      encodeLines.push(
+        "  const enumIndex = enumValues.indexOf(value as never);",
+      );
+      encodeLines.push("  if (enumIndex === -1) {");
+      encodeLines.push(
+        "    throw new Error(`Unknown enum value ${String(value)} for ${definitionName}`);",
+      );
+      encodeLines.push("  }");
+      encodeLines.push(
+        `  ${renderOrdinalWrite(definition.enumWireType ?? "u8", "enumIndex + 1")}`,
+      );
+      decodeLines.push(
+        `  const enumValues = ${JSON.stringify(definition.enumValues ?? [])} as const;`,
+      );
+      decodeLines.push(
+        `  ${renderOrdinalRead(definition.enumWireType ?? "u8", "ordinal")}`,
+      );
+      decodeLines.push("  if (ordinal <= 0) {");
+      decodeLines.push(
+        "    throw new Error(`Invalid ordinal ${ordinal} for ${definitionName}`);",
+      );
+      decodeLines.push("  }");
+      decodeLines.push("  const value = enumValues[ordinal - 1];");
+      decodeLines.push("  if (value === undefined) {");
+      decodeLines.push(
+        "    throw new Error(`Invalid enum ordinal ${ordinal} for ${definitionName}`);",
+      );
+      decodeLines.push("  }");
+      decodeLines.push("  return value;");
+      break;
+  }
+  encodeLines.push("}");
+  decodeLines.push("}");
+  return `${encodeLines.join("\n")}\n\n${decodeLines.join("\n")}`;
+}
+
+function renderProjectedScalarHelpers(
+  name: string,
+  definition: BinaryProjectedScalarDefinition,
+): string {
+  const encodeLines = [
+    `function encode_${name}(`,
+    "  writer: BinaryWriter,",
+    "  value: unknown,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    ") {",
+  ];
+  const decodeLines = [
+    `function decode_${name}(`,
+    "  reader: BinaryReader,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    "): unknown {",
+  ];
+  if (definition.wireType === "playerRef") {
+    if (!definition.allowAllPlayers) {
+      encodeLines.push("  if (value === AllPlayers) {");
+      encodeLines.push(
+        "    throw new Error(`${definitionName} cannot target AllPlayers`);",
+      );
+      encodeLines.push("  }");
+    }
+    encodeLines.push(
+      `  writePlayerRef(writer, value as string | null | typeof AllPlayers, context, ${definition.inlineFallback ?? false});`,
+    );
+    decodeLines.push("  const playerId = readPlayerRef(reader, context);");
+    if (!definition.allowAllPlayers) {
+      decodeLines.push("  if (playerId === AllPlayers) {");
+      decodeLines.push(
+        "    throw new Error(`${definitionName} cannot target AllPlayers`);",
+      );
+      decodeLines.push("  }");
+    }
+    decodeLines.push("  return playerId;");
+  } else {
+    encodeLines.push(
+      "  const index = context.playerIdToIndex.get(value as never);",
+    );
+    encodeLines.push("  if (index === undefined) {");
+    encodeLines.push(
+      "    throw new Error(`Unknown stamped client ID: ${String(value)}`);",
+    );
+    encodeLines.push("  }");
+    encodeLines.push("  writer.writeUint16(index);");
+    decodeLines.push("  return requireClientId(reader.readUint16(), context);");
+  }
+  encodeLines.push("}");
+  decodeLines.push("}");
+  return `${encodeLines.join("\n")}\n\n${decodeLines.join("\n")}`;
+}
+
+function renderObjectHelpers(
+  name: string,
+  definition: BinaryObjectValueDefinition,
+): string {
+  const encodeLines = [
+    `function encode_${name}(`,
+    "  writer: BinaryWriter,",
+    "  value: unknown,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    ") {",
+    "  if (!isBinaryRecord(value)) {",
+    "    throw new Error(`Expected object for ${definitionName}`);",
+    "  }",
+    "  const source = value;",
+  ];
+  definition.fields.forEach((field, index) => {
+    const valueName = `fieldValue${index}`;
+    const access = `source[${JSON.stringify(field.name)}]`;
+    encodeLines.push(
+      field.defaultValue !== undefined
+        ? `  const ${valueName} = ${access} === undefined ? ${renderLiteral(field.defaultValue)} : ${access};`
+        : `  const ${valueName} = ${access};`,
+    );
+  });
+  if (definition.allowedFlags !== 0) {
+    encodeLines.push("  let flags = 0;");
+    definition.fields.forEach((field, index) => {
+      const valueName = `fieldValue${index}`;
+      if (
+        field.optional &&
+        field.value.kind === "scalar" &&
+        field.value.wireType === "bool"
+      ) {
+        encodeLines.push(`  if (${valueName} !== undefined) {`);
+        encodeLines.push(`    flags |= 1 << ${field.presenceBit!};`);
+        encodeLines.push(`    if (${valueName}) {`);
+        encodeLines.push(`      flags |= 1 << ${field.valueBit!};`);
+        encodeLines.push("    }");
+        encodeLines.push("  }");
+        return;
+      }
+      if (field.optional) {
+        encodeLines.push(`  if (${valueName} !== undefined) {`);
+        encodeLines.push(`    flags |= 1 << ${field.presenceBit!};`);
+        encodeLines.push("  }");
+        return;
+      }
+      if (field.nullable) {
+        encodeLines.push(`  if (${valueName} !== null) {`);
+        encodeLines.push(`    flags |= 1 << ${field.presenceBit!};`);
+        encodeLines.push("  }");
+      }
+    });
+    encodeLines.push("  writer.writeUint16(flags);");
+  }
+  definition.fields.forEach((field, index) => {
+    const childName = nestedHelperName(name, field.name);
+    const valueName = `fieldValue${index}`;
+    if (
+      field.optional &&
+      field.value.kind === "scalar" &&
+      field.value.wireType === "bool"
+    ) {
+      return;
+    }
+    if (field.optional) {
+      encodeLines.push(`  if (${valueName} !== undefined) {`);
+      encodeLines.push(
+        `    encode_${childName}(writer, ${valueName}, context, ${JSON.stringify(field.name)});`,
+      );
+      encodeLines.push("  }");
+      return;
+    }
+    if (field.nullable) {
+      encodeLines.push(`  if (${valueName} !== null) {`);
+      encodeLines.push(
+        `    encode_${childName}(writer, ${valueName}, context, ${JSON.stringify(field.name)});`,
+      );
+      encodeLines.push("  }");
+      return;
+    }
+    encodeLines.push(
+      `  encode_${childName}(writer, ${valueName}, context, ${JSON.stringify(field.name)});`,
+    );
+  });
+  encodeLines.push("}");
+
+  const decodeLines = [
+    `function decode_${name}(`,
+    "  reader: BinaryReader,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    "): Record<string, unknown> {",
+    `  const flags = ${definition.allowedFlags !== 0 ? "reader.readUint16()" : "0"};`,
+  ];
+  if (definition.allowedFlags !== 0) {
+    decodeLines.push(
+      `  const invalidFlags = flags & ~${definition.allowedFlags};`,
+    );
+    decodeLines.push("  if (invalidFlags !== 0) {");
+    decodeLines.push(
+      "    throw new Error(`Unsupported flags ${invalidFlags} for ${definitionName}`);",
+    );
+    decodeLines.push("  }");
+  }
+  decodeLines.push("  const output: Record<string, unknown> = {};");
+  definition.fields.forEach((field) => {
+    const childName = nestedHelperName(name, field.name);
+    const access = `output[${JSON.stringify(field.name)}]`;
+    if (
+      field.optional &&
+      field.value.kind === "scalar" &&
+      field.value.wireType === "bool"
+    ) {
+      decodeLines.push(
+        `  ${access} = (flags & (1 << ${field.presenceBit!})) !== 0 ? (flags & (1 << ${field.valueBit!})) !== 0 : ${renderLiteral(field.defaultValue)};`,
+      );
+      return;
+    }
+    if (field.optional) {
+      decodeLines.push(
+        `  ${access} = (flags & (1 << ${field.presenceBit!})) !== 0 ? decode_${childName}(reader, context, ${JSON.stringify(field.name)}) : ${renderLiteral(field.defaultValue)};`,
+      );
+      return;
+    }
+    if (field.nullable) {
+      decodeLines.push(
+        `  ${access} = (flags & (1 << ${field.presenceBit!})) !== 0 ? decode_${childName}(reader, context, ${JSON.stringify(field.name)}) : null;`,
+      );
+      return;
+    }
+    decodeLines.push(
+      `  ${access} = decode_${childName}(reader, context, ${JSON.stringify(field.name)});`,
+    );
+  });
+  decodeLines.push("  return output;");
+  decodeLines.push("}");
+
+  return `${encodeLines.join("\n")}\n\n${decodeLines.join("\n")}`;
+}
+
+function renderArrayHelpers(
+  name: string,
+  definition: BinaryArrayValueDefinition,
+): string {
+  const childName = nestedHelperName(name, "item");
+  const encodeLines = [
+    `function encode_${name}(`,
+    "  writer: BinaryWriter,",
+    "  value: unknown,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    ") {",
+    "  if (!Array.isArray(value)) {",
+    "    throw new Error(`Expected array for ${definitionName}`);",
+    "  }",
+    "  if (value.length > 0xffff) {",
+    "    throw new RangeError(`Binary array too long: ${value.length} elements exceeds 65535 for ${definitionName}`);",
+    "  }",
+    "  writer.writeUint16(value.length);",
+    "  value.forEach((entry, index) => {",
+    `    encode_${childName}(writer, entry, context, \`\${definitionName}[\${index}]\`);`,
+    "  });",
+    "}",
+  ];
+  const decodeLines = [
+    `function decode_${name}(`,
+    "  reader: BinaryReader,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    "): unknown[] {",
+    "  const length = reader.readUint16();",
+    "  return Array.from({ length }, (_, index) =>",
+    `    decode_${childName}(reader, context, \`\${definitionName}[\${index}]\`),`,
+    "  );",
+    "}",
+  ];
+  return `${encodeLines.join("\n")}\n\n${decodeLines.join("\n")}`;
+}
+
+function renderDiscriminatedUnionHelpers(
+  name: string,
+  definition: BinaryDiscriminatedUnionValueDefinition,
+): string {
+  const encodeLines = [
+    `function encode_${name}(`,
+    "  writer: BinaryWriter,",
+    "  value: unknown,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    ") {",
+    "  if (!isBinaryRecord(value)) {",
+    "    throw new Error(`Expected object for ${definitionName}`);",
+    "  }",
+    `  const discriminantValue = value[${JSON.stringify(definition.discriminant)}];`,
+    '  if (typeof discriminantValue !== "string") {',
+    `    throw new Error(\`Expected string discriminant ${definition.discriminant} on \${definitionName}\`);`,
+    "  }",
+    "  switch (discriminantValue) {",
+  ];
+  const decodeLines = [
+    `function decode_${name}(`,
+    "  reader: BinaryReader,",
+    "  context: BinaryProtocolContext,",
+    "  definitionName: string,",
+    "): Record<string, unknown> {",
+    `  ${renderOrdinalRead(definition.tagWireType, "tag")}`,
+    "  if (tag <= 0) {",
+    "    throw new Error(`Invalid ordinal ${tag} for ${definitionName}`);",
+    "  }",
+    "  switch (tag) {",
+  ];
+  definition.variants.forEach((variant) => {
+    const childName = nestedHelperName(name, variant.type);
+    encodeLines.push(`    case ${JSON.stringify(variant.type)}:`);
+    encodeLines.push(
+      `      ${renderOrdinalWrite(definition.tagWireType, String(variant.tag))}`,
+    );
+    encodeLines.push(
+      `      encode_${childName}(writer, value, context, \`\${definitionName}.${variant.type}\`);`,
+    );
+    encodeLines.push("      return;");
+
+    decodeLines.push(`    case ${variant.tag}: {`);
+    decodeLines.push(
+      `      const decoded = decode_${childName}(reader, context, \`\${definitionName}.${variant.type}\`);`,
+    );
+    decodeLines.push("      if (!isBinaryRecord(decoded)) {");
+    decodeLines.push(
+      `        throw new Error(\`Expected object payload for \${definitionName}.${variant.type}\`);`,
+    );
+    decodeLines.push("      }");
+    decodeLines.push(
+      `      return { ${JSON.stringify(definition.discriminant)}: ${JSON.stringify(variant.type)}, ...decoded };`,
+    );
+    decodeLines.push("    }");
+  });
+  encodeLines.push("    default:");
+  encodeLines.push(
+    "      throw new Error(`Unsupported ${definitionName} variant ${discriminantValue} on binary path`);",
+  );
+  encodeLines.push("  }");
+  encodeLines.push("}");
+  decodeLines.push("    default:");
+  decodeLines.push(
+    "      throw new Error(`Unknown ${definitionName} tag: ${tag}`);",
+  );
+  decodeLines.push("  }");
+  decodeLines.push("}");
+  return `${encodeLines.join("\n")}\n\n${decodeLines.join("\n")}`;
+}
+
+function renderValueHelpers(
+  name: string,
+  definition: BinaryValueDefinition,
+): string {
+  const childBlocks =
+    definition.kind === "object"
+      ? definition.fields
+          .map((field) =>
+            renderValueHelpers(nestedHelperName(name, field.name), field.value),
+          )
+          .filter(Boolean)
+      : definition.kind === "array"
+        ? [
+            renderValueHelpers(
+              nestedHelperName(name, "item"),
+              definition.element,
+            ),
+          ]
+        : definition.kind === "discriminatedUnion"
+          ? definition.variants
+              .map((variant) =>
+                renderValueHelpers(
+                  nestedHelperName(name, variant.type),
+                  variant.value,
+                ),
+              )
+              .filter(Boolean)
+          : [];
+  const localChunks =
+    definition.kind === "scalar"
+      ? [renderScalarHelpers(name, definition)]
+      : definition.kind === "projectedScalar"
+        ? [renderProjectedScalarHelpers(name, definition)]
+        : definition.kind === "object"
+          ? [renderObjectHelpers(name, definition)]
+          : definition.kind === "array"
+            ? [renderArrayHelpers(name, definition)]
+            : [renderDiscriminatedUnionHelpers(name, definition)];
+  return [...childBlocks, localChunks.join("\n\n")]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function renderIntentTypeHelpers(
+  definitions: readonly BinaryIntentDefinition[],
+): string {
+  const byTypeEntries = definitions
+    .map(
+      (definition) =>
+        `  ${JSON.stringify(definition.type)}: ${definition.opcode},`,
+    )
+    .join("\n");
+  const byOpcodeEntries = definitions
+    .map(
+      (definition) =>
+        `  ${definition.opcode}: ${JSON.stringify(definition.type)},`,
+    )
+    .join("\n");
+  return [
+    "const BINARY_INTENT_OPCODE_BY_TYPE = {",
+    byTypeEntries,
+    "} as const;",
+    "",
+    "const BINARY_INTENT_TYPE_BY_OPCODE = {",
+    byOpcodeEntries,
+    "} as const;",
+    "",
+    'export function hasBinaryIntentOpcode(intentType: Intent["type"]): boolean {',
+    "  return Object.prototype.hasOwnProperty.call(",
+    "    BINARY_INTENT_OPCODE_BY_TYPE,",
+    "    intentType,",
+    "  );",
+    "}",
+    "",
+    'export function intentTypeToOpcode(intentType: Intent["type"]): BinaryIntentType {',
+    '  const opcode = (BINARY_INTENT_OPCODE_BY_TYPE as Partial<Record<Intent["type"], BinaryIntentType>>)[intentType];',
+    "  if (opcode === undefined) {",
+    "    throw new Error(`Unsupported binary intent type: ${intentType}`);",
+    "  }",
+    "  return opcode;",
+    "}",
+    "",
+    'export function opcodeToIntentType(opcode: number): Intent["type"] {',
+    '  const intentType = (BINARY_INTENT_TYPE_BY_OPCODE as Partial<Record<number, Intent["type"]>>)[opcode];',
+    "  if (intentType === undefined) {",
+    "    throw new Error(`Unknown binary intent opcode: ${opcode}`);",
+    "  }",
+    "  return intentType;",
+    "}",
+  ].join("\n");
+}
+
+function renderGeneratedIntentExports(model: GeneratedBinaryModel): string {
+  const intentHelperName = "IntentPayload";
+  return [
+    "export function encodeGeneratedBinaryIntent(",
+    "  writer: BinaryWriter,",
+    "  intent: Intent,",
+    "  context: BinaryProtocolContext,",
+    ") {",
+    `  encode_${intentHelperName}(writer, intent, context, "binary intent type");`,
+    "}",
+    "",
+    "export function decodeGeneratedBinaryIntent(",
+    "  reader: BinaryReader,",
+    "  context: BinaryProtocolContext,",
+    "): Intent {",
+    `  return decode_${intentHelperName}(reader, context, "binary intent type") as Intent;`,
+    "}",
+  ].join("\n");
+}
+
+function renderMessageHelpers(
+  model: GeneratedBinaryModel,
+  direction: BinaryDirection,
+): string {
+  const relevant = model.messageDefinitions.filter(
+    (definition) => definition.direction === direction,
+  );
+  const opposite = model.messageDefinitions.filter(
+    (definition) => definition.direction !== direction,
+  );
+  const typeName = pascalCase(direction);
+  const messageType =
+    direction === "client"
+      ? "BinaryClientGameplayMessage"
+      : "BinaryServerGameplayMessage";
+  const encodeLines = [
+    `export function encodeGeneratedBinary${typeName}GameplayMessage(`,
+    `  message: ${messageType},`,
+    "  context: BinaryProtocolContext,",
+    "): Uint8Array {",
+    "  const writer = new BinaryWriter();",
+    "  const messageTypeName = message.type as string;",
+    "  switch (messageTypeName) {",
+  ];
+  const decodeLines = [
+    `export function decodeGeneratedBinary${typeName}GameplayMessage(`,
+    "  data: ArrayBuffer | Uint8Array,",
+    "  context: BinaryProtocolContext,",
+    `): ${messageType} {`,
+    "  const reader = new BinaryReader(toUint8Array(data));",
+    "  const { messageType } = reader.readFrameHeader();",
+    `  let decoded: ${messageType};`,
+    "  switch (messageType) {",
+  ];
+  relevant.forEach((definition) => {
+    const helperName = `${pascalCase(direction)}${pascalCase(definition.type)}Payload`;
+    encodeLines.push(`    case ${JSON.stringify(definition.type)}:`);
+    encodeLines.push(
+      `      return writer.writeFrame(${definition.messageType}, () => encode_${helperName}(writer, message, context, ${JSON.stringify(`binary message type ${definition.type}`)}));`,
+    );
+    decodeLines.push(`    case ${definition.messageType}:`);
+    decodeLines.push(
+      `      decoded = { type: ${JSON.stringify(definition.type)}, ...(decode_${helperName}(reader, context, ${JSON.stringify(`binary message type ${definition.type}`)}) as Record<string, unknown>) } as ${messageType};`,
+    );
+    decodeLines.push("      break;");
+  });
+  opposite.forEach((definition) => {
+    encodeLines.push(`    case ${JSON.stringify(definition.type)}:`);
+    encodeLines.push(
+      `      throw new Error(${JSON.stringify(`Unexpected ${direction} binary message type: ${definition.type}`)});`,
+    );
+    decodeLines.push(`    case ${definition.messageType}:`);
+    decodeLines.push(
+      `      throw new Error(${JSON.stringify(`Unexpected ${direction} binary message type: ${definition.type}`)});`,
+    );
+  });
+  encodeLines.push("    default:");
+  encodeLines.push(
+    `      throw new Error(\`Unknown ${direction} binary message type: \${String((message as { type?: unknown }).type)}\`);`,
+  );
+  encodeLines.push("  }");
+  encodeLines.push("}");
+  decodeLines.push("    default:");
+  decodeLines.push(
+    `      throw new Error(\`Unknown ${direction} binary message type: \${messageType}\`);`,
+  );
+  decodeLines.push("  }");
+  decodeLines.push("  reader.ensureFinished();");
+  decodeLines.push("  return decoded;");
+  decodeLines.push("}");
+  return `${encodeLines.join("\n")}\n\n${decodeLines.join("\n")}`;
+}
+
+function renderClientCanEncodeFunction(model: GeneratedBinaryModel): string {
+  const clientDefinitions = model.messageDefinitions.filter(
+    (definition) => definition.direction === "client",
+  );
+  const lines = [
+    "export function canEncodeGeneratedBinaryClientGameplayMessage(",
+    "  message: ClientMessage,",
+    "): message is BinaryClientGameplayMessage {",
+    "  switch (message.type) {",
+  ];
+  clientDefinitions.forEach((definition) => {
+    lines.push(`    case ${JSON.stringify(definition.type)}:`);
+    if (definition.type === "intent") {
+      lines.push("      return hasBinaryIntentOpcode(message.intent.type);");
+      return;
+    }
+    lines.push("      return true;");
+  });
+  lines.push("    default:");
+  lines.push("      return false;");
+  lines.push("  }");
+  lines.push("}");
+  return lines.join("\n");
+}
+
+function renderHelperPrelude(): string {
+  return [
+    "function isBinaryRecord(value: unknown): value is Record<string, unknown> {",
+    '  return typeof value === "object" && value !== null && !Array.isArray(value);',
+    "}",
+  ].join("\n");
+}
+
+export function collectGeneratedBinaryModel(): GeneratedBinaryModel {
+  const state = createCompileState();
+  const compiledIntentUnion = compileValueSchema(AllIntentSchema, state);
+  if (compiledIntentUnion.kind !== "discriminatedUnion") {
+    throw new Error("AllIntentSchema must compile to a discriminated union");
+  }
+  return {
+    intentUnion: compiledIntentUnion,
+    intentDefinitions: buildIntentDefinitions(compiledIntentUnion),
+    messageDefinitions: buildMessageDefinitions(state),
+  };
 }
 
 export function generateBinaryGameplaySource(): string {
@@ -665,15 +1381,33 @@ export function generateBinaryGameplaySource(): string {
     key: pascalCase(definition.type),
     value: definition.opcode,
   }));
+  const helperBlocks = [
+    renderValueHelpers("IntentPayload", model.intentUnion),
+    ...model.messageDefinitions.map((definition) =>
+      renderValueHelpers(
+        `${pascalCase(definition.direction)}${pascalCase(definition.type)}Payload`,
+        definition.payload,
+      ),
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
   return `/* This file is auto-generated by scripts/gen-binary-gameplay.ts. Do not edit manually. */
 import type {
   ClientMessage,
   Intent,
   ServerMessage,
 } from "../../Schemas";
-import type {
-  BinaryIntentDefinition,
-  BinaryMessageDefinition,
+import { AllPlayers } from "../../game/Game";
+import {
+  BinaryReader,
+  BinaryWriter,
+  requireClientId,
+  readPlayerRef,
+  toUint8Array,
+  writePlayerRef,
+  type BinaryProtocolContext,
 } from "../../protocol/BinaryRuntime";
 
 ${renderConstObject("BinaryMessageType", messageConstants)}
@@ -683,21 +1417,6 @@ export type BinaryMessageType =
 ${renderConstObject("BinaryIntentType", intentConstants)}
 export type BinaryIntentType =
   (typeof BinaryIntentType)[keyof typeof BinaryIntentType];
-
-${renderDefinitions("BINARY_MESSAGE_DEFINITIONS", model.messageDefinitions)}
-${renderDefinitions("BINARY_INTENT_DEFINITIONS", model.intentDefinitions)}
-
-export const BINARY_MESSAGE_DEFINITION_BY_TYPE = new Map(
-  (BINARY_MESSAGE_DEFINITIONS as readonly BinaryMessageDefinition[]).map(
-    (definition) => [definition.type, definition],
-  ),
-);
-
-export const BINARY_MESSAGE_DEFINITION_BY_MESSAGE_TYPE = new Map(
-  (BINARY_MESSAGE_DEFINITIONS as readonly BinaryMessageDefinition[]).map(
-    (definition) => [definition.messageType, definition],
-  ),
-);
 
 export type BinaryClientGameplayMessage = Extract<
   ClientMessage,
@@ -709,37 +1428,19 @@ export type BinaryServerGameplayMessage = Extract<
   { type: ${renderStringLiteralUnion(serverMessageTypes)} }
 >;
 
-export const BINARY_INTENT_DEFINITION_BY_TYPE = new Map(
-  (BINARY_INTENT_DEFINITIONS as readonly BinaryIntentDefinition[]).map(
-    (definition) => [definition.type, definition],
-  ),
-);
+${renderHelperPrelude()}
 
-export const BINARY_INTENT_DEFINITION_BY_OPCODE = new Map(
-  (BINARY_INTENT_DEFINITIONS as readonly BinaryIntentDefinition[]).map(
-    (definition) => [definition.opcode, definition],
-  ),
-);
+${helperBlocks}
 
-export function hasBinaryIntentOpcode(intentType: Intent["type"]): boolean {
-  return BINARY_INTENT_DEFINITION_BY_TYPE.has(intentType);
-}
+${renderIntentTypeHelpers(model.intentDefinitions)}
 
-export function intentTypeToOpcode(intentType: Intent["type"]): BinaryIntentType {
-  const definition = BINARY_INTENT_DEFINITION_BY_TYPE.get(intentType);
-  if (!definition) {
-    throw new Error(\`Unsupported binary intent type: \${intentType}\`);
-  }
-  return definition.opcode as BinaryIntentType;
-}
+${renderGeneratedIntentExports(model)}
 
-export function opcodeToIntentType(opcode: number): Intent["type"] {
-  const definition = BINARY_INTENT_DEFINITION_BY_OPCODE.get(opcode);
-  if (!definition) {
-    throw new Error(\`Unknown binary intent opcode: \${opcode}\`);
-  }
-  return definition.type as Intent["type"];
-}
+${renderClientCanEncodeFunction(model)}
+
+${renderMessageHelpers(model, "client")}
+
+${renderMessageHelpers(model, "server")}
 `;
 }
 

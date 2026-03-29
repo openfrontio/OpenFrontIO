@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
-  BINARY_INTENT_DEFINITIONS,
-  BINARY_MESSAGE_DEFINITIONS,
+  BinaryMessageType,
   hasBinaryIntentOpcode,
+  intentTypeToOpcode,
+  opcodeToIntentType,
 } from "../../src/core/__generated__/binary/generated";
-import { collectGeneratedBinaryModel } from "../../src/core/protocol/BinaryGenerator";
+import {
+  collectGeneratedBinaryModel,
+  generateBinaryGameplaySource,
+} from "../../src/core/protocol/BinaryGenerator";
 import {
   binaryGameplayMessageRegistry,
   isBinaryGameplayMessageSchema,
@@ -75,6 +79,16 @@ function getDiscriminatedUnionOptions(schema: z.ZodTypeAny): z.ZodTypeAny[] {
   throw new Error("Unable to inspect discriminated union options");
 }
 
+function pascalCase(value: string): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_\s-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase() + part.slice(1))
+    .join("");
+}
+
 describe("BinaryGenerator", () => {
   function getExpectedBinaryGameplayMessages() {
     return [
@@ -103,11 +117,11 @@ describe("BinaryGenerator", () => {
       .map(getDiscriminantLiteral);
 
     expect(
-      BINARY_INTENT_DEFINITIONS.map((definition) => definition.type),
-    ).toEqual(expectedTypes);
-    expect(
-      BINARY_INTENT_DEFINITIONS.map((definition) => definition.opcode),
+      expectedTypes.map((type) => intentTypeToOpcode(type as any)),
     ).toEqual(expectedTypes.map((_, index) => index + 1));
+    expect(
+      expectedTypes.map((_, index) => opcodeToIntentType(index + 1)),
+    ).toEqual(expectedTypes);
     expect(hasBinaryIntentOpcode("update_game_config")).toBe(false);
   });
 
@@ -116,31 +130,35 @@ describe("BinaryGenerator", () => {
       (message) => message.type,
     );
     expect(
-      BINARY_MESSAGE_DEFINITIONS.map((definition) => definition.type),
-    ).toEqual(expectedTypes);
-    expect(
-      BINARY_MESSAGE_DEFINITIONS.map((definition) => definition.messageType),
+      expectedTypes.map(
+        (type) =>
+          BinaryMessageType[pascalCase(type) as keyof typeof BinaryMessageType],
+      ),
     ).toEqual(expectedTypes.map((_, index) => index + 1));
   });
 
   it("keeps binary gameplay message discovery in sync with the annotated top-level gameplay variants", () => {
+    const model = collectGeneratedBinaryModel();
     expect(
-      BINARY_MESSAGE_DEFINITIONS.map((definition) => ({
+      model.messageDefinitions.map((definition) => ({
         type: definition.type,
         direction: definition.direction,
       })),
     ).toEqual(getExpectedBinaryGameplayMessages());
   });
 
-  it("keeps the generated manifest in sync with the live generator model", () => {
-    const model = collectGeneratedBinaryModel();
+  it("emits direct codec entrypoints instead of definition manifests", () => {
+    const source = generateBinaryGameplaySource();
 
-    expect(model.intentDefinitions).toEqual(BINARY_INTENT_DEFINITIONS);
-    expect(model.messageDefinitions).toEqual(BINARY_MESSAGE_DEFINITIONS);
+    expect(source).toContain("encodeGeneratedBinaryClientGameplayMessage");
+    expect(source).toContain("decodeGeneratedBinaryServerGameplayMessage");
+    expect(source).toContain("decodeGeneratedBinaryIntent");
+    expect(source).not.toContain("BINARY_MESSAGE_DEFINITIONS");
+    expect(source).not.toContain("BINARY_INTENT_DEFINITIONS");
   });
 
   it("encodes allianceExtension recipients as player refs", () => {
-    const definition = BINARY_INTENT_DEFINITIONS.find(
+    const definition = collectGeneratedBinaryModel().intentDefinitions.find(
       (candidate) => candidate.type === "allianceExtension",
     );
 
@@ -191,9 +209,10 @@ describe("BinaryGenerator", () => {
   });
 
   it("compiles turn payloads through recursive arrays and projected client indexes", () => {
-    const turnDefinition = BINARY_MESSAGE_DEFINITIONS.find(
-      (definition) => definition.type === "turn",
-    );
+    const turnDefinition =
+      collectGeneratedBinaryModel().messageDefinitions.find(
+        (definition) => definition.type === "turn",
+      );
 
     expect(turnDefinition?.payload).toEqual(
       expect.objectContaining({
