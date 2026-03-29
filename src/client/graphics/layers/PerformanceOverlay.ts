@@ -476,14 +476,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
   };
 
-  private onUserSettingsChanged = (event: Event) => {
-    const customEvent = event as CustomEvent<{
-      key?: string;
-      value?: unknown;
-    }>;
-    if (customEvent.detail?.key !== "settings.performanceOverlay") return;
-
-    const nextVisible = customEvent.detail.value === true;
+  private onUserSettingsChanged = (event: CustomEvent) => {
+    const nextVisible = (event.detail as boolean) === true;
     if (this.isVisible === nextVisible) return;
     this.setVisible(nextVisible);
   };
@@ -511,7 +505,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (!this.isUserSettingsListenerAttached) {
       globalThis.addEventListener(
-        "user-settings-changed",
+        "event:user-settings-changed:settings.performanceOverlay",
         this.onUserSettingsChanged,
       );
       this.isUserSettingsListenerAttached = true;
@@ -523,7 +517,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (this.isUserSettingsListenerAttached) {
       globalThis.removeEventListener(
-        "user-settings-changed",
+        "event:user-settings-changed:settings.performanceOverlay",
         this.onUserSettingsChanged,
       );
       this.isUserSettingsListenerAttached = false;

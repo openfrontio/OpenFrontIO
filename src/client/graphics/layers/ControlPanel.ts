@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -8,9 +9,9 @@ import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import soldierIcon from "/images/SoldierIcon.svg?url";
-import swordIcon from "/images/SwordIcon.svg?url";
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
+const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {

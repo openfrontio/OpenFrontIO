@@ -6,13 +6,13 @@ const PATTERN_KEY = "territoryPattern";
 export class UserSettings {
   private static cache = new Map<string, string | null>();
 
-  private emitChange(key: string, value: boolean | number | string): void {
+  private emitChange(key: string, value: any): void {
     try {
       const maybeDispatch = (globalThis as any)?.dispatchEvent;
       if (typeof maybeDispatch !== "function") return;
       (globalThis as any).dispatchEvent(
-        new CustomEvent("user-settings-changed", {
-          detail: { key, value },
+        new CustomEvent(`event:user-settings-changed:${key}`, {
+          detail: value,
         }),
       );
     } catch {
@@ -219,6 +219,7 @@ export class UserSettings {
     } else {
       this.setCached(PATTERN_KEY, patternName);
     }
+    this.emitChange("pattern", patternName);
   }
 
   getSelectedColor(): string | undefined {
@@ -233,10 +234,29 @@ export class UserSettings {
     }
   }
 
-  getFlag(): string | undefined {
-    const flag = this.getCached("flag") ?? undefined;
-    if (!flag || flag === "xx") return undefined;
+  getFlag(): string | null {
+    let flag = this.getCached("flag");
+    if (!flag) return null;
+    // Migrate bare country codes to country: prefix
+    if (!flag.startsWith("flag:") && !flag.startsWith("country:")) {
+      flag = `country:${flag}`;
+      this.setCached("flag", flag);
+    }
     return flag;
+  }
+
+  setFlag(flag: string): void {
+    if (flag === "country:xx") {
+      this.clearFlag();
+    } else {
+      localStorage.setItem("flag", flag);
+    }
+    console.log("emitting change!");
+    this.emitChange("flag", flag);
+  }
+
+  clearFlag(): void {
+    localStorage.removeItem("flag");
   }
 
   backgroundMusicVolume(): number {

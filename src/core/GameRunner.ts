@@ -1,5 +1,5 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/ConfigLoader";
+import { getGameLogicConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -35,7 +35,7 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameStart.config, null);
+  const config = await getGameLogicConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,

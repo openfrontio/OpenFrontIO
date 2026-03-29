@@ -329,6 +329,10 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "tourney1": "Tourney 2 Teams",
+    "tourney2": "Tourney 3 Teams",
+    "tourney3": "Tourney 4 Teams",
+    "tourney4": "Tourney 8 Teams",
     "passage": "Passage",
     "sierpinski": "Sierpinski",
     "thebox": "The Box",
@@ -346,12 +350,14 @@
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
-    "aegean": "Aegean"
+    "aegean": "Aegean",
+    "milkyway": "Milky Way"
   },
   "map_categories": {
     "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
+    "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
     "arcade": "Arcade"
@@ -368,7 +374,10 @@
     "error": "An error occurred. Please try again or contact support.",
     "joined_waiting": "Lobby joined! Waiting for host to start...",
     "version_mismatch": "This game was created with a different version. Cannot join.",
-    "disabled_units": "Disabled Units"
+    "disabled_units": "Disabled Units",
+    "game_length": "Game length",
+    "pvp_immunity": "PVP immunity duration",
+    "starting_gold": "Starting Gold"
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
@@ -406,7 +415,6 @@
     "title": "Create Private Lobby",
     "mode": "Mode",
     "team_count": "Number of Teams",
-    "team_type": "Team Type",
     "options_title": "Options",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
@@ -493,7 +501,15 @@
     "starting_gold_label": "Starting Gold",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "disable_alliances": "Alliances Disabled",
-    "disable_alliances_label": "Alliances"
+    "disable_alliances_label": "Alliances",
+    "ports_disabled": "Ports Disabled",
+    "ports_disabled_label": "Ports",
+    "nukes_disabled": "Nukes Disabled",
+    "nukes_disabled_label": "Nukes",
+    "sams_disabled": "SAMs Disabled",
+    "sams_disabled_label": "SAMs",
+    "peace_time": "4min Peace",
+    "peace_time_label": "PVP Immunity"
   },
   "select_lang": {
     "title": "Select Language"
@@ -848,7 +864,8 @@
   },
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "host_left": "The host has left the lobby."
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
@@ -912,18 +929,25 @@
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "catching_up": "Catching up..."
   },
+  "store": {
+    "title": "Store",
+    "patterns": "Skins",
+    "flags": "Flags",
+    "no_flags": "No flags available. Check back later for new items.",
+    "no_skins": "No skins available. Check back later for new items."
+  },
   "territory_patterns": {
     "title": "Skins",
-    "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "My Skins",
-    "all_owned": "All skins owned! Check back later for new items.",
     "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
     "selected": "selected"
+  },
+  "cosmetics": {
+    "artist_label": "Artist:"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -994,6 +1018,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",

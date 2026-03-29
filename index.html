@@ -7,8 +7,8 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/images/Favicon.svg" />
+    <link rel="manifest" href="<%- manifestHref %>" />
+    <link rel="icon" type="image/svg+xml" href="<%- faviconHref %>" />
 
     <!-- Preload styles -->
     <style>
@@ -50,16 +50,28 @@
       property="og:description"
       content="Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game."
     />
-    <meta
-      property="og:image"
-      content="https://openfront.io/images/GameplayScreenshot.png"
-    />
+    <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
     <!-- Injected from Server env -->
     <script>
       window.GIT_COMMIT = <%- gitCommit %>;
-      window.INSTANCE_ID = <%- instanceId %>;
+      window.ASSET_MANIFEST = <%- assetManifest %>;
+      window.BOOTSTRAP_CONFIG = {
+        gameEnv: <%- gameEnv %>,
+      };
+      document.documentElement.style.setProperty(
+        "--background-image-url",
+        `url("<%- backgroundImageUrl %>")`,
+      );
+      document.documentElement.style.setProperty(
+        "--desktop-logo-image-url",
+        `url("<%- desktopLogoImageUrl %>")`,
+      );
+      document.documentElement.style.setProperty(
+        "--mobile-logo-image-url",
+        `url("<%- mobileLogoImageUrl %>")`,
+      );
     </script>
 
     <!-- CrazyGames SDK -->
@@ -126,23 +138,15 @@
       <div
         id="background-layer"
         class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
-        style="
-          background-image: url(&quot;/resources/images/background.webp&quot;);
-        "
+        style="background-image: var(--background-image-url)"
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
-        style="
-          background-image: url(&quot;/resources/images/OpenFront.webp&quot;);
-          opacity: 0.5;
-        "
+        style="background-image: var(--desktop-logo-image-url); opacity: 0.5"
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
-        style="
-          background-image: url(&quot;/resources/images/OF.webp&quot;);
-          opacity: 0.5;
-        "
+        style="background-image: var(--mobile-logo-image-url); opacity: 0.5"
       ></div>
     </div>
 
@@ -204,11 +208,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></join-lobby-modal>
-        <territory-patterns-modal
+        <store-modal
           id="page-item-store"
           inline
           class="hidden w-full h-full page-content relative z-50"
-        ></territory-patterns-modal>
+        ></store-modal>
         <user-setting
           id="page-settings"
           inline
@@ -245,6 +249,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></flag-input-modal>
+        <territory-patterns-modal
+          id="territory-patterns-modal"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></territory-patterns-modal>
         <ranked-modal
           id="page-ranked"
           inline
@@ -259,9 +268,6 @@
       </div>
 
       <!-- Global Modals -->
-      <territory-patterns-modal
-        id="territory-patterns-modal"
-      ></territory-patterns-modal>
     </div>
 
     <!-- Game components -->
