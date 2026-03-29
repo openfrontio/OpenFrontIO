@@ -67,14 +67,16 @@ const PlayerAchievementSchema = z.object({
 });
 
 const AchievementGroupSchema = z.union([
-  z.object({
-    type: z.literal("singleplayer-map"),
-    data: z.array(SingleplayerMapAchievementSchema),
-  }),
-  z.object({
-    type: z.literal("player"),
-    data: z.array(PlayerAchievementSchema),
-  }),
+  z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("singleplayer-map"),
+      data: z.array(SingleplayerMapAchievementSchema),
+    }),
+    z.object({
+      type: z.literal("player"),
+      data: z.array(PlayerAchievementSchema),
+    }),
+  ]),
   // Forward-compatible catch-all for achievement types not yet
   // recognized by the frontend.
   z.object({
