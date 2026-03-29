@@ -1,0 +1,50 @@
+{
+  "name": "Deglaciated Antarctica",
+  "nations": [
+    {
+      "coordinates": [1545, 785],
+      "name": "Penguin Empire",
+      "flag": "an_pe"
+    },
+    {
+      "coordinates": [1365, 155],
+      "name": "Norwegian Claim",
+      "flag": "no"
+    },
+    {
+      "coordinates": [1810, 450],
+      "name": "Upper Australian Claim",
+      "flag": "au"
+    },
+    {
+      "coordinates": [1980, 980],
+      "name": "Lower Australian Claim",
+      "flag": "au"
+    },
+    {
+      "coordinates": [495, 605],
+      "name": "Argentinian Claim",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [1150, 715],
+      "name": "United Kingdom Claim",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1060, 935],
+      "name": "Chilean Claim",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [1365, 1400],
+      "name": "New Zealand Claim",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1590, 1120],
+      "name": "French Claim",
+      "flag": "fr"
+    }
+  ]
+}
