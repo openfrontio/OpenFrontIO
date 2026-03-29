@@ -63,7 +63,7 @@ const SingleplayerMapAchievementSchema = z.object({
 const PlayerAchievementSchema = z.object({
   achievement: z.string(),
   achievedAt: z.string().nullable(),
-  gameId: z.number().nullable(),
+  gameId: z.string().nullable(),
 });
 
 const AchievementGroupSchema = z.union([
