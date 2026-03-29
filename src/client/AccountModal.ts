@@ -11,6 +11,7 @@ import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
+import "./components/baseComponents/stats/PlayerAchievements";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
@@ -132,6 +133,7 @@ export class AccountModal extends BaseModal {
   private renderAccountInfo() {
     const me = this.userMeResponse?.user;
     const isLinked = me?.discord ?? me?.email;
+    const achievements = this.userMeResponse?.player?.achievements ?? [];
 
     if (!isLinked) {
       return this.renderLoginOptions();
@@ -173,6 +175,15 @@ export class AccountModal extends BaseModal {
                 ></player-stats-tree-view>
               </div>`
             : ""}
+
+          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+              ${translateText("account_modal.achievements")}
+            </h3>
+            <player-achievements
+              .achievementGroups=${achievements}
+            ></player-achievements>
+          </div>
 
           <!-- Bottom Row: Recent Games Section -->
           <div class="bg-white/5 rounded-xl border border-white/10 p-6">

@@ -220,6 +220,13 @@
     "title": "Account",
     "connected_as": "Connected as",
     "stats_overview": "Stats Overview",
+    "achievements": "Achievements",
+    "achievement_label": "Achievement",
+    "achieved_on": "Achieved on",
+    "status": "Status",
+    "no_achievements": "No player achievements unlocked yet.",
+    "not_unlocked_yet": "Not unlocked yet",
+    "unknown_difficulty": "Unknown",
     "link_discord": "Link Discord Account",
     "log_out": "Log Out",
     "sign_in_desc": "Sign in to save your stats and progress",
@@ -234,6 +241,10 @@
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "enter_email_address": "Please enter an email address",
     "personal_player_id": "Personal Player ID:"
+  },
+  "achivements": {
+    "win_no_nukes": "Win Without Nukes",
+    "win_no_nukes_desc": "Win a free-for-all match without launching any nukes."
   },
   "leaderboard_modal": {
     "title": "Leaderboard",
