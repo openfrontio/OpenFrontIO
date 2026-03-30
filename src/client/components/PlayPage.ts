@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import "./NewsBox.js";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
@@ -106,6 +107,9 @@ export class PlayPage extends LitElement {
           <div
             class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2 -mb-4"
           ></div>
+
+          <!-- News box above username -->
+          <news-box class="lg:col-span-2"></news-box>
 
           <!-- Username: left col -->
           <div
