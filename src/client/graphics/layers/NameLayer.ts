@@ -279,6 +279,7 @@ export class NameLayer implements Layer {
     ) as HTMLDivElement;
 
     const font = this.theme.font();
+    nameDiv.style.fontFamily = font;
 
     const flag = player.cosmetics.flag;
     if (flag) {
