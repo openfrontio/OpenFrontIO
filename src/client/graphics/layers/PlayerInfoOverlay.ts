@@ -1,4 +1,4 @@
-import { LitElement, TemplateResult, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
@@ -25,7 +25,12 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
-import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
+import {
+  EMOJI_ICON_KIND,
+  getFirstPlacePlayer,
+  getPlayerIcons,
+  IMAGE_ICON_KIND,
+} from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
@@ -96,6 +101,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   private lastMouseUpdate = 0;
+  private alliancesDisabled: boolean = false;
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -113,6 +119,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.immunityBarVisible = e.visible;
     });
     this._isActive = true;
+    this.alliancesDisabled = this.game.config().disableAlliances();
   }
 
   private onMouseEvent(event: MouseMoveEvent) {
@@ -259,6 +266,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
       includeAllianceIcon: false,
       firstPlace,
+      alliancesDisabled: this.alliancesDisabled,
     });
 
     if (icons.length === 0) {
@@ -267,11 +275,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`<span class="flex items-center gap-1 ml-1 shrink-0">
       ${icons.map((icon) =>
-        icon.kind === "emoji" && icon.text
+        icon.kind === EMOJI_ICON_KIND && icon.text
           ? html`<span class="text-sm shrink-0" translate="no"
               >${icon.text}</span
             >`
-          : icon.kind === "image" && icon.src
+          : icon.kind === IMAGE_ICON_KIND && icon.src
             ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
             : html``,
       )}
