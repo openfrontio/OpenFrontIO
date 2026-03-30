@@ -1,4 +1,4 @@
-import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { assetUrl } from "src/core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Config, Theme } from "../../../core/configuration/Config";
@@ -129,7 +129,6 @@ export class NameLayer implements Layer {
     this.iconCenterTemplate.style.transform = "translateY(-50%)";
 
     this.flagTemplate = document.createElement("img");
-    this.flagTemplate.style.width = "100%";
     this.flagTemplate.style.height = "100%";
     this.flagTemplate.style.display = "block";
 
@@ -247,7 +246,7 @@ export class NameLayer implements Layer {
     flagWrapper.classList.add(PLAYER_FLAG);
     flagWrapper.style.opacity = "0.8";
     flagWrapper.style.zIndex = "1";
-    flagWrapper.style.aspectRatio = "3/4";
+    flagWrapper.style.aspectRatio = "contain";
     nameDiv.appendChild(flagWrapper);
 
     const nameSpan = document.createElement("span");
@@ -293,13 +292,9 @@ export class NameLayer implements Layer {
     troopsDiv.textContent = renderTroops(player.troops());
 
     const flag = player.cosmetics.flag;
-    if (!flag) {
-      flagDiv.style.display = "none";
-    } else if (flag.startsWith("!")) {
-      renderPlayerFlag(flag, flagDiv);
-    } else {
+    if (flag) {
       const flagImg = this.flagTemplate.cloneNode(true) as HTMLImageElement;
-      flagImg.src = "/flags/" + flag + ".svg";
+      flagImg.src = flag;
       flagDiv.appendChild(flagImg);
     }
 

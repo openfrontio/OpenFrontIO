@@ -2,7 +2,8 @@ import { Howl } from "howler";
 import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
-import kaChingSound from "/sounds/effects/ka-ching.mp3?url";
+import { assetUrl } from "../../core/AssetUrls";
+const kaChingSound = assetUrl("sounds/effects/ka-ching.mp3");
 
 export enum SoundEffect {
   KaChing = "ka-ching",

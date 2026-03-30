@@ -1,18 +1,23 @@
+import { assetUrl } from "../../core/AssetUrls";
 import { AllPlayers, Nukes } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
-import allianceIcon from "/images/AllianceIcon.svg?url";
-import allianceIconFaded from "/images/AllianceIconFaded.svg?url";
-import allianceRequestBlackIcon from "/images/AllianceRequestBlackIcon.svg?url";
-import allianceRequestWhiteIcon from "/images/AllianceRequestWhiteIcon.svg?url";
-import crownIcon from "/images/CrownIcon.svg?url";
-import disconnectedIcon from "/images/DisconnectedIcon.svg?url";
-import embargoBlackIcon from "/images/EmbargoBlackIcon.svg?url";
-import embargoWhiteIcon from "/images/EmbargoWhiteIcon.svg?url";
-import nukeRedIcon from "/images/NukeIconRed.svg?url";
-import nukeWhiteIcon from "/images/NukeIconWhite.svg?url";
-import questionMarkIcon from "/images/QuestionMarkIcon.svg?url";
-import targetIcon from "/images/TargetIcon.svg?url";
-import traitorIcon from "/images/TraitorIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIcon.svg");
+const allianceIconFaded = assetUrl("images/AllianceIconFaded.svg");
+const allianceRequestBlackIcon = assetUrl(
+  "images/AllianceRequestBlackIcon.svg",
+);
+const allianceRequestWhiteIcon = assetUrl(
+  "images/AllianceRequestWhiteIcon.svg",
+);
+const crownIcon = assetUrl("images/CrownIcon.svg");
+const disconnectedIcon = assetUrl("images/DisconnectedIcon.svg");
+const embargoBlackIcon = assetUrl("images/EmbargoBlackIcon.svg");
+const embargoWhiteIcon = assetUrl("images/EmbargoWhiteIcon.svg");
+const nukeRedIcon = assetUrl("images/NukeIconRed.svg");
+const nukeWhiteIcon = assetUrl("images/NukeIconWhite.svg");
+const questionMarkIcon = assetUrl("images/QuestionMarkIcon.svg");
+const targetIcon = assetUrl("images/TargetIcon.svg");
+const traitorIcon = assetUrl("images/TraitorIcon.svg");
 
 let allianceIconTemplate: HTMLDivElement | undefined;
 

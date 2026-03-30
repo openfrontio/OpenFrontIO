@@ -1,0 +1,13 @@
+{
+  "name": "Tourney1",
+  "nations": [
+    {
+      "coordinates": [177, 510],
+      "name": "Left"
+    },
+    {
+      "coordinates": [847, 511],
+      "name": "Right"
+    }
+  ]
+}

@@ -71,7 +71,7 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Medium,
+        difficulty: Difficulty.Easy,
         nations: "default",
         infiniteGold: false,
         infiniteTroops: false,

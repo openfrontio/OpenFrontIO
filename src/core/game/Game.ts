@@ -120,6 +120,10 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Tourney1 = "Tourney 2 Teams",
+  Tourney2 = "Tourney 3 Teams",
+  Tourney3 = "Tourney 4 Teams",
+  Tourney4 = "Tourney 8 Teams",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
@@ -139,6 +143,7 @@ export enum GameMapType {
   Arctic = "Arctic",
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
+  MilkyWay = "MilkyWay",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -203,12 +208,19 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
+    GameMapType.MilkyWay,
   ],
   arcade: [
     GameMapType.TheBox,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
+  ],
+  tournament: [
+    GameMapType.Tourney1,
+    GameMapType.Tourney2,
+    GameMapType.Tourney3,
+    GameMapType.Tourney4,
   ],
 };
 
@@ -238,13 +250,17 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
   goldMultiplier?: number;
-  isAlliancesDisabled: boolean;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
 }
 
 export interface UnitInfo {
