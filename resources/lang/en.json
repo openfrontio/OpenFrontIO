@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -939,7 +940,6 @@
   "territory_patterns": {
     "title": "Skins",
     "purchase": "Purchase",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
