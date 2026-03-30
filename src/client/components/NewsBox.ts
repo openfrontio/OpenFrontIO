@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import newsItems from "resources/news.json" with { type: "json" };
+import newsItems from "resources/news.json";
 
 export interface NewsItem {
   id: string;
