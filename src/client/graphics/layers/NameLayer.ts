@@ -59,7 +59,6 @@ export class NameLayer implements Layer {
   private seenPlayers: Set<PlayerView> = new Set();
   private container: HTMLDivElement;
   private theme: Theme;
-  private darkMode: boolean;
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
@@ -85,7 +84,6 @@ export class NameLayer implements Layer {
 
   redraw() {
     this.theme = this.config.theme();
-    this.darkMode = this.config.userSettings().darkMode();
   }
 
   public init() {
@@ -115,7 +113,7 @@ export class NameLayer implements Layer {
     this.myPlayer = this.game.myPlayer();
     this.config = this.game.config();
     this.theme = this.config.theme();
-    this.darkMode = this.config.userSettings().darkMode();
+
     this.alliancesDisabled = this.config.disableAlliances();
     this.allianceDuration = Math.max(1, this.config.allianceDuration());
 
@@ -294,7 +292,7 @@ export class NameLayer implements Layer {
     const flag = player.cosmetics.flag;
     if (flag) {
       const flagImg = this.flagTemplate.cloneNode(true) as HTMLImageElement;
-      flagImg.src = flag;
+      flagImg.src = assetUrl(flag);
       flagDiv.appendChild(flagImg);
     }
 
@@ -372,8 +370,8 @@ export class NameLayer implements Layer {
 
     // Handle icons
     const iconSize = Math.min(render.fontSize * 1.5, 48);
-    this.darkMode = this.config.userSettings().darkMode();
-    const darkModeStr = this.darkMode.toString();
+    const darkMode = this.userSettings.darkMode();
+    const darkModeStr = darkMode.toString();
 
     // Compute which icons should be shown for this player using shared logic
     const icons = getPlayerIcons({
@@ -381,7 +379,7 @@ export class NameLayer implements Layer {
       player: render.player,
       includeAllianceIcon: true,
       firstPlace: this.firstPlace,
-      darkMode: this.darkMode,
+      darkMode: darkMode,
       alliancesDisabled: this.alliancesDisabled,
     });
 
