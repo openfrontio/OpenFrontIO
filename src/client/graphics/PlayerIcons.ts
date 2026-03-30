@@ -101,7 +101,8 @@ export function getPlayerIcons(
 
   const myPlayer = game.myPlayer();
   const userSettings = game.config().userSettings();
-  const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
+  // const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
+  const isDarkMode = darkMode;
   const emojisEnabled = userSettings?.emojis() ?? false;
   const alliancesOff = alliancesDisabled ?? game.config().disableAlliances();
 
@@ -158,7 +159,6 @@ export function getPlayerIcons(
   }
 
   // Target icon (centered on the map, but regular in overlays)
-  // TODO: can we do without new Set allocation each time here?
   if (myPlayer !== null && myPlayer.transitiveTargets().includes(player)) {
     icons.push({
       id: TARGET_ICON_ID,
@@ -278,6 +278,7 @@ export function createAllianceProgressIconRefs(
   wrapper.style.height = `${size}px`;
 
   // Base faded icon (full)
+  // No QuerySelector here since we know the structure and it avoids overhead each call
   const base = wrapper.childNodes[0] as HTMLImageElement;
   base.style.width = `${size}px`;
   base.style.height = `${size}px`;

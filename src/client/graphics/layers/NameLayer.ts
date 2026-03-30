@@ -81,9 +81,7 @@ export class NameLayer implements Layer {
     return false;
   }
 
-  redraw() {
-    this.theme = this.config.theme();
-  }
+  redraw() {} // not affected by Canvas/WebGL context loss as this layer is DOM-based
 
   public init() {
     this.container = document.createElement("div");
@@ -259,9 +257,9 @@ export class NameLayer implements Layer {
   }
 
   private createPlayerElement(player: PlayerView): RenderInfo {
-    // TODO: check if working with updateElement (reusable within renderLayer would be better? As Vimacs first suggested)
     const element = this.basePlayerTemplate.cloneNode(true) as HTMLDivElement;
 
+    // Queryselector expensive but this runs only once per player and better maintainable
     const nameDiv = element.querySelector(`.${PLAYER_NAME}`) as HTMLDivElement;
     const nameSpan = element.querySelector(
       `.${PLAYER_NAME_SPAN}`,
@@ -276,16 +274,7 @@ export class NameLayer implements Layer {
       `.${PLAYER_ICONS}`,
     ) as HTMLDivElement;
 
-    const fontColor = this.theme.textColor(player);
     const font = this.theme.font();
-
-    nameDiv.style.color = fontColor;
-    nameDiv.style.fontFamily = font;
-    nameSpan.textContent = player.displayName();
-
-    troopsDiv.style.color = fontColor;
-    troopsDiv.style.fontFamily = font;
-    troopsDiv.textContent = renderTroops(player.troops());
 
     const flag = player.cosmetics.flag;
     if (flag) {
@@ -298,7 +287,7 @@ export class NameLayer implements Layer {
       0,
       null,
       0,
-      fontColor,
+      "",
       element,
       nameDiv,
       nameSpan,
