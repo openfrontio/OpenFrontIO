@@ -77,6 +77,7 @@ export interface PlayerIconParams {
   firstPlace: PlayerView | null;
   alliancesDisabled: boolean;
   darkMode?: boolean;
+  transitiveTargets?: PlayerView[];
 }
 
 export function getFirstPlacePlayer(game: GameView): PlayerView | null {
@@ -97,12 +98,12 @@ export function getPlayerIcons(
     firstPlace,
     alliancesDisabled,
     darkMode,
+    transitiveTargets,
   } = params;
 
   const myPlayer = game.myPlayer();
   const userSettings = game.config().userSettings();
-  // const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
-  const isDarkMode = darkMode;
+  const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
   const emojisEnabled = userSettings?.emojis() ?? false;
   const alliancesOff = alliancesDisabled ?? game.config().disableAlliances();
 
@@ -159,7 +160,8 @@ export function getPlayerIcons(
   }
 
   // Target icon (centered on the map, but regular in overlays)
-  if (myPlayer !== null && myPlayer.transitiveTargets().includes(player)) {
+  const targets = transitiveTargets ?? myPlayer?.transitiveTargets() ?? [];
+  if (targets.includes(player)) {
     icons.push({
       id: TARGET_ICON_ID,
       kind: IMAGE_ICON_KIND,

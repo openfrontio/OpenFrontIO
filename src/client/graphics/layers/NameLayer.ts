@@ -199,8 +199,12 @@ export class NameLayer implements Layer {
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
       this.lastChecked = now;
+
+      this.myPlayer ??= this.game.myPlayer();
+      const transitiveTargets = this.myPlayer?.transitiveTargets() || [];
+
       for (const render of this.renders) {
-        this.renderPlayerInfo(render);
+        this.renderPlayerInfo(render, transitiveTargets);
       }
     }
   }
@@ -300,7 +304,7 @@ export class NameLayer implements Layer {
     return renderInfo;
   }
 
-  renderPlayerInfo(render: RenderInfo) {
+  renderPlayerInfo(render: RenderInfo, transitiveTargets: PlayerView[]) {
     if (!render.player.nameLocation()) {
       return;
     }
@@ -367,6 +371,7 @@ export class NameLayer implements Layer {
       firstPlace: this.firstPlace,
       darkMode: darkMode,
       alliancesDisabled: this.alliancesDisabled,
+      transitiveTargets: transitiveTargets,
     });
 
     // Build a set of desired icon IDs
