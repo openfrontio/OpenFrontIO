@@ -43,7 +43,7 @@ class RenderInfo {
     public nameDiv: HTMLDivElement,
     public nameSpan: HTMLSpanElement,
     public troopsDiv: HTMLDivElement,
-    public flagDiv: HTMLDivElement,
+    public flagImg: HTMLImageElement,
     public iconsDiv: HTMLDivElement,
     public lastTransform: string = "",
   ) {}
@@ -69,7 +69,6 @@ export class NameLayer implements Layer {
   private basePlayerTemplate: HTMLDivElement;
   private iconTemplate: HTMLImageElement;
   private iconCenterTemplate: HTMLImageElement;
-  private flagTemplate: HTMLImageElement;
   private emojiTemplate: HTMLDivElement;
 
   constructor(
@@ -125,10 +124,6 @@ export class NameLayer implements Layer {
     this.iconCenterTemplate.style.position = "absolute";
     this.iconCenterTemplate.style.top = "50%";
     this.iconCenterTemplate.style.transform = "translateY(-50%)";
-
-    this.flagTemplate = document.createElement("img");
-    this.flagTemplate.style.height = "100%";
-    this.flagTemplate.style.display = "block";
 
     this.emojiTemplate = document.createElement("div");
     this.emojiTemplate.style.position = "absolute";
@@ -240,12 +235,13 @@ export class NameLayer implements Layer {
     nameDiv.style.justifyContent = "flex-end";
     nameDiv.style.alignItems = "center";
 
-    const flagWrapper = document.createElement("div");
-    flagWrapper.classList.add(PLAYER_FLAG);
-    flagWrapper.style.opacity = "0.8";
-    flagWrapper.style.zIndex = "1";
-    flagWrapper.style.aspectRatio = "contain";
-    nameDiv.appendChild(flagWrapper);
+    const flagImg = document.createElement("img");
+    flagImg.classList.add(PLAYER_FLAG);
+    flagImg.style.opacity = "0.8";
+    flagImg.style.zIndex = "1";
+    flagImg.style.objectFit = "contain";
+    flagImg.style.display = "none";
+    nameDiv.appendChild(flagImg);
 
     const nameSpan = document.createElement("span");
     nameSpan.classList.add(PLAYER_NAME_SPAN);
@@ -273,7 +269,9 @@ export class NameLayer implements Layer {
     const troopsDiv = element.querySelector(
       `.${PLAYER_TROOPS}`,
     ) as HTMLDivElement;
-    const flagDiv = element.querySelector(`.${PLAYER_FLAG}`) as HTMLDivElement;
+    const flagImg = element.querySelector(
+      `.${PLAYER_FLAG}`,
+    ) as HTMLImageElement;
     const iconsDiv = element.querySelector(
       `.${PLAYER_ICONS}`,
     ) as HTMLDivElement;
@@ -291,9 +289,8 @@ export class NameLayer implements Layer {
 
     const flag = player.cosmetics.flag;
     if (flag) {
-      const flagImg = this.flagTemplate.cloneNode(true) as HTMLImageElement;
       flagImg.src = assetUrl(flag);
-      flagDiv.appendChild(flagImg);
+      flagImg.style.display = "block";
     }
 
     const renderInfo = new RenderInfo(
@@ -306,7 +303,7 @@ export class NameLayer implements Layer {
       nameDiv,
       nameSpan,
       troopsDiv,
-      flagDiv,
+      flagImg,
       iconsDiv,
     );
 
@@ -355,7 +352,7 @@ export class NameLayer implements Layer {
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
     render.nameDiv.style.fontSize = `${render.fontSize}px`;
     render.nameDiv.style.lineHeight = `${render.fontSize}px`;
-    render.flagDiv.style.height = `${render.fontSize}px`;
+    render.flagImg.style.height = `${render.fontSize}px`;
     render.troopsDiv.style.fontSize = `${render.fontSize}px`;
 
     render.nameSpan.textContent = render.player.displayName();
