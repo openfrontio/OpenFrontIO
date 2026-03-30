@@ -201,7 +201,7 @@ export class NameLayer implements Layer {
       this.lastChecked = now;
 
       this.myPlayer ??= this.game.myPlayer();
-      const transitiveTargets = this.myPlayer?.transitiveTargets() || [];
+      const transitiveTargets = this.myPlayer?.transitiveTargets() ?? [];
 
       for (const render of this.renders) {
         this.renderPlayerInfo(render, transitiveTargets);
