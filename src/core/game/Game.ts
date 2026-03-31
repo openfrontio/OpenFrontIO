@@ -144,6 +144,10 @@ export enum GameMapType {
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
   MilkyWay = "MilkyWay",
+  AmazonRiverWide = "Amazon River Wide",
+  ReglaciatedAntarctica = "Reglaciated Antarctica",
+  TheBoxPlus = "The Box Plus",
+  WorldRotated = "World for Mobile",
   Mediterranean = "Mediterranean",
 }
 
@@ -152,6 +156,7 @@ export type GameMapName = keyof typeof GameMapType;
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
+    GameMapType.WorldRotated,
     GameMapType.GiantWorldMap,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
@@ -187,6 +192,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.AmazonRiverWide,
     GameMapType.BosphorusStraits,
     GameMapType.BeringStrait,
     GameMapType.Yenisei,
@@ -203,6 +209,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
+    GameMapType.ReglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
@@ -214,6 +221,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
   arcade: [
     GameMapType.TheBox,
+    GameMapType.TheBoxPlus,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
