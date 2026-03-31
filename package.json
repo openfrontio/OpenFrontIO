@@ -36,7 +36,7 @@
     "@types/benchmark": "^2.1.5",
     "@types/chai": "^4.3.17",
     "@types/d3": "^7.4.3",
-    "@types/express": "^4.17.23",
+    "@types/express": "^5.0.6",
     "@types/google-protobuf": "^3.15.12",
     "@types/hammerjs": "^2.0.46",
     "@types/howler": "^2.2.12",
