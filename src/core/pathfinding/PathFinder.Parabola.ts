@@ -187,11 +187,11 @@ export class BouncingParabolaUniversalPathFinder
     const srcY = this.mg.y(src);
     const newX = Math.min(
       Math.floor(destX + (destX - srcX) / 2),
-      this.mg.width(),
+      this.mg.width() - 1,
     );
     const newY = Math.min(
       Math.floor(destY + (destY - srcY) / 2),
-      this.mg.height(),
+      this.mg.height() - 1,
     );
     return this.mg.isValidCoord(newX, newY) ? this.mg.ref(newX, newY) : null;
   }
