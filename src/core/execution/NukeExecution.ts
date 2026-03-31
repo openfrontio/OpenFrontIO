@@ -48,7 +48,7 @@ export class NukeExecution implements Execution {
     }
 
     const rand = new PseudoRandom(ticks);
-    if (rand.chance(10)) {
+    if (rand.chance(6)) {
       this.pathFinder = UniversalPathFinding.BouncingParabola(
         mg,
         this.player.id(),

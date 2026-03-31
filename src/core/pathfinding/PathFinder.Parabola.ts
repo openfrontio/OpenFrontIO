@@ -143,7 +143,7 @@ export class BouncingParabolaUniversalPathFinder
     });
 
     this.parabola = new ParabolaUniversalPathFinder(this.mg.map(), {
-      increment: this.options?.increment ?? 0,
+      increment: this.options?.increment ?? 3,
       distanceBasedHeight: true,
       directionUp: this.options?.directionUp ?? true,
       minHeight: 25,
