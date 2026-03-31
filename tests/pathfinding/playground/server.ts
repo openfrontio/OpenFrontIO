@@ -44,7 +44,7 @@ app.get("/api/maps", (req: Request, res: Response) => {
  * GET /api/maps/:name
  * Get map metadata (map data, dimensions)
  */
-app.get("/api/maps/:name", async (req: Request, res: Response) => {
+app.get("/api/maps/:name", async (req: Request<{ name: string }>, res: Response) => {
   try {
     const { name } = req.params;
     const metadata = await getMapMetadata(name);
@@ -70,7 +70,7 @@ app.get("/api/maps/:name", async (req: Request, res: Response) => {
  * GET /api/maps/:name/thumbnail
  * Get map thumbnail image
  */
-app.get("/api/maps/:name/thumbnail", (req: Request, res: Response) => {
+app.get("/api/maps/:name/thumbnail", (req: Request<{ name: string }>, res: Response) => {
   try {
     const { name } = req.params;
     const thumbnailPath = join(
