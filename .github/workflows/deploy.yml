@@ -130,7 +130,7 @@ jobs:
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
