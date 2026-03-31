@@ -148,6 +148,7 @@ export enum GameMapType {
   ReglaciatedAntarctica = "Reglaciated Antarctica",
   TheBoxPlus = "The Box Plus",
   WorldRotated = "World for Mobile",
+  Mediterranean = "Mediterranean",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -201,6 +202,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Arctic,
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
+    GameMapType.Mediterranean,
   ],
   fantasy: [
     GameMapType.Pangaea,

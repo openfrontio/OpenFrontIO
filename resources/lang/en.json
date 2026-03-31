@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -355,7 +356,8 @@
     "amazonriverwide": "Amazon River Wide",
     "reglaciatedantarctica": "Reglaciated Antarctica",
     "theboxplus": "The Box PLUS",
-    "worldrotated": "World for Mobile"
+    "worldrotated": "World for Mobile",
+    "mediterranean": "Mediterranean"
   },
   "map_categories": {
     "featured": "Featured",
@@ -943,7 +945,6 @@
   "territory_patterns": {
     "title": "Skins",
     "purchase": "Purchase",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
