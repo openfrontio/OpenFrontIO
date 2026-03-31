@@ -22,6 +22,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
   @state() private selectedPattern: PlayerPattern | null;
   @state() private selectedColor: string | null = null;
+  @state() private search = "";
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -67,6 +68,18 @@ export class TerritoryPatternsModal extends BaseModal {
     this.refresh();
   }
 
+  private includedInSearch(name: string): boolean {
+    const displayName = name
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    return displayName.toLowerCase().includes(this.search.toLowerCase());
+  }
+
+  private handleSearch(event: Event) {
+    this.search = (event.target as HTMLInputElement).value;
+  }
+
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
     const patterns: (Pattern | null)[] = [
@@ -74,6 +87,12 @@ export class TerritoryPatternsModal extends BaseModal {
       ...Object.values(this.cosmetics?.patterns ?? {}),
     ];
     for (const pattern of patterns) {
+      if (pattern === null && this.search) {
+        continue;
+      }
+      if (pattern !== null && !this.includedInSearch(pattern.name)) {
+        continue;
+      }
       const colorPalettes = pattern
         ? [...(pattern.colorPalettes ?? []), null]
         : [null];
@@ -135,6 +154,19 @@ export class TerritoryPatternsModal extends BaseModal {
             ariaLabel: translateText("common.back"),
             rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
           })}
+
+          <div class="md:flex items-center gap-2 justify-center mt-4">
+            <input
+              class="h-12 w-full max-w-md border border-white/10 bg-black/60
+              rounded-xl shadow-inner text-xl text-center focus:outline-none
+              focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-white/30 transition-all"
+              type="text"
+              placeholder=${translateText("territory_patterns.search")}
+              .value=${this.search}
+              @change=${this.handleSearch}
+              @keyup=${this.handleSearch}
+            />
+          </div>
         </div>
         <div class="flex justify-center py-3 shrink-0">
           <button
@@ -174,6 +206,10 @@ export class TerritoryPatternsModal extends BaseModal {
 
   protected async onOpen(): Promise<void> {
     await this.refresh();
+  }
+
+  protected onClose(): void {
+    this.search = "";
   }
 
   private selectPattern(pattern: PlayerPattern | null) {

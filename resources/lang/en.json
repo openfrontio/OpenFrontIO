@@ -945,7 +945,8 @@
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
   },
   "cosmetics": {
     "artist_label": "Artist:"
