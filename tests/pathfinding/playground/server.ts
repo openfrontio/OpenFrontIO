@@ -237,7 +237,11 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, (error?: Error) => {
+  if (error) {
+    console.error("Failed to start server", error);
+    process.exit(1);
+  }
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║  Pathfinding Playground Server                            ║
