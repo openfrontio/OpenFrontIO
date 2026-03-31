@@ -68,7 +68,12 @@ export class AbstractGraph {
   getNodeEdges(nodeId: number): AbstractEdge[] {
     const edgeIds = this._nodeEdgeIds[nodeId];
     if (!edgeIds) return [];
-    return edgeIds.map((id) => this._edges[id]);
+    const edges: AbstractEdge[] = [];
+    for (let i = 0; i < edgeIds.length; i++) {
+      const e = this._edges[edgeIds[i]];
+      if (e) edges.push(e);
+    }
+    return edges;
   }
 
   getEdgeBetween(nodeA: number, nodeB: number): AbstractEdge | undefined {
@@ -192,6 +197,67 @@ export class AbstractGraph {
 
     this._clusters[clusterKey].nodeIds.push(nodeId);
   }
+
+  /**
+   * Remove a node and all its edges from the graph.
+   * Also clears path cache entries for removed edges.
+   */
+  _removeNodeAndEdges(nodeId: number): void {
+    const edgeIds = this._nodeEdgeIds[nodeId];
+    if (edgeIds) {
+      for (const edgeId of edgeIds) {
+        const edge = this._edges[edgeId];
+        if (!edge) continue;
+        const otherId = edge.nodeA === nodeId ? edge.nodeB : edge.nodeA;
+        const otherEdges = this._nodeEdgeIds[otherId];
+        if (otherEdges) {
+          const idx = otherEdges.indexOf(edgeId);
+          if (idx !== -1) otherEdges.splice(idx, 1);
+        }
+        // Clear path cache
+        const ci = edgeId * 2;
+        if (ci < this._pathCache.length) {
+          this._pathCache[ci] = null;
+          this._pathCache[ci + 1] = null;
+        }
+        this._edges[edgeId] = undefined!;
+      }
+    }
+    this._nodes[nodeId] = undefined!;
+    this._nodeEdgeIds[nodeId] = undefined!;
+  }
+
+  /**
+   * Remove a specific node ID from a cluster's nodeIds list.
+   */
+  _removeNodeFromCluster(clusterKey: number, nodeId: number): void {
+    const cluster = this._clusters[clusterKey];
+    if (!cluster) return;
+    const idx = cluster.nodeIds.indexOf(nodeId);
+    if (idx !== -1) cluster.nodeIds.splice(idx, 1);
+  }
+
+  getWaterComponents(): ConnectedComponents | null {
+    return this._waterComponents;
+  }
+
+  get nextNodeId(): number {
+    return this._nodes.length;
+  }
+
+  get nextEdgeId(): number {
+    return this._edges.length;
+  }
+
+  /**
+   * Grow the path cache to accommodate new edges.
+   */
+  _growPathCache(): void {
+    const needed = this._edges.length * 2;
+    while (this._pathCache.length < needed) {
+      this._pathCache.push(null);
+    }
+  }
 }
 
 export class AbstractGraphBuilder {
@@ -203,7 +269,7 @@ export class AbstractGraphBuilder {
   private readonly clustersX: number;
   private readonly clustersY: number;
   private readonly tileBFS: BFSGrid;
-  private readonly waterComponents: ConnectedComponents;
+  private waterComponents: ConnectedComponents;
 
   // Build state
   private graph!: AbstractGraph;
@@ -576,5 +642,200 @@ export class AbstractGraphBuilder {
     );
 
     return reachable;
+  }
+
+  /**
+   * Incrementally rebuild the graph for only the affected region.
+   * Updates ConnectedComponents for new water tiles, then rebuilds
+   * nodes and edges only in clusters that changed.
+   */
+  rebuildAffected(
+    existingGraph: AbstractGraph,
+    changedMiniTiles: Set<TileRef>,
+  ): void {
+    if (changedMiniTiles.size === 0) return;
+
+    this.graph = existingGraph;
+
+    // Reuse the existing ConnectedComponents and update incrementally
+    const wc = existingGraph.getWaterComponents();
+    if (wc) {
+      wc.addWaterTiles(changedMiniTiles);
+      this.waterComponents = wc;
+    }
+
+    // Continue IDs from existing graph
+    this.nextNodeId = existingGraph.nextNodeId;
+    this.nextEdgeId = existingGraph.nextEdgeId;
+
+    const cs = this.clusterSize;
+
+    // Find directly affected clusters (contain changed tiles)
+    const directClusters = new Set<number>();
+    for (const tile of changedMiniTiles) {
+      const x = this.map.x(tile);
+      const y = this.map.y(tile);
+      const cx = Math.floor(x / cs);
+      const cy = Math.floor(y / cs);
+      directClusters.add(this.graph.getClusterKey(cx, cy));
+    }
+
+    // Expand to 1-ring neighborhood for node rebuild
+    // (boundary nodes are shared between adjacent clusters)
+    const rebuildZone = new Set<number>();
+    for (const key of directClusters) {
+      const cy = Math.floor(key / this.clustersX);
+      const cx = key % this.clustersX;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ncx = cx + dx;
+          const ncy = cy + dy;
+          if (
+            ncx >= 0 &&
+            ncx < this.clustersX &&
+            ncy >= 0 &&
+            ncy < this.clustersY
+          ) {
+            rebuildZone.add(this.graph.getClusterKey(ncx, ncy));
+          }
+        }
+      }
+    }
+
+    // Collect all nodes in rebuild zone
+    const nodesToRemove = new Set<number>();
+    for (const key of rebuildZone) {
+      const cluster = this.graph.getCluster(
+        key % this.clustersX,
+        Math.floor(key / this.clustersX),
+      );
+      if (!cluster) continue;
+      for (const nid of cluster.nodeIds) {
+        nodesToRemove.add(nid);
+      }
+      cluster.nodeIds = [];
+    }
+
+    // Also remove these nodes from any cluster OUTSIDE the rebuild zone
+    // (boundary nodes are shared, so they may appear in neighboring clusters).
+    // A node belongs to its home cluster AND one boundary neighbor (right or bottom).
+    // Either or both could be outside the rebuild zone.
+    for (const nid of nodesToRemove) {
+      const node = this.graph.getNode(nid);
+      if (!node) continue;
+
+      const ncx = Math.floor(node.x / cs);
+      const ncy = Math.floor(node.y / cs);
+      const localX = node.x - ncx * cs;
+      const localY = node.y - ncy * cs;
+
+      // Always check home cluster
+      const homeKey = this.graph.getClusterKey(ncx, ncy);
+      if (!rebuildZone.has(homeKey)) {
+        this.graph._removeNodeFromCluster(homeKey, nid);
+      }
+
+      // Check boundary neighbor clusters (right / bottom)
+      if (localX === cs - 1 && ncx + 1 < this.clustersX) {
+        const rk = this.graph.getClusterKey(ncx + 1, ncy);
+        if (!rebuildZone.has(rk)) {
+          this.graph._removeNodeFromCluster(rk, nid);
+        }
+      }
+      if (localY === cs - 1 && ncy + 1 < this.clustersY) {
+        const bk = this.graph.getClusterKey(ncx, ncy + 1);
+        if (!rebuildZone.has(bk)) {
+          this.graph._removeNodeFromCluster(bk, nid);
+        }
+      }
+    }
+
+    // Remove all collected nodes and their edges
+    for (const nid of nodesToRemove) {
+      this.graph._removeNodeAndEdges(nid);
+    }
+
+    // Rebuild tileToNode mapping for the rebuild zone
+    // (the builder uses this to deduplicate nodes at shared boundaries)
+    this.tileToNode.clear();
+
+    // Rebuild nodes on cluster boundaries within rebuild zone
+    for (const key of rebuildZone) {
+      const cx = key % this.clustersX;
+      const cy = Math.floor(key / this.clustersX);
+      this.processCluster(cx, cy);
+    }
+
+    // Track which clusters need edge rebuild (rebuild zone + any outside
+    // clusters that gained new boundary nodes from processCluster)
+    const edgeRebuildKeys = new Set<number>(rebuildZone);
+    for (const key of rebuildZone) {
+      const cx = key % this.clustersX;
+      const cy = Math.floor(key / this.clustersX);
+      // processCluster(cx,cy) adds nodes to (cx+1,cy) and (cx,cy+1)
+      if (cx + 1 < this.clustersX) {
+        const rk = this.graph.getClusterKey(cx + 1, cy);
+        if (!rebuildZone.has(rk)) edgeRebuildKeys.add(rk);
+      }
+      if (cy + 1 < this.clustersY) {
+        const bk = this.graph.getClusterKey(cx, cy + 1);
+        if (!rebuildZone.has(bk)) edgeRebuildKeys.add(bk);
+      }
+    }
+
+    // Rebuild edges within all affected clusters
+    // First, refresh componentIds on existing nodes in edge-rebuild clusters
+    // that are outside the rebuild zone (they may have stale IDs after merges)
+    for (const key of edgeRebuildKeys) {
+      if (rebuildZone.has(key)) continue;
+      const cluster = this.graph.getCluster(
+        key % this.clustersX,
+        Math.floor(key / this.clustersX),
+      );
+      if (!cluster) continue;
+      for (const nid of cluster.nodeIds) {
+        const node = this.graph.getNode(nid);
+        if (node) {
+          node.componentId = this.waterComponents.getComponentId(node.tile);
+        }
+      }
+    }
+
+    // Pre-populate edgeBetween with existing edges from outside-rebuild-zone
+    // nodes in edge-rebuild clusters to prevent duplicate edge creation
+    this.edgeBetween.clear();
+    for (const key of edgeRebuildKeys) {
+      if (rebuildZone.has(key)) continue;
+      const cluster = this.graph.getCluster(
+        key % this.clustersX,
+        Math.floor(key / this.clustersX),
+      );
+      if (!cluster) continue;
+      for (const nid of cluster.nodeIds) {
+        for (const edge of this.graph.getNodeEdges(nid)) {
+          const lo = edge.nodeA;
+          const hi = edge.nodeB;
+          let nodeMap = this.edgeBetween.get(lo);
+          if (!nodeMap) {
+            nodeMap = new Map();
+            this.edgeBetween.set(lo, nodeMap);
+          }
+          if (!nodeMap.has(hi)) {
+            nodeMap.set(hi, edge);
+          }
+        }
+      }
+    }
+
+    for (const key of edgeRebuildKeys) {
+      const cx = key % this.clustersX;
+      const cy = Math.floor(key / this.clustersX);
+      const cluster = this.graph.getCluster(cx, cy);
+      if (!cluster || cluster.nodeIds.length === 0) continue;
+      this.buildClusterConnections(cx, cy);
+    }
+
+    // Grow path cache to accommodate new edges
+    this.graph._growPathCache();
   }
 }

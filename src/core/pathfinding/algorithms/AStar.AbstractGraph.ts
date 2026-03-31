@@ -237,9 +237,12 @@ export class AbstractGraphAStar implements PathFinder<number> {
   private buildPathFromGoal(goalId: number): number[] {
     const path: number[] = [];
     let current = goalId;
+    const maxLen = this.cameFrom.length;
 
     while (current !== -1) {
+      if (current < 0 || current >= maxLen) return null;
       path.push(current);
+      if (path.length > maxLen) return null;
       current = this.cameFrom[current];
     }
 

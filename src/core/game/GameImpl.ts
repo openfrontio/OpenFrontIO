@@ -143,6 +143,10 @@ export class GameImpl implements Game {
       const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
       this._miniWaterGraph = graphBuilder.build();
 
+      // Initialize union-find for incremental water updates
+      const wc = this._miniWaterGraph.getWaterComponents();
+      if (wc) wc.initializeUnionFind();
+
       this._miniWaterHPA = new AStarWaterHierarchical(
         this.miniGameMap,
         this._miniWaterGraph,
@@ -323,7 +327,9 @@ export class GameImpl implements Game {
     //    BFS from remaining land outward. Stops when the computed magnitude
     //    matches the tile's existing magnitude (convergence with surrounding
     //    unaffected ocean).  Only records tile updates for tiles that changed.
-    const distMap = new Map<TileRef, number>();
+    const NOT_VISITED = 0xffff;
+    const distArr = new Uint16Array(this._width * this._height);
+    distArr.fill(NOT_VISITED);
     const magQueue: TileRef[] = [];
     // Seed candidates: converted tiles + their immediate water neighbors
     const seedCandidates = new Set<TileRef>(converted);
@@ -338,8 +344,8 @@ export class GameImpl implements Game {
     for (const tile of seedCandidates) {
       for (const n of this.neighbors(tile)) {
         if (this.isLand(n)) {
-          if (!distMap.has(tile)) {
-            distMap.set(tile, 0);
+          if (distArr[tile] === NOT_VISITED) {
+            distArr[tile] = 0;
             if (this.magnitude(tile) !== 0) {
               this._map.setMagnitude(tile, 0);
             }
@@ -350,24 +356,25 @@ export class GameImpl implements Game {
       }
     }
     // BFS outward through water tiles, stopping at convergence
-    while (magQueue.length > 0) {
-      const tile = magQueue.shift()!;
-      const dist = distMap.get(tile)!;
+    let magHead = 0;
+    while (magHead < magQueue.length) {
+      const tile = magQueue[magHead++];
+      const dist = distArr[tile];
       const nextDist = dist + 1;
       const nextMag = Math.min(Math.ceil(nextDist / 2), 31);
       for (const n of this.neighbors(tile)) {
-        if (!this.isWater(n) || distMap.has(n)) continue;
+        if (!this.isWater(n) || distArr[n] !== NOT_VISITED) continue;
         const oldMag = this.magnitude(n);
         // Converged: existing magnitude already matches what we'd assign
         if (oldMag === nextMag) continue;
-        distMap.set(n, nextDist);
+        distArr[n] = nextDist;
         this._map.setMagnitude(n, nextMag);
         magQueue.push(n);
       }
     }
     // Unreached water tiles in the affected area get deep ocean magnitude
     for (const tile of seedCandidates) {
-      if (!distMap.has(tile) && this.isWater(tile)) {
+      if (distArr[tile] === NOT_VISITED && this.isWater(tile)) {
         this._map.setMagnitude(tile, 20);
       }
     }
@@ -385,7 +392,8 @@ export class GameImpl implements Game {
     }
     // Also check neighbors of every tile whose magnitude was updated,
     // since those magnitude changes may border remaining land.
-    for (const tile of distMap.keys()) {
+    for (let i = 0; i < magQueue.length; i++) {
+      const tile = magQueue[i];
       tilesToCheck.add(tile);
       for (const n of this.neighbors(tile)) {
         tilesToCheck.add(n);
@@ -405,7 +413,7 @@ export class GameImpl implements Game {
       // Only send update if terrain actually changed from original
       if (
         converted.has(tile) ||
-        distMap.has(tile) ||
+        distArr[tile] !== NOT_VISITED ||
         oldShoreline !== this.isShoreline(tile)
       ) {
         this.recordTileUpdate(tile);
@@ -414,6 +422,7 @@ export class GameImpl implements Game {
 
     // 4. Update minimap terrain
     const miniTilesToCheck = new Set<TileRef>();
+    const convertedMiniTiles = new Set<TileRef>();
     for (const tile of converted) {
       const miniX = Math.floor(this.x(tile) / 2);
       const miniY = Math.floor(this.y(tile) / 2);
@@ -437,11 +446,23 @@ export class GameImpl implements Game {
       }
       if (waterCount > total / 2) {
         this.miniGameMap.setWater(miniTile);
+        convertedMiniTiles.add(miniTile);
       }
     }
 
-    // 5. Rebuild water navigation graph
-    if (!this._config.disableNavMesh()) {
+    // 5. Incrementally rebuild water navigation graph
+    if (!this._config.disableNavMesh() && this._miniWaterGraph) {
+      if (convertedMiniTiles.size > 0) {
+        const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
+        graphBuilder.rebuildAffected(this._miniWaterGraph, convertedMiniTiles);
+        this._miniWaterHPA = new AStarWaterHierarchical(
+          this.miniGameMap,
+          this._miniWaterGraph,
+          { cachePaths: true },
+        );
+      }
+    } else if (!this._config.disableNavMesh()) {
+      // First time: full build
       const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
       this._miniWaterGraph = graphBuilder.build();
       this._miniWaterHPA = new AStarWaterHierarchical(

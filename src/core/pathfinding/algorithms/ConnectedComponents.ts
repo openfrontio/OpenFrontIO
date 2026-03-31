@@ -17,6 +17,12 @@ export class ConnectedComponents {
   private readonly queue: Int32Array;
   private componentIds: Uint8Array | Uint16Array | null = null;
 
+  // Union-find for incremental component merging
+  private ufParent: number[] = [];
+  private ufRank: number[] = [];
+  private nextId: number = 0;
+  private ufActive: boolean = false;
+
   constructor(
     private readonly map: GameMap,
     private readonly accessTerrainDirectly: boolean = true,
@@ -54,7 +60,166 @@ export class ConnectedComponents {
     }
 
     this.componentIds = ids;
+    this.nextId = nextId;
     DebugSpan.end();
+  }
+
+  /**
+   * Initialize union-find structures from existing component IDs.
+   * Must be called after initialize() before using addWaterTiles().
+   */
+  initializeUnionFind(): void {
+    this.ufParent = new Array(this.nextId + 1);
+    this.ufRank = new Array(this.nextId + 1).fill(0);
+    for (let i = 0; i <= this.nextId; i++) {
+      this.ufParent[i] = i;
+    }
+    this.ufActive = true;
+  }
+
+  /**
+   * Union-find: find canonical representative with path halving.
+   */
+  private find(id: number): number {
+    while (this.ufParent[id] !== id) {
+      this.ufParent[id] = this.ufParent[this.ufParent[id]];
+      id = this.ufParent[id];
+    }
+    return id;
+  }
+
+  /**
+   * Union-find: merge two components. Returns the canonical ID.
+   */
+  private union(a: number, b: number): number {
+    a = this.find(a);
+    b = this.find(b);
+    if (a === b) return a;
+    if (this.ufRank[a] < this.ufRank[b]) {
+      const tmp = a;
+      a = b;
+      b = tmp;
+    }
+    this.ufParent[b] = a;
+    if (this.ufRank[a] === this.ufRank[b]) this.ufRank[a]++;
+    return a;
+  }
+
+  /**
+   * Incrementally add newly converted water tiles.
+   * BFS through connected new tiles, assigning them to adjacent existing
+   * components or creating new ones. Merges components when new water
+   * bridges previously separate bodies.
+   */
+  addWaterTiles(newTiles: Set<TileRef>): void {
+    if (!this.componentIds) return;
+    if (!this.ufActive) this.initializeUnionFind();
+
+    let ids = this.componentIds;
+    const w = this.width;
+
+    // Mark new tiles as unassigned water (0)
+    for (const tile of newTiles) {
+      ids[tile] = 0;
+    }
+
+    // BFS through connected groups of new water tiles.
+    // Each group gets a fresh component ID immediately (no VISITED marker)
+    // to avoid Uint8Array truncation issues.
+    for (const startTile of newTiles) {
+      if (ids[startTile] !== 0) continue; // already assigned by previous group
+
+      // Allocate a fresh component ID for this group
+      this.nextId++;
+
+      // Upgrade to Uint16Array when approaching Uint8 capacity
+      if (this.nextId >= 254 && ids instanceof Uint8Array) {
+        ids = this.upgradeToUint16Array(ids);
+        this.componentIds = ids;
+      }
+
+      let groupId = this.nextId;
+      if (this.ufParent.length <= groupId) {
+        this.ufParent.length = groupId + 1;
+        this.ufRank.length = groupId + 1;
+      }
+      this.ufParent[groupId] = groupId;
+      this.ufRank[groupId] = 0;
+
+      const group: number[] = [];
+      let head = 0;
+
+      ids[startTile] = groupId;
+      group.push(startTile);
+
+      while (head < group.length) {
+        const t = group[head++];
+
+        // Check 4 neighbors
+        // Up
+        if (t >= w) {
+          const n = t - w;
+          const nId = ids[n];
+          if (nId === 0) {
+            ids[n] = groupId;
+            group.push(n);
+          } else if (
+            nId !== LAND_MARKER &&
+            this.find(nId) !== this.find(groupId)
+          ) {
+            groupId = this.union(groupId, nId);
+          }
+        }
+        // Down
+        if (t < this.lastRowStart) {
+          const n = t + w;
+          const nId = ids[n];
+          if (nId === 0) {
+            ids[n] = groupId;
+            group.push(n);
+          } else if (
+            nId !== LAND_MARKER &&
+            this.find(nId) !== this.find(groupId)
+          ) {
+            groupId = this.union(groupId, nId);
+          }
+        }
+        // Left
+        if (t % w > 0) {
+          const n = t - 1;
+          const nId = ids[n];
+          if (nId === 0) {
+            ids[n] = groupId;
+            group.push(n);
+          } else if (
+            nId !== LAND_MARKER &&
+            this.find(nId) !== this.find(groupId)
+          ) {
+            groupId = this.union(groupId, nId);
+          }
+        }
+        // Right
+        if (t % w < w - 1) {
+          const n = t + 1;
+          const nId = ids[n];
+          if (nId === 0) {
+            ids[n] = groupId;
+            group.push(n);
+          } else if (
+            nId !== LAND_MARKER &&
+            this.find(nId) !== this.find(groupId)
+          ) {
+            groupId = this.union(groupId, nId);
+          }
+        }
+      }
+
+      // Update all tiles in group to the final canonical ID
+      const finalId = this.find(groupId);
+      for (let i = 0; i < group.length; i++) {
+        ids[group[i]] = finalId;
+      }
+    }
   }
 
   /**
@@ -197,9 +362,12 @@ export class ConnectedComponents {
   /**
    * Get the component ID for a tile.
    * Returns 0 for land tiles or if not initialized.
+   * Resolves through union-find when active.
    */
   getComponentId(tile: TileRef): number {
     if (!this.componentIds) return 0;
-    return this.componentIds[tile] ?? 0;
+    const raw = this.componentIds[tile] ?? 0;
+    if (!this.ufActive || raw === LAND_MARKER || raw === 0) return raw;
+    return this.find(raw);
   }
 }
