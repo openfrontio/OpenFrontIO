@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -352,7 +353,8 @@
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
     "dyslexdria": "Dyslexdria",
-    "milkyway": "Milky Way"
+    "milkyway": "Milky Way",
+    "mediterranean": "Mediterranean"
   },
   "map_categories": {
     "featured": "Featured",
@@ -940,7 +942,6 @@
   "territory_patterns": {
     "title": "Skins",
     "purchase": "Purchase",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },

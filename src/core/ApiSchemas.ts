@@ -69,14 +69,9 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
-    achievements: z
-      .array(
-        z.object({
-          type: z.literal("singleplayer-map"), // TODO: change the shape to be more flexible when we have more achievements
-          data: z.array(SingleplayerMapAchievementSchema),
-        }),
-      )
-      .optional(),
+    achievements: z.object({
+      singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+    }),
     leaderboard: z
       .object({
         oneVone: z
