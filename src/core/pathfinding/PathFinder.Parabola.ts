@@ -117,7 +117,6 @@ export class BouncingParabolaUniversalPathFinder
     }
     const result = this.parabola.next(from, to, dist);
     if (result.status === PathStatus.COMPLETE) {
-      console.log("Bounce");
       if (this.bounce(from, to)) {
         return this.nextBounce();
       }
