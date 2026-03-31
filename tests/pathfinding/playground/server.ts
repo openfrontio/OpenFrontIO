@@ -44,50 +44,56 @@ app.get("/api/maps", (req: Request, res: Response) => {
  * GET /api/maps/:name
  * Get map metadata (map data, dimensions)
  */
-app.get("/api/maps/:name", async (req: Request<{ name: string }>, res: Response) => {
-  try {
-    const { name } = req.params;
-    const metadata = await getMapMetadata(name);
-    res.json(metadata);
-  } catch (error) {
-    console.error(`Error loading map ${req.params.name}:`, error);
+app.get(
+  "/api/maps/:name",
+  async (req: Request<{ name: string }>, res: Response) => {
+    try {
+      const { name } = req.params;
+      const metadata = await getMapMetadata(name);
+      res.json(metadata);
+    } catch (error) {
+      console.error(`Error loading map ${req.params.name}:`, error);
 
-    if (error instanceof Error && error.message.includes("ENOENT")) {
-      res.status(404).json({
-        error: "Map not found",
-        message: `Map "${req.params.name}" does not exist`,
-      });
-    } else {
-      res.status(500).json({
-        error: "Failed to load map",
-        message: error instanceof Error ? error.message : String(error),
-      });
+      if (error instanceof Error && error.message.includes("ENOENT")) {
+        res.status(404).json({
+          error: "Map not found",
+          message: `Map "${req.params.name}" does not exist`,
+        });
+      } else {
+        res.status(500).json({
+          error: "Failed to load map",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
-  }
-});
+  },
+);
 
 /**
  * GET /api/maps/:name/thumbnail
  * Get map thumbnail image
  */
-app.get("/api/maps/:name/thumbnail", (req: Request<{ name: string }>, res: Response) => {
-  try {
-    const { name } = req.params;
-    const thumbnailPath = join(
-      dirname(fileURLToPath(import.meta.url)),
-      "../../../resources/maps",
-      name,
-      "thumbnail.webp",
-    );
-    res.sendFile(thumbnailPath);
-  } catch (error) {
-    console.error(`Error loading thumbnail for ${req.params.name}:`, error);
-    res.status(404).json({
-      error: "Thumbnail not found",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
+app.get(
+  "/api/maps/:name/thumbnail",
+  (req: Request<{ name: string }>, res: Response) => {
+    try {
+      const { name } = req.params;
+      const thumbnailPath = join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../../../resources/maps",
+        name,
+        "thumbnail.webp",
+      );
+      res.sendFile(thumbnailPath);
+    } catch (error) {
+      console.error(`Error loading thumbnail for ${req.params.name}:`, error);
+      res.status(404).json({
+        error: "Thumbnail not found",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  },
+);
 
 /**
  * POST /api/pathfind
