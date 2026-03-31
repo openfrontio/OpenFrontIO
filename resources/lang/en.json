@@ -354,6 +354,10 @@
     "aegean": "Aegean",
     "dyslexdria": "Dyslexdria",
     "milkyway": "Milky Way",
+    "amazonriverwide": "Amazon River Wide",
+    "reglaciatedantarctica": "Reglaciated Antarctica",
+    "theboxplus": "The Box PLUS",
+    "worldrotated": "World for Mobile",
     "mediterranean": "Mediterranean"
   },
   "map_categories": {
@@ -946,7 +950,8 @@
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
   },
   "cosmetics": {
     "artist_label": "Artist:"
