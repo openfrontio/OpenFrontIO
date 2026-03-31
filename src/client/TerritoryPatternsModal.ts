@@ -69,10 +69,7 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private includedInSearch(name: string): boolean {
-    const displayName = name
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
+    const displayName = name.replace(/_/g, " ");
     return displayName.toLowerCase().includes(this.search.toLowerCase());
   }
 
