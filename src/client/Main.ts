@@ -163,6 +163,7 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 declare global {
   interface Window {
     GIT_COMMIT: string;
+    WS_URL: string;
     turnstile: any;
     adsEnabled: boolean;
     PageOS: {
