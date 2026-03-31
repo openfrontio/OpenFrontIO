@@ -82,6 +82,7 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: alpha.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -133,6 +134,7 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: beta.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -184,6 +186,7 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: blue.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -235,6 +238,7 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: green.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
