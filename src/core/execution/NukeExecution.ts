@@ -11,7 +11,10 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
-import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
+import {
+  BouncingParabolaUniversalPathFinder,
+  ParabolaUniversalPathFinder,
+} from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
@@ -24,7 +27,9 @@ export class NukeExecution implements Execution {
   private mg: Game;
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
-  private pathFinder: ParabolaUniversalPathFinder;
+  private pathFinder:
+    | BouncingParabolaUniversalPathFinder
+    | ParabolaUniversalPathFinder;
 
   constructor(
     private nukeType: NukeType,
@@ -41,18 +46,32 @@ export class NukeExecution implements Execution {
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
-    this.pathFinder = UniversalPathFinding.Parabola(mg, {
-      increment: this.speed,
-      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
-      directionUp: this.rocketDirectionUp,
-    });
+
+    const rand = new PseudoRandom(ticks);
+    if (rand.chance(6)) {
+      this.pathFinder = UniversalPathFinding.BouncingParabola(
+        mg,
+        this.player.id(),
+        {
+          increment: this.speed,
+          distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
+          directionUp: this.rocketDirectionUp,
+        },
+      );
+    } else {
+      this.pathFinder = UniversalPathFinding.Parabola(mg, {
+        increment: this.speed,
+        distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
+        directionUp: this.rocketDirectionUp,
+      });
+    }
   }
 
   public target(): Player | TerraNullius {
     return this.mg.owner(this.dst);
   }
 
-  private tilesToDestroy(): Set<TileRef> {
+  private tilesToDestroy(explosionTile: TileRef): Set<TileRef> {
     if (this.tilesToDestroyCache !== undefined) {
       return this.tilesToDestroyCache;
     }
@@ -63,8 +82,8 @@ export class NukeExecution implements Execution {
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
-    this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
-      const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
+    this.tilesToDestroyCache = this.mg.bfs(explosionTile, (_, n: TileRef) => {
+      const d2 = this.mg?.euclideanDistSquared(explosionTile, n) ?? 0;
       return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
     });
     return this.tilesToDestroyCache;
@@ -193,7 +212,7 @@ export class NukeExecution implements Execution {
     // Move to next tile
     const result = this.pathFinder.next(this.src!, this.dst, this.speed);
     if (result.status === PathStatus.COMPLETE) {
-      this.detonate();
+      this.detonate(result.node);
       return;
     } else if (result.status === PathStatus.NEXT) {
       this.updateNukeTargetable();
@@ -247,7 +266,7 @@ export class NukeExecution implements Execution {
     );
   }
 
-  private detonate() {
+  private detonate(explosionTile: TileRef) {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -256,7 +275,7 @@ export class NukeExecution implements Execution {
     const config = mg.config();
 
     const magnitude = config.nukeMagnitudes(this.nuke.type());
-    const toDestroy = this.tilesToDestroy();
+    const toDestroy = this.tilesToDestroy(explosionTile);
 
     // Retrieve all impacted players and the number of tiles
     const tilesPerPlayers = new Map<Player, number>();
