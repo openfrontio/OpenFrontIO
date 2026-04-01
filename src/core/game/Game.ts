@@ -143,6 +143,7 @@ export enum GameMapType {
   Arctic = "Arctic",
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
+  Dyslexdria = "Dyslexdria",
   MilkyWay = "Milky Way",
   AmazonRiverWide = "Amazon River ",
   ReglaciatedAntarctica = "Deglaciated Antarctica ",
@@ -217,6 +218,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
+    GameMapType.Dyslexdria,
     GameMapType.MilkyWay,
   ],
   arcade: [
