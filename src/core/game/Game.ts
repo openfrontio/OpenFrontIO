@@ -143,7 +143,7 @@ export enum GameMapType {
   AmazonRiverWide = "Amazon River Wide",
   ReglaciatedAntarctica = "Reglaciated Antarctica",
   TheBoxPlus = "The Box Plus",
-  WorldRotated = "World for Mobile",
+  WorldRotated = "World Rotated",
 }
 
 export type GameMapName = keyof typeof GameMapType;
