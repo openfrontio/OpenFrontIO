@@ -213,7 +213,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TradersDream,
     GameMapType.Passage,
     GameMapType.Dyslexdria,
-    GameMapType.MilkyWay,
   ],
   arcade: [
     GameMapType.TheBox,
