@@ -593,11 +593,7 @@ export class PlayerView {
     // Add teammates' targets
     if (this.data.team !== undefined) {
       for (const p of this.game.playerViews()) {
-        if (
-          p !== this &&
-          p.data.team === this.data.team &&
-          !this.data.allies.includes(p.data.smallID)
-        ) {
+        if (p !== this && p.data.team === this.data.team) {
           for (const targetId of p.data.targets) {
             result.push(this.game.playerBySmallID(targetId) as PlayerView);
           }
