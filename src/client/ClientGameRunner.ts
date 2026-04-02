@@ -444,9 +444,19 @@ export class ClientGameRunner {
             !this.gameView.config().isReplay() &&
             this.userSettings.stopTradingAllAtStartForTeamGames()
           ) {
-            this.startTradeEmbargoAtTick =
-              this.gameView.ticks() +
-              this.gameView.config().embargoAllCooldown();
+            // gameView.ticks() is still 0 here (worker has not applied start turns yet).
+            // Using it would re-schedule the embargo on every reconnect from tick 0 and
+            // could re-emit "start" after the cooldown already passed. Anchor to server
+            // progress: game tick after this batch equals last turnNumber + 1 (see
+            // GameServer.endTurn).
+            const cooldownTicks = this.gameView.config().embargoAllCooldown();
+            const gameTickAfterBatch =
+              message.turns.length > 0
+                ? message.turns[message.turns.length - 1].turnNumber + 1
+                : this.turnsSeen;
+            if (gameTickAfterBatch < cooldownTicks) {
+              this.startTradeEmbargoAtTick = cooldownTicks;
+            }
           }
         }
 
