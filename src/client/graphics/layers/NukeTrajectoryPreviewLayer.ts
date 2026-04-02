@@ -246,12 +246,6 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       game: this.game,
       targetTile,
       magnitude: this.game.config().nukeMagnitudes(ghostStructure),
-      allySmallIds: new Set(
-        this.game
-          .myPlayer()
-          ?.allies()
-          .map((a) => a.smallID()),
-      ),
       threshold: this.game.config().nukeAllianceBreakThreshold(),
     });
     // Find the point where SAM can intercept
