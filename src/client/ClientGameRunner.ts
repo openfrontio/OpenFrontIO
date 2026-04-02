@@ -13,7 +13,12 @@ import {
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
-import { GameMode, BuildableUnit, Structures, UnitType } from "../core/game/Game";
+import {
+  BuildableUnit,
+  GameMode,
+  Structures,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
