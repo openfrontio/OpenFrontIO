@@ -1,3 +1,4 @@
+import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/DefaultConfig";
 import {
   Difficulty,
   Duos,
@@ -11,6 +12,7 @@ import {
   Quads,
   RankedType,
   Trios,
+  UnitType,
   mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
@@ -20,6 +22,9 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 const ARCADE_MAPS = new Set(mapCategories.arcade);
+
+// Hard cap on player count for performance. Applied after compact-map reduction.
+const MAX_PLAYER_COUNT = 125;
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
@@ -58,7 +63,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
   Svalmel: 8,
-  World: 8,
+  World: 20,
   Lemnos: 3,
   Passage: 4,
   TwoLakes: 6,
@@ -76,6 +81,11 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Hawaii: 4,
   Alps: 4,
   NileDelta: 4,
+  Arctic: 6,
+  SanFrancisco: 3,
+  Aegean: 6,
+  MilkyWay: 8,
+  Mediterranean: 6,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -96,27 +106,41 @@ type ModifierKey =
   | "isCompact"
   | "isCrowded"
   | "isHardNations"
-  | "startingGold"
-  | "startingGoldHigh";
+  | "startingGold1M"
+  | "startingGold5M"
+  | "startingGold25M"
+  | "goldMultiplier"
+  | "isAlliancesDisabled"
+  | "isPortsDisabled"
+  | "isNukesDisabled"
+  | "isSAMsDisabled"
+  | "isPeaceTime";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
-  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
-  ...Array<ModifierKey>(8).fill("isCompact"),
-  ...Array<ModifierKey>(1).fill("isCrowded"),
+  ...Array<ModifierKey>(2).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(5).fill("isCompact"),
+  ...Array<ModifierKey>(2).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
-  ...Array<ModifierKey>(8).fill("startingGold"),
-  ...Array<ModifierKey>(1).fill("startingGoldHigh"),
+  ...Array<ModifierKey>(3).fill("startingGold1M"),
+  ...Array<ModifierKey>(5).fill("startingGold5M"),
+  ...Array<ModifierKey>(1).fill("startingGold25M"),
+  ...Array<ModifierKey>(4).fill("goldMultiplier"),
+  ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
+  ...Array<ModifierKey>(1).fill("isPortsDisabled"),
+  ...Array<ModifierKey>(1).fill("isNukesDisabled"),
+  ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
+  ...Array<ModifierKey>(1).fill("isPeaceTime"),
 ];
 
 // Modifiers that cannot be active at the same time.
 const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
-  ["startingGold", "startingGoldHigh"],
-  ["isHardNations", "startingGoldHigh"],
+  ["startingGold5M", "startingGold25M"],
+  ["startingGold5M", "startingGold1M"],
+  ["startingGold25M", "startingGold1M"],
+  ["isHardNations", "startingGold25M"],
+  ["isNukesDisabled", "isSAMsDisabled"],
 ];
-
-// Probability of hard nations modifier in HumansVsNations games.
-const HARD_NATIONS_HVN_PROBABILITY = 0.2; // 20%
 
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
@@ -136,77 +160,41 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
-    const modifiers = this.getRandomPublicGameModifiers(playerTeams);
-    const { startingGold } = modifiers;
-    let { isCompact, isRandomSpawn, isCrowded, isHardNations } = modifiers;
-
-    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
-    if (
-      playerTeams === Duos ||
-      playerTeams === Trios ||
-      playerTeams === Quads
-    ) {
-      isRandomSpawn = false;
-    }
-
-    // Hard nations modifier only applies when nations are present
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
-      isHardNations = false;
-    }
-
-    // Check if compact map would leave every team with at least 2 players
+    let isCompact: boolean | undefined =
+      this.playlists[type].length % 3 === 0 || undefined;
     if (
       isCompact &&
       mode === GameMode.Team &&
       !(await this.supportsCompactMapForTeams(map, playerTeams!))
     ) {
-      isCompact = false;
+      isCompact = undefined;
     }
 
-    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to 125 (or 60 if compact map is also enabled)
-    let crowdedMaxPlayers: number | undefined;
-    if (isCrowded) {
-      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
-      if (crowdedMaxPlayers === undefined) {
-        isCrowded = false;
-      } else {
-        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
-      }
-    }
-
-    // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers:
-        crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
         isCompact,
-        isRandomSpawn,
-        isCrowded,
-        isHardNations,
-        startingGold,
       },
-      startingGold,
-      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      difficulty:
+        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
-      randomSpawn: isRandomSpawn,
-      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      randomSpawn: false,
+      nations:
+        mode === GameMode.Team && playerTeams !== HumansVsNations
+          ? "disabled"
+          : "default",
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: this.getSpawnImmunityDuration(
-        playerTeams,
-        startingGold,
-      ),
+      spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -219,6 +207,7 @@ export class MapPlaylist {
 
     const excludedModifiers: ModifierKey[] = [];
 
+    // Check if compact map would leave every team with at least 2 players
     const supportsCompact =
       mode !== GameMode.Team ||
       (await this.supportsCompactMapForTeams(map, playerTeams!));
@@ -226,6 +215,7 @@ export class MapPlaylist {
       excludedModifiers.push("isCompact");
     }
 
+    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
       playerTeams === Duos ||
       playerTeams === Trios ||
@@ -234,54 +224,70 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // Hard nations: excluded for non-HvN team modes (no nations present).
-    // For HumansVsNations: rolled independently (not via pool).
-    // For FFA: stays in the pool for normal ticket-based selection.
-    let hardNationsFromIndependentRoll: boolean | undefined;
-    let poolCountReduction = 0;
-    if (mode === GameMode.Team && playerTeams !== HumansVsNations) {
+    // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
+    if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
-    } else if (playerTeams === HumansVsNations) {
-      excludedModifiers.push("isHardNations");
-      excludedModifiers.push("startingGoldHigh"); // Nations are disabled if that modifier is active
-      hardNationsFromIndependentRoll =
-        Math.random() < HARD_NATIONS_HVN_PROBABILITY;
-      poolCountReduction = hardNationsFromIndependentRoll ? 1 : 0;
+    }
+    if (playerTeams === HumansVsNations) {
+      excludedModifiers.push("startingGold25M"); // Nations are disabled if that modifier is active (Because of PVP immunity)
+      excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
     }
 
-    const poolResult = this.getRandomSpecialGameModifiers(
-      excludedModifiers,
-      undefined,
-      poolCountReduction,
-    );
-    let { isCrowded, startingGold, isCompact, isRandomSpawn } = poolResult;
-    let isHardNations =
-      hardNationsFromIndependentRoll ?? poolResult.isHardNations;
+    const poolResult = this.getRandomSpecialGameModifiers(excludedModifiers);
+    let {
+      isCrowded,
+      startingGold,
+      isCompact,
+      isRandomSpawn,
+      goldMultiplier,
+      isAlliancesDisabled,
+      isHardNations,
+      isPortsDisabled,
+      isNukesDisabled,
+      isSAMsDisabled,
+      isPeaceTime,
+    } = poolResult;
 
+    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+    // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
-      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
+      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, !!isCompact);
       if (crowdedMaxPlayers !== undefined) {
         crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
       } else {
         // Map doesn't support crowded. Drop it and pick one replacement only
         // if it was the sole modifier, so the lobby always has at least one.
-        isCrowded = false;
+        isCrowded = undefined;
         if (
           !isRandomSpawn &&
           !isCompact &&
           !isHardNations &&
-          startingGold === undefined
+          startingGold === undefined &&
+          goldMultiplier === undefined &&
+          !isAlliancesDisabled &&
+          !isPortsDisabled &&
+          !isNukesDisabled &&
+          !isSAMsDisabled &&
+          !isPeaceTime
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
             excludedModifiers,
             1,
-            poolCountReduction,
           );
-          ({ isRandomSpawn, isCompact, startingGold } = fallback);
-          isHardNations =
-            hardNationsFromIndependentRoll ?? fallback.isHardNations;
+          ({
+            isRandomSpawn,
+            isCompact,
+            startingGold,
+            goldMultiplier,
+            isAlliancesDisabled,
+            isPortsDisabled,
+            isNukesDisabled,
+            isSAMsDisabled,
+            isPeaceTime,
+          } = fallback);
+          ({ isHardNations } = fallback);
         }
       }
     }
@@ -292,10 +298,34 @@ export class MapPlaylist {
         (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
     );
 
-    const disableNations =
+    const nations: GameConfig["nations"] =
       (mode === GameMode.Team && playerTeams !== HumansVsNations) ||
       // Nations don't have PVP immunity, so 25M starting gold wouldn't work well with them
-      (startingGold !== undefined && startingGold >= 25_000_000);
+      (startingGold !== undefined && startingGold >= 25_000_000)
+        ? "disabled"
+        : "default";
+
+    // Build disabledUnits from modifiers
+    const disabledUnits: UnitType[] = [];
+    if (isPortsDisabled) {
+      disabledUnits.push(UnitType.Port);
+    }
+    if (isNukesDisabled) {
+      disabledUnits.push(
+        UnitType.MissileSilo,
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+        UnitType.MIRV,
+        UnitType.SAMLauncher,
+      );
+    }
+    if (isSAMsDisabled) {
+      disabledUnits.push(UnitType.SAMLauncher);
+    }
+
+    // 3min peace = 180s = 1800 ticks
+    // 4min peace = 240s = 2400 ticks
+    const peaceTimeDuration = isPeaceTime ? 240 * 10 : undefined;
 
     return {
       donateGold: mode === GameMode.Team,
@@ -310,23 +340,33 @@ export class MapPlaylist {
         isCrowded,
         isHardNations,
         startingGold,
+        goldMultiplier,
+        isAlliancesDisabled,
+        isPortsDisabled,
+        isNukesDisabled,
+        isSAMsDisabled,
+        isPeaceTime,
       },
       startingGold,
-      difficulty: isHardNations ? Difficulty.Hard : Difficulty.Medium,
+      goldMultiplier,
+      disableAlliances: isAlliancesDisabled ? true : undefined,
+      difficulty:
+        isHardNations || playerTeams === HumansVsNations
+          ? Difficulty.Hard
+          : Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
-      randomSpawn: isRandomSpawn,
-      disableNations,
+      randomSpawn: isRandomSpawn ? true : false,
+      nations,
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: this.getSpawnImmunityDuration(
-        playerTeams,
-        startingGold,
-      ),
-      disabledUnits: [],
+      spawnImmunityDuration:
+        peaceTimeDuration ??
+        this.getSpawnImmunityDuration(playerTeams, startingGold),
+      disabledUnits,
     } satisfies GameConfig;
   }
 
@@ -353,7 +393,7 @@ export class MapPlaylist {
       maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
       randomSpawn: false,
-      disableNations: true,
+      nations: "disabled",
       gameMode: GameMode.FFA,
       bots: isCompact ? 100 : 400,
       spawnImmunityDuration: 30 * 10,
@@ -459,39 +499,16 @@ export class MapPlaylist {
     return TEAM_WEIGHTS[0].config;
   }
 
-  private getRandomPublicGameModifiers(
-    playerTeams?: TeamCountConfig,
-  ): PublicGameModifiers {
-    return {
-      isRandomSpawn: Math.random() < 0.05, // 5% chance
-      isCompact: Math.random() < 0.05, // 5% chance
-      isCrowded: Math.random() < 0.05, // 5% chance
-      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
-      isHardNations:
-        playerTeams === HumansVsNations
-          ? Math.random() < HARD_NATIONS_HVN_PROBABILITY
-          : Math.random() < 0.025, // 2.5% chance
-    };
-  }
-
   private getRandomSpecialGameModifiers(
     excludedModifiers: ModifierKey[] = [],
     count?: number,
     countReduction: number = 0,
   ): PublicGameModifiers {
-    // Roll how many modifiers to pick: 30% → 1, 40% → 2, 20% → 3, 10% → 4
-    const modifierCountRoll = Math.floor(Math.random() * 10) + 1;
-    const k = Math.max(
-      0,
-      (count ??
-        (modifierCountRoll <= 3
-          ? 1
-          : modifierCountRoll <= 7
-            ? 2
-            : modifierCountRoll <= 9
-              ? 3
-              : 4)) - countReduction,
-    );
+    // Roll how many modifiers to pick: 30% → 1, 50% → 2, 20% → 3
+    const modifierCounts = [1, 1, 1, 2, 2, 2, 2, 2, 3, 3];
+    const rolled =
+      modifierCounts[Math.floor(Math.random() * modifierCounts.length)];
+    const k = Math.max(0, (count ?? rolled) - countReduction);
 
     // Shuffle the pool, then pick the first k unique modifier keys.
     const pool = SPECIAL_MODIFIER_POOL.filter(
@@ -510,15 +527,23 @@ export class MapPlaylist {
     }
 
     return {
-      isRandomSpawn: selected.has("isRandomSpawn"),
-      isCompact: selected.has("isCompact"),
-      isCrowded: selected.has("isCrowded"),
-      isHardNations: selected.has("isHardNations"),
-      startingGold: selected.has("startingGoldHigh")
+      isRandomSpawn: selected.has("isRandomSpawn") || undefined,
+      isCompact: selected.has("isCompact") || undefined,
+      isCrowded: selected.has("isCrowded") || undefined,
+      isHardNations: selected.has("isHardNations") || undefined,
+      startingGold: selected.has("startingGold25M")
         ? 25_000_000
-        : selected.has("startingGold")
+        : selected.has("startingGold5M")
           ? 5_000_000
-          : undefined,
+          : selected.has("startingGold1M")
+            ? 1_000_000
+            : undefined,
+      goldMultiplier: selected.has("goldMultiplier") ? 2 : undefined,
+      isAlliancesDisabled: selected.has("isAlliancesDisabled") || undefined,
+      isPortsDisabled: selected.has("isPortsDisabled") || undefined,
+      isNukesDisabled: selected.has("isNukesDisabled") || undefined,
+      isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
+      isPeaceTime: selected.has("isPeaceTime") || undefined,
     };
   }
 
@@ -532,12 +557,15 @@ export class MapPlaylist {
     const [l, , s] = this.calculateMapPlayerCounts(landTiles);
     // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
     let p = Math.min(Math.ceil(s * 1.5), l);
-    // Apply compact 75% player reduction
-    p = Math.max(3, Math.floor(p * 0.25));
+    // Apply compact 75% player reduction, then cap for performance
+    p = Math.min(Math.max(3, Math.floor(p * 0.25)), MAX_PLAYER_COUNT);
     // Apply team adjustment
     p = this.adjustForTeams(p, playerTeams);
-    // Check at least 2 players per team
-    return this.playersPerTeam(p, playerTeams) >= 2;
+    // Check at least 2 players per team AND at least 2 teams
+    return (
+      this.playersPerTeam(p, playerTeams) >= 2 &&
+      this.numberOfTeams(p, playerTeams) >= 2
+    );
   }
 
   private playersPerTeam(
@@ -558,11 +586,29 @@ export class MapPlaylist {
     }
   }
 
+  private numberOfTeams(
+    adjustedPlayerCount: number,
+    playerTeams: TeamCountConfig,
+  ): number {
+    switch (playerTeams) {
+      case Duos:
+        return Math.floor(adjustedPlayerCount / 2);
+      case Trios:
+        return Math.floor(adjustedPlayerCount / 3);
+      case Quads:
+        return Math.floor(adjustedPlayerCount / 4);
+      case HumansVsNations:
+        return 2; // always 2 teams
+      default:
+        return playerTeams; // numeric value IS the team count
+    }
+  }
+
   /**
    * Centralised spawn-immunity duration logic.
    * - HumansVsNations: always 5s (nations can't benefit from longer PVP immunity)
-   * - 25M starting gold: 2:30 (extra time to compensate for high gold)
-   * - 5M starting gold: 30s
+   * - 25M starting gold: 2:30min (extra time to compensate for high gold)
+   * - 5M starting gold: SAM build time + 15s (enough to build a SAM)
    * - Default: 5s
    */
   private getSpawnImmunityDuration(
@@ -572,7 +618,7 @@ export class MapPlaylist {
     if (playerTeams === HumansVsNations) return 5 * 10;
     if (startingGold !== undefined && startingGold >= 25_000_000)
       return 150 * 10;
-    if (startingGold) return 30 * 10;
+    if (startingGold) return SAM_CONSTRUCTION_TICKS + 15 * 10;
     return 5 * 10;
   }
 
@@ -581,9 +627,10 @@ export class MapPlaylist {
     isCompact: boolean,
   ): Promise<number | undefined> {
     const landTiles = await getMapLandTiles(map);
-    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    const [rawFirstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    const firstPlayerCount = Math.min(rawFirstPlayerCount, MAX_PLAYER_COUNT);
     if (firstPlayerCount <= 60) {
-      return isCompact ? 60 : 125;
+      return isCompact ? 60 : MAX_PLAYER_COUNT;
     }
     return undefined;
   }
@@ -603,6 +650,8 @@ export class MapPlaylist {
     if (isCompactMap) {
       p = Math.max(3, Math.floor(p * 0.25));
     }
+    // Cap for performance
+    p = Math.min(p, MAX_PLAYER_COUNT);
     return this.adjustForTeams(p, numPlayerTeams);
   }
 
@@ -636,7 +685,6 @@ export class MapPlaylist {
   /**
    * Calculate player counts from land tiles
    * For every 1,000,000 land tiles, take 50 players
-   * Limit to max 125 players for performance
    * Second value is 75% of calculated value, third is 50%
    * All values are rounded to the nearest 5
    */
@@ -645,12 +693,7 @@ export class MapPlaylist {
   ): [number, number, number] {
     const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
 
-    const base = roundToNearest5((landTiles / 1_000_000) * 50);
-    const limitedBase = Math.min(Math.max(base, 5), 125);
-    return [
-      limitedBase,
-      roundToNearest5(limitedBase * 0.75),
-      roundToNearest5(limitedBase * 0.5),
-    ];
+    const base = Math.max(roundToNearest5((landTiles / 1_000_000) * 50), 5);
+    return [base, roundToNearest5(base * 0.75), roundToNearest5(base * 0.5)];
   }
 }

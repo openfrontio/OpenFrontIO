@@ -1,10 +1,11 @@
 import {
+  BuildableUnit,
   Cell,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
@@ -22,7 +23,7 @@ export class WorkerClient {
 
   constructor(
     private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
       type: "module",
@@ -166,7 +167,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -196,10 +197,12 @@ export class WorkerClient {
     });
   }
 
-  attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
+  playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -210,23 +213,64 @@ export class WorkerClient {
 
       this.messageHandlers.set(messageId, (message) => {
         if (
-          message.type === "attack_average_position_result" &&
-          message.x !== undefined &&
-          message.y !== undefined
+          message.type === "player_buildables_result" &&
+          message.result !== undefined
         ) {
-          if (message.x === null || message.y === null) {
-            resolve(null);
-          } else {
-            resolve(new Cell(message.x, message.y));
-          }
+          resolve(message.result);
         }
       });
 
       this.worker.postMessage({
-        type: "attack_average_position",
+        type: "player_buildables",
         id: messageId,
-        playerID: playerID,
-        attackID: attackID,
+        playerID,
+        x,
+        y,
+        units,
+      });
+    });
+  }
+
+  attackClusteredPositions(
+    playerID: number,
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      const timeout = setTimeout(() => {
+        this.messageHandlers.delete(messageId);
+        reject(new Error("attack_clustered_positions request timed out"));
+      }, 5000);
+
+      this.messageHandlers.set(messageId, (message) => {
+        clearTimeout(timeout);
+        if (message.type !== "attack_clustered_positions_result") {
+          reject(
+            new Error(
+              `Unexpected message type for attackClusteredPositions: ${message.type}`,
+            ),
+          );
+          return;
+        }
+        resolve(
+          message.attacks.map((a) => ({
+            id: a.id,
+            positions: a.positions.map((c) => new Cell(c.x, c.y)),
+          })),
+        );
+      });
+
+      this.worker.postMessage({
+        type: "attack_clustered_positions",
+        id: messageId,
+        playerID,
+        attackID,
       });
     });
   }

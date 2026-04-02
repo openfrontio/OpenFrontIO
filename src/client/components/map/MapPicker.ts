@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import {
   Difficulty,
   GameMapType,
@@ -7,7 +8,7 @@ import {
 } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
-import randomMap from "/images/RandomMap.webp?url";
+const randomMap = assetUrl("images/RandomMap.webp");
 
 const featuredMaps: GameMapType[] = [
   GameMapType.World,
@@ -93,7 +94,7 @@ export class MapPicker extends LitElement {
 
   private renderFeaturedMaps() {
     let featuredMapList = featuredMaps;
-    if (!featuredMapList.includes(this.selectedMap)) {
+    if (!this.useRandomMap && !featuredMapList.includes(this.selectedMap)) {
       featuredMapList = [this.selectedMap, ...featuredMaps];
     }
     return html`<div class="w-full">

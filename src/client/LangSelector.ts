@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../core/AssetUrls";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
 import { formatDebugTranslation } from "./Utils";
@@ -71,6 +72,7 @@ export class LangSelector extends LitElement {
     if (supported.has(lang)) return lang;
 
     const base = lang.slice(0, 2);
+    if (supported.has(base)) return base;
     const candidates = Array.from(supported).filter((key) =>
       key.startsWith(base),
     );
@@ -118,7 +120,9 @@ export class LangSelector extends LitElement {
     }
 
     try {
-      const response = await fetch(`/lang/${encodeURIComponent(lang)}.json`);
+      const response = await fetch(
+        assetUrl(`lang/${encodeURIComponent(lang)}.json`),
+      );
       if (!response.ok) {
         throw new Error(`Failed to fetch language ${lang}: ${response.status}`);
       }
@@ -223,6 +227,7 @@ export class LangSelector extends LitElement {
       "o-modal",
       "o-button",
       "territory-patterns-modal",
+      "store-modal",
       "pattern-input",
       "fluent-slider",
       "news-modal",
@@ -349,14 +354,12 @@ export class LangSelector extends LitElement {
         id="lang-selector"
         title="Change Language"
         @click=${this.openModal}
-        class="border-none bg-none cursor-pointer p-0 flex items-center justify-center transition-transform duration-200 hover:scale-[1.1] active:scale-[0.9]"
-        style="width: 28px; height: 28px;"
+        class="border-none bg-none cursor-pointer p-0 flex items-center justify-center transition-transform duration-200 hover:scale-[1.1] active:scale-[0.9] opacity-60 hover:opacity-100 w-[40px] h-[40px] lg:w-[56px] lg:h-[56px]"
       >
         <img
           id="lang-flag"
-          class="object-contain pointer-events-none"
-          style="width: 28px; height: 28px;"
-          src="/flags/${currentLang.svg}.svg"
+          class="object-contain pointer-events-none transition-all w-[40px] h-[40px] lg:w-[48px] lg:h-[48px]"
+          src=${assetUrl(`flags/${currentLang.svg}.svg`)}
           alt="flag"
           draggable="false"
         />

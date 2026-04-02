@@ -1,10 +1,14 @@
 import { z } from "zod";
-import { GameInfo } from "../core/Schemas";
+import { buildAssetUrl } from "../core/AssetUrls";
+import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
+import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
+import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
-  username: z.string().optional(),
+  username: UsernameSchema.optional(),
+  clanTag: ClanTagSchema,
   stats: z.unknown().optional(),
 });
 
@@ -85,7 +89,10 @@ function parseWinner(
   if (!winnerArray || winnerArray.length < 2) return undefined;
 
   const idToName = new Map(
-    (players ?? []).map((p) => [p.clientID, p.username]),
+    (players ?? []).map((p) => [
+      p.clientID,
+      p.username ? formatPlayerDisplayName(p.username, p.clanTag) : undefined,
+    ]),
   );
 
   if (winnerArray[0] === "team" && winnerArray.length >= 3) {
@@ -126,13 +133,16 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export function buildPreview(
+export async function buildPreview(
   gameID: string,
   origin: string,
   workerPath: string,
   lobby: GameInfo | null,
   publicInfo: ExternalGameInfo | null,
-): PreviewMeta {
+): Promise<PreviewMeta> {
+  const assetManifest = await getRuntimeAssetManifest();
+  const buildAbsoluteAssetUrl = (path: string) =>
+    new URL(buildAssetUrl(path, assetManifest), origin).toString();
   const isFinished = !!publicInfo?.info?.end;
   const isPrivate = lobby?.gameConfig?.gameType === "Private";
 
@@ -183,9 +193,12 @@ export function buildPreview(
   const normalizedMap = map ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
 
   const mapThumbnail = normalizedMap
-    ? `${origin}/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`
+    ? buildAbsoluteAssetUrl(
+        `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
+      )
     : null;
-  const image = mapThumbnail ?? `${origin}/images/GameplayScreenshot.png`;
+  const image =
+    mapThumbnail ?? buildAbsoluteAssetUrl("images/GameplayScreenshot.png");
 
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
   const gameTypeLabel = gameType ? ` (${gameType})` : "";
@@ -228,7 +241,9 @@ export function buildPreview(
       // Show host
       const hostClient = lobby.clients?.[0];
       if (hostClient?.username) {
-        sections.push(`Host: ${hostClient.username}`);
+        sections.push(
+          `Host: ${formatPlayerDisplayName(hostClient.username, hostClient.clanTag)}`,
+        );
       }
 
       const gameOptions: string[] = [];
@@ -240,7 +255,7 @@ export function buildPreview(
       if (gc?.infiniteTroops) gameOptions.push("Infinite Troops");
       if (gc?.instantBuild) gameOptions.push("Instant Build");
       if (gc?.randomSpawn) gameOptions.push("Random Spawn");
-      if (gc?.disableNations) gameOptions.push("Nations Disabled");
+      if (gc?.nations === "disabled") gameOptions.push("Nations Disabled");
       if (gc?.donateTroops) gameOptions.push("Troop Donations Enabled");
 
       if (gameOptions.length > 0) {

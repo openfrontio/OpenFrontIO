@@ -10,13 +10,7 @@ import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
-import "./FlagInputModal";
 import { Platform } from "./Platform";
-
-interface FlagInputModalElement extends HTMLElement {
-  open(): void;
-  returnTo?: string;
-}
 
 const isMac = Platform.isMac;
 
@@ -47,6 +41,9 @@ const DefaultKeybinds: Record<string, string> = {
   moveRight: "KeyD",
   modifierKey: isMac ? "MetaLeft" : "ControlLeft",
   altKey: "AltLeft",
+  pauseGame: "KeyP",
+  gameSpeedUp: "Period",
+  gameSpeedDown: "Comma",
 };
 
 @customElement("user-setting")
@@ -404,16 +401,6 @@ export class UserSettingModal extends BaseModal {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
-  private openFlagSelector = () => {
-    const flagInputModal =
-      document.querySelector<FlagInputModalElement>("#flag-input-modal");
-    if (flagInputModal?.open) {
-      this.close();
-      flagInputModal.returnTo = "#" + (this.id || "page-settings");
-      flagInputModal.open();
-    }
-  };
-
   render() {
     const activeContent =
       this.activeTab === "basic"
@@ -642,6 +629,36 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="pauseGame"
+        label=${translateText("user_setting.pause_game")}
+        description=${translateText("user_setting.pause_game_desc")}
+        .defaultKey=${DefaultKeybinds.pauseGame}
+        .value=${this.getKeyValue("pauseGame")}
+        .display=${this.getKeyChar("pauseGame")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="gameSpeedUp"
+        label=${translateText("user_setting.game_speed_up")}
+        description=${translateText("user_setting.game_speed_up_desc")}
+        .defaultKey=${DefaultKeybinds.gameSpeedUp}
+        .value=${this.getKeyValue("gameSpeedUp")}
+        .display=${this.getKeyChar("gameSpeedUp")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="gameSpeedDown"
+        label=${translateText("user_setting.game_speed_down")}
+        description=${translateText("user_setting.game_speed_down_desc")}
+        .defaultKey=${DefaultKeybinds.gameSpeedDown}
+        .value=${this.getKeyValue("gameSpeedDown")}
+        .display=${this.getKeyChar("gameSpeedDown")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -794,35 +811,6 @@ export class UserSettingModal extends BaseModal {
 
   private renderBasicSettings() {
     return html`
-      <!-- 🚩 Flag Selector -->
-      <div
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer"
-        role="button"
-        tabindex="0"
-        @click=${this.openFlagSelector}
-        @keydown=${(e: KeyboardEvent) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            this.openFlagSelector();
-          }
-        }}
-      >
-        <div class="flex flex-col flex-1 min-w-0 mr-4">
-          <div class="text-white font-bold text-base block mb-1">
-            ${translateText("flag_input.title")}
-          </div>
-          <div class="text-white/50 text-sm leading-snug">
-            ${translateText("flag_input.button_title")}
-          </div>
-        </div>
-
-        <div
-          class="relative inline-block w-12 h-8 shrink-0 rounded overflow-hidden border border-white/20"
-        >
-          <flag-input class="w-full h-full pointer-events-none"></flag-input>
-        </div>
-      </div>
-
       <!-- 🌙 Dark Mode -->
       <setting-toggle
         label="${translateText("user_setting.dark_mode_label")}"

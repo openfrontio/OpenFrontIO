@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -39,17 +40,17 @@ import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import "./PlayerModerationModal";
 import "./SendResourceModal";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
-import stopTradingIcon from "/images/StopIconWhite.png?url";
-import targetIcon from "/images/TargetIconWhite.svg?url";
-import startTradingIcon from "/images/TradingIconWhite.png?url";
-import traitorIcon from "/images/TraitorIconLightRed.svg?url";
-import breakAllianceIcon from "/images/TraitorIconWhite.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+const stopTradingIcon = assetUrl("images/StopIconWhite.png");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const startTradingIcon = assetUrl("images/TradingIconWhite.png");
+const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
+const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -121,7 +122,7 @@ export class PlayerPanel extends LitElement implements Layer {
       // Refresh actions & alliance expiry
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
-        this.actions = await myPlayer.actions(this.tile);
+        this.actions = await myPlayer.actions(this.tile, null);
         if (this.actions?.interaction?.allianceInfo?.expiresAt !== undefined) {
           const expiresAt = this.actions.interaction.allianceInfo.expiresAt;
           const remainingTicks = expiresAt - this.g.ticks();
@@ -493,7 +494,7 @@ export class PlayerPanel extends LitElement implements Layer {
       <div class="flex items-center gap-2.5 flex-wrap">
         ${country && typeof flagCode === "string"
           ? html`<img
-              src="/flags/${encodeURIComponent(flagCode)}.svg"
+              src=${assetUrl(`flags/${encodeURIComponent(flagCode)}.svg`)}
               alt=${country?.name ?? "Flag"}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
@@ -505,9 +506,9 @@ export class PlayerPanel extends LitElement implements Layer {
         <div class="flex-1 min-w-0">
           <h2
             class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
-            title=${other.name()}
+            title=${other.displayName()}
           >
-            ${other.name()}
+            ${other.displayName()}
           </h2>
         </div>
         ${chip
@@ -626,7 +627,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
     const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
     const alliesSorted = [...allies].sort((a, b) =>
-      nameCollator.compare(a.name(), b.name()),
+      nameCollator.compare(a.displayName(), b.displayName()),
     );
 
     return html`
@@ -669,9 +670,9 @@ export class PlayerPanel extends LitElement implements Layer {
                              rounded-md border border-white/10 bg-white/5
                              px-2.5 py-1 text-[14px] text-zinc-100
                              hover:bg-white/8 active:scale-[0.99] transition"
-                      title=${p.name()}
+                      title=${p.displayName()}
                     >
-                      <span class="truncate">${p.name()}</span>
+                      <span class="truncate">${p.displayName()}</span>
                     </li>`,
                 )}
           </ul>

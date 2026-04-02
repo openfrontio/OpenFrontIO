@@ -13,9 +13,14 @@ import {
 import { Nation as ManifestNation } from "./TerrainMapLoader";
 
 /**
- * Creates the nations array for a game, handling HumansVsNations mode specially.
- * In HumansVsNations mode, the number of nations matches the number of human players to ensure fair gameplay.
- * For compact maps, only 25% of the nations are used.
+ * Creates the nations array for a game.
+ * If config.nations is a number (custom count), uses that exact count,
+ * generating additional nations with random names if needed.
+ * If config.nations is "disabled", returns no nations.
+ * If config.nations is "default":
+ *   - Public HumansVsNations: matches nation count to human player count
+ *   - Public compact maps: uses 25% of manifest nations
+ *   - Otherwise: uses all manifest nations
  */
 export function createNationsForGame(
   gameStart: GameStartInfo,
@@ -23,10 +28,6 @@ export function createNationsForGame(
   numHumans: number,
   random: PseudoRandom,
 ): Nation[] {
-  if (gameStart.config.disableNations) {
-    return [];
-  }
-
   const toNation = (n: ManifestNation): Nation =>
     new Nation(
       new Cell(n.coordinates[0], n.coordinates[1]),
@@ -39,38 +40,59 @@ export function createNationsForGame(
     gameStart.config.gameMode === GameMode.Team &&
     gameStart.config.playerTeams === HumansVsNations;
 
-  // For compact maps, use only 25% of nations (minimum 1)
-  let effectiveNations = manifestNations;
-  if (isCompactMap && !isHumansVsNations) {
-    const targetCount = getCompactMapNationCount(manifestNations.length, true);
-    const shuffled = random.shuffleArray(manifestNations);
-    effectiveNations = shuffled.slice(0, targetCount);
-  }
-
-  // For non-HumansVsNations modes, simply use the effective nations
-  if (!isHumansVsNations) {
-    return effectiveNations.map(toNation);
-  }
-
-  // HumansVsNations mode: balance nation count to match human count
-  const isSingleplayer = gameStart.config.gameType === GameType.Singleplayer;
-  const targetNationCount = isSingleplayer ? 1 : numHumans;
-
-  if (targetNationCount === 0) {
+  const configNations = gameStart.config.nations;
+  if (configNations === "disabled") {
     return [];
   }
-
-  // If we have enough manifest nations, use a subset
-  if (manifestNations.length >= targetNationCount) {
-    // Shuffle manifest nations to add variety
-    const shuffled = random.shuffleArray(manifestNations);
-    return shuffled.slice(0, targetNationCount).map(toNation);
+  // If nations count is explicitly set, use that exact count
+  if (typeof configNations === "number") {
+    return createRandomNations(
+      configNations,
+      manifestNations,
+      toNation,
+      random,
+    );
   }
 
-  // If we need more nations than defined in manifest, create additional ones
-  const nations: Nation[] = manifestNations.map(toNation);
+  if (gameStart.config.gameType === GameType.Public) {
+    // For HvN, balance nation count to match human count
+    if (isHumansVsNations) {
+      return createRandomNations(numHumans, manifestNations, toNation, random);
+    }
+
+    // For compact maps, use only 25% of nations (minimum 1)
+    if (isCompactMap) {
+      const targetCount = getCompactMapNationCount(
+        manifestNations.length,
+        true,
+      );
+      const shuffled = random.shuffleArray(manifestNations);
+      const slicedNations = shuffled.slice(0, targetCount);
+      return slicedNations.map(toNation);
+    }
+  }
+
+  return manifestNations.map(toNation);
+}
+
+/**
+ * Creates the requested number of nations from manifest data.
+ * If more nations are needed than available in the manifest, generates additional ones with random names.
+ */
+function createRandomNations(
+  targetCount: number,
+  manifestNations: ManifestNation[],
+  toNation: (n: ManifestNation) => Nation,
+  random: PseudoRandom,
+): Nation[] {
+  const shuffled = random.shuffleArray(manifestNations);
+  if (targetCount <= manifestNations.length) {
+    return shuffled.slice(0, targetCount).map(toNation);
+  }
+  // Need more nations than defined in manifest, create additional ones
+  const nations: Nation[] = shuffled.map(toNation);
   const usedNames = new Set(nations.map((n) => n.playerInfo.name));
-  const additionalCount = targetNationCount - manifestNations.length;
+  const additionalCount = targetCount - manifestNations.length;
   for (let i = 0; i < additionalCount; i++) {
     const name = generateUniqueNationName(random, usedNames);
     usedNames.add(name);
@@ -81,7 +103,6 @@ export function createNationsForGame(
       ),
     );
   }
-
   return nations;
 }
 
@@ -178,6 +199,60 @@ const NAME_TEMPLATES: NameTemplate[] = [
   ["House of", PLURAL_NOUN],
   ["Certified Organic", NOUN],
   ["Unregulated", NOUN],
+  ["Slightly Damp", NOUN],
+  ["Suspiciously Quiet", PLURAL_NOUN],
+  ["Weaponized", NOUN],
+  ["Accidentally Evil", NOUN],
+  ["Extremely Loud", PLURAL_NOUN],
+  ["Bootleg", NOUN],
+  ["Questionable", NOUN],
+  ["Off-Brand", NOUN],
+  ["Counterfeit", PLURAL_NOUN],
+  ["Sentient", PLURAL_NOUN],
+  ["Feral", PLURAL_NOUN],
+  ["Aggressively Friendly", PLURAL_NOUN],
+  ["Mildly Threatening", NOUN],
+  ["Dangerously Cute", PLURAL_NOUN],
+  ["Legally Distinct", NOUN],
+  ["Deeply Confused", PLURAL_NOUN],
+  ["Order of the", NOUN],
+  ["Knights of the", NOUN],
+  ["Cult of the", NOUN],
+  ["League of", PLURAL_NOUN],
+  ["Band of", PLURAL_NOUN],
+  ["Council of", PLURAL_NOUN],
+  ["Assembly of", PLURAL_NOUN],
+  ["Haunted", NOUN],
+  ["Cursed", NOUN],
+  ["Blessed", NOUN],
+  ["Radioactive", PLURAL_NOUN],
+  ["Deep Fried", NOUN],
+  ["Gluten Free", PLURAL_NOUN],
+  ["Turbocharged", NOUN],
+  ["Nomadic", PLURAL_NOUN],
+  ["Vengeful", PLURAL_NOUN],
+  ["Legendary", PLURAL_NOUN],
+  ["Outlaw", PLURAL_NOUN],
+  ["AFK", NOUN],
+  ["Noob", NOUN],
+  ["Pro", NOUN],
+  ["Tryhard", PLURAL_NOUN],
+  ["Sweaty", PLURAL_NOUN],
+  ["Griefing", PLURAL_NOUN],
+  ["Speedrunning", PLURAL_NOUN],
+  ["Nerfed", PLURAL_NOUN],
+  ["Buffed", PLURAL_NOUN],
+  ["OP", NOUN],
+  ["Overpowered", NOUN],
+  ["Underpowered", PLURAL_NOUN],
+  ["Modded", PLURAL_NOUN],
+  ["Prestige", NOUN],
+  ["Hardcore", PLURAL_NOUN],
+  ["Clutch", NOUN],
+  ["Cracked", NOUN],
+  ["Unranked", PLURAL_NOUN],
+  ["Max Level", NOUN],
+  ["Ironman", NOUN],
 
   [NOUN, "For Hire"],
   [PLURAL_NOUN, "That Bite"],
@@ -203,6 +278,43 @@ const NAME_TEMPLATES: NameTemplate[] = [
   [NOUN, "State"],
   [NOUN, "Duchy"],
   [NOUN, "Ocean"],
+  [NOUN, "Syndicate"],
+  [NOUN, "Republic"],
+  [NOUN, "Province"],
+  [NOUN, "Dominion"],
+  [NOUN, "Commune"],
+  [NOUN, "Federation"],
+  [NOUN, "Parliament"],
+  [NOUN, "Tribunal"],
+  [NOUN, "Armada"],
+  [NOUN, "Rebellion"],
+  [NOUN, "Resistance"],
+  [NOUN, "Expedition"],
+  [NOUN, "Preservation Society"],
+  [NOUN, "Defense League"],
+  [NOUN, "Thunderdome"],
+  [NOUN, "Uprising"],
+  [NOUN, "Enthusiasts"],
+  [NOUN, "Appreciation Society"],
+  [NOUN, "Fan Club"],
+  [NOUN, "Simulation"],
+  [PLURAL_NOUN, "Anonymous"],
+  [PLURAL_NOUN, "With Attitude"],
+  [PLURAL_NOUN, "Gone Wrong"],
+  [PLURAL_NOUN, "on Vacation"],
+  [PLURAL_NOUN, "in Disguise"],
+  [PLURAL_NOUN, "With Hats"],
+  [PLURAL_NOUN, "on Ice"],
+  [PLURAL_NOUN, "United"],
+  [PLURAL_NOUN, "Unhinged"],
+  [PLURAL_NOUN, "Unleashed"],
+  [PLURAL_NOUN, "Reloaded"],
+  [PLURAL_NOUN, "After Dark"],
+  [PLURAL_NOUN, "From Space"],
+  [PLURAL_NOUN, "of Doom"],
+  [PLURAL_NOUN, "Without Borders"],
+  [NOUN, "Meta"],
+  [PLURAL_NOUN, "OP Please Nerf"],
 
   ["Alternate", NOUN, "Universe"],
   ["Famous", NOUN, "Collection"],
@@ -216,50 +328,39 @@ const NAME_TEMPLATES: NameTemplate[] = [
   ["Quantum", NOUN, "Computer"],
   ["Hadron", NOUN, "Collider"],
   ["Large", NOUN, "Obliterator"],
-  ["Interstellar", NOUN, "Cabal"],
-  ["Interstellar", NOUN, "Army"],
   ["Interstellar", NOUN, "Pirates"],
-  ["Interstellar", NOUN, "Dynasty"],
-  ["Interstellar", NOUN, "Clan"],
-  ["Galactic", NOUN, "Smugglers"],
-  ["Galactic", NOUN, "Cabal"],
-  ["Galactic", NOUN, "Alliance"],
-  ["Galactic", NOUN, "Empire"],
-  ["Galactic", NOUN, "Army"],
-  ["Galactic", NOUN, "Crown"],
-  ["Galactic", NOUN, "Pirates"],
-  ["Galactic", NOUN, "Dynasty"],
-  ["Galactic", NOUN, "Clan"],
-  ["Alien", NOUN, "Army"],
-  ["Alien", NOUN, "Cabal"],
-  ["Alien", NOUN, "Alliance"],
-  ["Alien", NOUN, "Empire"],
-  ["Alien", NOUN, "Pirates"],
   ["Alien", NOUN, "Clan"],
-  ["Grand", NOUN, "Empire"],
-  ["Grand", NOUN, "Dynasty"],
-  ["Grand", NOUN, "Army"],
-  ["Grand", NOUN, "Cabal"],
   ["Grand", NOUN, "Alliance"],
   ["Royal", NOUN, "Army"],
-  ["Royal", NOUN, "Cabal"],
-  ["Royal", NOUN, "Empire"],
-  ["Royal", NOUN, "Dynasty"],
-  ["Holy", NOUN, "Dynasty"],
   ["Holy", NOUN, "Empire"],
-  ["Holy", NOUN, "Alliance"],
-  ["Eternal", NOUN, "Empire"],
   ["Eternal", NOUN, "Cabal"],
-  ["Eternal", NOUN, "Alliance"],
-  ["Eternal", NOUN, "Dynasty"],
-  ["Invading", NOUN, "Cabal"],
   ["Invading", NOUN, "Empire"],
-  ["Invading", NOUN, "Alliance"],
   ["Immortal", NOUN, "Pirates"],
   ["Shadow", NOUN, "Cabal"],
   ["Secret", NOUN, "Dynasty"],
   ["The Great", NOUN, "Army"],
   ["The", NOUN, "Matrix"],
+  ["Tax-Free", NOUN, "Paradise"],
+  ["Self-Proclaimed", NOUN, "Experts"],
+  ["Forbidden", NOUN, "Zone"],
+  ["Reluctant", NOUN, "Monarchy"],
+  ["Chaotic", NOUN, "Collective"],
+  ["Unsanctioned", NOUN, "Olympics"],
+  ["The", NOUN, "Conspiracy"],
+  ["The", NOUN, "Incident"],
+  ["The", NOUN, "Situation"],
+  ["Premium", NOUN, "Subscription"],
+  ["Clearance", NOUN, "Warehouse"],
+  ["Budget", NOUN, "Emporium"],
+  ["Overnight", NOUN, "Delivery"],
+  ["National", NOUN, "Reserve"],
+  ["The", NOUN, "Dimension"],
+  ["The", NOUN, "Prophecy"],
+  ["The", NOUN, "Awakening"],
+  ["The", NOUN, "Inquisition"],
+  ["Legendary", NOUN, "Drop"],
+  ["Elite", NOUN, "Squad"],
+  ["The", NOUN, "Saga"],
 ];
 
 const NOUNS = [
@@ -329,12 +430,201 @@ const NOUNS = [
   "Burger",
   "Tomato",
   "Penguin",
+  "Waffle",
+  "Toaster",
+  "Hamster",
+  "Pretzel",
+  "Walrus",
+  "Raccoon",
+  "Llama",
+  "Noodle",
+  "Goblin",
+  "Muffin",
+  "Coconut",
+  "Biscuit",
+  "Cactus",
+  "Moose",
+  "Platypus",
+  "Yeti",
+  "Sponge",
+  "Spatula",
+  "Trampoline",
+  "Dolphin",
+  "Taco",
+  "Chainsaw",
+  "Spoon",
+  "Doorknob",
+  "Bathrobe",
+  "Lampshade",
+  "Crowbar",
+  "Shoelace",
+  "Wheelbarrow",
+  "Barnacle",
+  "Armadillo",
+  "Cabbage",
+  "Wig",
+  "Plunger",
+  "Kazoo",
+  "Napkin",
+  "Pelican",
+  "Turnip",
+  "Canoe",
+  "Igloo",
+  "Stapler",
+  "Ferret",
+  "Anchovy",
+  "Dumpling",
+  "Mattress",
+  "Parsnip",
+  "Gargoyle",
+  "Crayon",
+  "Corgi",
+  "Macaroni",
+  "Blender",
+  "Ukulele",
+  "Flamingo",
+  "Nugget",
+  "Porcupine",
+  "Tadpole",
+  "Papaya",
+  "Chinchilla",
+  "Teapot",
+  "Baguette",
+  "Squid",
+  "Otter",
+  "Badger",
+  "Hedgehog",
+  "Mantis",
+  "Scorpion",
+  "Vulture",
+  "Falcon",
+  "Jackal",
+  "Hyena",
+  "Panther",
+  "Stingray",
+  "Octopus",
+  "Basilisk",
+  "Dragon",
+  "Sphinx",
+  "Phoenix",
+  "Kraken",
+  "Leviathan",
+  "Mammoth",
+  "Chimera",
+  "Griffin",
+  "Minotaur",
+  "Cyclops",
+  "Brick",
+  "Anvil",
+  "Torpedo",
+  "Lantern",
+  "Compass",
+  "Telescope",
+  "Pendulum",
+  "Furnace",
+  "Cauldron",
+  "Beacon",
+  "Anchor",
+  "Dagger",
+  "Gauntlet",
+  "Helmet",
+  "Shield",
+  "Banner",
+  "Trumpet",
+  "Bagpipe",
+  "Tambourine",
+  "Accordion",
+  "Xylophone",
+  "Avocado",
+  "Broccoli",
+  "Radish",
+  "Artichoke",
+  "Kumquat",
+  "Pomegranate",
+  "Mango",
+  "Truffle",
+  "Croissant",
+  "Lasagna",
+  "Soufflé",
+  "Spaghetti",
+  "Tsunami",
+  "Tornado",
+  "Avalanche",
+  "Volcano",
+  "Glacier",
+  "Comet",
+  "Meteor",
+  "Nebula",
+  "Supernova",
+  "Quasar",
+  "Abyss",
+  "Labyrinth",
+  "Caterpillar",
+  "Chameleon",
+  "Narwhal",
+  "Capybara",
+  "Pangolin",
+  "Axolotl",
+  "Sloth",
+  "Lemur",
+  "Alpaca",
+  "Tapir",
+  "Wombat",
+  "Ocelot",
+  "Manatee",
+  "Ibis",
+  "Kiwi",
+  "Creeper",
+  "Enderman",
+  "Skeleton",
+  "Necromancer",
+  "Paladin",
+  "Warlock",
+  "Ranger",
+  "Boss",
+  "NPC",
+  "Assassin",
+  "Viking",
+  "Samurai",
+  "Pirate",
+  "Champion",
+  "Gladiator",
+  "Demon",
+  "Angel",
+
+  "Fullsender",
+  "Fullsender",
+  "Fullsender",
+  "Mito",
+  "Mito",
+  "Mito",
+  "Mitochondria",
+  "Mitochondria",
+  "Mitochondria",
 ];
 
 // Words from NOUNS that need irregular "-oes" plural
-const O_TO_OES = new Set(["Potato", "Tomato"]);
+const O_TO_OES = new Set(["Potato", "Tomato", "Volcano", "Torpedo"]);
+
+// Words from NOUNS that need special plural forms
+const SPECIAL_PLURALS = new Map([
+  ["Cactus", "Cacti"],
+  ["Platypus", "Platypuses"],
+  ["Moose", "Moose"],
+  ["Octopus", "Octopi"],
+  ["Cyclops", "Cyclopes"],
+  ["Samurai", "Samurai"],
+  ["Fish", "Fish"],
+  ["Salmon", "Salmon"],
+  ["Cod", "Cod"],
+  ["Enderman", "Endermen"],
+  ["Mitochondria", "Mitochondria"],
+]);
 
 function pluralize(noun: string): string {
+  if (SPECIAL_PLURALS.has(noun)) {
+    return SPECIAL_PLURALS.get(noun)!;
+  }
   if (
     noun.endsWith("s") ||
     noun.endsWith("ch") ||

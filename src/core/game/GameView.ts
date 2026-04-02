@@ -4,9 +4,10 @@ import { Config } from "../configuration/Config";
 import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
-import { createRandomName } from "../Util";
+import { createRandomName, formatPlayerDisplayName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
+  BuildableUnit,
   Cell,
   EmojiMessage,
   GameUpdates,
@@ -14,6 +15,7 @@ import {
   NameViewData,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
   PlayerType,
@@ -415,8 +417,23 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef, units?: UnitType[]): Promise<PlayerActions> {
+  async actions(
+    tile?: TileRef,
+    units?: readonly PlayerBuildableUnitType[] | null,
+  ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
+      this.id(),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
+      units,
+    );
+  }
+
+  async buildables(
+    tile?: TileRef,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
+    return this.game.worker.playerBuildables(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
@@ -436,11 +453,10 @@ export class PlayerView {
     return this.data.incomingAttacks;
   }
 
-  async attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
-    return this.game.worker.attackAveragePosition(playerID, attackID);
+  async attackClusteredPositions(
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
+    return this.game.worker.attackClusteredPositions(this.smallID(), attackID);
   }
 
   units(...types: UnitType[]): UnitView[] {
@@ -465,7 +481,7 @@ export class PlayerView {
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.data.name;
+      : this.data.displayName;
   }
 
   clientID(): ClientID | null {
@@ -640,28 +656,22 @@ export class GameView implements GameMap {
     public worker: WorkerClient,
     private _config: Config,
     private _mapData: TerrainMapData,
-    private _myClientID: ClientID,
+    private _myClientID: ClientID | undefined,
     private _myUsername: string,
+    private _myClanTag: string | null,
     private _gameID: GameID,
-    private humans: Player[],
+    humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
-    // Replace the local player's username with their own stored username.
-    // This way the user does not know they are being censored.
-    for (const h of this.humans) {
-      if (h.clientID === this._myClientID) {
-        h.username = this._myUsername;
-      }
-    }
     this._cosmetics = new Map(
-      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
+      humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
-        flag: nation.flag,
+        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
       } satisfies PlayerCosmetics);
     }
   }
@@ -746,29 +756,44 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
+    const myDisplayName = formatPlayerDisplayName(
+      this._myUsername,
+      this._myClanTag,
+    );
+
     gu.updates[GameUpdateType.Player].forEach((pu) => {
+      // Replace the local player's name/displayName with their own stored values.
+      // This way the user does not know they are being censored.
+      if (pu.clientID === this._myClientID) {
+        pu.name = this._myUsername;
+        pu.displayName = myDisplayName;
+      }
+
       this.smallIDToID.set(pu.smallID, pu.id);
-      const player = this._players.get(pu.id);
+      let player = this._players.get(pu.id);
       if (player !== undefined) {
         player.data = pu;
-        player.nameData = gu.playerNameViewData[pu.id];
+        const nextNameData = gu.playerNameViewData[pu.id];
+        if (nextNameData !== undefined) {
+          player.nameData = nextNameData;
+        }
       } else {
-        this._players.set(
-          pu.id,
-          new PlayerView(
-            this,
-            pu,
-            gu.playerNameViewData[pu.id],
-            // First check human by clientID, then check nation by name.
-            this._cosmetics.get(pu.clientID ?? "") ??
-              this._cosmetics.get(pu.name) ??
-              {},
-          ),
+        player = new PlayerView(
+          this,
+          pu,
+          gu.playerNameViewData[pu.id],
+          // First check human by clientID, then check nation by name.
+          this._cosmetics.get(pu.clientID ?? "") ??
+            this._cosmetics.get(pu.name) ??
+            {},
         );
+        this._players.set(pu.id, player);
       }
     });
 
-    this._myPlayer ??= this.playerByClientID(this._myClientID);
+    if (this._myClientID) {
+      this._myPlayer ??= this.playerByClientID(this._myClientID);
+    }
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
@@ -1086,7 +1111,7 @@ export class GameView implements GameMap {
     );
   }
 
-  myClientID(): ClientID {
+  myClientID(): ClientID | undefined {
     return this._myClientID;
   }
 

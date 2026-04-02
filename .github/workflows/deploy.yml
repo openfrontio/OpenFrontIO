@@ -21,7 +21,7 @@ on:
         options:
           - masters
           - staging
-          - falk1
+          - falk2
       target_subdomain:
         description: "Deployment Subdomain"
         required: false
@@ -53,7 +53,7 @@ jobs:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 📝 Update job summary
         env:
           FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
@@ -64,7 +64,7 @@ jobs:
 
           Deploying from $GITHUB_REF to $FQDN
           EOF
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: generate-token
         if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
         with:
@@ -78,14 +78,34 @@ jobs:
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
       - name: 📝 Create deployment
-        uses: chrnorm/deployment-action@v2
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' }}
+        uses: actions/github-script@v8
         id: deployment
+        env:
+          ENVIRONMENT: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
+          FQDN: ${{ env.FQDN }}
         with:
-          token: ${{ steps.generate-token.outputs.token }}
-          environment-url: https://${{ env.FQDN }}
-          environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            const response = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: process.env.GITHUB_SHA,
+              environment: process.env.ENVIRONMENT,
+              description: 'Deployment to ' + process.env.FQDN,
+              auto_merge: false,
+              required_contexts: [],
+              transient_environment: process.env.ENVIRONMENT === 'staging' && context.ref !== 'refs/heads/main',
+              production_environment: process.env.ENVIRONMENT === 'prod'
+            });
+            const deployment = response.data;
+            if (!deployment || !deployment.id) {
+              core.setFailed('Failed to create deployment');
+              return;
+            }
+            core.setOutput('deployment_id', deployment.id);
       - name: 🔗 Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ vars.GHCR_USERNAME }}
@@ -93,7 +113,7 @@ jobs:
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
@@ -101,13 +121,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_MASTERS" && ssh-keyscan -H "$SERVER_HOST_MASTERS" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK2" && ssh-keyscan -H "$SERVER_HOST_FALK2" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
@@ -117,7 +135,7 @@ jobs:
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
-          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
+          SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest
@@ -127,10 +145,12 @@ jobs:
           echo "Deployment created in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: ⏳ Wait for deployment to start
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -139,14 +159,23 @@ jobs:
           done
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
-      - name: ✅ Update deployment status
-        if: success()
-        uses: chrnorm/deployment-status@v2
+      - name: 🔄 Update deployment status
+        if: ${{ always() && github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
+        uses: actions/github-script@v8
+        env:
+          FQDN: ${{ env.FQDN }}
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          STATUS: ${{ job.status }}
         with:
-          token: ${{ steps.generate-token.outputs.token }}
-          environment-url: https://${{ env.FQDN }}
-          state: success
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: process.env.DEPLOYMENT_ID,
+              state: process.env.STATUS === 'success' ? 'success' : 'failure',
+              environment_url: 'https://' + process.env.FQDN
+            });
       - name: ✅ Update job summary
         if: success()
         run: |
@@ -155,14 +184,6 @@ jobs:
 
           Deployed from $GITHUB_REF to $FQDN
           EOF
-      - name: ❌ Update deployment status
-        if: failure()
-        uses: chrnorm/deployment-status@v2
-        with:
-          token: ${{ steps.generate-token.outputs.token }}
-          environment-url: https://${{ env.FQDN }}
-          state: failure
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
       - name: ❌ Update job summary
         if: failure()
         run: |

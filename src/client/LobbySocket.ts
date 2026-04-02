@@ -1,4 +1,4 @@
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { PublicGames, PublicGamesSchema } from "../core/Schemas";
 
 interface LobbySocketOptions {
@@ -18,6 +18,7 @@ export class PublicLobbySocket {
   private wsConnectionAttempts = 0;
   private wsAttemptCounted = false;
   private workerPath: string = "";
+  private stopped = true;
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -31,14 +32,16 @@ export class PublicLobbySocket {
   }
 
   async start() {
+    this.stopped = false;
     this.wsConnectionAttempts = 0;
     // Get config to determine number of workers, then pick a random one
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     this.workerPath = getRandomWorkerPath(config.numWorkers());
     this.connectWebSocket();
   }
 
   stop() {
+    this.stopped = true;
     this.disconnectWebSocket();
   }
 
@@ -96,6 +99,7 @@ export class PublicLobbySocket {
   }
 
   private handleClose() {
+    if (this.stopped) return;
     console.log("WebSocket disconnected, attempting to reconnect...");
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;

@@ -1,9 +1,10 @@
 import {
+  BuildableUnit,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
@@ -17,12 +18,14 @@ export type WorkerMessageType =
   | "game_update_batch"
   | "player_actions"
   | "player_actions_result"
+  | "player_buildables"
+  | "player_buildables_result"
   | "player_profile"
   | "player_profile_result"
   | "player_border_tiles"
   | "player_border_tiles_result"
-  | "attack_average_position"
-  | "attack_average_position_result"
+  | "attack_clustered_positions"
+  | "attack_clustered_positions_result"
   | "transport_ship_spawn"
   | "transport_ship_spawn_result";
 
@@ -36,7 +39,7 @@ interface BaseWorkerMessage {
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
-  clientID: ClientID;
+  clientID: ClientID | undefined;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -64,12 +67,25 @@ export interface PlayerActionsMessage extends BaseWorkerMessage {
   playerID: PlayerID;
   x?: number;
   y?: number;
-  units?: UnitType[];
+  units?: readonly PlayerBuildableUnitType[] | null;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {
   type: "player_actions_result";
   result: PlayerActions;
+}
+
+export interface PlayerBuildablesMessage extends BaseWorkerMessage {
+  type: "player_buildables";
+  playerID: PlayerID;
+  x?: number;
+  y?: number;
+  units?: readonly PlayerBuildableUnitType[];
+}
+
+export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
+  type: "player_buildables_result";
+  result: BuildableUnit[];
 }
 
 export interface PlayerProfileMessage extends BaseWorkerMessage {
@@ -92,16 +108,16 @@ export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
   result: PlayerBorderTiles;
 }
 
-export interface AttackAveragePositionMessage extends BaseWorkerMessage {
-  type: "attack_average_position";
+export interface AttackClusteredPositionsMessage extends BaseWorkerMessage {
+  type: "attack_clustered_positions";
   playerID: number;
-  attackID: string;
+  attackID?: string;
 }
 
-export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
-  type: "attack_average_position_result";
-  x: number | null;
-  y: number | null;
+export interface AttackClusteredPositionsResultMessage
+  extends BaseWorkerMessage {
+  type: "attack_clustered_positions_result";
+  attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
 
 export interface TransportShipSpawnMessage extends BaseWorkerMessage {
@@ -120,9 +136,10 @@ export type MainThreadMessage =
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
+  | PlayerBuildablesMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
-  | AttackAveragePositionMessage
+  | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage;
 
 // Message send from worker
@@ -131,7 +148,8 @@ export type WorkerMessage =
   | GameUpdateMessage
   | GameUpdateBatchMessage
   | PlayerActionsResultMessage
+  | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
-  | AttackAveragePositionResultMessage
+  | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage;

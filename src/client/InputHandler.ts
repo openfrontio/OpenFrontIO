@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitType } from "../core/game/Game";
+import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
@@ -83,12 +83,16 @@ export class RefreshGraphicsEvent implements GameEvent {}
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
-  constructor(public readonly structureTypes: UnitType[] | null) {}
+  constructor(
+    public readonly structureTypes: PlayerBuildableUnitType[] | null,
+  ) {}
 }
 
 export class GhostStructureChangedEvent implements GameEvent {
-  constructor(public readonly ghostStructure: UnitType | null) {}
+  constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
+
+export class ConfirmGhostStructureEvent implements GameEvent {}
 
 export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
@@ -118,6 +122,12 @@ export class AttackRatioEvent implements GameEvent {
 export class ReplaySpeedChangeEvent implements GameEvent {
   constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
 }
+
+export class TogglePauseIntentEvent implements GameEvent {}
+
+export class GameSpeedUpIntentEvent implements GameEvent {}
+
+export class GameSpeedDownIntentEvent implements GameEvent {}
 
 export class CenterCameraEvent implements GameEvent {
   constructor() {}
@@ -232,6 +242,9 @@ export class InputHandler {
       buildAtomBomb: "Digit8",
       buildHydrogenBomb: "Digit9",
       buildMIRV: "Digit0",
+      pauseGame: "KeyP",
+      gameSpeedUp: "Period",
+      gameSpeedDown: "Comma",
       ...saved,
     };
 
@@ -252,6 +265,19 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
+    });
+    // Clear all tracked keys when the window loses focus so keys that had
+    // their keyup swallowed by the browser (e.g. cmd+zoom) don't stay stuck.
+    // Also release the hold-to-view state and any active pointer/drag state
+    // so the alternate view and drags aren't left latched when focus returns.
+    window.addEventListener("blur", () => {
+      this.activeKeys.clear();
+      if (this.alternateView) {
+        this.alternateView = false;
+        this.eventBus.emit(new AlternateViewEvent(false));
+      }
+      this.pointerDown = false;
+      this.pointers.clear();
     });
     this.pointers.clear();
 
@@ -297,13 +323,15 @@ export class InputHandler {
 
       if (
         this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus")
+        this.activeKeys.has("Minus") ||
+        this.activeKeys.has("NumpadSubtract")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
         this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal")
+        this.activeKeys.has("Equal") ||
+        this.activeKeys.has("NumpadAdd")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -338,6 +366,26 @@ export class InputHandler {
       }
 
       if (
+        (e.code === "Enter" || e.code === "NumpadEnter") &&
+        this.uiState.ghostStructure !== null
+      ) {
+        e.preventDefault();
+        this.eventBus.emit(new ConfirmGhostStructureEvent());
+      }
+
+      // Don't track zoom keys when a meta/ctrl modifier is held — that means
+      // the browser is handling its own zoom (cmd+/cmd-) and the keyup will
+      // never fire, which would leave the key stuck in activeKeys forever.
+      // Also covers numpad zoom shortcuts (Ctrl+NumpadAdd/NumpadSubtract).
+      const isBrowserZoomCombo =
+        (e.metaKey || e.ctrlKey) &&
+        (e.code === "Minus" ||
+          e.code === "Equal" ||
+          e.code === "NumpadAdd" ||
+          e.code === "NumpadSubtract");
+
+      if (
+        !isBrowserZoomCombo &&
         [
           this.keybinds.moveUp,
           this.keybinds.moveDown,
@@ -351,6 +399,8 @@ export class InputHandler {
           "ArrowRight",
           "Minus",
           "Equal",
+          "NumpadAdd",
+          "NumpadSubtract",
           this.keybinds.attackRatioDown,
           this.keybinds.attackRatioUp,
           this.keybinds.centerCamera,
@@ -367,6 +417,24 @@ export class InputHandler {
       const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
+      }
+
+      // When the meta (cmd) or ctrl key is released, any keys that were held
+      // simultaneously will have had their keyup swallowed by the browser
+      // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys to
+      // prevent them staying stuck in activeKeys.
+      if (
+        e.code === "MetaLeft" ||
+        e.code === "MetaRight" ||
+        e.code === "ControlLeft" ||
+        e.code === "ControlRight"
+      ) {
+        this.activeKeys.delete("Minus");
+        this.activeKeys.delete("Equal");
+        this.activeKeys.delete("NumpadAdd");
+        this.activeKeys.delete("NumpadSubtract");
+        this.activeKeys.delete(this.keybinds.zoomIn);
+        this.activeKeys.delete(this.keybinds.zoomOut);
       }
 
       if (e.code === this.keybinds.toggleView) {
@@ -408,54 +476,11 @@ export class InputHandler {
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (e.code === this.keybinds.buildCity) {
+      // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
+      const matchedBuild = this.resolveBuildKeybind(e.code);
+      if (matchedBuild !== null) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.City);
-      }
-
-      if (e.code === this.keybinds.buildFactory) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
-      }
-
-      if (e.code === this.keybinds.buildPort) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Port);
-      }
-
-      if (e.code === this.keybinds.buildDefensePost) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.DefensePost);
-      }
-
-      if (e.code === this.keybinds.buildMissileSilo) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MissileSilo);
-      }
-
-      if (e.code === this.keybinds.buildSamLauncher) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.SAMLauncher);
-      }
-
-      if (e.code === this.keybinds.buildAtomBomb) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.AtomBomb);
-      }
-
-      if (e.code === this.keybinds.buildHydrogenBomb) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.HydrogenBomb);
-      }
-
-      if (e.code === this.keybinds.buildWarship) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Warship);
-      }
-
-      if (e.code === this.keybinds.buildMIRV) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MIRV);
+        this.setGhostStructure(matchedBuild);
       }
 
       if (e.code === this.keybinds.swapDirection) {
@@ -464,8 +489,20 @@ export class InputHandler {
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
+      if (!e.repeat && e.code === this.keybinds.pauseGame) {
+        e.preventDefault();
+        this.eventBus.emit(new TogglePauseIntentEvent());
+      }
+      if (!e.repeat && e.code === this.keybinds.gameSpeedUp) {
+        e.preventDefault();
+        this.eventBus.emit(new GameSpeedUpIntentEvent());
+      }
+      if (!e.repeat && e.code === this.keybinds.gameSpeedDown) {
+        e.preventDefault();
+        this.eventBus.emit(new GameSpeedDownIntentEvent());
+      }
+
       // Shift-D to toggle performance overlay
-      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
       if (e.code === "KeyD" && e.shiftKey) {
         e.preventDefault();
         console.log("TogglePerformanceOverlayEvent");
@@ -547,8 +584,27 @@ export class InputHandler {
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
-      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
+      if (event.ctrlKey) {
+        if (!realCtrl) {
+          // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
+          // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
+          // which fire synthetic wheel events we don't want to handle.
+          if (Math.abs(event.deltaY) <= 10) {
+            this.eventBus.emit(
+              new ZoomEvent(event.x, event.y, event.deltaY * 10),
+            );
+          }
+        }
+        // Always return when ctrlKey is set — whether it's a real ctrl scroll,
+        // a pinch gesture, or a browser zoom event, none should reach the
+        // regular scroll path below.
+        return;
+      }
+      // Regular scroll wheel: ignore tiny residual momentum events that macOS
+      // keeps sending after a gesture ends (especially after browser zoom changes
+      // devicePixelRatio, which can cause these to accumulate into runaway zoom).
+      if (Math.abs(event.deltaY) < 2) return;
+      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
     }
   }
 
@@ -609,9 +665,74 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: UnitType | null) {
+  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
+  }
+
+  /**
+   * Extracts the digit character from KeyboardEvent.code.
+   * Codes look like "Digit0".."Digit9" (6 chars, digit at index 5) and
+   * "Numpad0".."Numpad9" (7 chars, digit at index 6). Returns null if not a digit key.
+   */
+  private digitFromKeyCode(code: string): string | null {
+    if (
+      code?.length === 6 &&
+      code.startsWith("Digit") &&
+      /^[0-9]$/.test(code[5])
+    )
+      return code[5];
+    if (
+      code?.length === 7 &&
+      code.startsWith("Numpad") &&
+      /^[0-9]$/.test(code[6])
+    )
+      return code[6];
+    return null;
+  }
+
+  /** Strict equality only: used for first-pass exact KeyboardEvent.code match. */
+  private buildKeybindMatches(code: string, keybindValue: string): boolean {
+    return code === keybindValue;
+  }
+
+  /** Digit/Numpad alias match: used only when no exact match was found. */
+  private buildKeybindMatchesDigit(
+    code: string,
+    keybindValue: string,
+  ): boolean {
+    const digit = this.digitFromKeyCode(code);
+    const bindDigit = this.digitFromKeyCode(keybindValue);
+    return digit !== null && bindDigit !== null && digit === bindDigit;
+  }
+
+  /**
+   * Resolves a keyup code to a build action: exact code match first, then digit/Numpad alias.
+   * Returns the UnitType to set as ghost, or null if no build keybind matched.
+   */
+  private resolveBuildKeybind(code: string): PlayerBuildableUnitType | null {
+    const buildKeybinds: ReadonlyArray<{
+      key: string;
+      type: PlayerBuildableUnitType;
+    }> = [
+      { key: "buildCity", type: UnitType.City },
+      { key: "buildFactory", type: UnitType.Factory },
+      { key: "buildPort", type: UnitType.Port },
+      { key: "buildDefensePost", type: UnitType.DefensePost },
+      { key: "buildMissileSilo", type: UnitType.MissileSilo },
+      { key: "buildSamLauncher", type: UnitType.SAMLauncher },
+      { key: "buildAtomBomb", type: UnitType.AtomBomb },
+      { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
+      { key: "buildWarship", type: UnitType.Warship },
+      { key: "buildMIRV", type: UnitType.MIRV },
+    ];
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatches(code, this.keybinds[key])) return type;
+    }
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatchesDigit(code, this.keybinds[key])) return type;
+    }
+    return null;
   }
 
   private getPinchDistance(): number {
@@ -637,7 +758,7 @@ export class InputHandler {
     }
     if (element.tagName === "INPUT") {
       const input = element as HTMLInputElement;
-      if (input.id === "attack-ratio" && input.type === "range") {
+      if (input.type === "range") {
         return false;
       }
       return true;
