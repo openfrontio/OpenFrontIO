@@ -144,11 +144,11 @@ export enum GameMapType {
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
   Dyslexdria = "Dyslexdria",
-  MilkyWay = "Milky Way",
-  AmazonRiverWide = "Amazon River ",
-  ReglaciatedAntarctica = "Deglaciated Antarctica ",
-  TheBoxPlus = "The Box ",
-  WorldRotated = "World ",
+  MilkyWay = "MilkyWay",
+  AmazonRiverWide = "Amazon River Wide",
+  ReglaciatedAntarctica = "Reglaciated Antarctica",
+  TheBoxPlus = "The Box Plus",
+  WorldRotated = "World Rotated",
   Mediterranean = "Mediterranean",
 }
 
