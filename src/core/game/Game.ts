@@ -139,7 +139,6 @@ export enum GameMapType {
   Arctic = "Arctic",
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
-  MilkyWay = "MilkyWay",
 }
 
 export type GameMapName = keyof typeof GameMapType;
