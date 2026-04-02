@@ -2,6 +2,7 @@ import {
   Execution,
   Game,
   isUnit,
+  MessageType,
   OwnerComp,
   Unit,
   UnitParams,
@@ -11,15 +12,24 @@ import { TileRef } from "../game/GameMap";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { SAMMissileExecution } from "./SAMMissileExecution";
 import { ShellExecution } from "./ShellExecution";
+import {
+  AirDefenseTarget,
+  AirDefenseTargetingSystem,
+  findMirvWarheadTargets,
+} from "./utils/AirDefenseUtils";
 
 export class WarshipExecution implements Execution {
+  private readonly MIRVWarheadSearchRadius = 400;
+  private readonly MIRVWarheadProtectionRadius = 50;
   private random: PseudoRandom;
   private warship: Unit;
   private mg: Game;
   private pathfinder: SteppingPathFinder<TileRef>;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
+  private airDefenseTargetingSystem: AirDefenseTargetingSystem | undefined;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -64,15 +74,15 @@ export class WarshipExecution implements Execution {
     this.warship.setTargetUnit(this.findTargetUnit());
     if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
       this.huntDownTradeShip();
-      return;
+    } else {
+      this.patrol();
+
+      if (this.warship.targetUnit() !== undefined) {
+        this.shootTarget();
+      }
     }
 
-    this.patrol();
-
-    if (this.warship.targetUnit() !== undefined) {
-      this.shootTarget();
-      return;
-    }
+    this.handleAirDefense(ticks);
   }
 
   private findTargetUnit(): Unit | undefined {
@@ -231,6 +241,98 @@ export class WarshipExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  private handleAirDefense(ticks: number) {
+    if (this.warship.level() <= 1) {
+      return;
+    }
+
+    if (this.warship.isInCooldown()) {
+      const frontTime = this.warship.missileTimerQueue()[0];
+      if (frontTime === undefined) {
+        return;
+      }
+      const cooldown =
+        this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+      if (cooldown <= 0) {
+        this.warship.reloadMissile();
+      }
+      return;
+    }
+
+    this.airDefenseTargetingSystem ??= new AirDefenseTargetingSystem(
+      this.mg,
+      this.warship,
+      (unit, interceptor, game) => {
+        const dst = unit.targetTile();
+        if (dst === undefined || !game.isOcean(dst)) {
+          return false;
+        }
+        const range = game.config().samRange(interceptor.level());
+        return (
+          game.euclideanDistSquared(interceptor.tile(), dst) <= range * range
+        );
+      },
+    );
+
+    const mirvWarheadTargets = findMirvWarheadTargets(
+      this.mg,
+      this.warship,
+      (unit, interceptor, game) => {
+        const dst = unit.targetTile();
+        return (
+          dst !== undefined &&
+          game.isOcean(dst) &&
+          game.manhattanDist(dst, interceptor.tile()) <
+            this.MIRVWarheadProtectionRadius
+        );
+      },
+      this.MIRVWarheadSearchRadius,
+    );
+
+    let target: AirDefenseTarget | null = null;
+    if (mirvWarheadTargets.length === 0) {
+      target = this.airDefenseTargetingSystem.getSingleTarget(ticks);
+    }
+
+    if (target === null && mirvWarheadTargets.length === 0) {
+      return;
+    }
+
+    this.warship.launch();
+
+    if (mirvWarheadTargets.length > 0) {
+      const owner = this.warship.owner();
+      this.mg.displayMessage(
+        "events_display.mirv_warheads_intercepted",
+        MessageType.SAM_HIT,
+        owner.id(),
+        undefined,
+        { count: mirvWarheadTargets.length },
+      );
+
+      mirvWarheadTargets.forEach(({ unit }) => unit.delete());
+      this.mg
+        .stats()
+        .bombIntercept(owner, UnitType.MIRVWarhead, mirvWarheadTargets.length);
+      return;
+    }
+
+    if (target === null) {
+      return;
+    }
+
+    target.unit.setTargetedBySAM(true);
+    this.mg.addExecution(
+      new SAMMissileExecution(
+        this.warship.tile(),
+        this.warship.owner(),
+        this.warship,
+        target.unit,
+        target.tile,
+      ),
+    );
   }
 
   randomTile(allowShoreline: boolean = false): TileRef | undefined {

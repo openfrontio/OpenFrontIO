@@ -169,7 +169,8 @@ export class UnitView {
     let readiness = missilesReady / maxMissiles;
 
     const cooldownDuration =
-      this.data.unitType === UnitType.SAMLauncher
+      this.data.unitType === UnitType.SAMLauncher ||
+      this.data.unitType === UnitType.Warship
         ? this.gameView.config().SAMCooldown()
         : this.gameView.config().SiloCooldown();
 

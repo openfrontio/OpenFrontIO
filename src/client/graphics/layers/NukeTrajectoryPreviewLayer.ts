@@ -74,6 +74,38 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     this.drawTrajectoryPreview(context);
   }
 
+  private canBeInterceptedByAirDefense(
+    unit: ReturnType<GameView["nearbyUnits"]>[number]["unit"],
+    distSquared: number,
+    targetTile: TileRef,
+    playersToBreakAllianceWith: Set<number>,
+  ): boolean {
+    if (
+      unit.owner().isMe() ||
+      (this.game.myPlayer()?.isFriendly(unit.owner()) &&
+        !playersToBreakAllianceWith.has(unit.owner().smallID()))
+    ) {
+      return false;
+    }
+
+    const range = this.game.config().samRange(unit.level());
+    if (distSquared > range * range) {
+      return false;
+    }
+
+    if (unit.type() !== UnitType.Warship) {
+      return true;
+    }
+
+    if (unit.level() <= 1 || !this.game.isOcean(targetTile)) {
+      return false;
+    }
+
+    return (
+      this.game.euclideanDistSquared(unit.tile(), targetTile) <= range * range
+    );
+  }
+
   /**
    * Update trajectory preview - called from tick() to cache spawn tile via expensive player.buildables() call
    * This only runs when target tile changes, minimizing worker thread communication
@@ -276,21 +308,18 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // Check trajectory
     for (let i = 0; i < this.trajectoryPoints.length; i++) {
       const tile = this.trajectoryPoints[i];
-      for (const sam of this.game.nearbyUnits(
+      for (const airDefense of this.game.nearbyUnits(
         tile,
         this.game.config().maxSamRange(),
-        UnitType.SAMLauncher,
+        [UnitType.SAMLauncher, UnitType.Warship],
       )) {
         if (
-          sam.unit.owner().isMe() ||
-          (this.game.myPlayer()?.isFriendly(sam.unit.owner()) &&
-            !playersToBreakAllianceWith.has(sam.unit.owner().smallID()))
-        ) {
-          continue;
-        }
-        if (
-          sam.distSquared <=
-          this.game.config().samRange(sam.unit.level()) ** 2
+          this.canBeInterceptedByAirDefense(
+            airDefense.unit,
+            airDefense.distSquared,
+            targetTile,
+            playersToBreakAllianceWith,
+          )
         ) {
           this.targetedIndex = i;
           break;

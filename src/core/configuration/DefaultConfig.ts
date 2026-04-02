@@ -352,6 +352,7 @@ export class DefaultConfig implements Config {
             UnitType.Warship,
           ),
           maxHealth: 1000,
+          upgradable: true,
         };
         break;
       case UnitType.Shell:

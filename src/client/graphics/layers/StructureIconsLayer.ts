@@ -565,7 +565,10 @@ export class StructureIconsLayer implements Layer {
   private resolveGhostRangeLevel(
     buildableUnit: BuildableUnit,
   ): number | undefined {
-    if (buildableUnit.type !== UnitType.SAMLauncher) {
+    if (
+      buildableUnit.type !== UnitType.SAMLauncher &&
+      buildableUnit.type !== UnitType.Warship
+    ) {
       return undefined;
     }
     if (buildableUnit.canUpgrade !== false) {
@@ -573,11 +576,11 @@ export class StructureIconsLayer implements Layer {
       if (existing) {
         return existing.level() + 1;
       } else {
-        console.error("Failed to find existing SAMLauncher for upgrade");
+        console.error("Failed to find existing air-defense unit for upgrade");
       }
     }
 
-    return 1;
+    return buildableUnit.type === UnitType.Warship ? undefined : 1;
   }
 
   private updateGhostRange(level?: number, targetingAlly: boolean = false) {

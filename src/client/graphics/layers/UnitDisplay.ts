@@ -45,6 +45,20 @@ export class UnitDisplay extends LitElement implements Layer {
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
 
+  private hoverStructureTypes(
+    unitType: PlayerBuildableUnitType,
+  ): PlayerBuildableUnitType[] {
+    switch (unitType) {
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        return [UnitType.MissileSilo, UnitType.SAMLauncher];
+      case UnitType.Warship:
+        return [UnitType.Port, UnitType.Warship];
+      default:
+        return [unitType];
+    }
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -273,22 +287,9 @@ export class UnitDisplay extends LitElement implements Layer {
             this.requestUpdate();
           }}
           @mouseenter=${() => {
-            switch (unitType) {
-              case UnitType.AtomBomb:
-              case UnitType.HydrogenBomb:
-                this.eventBus?.emit(
-                  new ToggleStructureEvent([
-                    UnitType.MissileSilo,
-                    UnitType.SAMLauncher,
-                  ]),
-                );
-                break;
-              case UnitType.Warship:
-                this.eventBus?.emit(new ToggleStructureEvent([UnitType.Port]));
-                break;
-              default:
-                this.eventBus?.emit(new ToggleStructureEvent([unitType]));
-            }
+            this.eventBus?.emit(
+              new ToggleStructureEvent(this.hoverStructureTypes(unitType)),
+            );
           }}
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}

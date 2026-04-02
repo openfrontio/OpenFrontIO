@@ -111,6 +111,9 @@ export class UILayer implements Layer {
     switch (unit.type()) {
       case UnitType.Warship: {
         this.drawHealthBar(unit);
+        if (unit.level() > 1 && unit.missileReadinesss() < 1) {
+          this.createLoadingBar(unit);
+        }
         break;
       }
       case UnitType.City:
@@ -330,6 +333,7 @@ export class UILayer implements Layer {
     switch (unit.type()) {
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
+      case UnitType.Warship:
         return !unit.markedForDeletion()
           ? unit.missileReadinesss()
           : this.deletionProgress(this.game, unit);

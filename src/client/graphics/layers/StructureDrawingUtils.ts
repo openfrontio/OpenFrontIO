@@ -468,6 +468,12 @@ export class SpriteFactory {
       case UnitType.SAMLauncher:
         radius = this.game.config().samRange(level ?? 1);
         break;
+      case UnitType.Warship:
+        if ((level ?? 1) <= 1) {
+          return null;
+        }
+        radius = this.game.config().samRange(level ?? 1);
+        break;
       case UnitType.Factory:
         radius = this.game.config().trainStationMaxRange();
         break;

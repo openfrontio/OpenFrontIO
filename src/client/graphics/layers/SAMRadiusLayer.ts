@@ -19,15 +19,17 @@ interface SAMRadius {
   arcs: Interval[];
 }
 
-interface SamInfo {
+interface AirDefenseInfo {
   ownerId: number;
   level: number;
+  tile: number;
+  type: UnitType;
 }
 /**
- * Layer responsible for rendering SAM launcher defense radii
+ * Layer responsible for rendering air-defense radii.
  */
 export class SAMRadiusLayer implements Layer {
-  private readonly samLaunchers: Map<number, SamInfo> = new Map(); // Track SAM launcher IDs -> SAM info
+  private readonly airDefenseUnits: Map<number, AirDefenseInfo> = new Map();
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
   private ghostShow: boolean = false;
@@ -43,7 +45,8 @@ export class SAMRadiusLayer implements Layer {
     this.hoveredShow =
       !!types &&
       (types.indexOf(UnitType.SAMLauncher) !== -1 ||
-        types.indexOf(UnitType.City) !== -1);
+        types.indexOf(UnitType.City) !== -1 ||
+        types.indexOf(UnitType.Warship) !== -1);
     this.updateVisibility();
   }
 
@@ -54,7 +57,7 @@ export class SAMRadiusLayer implements Layer {
   ) {}
 
   init() {
-    // Listen for game updates to detect SAM launcher changes
+    // Listen for game updates to detect air-defense changes.
     // Also listen for UI toggle structure events so we can show borders when
     // the user is hovering the Atom/Hydrogen option (UnitDisplay emits
     // ToggleStructureEvent with SAMLauncher included in the list).
@@ -68,14 +71,18 @@ export class SAMRadiusLayer implements Layer {
   }
 
   tick() {
-    // Check for updates to SAM launchers
+    // Check for updates to air-defense units
     const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
     if (unitUpdates) {
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);
-        if (unit && unit.type() === UnitType.SAMLauncher) {
+        if (
+          unit &&
+          (unit.type() === UnitType.SAMLauncher ||
+            unit.type() === UnitType.Warship)
+        ) {
           if (this.hasChanged(unit)) {
-            this.needsRedraw = true; // A SAM changed: radiuses shall be recomputed when necessary
+            this.needsRedraw = true;
             break;
           }
         }
@@ -86,6 +93,7 @@ export class SAMRadiusLayer implements Layer {
     this.ghostShow =
       this.uiState.ghostStructure === UnitType.MissileSilo ||
       this.uiState.ghostStructure === UnitType.SAMLauncher ||
+      this.uiState.ghostStructure === UnitType.Warship ||
       this.uiState.ghostStructure === UnitType.City ||
       this.uiState.ghostStructure === UnitType.AtomBomb ||
       this.uiState.ghostStructure === UnitType.HydrogenBomb;
@@ -95,7 +103,7 @@ export class SAMRadiusLayer implements Layer {
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.visible) {
       if (this.needsRedraw) {
-        // SAM changed: the radiuses needs to be updated
+        // Air-defense coverage changed, so the radii need to be recomputed.
         this.computeCircleUnions();
         this.needsRedraw = false;
       }
@@ -120,39 +128,46 @@ export class SAMRadiusLayer implements Layer {
   }
 
   private hasChanged(unit: UnitView): boolean {
-    const samInfos = this.samLaunchers.get(unit.id());
-    const isNew = samInfos === undefined;
-    const active = unit.isActive();
+    const info = this.airDefenseUnits.get(unit.id());
+    const isTracked = info !== undefined;
+    const isRelevant =
+      unit.isActive() &&
+      (unit.type() === UnitType.SAMLauncher || unit.level() > 1);
     const ownerId = unit.owner().smallID();
-    let hasChanges = isNew || !active; // was built or destroyed
-    hasChanges ||= !isNew && samInfos.ownerId !== ownerId; // Sam owner changed
-    hasChanges ||= !isNew && samInfos.level !== unit.level(); // Sam leveled up
+    let hasChanges = (!isTracked && isRelevant) || (isTracked && !isRelevant);
+    hasChanges ||= isTracked && info.ownerId !== ownerId;
+    hasChanges ||= isTracked && info.level !== unit.level();
+    hasChanges ||= isTracked && info.tile !== unit.tile();
+    hasChanges ||= isTracked && info.type !== unit.type();
     return hasChanges;
   }
 
-  private getAllSamRanges(): SAMRadius[] {
-    // Get all active SAM launchers
-    const samLaunchers = this.game
-      .units(UnitType.SAMLauncher)
-      .filter((unit) => unit.isActive());
+  private getAllAirDefenseRanges(): SAMRadius[] {
+    const airDefenseUnits = this.game
+      .units(UnitType.SAMLauncher, UnitType.Warship)
+      .filter(
+        (unit) =>
+          unit.isActive() &&
+          (unit.type() === UnitType.SAMLauncher || unit.level() > 1),
+      );
 
-    // Update our tracking set
-    this.samLaunchers.clear();
-    samLaunchers.forEach((sam) =>
-      this.samLaunchers.set(sam.id(), {
-        ownerId: sam.owner().smallID(),
-        level: sam.level(),
+    this.airDefenseUnits.clear();
+    airDefenseUnits.forEach((unit) =>
+      this.airDefenseUnits.set(unit.id(), {
+        ownerId: unit.owner().smallID(),
+        level: unit.level(),
+        tile: unit.tile(),
+        type: unit.type(),
       }),
     );
 
-    // Collect radius data
-    const radiuses = samLaunchers.map((sam) => {
-      const tile = sam.tile();
+    const radiuses = airDefenseUnits.map((unit) => {
+      const tile = unit.tile();
       return {
         x: this.game.x(tile),
         y: this.game.y(tile),
-        r: this.game.config().samRange(sam.level()),
-        owner: sam.owner(),
+        r: this.game.config().samRange(unit.level()),
+        owner: unit.owner(),
         arcs: [],
       };
     });
@@ -311,7 +326,7 @@ export class SAMRadiusLayer implements Layer {
    * Compute for each circle which angular segments are NOT covered by any other circle
    */
   private computeCircleUnions() {
-    this.samRanges = this.getAllSamRanges();
+    this.samRanges = this.getAllAirDefenseRanges();
     for (let i = 0; i < this.samRanges.length; i++) {
       const a = this.samRanges[i];
       this.computeUncoveredArcIntervals(a, this.samRanges);
