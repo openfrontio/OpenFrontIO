@@ -1,0 +1,53 @@
+{
+  "name": "Mediterran Sea in Australia",
+  "nations": [
+    {
+      "coordinates": [1277, 996],
+      "name": "South Australia",
+      "strength": 1,
+      "flag": "aus_souaus"
+    },
+    {
+      "coordinates": [805, 304],
+      "name": "Nothern Territory",
+      "strength": 1,
+      "flag": "aus_norter"
+    },
+    {
+      "coordinates": [406, 817],
+      "name": "Western Australia",
+      "strength": 1,
+      "flag": "aus_wesaus"
+    },
+    {
+      "coordinates": [1578, 1407],
+      "name": "Tasmania",
+      "strength": 2,
+      "flag": "aus_tas"
+    },
+    {
+      "coordinates": [992, 570],
+      "name": "Italy",
+      "strength": 2,
+      "flag": "it"
+    },
+    {
+      "coordinates": [1252, 595],
+      "name": "Greece",
+      "strength": 3,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1708, 745],
+      "name": "Cyprus",
+      "strength": 1,
+      "flag": "cy"
+    },
+    {
+      "coordinates": [255, 608],
+      "name": "Spain",
+      "strength": 2,
+      "flag": "es"
+    }
+  ]
+}
