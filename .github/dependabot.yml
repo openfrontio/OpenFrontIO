@@ -6,3 +6,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+      groups:
+      updates:
+        applies-to: version-updates
+      security:
+        applies-to: security-updates
