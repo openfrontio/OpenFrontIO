@@ -9,5 +9,7 @@ updates:
     groups:
       updates:
         applies-to: version-updates
+        patterns: ["*"] #wildcard, needs brackets as bugfix apparently
       security:
         applies-to: security-updates
+        patterns: ["*"]
