@@ -1,0 +1,55 @@
+{
+  "name": "antarctica",
+  "nations": [
+    {
+      "coordinates": [1159, 1261],
+      "name": "New Zealand Claim",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1409, 1571],
+      "name": "French Claim",
+      "flag": "tf"
+    },
+    {
+      "coordinates": [1681, 1093],
+      "name": "Australian Claim",
+      "flag": "hm"
+    },
+    {
+      "coordinates": [1260, 510],
+      "name": "Norway Claim",
+      "flag": "bv"
+    },
+    {
+      "coordinates": [900, 686],
+      "name": "United Kingdom Claim",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [351, 703],
+      "name": "Argentina Claim",
+      "flag": "ar"
+    },
+    {
+      "coordinates": [506, 939],
+      "name": "Chile Claim",
+      "flag": "cl"
+    },
+    {
+      "coordinates": [705, 1264],
+      "name": "Marie Byrd Land",
+      "flag": "aq"
+    },
+    {
+      "coordinates": [1532, 716],
+      "name": "Penguins",
+      "flag": "aq"
+    },
+    {
+      "coordinates": [1100, 954],
+      "name": "Ancient Aliens",
+      "flag": "Cthulhu Republic"
+    }
+  ]
+}

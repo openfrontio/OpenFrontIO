@@ -64,6 +64,14 @@ Licensed under [CC0 1.0.](https://creativecommons.org/publicdomain/zero/1.0/lega
 [NASA/JPL-Caltech](https://www.jpl.nasa.gov/images/pia10748-our-milky-way-gets-a-makeover-artist-concept/)
 [Public Domain](https://www.jpl.nasa.gov/jpl-image-use-policy/)
 
+### Antarctica Map
+
+Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R8F7U, Harvard Dataverse, V1, [2364], [Apr-02-2026].
+[Terms of Use](https://www.pgc.umn.edu/guides/user-services/acknowledgement-policy/)
+
+[U.S Geological Survey](https://earthexplorer.usgs.gov/metadata/4980/GT30ANTARCPS/)
+[Public Domain](https://www.doi.gov/copyright)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
