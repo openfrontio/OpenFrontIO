@@ -5,7 +5,6 @@ import {
   BonusEventUpdate,
   ConquestUpdate,
   GameUpdateType,
-  TextEventUpdate,
 } from "src/core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
 import { MoveWarshipIntentEvent } from "../../Transport";
@@ -63,30 +62,10 @@ export class DynamicUILayer implements Layer {
       this.onBonusEvent(bonusEvent);
     });
 
-    updates[GameUpdateType.TextUIEvent]?.forEach((textEvent) => {
-      if (textEvent === undefined) return;
-      this.onTextEvent(textEvent);
-    });
-
     updates[GameUpdateType.ConquestEvent]?.forEach((update) => {
       if (update === undefined) return;
       this.onConquestEvent(update);
     });
-  }
-
-  onTextEvent(textEvent: TextEventUpdate) {
-    // Only display text fx for the current player
-    if (this.game.player(textEvent.player) !== this.game.myPlayer()) {
-      return;
-    }
-    const tile = textEvent.tile;
-    const x = this.game.x(tile);
-    const y = this.game.y(tile) + TEXT_OFFSET_Y;
-    const text = textEvent.text;
-
-    this.uiElements.push(
-      new TextIndicator(this.transformHandler, text, x, y, 500, 12),
-    );
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {

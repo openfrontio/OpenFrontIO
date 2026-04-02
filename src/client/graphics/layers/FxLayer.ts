@@ -2,11 +2,7 @@ import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import {
-  ConquestUpdate,
-  GameUpdateType,
-  TextEventUpdate,
-} from "../../../core/game/GameUpdates";
+import { ConquestUpdate, GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
@@ -59,12 +55,6 @@ export class FxLayer implements Layer {
       ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
         if (update === undefined) return;
         this.onConquestEvent(update);
-      });
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.TextUIEvent]?.forEach((update) => {
-        if (update === undefined) return;
-        this.onBoingEvent(update);
       });
   }
 
@@ -147,12 +137,6 @@ export class FxLayer implements Layer {
       );
       this.allFx.push(animation);
     }
-  }
-
-  onBoingEvent(boing: TextEventUpdate) {
-    const x = this.game.x(boing.tile);
-    const y = this.game.y(boing.tile);
-    this.allFx.push(new ShockwaveFx(x, y, 1000, 20));
   }
 
   onConquestEvent(conquest: ConquestUpdate) {

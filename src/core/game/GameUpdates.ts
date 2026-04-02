@@ -59,7 +59,6 @@ export enum GameUpdateType {
   Hash,
   UnitIncoming,
   BonusEvent,
-  TextUIEvent,
   RailroadDestructionEvent,
   RailroadConstructionEvent,
   RailroadSnapEvent,
@@ -84,7 +83,6 @@ export type GameUpdate =
   | UnitIncomingUpdate
   | AllianceExtensionUpdate
   | BonusEventUpdate
-  | TextEventUpdate
   | RailroadConstructionUpdate
   | RailroadDestructionUpdate
   | RailroadSnapUpdate
@@ -98,13 +96,6 @@ export interface BonusEventUpdate {
   tile: TileRef;
   gold: number;
   troops: number;
-}
-
-export interface TextEventUpdate {
-  type: GameUpdateType.TextUIEvent;
-  player: PlayerID;
-  tile: TileRef;
-  text: string;
 }
 
 export interface RailroadConstructionUpdate {
