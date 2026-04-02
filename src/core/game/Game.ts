@@ -147,7 +147,7 @@ export enum GameMapType {
   AmazonRiverWide = "Amazon River Wide",
   ReglaciatedAntarctica = "Reglaciated Antarctica",
   TheBoxPlus = "The Box Plus",
-  WorldRotated = "World Rotated",
+  WorldRotated = "World for Mobile",
   Mediterranean = "Mediterranean",
 }
 
