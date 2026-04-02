@@ -345,14 +345,7 @@
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
-    "aegean": "Aegean",
-    "dyslexdria": "Dyslexdria",
-    "milkyway": "Milky Way",
-    "amazonriverwide": "Amazon River Wide",
-    "reglaciatedantarctica": "Reglaciated Antarctica",
-    "theboxplus": "The Box PLUS",
-    "worldrotated": "World Rotated",
-    "mediterranean": "Mediterranean"
+    "aegean": "Aegean"
   },
   "map_categories": {
     "featured": "Featured",
