@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -351,8 +352,9 @@
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
+    "milkyway": "Milky Way",
+    "mediterranean": "Mediterranean",
     "india": "India",
-    "milkyway": "Milky Way"
   },
   "map_categories": {
     "featured": "Featured",
@@ -940,12 +942,12 @@
   "territory_patterns": {
     "title": "Skins",
     "purchase": "Purchase",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
   },
   "cosmetics": {
     "artist_label": "Artist:"
