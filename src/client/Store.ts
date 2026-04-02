@@ -5,9 +5,9 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { hasLinkedAccount } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import "./components/FlagButton";
+import "./components/NotLoggedInWarning";
 import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -77,11 +77,7 @@ export class StoreModal extends BaseModal {
         title: translateText("store.title"),
         onBack: () => this.close(),
         ariaLabel: translateText("common.back"),
-        rightContent: !hasLinkedAccount(this.userMeResponse)
-          ? html`<div class="flex items-center">
-              ${this.renderNotLoggedInWarning()}
-            </div>`
-          : undefined,
+        rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
       })}
       <div class="flex items-center gap-2 justify-center pt-2">
         <button
@@ -212,18 +208,6 @@ export class StoreModal extends BaseModal {
         ${buttons}
       </div>
     `;
-  }
-
-  private renderNotLoggedInWarning(): TemplateResult {
-    return html`<button
-      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 cursor-pointer hover:bg-red-500/30"
-      @click=${() => {
-        this.close();
-        window.showPage?.("page-account");
-      }}
-    >
-      ${translateText("territory_patterns.not_logged_in")}
-    </button>`;
   }
 
   render() {

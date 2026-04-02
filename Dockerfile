@@ -38,23 +38,13 @@ FROM base
 RUN apt-get update && apt-get install -y \
     nginx \
     curl \
-    jq \
     wget \
     supervisor \
     apache2-utils \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > cloudflared.deb \
-    && dpkg -i cloudflared.deb \
-    && rm cloudflared.deb
-
 # Update worker_connections in nginx.conf
 RUN sed -i 's/worker_connections [0-9]*/worker_connections 8192/' /etc/nginx/nginx.conf
-
-# Create cloudflared directory with proper permissions
-RUN mkdir -p /etc/cloudflared && \
-    chown -R node:node /etc/cloudflared && \
-    chmod -R 755 /etc/cloudflared
 
 # Setup supervisor configuration
 RUN mkdir -p /var/log/supervisor
@@ -63,10 +53,6 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -f /etc/nginx/sites-enabled/default
-
-# Copy and make executable the startup script
-COPY startup.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/startup.sh
 
 # Copy production node_modules from prod-deps stage (cached separately from build)
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
@@ -87,8 +73,14 @@ ARG GIT_COMMIT=unknown
 RUN echo "$GIT_COMMIT" > static/commit.txt
 
 ENV GIT_COMMIT="$GIT_COMMIT"
-ENV CF_CONFIG_PATH=/etc/cloudflared/config.yml
-ENV CF_CREDS_PATH=/etc/cloudflared/creds.json
 
-# Use the startup script as the entrypoint
-ENTRYPOINT ["/usr/local/bin/startup.sh"]
+RUN <<'EOF' tee /usr/local/bin/start.sh
+#!/bin/sh
+if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
+    exec timeout 18h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+else
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+fi
+EOF
+RUN chmod +x /usr/local/bin/start.sh
+ENTRYPOINT ["/usr/local/bin/start.sh"]

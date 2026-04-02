@@ -55,6 +55,9 @@ export function registerGamePreviewRoute(opts: {
       const apiDomain = config.jwtIssuer();
       const encodedID = encodeURIComponent(gameID);
       const response = await fetch(`${apiDomain}/game/${encodedID}`, {
+        headers: {
+          "x-api-key": config.apiKey(),
+        },
         signal: controller.signal,
       });
       if (!response.ok) return null;
