@@ -335,6 +335,22 @@ export class DefaultConfig implements Config {
     return Math.floor((100 * rejectionModifier) / baseSpawnRate);
   }
 
+  oilRigIncomeInterval(): Tick {
+    // TODOHERE: decide how frequently oil rigs should pay out.
+    // A dedicated interval lets us tune oil rigs independently from ports/trade ships.
+    return 10 * 10;
+  }
+
+  oilRigIncome(level: number): Gold {
+    // TODOHERE: replace this placeholder with the real oil rig economy formula.
+    // Suggestions:
+    // - flat passive income per interval
+    // - scale with rig level
+    // - optionally scale with nearby ocean depth / map resource data later
+    void level;
+    return 0n;
+  }
+
   unitInfo(type: UnitType): UnitInfo {
     const cached = this.unitInfoCache.get(type);
     if (cached !== undefined) {
@@ -369,11 +385,13 @@ export class DefaultConfig implements Config {
         };
         break;
       case UnitType.Port:
+      case UnitType.OilRig:
         info = {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Port,
+            UnitType.OilRig,
             UnitType.Factory,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,

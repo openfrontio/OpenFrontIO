@@ -298,6 +298,7 @@ export enum UnitType {
   Shell = "Shell",
   SAMMissile = "SAMMissile",
   Port = "Port",
+  OilRig = "Oil Rig",
   AtomBomb = "Atom Bomb",
   HydrogenBomb = "Hydrogen Bomb",
   TradeShip = "Trade Ship",
@@ -337,6 +338,7 @@ export const Structures = unitTypeGroup([
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
+  UnitType.OilRig,
   UnitType.Factory,
 ] as const);
 
@@ -375,6 +377,8 @@ export interface UnitParamsMap {
   [UnitType.SAMMissile]: Record<string, never>;
 
   [UnitType.Port]: Record<string, never>;
+
+  [UnitType.OilRig]: Record<string, never>;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;

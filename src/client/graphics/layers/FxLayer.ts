@@ -83,6 +83,7 @@ export class FxLayer implements Layer {
       case UnitType.DefensePost:
       case UnitType.City:
       case UnitType.Port:
+      case UnitType.OilRig:
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
       case UnitType.Factory:

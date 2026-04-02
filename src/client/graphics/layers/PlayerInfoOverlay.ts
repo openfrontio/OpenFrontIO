@@ -37,6 +37,7 @@ const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
+const oilRigIcon = assetUrl("images/PortIcon.svg"); // TODOHERE
 const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
@@ -394,6 +395,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ${this.displayUnitCount(player, UnitType.City, cityIcon)}
             ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
             ${this.displayUnitCount(player, UnitType.Port, portIcon)}
+            ${this.displayUnitCount(player, UnitType.OilRig, oilRigIcon)}
             ${this.displayUnitCount(
               player,
               UnitType.MissileSilo,

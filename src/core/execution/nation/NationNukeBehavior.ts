@@ -82,6 +82,8 @@ export class NationNukeBehavior {
       UnitType.DefensePost,
       UnitType.MissileSilo,
       UnitType.Port,
+      // TODOHERE: decide whether oil rigs should be high-value nuke targets,
+      // and if so, what score they should carry relative to ports/factories.
       UnitType.SAMLauncher,
       UnitType.Factory,
     );

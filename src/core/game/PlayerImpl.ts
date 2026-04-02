@@ -1148,6 +1148,8 @@ export class PlayerImpl implements Player {
         return targetTile;
       case UnitType.Port:
         return this.portSpawn(targetTile, validTiles);
+      case UnitType.OilRig:
+        return this.oilRigSpawn(targetTile, validTiles);
       case UnitType.Warship:
         return this.warshipSpawn(targetTile);
       case UnitType.Shell:
@@ -1236,6 +1238,13 @@ export class PlayerImpl implements Player {
       }
     }
     return false;
+  }
+
+  oilRigSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
+    // TODOHERE: oil rigs currently reuse port placement rules.
+    // If rigs later need stricter offshore placement, resource deposits,
+    // or distance-from-shore constraints, this should diverge from portSpawn().
+    return this.portSpawn(tile, validTiles);
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {

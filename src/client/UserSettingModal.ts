@@ -20,6 +20,7 @@ const DefaultKeybinds: Record<string, string> = {
   buildCity: "Digit1",
   buildFactory: "Digit2",
   buildPort: "Digit3",
+  buildOilRig: "KeyO",
   buildDefensePost: "Digit4",
   buildMissileSilo: "Digit5",
   buildSamLauncher: "Digit6",
@@ -522,6 +523,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey="Digit3"
         .value=${this.getKeyValue("buildPort")}
         .display=${this.getKeyChar("buildPort")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildOilRig"
+        label=${translateText("user_setting.build_oil_rig")}
+        description=${translateText("user_setting.build_oil_rig_desc")}
+        .defaultKey=${DefaultKeybinds.buildOilRig}
+        .value=${this.getKeyValue("buildOilRig")}
+        .display=${this.getKeyChar("buildOilRig")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

@@ -104,4 +104,11 @@ describe("PortExecution", () => {
 
     expect(ports.length).toBe(1);
   });
+
+  test("Oil rigs use the same coastal placement rules as ports", () => {
+    player.conquer(game.ref(7, 10));
+
+    expect(player.canBuild(UnitType.OilRig, game.ref(7, 10))).toBeTruthy();
+    expect(player.canBuild(UnitType.OilRig, game.ref(10, 10))).toBe(false);
+  }); // TODOHERE: actually make oilrig tests
 });

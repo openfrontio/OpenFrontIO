@@ -117,6 +117,7 @@ export class UILayer implements Layer {
       case UnitType.Factory:
       case UnitType.DefensePost:
       case UnitType.Port:
+      case UnitType.OilRig:
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
         if (

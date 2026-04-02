@@ -47,6 +47,8 @@ function getStructureRatios(
 ): Partial<Record<UnitType, StructureRatioConfig>> {
   return {
     [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
+    // TODOHERE: give oil rigs their own nation-building ratio once their
+    // economy and placement rules are finalized.
     [UnitType.Factory]: {
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
@@ -505,6 +507,8 @@ export class NationStructureBehavior {
         return this.factoryValue();
       case UnitType.Port:
         return this.portValue();
+      case UnitType.OilRig:
+        return this.oilRigValue();
       case UnitType.DefensePost:
         return this.defensePostValue();
       case UnitType.SAMLauncher:
@@ -567,6 +571,13 @@ export class NationStructureBehavior {
 
       return w;
     };
+  }
+
+  private oilRigValue(): (tile: TileRef) => number {
+    // TODOHERE: oil rigs currently mirror the port heuristic.
+    // Once rigs have their own mechanic, score by whatever matters most:
+    // resource deposits, safe offshore distance, route efficiency, etc.
+    return this.portValue();
   }
 
   /**

@@ -132,6 +132,8 @@ export interface Config {
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number;
+  oilRigIncomeInterval(): Tick;
+  oilRigIncome(level: number): Gold;
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,

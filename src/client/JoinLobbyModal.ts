@@ -645,6 +645,7 @@ export class JoinLobbyModal extends BaseModal {
     const unitKeys: Record<string, string> = {
       City: "unit_type.city",
       Port: "unit_type.port",
+      "Oil Rig": "unit_type.oil_rig",
       "Defense Post": "unit_type.defense_post",
       "SAM Launcher": "unit_type.sam_launcher",
       "Missile Silo": "unit_type.missile_silo",

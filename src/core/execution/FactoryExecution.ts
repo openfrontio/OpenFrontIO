@@ -32,6 +32,9 @@ export class FactoryExecution implements Execution {
   }
 
   private createStation(): void {
+    // TODOHERE: if oil rigs should join railroad logistics,
+    // do something like include UnitType.OilRig in this nearby structure list and then teach
+    // TrainStation/TrainExecution how rigs behave as network stops.
     const structures = this.game.nearbyUnits(
       this.factory.tile()!,
       this.game.config().trainStationMaxRange(),

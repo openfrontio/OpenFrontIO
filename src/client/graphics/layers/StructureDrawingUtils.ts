@@ -18,6 +18,7 @@ const shieldIcon = assetUrl("images/ShieldIcon.png");
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",
   [UnitType.Port]: "pentagon",
+  [UnitType.OilRig]: "pentagon", // TODOHERE
   [UnitType.Factory]: "circle",
   [UnitType.DefensePost]: "octagon",
   [UnitType.SAMLauncher]: "square",
@@ -65,6 +66,7 @@ export class SpriteFactory {
     [UnitType.Factory, { iconPath: factoryIcon, image: null }],
     [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
     [UnitType.Port, { iconPath: anchorIcon, image: null }],
+    [UnitType.OilRig, { iconPath: anchorIcon, image: null }], // TODOHERE
     [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
     [UnitType.SAMLauncher, { iconPath: SAMMissileIcon, image: null }],
   ]);

@@ -235,6 +235,7 @@ export class RailNetworkImpl implements RailNetwork {
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
     // Factories already show their radius, so we'll exclude from ghost rails
     // in order not to clutter the interface too much.
+    // TODOHERE: if oil rigs should become railroad-connectable structures i think we need to add UnitType.OilRig to this check and the neighbor queries below.
     if (![UnitType.City, UnitType.Port].includes(unitType)) {
       return [];
     }

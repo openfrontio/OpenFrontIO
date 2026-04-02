@@ -267,6 +267,8 @@ export class TrainExecution implements Execution {
     }
     this.stations[1].onTrainStop(this);
     const stationType = this.stations[1].unit.type();
+    // TODOHERE: decide whether oil rigs should count as a train trade stop,
+    // a resource pickup stop, or something entirely different.
     if (stationType === UnitType.City || stationType === UnitType.Port) {
       this._tradeStopsVisited++;
     }
