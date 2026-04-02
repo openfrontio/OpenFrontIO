@@ -1,6 +1,6 @@
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerInfo, PlayerType, Team } from "./Game";
+import { ColoredTeams, PlayerInfo, PlayerType, Team } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],
@@ -84,6 +84,59 @@ export function assignTeams(
     result.set(player, team);
   }
 
+  // Only rename numbered teams (8+ team mode), not colored teams
+  const coloredTeamValues = Object.values(ColoredTeams);
+  const isNumberedTeams = !teams.some((t) => coloredTeamValues.includes(t));
+
+  if (isNumberedTeams) {
+    // Build reverse map: team → assigned players
+    const teamToPlayers = new Map<Team, PlayerInfo[]>();
+    for (const [pi, team] of result.entries()) {
+      if (team === "kicked") continue;
+      if (!teamToPlayers.has(team)) teamToPlayers.set(team, []);
+      teamToPlayers.get(team)!.push(pi);
+    }
+
+    // Compute candidate names
+    const renameMap = new Map<Team, Team>();
+    for (const [oldTeam, teamPlayers] of teamToPlayers.entries()) {
+      const newName = computeClanTeamName(teamPlayers);
+      if (newName !== null && newName !== oldTeam) {
+        renameMap.set(oldTeam, newName);
+      }
+    }
+
+    // Collision check: repeatedly remove renames that collide with existing
+    // team names or with each other until no more removals occur.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const existingNames = new Set(teams.filter((t) => !renameMap.has(t)));
+      const newNames = Array.from(renameMap.values());
+      for (const [oldTeam, newName] of renameMap.entries()) {
+        if (
+          existingNames.has(newName) ||
+          newNames.filter((n) => n === newName).length > 1
+        ) {
+          renameMap.delete(oldTeam);
+          changed = true;
+        }
+      }
+    }
+
+    // Apply renames to teams array in-place (preserves index order for teamSpawnArea)
+    for (let i = 0; i < teams.length; i++) {
+      teams[i] = renameMap.get(teams[i]) ?? teams[i];
+    }
+
+    // Apply renames to result map
+    for (const [pi, team] of result.entries()) {
+      if (team !== "kicked" && renameMap.has(team)) {
+        result.set(pi, renameMap.get(team)!);
+      }
+    }
+  }
+
   return result;
 }
 
@@ -101,4 +154,39 @@ export function assignTeamsLobbyPreview(
 
 export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
   return Math.ceil(numPlayers / numTeams);
+}
+
+export function computeClanTeamName(players: PlayerInfo[]): string | null {
+  const humans = players.filter((p) => p.playerType === PlayerType.Human);
+  if (humans.length === 0) return null;
+
+  const clanCounts = new Map<string, number>();
+  for (const player of humans) {
+    if (player.clanTag !== null) {
+      clanCounts.set(player.clanTag, (clanCounts.get(player.clanTag) ?? 0) + 1);
+    }
+  }
+  if (clanCounts.size === 0) return null;
+
+  const sorted = Array.from(clanCounts.entries()).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+  const [topTag, topCount] = sorted[0];
+  const total = humans.length;
+
+  // Unanimous or majority
+  if (topCount / total > 0.5) return topTag;
+
+  // Coalition: top two clans cover the majority of humans
+  if (sorted.length >= 2) {
+    const [secondTag, secondCount] = sorted[1];
+    if (
+      (topCount + secondCount) / total > 2 / 3 &&
+      secondCount / total >= 0.25
+    ) {
+      return `${topTag} / ${secondTag}`;
+    }
+  }
+
+  return null;
 }
