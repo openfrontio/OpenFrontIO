@@ -204,7 +204,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
-    GameMapType.Dyslexdria,
   ],
   arcade: [
     GameMapType.TheBox,
