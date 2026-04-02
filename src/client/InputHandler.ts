@@ -266,6 +266,19 @@ export class InputHandler {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
     });
+    // Clear all tracked keys when the window loses focus so keys that had
+    // their keyup swallowed by the browser (e.g. cmd+zoom) don't stay stuck.
+    // Also release the hold-to-view state and any active pointer/drag state
+    // so the alternate view and drags aren't left latched when focus returns.
+    window.addEventListener("blur", () => {
+      this.activeKeys.clear();
+      if (this.alternateView) {
+        this.alternateView = false;
+        this.eventBus.emit(new AlternateViewEvent(false));
+      }
+      this.pointerDown = false;
+      this.pointers.clear();
+    });
     this.pointers.clear();
 
     this.moveInterval = setInterval(() => {
@@ -310,13 +323,15 @@ export class InputHandler {
 
       if (
         this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus")
+        this.activeKeys.has("Minus") ||
+        this.activeKeys.has("NumpadSubtract")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
         this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal")
+        this.activeKeys.has("Equal") ||
+        this.activeKeys.has("NumpadAdd")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -358,7 +373,19 @@ export class InputHandler {
         this.eventBus.emit(new ConfirmGhostStructureEvent());
       }
 
+      // Don't track zoom keys when a meta/ctrl modifier is held — that means
+      // the browser is handling its own zoom (cmd+/cmd-) and the keyup will
+      // never fire, which would leave the key stuck in activeKeys forever.
+      // Also covers numpad zoom shortcuts (Ctrl+NumpadAdd/NumpadSubtract).
+      const isBrowserZoomCombo =
+        (e.metaKey || e.ctrlKey) &&
+        (e.code === "Minus" ||
+          e.code === "Equal" ||
+          e.code === "NumpadAdd" ||
+          e.code === "NumpadSubtract");
+
       if (
+        !isBrowserZoomCombo &&
         [
           this.keybinds.moveUp,
           this.keybinds.moveDown,
@@ -372,6 +399,8 @@ export class InputHandler {
           "ArrowRight",
           "Minus",
           "Equal",
+          "NumpadAdd",
+          "NumpadSubtract",
           this.keybinds.attackRatioDown,
           this.keybinds.attackRatioUp,
           this.keybinds.centerCamera,
@@ -388,6 +417,24 @@ export class InputHandler {
       const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
+      }
+
+      // When the meta (cmd) or ctrl key is released, any keys that were held
+      // simultaneously will have had their keyup swallowed by the browser
+      // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys to
+      // prevent them staying stuck in activeKeys.
+      if (
+        e.code === "MetaLeft" ||
+        e.code === "MetaRight" ||
+        e.code === "ControlLeft" ||
+        e.code === "ControlRight"
+      ) {
+        this.activeKeys.delete("Minus");
+        this.activeKeys.delete("Equal");
+        this.activeKeys.delete("NumpadAdd");
+        this.activeKeys.delete("NumpadSubtract");
+        this.activeKeys.delete(this.keybinds.zoomIn);
+        this.activeKeys.delete(this.keybinds.zoomOut);
       }
 
       if (e.code === this.keybinds.toggleView) {
@@ -537,8 +584,27 @@ export class InputHandler {
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
-      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
+      if (event.ctrlKey) {
+        if (!realCtrl) {
+          // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
+          // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
+          // which fire synthetic wheel events we don't want to handle.
+          if (Math.abs(event.deltaY) <= 10) {
+            this.eventBus.emit(
+              new ZoomEvent(event.x, event.y, event.deltaY * 10),
+            );
+          }
+        }
+        // Always return when ctrlKey is set — whether it's a real ctrl scroll,
+        // a pinch gesture, or a browser zoom event, none should reach the
+        // regular scroll path below.
+        return;
+      }
+      // Regular scroll wheel: ignore tiny residual momentum events that macOS
+      // keeps sending after a gesture ends (especially after browser zoom changes
+      // devicePixelRatio, which can cause these to accumulate into runaway zoom).
+      if (Math.abs(event.deltaY) < 2) return;
+      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
     }
   }
 

@@ -158,7 +158,7 @@ app.get("/api/instance", (_req, res) => {
 });
 
 // SPA fallback route
-app.get("*", async function (_req, res) {
+app.get("/{*splat}", async function (_req, res) {
   try {
     const htmlPath = path.join(__dirname, "../../static/index.html");
     await renderAppShell(res, htmlPath);
