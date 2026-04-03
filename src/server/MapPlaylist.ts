@@ -439,8 +439,7 @@ export class MapPlaylist {
   }
 
   private cycleNextMap(type: PublicGameType): void {
-    this.ensurePlaylistPopulated(type);
-    const map = this.playlists[type].shift()!;
+    const map = this.consumeNextMap(type);
 
     if (!this.addNextMapNonConsecutive(this.playlists[type], [map])) {
       this.playlists[type].push(...this.generateNewPlaylist(type));
