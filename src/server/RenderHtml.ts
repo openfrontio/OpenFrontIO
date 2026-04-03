@@ -26,6 +26,7 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
     backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
     desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
     mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+    wsUrl: JSON.stringify(`${process.env.SUBDOMAIN}.${process.env.DOMAIN}`),
   });
 }
 

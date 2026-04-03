@@ -101,6 +101,7 @@ export default defineConfig(({ mode }) => {
               inject: {
                 data: {
                   gitCommit: JSON.stringify("DEV"),
+                  wsUrl: JSON.stringify("localhost:9000"),
                   ...htmlAssetData,
                 },
               },
