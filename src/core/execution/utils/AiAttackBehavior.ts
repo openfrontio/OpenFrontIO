@@ -2,6 +2,7 @@ import {
   Difficulty,
   Game,
   GameMode,
+  GameType,
   HumansVsNations,
   Player,
   PlayerID,
@@ -843,6 +844,11 @@ export class AiAttackBehavior {
   private donateTroops(): boolean {
     // Only donate in team games
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return false;
+    }
+
+    // Don't donate in public games (To balance HvN)
+    if (this.game.config().gameConfig().gameType === GameType.Public) {
       return false;
     }
 

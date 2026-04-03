@@ -61,6 +61,60 @@ export function distSortUnit(
   };
 }
 
+/**
+ * Finds minimum, by score, with single pass search
+ * Faster than array.reduce()
+ */
+export function findMinimumBy<T>(
+  values: readonly T[],
+  score: (value: T) => number,
+  isCandidate?: (value: T) => boolean,
+): T | null {
+  let best: T | null = null;
+  let bestScore = Infinity;
+
+  if (isCandidate === undefined) {
+    for (let i = 0, len = values.length; i < len; i++) {
+      const value = values[i];
+      const currentScore = score(value);
+      if (currentScore < bestScore) {
+        bestScore = currentScore;
+        best = value;
+      }
+    }
+    return best;
+  }
+
+  for (let i = 0, len = values.length; i < len; i++) {
+    const value = values[i];
+    if (!isCandidate(value)) continue;
+
+    const currentScore = score(value);
+    if (currentScore < bestScore) {
+      bestScore = currentScore;
+      best = value;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Finds closest by fast. Example usage:
+ * findClosestBy(
+ *       this.units(UnitType.MissileSilo),
+ *       (silo) => mg.manhattanDist(silo.tile(), tile),
+ *       (silo) => !silo.isInCooldown() && !silo.isUnderConstruction(),
+ *     )
+ */
+export function findClosestBy<T>(
+  values: readonly T[],
+  distance: (value: T) => number,
+  isCandidate?: (value: T) => boolean,
+): T | null {
+  return findMinimumBy(values, distance, isCandidate);
+}
+
 export function simpleHash(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -197,6 +251,8 @@ export function createPartialGameRecord(
   winner: Winner,
   // lobby creation time (ms). Defaults to start time for singleplayer.
   lobbyCreatedAt?: number,
+  // Time the lobby became visible to players (ms).
+  visibleAt?: number,
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -208,13 +264,14 @@ export function createPartialGameRecord(
   const actualLobbyCreatedAt = lobbyCreatedAt ?? start;
   const lobbyFillTime = Math.max(
     0,
-    start - Math.min(actualLobbyCreatedAt, start),
+    start - (visibleAt ?? actualLobbyCreatedAt),
   );
 
   const record: PartialGameRecord = {
     info: {
       gameID,
       lobbyCreatedAt: actualLobbyCreatedAt,
+      visibleAt,
       lobbyFillTime,
       config,
       players,
@@ -340,29 +397,17 @@ export function sigmoid(
   return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
 }
 
-// Compute clan from name
-export function getClanTag(name: string): string | null {
-  const clanTag = clanMatch(name);
-  return clanTag ? clanTag[1].toUpperCase() : null;
-}
-
-export function getClanTagOriginalCase(name: string): string | null {
-  const clanTag = clanMatch(name);
-  return clanTag ? clanTag[1] : null;
+export function formatPlayerDisplayName(
+  username: string,
+  clanTag?: string | null,
+): string {
+  return clanTag ? `[${clanTag}] ${username}` : username;
 }
 
 const CLAN_TAG_CHARS = "a-zA-Z0-9";
 
 const CLAN_TAG_INVALID_CHARS = new RegExp(`[^${CLAN_TAG_CHARS}]`, "g");
-const CLAN_TAG_REGEX = new RegExp(`\\[([${CLAN_TAG_CHARS}]{2,5})\\]`);
 
 export function sanitizeClanTag(tag: string): string {
   return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
-}
-
-function clanMatch(name: string): RegExpMatchArray | null {
-  if (!name.includes("[") || !name.includes("]")) {
-    return null;
-  }
-  return name.match(CLAN_TAG_REGEX);
 }

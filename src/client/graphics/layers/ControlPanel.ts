@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -8,9 +9,9 @@ import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import soldierIcon from "/images/SoldierIcon.svg?url";
-import swordIcon from "/images/SwordIcon.svg?url";
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
+const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -208,7 +209,7 @@ export class ControlPanel extends LitElement implements Layer {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-8 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="h-full flex">
           ${greenPercent > 0
@@ -225,7 +226,7 @@ export class ControlPanel extends LitElement implements Layer {
             : ""}
         </div>
         <div
-          class="absolute inset-0 flex items-center text-xl font-bold leading-none pointer-events-none"
+          class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
           translate="no"
         >
           <span class="flex-1 flex justify-end h-full items-center pr-0.5">
@@ -261,10 +262,10 @@ export class ControlPanel extends LitElement implements Layer {
   private renderDesktop() {
     return html`
       <!-- Row 1: troop rate | troop bar | gold -->
-      <div class="flex gap-1.5 items-center mb-1.5">
+      <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm p-1 w-[5.5rem] ${this
+          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this
             ._troopRateIsIncreasing
             ? "border-green-400"
             : "border-orange-400"}"
@@ -292,7 +293,7 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="flex-1">${this.renderDesktopTroopBar()}</div>
         <!-- Gold -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm p-1 w-[4.5rem]"
+          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 w-[4.5rem]"
           translate="no"
         >
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
@@ -300,9 +301,9 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
       </div>
       <!-- Row 2: attack ratio | slider -->
-      <div class="flex items-center gap-2" translate="no">
+      <div class="flex items-center gap-1.5" translate="no">
         <div
-          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md p-1 text-sm font-bold text-white cursor-pointer w-[8rem]"
+          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
         >
           <img
             src=${swordIcon}
@@ -326,7 +327,7 @@ export class ControlPanel extends LitElement implements Layer {
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          class="flex-1 h-2 accent-blue-500 cursor-pointer"
+          class="flex-1 h-1.5 accent-blue-500 cursor-pointer"
         />
       </div>
     `;
@@ -384,7 +385,7 @@ export class ControlPanel extends LitElement implements Layer {
     return html`
       <div
         class="relative pointer-events-auto ${this._isVisible
-          ? "relative w-full text-sm px-2 py-1.5"
+          ? "relative w-full text-sm px-2 py-1"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
