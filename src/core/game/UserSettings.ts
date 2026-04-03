@@ -265,4 +265,12 @@ export class UserSettings {
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
+
+  stopTradingAllAtStartForTeamGames(): boolean {
+    return this.get("settings.stopTradingAllAtStartForTeamGames", false);
+  }
+
+  setStopTradingAllAtStartForTeamGames(enabled: boolean): void {
+    this.set("settings.stopTradingAllAtStartForTeamGames", enabled);
+  }
 }

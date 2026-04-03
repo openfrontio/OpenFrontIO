@@ -13,7 +13,12 @@ import {
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
-import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
+import {
+  BuildableUnit,
+  GameMode,
+  Structures,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -42,6 +47,7 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
+  SendEmbargoAllIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -268,6 +274,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    userSettings,
   );
 }
 
@@ -284,6 +291,9 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+  private startTradeEmbargoAtTick: number | null = null;
+  private startTradeEmbargoApplied = false;
+  private startTradeModeInitialized = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -294,6 +304,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private userSettings: UserSettings,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -392,6 +403,15 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      if (
+        this.startTradeEmbargoAtTick !== null &&
+        !this.startTradeEmbargoApplied &&
+        this.gameView.ticks() >= this.startTradeEmbargoAtTick
+      ) {
+        this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
+        this.startTradeEmbargoApplied = true;
+        this.startTradeEmbargoAtTick = null;
+      }
       this.renderer.tick();
 
       // Emit tick metrics event for performance overlay
@@ -415,6 +435,30 @@ export class ClientGameRunner {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
+        if (!this.startTradeModeInitialized) {
+          this.startTradeModeInitialized = true;
+          const isTeamGame =
+            this.gameView.config().gameConfig().gameMode === GameMode.Team;
+          if (
+            isTeamGame &&
+            !this.gameView.config().isReplay() &&
+            this.userSettings.stopTradingAllAtStartForTeamGames()
+          ) {
+            // gameView.ticks() is still 0 here (worker has not applied start turns yet).
+            // Using it would re-schedule the embargo on every reconnect from tick 0 and
+            // could re-emit "start" after the cooldown already passed. Anchor to server
+            // progress: game tick after this batch equals last turnNumber + 1 (see
+            // GameServer.endTurn).
+            const cooldownTicks = this.gameView.config().embargoAllCooldown();
+            const gameTickAfterBatch =
+              message.turns.length > 0
+                ? message.turns[message.turns.length - 1].turnNumber + 1
+                : this.turnsSeen;
+            if (gameTickAfterBatch < cooldownTicks) {
+              this.startTradeEmbargoAtTick = cooldownTicks;
+            }
+          }
+        }
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -538,6 +582,9 @@ export class ClientGameRunner {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
     }
+    this.startTradeEmbargoAtTick = null;
+    this.startTradeEmbargoApplied = false;
+    this.startTradeModeInitialized = false;
   }
 
   private inputEvent(event: MouseUpEvent) {
