@@ -364,13 +364,12 @@ export class AttacksDisplay extends LitElement implements Layer {
   private getBoatEtaSeconds(boat: UnitView): number | null {
     const plan = this.game.motionPlans().get(boat.id());
     if (!plan) return null;
-    const elapsed = Math.floor(
-      (this.game.ticks() - plan.startTick) / plan.ticksPerStep,
-    );
-    const remaining = plan.path.length - 1 - elapsed;
-    if (remaining <= 0) return 0;
+    const totalTicks = (plan.path.length - 1) * plan.ticksPerStep;
+    const elapsedTicks = this.game.ticks() - plan.startTick;
+    const remainingTicks = totalTicks - elapsedTicks;
+    if (remainingTicks <= 0) return 0;
     return estimateBoatEtaSeconds(
-      remaining * plan.ticksPerStep,
+      remainingTicks,
       this.game.config().serverConfig().turnIntervalMs(),
     );
   }
