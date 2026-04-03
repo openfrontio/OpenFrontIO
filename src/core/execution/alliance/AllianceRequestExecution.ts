@@ -54,6 +54,9 @@ export class AllianceRequestExecution implements Execution {
 
         // Cancel incoming nukes between players
         this.cancelNukesBetweenAlliedPlayers(recipient);
+
+        // Retreat naval invasions between players
+        this.retreatBoatsBetweenAlliedPlayers(recipient);
       } else {
         this.req = this.requestor.createAllianceRequest(recipient);
       }
@@ -83,6 +86,50 @@ export class AllianceRequestExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  retreatBoatsBetweenAlliedPlayers(recipient: Player): void {
+    const retreated = new Map<Player, number>();
+
+    const players = [this.requestor, recipient];
+
+    for (const sender of players) {
+      for (const unit of sender.units(UnitType.TransportShip)) {
+        if (!unit.isActive() || unit.retreating()) continue;
+
+        const targetTile = unit.targetTile();
+        if (!targetTile) continue;
+
+        const targetOwner = this.mg.owner(targetTile);
+        if (!targetOwner.isPlayer()) continue;
+
+        const other = sender === this.requestor ? recipient : this.requestor;
+        if (targetOwner !== other) continue;
+
+        unit.orderBoatRetreat();
+        retreated.set(sender, (retreated.get(sender) ?? 0) + 1);
+      }
+    }
+
+    for (const [sender, count] of retreated) {
+      const other = sender === this.requestor ? recipient : this.requestor;
+
+      this.mg.displayMessage(
+        "events_display.alliance_boats_retreated_outgoing",
+        MessageType.ALLIANCE_ACCEPTED,
+        sender.id(),
+        undefined,
+        { name: other.displayName(), count },
+      );
+
+      this.mg.displayMessage(
+        "events_display.alliance_boats_retreated_incoming",
+        MessageType.ALLIANCE_ACCEPTED,
+        other.id(),
+        undefined,
+        { name: sender.displayName(), count },
+      );
+    }
   }
 
   cancelNukesBetweenAlliedPlayers(recipient: Player): void {
