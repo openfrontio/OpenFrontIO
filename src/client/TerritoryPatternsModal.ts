@@ -5,7 +5,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { hasLinkedAccount } from "./Api";
+import { hasLinkedAccount, refreshUserMe } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
@@ -16,7 +16,7 @@ import {
   handlePurchase,
   patternRelationship,
 } from "./Cosmetics";
-import { translateText } from "./Utils";
+import { renderNumber, translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends BaseModal {
@@ -74,6 +74,18 @@ export class TerritoryPatternsModal extends BaseModal {
     this.cosmetics = await fetchCosmetics();
     await this.updateFromSettings();
     this.refresh();
+  }
+
+  protected onOpen(): void {
+    void refreshUserMe().then((userMeResponse) => {
+      void this.onUserMe(userMeResponse);
+    });
+  }
+
+  private getBalance(type: "premium" | "standard"): bigint {
+    return this.userMeResponse === false
+      ? 0n
+      : (this.userMeResponse.player.balances?.[type] ?? 0n);
   }
 
   private renderTabNavigation(): TemplateResult {
@@ -168,7 +180,10 @@ export class TerritoryPatternsModal extends BaseModal {
 
     return html`
       <div class="flex flex-col">
-        <div class="pt-4 flex justify-center">
+        <div class="pt-4 flex flex-col items-center gap-3">
+          ${hasLinkedAccount(this.userMeResponse)
+            ? this.renderBalanceStrip()
+            : html``}
           ${hasLinkedAccount(this.userMeResponse)
             ? this.renderMySkinsButton()
             : html``}
@@ -186,6 +201,40 @@ export class TerritoryPatternsModal extends BaseModal {
                 ${buttons}
               </div>
             `}
+      </div>
+    `;
+  }
+
+  private renderBalanceStrip(): TemplateResult {
+    return html`
+      <div class="flex flex-wrap items-stretch justify-center gap-2 px-2">
+        ${this.renderBalancePill(
+          translateText("account_modal.premium_balance"),
+          this.getBalance("premium"),
+          "text-amber-300 border-amber-400/20 bg-amber-500/10",
+        )}
+        ${this.renderBalancePill(
+          translateText("account_modal.standard_balance"),
+          this.getBalance("standard"),
+          "text-sky-300 border-sky-400/20 bg-sky-500/10",
+        )}
+      </div>
+    `;
+  }
+
+  private renderBalancePill(
+    label: string,
+    balance: bigint,
+    classes: string,
+  ): TemplateResult {
+    return html`
+      <div class="rounded-full border px-3 py-2 ${classes}">
+        <div
+          class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+        >
+          <span class="text-white/60">${label}</span>
+          <span>${renderNumber(balance)}</span>
+        </div>
       </div>
     `;
   }

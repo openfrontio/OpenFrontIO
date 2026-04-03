@@ -47,6 +47,21 @@ const SingleplayerMapAchievementSchema = z.object({
   difficulty: z.enum(Difficulty),
 });
 
+const NonNegativeBigIntSchema = z.preprocess((val) => {
+  if (typeof val === "string" && /^\d+$/.test(val)) return BigInt(val);
+  if (typeof val === "number" && Number.isSafeInteger(val) && val >= 0) {
+    return BigInt(val);
+  }
+  if (typeof val === "bigint" && val >= 0) return val;
+  return val;
+}, z.bigint().nonnegative());
+
+export const PlayerBalancesSchema = z.object({
+  premium: NonNegativeBigIntSchema.optional(),
+  standard: NonNegativeBigIntSchema.optional(),
+});
+export type PlayerBalances = z.infer<typeof PlayerBalancesSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -56,6 +71,7 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
+    balances: PlayerBalancesSchema.optional(),
     achievements: z
       .array(
         z.object({

@@ -12,6 +12,81 @@ import {
 import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
 
+const LOCAL_WALLET_DEBUG_KEY = "debug.walletBalances";
+
+function mergeLocalWalletDebugBalances(
+  userMe: UserMeResponse,
+  localDebugUserMe: UserMeResponse | null,
+): UserMeResponse {
+  if (localDebugUserMe === null) {
+    return userMe;
+  }
+
+  return {
+    ...userMe,
+    player: {
+      ...userMe.player,
+      balances: {
+        ...userMe.player.balances,
+        ...localDebugUserMe.player.balances,
+      },
+    },
+  };
+}
+
+export function getLocalWalletDebugUserMe(
+  audience: string = getAudience(),
+): UserMeResponse | null {
+  if (audience !== "localhost") {
+    return null;
+  }
+
+  const raw = localStorage.getItem(LOCAL_WALLET_DEBUG_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      premium?: string | number;
+      standard?: string | number;
+      email?: string;
+      publicId?: string;
+      flares?: string[];
+    };
+
+    const result = UserMeResponseSchema.safeParse({
+      user: {
+        email: parsed.email ?? "wallet-test@localhost",
+      },
+      player: {
+        publicId: parsed.publicId ?? "wallet-test-player",
+        flares: parsed.flares,
+        balances: {
+          premium: parsed.premium ?? 0,
+          standard: parsed.standard ?? 0,
+        },
+      },
+    });
+
+    if (!result.success) {
+      console.warn(
+        "Invalid local wallet debug override",
+        z.prettifyError(result.error),
+      );
+      return null;
+    }
+
+    console.info(
+      `Using local wallet debug override from ${LOCAL_WALLET_DEBUG_KEY}`,
+    );
+    return result.data;
+  } catch (error) {
+    console.warn("Failed to parse local wallet debug override", error);
+    return null;
+  }
+}
+
 export async function fetchPlayerById(
   playerId: string,
 ): Promise<PlayerProfile | false> {
@@ -53,40 +128,60 @@ export async function fetchPlayerById(
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
-export async function getUserMe(): Promise<UserMeResponse | false> {
-  if (__userMe !== null) {
-    return __userMe;
-  }
-  __userMe = (async () => {
-    try {
-      const userAuthResult = await userAuth();
-      if (!userAuthResult) return false;
-      const { jwt } = userAuthResult;
 
-      // Get the user object
-      const response = await fetch(getApiBase() + "/users/@me", {
-        headers: {
-          authorization: `Bearer ${jwt}`,
-        },
-      });
-      if (response.status === 401) {
-        await logOut();
-        return false;
+async function fetchUserMe(): Promise<UserMeResponse | false> {
+  const localDebugUserMe = getLocalWalletDebugUserMe();
+
+  try {
+    const userAuthResult = await userAuth();
+    if (!userAuthResult) return localDebugUserMe ?? false;
+    const { jwt } = userAuthResult;
+
+    // Get the user object
+    const response = await fetch(getApiBase() + "/users/@me", {
+      headers: {
+        authorization: `Bearer ${jwt}`,
+      },
+    });
+    if (response.status === 401) {
+      if (localDebugUserMe !== null) {
+        return localDebugUserMe;
       }
-      if (response.status !== 200) return false;
-      const body = await response.json();
-      const result = UserMeResponseSchema.safeParse(body);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        console.error("Invalid response", error);
-        return false;
-      }
-      return result.data;
-    } catch (e) {
+      await logOut();
       return false;
     }
-  })();
+    if (response.status !== 200) return localDebugUserMe ?? false;
+    const body = await response.json();
+    const result = UserMeResponseSchema.safeParse(body);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
+      return localDebugUserMe ?? false;
+    }
+    return mergeLocalWalletDebugBalances(result.data, localDebugUserMe);
+  } catch (e) {
+    return localDebugUserMe ?? false;
+  }
+}
+
+function loadUserMe(forceRefresh = false): Promise<UserMeResponse | false> {
+  if (forceRefresh || __userMe === null) {
+    __userMe = fetchUserMe();
+  }
   return __userMe;
+}
+
+export function invalidateUserMe(): void {
+  __userMe = null;
+}
+
+export function getUserMe(): Promise<UserMeResponse | false> {
+  return loadUserMe();
+}
+
+export function refreshUserMe(): Promise<UserMeResponse | false> {
+  invalidateUserMe();
+  return loadUserMe(true);
 }
 
 export async function createCheckoutSession(

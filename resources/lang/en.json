@@ -229,7 +229,12 @@
     "clear_session": "Clear Session",
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "enter_email_address": "Please enter an email address",
-    "personal_player_id": "Personal Player ID:"
+    "personal_player_id": "Personal Player ID:",
+    "wallet_title": "Wallet",
+    "premium_balance": "Premium Currency",
+    "premium_balance_hint": "Granted to paid users and tournament winners",
+    "standard_balance": "Standard Currency",
+    "standard_balance_hint": "Earned from winning games"
   },
   "leaderboard_modal": {
     "title": "Leaderboard",

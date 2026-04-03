@@ -1,12 +1,13 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  PlayerBalances,
   PlayerGame,
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { fetchPlayerById, getUserMe } from "./Api";
+import { fetchPlayerById, refreshUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
@@ -17,7 +18,7 @@ import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { translateText } from "./Utils";
+import { renderNumber, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
@@ -32,19 +33,29 @@ export class AccountModal extends BaseModal {
     super();
 
     document.addEventListener("userMeResponse", (event: Event) => {
-      const customEvent = event as CustomEvent;
+      const customEvent = event as CustomEvent<UserMeResponse | false>;
       if (customEvent.detail) {
-        this.userMeResponse = customEvent.detail as UserMeResponse;
+        this.userMeResponse = customEvent.detail;
         if (this.userMeResponse?.player?.publicId === undefined) {
           this.statsTree = null;
           this.recentGames = [];
         }
       } else {
+        this.userMeResponse = null;
         this.statsTree = null;
         this.recentGames = [];
-        this.requestUpdate();
       }
+
+      this.requestUpdate();
     });
+  }
+
+  private getBalances(): PlayerBalances {
+    return this.userMeResponse?.player?.balances ?? {};
+  }
+
+  private getBalance(type: "premium" | "standard"): bigint {
+    return this.getBalances()[type] ?? 0n;
   }
 
   private hasAnyStats(): boolean {
@@ -156,6 +167,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
 
+          ${this.renderBalancesSection()}
+
           <!-- Middle Row: Stats Section -->
           ${this.hasAnyStats()
             ? html`<div
@@ -186,6 +199,54 @@ export class AccountModal extends BaseModal {
               .onViewGame=${(id: string) => void this.viewGame(id)}
             ></game-list>
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderBalancesSection(): TemplateResult {
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span class="text-amber-300">◎</span>
+          ${translateText("account_modal.wallet_title")}
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${this.renderBalanceCard(
+            translateText("account_modal.premium_balance"),
+            translateText("account_modal.premium_balance_hint"),
+            this.getBalance("premium"),
+            "text-amber-300",
+          )}
+          ${this.renderBalanceCard(
+            translateText("account_modal.standard_balance"),
+            translateText("account_modal.standard_balance_hint"),
+            this.getBalance("standard"),
+            "text-sky-300",
+          )}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderBalanceCard(
+    title: string,
+    description: string,
+    balance: bigint,
+    accentClass: string,
+  ): TemplateResult {
+    return html`
+      <div class="rounded-xl border border-white/10 bg-black/20 p-4">
+        <div class="flex flex-col gap-2">
+          <div
+            class="text-xs font-bold uppercase tracking-[0.2em] text-white/40"
+          >
+            ${title}
+          </div>
+          <div class="text-3xl font-black ${accentClass}">
+            ${renderNumber(balance)}
+          </div>
+          <div class="text-sm text-white/55">${description}</div>
         </div>
       </div>
     `;
@@ -363,13 +424,15 @@ export class AccountModal extends BaseModal {
   protected onOpen(): void {
     this.isLoadingUser = true;
 
-    void getUserMe()
+    void refreshUserMe()
       .then((userMe) => {
-        if (userMe) {
+        if (userMe !== false) {
           this.userMeResponse = userMe;
           if (this.userMeResponse?.player?.publicId) {
-            this.loadPlayerProfile(this.userMeResponse.player.publicId);
+            void this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
+        } else {
+          this.userMeResponse = null;
         }
         this.isLoadingUser = false;
         this.requestUpdate();

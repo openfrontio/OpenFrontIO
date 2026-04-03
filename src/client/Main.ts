@@ -13,8 +13,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
-import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { getUserMe, refreshUserMe } from "./Api";
 import { joinLobby } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -252,6 +251,37 @@ class Client {
     createdAt: number;
   }> | null = null;
 
+  private publishUserMeResponse(userMeResponse: UserMeResponse | false) {
+    updateAccountNavButton(userMeResponse);
+    const hasLinkedAccount =
+      !crazyGamesSDK.isOnCrazyGames() &&
+      ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
+    console.log("ads enabled: ", hasLinkedAccount);
+    window.adsEnabled = !hasLinkedAccount && !crazyGamesSDK.isOnCrazyGames();
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: userMeResponse,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    if (userMeResponse !== false) {
+      console.log(
+        `Your player ID is ${userMeResponse.player.publicId}\n` +
+          "Sharing this ID will allow others to view your game history and stats.",
+      );
+    }
+  }
+
+  private async syncUserMe(forceRefresh = false) {
+    const userMeResponse = forceRefresh
+      ? await refreshUserMe()
+      : await getUserMe();
+    this.publishUserMeResponse(userMeResponse);
+    return userMeResponse;
+  }
+
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
     // Prefetch turnstile token so it is available when
@@ -435,38 +465,7 @@ class Client {
       console.warn("Matchmaking modal element not found");
     }
 
-    const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      updateAccountNavButton(userMeResponse);
-      const hasLinkedAccount =
-        !crazyGamesSDK.isOnCrazyGames() &&
-        ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
-      console.log("ads enabled: ", hasLinkedAccount);
-      window.adsEnabled = !hasLinkedAccount && !crazyGamesSDK.isOnCrazyGames();
-      document.dispatchEvent(
-        new CustomEvent("userMeResponse", {
-          detail: userMeResponse,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-
-      if (userMeResponse !== false) {
-        // Authorized
-        console.log(
-          `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
-        );
-      }
-    };
-
-    if ((await userAuth()) === false) {
-      // Not logged in
-      onUserMe(false);
-    } else {
-      // JWT appears to be valid
-      // TODO: Add caching
-      getUserMe().then(onUserMe);
-    }
+    void this.syncUserMe();
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -662,7 +661,9 @@ class Client {
         this.tokenLoginModal.openWithToken(token);
       } else {
         alertAndStrip(`purchase succeeded: ${patternName}`);
-        this.patternsModal.refresh();
+        void this.syncUserMe(true).finally(() => {
+          this.patternsModal.refresh();
+        });
       }
       return;
     }
