@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 30
     needs: [build]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
@@ -101,7 +101,7 @@ jobs:
     timeout-minutes: 30
     environment: prod-beta
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -151,7 +151,7 @@ jobs:
     timeout-minutes: 30
     environment: prod-blue
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -201,7 +201,7 @@ jobs:
     timeout-minutes: 30
     environment: prod-green
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
