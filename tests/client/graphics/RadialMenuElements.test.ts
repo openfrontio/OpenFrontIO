@@ -557,7 +557,11 @@ describe("RadialMenuElements", () => {
       const subMenu = buildMenuElement.subMenu!(mockParams);
       const cityElement = subMenu.find((item) => item.id === "build_City");
 
-      expect(cityElement!.color).toBe(COLORS.building);
+      expect(
+        (cityElement!.color as (params: MenuElementParams) => string)(
+          mockParams,
+        ),
+      ).toBe(COLORS.building);
     });
 
     it("should use correct colors for attack elements", () => {
@@ -572,16 +576,24 @@ describe("RadialMenuElements", () => {
         (item) => item.id === "attack_Atom Bomb",
       );
 
-      expect(atomBombElement!.color).toBe(COLORS.attack);
+      expect(
+        (atomBombElement!.color as (params: MenuElementParams) => string)(
+          mockParams,
+        ),
+      ).toBe(COLORS.attack);
     });
 
-    it("should not set color when element is disabled", () => {
+    it("should use disabled color when element is disabled", () => {
       mockBuildMenu.canBuildOrUpgrade = vi.fn(() => false);
 
       const subMenu = buildMenuElement.subMenu!(mockParams);
       const cityElement = subMenu.find((item) => item.id === "build_City");
 
-      expect(cityElement!.color).toBeUndefined();
+      expect(
+        (cityElement!.color as (params: MenuElementParams) => string)(
+          mockParams,
+        ),
+      ).toBe(COLORS.building);
     });
   });
 

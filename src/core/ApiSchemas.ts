@@ -83,6 +83,11 @@ export const AchievementsResponseSchema = z.array(
 );
 export type AchievementsResponse = z.infer<typeof AchievementsResponseSchema>;
 
+const UserMeAchievementsSchema = z.object({
+  singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+  player: z.array(PlayerAchievementSchema).optional(),
+});
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -92,7 +97,7 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
-    achievements: AchievementsResponseSchema.optional(),
+    achievements: UserMeAchievementsSchema,
     leaderboard: z
       .object({
         oneVone: z
