@@ -134,8 +134,14 @@ export class StructureLayer implements Layer {
     this.context.imageSmoothingEnabled = true;
     this.context.imageSmoothingQuality = "high";
 
-    this.canvas.width = this.game.width() * 2;
-    this.canvas.height = this.game.height() * 2;
+    // Firefox's GPU limit is 8192, only known browser issue
+    const maxTextureSize = 8192;
+    const scaleX = maxTextureSize / this.game.width();
+    const scaleY = maxTextureSize / this.game.height();
+    const bufferScale = Math.min(2, scaleX, scaleY);
+    this.canvas.width = this.game.width() * bufferScale;
+    this.canvas.height = this.game.height() * bufferScale;
+    this.context.scale(bufferScale / 2, bufferScale / 2);
 
     Promise.all(
       Array.from(this.unitIcons.values()).map((img) =>
