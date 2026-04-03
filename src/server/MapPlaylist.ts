@@ -156,9 +156,14 @@ export class MapPlaylist {
     const maxAttempts = 6;
     let attempts = 0;
 
+    // Capture playlist length because isCompact decision depends on it in buildConfig, and
+    // cycleNextMap could modify playlist length via generateNewPlaylist
+    this.ensurePlaylistPopulated(type);
+    const playlistLength = this.playlists[type].length;
+
     while (true) {
       const map = this.peekNextMap(type);
-      const config = await this.buildConfig(type, map);
+      const config = await this.buildConfig(type, map, playlistLength);
       attempts++;
 
       if (notInUse(config) || attempts >= maxAttempts) {
@@ -173,6 +178,7 @@ export class MapPlaylist {
   private async buildConfig(
     type: PublicGameType,
     map: GameMapType,
+    playlistLength: number = this.playlists[type].length,
   ): Promise<GameConfig> {
     if (type === "special") {
       return this.buildSpecialConfig(map);
@@ -182,8 +188,7 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
-    let isCompact: boolean | undefined =
-      this.playlists[type].length % 3 === 0 || undefined;
+    let isCompact: boolean | undefined = playlistLength % 3 === 0 || undefined;
     if (
       isCompact &&
       mode === GameMode.Team &&
