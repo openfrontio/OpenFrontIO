@@ -167,7 +167,7 @@ export class MapPlaylist {
       }
 
       this.firstMapToLast(type);
-    } while (true);
+    } while (true); // eslint-disable-line no-constant-condition
   }
 
   private async buildConfig(
