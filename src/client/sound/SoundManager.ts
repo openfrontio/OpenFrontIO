@@ -4,7 +4,9 @@ import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import { assetUrl } from "../../core/AssetUrls";
 const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
-const allianceSuggestedSound = assetUrl("sounds/effects/alliance-suggested.mp3");
+const allianceSuggestedSound = assetUrl(
+  "sounds/effects/alliance-suggested.mp3",
+);
 const atomHitSound = assetUrl("sounds/effects/atom-hit.mp3");
 const atomLaunchSound = assetUrl("sounds/effects/atom-launch.mp3");
 const buildCitySound = assetUrl("sounds/effects/build-city.mp3");
