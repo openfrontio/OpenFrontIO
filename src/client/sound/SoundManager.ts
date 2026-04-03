@@ -2,21 +2,22 @@ import { Howl } from "howler";
 import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
-import allianceBrokenSound from "/sounds/effects/alliance-broken.mp3?url";
-import allianceSuggestedSound from "/sounds/effects/alliance-suggested.mp3?url";
-import atomHitSound from "/sounds/effects/atom-hit.mp3?url";
-import atomLaunchSound from "/sounds/effects/atom-launch.mp3?url";
-import buildCitySound from "/sounds/effects/build-city.mp3?url";
-import buildDefensePostSound from "/sounds/effects/build-defense-post.mp3?url";
-import buildPortSound from "/sounds/effects/build-port.mp3?url";
-import buildWarshipSound from "/sounds/effects/build-warship.mp3?url";
-import clickSound from "/sounds/effects/click.mp3?url";
-import hydrogenHitSound from "/sounds/effects/hydrogen-hit.mp3?url";
-import hydrogenLaunchSound from "/sounds/effects/hydrogen-launch.mp3?url";
-import kaChingSound from "/sounds/effects/ka-ching.mp3?url";
-import messageSound from "/sounds/effects/message.mp3?url";
-import mirvLaunchSound from "/sounds/effects/mirv-launch.mp3?url";
-import samBuiltSound from "/sounds/effects/sam-built.mp3?url";
+import { assetUrl } from "../../core/AssetUrls";
+const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
+const allianceSuggestedSound = assetUrl("sounds/effects/alliance-suggested.mp3");
+const atomHitSound = assetUrl("sounds/effects/atom-hit.mp3");
+const atomLaunchSound = assetUrl("sounds/effects/atom-launch.mp3");
+const buildCitySound = assetUrl("sounds/effects/build-city.mp3");
+const buildDefensePostSound = assetUrl("sounds/effects/build-defense-post.mp3");
+const buildPortSound = assetUrl("sounds/effects/build-port.mp3");
+const buildWarshipSound = assetUrl("sounds/effects/build-warship.mp3");
+const clickSound = assetUrl("sounds/effects/click.mp3");
+const hydrogenHitSound = assetUrl("sounds/effects/hydrogen-hit.mp3");
+const hydrogenLaunchSound = assetUrl("sounds/effects/hydrogen-launch.mp3");
+const kaChingSound = assetUrl("sounds/effects/ka-ching.mp3");
+const messageSound = assetUrl("sounds/effects/message.mp3");
+const mirvLaunchSound = assetUrl("sounds/effects/mirv-launch.mp3");
+const samBuiltSound = assetUrl("sounds/effects/sam-built.mp3");
 
 export enum SoundEffect {
   KaChing = "ka-ching",

@@ -2,18 +2,16 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
+import { Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { hasLinkedAccount } from "./Api";
 import { BaseModal } from "./components/BaseModal";
-import "./components/Difficulties";
+import "./components/NotLoggedInWarning";
 import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   getPlayerCosmetics,
-  handlePurchase,
   patternRelationship,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
@@ -24,28 +22,16 @@ export class TerritoryPatternsModal extends BaseModal {
 
   @state() private selectedPattern: PlayerPattern | null;
   @state() private selectedColor: string | null = null;
-
-  @state() private activeTab: "patterns" | "colors" = "patterns";
-  @state() private showOnlyOwned: boolean = false;
+  @state() private search = "";
 
   private cosmetics: Cosmetics | null = null;
-
   private userSettings: UserSettings = new UserSettings();
-
-  private isActive = false;
-
-  private affiliateCode: string | null = null;
-
   private userMeResponse: UserMeResponse | false = false;
 
   private _onPatternSelected = async () => {
     await this.updateFromSettings();
     this.refresh();
   };
-
-  constructor() {
-    super();
-  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -55,12 +41,18 @@ export class TerritoryPatternsModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
-    window.addEventListener("pattern-selected", this._onPatternSelected);
+    window.addEventListener(
+      "event:user-settings-changed:pattern",
+      this._onPatternSelected,
+    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("pattern-selected", this._onPatternSelected);
+    window.removeEventListener(
+      "event:user-settings-changed:pattern",
+      this._onPatternSelected,
+    );
   }
 
   private async updateFromSettings() {
@@ -76,40 +68,13 @@ export class TerritoryPatternsModal extends BaseModal {
     this.refresh();
   }
 
-  private renderTabNavigation(): TemplateResult {
-    return html`
-      ${modalHeader({
-        title: translateText("territory_patterns.title"),
-        onBack: () => this.close(),
-        ariaLabel: translateText("common.back"),
-        rightContent: !hasLinkedAccount(this.userMeResponse)
-          ? html`<div class="flex items-center">
-              ${this.renderNotLoggedInWarning()}
-            </div>`
-          : undefined,
-      })}
-      <!-- TEMP DISABlE TAB SWITCHING
-        <div class="flex items-center gap-2 justify-center">
-          <button
-            class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-        .activeTab === "patterns"
-        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-        : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-            @click=${() => (this.activeTab = "patterns")}
-          >
-            ${translateText("territory_patterns.title")}
-          </button>
-          <button
-            class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-        .activeTab === "colors"
-        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-        : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-            @click=${() => (this.activeTab = "colors")}
-          >
-            ${translateText("territory_patterns.colors")}
-          </button>
-          TEMP DISABlE TAB SWITCHING -->
-    `;
+  private includedInSearch(name: string): boolean {
+    const displayName = name.replace(/_/g, " ");
+    return displayName.toLowerCase().includes(this.search.toLowerCase());
+  }
+
+  private handleSearch(event: Event) {
+    this.search = (event.target as HTMLInputElement).value;
   }
 
   private renderPatternGrid(): TemplateResult {
@@ -119,6 +84,12 @@ export class TerritoryPatternsModal extends BaseModal {
       ...Object.values(this.cosmetics?.patterns ?? {}),
     ];
     for (const pattern of patterns) {
+      if (pattern === null && this.search) {
+        continue;
+      }
+      if (pattern !== null && !this.includedInSearch(pattern.name)) {
+        continue;
+      }
       const colorPalettes = pattern
         ? [...(pattern.colorPalettes ?? []), null]
         : [null];
@@ -129,19 +100,12 @@ export class TerritoryPatternsModal extends BaseModal {
             pattern,
             colorPalette,
             this.userMeResponse,
-            this.affiliateCode,
+            null,
           );
         }
-        if (rel === "blocked") {
+        if (rel !== "owned") {
           continue;
         }
-        if (this.showOnlyOwned) {
-          if (rel !== "owned") continue;
-        } else {
-          // Store mode: hide owned items
-          if (rel === "owned") continue;
-        }
-        // Determine if this pattern/color is selected
         const isDefaultPattern = pattern === null;
         const isSelected =
           (isDefaultPattern && this.selectedPattern === null) ||
@@ -156,11 +120,9 @@ export class TerritoryPatternsModal extends BaseModal {
             .colorPalette=${this.cosmetics?.colorPalettes?.[
               colorPalette?.name ?? ""
             ] ?? null}
-            .requiresPurchase=${rel === "purchasable"}
+            .requiresPurchase=${false}
             .selected=${isSelected}
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
-            .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
-              handlePurchase(p, colorPalette)}
           ></pattern-button>
         `);
       }
@@ -168,92 +130,56 @@ export class TerritoryPatternsModal extends BaseModal {
 
     return html`
       <div class="flex flex-col">
-        <div class="pt-4 flex justify-center">
-          ${hasLinkedAccount(this.userMeResponse)
-            ? this.renderMySkinsButton()
-            : html``}
+        <div
+          class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+        >
+          ${buttons}
         </div>
-        ${!this.showOnlyOwned && buttons.length === 0
-          ? html`<div
-              class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
-            >
-              ${translateText("territory_patterns.all_owned")}
-            </div>`
-          : html`
-              <div
-                class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
-              >
-                ${buttons}
-              </div>
-            `}
-      </div>
-    `;
-  }
-
-  private renderMySkinsButton(): TemplateResult {
-    return html`<button
-      class="px-4 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-wider border mb-4 ${this
-        .showOnlyOwned
-        ? "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-        : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white"}"
-      @click=${() => {
-        this.showOnlyOwned = !this.showOnlyOwned;
-      }}
-    >
-      ${translateText("territory_patterns.show_only_owned")}
-    </button>`;
-  }
-
-  private renderNotLoggedInWarning(): TemplateResult {
-    return html`<button
-      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 cursor-pointer hover:bg-red-500/30"
-      @click=${() => {
-        this.close();
-        window.showPage?.("page-account");
-      }}
-    >
-      ${translateText("territory_patterns.not_logged_in")}
-    </button>`;
-  }
-
-  private renderColorSwatchGrid(): TemplateResult {
-    const hexCodes = (
-      this.userMeResponse === false
-        ? []
-        : (this.userMeResponse.player.flares ?? [])
-    )
-      .filter((flare) => flare.startsWith("color:"))
-      .map((flare) => flare.split(":")[1]);
-    return html`
-      <div class="flex flex-wrap gap-3 p-2 justify-center items-center">
-        ${hexCodes.map(
-          (hexCode) => html`
-            <div
-              class="w-12 h-12 rounded-xl border-2 border-white/10 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:border-white relative group"
-              style="background-color: ${hexCode};"
-              title="${hexCode}"
-              @click=${() => this.selectColor(hexCode)}
-            >
-              <div
-                class="absolute inset-0 rounded-xl ring-2 ring-inset ring-black/20"
-              ></div>
-            </div>
-          `,
-        )}
       </div>
     `;
   }
 
   render() {
-    if (!this.isActive && !this.inline) return html``;
-
     const content = html`
       <div class="${this.modalContainerClass}">
-        ${this.renderTabNavigation()}
-        <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
-          ${this.activeTab === "patterns"
-            ? this.renderPatternGrid()
-            : this.renderColorSwatchGrid()}
+        <div
+          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
+        >
+          ${modalHeader({
+            title: translateText("territory_patterns.title"),
+            onBack: () => this.close(),
+            ariaLabel: translateText("common.back"),
+            rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+          })}
+
+          <div class="md:flex items-center gap-2 justify-center mt-4">
+            <input
+              class="h-12 w-full max-w-md border border-white/10 bg-black/60
+              rounded-xl shadow-inner text-xl text-center focus:outline-none
+              focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-white/30 transition-all"
+              type="text"
+              placeholder=${translateText("territory_patterns.search")}
+              .value=${this.search}
+              @change=${this.handleSearch}
+              @keyup=${this.handleSearch}
+            />
+          </div>
+        </div>
+        <div class="flex justify-center py-3 shrink-0">
+          <button
+            class="px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors"
+            @click=${() => {
+              this.close();
+              window.showPage?.("page-item-store");
+            }}
+          >
+            ${translateText("main.store")}
+          </button>
+        </div>
+        <div
+          class="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
+        >
+          ${this.renderPatternGrid()}
         </div>
       </div>
     `;
@@ -265,9 +191,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       <o-modal
         id="territoryPatternsModal"
-        title="${this.activeTab === "patterns"
-          ? translateText("territory_patterns.title")
-          : translateText("territory_patterns.colors")}"
+        title="${translateText("territory_patterns.title")}"
         ?inline=${this.inline}
         ?hideHeader=${true}
         ?hideCloseButton=${true}
@@ -277,33 +201,12 @@ export class TerritoryPatternsModal extends BaseModal {
     `;
   }
 
-  public async open(
-    options?: string | { affiliateCode?: string; showOnlyOwned?: boolean },
-  ) {
-    this.isActive = true;
-    if (typeof options === "string") {
-      this.affiliateCode = options;
-      this.showOnlyOwned = false;
-    } else if (
-      options !== null &&
-      typeof options === "object" &&
-      !Array.isArray(options)
-    ) {
-      this.affiliateCode = options.affiliateCode ?? null;
-      this.showOnlyOwned = options.showOnlyOwned ?? false;
-    } else {
-      this.affiliateCode = null;
-      this.showOnlyOwned = false;
-    }
-
+  protected async onOpen(): Promise<void> {
     await this.refresh();
-    super.open();
   }
 
-  public close() {
-    this.isActive = false;
-    this.affiliateCode = null;
-    super.close();
+  protected onClose(): void {
+    this.search = "";
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
@@ -320,16 +223,11 @@ export class TerritoryPatternsModal extends BaseModal {
     }
     this.selectedPattern = pattern;
     this.refresh();
-    // Dispatch event so Main.ts can refresh the preview button
-    this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
-    // Show popup/modal for skin selection
     this.showSkinSelectedPopup();
-    // Close the skin store
     this.close();
   }
 
   private showSkinSelectedPopup() {
-    // Use unified heads-up-message for feedback
     let skinName = translateText("territory_patterns.pattern.default");
     if (this.selectedPattern && this.selectedPattern.name) {
       skinName = this.selectedPattern.name
@@ -351,29 +249,6 @@ export class TerritoryPatternsModal extends BaseModal {
         },
       }),
     );
-  }
-
-  private selectColor(hexCode: string) {
-    this.selectedPattern = null;
-    this.userSettings.setSelectedPatternName(undefined);
-    this.selectedColor = hexCode;
-    this.userSettings.setSelectedColor(hexCode);
-    this.refresh();
-    this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
-    this.close();
-  }
-
-  private renderColorPreview(
-    hexCode: string,
-    width: number,
-    height: number,
-  ): TemplateResult {
-    return html`
-      <div
-        class="w-full h-full rounded"
-        style="background-color: ${hexCode};"
-      ></div>
-    `;
   }
 
   public async refresh() {

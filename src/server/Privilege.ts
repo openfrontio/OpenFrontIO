@@ -9,16 +9,19 @@ import {
   skipNonAlphabeticTransformer,
   toAsciiLowerCaseTransformer,
 } from "obscenity";
+import countries from "resources/countries.json";
+
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
-  FlagSchema,
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerPattern,
 } from "../core/Schemas";
-import { getClanTagOriginalCase, simpleHash } from "../core/Util";
+import { simpleHash } from "../core/Util";
+
+const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const shadowNames = [
   "UnhuggedToday",
@@ -72,7 +75,7 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
 }
 
 /**
- * Sanitizes and censors profane usernames and clan tags.
+ * Sanitizes and censors profane usernames and clan tags separately.
  * Profane username is overwritten, profane clan tag is removed.
  *
  * Removing bad clan tags won't hurt existing clans nor cause desyncs:
@@ -80,36 +83,28 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
  * - only each separate local player name with a profane clan tag will remain, no clan team assignment
  *
  * Examples:
- * - "GoodName" -> "GoodName"
- * - "BadName" -> "Censored"
- * - "[CLAN]GoodName" -> "[CLAN]GoodName"
- * - "[CLaN]BadName" -> "[CLAN] Censored"
- * - "[BAD]GoodName" -> "GoodName"
- * - "[BAD]BadName" -> "Censored"
+ * - username="GoodName", clanTag=null -> { username: "GoodName", clanTag: null }
+ * - username="BadName", clanTag=null -> { username: "Censored", clanTag: null }
+ * - username="GoodName", clanTag="CLaN" -> { username: "GoodName", clanTag: "CLAN" }
+ * - username="GoodName", clanTag="BAD" -> { username: "GoodName", clanTag: null }
+ * - username="BadName", clanTag="BAD" -> { username: "Censored", clanTag: null }
  */
-function censorUsernameWithMatcher(
-  username: string,
-  matcher: RegExpMatcher,
-): string {
-  const clanTag = getClanTagOriginalCase(username);
 
-  const nameWithoutClan = clanTag
-    ? username.replace(`[${clanTag}]`, "").trim()
+function censorWithMatcher(
+  username: string,
+  clanTag: string | null,
+  matcher: RegExpMatcher,
+): { username: string; clanTag: string | null } {
+  const usernameIsProfane = matcher.hasMatch(username);
+  const censoredName = usernameIsProfane
+    ? shadowNames[simpleHash(username) % shadowNames.length]
     : username;
 
   const clanTagIsProfane = clanTag ? matcher.hasMatch(clanTag) : false;
-  const usernameIsProfane = matcher.hasMatch(nameWithoutClan);
+  const censoredClanTag =
+    clanTag && !clanTagIsProfane ? clanTag.toUpperCase() : null;
 
-  const censoredName = usernameIsProfane
-    ? shadowNames[simpleHash(nameWithoutClan) % shadowNames.length]
-    : nameWithoutClan;
-
-  // Restore clan tag only if it's clean, otherwise remove it entirely
-  if (clanTag && !clanTagIsProfane) {
-    return `[${clanTag.toUpperCase()}] ${censoredName}`;
-  }
-
-  return censoredName;
+  return { username: censoredName, clanTag: censoredClanTag };
 }
 
 type CosmeticResult =
@@ -118,7 +113,10 @@ type CosmeticResult =
 
 export interface PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult;
-  censorUsername(username: string): string;
+  censor(
+    username: string,
+    clanTag: string | null,
+  ): { username: string; clanTag: string | null };
 }
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
@@ -153,14 +151,11 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     if (refs.flag) {
-      const result = FlagSchema.safeParse(refs.flag);
-      if (!result.success) {
-        return {
-          type: "forbidden",
-          reason: "invalid flag: " + result.error.message,
-        };
+      try {
+        cosmetics.flag = this.isFlagAllowed(flares, refs.flag);
+      } catch (e) {
+        return { type: "forbidden", reason: "invalid flag: " + e.message };
       }
-      cosmetics.flag = result.data;
     }
 
     return { type: "allowed", cosmetics };
@@ -207,6 +202,28 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     }
   }
 
+  isFlagAllowed(flares: string[], flagRef: string): string {
+    if (flagRef.startsWith("flag:")) {
+      const key = flagRef.slice("flag:".length);
+      const found = this.cosmetics.flags[key];
+      if (!found) throw new Error(`Flag ${key} not found`);
+
+      if (flares.includes("flag:*") || flares.includes(`flag:${found.name}`)) {
+        return found.url;
+      }
+
+      throw new Error(`No flares for flag ${key}`);
+    } else if (flagRef.startsWith("country:")) {
+      const code = flagRef.slice("country:".length);
+      if (!countryCodes.includes(code)) {
+        throw new Error(`invalid country code`);
+      }
+      return `/flags/${code}.svg`;
+    } else {
+      throw new Error(`invalid flag prefix`);
+    }
+  }
+
   isColorAllowed(flares: string[], color: string): PlayerColor {
     const allowedColors = flares
       .filter((flare) => flare.startsWith("color:"))
@@ -217,8 +234,11 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     return { color };
   }
 
-  censorUsername(username: string): string {
-    return censorUsernameWithMatcher(username, this.matcher);
+  censor(
+    username: string,
+    clanTag: string | null,
+  ): { username: string; clanTag: string | null } {
+    return censorWithMatcher(username, clanTag, this.matcher);
   }
 }
 
@@ -230,8 +250,10 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
     return { type: "allowed", cosmetics: {} };
   }
 
-  censorUsername(username: string): string {
-    // Fail open: use matcher with just the built-in English profanity dataset
-    return censorUsernameWithMatcher(username, defaultMatcher);
+  censor(
+    username: string,
+    clanTag: string | null,
+  ): { username: string; clanTag: string | null } {
+    return censorWithMatcher(username, clanTag, defaultMatcher);
   }
 }

@@ -203,7 +203,7 @@ export class WinModal extends LitElement implements Layer {
               .requiresPurchase=${true}
               .onSelect=${(p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
-                handlePurchase(p, colorPalette)}
+                handlePurchase(p.product!, colorPalette?.name)}
             ></pattern-button>
           `,
         )}
@@ -334,7 +334,7 @@ export class WinModal extends LitElement implements Layer {
           crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
-            player: winner.name(),
+            player: winner.displayName(),
           });
           this.isWin = false;
         }

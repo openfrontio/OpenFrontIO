@@ -89,7 +89,6 @@ export class NukeExecution implements Execution {
       game: this.mg,
       targetTile: this.dst,
       magnitude,
-      allySmallIds: new Set(this.player.allies().map((a) => a.smallID())),
       threshold: this.mg.config().nukeAllianceBreakThreshold(),
     });
 
@@ -150,7 +149,7 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             // TODO TranslateText
-            `${this.player.name()} - atom bomb inbound`,
+            `${this.player.displayName()} - atom bomb inbound`,
             MessageType.NUKE_INBOUND,
             target.id(),
           );
@@ -158,7 +157,7 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             // TODO TranslateText
-            `${this.player.name()} - hydrogen bomb inbound`,
+            `${this.player.displayName()} - hydrogen bomb inbound`,
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );

@@ -9,7 +9,10 @@ import {
 } from "../../core/CosmeticSchemas";
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { PlayerPattern } from "../../core/Schemas";
+import { translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
+import "./ArtistInfo";
+import "./PurchaseButton";
 
 export const BUTTON_WIDTH = 150;
 
@@ -36,18 +39,6 @@ export class PatternButton extends LitElement {
     return this;
   }
 
-  private translateCosmetic(prefix: string, patternName: string): string {
-    const translation = translateText(`${prefix}.${patternName}`);
-    if (translation.startsWith(prefix)) {
-      return patternName
-        .split("_")
-        .filter((word) => word.length > 0)
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(" ");
-    }
-    return translation;
-  }
-
   private handleClick() {
     if (this.pattern === null) {
       this.onSelect?.(null);
@@ -60,8 +51,7 @@ export class PatternButton extends LitElement {
     } satisfies PlayerPattern);
   }
 
-  private handlePurchase(e: Event) {
-    e.stopPropagation();
+  private handlePurchase() {
     if (this.pattern?.product) {
       this.onPurchase?.(this.pattern, this.colorPalette ?? null);
     }
@@ -83,22 +73,25 @@ export class PatternButton extends LitElement {
           ?disabled=${this.requiresPurchase}
           @click=${this.handleClick}
         >
+          <artist-info .artist=${this.pattern?.artist}></artist-info>
           <div class="flex flex-col items-center w-full">
             <div
-              class="text-xs font-bold text-white uppercase tracking-wider mb-1 text-center truncate w-full ${this
-                .requiresPurchase
+              class="text-xs font-bold text-white uppercase tracking-wider mb-1 ${this
+                .pattern?.artist
+                ? "pr-5"
+                : ""} text-center truncate w-full ${this.requiresPurchase
                 ? "opacity-50"
                 : ""}"
               title="${isDefaultPattern
                 ? translateText("territory_patterns.pattern.default")
-                : this.translateCosmetic(
+                : translateCosmetic(
                     "territory_patterns.pattern",
                     this.pattern!.name,
                   )}"
             >
               ${isDefaultPattern
                 ? translateText("territory_patterns.pattern.default")
-                : this.translateCosmetic(
+                : translateCosmetic(
                     "territory_patterns.pattern",
                     this.pattern!.name,
                   )}
@@ -111,7 +104,7 @@ export class PatternButton extends LitElement {
                       ? "opacity-50"
                       : ""}"
                   >
-                    ${this.translateCosmetic(
+                    ${translateCosmetic(
                       "territory_patterns.color_palette",
                       this.colorPalette!.name,
                     )}
@@ -139,18 +132,10 @@ export class PatternButton extends LitElement {
 
         ${this.requiresPurchase && this.pattern?.product
           ? html`
-              <div class="w-full mt-2">
-                <button
-                  class="w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
-                   hover:bg-green-500/30 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)]"
-                  @click=${this.handlePurchase}
-                >
-                  ${translateText("territory_patterns.purchase")}
-                  <span class="ml-1 text-white/60"
-                    >(${this.pattern.product.price})</span
-                  >
-                </button>
-              </div>
+              <purchase-button
+                .product=${this.pattern.product}
+                .onPurchase=${() => this.handlePurchase()}
+              ></purchase-button>
             `
           : null}
       </div>
