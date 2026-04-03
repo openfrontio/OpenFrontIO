@@ -1,13 +1,10 @@
 import {
   DataSet,
   RegExpMatcher,
-  collapseDuplicatesTransformer,
   englishDataset,
+  englishRecommendedTransformers,
   pattern,
-  resolveConfusablesTransformer,
-  resolveLeetSpeakTransformer,
   skipNonAlphabeticTransformer,
-  toAsciiLowerCaseTransformer,
 } from "obscenity";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
@@ -44,6 +41,18 @@ export const shadowNames = [
   "AlmostPottyTrained",
 ];
 
+function createBlacklistMatcherTransformers() {
+  const recommendedBlacklistTransformers =
+    englishRecommendedTransformers.blacklistMatcherTransformers;
+  const collapseDuplicatesIndex = recommendedBlacklistTransformers.length - 1;
+
+  return [
+    ...recommendedBlacklistTransformers.slice(0, collapseDuplicatesIndex),
+    skipNonAlphabeticTransformer(),
+    recommendedBlacklistTransformers[collapseDuplicatesIndex],
+  ];
+}
+
 export function createMatcher(bannedWords: string[]): RegExpMatcher {
   const customDataset = new DataSet<{ originalWord: string }>().addAll(
     englishDataset,
@@ -61,13 +70,9 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
 
   return new RegExpMatcher({
     ...customDataset.build(),
-    blacklistMatcherTransformers: [
-      toAsciiLowerCaseTransformer(),
-      resolveConfusablesTransformer(),
-      resolveLeetSpeakTransformer(),
-      collapseDuplicatesTransformer(),
-      skipNonAlphabeticTransformer(),
-    ],
+    blacklistMatcherTransformers: createBlacklistMatcherTransformers(),
+    whitelistMatcherTransformers:
+      englishRecommendedTransformers.whitelistMatcherTransformers,
   });
 }
 

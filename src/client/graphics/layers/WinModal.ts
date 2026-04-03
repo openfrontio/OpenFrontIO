@@ -15,6 +15,7 @@ import { getUserMe } from "../../Api";
 import "../../components/PatternButton";
 import {
   fetchCosmetics,
+  getPatternPurchaseState,
   handlePurchase,
   patternRelationship,
 } from "../../Cosmetics";
@@ -195,18 +196,22 @@ export class WinModal extends LitElement implements Layer {
 
     this.patternContent = html`
       <div class="flex gap-4 flex-wrap justify-start">
-        ${selectedPatterns.map(
-          ({ pattern, colorPalette }) => html`
+        ${selectedPatterns.map(({ pattern, colorPalette }) => {
+          const purchaseState = getPatternPurchaseState(pattern, me);
+
+          return html`
             <pattern-button
               .pattern=${pattern}
               .colorPalette=${colorPalette}
               .requiresPurchase=${true}
+              .purchaseDisabled=${purchaseState.purchaseDisabled}
+              .purchaseReason=${purchaseState.purchaseReason}
               .onSelect=${(p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
                 handlePurchase(p, colorPalette)}
             ></pattern-button>
-          `,
-        )}
+          `;
+        })}
       </div>
     `;
   }

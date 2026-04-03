@@ -9,10 +9,64 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
+import { WalletCurrency } from "../core/CosmeticSchemas";
 import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
 
 const LOCAL_WALLET_DEBUG_KEY = "debug.walletBalances";
+const STORE_PATTERN_PURCHASE_PATH = "/store/patterns/purchase";
+
+const LocalWalletDebugSchema = z.object({
+  premium: z.union([z.string(), z.number()]).optional(),
+  standard: z.union([z.string(), z.number()]).optional(),
+  email: z.string().optional(),
+  publicId: z.string().optional(),
+  flares: z.array(z.string()).optional(),
+});
+type LocalWalletDebugState = z.infer<typeof LocalWalletDebugSchema>;
+
+export type WalletPurchaseFailureReason =
+  | "insufficient_balance"
+  | "unauthorized"
+  | "unavailable"
+  | "failed";
+
+export interface WalletPatternPurchaseResult {
+  ok: boolean;
+  reason?: WalletPurchaseFailureReason;
+}
+
+function getLocalWalletDebugState(
+  audience: string = getAudience(),
+): LocalWalletDebugState | null {
+  if (audience !== "localhost") {
+    return null;
+  }
+
+  const raw = localStorage.getItem(LOCAL_WALLET_DEBUG_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = LocalWalletDebugSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) {
+      console.warn(
+        "Invalid local wallet debug override",
+        z.prettifyError(parsed.error),
+      );
+      return null;
+    }
+    return parsed.data;
+  } catch (error) {
+    console.warn("Failed to parse local wallet debug override", error);
+    return null;
+  }
+}
+
+function setLocalWalletDebugState(state: LocalWalletDebugState): void {
+  localStorage.setItem(LOCAL_WALLET_DEBUG_KEY, JSON.stringify(state));
+}
 
 function mergeLocalWalletDebugBalances(
   userMe: UserMeResponse,
@@ -37,54 +91,74 @@ function mergeLocalWalletDebugBalances(
 export function getLocalWalletDebugUserMe(
   audience: string = getAudience(),
 ): UserMeResponse | null {
-  if (audience !== "localhost") {
+  const parsed = getLocalWalletDebugState(audience);
+  if (!parsed) {
     return null;
   }
 
-  const raw = localStorage.getItem(LOCAL_WALLET_DEBUG_KEY);
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as {
-      premium?: string | number;
-      standard?: string | number;
-      email?: string;
-      publicId?: string;
-      flares?: string[];
-    };
-
-    const result = UserMeResponseSchema.safeParse({
-      user: {
-        email: parsed.email ?? "wallet-test@localhost",
+  const result = UserMeResponseSchema.safeParse({
+    user: {
+      email: parsed.email ?? "wallet-test@localhost",
+    },
+    player: {
+      publicId: parsed.publicId ?? "wallet-test-player",
+      flares: parsed.flares,
+      balances: {
+        premium: parsed.premium ?? 0,
+        standard: parsed.standard ?? 0,
       },
-      player: {
-        publicId: parsed.publicId ?? "wallet-test-player",
-        flares: parsed.flares,
-        balances: {
-          premium: parsed.premium ?? 0,
-          standard: parsed.standard ?? 0,
-        },
-      },
-    });
+    },
+  });
 
-    if (!result.success) {
-      console.warn(
-        "Invalid local wallet debug override",
-        z.prettifyError(result.error),
-      );
-      return null;
-    }
-
-    console.info(
-      `Using local wallet debug override from ${LOCAL_WALLET_DEBUG_KEY}`,
+  if (!result.success) {
+    console.warn(
+      "Invalid local wallet debug override",
+      z.prettifyError(result.error),
     );
-    return result.data;
-  } catch (error) {
-    console.warn("Failed to parse local wallet debug override", error);
     return null;
   }
+
+  console.info(
+    `Using local wallet debug override from ${LOCAL_WALLET_DEBUG_KEY}`,
+  );
+  return result.data;
+}
+
+function tryLocalWalletDebugPatternPurchase(
+  params: {
+    patternName: string;
+    colorPaletteName: string | null;
+    currency: WalletCurrency;
+    amount: bigint;
+  },
+  audience: string = getAudience(),
+): WalletPatternPurchaseResult | null {
+  const localDebugState = getLocalWalletDebugState(audience);
+  const localDebugUserMe = getLocalWalletDebugUserMe(audience);
+  if (!localDebugState || !localDebugUserMe) {
+    return null;
+  }
+
+  const currentBalance =
+    localDebugUserMe.player.balances?.[params.currency] ?? 0n;
+  if (currentBalance < params.amount) {
+    return { ok: false, reason: "insufficient_balance" };
+  }
+
+  const flare = params.colorPaletteName
+    ? `pattern:${params.patternName}:${params.colorPaletteName}`
+    : `pattern:${params.patternName}`;
+  const nextFlares = Array.from(
+    new Set([...(localDebugState.flares ?? []), flare]),
+  );
+
+  setLocalWalletDebugState({
+    ...localDebugState,
+    [params.currency]: (currentBalance - params.amount).toString(),
+    flares: nextFlares,
+  });
+  invalidateUserMe();
+  return { ok: true };
 }
 
 export async function fetchPlayerById(
@@ -182,6 +256,76 @@ export function getUserMe(): Promise<UserMeResponse | false> {
 export function refreshUserMe(): Promise<UserMeResponse | false> {
   invalidateUserMe();
   return loadUserMe(true);
+}
+
+export function requestUserMeRefresh(forceRefresh = true): void {
+  document.dispatchEvent(
+    new CustomEvent("refresh-user-me", {
+      detail: { forceRefresh },
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
+export async function purchasePatternWithWallet(
+  params: {
+    patternName: string;
+    colorPaletteName: string | null;
+    currency: WalletCurrency;
+    amount: bigint;
+  },
+  audience: string = getAudience(),
+): Promise<WalletPatternPurchaseResult> {
+  const localResult = tryLocalWalletDebugPatternPurchase(params, audience);
+  if (localResult !== null) {
+    return localResult;
+  }
+
+  const authorization = await getAuthHeader();
+  if (!authorization) {
+    return { ok: false, reason: "unauthorized" };
+  }
+
+  try {
+    const response = await fetch(
+      `${getApiBase()}${STORE_PATTERN_PURCHASE_PATH}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authorization,
+        },
+        body: JSON.stringify({
+          patternName: params.patternName,
+          colorPaletteName: params.colorPaletteName,
+          currency: params.currency,
+        }),
+      },
+    );
+
+    if (response.ok) {
+      invalidateUserMe();
+      return { ok: true };
+    }
+
+    if (response.status === 401) {
+      return { ok: false, reason: "unauthorized" };
+    }
+
+    if (response.status === 402 || response.status === 409) {
+      return { ok: false, reason: "insufficient_balance" };
+    }
+
+    if (response.status === 404) {
+      return { ok: false, reason: "unavailable" };
+    }
+
+    return { ok: false, reason: "failed" };
+  } catch (error) {
+    console.error("purchasePatternWithWallet: request failed", error);
+    return { ok: false, reason: "failed" };
+  }
 }
 
 export async function createCheckoutSession(

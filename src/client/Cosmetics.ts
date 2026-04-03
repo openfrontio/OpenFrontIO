@@ -4,6 +4,7 @@ import {
   Cosmetics,
   CosmeticsSchema,
   Pattern,
+  Product,
 } from "../core/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
@@ -11,7 +12,15 @@ import {
   PlayerPattern,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
-import { createCheckoutSession, getApiBase, getUserMe } from "./Api";
+import {
+  createCheckoutSession,
+  getApiBase,
+  getUserMe,
+  hasLinkedAccount,
+  purchasePatternWithWallet,
+  requestUserMeRefresh,
+} from "./Api";
+import { renderNumber, translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
@@ -20,7 +29,46 @@ export async function handlePurchase(
   colorPalette: ColorPalette | null,
 ) {
   if (pattern.product === null) {
-    alert("This pattern is not available for purchase.");
+    alert(translateText("territory_patterns.purchase_unavailable"));
+    return;
+  }
+
+  const walletPrice = pattern.product.walletPrice;
+  if (walletPrice) {
+    const result = await purchasePatternWithWallet({
+      patternName: pattern.name,
+      colorPaletteName: colorPalette?.name ?? null,
+      currency: walletPrice.currency,
+      amount: walletPrice.amount,
+    });
+
+    if (!result.ok) {
+      switch (result.reason) {
+        case "insufficient_balance":
+          alert(
+            walletPrice.currency === "premium"
+              ? translateText("territory_patterns.insufficient_premium")
+              : translateText("territory_patterns.insufficient_standard"),
+          );
+          return;
+        case "unauthorized":
+          alert(translateText("territory_patterns.sign_in_to_purchase"));
+          return;
+        case "unavailable":
+          alert(translateText("territory_patterns.purchase_unavailable"));
+          return;
+        default:
+          alert(translateText("territory_patterns.purchase_failed"));
+          return;
+      }
+    }
+
+    requestUserMeRefresh(true);
+    return;
+  }
+
+  if (!pattern.product.priceId) {
+    alert(translateText("territory_patterns.purchase_unavailable"));
     return;
   }
 
@@ -29,12 +77,78 @@ export async function handlePurchase(
     colorPalette?.name ?? null,
   );
   if (url === false) {
-    alert("Failed to create checkout session.");
+    alert(translateText("territory_patterns.purchase_failed"));
     return;
   }
 
   // Redirect to Stripe checkout
   window.location.href = url;
+}
+
+export function getProductPurchaseLabel(product: Product): string {
+  if (product.walletPrice?.currency === "premium") {
+    return translateText("territory_patterns.buy_with_premium");
+  }
+  if (product.walletPrice?.currency === "standard") {
+    return translateText("territory_patterns.buy_with_standard");
+  }
+  return translateText("territory_patterns.purchase");
+}
+
+export function getProductPriceLabel(product: Product): string | null {
+  if (product.walletPrice) {
+    return renderNumber(product.walletPrice.amount);
+  }
+  return product.price ?? null;
+}
+
+export function getProductPriceAccentClass(product: Product): string {
+  if (product.walletPrice?.currency === "premium") {
+    return "text-amber-200";
+  }
+  if (product.walletPrice?.currency === "standard") {
+    return "text-sky-200";
+  }
+  return "text-white/60";
+}
+
+export function getPatternPurchaseState(
+  pattern: Pattern,
+  userMeResponse: UserMeResponse | false,
+): {
+  purchaseDisabled: boolean;
+  purchaseReason: string | null;
+} {
+  if (!hasLinkedAccount(userMeResponse)) {
+    return {
+      purchaseDisabled: true,
+      purchaseReason: translateText("territory_patterns.sign_in_to_purchase"),
+    };
+  }
+
+  const walletPrice = pattern.product?.walletPrice;
+  if (!walletPrice) {
+    return {
+      purchaseDisabled: false,
+      purchaseReason: null,
+    };
+  }
+
+  const balance = userMeResponse.player.balances?.[walletPrice.currency] ?? 0n;
+  if (balance >= walletPrice.amount) {
+    return {
+      purchaseDisabled: false,
+      purchaseReason: null,
+    };
+  }
+
+  return {
+    purchaseDisabled: true,
+    purchaseReason:
+      walletPrice.currency === "premium"
+        ? translateText("territory_patterns.insufficient_premium")
+        : translateText("territory_patterns.insufficient_standard"),
+  };
 }
 
 let __cosmetics: Promise<Cosmetics | null> | null = null;

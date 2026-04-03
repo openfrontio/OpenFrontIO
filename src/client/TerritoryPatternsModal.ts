@@ -12,6 +12,7 @@ import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  getPatternPurchaseState,
   getPlayerCosmetics,
   handlePurchase,
   patternRelationship,
@@ -162,6 +163,9 @@ export class TerritoryPatternsModal extends BaseModal {
             this.selectedPattern.name === pattern?.name &&
             (this.selectedPattern.colorPalette?.name ?? null) ===
               (colorPalette?.name ?? null));
+        const purchaseState = pattern
+          ? getPatternPurchaseState(pattern, this.userMeResponse)
+          : { purchaseDisabled: false, purchaseReason: null };
         buttons.push(html`
           <pattern-button
             .pattern=${pattern}
@@ -169,6 +173,8 @@ export class TerritoryPatternsModal extends BaseModal {
               colorPalette?.name ?? ""
             ] ?? null}
             .requiresPurchase=${rel === "purchasable"}
+            .purchaseDisabled=${purchaseState.purchaseDisabled}
+            .purchaseReason=${purchaseState.purchaseReason}
             .selected=${isSelected}
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
@@ -211,11 +217,13 @@ export class TerritoryPatternsModal extends BaseModal {
         ${this.renderBalancePill(
           translateText("account_modal.premium_balance"),
           this.getBalance("premium"),
+          translateText("territory_patterns.buy_with_premium"),
           "text-amber-300 border-amber-400/20 bg-amber-500/10",
         )}
         ${this.renderBalancePill(
           translateText("account_modal.standard_balance"),
           this.getBalance("standard"),
+          translateText("territory_patterns.buy_with_standard"),
           "text-sky-300 border-sky-400/20 bg-sky-500/10",
         )}
       </div>
@@ -225,15 +233,23 @@ export class TerritoryPatternsModal extends BaseModal {
   private renderBalancePill(
     label: string,
     balance: bigint,
+    sublabel: string,
     classes: string,
   ): TemplateResult {
     return html`
       <div class="rounded-full border px-3 py-2 ${classes}">
-        <div
-          class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
-        >
-          <span class="text-white/60">${label}</span>
-          <span>${renderNumber(balance)}</span>
+        <div class="flex flex-col gap-1">
+          <div
+            class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+          >
+            <span class="text-white/60">${label}</span>
+            <span>${renderNumber(balance)}</span>
+          </div>
+          <div
+            class="text-[10px] font-bold uppercase tracking-widest text-white/45"
+          >
+            ${sublabel}
+          </div>
         </div>
       </div>
     `;

@@ -59,6 +59,16 @@ describe("UsernameCensor", () => {
       expect(matcher.hasMatch("naazzii")).toBe(true);
     });
 
+    test("keeps repeated-letter banned words from matching clean gon names", () => {
+      const repeatedLetterMatcher = createMatcher(["goon"]);
+
+      expect(repeatedLetterMatcher.hasMatch("goon")).toBe(true);
+      expect(repeatedLetterMatcher.hasMatch("Dogon Tribe")).toBe(false);
+      expect(repeatedLetterMatcher.hasMatch("Gonzo")).toBe(false);
+      expect(repeatedLetterMatcher.hasMatch("Jargon")).toBe(false);
+      expect(repeatedLetterMatcher.hasMatch("Qui Gon Jinn")).toBe(false);
+    });
+
     test("detects banned words with accented characters", () => {
       expect(matcher.hasMatch("Adölf")).toBe(true);
     });
@@ -142,6 +152,26 @@ describe("UsernameCensor", () => {
       // Verify a known english profanity gets censored even without custom banned words
       const result = emptyChecker.censorUsername("fuck");
       expect(shadowNames).toContain(result);
+    });
+
+    test("does not censor clean names containing gon when goon is banned", () => {
+      const repeatedLetterChecker = new PrivilegeCheckerImpl(
+        mockCosmetics,
+        mockDecoder,
+        ["goon"],
+      );
+
+      expect(repeatedLetterChecker.censorUsername("Dogon Tribe")).toBe(
+        "Dogon Tribe",
+      );
+      expect(repeatedLetterChecker.censorUsername("Gonzo")).toBe("Gonzo");
+      expect(repeatedLetterChecker.censorUsername("Jargon")).toBe("Jargon");
+      expect(repeatedLetterChecker.censorUsername("Qui Gon Jinn")).toBe(
+        "Qui Gon Jinn",
+      );
+      expect(shadowNames).toContain(
+        repeatedLetterChecker.censorUsername("goon"),
+      );
     });
   });
 });

@@ -27,6 +27,10 @@ export class ColorAllocator {
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
     this.fallbackColors = [...colors, ...fallback];
+
+    if (this.fallbackColors.length === 0) {
+      throw new Error("ColorAllocator requires at least one color");
+    }
   }
 
   private getTeamColorVariations(team: Team): Colord[] {

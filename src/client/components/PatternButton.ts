@@ -9,6 +9,11 @@ import {
 } from "../../core/CosmeticSchemas";
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { PlayerPattern } from "../../core/Schemas";
+import {
+  getProductPriceAccentClass,
+  getProductPriceLabel,
+  getProductPurchaseLabel,
+} from "../Cosmetics";
 import { translateText } from "../Utils";
 
 export const BUTTON_WIDTH = 150;
@@ -25,6 +30,12 @@ export class PatternButton extends LitElement {
 
   @property({ type: Boolean })
   requiresPurchase: boolean = false;
+
+  @property({ type: Boolean })
+  purchaseDisabled: boolean = false;
+
+  @property({ type: String })
+  purchaseReason: string | null = null;
 
   @property({ type: Function })
   onSelect?: (pattern: PlayerPattern | null) => void;
@@ -62,13 +73,41 @@ export class PatternButton extends LitElement {
 
   private handlePurchase(e: Event) {
     e.stopPropagation();
+    if (this.purchaseDisabled) {
+      return;
+    }
     if (this.pattern?.product) {
       this.onPurchase?.(this.pattern, this.colorPalette ?? null);
     }
   }
 
+  private getPurchaseText(): string {
+    if (this.purchaseDisabled && this.purchaseReason) {
+      return this.purchaseReason;
+    }
+
+    if (!this.pattern?.product) {
+      return translateText("territory_patterns.purchase");
+    }
+
+    return getProductPurchaseLabel(this.pattern.product);
+  }
+
+  private getPurchasePriceText(): string | null {
+    if (!this.pattern?.product || this.purchaseDisabled) {
+      return null;
+    }
+
+    return getProductPriceLabel(this.pattern.product);
+  }
+
   render() {
     const isDefaultPattern = this.pattern === null;
+    const purchasePrice = this.getPurchasePriceText();
+    const purchaseLabel = this.getPurchaseText();
+    const purchasePriceAccentClass = this.pattern?.product
+      ? getProductPriceAccentClass(this.pattern.product)
+      : "text-white/60";
 
     return html`
       <div
@@ -141,14 +180,19 @@ export class PatternButton extends LitElement {
           ? html`
               <div class="w-full mt-2">
                 <button
-                  class="w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
-                   hover:bg-green-500/30 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)]"
+                  class="w-full px-4 py-2 border rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${this
+                    .purchaseDisabled
+                    ? "bg-white/5 text-white/40 border-white/10 cursor-not-allowed"
+                    : "bg-green-500/20 text-green-400 border-green-500/30 cursor-pointer hover:bg-green-500/30 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)]"}"
+                  ?disabled=${this.purchaseDisabled}
                   @click=${this.handlePurchase}
                 >
-                  ${translateText("territory_patterns.purchase")}
-                  <span class="ml-1 text-white/60"
-                    >(${this.pattern.product.price})</span
-                  >
+                  ${purchaseLabel}
+                  ${purchasePrice
+                    ? html`<span class="ml-1 ${purchasePriceAccentClass}"
+                        >(${purchasePrice})</span
+                      >`
+                    : null}
                 </button>
               </div>
             `

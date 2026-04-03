@@ -9,12 +9,46 @@ export type PatternName = z.infer<typeof PatternNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
 export type PatternData = z.infer<typeof PatternDataSchema>;
+export type WalletCurrency = z.infer<typeof WalletCurrencySchema>;
+export type WalletPrice = z.infer<typeof WalletPriceSchema>;
 
-export const ProductSchema = z.object({
-  productId: z.string(),
-  priceId: z.string(),
-  price: z.string(),
+const NonNegativeBigIntSchema = z.preprocess((val) => {
+  if (typeof val === "string" && /^\d+$/.test(val)) return BigInt(val);
+  if (typeof val === "number" && Number.isSafeInteger(val) && val >= 0) {
+    return BigInt(val);
+  }
+  if (typeof val === "bigint" && val >= 0) return val;
+  return val;
+}, z.bigint().nonnegative());
+
+export const WalletCurrencySchema = z.enum(["premium", "standard"]);
+
+export const WalletPriceSchema = z.object({
+  currency: WalletCurrencySchema,
+  amount: NonNegativeBigIntSchema,
 });
+
+export const ProductSchema = z
+  .object({
+    productId: z.string().optional(),
+    priceId: z.string().optional(),
+    price: z.string().optional(),
+    walletPrice: WalletPriceSchema.optional(),
+  })
+  .superRefine((product, ctx) => {
+    if (product.walletPrice) {
+      return;
+    }
+
+    if (product.productId && product.priceId && product.price) {
+      return;
+    }
+
+    ctx.addIssue({
+      code: "custom",
+      message: "Product must define wallet pricing or Stripe checkout data",
+    });
+  });
 
 export const PatternNameSchema = z
   .string()

@@ -214,6 +214,7 @@ declare global {
     "kick-player": CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
+    "refresh-user-me": CustomEvent<{ forceRefresh?: boolean }>;
   }
 }
 
@@ -352,6 +353,10 @@ class Client {
       "open-matchmaking",
       this.handleOpenMatchmaking.bind(this),
     );
+    document.addEventListener("refresh-user-me", (event: Event) => {
+      const customEvent = event as CustomEvent<{ forceRefresh?: boolean }>;
+      void this.syncUserMe(customEvent.detail?.forceRefresh ?? true);
+    });
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {

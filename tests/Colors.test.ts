@@ -66,6 +66,12 @@ describe("ColorAllocator", () => {
     expect(match2).toBe(false);
   });
 
+  test("throws when no colors are configured", () => {
+    expect(() => new ColorAllocator([], [])).toThrow(
+      "ColorAllocator requires at least one color",
+    );
+  });
+
   test("assignBotColor returns deterministic color from botColors", () => {
     const allocator = new ColorAllocator(mockColors, mockColors);
 
