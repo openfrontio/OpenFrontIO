@@ -156,7 +156,7 @@ export class MapPlaylist {
     const maxAttempts = 6;
     let attempts = 0;
 
-    do {
+    while (true) {
       const map = this.tryFirstMap(type);
       const config = await this.buildConfig(type, map);
       attempts++;
@@ -167,7 +167,7 @@ export class MapPlaylist {
       }
 
       this.firstMapToLast(type);
-    } while (true); // eslint-disable-line no-constant-condition
+    }
   }
 
   private async buildConfig(
