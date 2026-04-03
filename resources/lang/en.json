@@ -244,6 +244,8 @@
     "personal_player_id": "Personal Player ID:"
   },
   "achievements": {
+    "test": "Test",
+    "test_desc": "This is a test achievement.",
     "win_no_nukes": "Win Without Nukes",
     "win_no_nukes_desc": "Win a free-for-all match without launching any nukes."
   },

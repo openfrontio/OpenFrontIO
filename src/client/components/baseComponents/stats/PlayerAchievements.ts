@@ -22,6 +22,13 @@ const playerAchievementMetadata = playerAchievementMetadataJson as Record<
   string,
   PlayerAchievementMetadata
 >;
+const MOCK_UNLOCKED_TEST_ACHIEVEMENT = {
+  playerId: "0",
+  achievement: "test",
+  achievedAt: "2025-01-01T00:00:00.000Z",
+  gameId: "0",
+  game: "ui-test",
+} satisfies PlayerAchievementJson;
 
 @customElement("player-achievements")
 export class PlayerAchievements extends LitElement {
@@ -32,13 +39,24 @@ export class PlayerAchievements extends LitElement {
   @property({ attribute: false }) achievementGroups: AchievementsResponse = [];
 
   private get unlockedAchievements(): PlayerAchievementJson[] {
-    return this.achievementGroups
+    const unlockedAchievements = this.achievementGroups
       .flatMap((group) => (group.type === "player" ? group.data : []))
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime(),
-      );
+      .slice();
+
+    if (
+      !unlockedAchievements.some(
+        (achievement) =>
+          achievement.achievement ===
+          MOCK_UNLOCKED_TEST_ACHIEVEMENT.achievement,
+      )
+    ) {
+      unlockedAchievements.push(MOCK_UNLOCKED_TEST_ACHIEVEMENT);
+    }
+
+    return unlockedAchievements.sort(
+      (a, b) =>
+        new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime(),
+    );
   }
 
   private get achievements(): PlayerAchievementCard[] {

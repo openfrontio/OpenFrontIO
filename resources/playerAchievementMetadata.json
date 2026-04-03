@@ -1,4 +1,7 @@
 {
+  "test": {
+    "difficulty": "Medium"
+  },
   "win_no_nukes": {
     "difficulty": "Hard"
   }
