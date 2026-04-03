@@ -204,12 +204,11 @@ export function getPlayerIcons(
     let isMyPlayerTarget = false;
     const playerNukes = player.units(...Nukes.types);
 
-    for (let i = 0; i < playerNukes.length; i++) {
-      const unit = playerNukes[i];
-      if (unit.isActive()) {
+    for (const nuke of playerNukes) {
+      if (nuke.isActive()) {
         hasActiveNukes = true;
 
-        const detonationDst = unit.targetTile();
+        const detonationDst = nuke.targetTile();
         if (
           myPlayer &&
           detonationDst &&
