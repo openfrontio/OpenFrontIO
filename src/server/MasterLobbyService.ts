@@ -134,17 +134,17 @@ export class MasterLobbyService {
     const lobbiesByType = this.getAllLobbies();
     const lobbyTypes = Object.keys(lobbiesByType) as PublicGameType[];
 
-    const usedMaps = new Set<string>();
-    const usedTeamTypes = new Set<string>();
-    const usedMaxPlayers = new Set<number>();
+    const inUseMaps = new Set<string>();
+    const inUseNumTeams = new Set<string>();
+    const inUseMaxPlayers = new Set<number>();
 
     const recordInUse = (config: GameConfig) => {
-      usedMaps.add(config.gameMap);
+      inUseMaps.add(config.gameMap);
       if (config.playerTeams !== undefined) {
-        usedTeamTypes.add(String(config.playerTeams));
+        inUseNumTeams.add(String(config.playerTeams));
       }
       if (config.maxPlayers !== undefined) {
-        usedMaxPlayers.add(config.maxPlayers);
+        inUseMaxPlayers.add(config.maxPlayers);
       }
     };
 
@@ -177,16 +177,16 @@ export class MasterLobbyService {
       }
 
       const gameConfig = await this.playlist.gameConfigNotInUse(type, (c) => {
-        if (usedMaps.has(c.gameMap)) return false;
+        if (inUseMaps.has(c.gameMap)) return false;
 
         if (
           c.playerTeams !== undefined &&
-          usedTeamTypes.has(String(c.playerTeams))
+          inUseNumTeams.has(String(c.playerTeams))
         ) {
           return false;
         }
 
-        if (c.maxPlayers !== undefined && usedMaxPlayers.has(c.maxPlayers)) {
+        if (c.maxPlayers !== undefined && inUseMaxPlayers.has(c.maxPlayers)) {
           return false;
         }
 
