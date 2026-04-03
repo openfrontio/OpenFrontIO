@@ -1,6 +1,7 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  AchievementsResponse,
   PlayerGame,
   PlayerStatsTree,
   UserMeResponse,
@@ -11,6 +12,7 @@ import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
+import "./components/baseComponents/stats/PlayerAchievements";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
@@ -28,6 +30,7 @@ export class AccountModal extends BaseModal {
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
+  private achievementGroups: AchievementsResponse = [];
 
   constructor() {
     super();
@@ -39,13 +42,37 @@ export class AccountModal extends BaseModal {
         if (this.userMeResponse?.player?.publicId === undefined) {
           this.statsTree = null;
           this.recentGames = [];
+          this.achievementGroups = [];
+        } else {
+          this.achievementGroups = this.getUserMeAchievementGroups(
+            this.userMeResponse,
+          );
         }
       } else {
         this.statsTree = null;
         this.recentGames = [];
+        this.achievementGroups = [];
         this.requestUpdate();
       }
     });
+  }
+
+  private getUserMeAchievementGroups(
+    userMeResponse: UserMeResponse | null,
+  ): AchievementsResponse {
+    const achievements = userMeResponse?.player?.achievements;
+    if (!achievements) return [];
+
+    return [
+      {
+        type: "singleplayer-map",
+        data: achievements.singleplayerMap,
+      },
+      {
+        type: "player",
+        data: achievements.player ?? [],
+      },
+    ];
   }
 
   private hasAnyStats(): boolean {
@@ -132,6 +159,10 @@ export class AccountModal extends BaseModal {
   private renderAccountInfo() {
     const me = this.userMeResponse?.user;
     const isLinked = me?.discord ?? me?.email;
+    const achievements =
+      this.achievementGroups.length > 0
+        ? this.achievementGroups
+        : this.getUserMeAchievementGroups(this.userMeResponse);
 
     if (!isLinked) {
       return this.renderLoginOptions();
@@ -173,6 +204,15 @@ export class AccountModal extends BaseModal {
                 ></player-stats-tree-view>
               </div>`
             : ""}
+
+          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+              ${translateText("account_modal.achievements")}
+            </h3>
+            <player-achievements
+              .achievementGroups=${achievements}
+            ></player-achievements>
+          </div>
 
           <!-- Bottom Row: Recent Games Section -->
           <div class="bg-white/5 rounded-xl border border-white/10 p-6">
@@ -368,6 +408,7 @@ export class AccountModal extends BaseModal {
       .then((userMe) => {
         if (userMe) {
           this.userMeResponse = userMe;
+          this.achievementGroups = this.getUserMeAchievementGroups(userMe);
           if (this.userMeResponse?.player?.publicId) {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
@@ -406,6 +447,9 @@ export class AccountModal extends BaseModal {
 
       this.recentGames = data.games;
       this.statsTree = data.stats;
+      this.achievementGroups =
+        data.achievements ??
+        this.getUserMeAchievementGroups(this.userMeResponse);
 
       this.requestUpdate();
     } catch (err) {

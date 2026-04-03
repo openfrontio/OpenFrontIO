@@ -60,6 +60,34 @@ const SingleplayerMapAchievementSchema = z.object({
   difficulty: z.enum(Difficulty),
 });
 
+export const PlayerAchievementSchema = z.object({
+  playerId: z.string(),
+  achievement: z.string(),
+  achievedAt: z.iso.datetime(),
+  gameId: z.string(),
+  game: z.string(),
+});
+export type PlayerAchievementJson = z.infer<typeof PlayerAchievementSchema>;
+
+export const AchievementsResponseSchema = z.array(
+  z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("singleplayer-map"),
+      data: z.array(SingleplayerMapAchievementSchema),
+    }),
+    z.object({
+      type: z.literal("player"),
+      data: z.array(PlayerAchievementSchema),
+    }),
+  ]),
+);
+export type AchievementsResponse = z.infer<typeof AchievementsResponseSchema>;
+
+const UserMeAchievementsSchema = z.object({
+  singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+  player: z.array(PlayerAchievementSchema).optional(),
+});
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -69,9 +97,7 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
-    achievements: z.object({
-      singleplayerMap: z.array(SingleplayerMapAchievementSchema),
-    }),
+    achievements: UserMeAchievementsSchema,
     leaderboard: z
       .object({
         oneVone: z
@@ -122,6 +148,7 @@ export const PlayerProfileSchema = z.object({
   user: DiscordUserSchema.optional(),
   games: PlayerGameSchema.array(),
   stats: PlayerStatsTreeSchema,
+  achievements: AchievementsResponseSchema.optional(),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
