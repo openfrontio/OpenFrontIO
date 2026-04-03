@@ -1,7 +1,7 @@
 import { Worker } from "cluster";
 import winston from "winston";
 import { ServerConfig } from "../core/configuration/Config";
-import { GameConfig, PublicGameInfo, PublicGameType } from "../core/Schemas";
+import { PublicGameInfo, PublicGameType } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
   MasterCreateGame,
@@ -132,31 +132,24 @@ export class MasterLobbyService {
 
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies();
-    const lobbyTypes = Object.keys(lobbiesByType) as PublicGameType[];
 
-    const inUseMaps = new Set<string>();
-    const inUseNumTeams = new Set<string>();
-    const inUseMaxPlayers = new Set<number>();
+    const activeConfigs = Object.values(lobbiesByType)
+      .map((lobbies) => lobbies[0]?.gameConfig)
+      .filter((c) => c !== undefined);
 
-    const recordInUse = (config: GameConfig) => {
-      inUseMaps.add(config.gameMap);
-      if (config.playerTeams !== undefined) {
-        inUseNumTeams.add(String(config.playerTeams));
-      }
-      if (config.maxPlayers !== undefined) {
-        inUseMaxPlayers.add(config.maxPlayers);
-      }
-    };
+    const activeMaps = new Set(activeConfigs.map((c) => c.gameMap));
+    const activeNumTeams = new Set(
+      activeConfigs
+        .filter((c) => c.playerTeams !== undefined)
+        .map((c) => String(c.playerTeams)),
+    );
+    const activeMaxPlayers = new Set(
+      activeConfigs
+        .filter((c) => c.maxPlayers !== undefined)
+        .map((c) => c.maxPlayers),
+    );
 
-    for (const type of lobbyTypes) {
-      const lobbies = lobbiesByType[type];
-      const nextLobby = lobbies[0];
-      if (nextLobby && nextLobby.gameConfig) {
-        recordInUse(nextLobby.gameConfig);
-      }
-    }
-
-    for (const type of lobbyTypes) {
+    for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
       const lobbies = lobbiesByType[type];
 
       // Always ensure the next lobby has a timer, even if we already have 2+
@@ -177,23 +170,29 @@ export class MasterLobbyService {
       }
 
       const gameConfig = await this.playlist.gameConfigNotInUse(type, (c) => {
-        if (inUseMaps.has(c.gameMap)) return false;
+        if (activeMaps.has(c.gameMap)) return false;
 
         if (
           c.playerTeams !== undefined &&
-          inUseNumTeams.has(String(c.playerTeams))
+          activeNumTeams.has(String(c.playerTeams))
         ) {
           return false;
         }
 
-        if (c.maxPlayers !== undefined && inUseMaxPlayers.has(c.maxPlayers)) {
+        if (c.maxPlayers !== undefined && activeMaxPlayers.has(c.maxPlayers)) {
           return false;
         }
 
         return true;
       });
 
-      recordInUse(gameConfig);
+      activeMaps.add(gameConfig.gameMap);
+      if (gameConfig.playerTeams !== undefined) {
+        activeNumTeams.add(String(gameConfig.playerTeams));
+      }
+      if (gameConfig.maxPlayers !== undefined) {
+        activeMaxPlayers.add(gameConfig.maxPlayers);
+      }
 
       this.sendMessageToWorker({
         type: "createGame",
