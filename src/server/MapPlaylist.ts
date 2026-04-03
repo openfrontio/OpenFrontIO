@@ -151,7 +151,7 @@ export class MapPlaylist {
 
   public async gameConfigNotInUse(
     type: PublicGameType,
-    isInUse: (config: GameConfig) => boolean,
+    notInUse: (config: GameConfig) => boolean,
   ): Promise<GameConfig> {
     const maxAttempts = 6;
     let attempts = 0;
@@ -161,7 +161,7 @@ export class MapPlaylist {
       const config = await this.buildConfig(type, map);
       attempts++;
 
-      if (!isInUse(config) || attempts >= maxAttempts) {
+      if (notInUse(config) || attempts >= maxAttempts) {
         this.consumeNextMap(type);
         return config;
       }

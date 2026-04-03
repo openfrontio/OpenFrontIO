@@ -177,20 +177,20 @@ export class MasterLobbyService {
       }
 
       const gameConfig = await this.playlist.gameConfigNotInUse(type, (c) => {
-        if (usedMaps.has(c.gameMap)) return true;
+        if (usedMaps.has(c.gameMap)) return false;
 
         if (
           c.playerTeams !== undefined &&
           usedTeamTypes.has(String(c.playerTeams))
         ) {
-          return true;
+          return false;
         }
 
         if (c.maxPlayers !== undefined && usedMaxPlayers.has(c.maxPlayers)) {
-          return true;
+          return false;
         }
 
-        return false;
+        return true;
       });
 
       recordInUse(gameConfig);
