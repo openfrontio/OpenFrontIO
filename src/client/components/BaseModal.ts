@@ -35,6 +35,10 @@ export abstract class BaseModal extends LitElement {
     return this;
   }
 
+  public isOpen(): boolean {
+    return this.isModalOpen;
+  }
+
   protected firstUpdated(): void {
     if (this.modalEl) {
       this.modalEl.onClose = () => {
@@ -115,6 +119,7 @@ export abstract class BaseModal extends LitElement {
    * Subclasses can override onOpen() for custom behavior.
    */
   public open(): void {
+    if (this.isModalOpen) return;
     this.registerEscapeHandler();
     this.onOpen();
 

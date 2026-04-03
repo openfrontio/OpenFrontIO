@@ -74,6 +74,7 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   disableNavMesh(): boolean;
+  disableAlliances(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
@@ -131,7 +132,10 @@ export interface Config {
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number;
-  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainGold(
+    rel: "self" | "team" | "ally" | "other",
+    citiesVisited: number,
+  ): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;

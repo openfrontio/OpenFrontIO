@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getServerConfigFromClient } from "src/core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "src/core/configuration/ConfigLoader";
 import {
   Duos,
   GameMapType,
@@ -10,15 +10,19 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { UsernameInput } from "./UsernameInput";
 import {
+  calculateServerTimeOffset,
   getMapName,
   getModifierLabels,
+  getSecondsUntilServerTimestamp,
   renderDuration,
   translateText,
 } from "./Utils";
@@ -45,26 +49,16 @@ export class GameModeSelector extends LitElement {
    * Returns true if valid, false otherwise.
    */
   private validateUsername(): boolean {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (usernameInput?.isValid?.() === false) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return false;
-    }
-    return true;
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput | null;
+    return usernameInput ? usernameInput.validateOrShowError() : true;
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    getServerConfigFromClient().then((config) => {
+    getRuntimeClientServerConfig().then((config) => {
       this.defaultLobbyTime = config.gameCreationRate() / 1000;
     });
   }
@@ -80,7 +74,7 @@ export class GameModeSelector extends LitElement {
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
-    this.serverTimeOffset = lobbies.serverTime - Date.now();
+    this.serverTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
     document.dispatchEvent(
       new CustomEvent("public-lobbies-update", {
         detail: { payload: lobbies },
@@ -133,17 +127,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
-          )}
+          ${!crazyGamesSDK.isOnCrazyGames()
+            ? this.renderSmallActionCard(
+                translateText("mode_selector.ranked_title"),
+                this.openRankedMenu,
+                "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+              )
+            : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
         </div>
         <!-- Game cards grid -->
@@ -151,21 +147,17 @@ export class GameModeSelector extends LitElement {
           class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
         >
           <!-- Left col: main card (desktop only) -->
-          ${special
+          ${ffa
             ? html`<div class="hidden sm:block">
-                ${this.renderSpecialLobbyCard(special)}
+                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
               </div>`
-            : ffa
-              ? html`<div class="hidden sm:block">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-                </div>`
-              : nothing}
+            : nothing}
 
-          <!-- Right col: FFA + teams (desktop only) -->
+          <!-- Right col: special + teams (desktop only) -->
           <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special && ffa
+            ${special
               ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                  ${this.renderSpecialLobbyCard(special)}
                 </div>`
               : nothing}
             ${teams
@@ -204,17 +196,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
-          )}
+          ${!crazyGamesSDK.isOnCrazyGames()
+            ? this.renderSmallActionCard(
+                translateText("mode_selector.ranked_title"),
+                this.openRankedMenu,
+                "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+              )
+            : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-slate-700 hover:bg-slate-600 active:bg-slate-800",
+            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
         </div>
       </div>
@@ -274,12 +268,7 @@ export class GameModeSelector extends LitElement {
     const useContain =
       aspectRatio !== undefined && (aspectRatio > 4 || aspectRatio < 0.25);
     const timeRemaining = lobby.startsAt
-      ? Math.max(
-          0,
-          Math.floor(
-            (lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000,
-          ),
-        )
+      ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
       : undefined;
 
     let timeDisplay: string = "";

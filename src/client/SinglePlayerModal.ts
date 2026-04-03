@@ -2,6 +2,7 @@ import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import {
   Difficulty,
   GameMapSize,
@@ -56,6 +57,7 @@ const DEFAULT_OPTIONS = {
   startingGold: false,
   startingGoldValue: undefined as number | undefined,
   disabledUnits: [] as UnitType[],
+  disableAlliances: false,
 } as const;
 
 @customElement("single-player-modal")
@@ -90,6 +92,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [
     ...DEFAULT_OPTIONS.disabledUnits,
   ];
+  @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -142,14 +145,7 @@ export class SinglePlayerModal extends BaseModal {
       return;
     }
 
-    const achievements = Array.isArray(userMe.player.achievements)
-      ? userMe.player.achievements
-      : [];
-
-    const completions =
-      achievements.find(
-        (achievement) => achievement?.type === "singleplayer-map",
-      )?.data ?? [];
+    const completions = userMe.player.achievements.singleplayerMap;
 
     const winsMap = new Map<GameMapType, Set<Difficulty>>();
     for (const entry of completions) {
@@ -242,7 +238,7 @@ export class SinglePlayerModal extends BaseModal {
                   : "text-white/60"}"
               >
                 <img
-                  src="/images/MedalIconWhite.svg"
+                  src=${assetUrl("images/MedalIconWhite.svg")}
                   class="w-4 h-4 opacity-80 shrink-0"
                   style="${this.showAchievements
                     ? ""
@@ -312,6 +308,10 @@ export class SinglePlayerModal extends BaseModal {
                   {
                     labelKey: "single_modal.compact_map",
                     checked: this.compactMap,
+                  },
+                  {
+                    labelKey: "single_modal.disable_alliances",
+                    checked: this.disableAlliances,
                   },
                 ],
                 inputCards,
@@ -383,6 +383,7 @@ export class SinglePlayerModal extends BaseModal {
       this.gameMode !== DEFAULT_OPTIONS.gameMode ||
       this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
+      this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.disabledUnits.length > 0
     );
   }
@@ -409,6 +410,7 @@ export class SinglePlayerModal extends BaseModal {
     this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
     this.startingGold = DEFAULT_OPTIONS.startingGold;
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
+    this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
   }
 
   protected onOpen(): void {
@@ -487,6 +489,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.compact_map":
         this.handleCompactMapChange(checked);
+        break;
+      case "single_modal.disable_alliances":
+        this.disableAlliances = checked;
         break;
       default:
         break;
@@ -643,9 +648,6 @@ export class SinglePlayerModal extends BaseModal {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
-    if (!usernameInput) {
-      console.warn("Username input element not found");
-    }
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -658,7 +660,8 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getCurrentUsername(),
+                username: usernameInput.getUsername(),
+                clanTag: usernameInput.getClanTag() ?? null,
                 cosmetics: await getPlayerCosmetics(),
               },
             ],
@@ -696,6 +699,7 @@ export class SinglePlayerModal extends BaseModal {
                     ),
                   }
                 : {}),
+              ...(this.disableAlliances ? { disableAlliances: true } : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

@@ -1,4 +1,5 @@
 import * as d3 from "d3";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
 import { getSvgAspectRatio, translateText } from "../../Utils";
@@ -9,7 +10,7 @@ import {
   MenuElementParams,
   TooltipKey,
 } from "./RadialMenuElements";
-import backIcon from "/images/BackIconWhite.svg?url";
+const backIcon = assetUrl("images/BackIconWhite.svg");
 
 function resolveColor(
   item: MenuElement,
@@ -88,7 +89,7 @@ export class RadialMenu implements Layer {
   private backButtonHoverTimeout: number | null = null;
   private navigationInProgress: boolean = false;
   private originalCenterButtonIcon: string = "";
-  private readonly defaultCenterButtonColor = "#2c3e50";
+  private readonly defaultCenterButtonColor = "#0f2744";
   private centerButtonColor: string;
   private centerButtonIconSize: number;
 
@@ -227,7 +228,7 @@ export class RadialMenu implements Layer {
     this.tooltipElement.className = "radial-tooltip";
     this.tooltipElement.style.position = "absolute";
     this.tooltipElement.style.pointerEvents = "none";
-    this.tooltipElement.style.background = "rgba(0, 0, 0, 0.7)";
+    this.tooltipElement.style.background = "rgba(12, 35, 64, 0.88)";
     this.tooltipElement.style.color = "white";
     this.tooltipElement.style.padding = "6px 10px";
     this.tooltipElement.style.borderRadius = "6px";
@@ -332,8 +333,8 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const color = disabled
           ? this.config.disabledColor
-          : (resolveColor(d.data, this.params) ?? "#333333");
-        const opacity = disabled ? 0.5 : 0.7;
+          : (resolveColor(d.data, this.params) ?? "#1e3a5f");
+        const opacity = disabled ? 0.4 : 0.82;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
@@ -341,8 +342,7 @@ export class RadialMenu implements Layer {
 
         return d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color;
       })
-      .attr("stroke", "#ffffff")
-      .attr("stroke-width", "2")
+      .attr("stroke", "none")
       .style("cursor", (d) =>
         this.params === null || d.data.disabled(this.params)
           ? "not-allowed"
@@ -353,9 +353,7 @@ export class RadialMenu implements Layer {
       )
       .style(
         "transition",
-        `filter ${this.config.menuTransitionDuration / 2}ms, stroke-width ${
-          this.config.menuTransitionDuration / 2
-        }ms, fill ${this.config.menuTransitionDuration / 2}ms`,
+        `filter ${this.config.menuTransitionDuration / 2}ms, fill ${this.config.menuTransitionDuration / 2}ms`,
       )
       .attr("data-id", (d) => d.data.id);
 
@@ -366,8 +364,8 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const baseColor = disabled
           ? this.config.disabledColor
-          : (resolveColor(d.data, this.params) ?? "#333333");
-        const opacity = disabled ? 0.5 : 0.7;
+          : (resolveColor(d.data, this.params) ?? "#1e3a5f");
+        const opacity = disabled ? 0.4 : 0.82;
 
         const normalColor =
           d3.color(baseColor)?.copy({ opacity: opacity })?.toString() ??
@@ -419,12 +417,11 @@ export class RadialMenu implements Layer {
         this.currentLevel > 0
       ) {
         path.attr("filter", "url(#glow)");
-        path.attr("stroke-width", "3");
 
         const color =
           this.params === null || d.data.disabled(this.params)
             ? this.config.disabledColor
-            : (resolveColor(d.data, this.params) ?? "#333333");
+            : (resolveColor(d.data, this.params) ?? "#1e3a5f");
         path.attr("fill", color);
       }
     });
@@ -466,8 +463,7 @@ export class RadialMenu implements Layer {
         return;
       }
 
-      path.attr("filter", "url(#glow)");
-      path.attr("stroke-width", "3");
+      path.style("filter", "brightness(1.5)");
     };
 
     const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: any) => {
@@ -486,12 +482,11 @@ export class RadialMenu implements Layer {
           d.data.id === this.selectedItemId)
       )
         return;
-      path.attr("filter", null);
-      path.attr("stroke-width", "2");
+      path.style("filter", null);
       const color = disabled
         ? this.config.disabledColor
         : (resolveColor(d.data, this.params) ?? "#333333");
-      const opacity = disabled ? 0.5 : 0.7;
+      const opacity = disabled ? 0.4 : 0.82;
 
       if (d.data.timerFraction) {
         path.attr("fill", `url(#timer-gradient-${d.data.id})`);
@@ -811,7 +806,6 @@ export class RadialMenu implements Layer {
       const selectedPath = this.menuPaths.get(this.selectedItemId);
       if (selectedPath) {
         selectedPath.attr("filter", null);
-        selectedPath.attr("stroke-width", "2");
       }
     }
     // Use refresh() to update all item appearances consistently
@@ -1127,7 +1121,7 @@ export class RadialMenu implements Layer {
         const color = disabled
           ? this.config.disabledColor
           : (resolveColor(item, this.params) ?? "#333333");
-        const opacity = disabled ? 0.5 : 0.7;
+        const opacity = disabled ? 0.4 : 0.82;
 
         // Update path appearance (skip fill for timer items — gradient handles it)
         if (!item.timerFraction) {

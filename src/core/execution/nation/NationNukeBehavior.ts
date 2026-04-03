@@ -51,7 +51,7 @@ export class NationNukeBehavior {
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
-      nukeTarget.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
+      nukeTarget.type() === PlayerType.Bot || // Don't nuke tribes (as opposed to nations and humans)
       this.player.isOnSameTeam(nukeTarget) ||
       this.attackBehavior.shouldAttack(nukeTarget) === false
     ) {

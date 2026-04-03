@@ -1,20 +1,20 @@
 {
   "map": {
-    "height": 1202,
-    "num_land_tiles": 1258353,
+    "height": 1200,
+    "num_land_tiles": 1255327,
     "width": 1800
   },
   "map16x": {
     "height": 300,
-    "num_land_tiles": 77228,
+    "num_land_tiles": 77229,
     "width": 450
   },
   "map4x": {
-    "height": 601,
-    "num_land_tiles": 313011,
+    "height": 600,
+    "num_land_tiles": 312219,
     "width": 900
   },
-  "name": "straitofhormuz",
+  "name": "Strait of Hormuz",
   "nations": [
     {
       "coordinates": [837, 356],
@@ -99,7 +99,7 @@
     {
       "coordinates": [159, 756],
       "flag": "",
-      "name": "Ar Rayy\u0101n"
+      "name": "Ar Rayyān"
     },
     {
       "coordinates": [1103, 647],

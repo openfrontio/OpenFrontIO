@@ -23,9 +23,10 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord, getClanTag } from "../core/Util";
+import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
+import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -34,9 +35,14 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
+const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
+const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
+
+  private intentRateLimiter = new ClientMsgRateLimiter();
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -51,6 +57,7 @@ export class GameServer {
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
+  private hasReachedMaxPlayerCount: boolean = false;
 
   private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
 
@@ -79,9 +86,9 @@ export class GameServer {
 
   private _hasEnded = false;
 
-  public desyncCount = 0;
-
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  private visibleAt?: number;
 
   constructor(
     public readonly id: string,
@@ -94,6 +101,9 @@ export class GameServer {
     private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+    if (startsAt !== undefined) {
+      this.visibleAt = Date.now();
+    }
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -156,6 +166,9 @@ export class GameServer {
     }
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
+    }
+    if (gameConfig.disableAlliances !== undefined) {
+      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
     }
   }
 
@@ -246,6 +259,10 @@ export class GameServer {
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
+    if (this.activeClients.length >= (this.gameConfig.maxPlayers ?? Infinity)) {
+      this.hasReachedMaxPlayerCount = true;
+    }
+
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, 0);
@@ -255,15 +272,13 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
-  // Only the WebSocket is updated — username, cosmetics, etc. are preserved
-  // from the original join to maintain consistency throughout the game session.
-  // Exception: in the pre-game lobby, the username is updated so players can
-  // rename between leaving and rejoining.
+  // WebSocket is always updated. Optional identity updates are applied only
+  // before the game has started.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
-    newUsername?: string,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -283,13 +298,12 @@ export class GameServer {
       (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
+    if (identityUpdate && !this.hasStarted()) {
+      client.username = identityUpdate.username;
+      client.clanTag = identityUpdate.clanTag;
+    }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
-
-    // Allow username updates in the pre-game lobby
-    if (!this._hasStarted && newUsername !== undefined) {
-      client.username = newUsername;
-    }
 
     client.ws = ws;
     this.addListeners(client);
@@ -305,22 +319,48 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
-        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-        if (!parsed.success) {
-          const error = z.prettifyError(parsed.error);
-          this.log.warn(`Failed to parse client message ${error}`, {
+        let json: unknown;
+        try {
+          json = JSON.parse(message);
+        } catch (e) {
+          this.log.warn(`Failed to parse client message JSON, kicking`, {
             clientID: client.clientID,
+            error: String(e),
           });
-          client.ws.send(
-            JSON.stringify({
-              type: "error",
-              error,
-              message: `Server could not parse message from client: ${message}`,
-            } satisfies ServerErrorMessage),
-          );
+          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+          return;
+        }
+        const parsed = ClientMessageSchema.safeParse(json);
+        if (!parsed.success) {
+          this.log.warn(`Failed to parse client message, kicking`, {
+            clientID: client.clientID,
+            error: z.prettifyError(parsed.error),
+          });
+          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
         }
         const clientMsg = parsed.data;
+        const bytes = Buffer.byteLength(message, "utf8");
+        const rateResult = this.intentRateLimiter.check(
+          client.clientID,
+          clientMsg.type,
+          bytes,
+        );
+        if (rateResult === "kick") {
+          this.log.warn(`Client rate limit exceeded, kicking`, {
+            clientID: client.clientID,
+            type: clientMsg.type,
+          });
+          this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
+          return;
+        }
+        if (rateResult === "limit") {
+          this.log.warn(`Client message rate limit exceeded, dropping`, {
+            clientID: client.clientID,
+            type: clientMsg.type,
+          });
+          return;
+        }
         switch (clientMsg.type) {
           case "rejoin": {
             // Client is already connected, no auth required, send start game message if game has started
@@ -503,6 +543,20 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Close lobby when host leaves before game starts
+      if (
+        !this._hasStarted &&
+        !this.isPublic() &&
+        client.persistentID === this.creatorPersistentID
+      ) {
+        this.log.info("Host left, closing lobby", {
+          gameID: this.id,
+        });
+        for (const c of [...this.activeClients]) {
+          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+        }
+        this._hasEnded = true;
+      }
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -524,10 +578,16 @@ export class GameServer {
 
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
+    // Record when the lobby first became visible to players, used to measure lobby fill time.
+    this.visibleAt ??= Date.now();
   }
 
   public numClients(): number {
     return this.activeClients.length;
+  }
+
+  public numDesyncedClients(): number {
+    return this.outOfSyncClients.size;
   }
 
   public prestart() {
@@ -618,9 +678,11 @@ export class GameServer {
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
+      visibleAt: this.visibleAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
+        clanTag: c.clanTag ?? null,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -800,6 +862,8 @@ export class GameServer {
         } else {
           return GamePhase.Active;
         }
+      } else if (this._hasEnded) {
+        return GamePhase.Finished;
       } else {
         return GamePhase.Lobby;
       }
@@ -808,11 +872,11 @@ export class GameServer {
     // Public Games
 
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
-    const notEnoughPlayers =
-      this.gameConfig.gameType === GameType.Public &&
-      this.gameConfig.maxPlayers &&
-      this.activeClients.length < this.gameConfig.maxPlayers;
-    if (lessThanLifetime && notEnoughPlayers) {
+    if (
+      lessThanLifetime &&
+      !this.hasStarted() &&
+      !this.hasReachedMaxPlayerCount
+    ) {
       return GamePhase.Lobby;
     }
     const warmupOver = now > this.startsAt! + 30 * 1000;
@@ -832,6 +896,7 @@ export class GameServer {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
+        clanTag: c.clanTag ?? null,
         clientID: c.clientID,
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
@@ -942,11 +1007,11 @@ export class GameServer {
         return {
           clientID: player.clientID,
           username: player.username,
+          clanTag: player.clanTag,
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
-          clanTag: getClanTag(player.username) ?? undefined,
         } satisfies PlayerRecord;
       },
     );
@@ -961,6 +1026,7 @@ export class GameServer {
           Date.now(),
           this.winner?.winner,
           this.createdAt,
+          this.visibleAt,
         ),
       ),
     );
@@ -979,8 +1045,6 @@ export class GameServer {
 
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
-
-    this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;

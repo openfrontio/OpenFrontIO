@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -24,6 +25,7 @@
     "copied": "Copied!",
     "click_to_copy": "Click to copy",
     "enabled": "Enabled",
+    "disabled": "Disabled",
     "map_default": "Map default"
   },
   "main": {
@@ -89,12 +91,16 @@
     "hotkeys": "Hotkeys",
     "table_key": "Key",
     "table_action": "Action",
+    "action_esc": "Closes menu. Cancels unit build preview.",
+    "action_enter": "Builds unit under cursor",
     "action_alt_view": "Alternate view (terrain/countries)",
     "action_coordinate_grid": "Toggle coordinate grid overlay",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
     "action_emote": "Open emote menu",
     "action_center": "Center camera on player",
+    "action_pause_game": "Pause / Resume game",
+    "action_game_speed": "Game speed down / up (single player)",
     "action_zoom": "Zoom out/in",
     "action_move_camera": "Move camera",
     "action_ratio_change": "Decrease/Increase attack ratio",
@@ -116,12 +122,13 @@
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
-    "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation, or Tribe. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, plus the number of Warships and various buildings the player has.",
+    "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay appears. It shows the player type (Human, Nation, or Tribe), a Nation's attitude toward you (Hostile to Friendly), defending troops, gold, and the number of Warships and buildings they have.",
     "ui_wilderness": "Wilderness",
-    "option_pause": "Pause/Unpause the game - Only available in single player mode.",
+    "option_pause": "Pause/Unpause the game - Unavailable in public games.",
+    "option_speed": "Speed - Adjust the game speed. Unavailable in public games.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
-    "option_settings": "Settings - Open the settings menu. Inside you can toggle the Alternate view, Emojis, Dark Mode, Ninja (anonymous/random names mode), and action on left click.",
+    "option_settings": "Settings - Open the settings menu. Inside you can toggle things like Alternate view, Emojis, Dark Mode, Hidden names, action on left click and more.",
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the Radial menu. Right click outside it to close it. From the menu you can:",
     "radial_build": "Open the Build menu.",
@@ -193,6 +200,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
+    "disable_alliances": "Disable alliances",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -322,6 +330,10 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "tourney1": "Tourney 2 Teams",
+    "tourney2": "Tourney 3 Teams",
+    "tourney3": "Tourney 4 Teams",
+    "tourney4": "Tourney 8 Teams",
     "passage": "Passage",
     "sierpinski": "Sierpinski",
     "thebox": "The Box",
@@ -339,12 +351,16 @@
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
-    "aegean": "Aegean"
+    "aegean": "Aegean",
+    "milkyway": "Milky Way",
+    "mediterranean": "Mediterranean",
+    "dyslexdria": "Dyslexdria"
   },
   "map_categories": {
     "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
+    "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
     "arcade": "Arcade"
@@ -361,7 +377,10 @@
     "error": "An error occurred. Please try again or contact support.",
     "joined_waiting": "Lobby joined! Waiting for host to start...",
     "version_mismatch": "This game was created with a different version. Cannot join.",
-    "disabled_units": "Disabled Units"
+    "disabled_units": "Disabled Units",
+    "game_length": "Game length",
+    "pvp_immunity": "PVP immunity duration",
+    "starting_gold": "Starting Gold"
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
@@ -399,7 +418,6 @@
     "title": "Create Private Lobby",
     "mode": "Mode",
     "team_count": "Number of Teams",
-    "team_type": "Team Type",
     "options_title": "Options",
     "bots": "Tribes: ",
     "bots_disabled": "Disabled",
@@ -414,6 +432,7 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
+    "disable_alliances": "Disable alliances",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -431,9 +450,12 @@
     "teams_Trios": "Trios (teams of 3)",
     "teams_Quads": "Quads (teams of 4)",
     "teams_Humans Vs Nations": "Humans vs Nations",
-    "starting_gold": "Starting gold",
     "crowded": "Crowded modifier",
     "hard_nations": "Hard Nations",
+    "gold_multiplier": "Gold multiplier",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "Starting Gold (Millions)",
+    "starting_gold_placeholder": "5",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {
@@ -478,7 +500,19 @@
     "compact_map": "Compact Map",
     "crowded": "Crowded",
     "hard_nations": "Hard Nations",
-    "starting_gold": "{amount}M Starting Gold"
+    "starting_gold": "{amount}M Starting Gold",
+    "starting_gold_label": "Starting Gold",
+    "gold_multiplier": "x{amount} Gold Multiplier",
+    "disable_alliances": "Alliances Disabled",
+    "disable_alliances_label": "Alliances",
+    "ports_disabled": "Ports Disabled",
+    "ports_disabled_label": "Ports",
+    "nukes_disabled": "Nukes Disabled",
+    "nukes_disabled_label": "Nukes",
+    "sams_disabled": "SAMs Disabled",
+    "sams_disabled_label": "SAMs",
+    "peace_time": "4min Peace",
+    "peace_time_label": "PVP Immunity"
   },
   "select_lang": {
     "title": "Select Language"
@@ -526,6 +560,8 @@
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "coordinate_grid_label": "Coordinate Grid",
     "coordinate_grid_desc": "Toggle the alphanumeric grid overlay",
+    "attacking_troops_overlay_label": "Attacking Troops Overlay",
+    "attacking_troops_overlay_desc": "Show attacker vs defender troop counts on active front lines.",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
@@ -562,6 +598,12 @@
     "build_menu_modifier_desc": "Hold this key while clicking to open the build menu.",
     "emoji_menu_modifier": "Emoji Menu Modifier",
     "emoji_menu_modifier_desc": "Hold this key while clicking to open the emoji menu.",
+    "pause_game": "Pause",
+    "pause_game_desc": "Pause or resume the game (single player and custom games for host).",
+    "game_speed_up": "Game Speed Up",
+    "game_speed_up_desc": "Cycle to next game speed (0.5, 1, 2, max). Single player only.",
+    "game_speed_down": "Game Speed Down",
+    "game_speed_down_desc": "Cycle to previous game speed. Single player only.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by {amount}%",
@@ -825,7 +867,8 @@
   },
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "host_left": "The host has left the lobby."
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
@@ -889,18 +932,25 @@
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "catching_up": "Catching up..."
   },
+  "store": {
+    "title": "Store",
+    "patterns": "Skins",
+    "flags": "Flags",
+    "no_flags": "No flags available. Check back later for new items.",
+    "no_skins": "No skins available. Check back later for new items."
+  },
   "territory_patterns": {
     "title": "Skins",
-    "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "My Skins",
-    "all_owned": "All skins owned! Check back later for new items.",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
+  },
+  "cosmetics": {
+    "artist_label": "Artist:"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -971,6 +1021,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",

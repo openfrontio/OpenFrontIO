@@ -1,0 +1,21 @@
+{
+  "name": "Tourney3",
+  "nations": [
+    {
+      "coordinates": [437, 410],
+      "name": "North West"
+    },
+    {
+      "coordinates": [1066, 408],
+      "name": "North East"
+    },
+    {
+      "coordinates": [433, 1088],
+      "name": "South West"
+    },
+    {
+      "coordinates": [1068, 1075],
+      "name": "South East"
+    }
+  ]
+}
