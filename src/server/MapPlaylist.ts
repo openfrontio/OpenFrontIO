@@ -157,16 +157,16 @@ export class MapPlaylist {
     let attempts = 0;
 
     while (true) {
-      const map = this.tryFirstMap(type);
+      const map = this.peekNextMap(type);
       const config = await this.buildConfig(type, map);
       attempts++;
 
       if (!isInUse(config) || attempts >= maxAttempts) {
-        this.useFirstMap(type);
+        this.consumeNextMap(type);
         return config;
       }
 
-      this.firstMapToLast(type);
+      this.cycleNextMap(type);
     }
   }
 
@@ -422,22 +422,29 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private tryFirstMap(type: PublicGameType): GameMapType {
-    const playlist = this.playlists[type];
-    if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist(type));
+  private ensurePlaylistPopulated(type: PublicGameType): void {
+    if (this.playlists[type].length === 0) {
+      this.playlists[type].push(...this.generateNewPlaylist(type));
     }
-    return playlist[0];
   }
 
-  private useFirstMap(type: PublicGameType): GameMapType {
-    this.tryFirstMap(type); // Ensure this.playlists[type] is populated
+  private peekNextMap(type: PublicGameType): GameMapType {
+    this.ensurePlaylistPopulated(type);
+    return this.playlists[type][0];
+  }
+
+  private consumeNextMap(type: PublicGameType): GameMapType {
+    this.ensurePlaylistPopulated(type);
     return this.playlists[type].shift()!;
   }
 
-  private firstMapToLast(type: PublicGameType): void {
-    this.tryFirstMap(type);
-    this.playlists[type].push(this.playlists[type].shift()!);
+  private cycleNextMap(type: PublicGameType): void {
+    this.ensurePlaylistPopulated(type);
+    const map = this.playlists[type].shift()!;
+
+    if (!this.addNextMapNonConsecutive(this.playlists[type], [map])) {
+      this.playlists[type].push(...this.generateNewPlaylist(type));
+    }
   }
 
   private generateNewPlaylist(type: PublicGameType): GameMapType[] {
