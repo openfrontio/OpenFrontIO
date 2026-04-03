@@ -149,14 +149,36 @@ export class MapPlaylist {
     team: [],
   };
 
-  public async gameConfig(type: PublicGameType): Promise<GameConfig> {
+  public async gameConfigNotInUse(
+    type: PublicGameType,
+    isInUse: (config: GameConfig) => boolean,
+  ): Promise<GameConfig> {
+    const maxAttempts = 6;
+    let attempts = 0;
+
+    do {
+      const map = this.tryFirstMap(type);
+      const config = await this.buildConfig(type, map);
+      attempts++;
+
+      if (!isInUse(config) || attempts >= maxAttempts) {
+        this.useFirstMap(type);
+        return config;
+      }
+
+      this.firstMapToLast(type);
+    } while (true);
+  }
+
+  private async buildConfig(
+    type: PublicGameType,
+    map: GameMapType,
+  ): Promise<GameConfig> {
     if (type === "special") {
-      return this.getSpecialConfig();
+      return this.buildSpecialConfig(map);
     }
 
     const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap(type);
-
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
@@ -199,9 +221,8 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private async getSpecialConfig(): Promise<GameConfig> {
+  private async buildSpecialConfig(map: GameMapType): Promise<GameConfig> {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap("special");
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
@@ -401,12 +422,22 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: PublicGameType): GameMapType {
+  private tryFirstMap(type: PublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {
       playlist.push(...this.generateNewPlaylist(type));
     }
-    return playlist.shift()!;
+    return playlist[0];
+  }
+
+  private useFirstMap(type: PublicGameType): GameMapType {
+    this.tryFirstMap(type); // Ensure this.playlists[type] is populated
+    return this.playlists[type].shift()!;
+  }
+
+  private firstMapToLast(type: PublicGameType): void {
+    this.tryFirstMap(type);
+    this.playlists[type].push(this.playlists[type].shift()!);
   }
 
   private generateNewPlaylist(type: PublicGameType): GameMapType[] {

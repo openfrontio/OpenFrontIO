@@ -1,7 +1,7 @@
 import { Worker } from "cluster";
 import winston from "winston";
 import { ServerConfig } from "../core/configuration/Config";
-import { PublicGameInfo, PublicGameType } from "../core/Schemas";
+import { GameConfig, PublicGameInfo, PublicGameType } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
   MasterCreateGame,
@@ -132,14 +132,33 @@ export class MasterLobbyService {
 
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies();
+    const lobbyTypes = Object.keys(lobbiesByType) as PublicGameType[];
 
-    for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
+    const usedMaps = new Set<string>();
+    const usedTeamTypes = new Set<string>();
+    const usedMaxPlayers = new Set<number>();
+
+    const recordInUse = (config: GameConfig) => {
+      usedMaps.add(config.gameMap);
+      if (config.playerTeams !== undefined) {
+        usedTeamTypes.add(String(config.playerTeams));
+      }
+      if (config.maxPlayers !== undefined) {
+        usedMaxPlayers.add(config.maxPlayers);
+      }
+    };
+
+    for (const type of lobbyTypes) {
+      const lobbies = lobbiesByType[type];
+      const nextLobby = lobbies[0];
+      if (nextLobby && nextLobby.gameConfig) {
+        recordInUse(nextLobby.gameConfig);
+      }
+    }
+
+    for (const type of lobbyTypes) {
       const lobbies = lobbiesByType[type];
 
-      // Always ensure the next lobby has a timer, even if we already have 2+
-      // lobbies. This prevents a race where two lobbies are created before
-      // either receives a startsAt (IPC round-trip delay), leaving both stuck
-      // without a countdown.
       const nextLobby = lobbies[0];
       if (nextLobby && nextLobby.startsAt === undefined) {
         this.sendMessageToWorker({
@@ -153,10 +172,29 @@ export class MasterLobbyService {
         continue;
       }
 
+      const gameConfig = await this.playlist.gameConfigNotInUse(type, (c) => {
+        if (usedMaps.has(c.gameMap)) return true;
+
+        if (
+          c.playerTeams !== undefined &&
+          usedTeamTypes.has(String(c.playerTeams))
+        ) {
+          return true;
+        }
+
+        if (c.maxPlayers !== undefined && usedMaxPlayers.has(c.maxPlayers)) {
+          return true;
+        }
+
+        return false;
+      });
+
+      recordInUse(gameConfig);
+
       this.sendMessageToWorker({
         type: "createGame",
         gameID: generateID(),
-        gameConfig: await this.playlist.gameConfig(type),
+        gameConfig,
         publicGameType: type,
       } satisfies MasterCreateGame);
     }
