@@ -13,6 +13,7 @@ import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
+import { ISoundManager } from "../../sound/ISoundManager";
 import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
   centerButtonElement,
@@ -46,6 +47,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     private buildMenu: BuildMenu,
     private uiState: UIState,
     private playerPanel: PlayerPanel,
+    private soundManager: ISoundManager,
   ) {
     super();
 
@@ -66,6 +68,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       this.eventBus,
       rootMenuElement,
       centerButtonElement,
+      this.soundManager,
       menuConfig,
     );
 

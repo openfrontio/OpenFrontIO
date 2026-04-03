@@ -3,6 +3,7 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import { assetUrl } from "../../core/AssetUrls";
+import { ISoundManager, SoundEffect } from "./ISoundManager";
 const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
 const allianceSuggestedSound = assetUrl(
   "sounds/effects/alliance-suggested.mp3",
@@ -21,30 +22,31 @@ const messageSound = assetUrl("sounds/effects/message.mp3");
 const mirvLaunchSound = assetUrl("sounds/effects/mirv-launch.mp3");
 const samBuiltSound = assetUrl("sounds/effects/sam-built.mp3");
 
-export enum SoundEffect {
-  KaChing = "ka-ching",
-  AtomHit = "atom-hit",
-  AtomLaunch = "atom-launch",
-  HydrogenHit = "hydrogen-hit",
-  HydrogenLaunch = "hydrogen-launch",
-  MIRVLaunch = "mirv-launch",
-  AllianceSuggested = "alliance-suggested",
-  AllianceBroken = "alliance-broken",
-  BuildPort = "build-port",
-  BuildCity = "build-city",
-  BuildDefensePost = "build-defense-post",
-  BuildWarship = "build-warship",
-  SAMBuilt = "sam-built",
-  Message = "message",
-  Click = "click",
-}
-
-class SoundManager {
+export class SoundManager implements ISoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
   private soundEffects: Map<SoundEffect, Howl> = new Map();
   private soundEffectsVolume: number = 1;
   private backgroundMusicVolume: number = 0;
+
+  private static readonly soundEffectUrls: ReadonlyMap<SoundEffect, string> =
+    new Map([
+      [SoundEffect.KaChing, kaChingSound],
+      [SoundEffect.AtomHit, atomHitSound],
+      [SoundEffect.AtomLaunch, atomLaunchSound],
+      [SoundEffect.HydrogenHit, hydrogenHitSound],
+      [SoundEffect.HydrogenLaunch, hydrogenLaunchSound],
+      [SoundEffect.MIRVLaunch, mirvLaunchSound],
+      [SoundEffect.AllianceSuggested, allianceSuggestedSound],
+      [SoundEffect.AllianceBroken, allianceBrokenSound],
+      [SoundEffect.BuildPort, buildPortSound],
+      [SoundEffect.BuildCity, buildCitySound],
+      [SoundEffect.BuildDefensePost, buildDefensePostSound],
+      [SoundEffect.BuildWarship, buildWarshipSound],
+      [SoundEffect.SAMBuilt, samBuiltSound],
+      [SoundEffect.Message, messageSound],
+      [SoundEffect.Click, clickSound],
+    ]);
 
   constructor() {
     this.backgroundMusic = [
@@ -67,21 +69,6 @@ class SoundManager {
         volume: 0,
       }),
     ];
-    this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
-    this.loadSoundEffect(SoundEffect.AtomHit, atomHitSound);
-    this.loadSoundEffect(SoundEffect.AtomLaunch, atomLaunchSound);
-    this.loadSoundEffect(SoundEffect.HydrogenHit, hydrogenHitSound);
-    this.loadSoundEffect(SoundEffect.HydrogenLaunch, hydrogenLaunchSound);
-    this.loadSoundEffect(SoundEffect.MIRVLaunch, mirvLaunchSound);
-    this.loadSoundEffect(SoundEffect.AllianceSuggested, allianceSuggestedSound);
-    this.loadSoundEffect(SoundEffect.AllianceBroken, allianceBrokenSound);
-    this.loadSoundEffect(SoundEffect.BuildPort, buildPortSound);
-    this.loadSoundEffect(SoundEffect.BuildCity, buildCitySound);
-    this.loadSoundEffect(SoundEffect.BuildDefensePost, buildDefensePostSound);
-    this.loadSoundEffect(SoundEffect.BuildWarship, buildWarshipSound);
-    this.loadSoundEffect(SoundEffect.SAMBuilt, samBuiltSound);
-    this.loadSoundEffect(SoundEffect.Message, messageSound);
-    this.loadSoundEffect(SoundEffect.Click, clickSound);
   }
 
   public playBackgroundMusic(): void {
@@ -121,8 +108,18 @@ class SoundManager {
     }
   }
 
+  private getOrLoadSoundEffect(name: SoundEffect): Howl | null {
+    let sound = this.soundEffects.get(name);
+    if (sound) return sound;
+    const src = SoundManager.soundEffectUrls.get(name);
+    if (!src) return null;
+    sound = new Howl({ src: [src], volume: this.soundEffectsVolume });
+    this.soundEffects.set(name, sound);
+    return sound;
+  }
+
   public playSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
+    const sound = this.getOrLoadSoundEffect(name);
     if (sound) {
       sound.play();
     }
@@ -151,4 +148,5 @@ class SoundManager {
   }
 }
 
-export default new SoundManager();
+export { SoundEffect } from "./ISoundManager";
+export type { ISoundManager } from "./ISoundManager";

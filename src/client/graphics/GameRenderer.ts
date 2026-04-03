@@ -1,6 +1,7 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
+import { ISoundManager } from "../sound/ISoundManager";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
@@ -51,6 +52,7 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  soundManager: ISoundManager,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
@@ -127,6 +129,7 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+  eventsDisplay.soundManager = soundManager;
 
   const attacksDisplay = document.querySelector(
     "attacks-display",
@@ -186,6 +189,7 @@ export function createRenderer(
   }
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
+  settingsModal.soundManager = soundManager;
 
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
@@ -279,7 +283,7 @@ export function createRenderer(
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game, eventBus, transformHandler),
+    new FxLayer(game, eventBus, transformHandler, soundManager),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
@@ -298,6 +302,7 @@ export function createRenderer(
       buildMenu,
       uiState,
       playerPanel,
+      soundManager,
     ),
     spawnTimer,
     immunityTimer,
