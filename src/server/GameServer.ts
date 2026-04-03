@@ -1,11 +1,17 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
-import WebSocket from "ws";
+import WebSocket, { RawData } from "ws";
 import { z } from "zod";
+import {
+  binaryContextFromGameStartInfo,
+  decodeBinaryClientGameplayMessage,
+  encodeBinaryServerGameplayMessage,
+} from "../core/BinaryCodec";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientID,
+  ClientMessage,
   ClientMessageSchema,
   ClientSendWinnerMessage,
   GameConfig,
@@ -19,7 +25,6 @@ import {
   ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
-  ServerTurnMessage,
   StampedIntent,
   Turn,
 } from "../core/Schemas";
@@ -87,6 +92,7 @@ export class GameServer {
   private _hasEnded = false;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
+  private binaryContext?: ReturnType<typeof binaryContextFromGameStartInfo>;
 
   private visibleAt?: number;
 
@@ -317,11 +323,43 @@ export class GameServer {
 
   private addListeners(client: Client) {
     client.ws.removeAllListeners("message");
-    client.ws.on("message", async (message: string) => {
+    client.ws.on("message", async (message: RawData, isBinary: boolean) => {
       try {
+        const bytes = rawDataByteLength(message);
+
+        if (isBinary) {
+          if (!this._hasStarted || !this.binaryContext) {
+            this.log.warn(`Received binary gameplay message before start`, {
+              clientID: client.clientID,
+            });
+            this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+            return;
+          }
+
+          let clientMsg;
+          try {
+            clientMsg = decodeBinaryClientGameplayMessage(
+              rawDataToUint8Array(message),
+              this.binaryContext,
+            );
+          } catch (e) {
+            this.log.warn(`Failed to parse client binary message, kicking`, {
+              clientID: client.clientID,
+              error: String(e),
+            });
+            this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
+            return;
+          }
+          if (!this.checkRateLimit(client, clientMsg.type, bytes)) {
+            return;
+          }
+          this.processClientMessage(client, clientMsg);
+          return;
+        }
+
         let json: unknown;
         try {
-          json = JSON.parse(message);
+          json = JSON.parse(rawDataToString(message));
         } catch (e) {
           this.log.warn(`Failed to parse client message JSON, kicking`, {
             clientID: client.clientID,
@@ -330,6 +368,7 @@ export class GameServer {
           this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
         }
+
         const parsed = ClientMessageSchema.safeParse(json);
         if (!parsed.success) {
           this.log.warn(`Failed to parse client message, kicking`, {
@@ -340,192 +379,25 @@ export class GameServer {
           return;
         }
         const clientMsg = parsed.data;
-        const bytes = Buffer.byteLength(message, "utf8");
-        const rateResult = this.intentRateLimiter.check(
-          client.clientID,
-          clientMsg.type,
-          bytes,
-        );
-        if (rateResult === "kick") {
-          this.log.warn(`Client rate limit exceeded, kicking`, {
+
+        if (
+          this._hasStarted &&
+          (clientMsg.type === "intent" ||
+            clientMsg.type === "ping" ||
+            clientMsg.type === "hash")
+        ) {
+          this.log.warn(`Received JSON gameplay message after start`, {
             clientID: client.clientID,
             type: clientMsg.type,
           });
-          this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
+          this.kickClient(client.clientID, KICK_REASON_INVALID_MESSAGE);
           return;
         }
-        if (rateResult === "limit") {
-          this.log.warn(`Client message rate limit exceeded, dropping`, {
-            clientID: client.clientID,
-            type: clientMsg.type,
-          });
+
+        if (!this.checkRateLimit(client, clientMsg.type, bytes)) {
           return;
         }
-        switch (clientMsg.type) {
-          case "rejoin": {
-            // Client is already connected, no auth required, send start game message if game has started
-            if (this._hasStarted) {
-              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
-            }
-            break;
-          }
-          case "intent": {
-            // Server stamps clientID from the authenticated connection
-            const stampedIntent = {
-              ...clientMsg.intent,
-              clientID: client.clientID,
-            };
-            switch (stampedIntent.type) {
-              case "mark_disconnected": {
-                this.log.warn(
-                  `Should not receive mark_disconnected intent from client`,
-                );
-                return;
-              }
-
-              // Handle kick_player intent via WebSocket
-              case "kick_player": {
-                // Check if the authenticated client is the lobby creator
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can kick players`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    target: stampedIntent.target,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                // Don't allow lobby creator to kick themselves
-                if (client.clientID === stampedIntent.target) {
-                  this.log.warn(`Cannot kick yourself`, {
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                // Log and execute the kick
-                this.log.info(`Lobby creator initiated kick of player`, {
-                  creatorID: client.clientID,
-                  target: stampedIntent.target,
-                  gameID: this.id,
-                  kickMethod: "websocket",
-                });
-
-                this.kickClient(
-                  stampedIntent.target,
-                  KICK_REASON_LOBBY_CREATOR,
-                );
-                return;
-              }
-              case "update_game_config": {
-                // Only lobby creator can update config
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can update game config`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                if (this.isPublic()) {
-                  this.log.warn(`Cannot update public game via WebSocket`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                if (this.hasStarted()) {
-                  this.log.warn(
-                    `Cannot update game config after it has started`,
-                    {
-                      gameID: this.id,
-                      clientID: client.clientID,
-                    },
-                  );
-                  return;
-                }
-
-                if (stampedIntent.config.gameType === GameType.Public) {
-                  this.log.warn(`Cannot update game to public via WebSocket`, {
-                    gameID: this.id,
-                    clientID: client.clientID,
-                  });
-                  return;
-                }
-
-                this.log.info(
-                  `Lobby creator updated game config via WebSocket`,
-                  {
-                    creatorID: client.clientID,
-                    gameID: this.id,
-                  },
-                );
-
-                this.updateGameConfig(stampedIntent.config);
-                return;
-              }
-              case "toggle_pause": {
-                // Only lobby creator can pause/resume
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can toggle pause`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    gameID: this.id,
-                  });
-                  return;
-                }
-
-                if (stampedIntent.paused) {
-                  // Pausing: send intent and complete current turn before pause takes effect
-                  this.addIntent(stampedIntent);
-                  this.endTurn();
-                  this.isPaused = true;
-                } else {
-                  // Unpausing: clear pause flag before sending intent so next turn can execute
-                  this.isPaused = false;
-                  this.addIntent(stampedIntent);
-                  this.endTurn();
-                }
-
-                this.log.info(`Game ${this.isPaused ? "paused" : "resumed"}`, {
-                  clientID: client.clientID,
-                  gameID: this.id,
-                });
-                break;
-              }
-              default: {
-                // Don't process intents while game is paused
-                if (!this.isPaused) {
-                  this.addIntent(stampedIntent);
-                }
-                break;
-              }
-            }
-            break;
-          }
-          case "ping": {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-            break;
-          }
-          case "hash": {
-            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-            break;
-          }
-          case "winner": {
-            this.handleWinner(client, clientMsg);
-            break;
-          }
-          default: {
-            this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
-              clientID: client.clientID,
-            });
-            break;
-          }
-        }
+        this.processClientMessage(client, clientMsg);
       } catch (error) {
         this.log.info(
           `error handline websocket request in game server: ${error}`,
@@ -573,6 +445,177 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+    }
+  }
+
+  private checkRateLimit(client: Client, type: string, bytes: number): boolean {
+    const rateResult = this.intentRateLimiter.check(
+      client.clientID,
+      type,
+      bytes,
+    );
+    if (rateResult === "kick") {
+      this.log.warn(`Client rate limit exceeded, kicking`, {
+        clientID: client.clientID,
+        type,
+      });
+      this.kickClient(client.clientID, KICK_REASON_TOO_MUCH_DATA);
+      return false;
+    }
+    if (rateResult === "limit") {
+      this.log.warn(`Client message rate limit exceeded, dropping`, {
+        clientID: client.clientID,
+        type,
+      });
+      return false;
+    }
+    return true;
+  }
+
+  private processClientMessage(client: Client, clientMsg: ClientMessage) {
+    switch (clientMsg.type) {
+      case "rejoin": {
+        if (this._hasStarted) {
+          this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
+        }
+        break;
+      }
+      case "intent": {
+        const stampedIntent = {
+          ...clientMsg.intent,
+          clientID: client.clientID,
+        };
+        switch (stampedIntent.type) {
+          case "mark_disconnected": {
+            this.log.warn(
+              `Should not receive mark_disconnected intent from client`,
+            );
+            return;
+          }
+          case "kick_player": {
+            if (client.clientID !== this.lobbyCreatorID) {
+              this.log.warn(`Only lobby creator can kick players`, {
+                clientID: client.clientID,
+                creatorID: this.lobbyCreatorID,
+                target: stampedIntent.target,
+                gameID: this.id,
+              });
+              return;
+            }
+
+            if (client.clientID === stampedIntent.target) {
+              this.log.warn(`Cannot kick yourself`, {
+                clientID: client.clientID,
+              });
+              return;
+            }
+
+            this.log.info(`Lobby creator initiated kick of player`, {
+              creatorID: client.clientID,
+              target: stampedIntent.target,
+              gameID: this.id,
+              kickMethod: "websocket",
+            });
+
+            this.kickClient(stampedIntent.target, KICK_REASON_LOBBY_CREATOR);
+            return;
+          }
+          case "update_game_config": {
+            if (client.clientID !== this.lobbyCreatorID) {
+              this.log.warn(`Only lobby creator can update game config`, {
+                clientID: client.clientID,
+                creatorID: this.lobbyCreatorID,
+                gameID: this.id,
+              });
+              return;
+            }
+
+            if (this.isPublic()) {
+              this.log.warn(`Cannot update public game via WebSocket`, {
+                gameID: this.id,
+                clientID: client.clientID,
+              });
+              return;
+            }
+
+            if (this.hasStarted()) {
+              this.log.warn(`Cannot update game config after it has started`, {
+                gameID: this.id,
+                clientID: client.clientID,
+              });
+              return;
+            }
+
+            if (stampedIntent.config.gameType === GameType.Public) {
+              this.log.warn(`Cannot update game to public via WebSocket`, {
+                gameID: this.id,
+                clientID: client.clientID,
+              });
+              return;
+            }
+
+            this.log.info(`Lobby creator updated game config via WebSocket`, {
+              creatorID: client.clientID,
+              gameID: this.id,
+            });
+
+            this.updateGameConfig(stampedIntent.config);
+            return;
+          }
+          case "toggle_pause": {
+            if (client.clientID !== this.lobbyCreatorID) {
+              this.log.warn(`Only lobby creator can toggle pause`, {
+                clientID: client.clientID,
+                creatorID: this.lobbyCreatorID,
+                gameID: this.id,
+              });
+              return;
+            }
+
+            if (stampedIntent.paused) {
+              this.addIntent(stampedIntent);
+              this.endTurn();
+              this.isPaused = true;
+            } else {
+              this.isPaused = false;
+              this.addIntent(stampedIntent);
+              this.endTurn();
+            }
+
+            this.log.info(`Game ${this.isPaused ? "paused" : "resumed"}`, {
+              clientID: client.clientID,
+              gameID: this.id,
+            });
+            break;
+          }
+          default: {
+            if (!this.isPaused) {
+              this.addIntent(stampedIntent);
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case "ping": {
+        this.lastPingUpdate = Date.now();
+        client.lastPing = Date.now();
+        break;
+      }
+      case "hash": {
+        client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+        break;
+      }
+      case "winner": {
+        this.handleWinner(client, clientMsg);
+        break;
+      }
+      default: {
+        this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
+          clientID: client.clientID,
+        });
+        break;
+      }
     }
   }
 
@@ -694,6 +737,7 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.binaryContext = binaryContextFromGameStartInfo(this.gameStartInfo);
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -762,10 +806,16 @@ export class GameServer {
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    const msg = JSON.stringify({
-      type: "turn",
-      turn: pastTurn,
-    } satisfies ServerTurnMessage);
+    if (!this.binaryContext) {
+      throw new Error("Binary gameplay context missing after start");
+    }
+    const msg = encodeBinaryServerGameplayMessage(
+      {
+        type: "turn",
+        turn: pastTurn,
+      },
+      this.binaryContext,
+    );
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });
@@ -956,6 +1006,7 @@ export class GameServer {
         clientID,
         reasonKey,
       });
+      return;
     }
   }
 
@@ -1067,7 +1118,13 @@ export class GameServer {
       return;
     }
 
-    const desyncMsg = JSON.stringify(serverDesync.data);
+    if (!this.binaryContext) {
+      throw new Error("Binary gameplay context missing for desync");
+    }
+    const desyncMsg = encodeBinaryServerGameplayMessage(
+      serverDesync.data,
+      this.binaryContext,
+    );
     for (const c of outOfSyncClients) {
       this.outOfSyncClients.add(c.clientID);
       if (this.sentDesyncMessageClients.has(c.clientID)) {
@@ -1174,4 +1231,40 @@ export class GameServer {
     );
     this.archiveGame();
   }
+}
+
+function rawDataToString(message: RawData): string {
+  if (typeof message === "string") {
+    return message;
+  }
+  if (Array.isArray(message)) {
+    return Buffer.concat(message).toString("utf8");
+  }
+  if (message instanceof ArrayBuffer) {
+    return Buffer.from(message).toString("utf8");
+  }
+  return message.toString("utf8");
+}
+
+function rawDataToUint8Array(message: RawData): Uint8Array {
+  if (typeof message === "string") {
+    return new Uint8Array(Buffer.from(message, "utf8"));
+  }
+  if (Array.isArray(message)) {
+    return Buffer.concat(message);
+  }
+  if (message instanceof ArrayBuffer) {
+    return new Uint8Array(message);
+  }
+  return message;
+}
+
+function rawDataByteLength(message: RawData): number {
+  if (typeof message === "string") {
+    return Buffer.byteLength(message, "utf8");
+  }
+  if (Array.isArray(message)) {
+    return message.reduce((total, chunk) => total + chunk.byteLength, 0);
+  }
+  return message.byteLength;
 }

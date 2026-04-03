@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  binaryContextFromGameStartInfo,
+  decodeBinaryServerGameplayMessage,
+  encodeBinaryClientGameplayMessage,
+  isBinaryGameplayClientMessage,
+} from "../core/BinaryCodec";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -20,6 +26,7 @@ import {
   ClientRejoinMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameStartInfo,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -178,13 +185,15 @@ export class Transport {
 
   private localServer: LocalServer;
 
-  private buffer: string[] = [];
+  private buffer: Array<string | Uint8Array> = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+  private binaryGameplayActive = false;
+  private binaryContext?: ReturnType<typeof binaryContextFromGameStartInfo>;
 
   constructor(
     private lobbyConfig: LobbyConfig,
@@ -324,12 +333,14 @@ export class Transport {
   ) {
     this.startPing();
     this.killExistingSocket();
+    this.binaryGameplayActive = false;
     const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
     this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    this.socket.binaryType = "arraybuffer";
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -351,14 +362,31 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
-        const parsed = JSON.parse(event.data);
-        const result = ServerMessageSchema.safeParse(parsed);
-        if (!result.success) {
-          const error = z.prettifyError(result.error);
-          console.error("Error parsing server message", error);
+        if (typeof event.data === "string") {
+          const parsed = JSON.parse(event.data);
+          const result = ServerMessageSchema.safeParse(parsed);
+          if (!result.success) {
+            const error = z.prettifyError(result.error);
+            console.error("Error parsing server message", error);
+            return;
+          }
+          if (result.data.type === "start") {
+            this.activateBinaryGameplay(result.data.gameStartInfo);
+          }
+          this.onmessage(result.data);
           return;
         }
-        this.onmessage(result.data);
+
+        if (!this.binaryContext) {
+          console.error("Received binary gameplay message before start");
+          return;
+        }
+
+        const message = decodeBinaryServerGameplayMessage(
+          event.data as ArrayBuffer,
+          this.binaryContext,
+        );
+        this.onmessage(message);
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
         return;
@@ -669,18 +697,35 @@ export class Transport {
       // Socket missing, do nothing
       return;
     }
-    const str = JSON.stringify(msg, replacer);
+    const payload = this.serializeMessage(msg);
     if (this.socket.readyState === WebSocket.CLOSED) {
       // Buffer message
       console.warn("socket not ready, closing and trying later");
       this.socket.close();
       this.socket = null;
       this.connectRemote(this.onconnect, this.onmessage);
-      this.buffer.push(str);
+      this.buffer.push(payload);
     } else {
       // Send the message directly
-      this.socket.send(str);
+      this.socket.send(payload);
     }
+  }
+
+  private serializeMessage(msg: ClientMessage): string | Uint8Array {
+    if (this.binaryGameplayActive && isBinaryGameplayClientMessage(msg)) {
+      if (!this.binaryContext) {
+        throw new Error("Binary gameplay active without context");
+      }
+      return encodeBinaryClientGameplayMessage(msg, this.binaryContext);
+    }
+    return JSON.stringify(msg, replacer);
+  }
+
+  private activateBinaryGameplay(
+    gameStartInfo: Pick<GameStartInfo, "players">,
+  ) {
+    this.binaryContext = binaryContextFromGameStartInfo(gameStartInfo);
+    this.binaryGameplayActive = true;
   }
 
   private killExistingSocket(): void {
