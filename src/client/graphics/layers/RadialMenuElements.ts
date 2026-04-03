@@ -15,12 +15,16 @@ import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
+import { quickChatPhrases } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
+import { PresetSlot, QuickChatPresetService } from "./QuickChatPresetService";
 import { TooltipItem } from "./RadialMenu";
+import { TargetSelectionMode } from "./TargetSelectionMode";
 
 import { EventBus } from "../../../core/EventBus";
+import { SendQuickChatEvent } from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
@@ -33,6 +37,8 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
 const xIcon = assetUrl("images/XIcon.svg");
+
+const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -56,7 +62,7 @@ export interface MenuElement {
   displayed?: boolean | ((params: MenuElementParams) => boolean);
   color?: string | ((params: MenuElementParams) => string);
   icon?: string;
-  text?: string;
+  text?: string | ((params: MenuElementParams) => string);
   fontSize?: string;
   tooltipItems?: TooltipItem[];
   tooltipKeys?: TooltipKey[];
@@ -367,6 +373,124 @@ const infoEmojiElement: MenuElement = {
   },
 };
 
+/** Shortens a phrase label to fit inside a radial menu arc segment. */
+function shortenPresetText(text: string, maxLength = 15): string {
+  return text.length <= maxLength
+    ? text
+    : text.substring(0, maxLength - 3) + "...";
+}
+
+/** Builds a single MenuElement from a PresetSlot at runtime. */
+function buildPresetItem(slot: PresetSlot, recipient: PlayerView): MenuElement {
+  // --- Quick Chat ---
+  if (slot.type === "quickchat" && slot.category && slot.key) {
+    const phrase = quickChatPhrases[slot.category]?.find(
+      (p) => p.key === slot.key,
+    );
+    const fullKey = `${slot.category}.${slot.key}`;
+    const label = translateText(`chat.${slot.category}.${slot.key}`);
+    const color =
+      COLORS.chat[slot.category as keyof typeof COLORS.chat] ??
+      COLORS.chat.default;
+    return {
+      id: `preset-qc-${slot.category}-${slot.key}`,
+      name: label,
+      disabled: () => false,
+      text: shortenPresetText(label),
+      fontSize: "10px",
+      color,
+      tooltipItems: [{ text: label, className: "description" }],
+      action: (p: MenuElementParams) => {
+        if (phrase?.requiresPlayer) {
+          TargetSelectionMode.getInstance().enter(fullKey, recipient);
+          p.closeMenu();
+        } else {
+          p.eventBus.emit(new SendQuickChatEvent(recipient, fullKey));
+          p.closeMenu();
+        }
+      },
+    };
+  }
+
+  // --- Emoji: opens the full emoji panel, same as the existing emoji button ---
+  if (slot.type === "emoji") {
+    return {
+      id: "preset-emoji-panel",
+      name: "emoji",
+      disabled: () => false,
+      icon: emojiIcon,
+      color: COLORS.infoEmoji,
+      action: (p: MenuElementParams) => {
+        const target =
+          p.selected === p.game.myPlayer() ? AllPlayers : p.selected;
+        p.emojiTable.showTable((emoji) => {
+          p.playerActionHandler.handleEmoji(
+            target!,
+            flattenedEmojiTable.indexOf(emoji as Emoji),
+          );
+          p.emojiTable.hideTable();
+        });
+        // Do NOT call closeMenu() here — the emoji table needs to stay interactive
+      },
+    };
+  }
+
+  // --- Trade: smart toggle — label/color reflect live canEmbargo state ---
+  if (slot.type === "trade") {
+    return {
+      id: "preset-trade-toggle",
+      name: "trade",
+      disabled: (p: MenuElementParams) =>
+        p.selected === null ||
+        p.selected?.id() === p.myPlayer?.id() ||
+        (!p.playerActions?.interaction?.canEmbargo &&
+          !p.playerActions?.interaction?.canDonateGold),
+      color: (p: MenuElementParams) =>
+        p.playerActions?.interaction?.canEmbargo
+          ? COLORS.embargo
+          : COLORS.trade,
+      text: (p: MenuElementParams) => {
+        const label = p.playerActions?.interaction?.canEmbargo
+          ? translateText("player_panel.stop_trade")
+          : translateText("player_panel.start_trade");
+        return shortenPresetText(label);
+      },
+      fontSize: "10px",
+      action: (p: MenuElementParams) => {
+        if (
+          p.selected === null ||
+          p.selected?.id() === p.myPlayer?.id() ||
+          (!p.playerActions?.interaction?.canEmbargo &&
+            !p.playerActions?.interaction?.canDonateGold)
+        )
+          return;
+        const canEmbargo = !!p.playerActions?.interaction?.canEmbargo;
+        p.playerActionHandler.handleEmbargo(
+          p.selected,
+          canEmbargo ? "start" : "stop",
+        );
+        p.closeMenu();
+      },
+    };
+  }
+
+  // Fallback (should never happen)
+  return {
+    id: "preset-unknown",
+    name: "?",
+    disabled: () => true,
+    color: COLORS.infoDetails,
+  };
+}
+
+/**
+ * The "i" (Info) button — opens a Quick Chat / actions submenu.
+ *
+ * Submenu contains:
+ *   1. User-configured preset slots (up to 5): quickchat, emoji, or trade
+ *   2. A permanent "Info" button that opens the player panel
+ *   3. A permanent "Customize Presets" settings button
+ */
 export const infoMenuElement: MenuElement = {
   id: Slot.Info,
   name: "info",
@@ -374,8 +498,57 @@ export const infoMenuElement: MenuElement = {
     !params.selected || params.game.inSpawnPhase(),
   icon: infoIcon,
   color: COLORS.info,
-  action: (params: MenuElementParams) => {
-    params.playerPanel.show(params.playerActions, params.tile);
+  subMenu: (params: MenuElementParams): MenuElement[] => {
+    if (params === undefined || !params.selected) return [];
+
+    const recipient = params.selected;
+    const isSelf = params.selected?.id() === params.myPlayer?.id();
+
+    // On own territory: skip chat presets, just show Info and Configure
+    const presets = isSelf ? [] : QuickChatPresetService.getInstance().load();
+
+    const presetItems = presets.map((slot) => buildPresetItem(slot, recipient));
+
+    // Permanent: open the player info panel (original Info button behaviour)
+    const playerInfoItem: MenuElement = {
+      id: "player-info",
+      name: "info",
+      disabled: () => false,
+      icon: infoIcon,
+      color: COLORS.info,
+      tooltipItems: [
+        { text: translateText("quick_chat.player_info"), className: "title" },
+      ],
+      action: (p: MenuElementParams) => {
+        p.playerPanel.show(p.playerActions, p.tile);
+      },
+    };
+
+    // Permanent: open the preset config modal
+    const configureItem: MenuElement = {
+      id: "configure-quick-chat",
+      name: translateText("quick_chat.configure_presets"),
+      disabled: () => false,
+      icon: settingsIcon,
+      color: COLORS.infoDetails,
+      tooltipItems: [
+        {
+          text: translateText("quick_chat.configure_presets"),
+          className: "title",
+        },
+      ],
+      action: (p: MenuElementParams) => {
+        const modal = document.querySelector("quick-chat-config-modal") as any;
+        if (modal) {
+          modal.open();
+        } else {
+          console.error("[QuickChat] quick-chat-config-modal not found");
+        }
+        p.closeMenu();
+      },
+    };
+
+    return [...presetItems, playerInfoItem, configureItem];
   },
 };
 

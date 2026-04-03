@@ -32,6 +32,7 @@ import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer"
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { QuickChatConfigModal } from "./layers/QuickChatConfigModal";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
@@ -39,6 +40,7 @@ import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
+import { TargetSelectionLayer } from "./layers/TargetSelectionLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
@@ -227,6 +229,25 @@ export function createRenderer(
   }
   headsUpMessage.game = game;
 
+  const targetSelectionLayer = document.querySelector(
+    "target-selection-layer",
+  ) as TargetSelectionLayer;
+  if (!(targetSelectionLayer instanceof TargetSelectionLayer)) {
+    console.error("target-selection-layer not found");
+  } else {
+    targetSelectionLayer.eventBus = eventBus;
+    targetSelectionLayer.game = game;
+    targetSelectionLayer.transformHandler = transformHandler;
+  }
+
+  // QuickChatConfigModal needs no runtime wiring — it reads from QuickChatPresetService directly.
+  const quickChatConfigModal = document.querySelector(
+    "quick-chat-config-modal",
+  ) as QuickChatConfigModal;
+  if (!(quickChatConfigModal instanceof QuickChatConfigModal)) {
+    console.error("quick-chat-config-modal not found");
+  }
+
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
   const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
@@ -317,6 +338,9 @@ export function createRenderer(
     inGamePromo,
     alertFrame,
     performanceOverlay,
+    ...(targetSelectionLayer instanceof TargetSelectionLayer
+      ? [targetSelectionLayer]
+      : []),
   ];
 
   return new GameRenderer(

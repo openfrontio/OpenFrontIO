@@ -5,6 +5,13 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import {
+  CloseViewEvent,
+  ContextMenuEvent,
+  MouseUpEvent,
+  TouchEvent,
+} from "../../InputHandler";
+import { SendQuickChatEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildMenu } from "./BuildMenu";
@@ -20,10 +27,10 @@ import {
   MenuElementParams,
   rootMenuElement,
 } from "./RadialMenuElements";
+import { TargetSelectionMode } from "./TargetSelectionMode";
+
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
-
-import { ContextMenuEvent } from "../../InputHandler";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
@@ -79,7 +86,59 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   init() {
     this.radialMenu.init();
+
+    // Handle left-click and touch: if target-selection mode is active, resolve
+    // the clicked tile as the chat target instead of performing a normal action.
+    const handleSelectClick = (x: number, y: number) => {
+      const mode = TargetSelectionMode.getInstance();
+      if (!mode.active) return false;
+
+      const worldCoords = this.transformHandler.screenToWorldCoordinates(x, y);
+      if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) return true;
+
+      const tile = this.game.ref(worldCoords.x, worldCoords.y);
+      const owner = this.game.owner(tile);
+
+      if (owner.isPlayer()) {
+        this.eventBus.emit(
+          new SendQuickChatEvent(
+            mode.pendingRecipient!,
+            mode.pendingKey!,
+            (owner as PlayerView).id(),
+          ),
+        );
+        mode.exit();
+      }
+      // If tile has no owner, stay in mode and wait for another click.
+      return true;
+    };
+
+    this.eventBus.on(MouseUpEvent, (event) => {
+      if (handleSelectClick(event.x, event.y)) return;
+    });
+
+    this.eventBus.on(TouchEvent, (event) => {
+      if (handleSelectClick(event.x, event.y)) return;
+    });
+
+    // Escape cancels target-selection mode.
+    this.eventBus.on(CloseViewEvent, () => {
+      TargetSelectionMode.getInstance().exit();
+    });
+
     this.eventBus.on(ContextMenuEvent, (event) => {
+      // While in target-selection mode:
+      // - left-click (isRightClick=false) → attempt to resolve the target
+      // - right-click (isRightClick=true) → cancel the mode
+      if (TargetSelectionMode.getInstance().active) {
+        if (event.isRightClick) {
+          TargetSelectionMode.getInstance().exit();
+        } else {
+          handleSelectClick(event.x, event.y);
+        }
+        return;
+      }
+
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,

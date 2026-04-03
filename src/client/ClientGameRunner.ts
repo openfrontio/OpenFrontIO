@@ -50,6 +50,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
+import { TargetSelectionMode } from "./graphics/layers/TargetSelectionMode";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -542,6 +543,10 @@ export class ClientGameRunner {
 
   private inputEvent(event: MouseUpEvent) {
     if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
+      return;
+    }
+    // Don't process attacks while the player is picking a target for a quick-chat action
+    if (TargetSelectionMode.getInstance().active) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(

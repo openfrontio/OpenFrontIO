@@ -18,3 +18,6 @@ src/assets/
 *.log
 *debug*.txt
 eslint_out.txt
+
+# Kiro IDE workspace files
+.kiro/

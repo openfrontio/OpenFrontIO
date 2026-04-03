@@ -960,6 +960,22 @@
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
   },
+  "quick_chat": {
+    "configure_presets": "Customize Presets",
+    "preset_label": "Preset",
+    "add_preset": "+ Add",
+    "done": "Done",
+    "reset_defaults": "Reset defaults",
+    "confirm_reset": "⚠ Confirm reset",
+    "emoji_panel": "😀 Emoji Panel",
+    "trade_toggle": "🤝 Start / Stop Trade",
+    "editing_hint": "Editing preset {n} — pick a category and phrase, or choose an action",
+    "select_hint": "Click a preset to edit it",
+    "actions": "Actions",
+    "select_target": "Select a player",
+    "player_info": "Player Info",
+    "needs_target": "[needs target]"
+  },
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },
