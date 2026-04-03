@@ -1,0 +1,80 @@
+{
+  "name": "Jamaica",
+  "nations": [
+    {
+      "coordinates": [1380, 754],
+      "name": "Kingston",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [600, 873],
+      "name": "Treasure Beach",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [451, 332],
+      "name": "Montego Bay",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1013, 484],
+      "name": "Nine Mile",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1321, 407],
+      "name": "Ocho Rios",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [677, 702],
+      "name": "Santa Cruz",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1754, 864],
+      "name": "Morant Bay",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1808, 662],
+      "name": "Boston Bay",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1250, 652],
+      "name": "Linstead",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [898, 350],
+      "name": "Discovery Bay",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1312, 492],
+      "name": "St. Mary Parish",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [637, 421],
+      "name": "Trelawny Parish",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [216, 480],
+      "name": "Westmoreland Parish",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [1040, 811],
+      "name": "Clarendon",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [758, 569],
+      "name": "Christiana",
+      "flag": "jm"
+    }
+  ]
+}
