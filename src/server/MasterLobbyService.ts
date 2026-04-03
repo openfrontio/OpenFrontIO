@@ -159,6 +159,10 @@ export class MasterLobbyService {
     for (const type of lobbyTypes) {
       const lobbies = lobbiesByType[type];
 
+      // Always ensure the next lobby has a timer, even if we already have 2+
+      // lobbies. This prevents a race where two lobbies are created before
+      // either receives a startsAt (IPC round-trip delay), leaving both stuck
+      // without a countdown.
       const nextLobby = lobbies[0];
       if (nextLobby && nextLobby.startsAt === undefined) {
         this.sendMessageToWorker({
