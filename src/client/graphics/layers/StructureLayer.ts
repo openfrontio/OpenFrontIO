@@ -138,10 +138,21 @@ export class StructureLayer implements Layer {
     const maxTextureSize = 8192;
     const scaleX = maxTextureSize / this.game.width();
     const scaleY = maxTextureSize / this.game.height();
-    const bufferScale = Math.min(2, scaleX, scaleY);
-    this.canvas.width = this.game.width() * bufferScale;
-    this.canvas.height = this.game.height() * bufferScale;
-    this.context.scale(bufferScale / 2, bufferScale / 2);
+    const targetScale = Math.min(2, scaleX, scaleY);
+    this.canvas.width = Math.max(
+      1,
+      Math.floor(this.game.width() * targetScale),
+    );
+    this.canvas.height = Math.max(
+      1,
+      Math.floor(this.game.height() * targetScale),
+    );
+    this.context.imageSmoothingEnabled = true;
+    this.context.imageSmoothingQuality = "high";
+    this.context.scale(
+      this.canvas.width / (this.game.width() * 2),
+      this.canvas.height / (this.game.height() * 2),
+    );
 
     Promise.all(
       Array.from(this.unitIcons.values()).map((img) =>
