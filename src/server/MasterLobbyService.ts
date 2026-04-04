@@ -133,6 +133,22 @@ export class MasterLobbyService {
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies();
 
+    const activeConfigs = Object.values(lobbiesByType)
+      .map((lobbies) => lobbies[0]?.gameConfig)
+      .filter((c) => c !== undefined);
+
+    const activeMaps = new Set(activeConfigs.map((c) => c.gameMap));
+    const activeNumTeams = new Set(
+      activeConfigs
+        .filter((c) => c.playerTeams !== undefined)
+        .map((c) => String(c.playerTeams)),
+    );
+    const activeMaxPlayers = new Set(
+      activeConfigs
+        .filter((c) => c.maxPlayers !== undefined)
+        .map((c) => c.maxPlayers),
+    );
+
     for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
       const lobbies = lobbiesByType[type];
 
@@ -153,10 +169,35 @@ export class MasterLobbyService {
         continue;
       }
 
+      const gameConfig = await this.playlist.gameConfigNotInUse(type, (c) => {
+        if (activeMaps.has(c.gameMap)) return false;
+
+        if (
+          c.playerTeams !== undefined &&
+          activeNumTeams.has(String(c.playerTeams))
+        ) {
+          return false;
+        }
+
+        if (c.maxPlayers !== undefined && activeMaxPlayers.has(c.maxPlayers)) {
+          return false;
+        }
+
+        return true;
+      });
+
+      activeMaps.add(gameConfig.gameMap);
+      if (gameConfig.playerTeams !== undefined) {
+        activeNumTeams.add(String(gameConfig.playerTeams));
+      }
+      if (gameConfig.maxPlayers !== undefined) {
+        activeMaxPlayers.add(gameConfig.maxPlayers);
+      }
+
       this.sendMessageToWorker({
         type: "createGame",
         gameID: generateID(),
-        gameConfig: await this.playlist.gameConfig(type),
+        gameConfig,
         publicGameType: type,
       } satisfies MasterCreateGame);
     }

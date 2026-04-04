@@ -150,19 +150,46 @@ export class MapPlaylist {
     team: [],
   };
 
-  public async gameConfig(type: PublicGameType): Promise<GameConfig> {
+  public async gameConfigNotInUse(
+    type: PublicGameType,
+    notInUse: (config: GameConfig) => boolean,
+  ): Promise<GameConfig> {
+    const maxAttempts = 6;
+    let attempts = 0;
+
+    // Capture playlist length because isCompact decision depends on it in buildConfig, and
+    // cycleNextMap could modify playlist length via generateNewPlaylist
+    this.ensurePlaylistPopulated(type);
+    const playlistLength = this.playlists[type].length;
+
+    while (true) {
+      const map = this.peekNextMap(type);
+      const config = await this.buildConfig(type, map, playlistLength);
+      attempts++;
+
+      if (notInUse(config) || attempts >= maxAttempts) {
+        this.consumeNextMap(type);
+        return config;
+      }
+
+      this.cycleNextMap(type);
+    }
+  }
+
+  private async buildConfig(
+    type: PublicGameType,
+    map: GameMapType,
+    playlistLength: number = this.playlists[type].length,
+  ): Promise<GameConfig> {
     if (type === "special") {
-      return this.getSpecialConfig();
+      return this.buildSpecialConfig(map);
     }
 
     const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap(type);
-
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
-    let isCompact: boolean | undefined =
-      this.playlists[type].length % 3 === 0 || undefined;
+    let isCompact: boolean | undefined = playlistLength % 3 === 0 || undefined;
     if (
       isCompact &&
       mode === GameMode.Team &&
@@ -200,9 +227,8 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private async getSpecialConfig(): Promise<GameConfig> {
+  private async buildSpecialConfig(map: GameMapType): Promise<GameConfig> {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap("special");
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
@@ -402,12 +428,28 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: PublicGameType): GameMapType {
-    const playlist = this.playlists[type];
-    if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist(type));
+  private ensurePlaylistPopulated(type: PublicGameType): void {
+    if (this.playlists[type].length === 0) {
+      this.playlists[type].push(...this.generateNewPlaylist(type));
     }
-    return playlist.shift()!;
+  }
+
+  private peekNextMap(type: PublicGameType): GameMapType {
+    this.ensurePlaylistPopulated(type);
+    return this.playlists[type][0];
+  }
+
+  private consumeNextMap(type: PublicGameType): GameMapType {
+    this.ensurePlaylistPopulated(type);
+    return this.playlists[type].shift()!;
+  }
+
+  private cycleNextMap(type: PublicGameType): void {
+    const map = this.consumeNextMap(type);
+
+    if (!this.addNextMapNonConsecutive(this.playlists[type], [map])) {
+      this.playlists[type].push(...this.generateNewPlaylist(type));
+    }
   }
 
   private generateNewPlaylist(type: PublicGameType): GameMapType[] {
