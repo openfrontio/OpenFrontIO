@@ -575,7 +575,33 @@ export class PlayerView {
   }
 
   transitiveTargets(): PlayerView[] {
-    return [...this.targets(), ...this.allies().flatMap((p) => p.targets())];
+    const result: PlayerView[] = [];
+
+    // Add own targets
+    for (const id of this.data.targets) {
+      result.push(this.game.playerBySmallID(id) as PlayerView);
+    }
+
+    // Add allies' targets
+    for (const allyID of this.data.allies) {
+      const ally = this.game.playerBySmallID(allyID) as PlayerView;
+      for (const targetId of ally.data.targets) {
+        result.push(this.game.playerBySmallID(targetId) as PlayerView);
+      }
+    }
+
+    // Add teammates' targets
+    if (this.data.team !== undefined) {
+      for (const p of this.game.playerViews()) {
+        if (p !== this && p.data.team === this.data.team) {
+          for (const targetId of p.data.targets) {
+            result.push(this.game.playerBySmallID(targetId) as PlayerView);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   isTraitor(): boolean {

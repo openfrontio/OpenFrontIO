@@ -1,18 +1,24 @@
 import { assetUrl } from "src/core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Theme } from "../../../core/configuration/Config";
+import { Config, Theme } from "../../../core/configuration/Config";
 import { Cell } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import {
-  computeAllianceClipPath,
-  createAllianceProgressIcon,
+  ALLIANCE_ICON_ID,
+  AllianceProgressIconRefs,
+  createAllianceProgressIconRefs,
+  EMOJI_ICON_KIND,
   getFirstPlacePlayer,
   getPlayerIcons,
+  IMAGE_ICON_KIND,
+  PlayerIconDescriptor,
   PlayerIconId,
+  TRAITOR_ICON_ID,
+  updateAllianceProgressIconRefs,
 } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -24,13 +30,8 @@ const PLAYER_ICONS = "player-icons";
 const PLAYER_FLAG = "player-flag";
 
 class RenderInfo {
-  public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
-
-  public nameDiv: HTMLDivElement;
-  public nameSpan: HTMLSpanElement | null;
-  public troopsDiv: HTMLDivElement;
-  public flagDiv: HTMLDivElement | null;
-  public iconsDiv: HTMLDivElement;
+  public icons: Map<PlayerIconId, HTMLElement> = new Map();
+  public allianceIconRefs: AllianceProgressIconRefs | null = null;
 
   constructor(
     public player: PlayerView,
@@ -39,23 +40,17 @@ class RenderInfo {
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
-  ) {
-    // Traverse the DOM once, upon creation
-    this.nameDiv = element.querySelector(`.${PLAYER_NAME}`) as HTMLDivElement;
-    this.nameSpan = element.querySelector(
-      `.${PLAYER_NAME_SPAN}`,
-    ) as HTMLSpanElement | null;
-    this.troopsDiv = element.querySelector(
-      `.${PLAYER_TROOPS}`,
-    ) as HTMLDivElement;
-    this.flagDiv = element.querySelector(
-      `.${PLAYER_FLAG}`,
-    ) as HTMLDivElement | null;
-    this.iconsDiv = element.querySelector(`.${PLAYER_ICONS}`) as HTMLDivElement;
-  }
+    public nameDiv: HTMLDivElement,
+    public nameSpan: HTMLSpanElement,
+    public troopsDiv: HTMLDivElement,
+    public flagImg: HTMLImageElement,
+    public iconsDiv: HTMLDivElement,
+    public lastTransform: string = "",
+  ) {}
 }
 
 export class NameLayer implements Layer {
+  private config: Config;
   private lastChecked = 0;
   private renderCheckRate = 100;
   private renderRefreshRate = 500;
@@ -63,11 +58,18 @@ export class NameLayer implements Layer {
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
   private container: HTMLDivElement;
-  private theme: Theme = this.game.config().theme();
+  private theme: Theme;
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private allianceDuration: number;
+  private alliancesDisabled: boolean = false;
+  private myPlayer: PlayerView | null = null;
   private lastContainerTransform: string = "";
+  private basePlayerTemplate: HTMLDivElement;
+  private iconTemplate: HTMLImageElement;
+  private iconCenterTemplate: HTMLImageElement;
+  private emojiTemplate: HTMLDivElement;
 
   constructor(
     private game: GameView,
@@ -79,9 +81,7 @@ export class NameLayer implements Layer {
     return false;
   }
 
-  redraw() {
-    this.theme = this.game.config().theme();
-  }
+  redraw() {} // not affected by Canvas/WebGL context loss as this layer is DOM-based
 
   public init() {
     this.container = document.createElement("div");
@@ -107,6 +107,27 @@ export class NameLayer implements Layer {
     `;
     this.container.appendChild(style);
 
+    this.myPlayer = this.game.myPlayer();
+    this.config = this.game.config();
+    this.theme = this.config.theme();
+
+    this.alliancesDisabled = this.config.disableAlliances();
+    this.allianceDuration = Math.max(1, this.config.allianceDuration());
+
+    this.basePlayerTemplate = this.createBasePlayerElement();
+
+    this.iconTemplate = document.createElement("img");
+
+    this.iconCenterTemplate = document.createElement("img");
+    this.iconCenterTemplate.style.position = "absolute";
+    this.iconCenterTemplate.style.top = "50%";
+    this.iconCenterTemplate.style.transform = "translateY(-50%)";
+
+    this.emojiTemplate = document.createElement("div");
+    this.emojiTemplate.style.position = "absolute";
+    this.emojiTemplate.style.top = "50%";
+    this.emojiTemplate.style.transform = "translateY(-50%)";
+
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
   }
 
@@ -131,15 +152,15 @@ export class NameLayer implements Layer {
       : false;
     const maxZoomScale = 17;
 
-    if (
+    const display =
       !this.isVisible ||
       size < 7 ||
       (this.transformHandler.scale > maxZoomScale && size > 100) ||
       !isOnScreen
-    ) {
-      render.element.style.display = "none";
-    } else {
-      render.element.style.display = "flex";
+        ? "none"
+        : "flex";
+    if (render.element.style.display !== display) {
+      render.element.style.display = display;
     }
   }
 
@@ -155,16 +176,7 @@ export class NameLayer implements Layer {
       if (player.isAlive()) {
         if (!this.seenPlayers.has(player)) {
           this.seenPlayers.add(player);
-          this.renders.push(
-            new RenderInfo(
-              player,
-              0,
-              null,
-              0,
-              "",
-              this.createPlayerElement(player),
-            ),
-          );
+          this.renders.push(this.createPlayerElement(player));
         }
       }
     }
@@ -187,19 +199,24 @@ export class NameLayer implements Layer {
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
       this.lastChecked = now;
+
+      this.myPlayer ??= this.game.myPlayer();
+      const transitiveTargets = this.myPlayer?.transitiveTargets() ?? [];
+
       for (const render of this.renders) {
-        this.renderPlayerInfo(render);
+        this.renderPlayerInfo(render, transitiveTargets);
       }
     }
   }
 
-  private createPlayerElement(player: PlayerView): HTMLDivElement {
+  private createBasePlayerElement(): HTMLDivElement {
     const element = document.createElement("div");
     element.style.position = "absolute";
-    element.style.display = "flex";
     element.style.flexDirection = "column";
     element.style.alignItems = "center";
     element.style.gap = "0px";
+    // Start off invisible so it doesn't flash at 0,0
+    element.style.display = "none";
 
     const iconsDiv = document.createElement("div");
     iconsDiv.classList.add(PLAYER_ICONS);
@@ -212,23 +229,7 @@ export class NameLayer implements Layer {
     element.appendChild(iconsDiv);
 
     const nameDiv = document.createElement("div");
-    const applyFlagStyles = (element: HTMLElement): void => {
-      element.classList.add(PLAYER_FLAG);
-      element.style.opacity = "0.8";
-      element.style.zIndex = "1";
-      element.style.objectFit = "contain";
-    };
-
-    if (player.cosmetics.flag) {
-      const flag = assetUrl(player.cosmetics.flag);
-      const flagImg = document.createElement("img");
-      flagImg.src = flag;
-      applyFlagStyles(flagImg);
-      nameDiv.appendChild(flagImg);
-    }
     nameDiv.classList.add(PLAYER_NAME);
-    nameDiv.style.color = this.theme.textColor(player);
-    nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
     nameDiv.style.textOverflow = "ellipsis";
     nameDiv.style.zIndex = "3";
@@ -236,30 +237,75 @@ export class NameLayer implements Layer {
     nameDiv.style.justifyContent = "flex-end";
     nameDiv.style.alignItems = "center";
 
+    const flagImg = document.createElement("img");
+    flagImg.classList.add(PLAYER_FLAG);
+    flagImg.style.opacity = "0.8";
+    flagImg.style.zIndex = "1";
+    flagImg.style.objectFit = "contain";
+    flagImg.style.display = "none";
+    nameDiv.appendChild(flagImg);
+
     const nameSpan = document.createElement("span");
-    nameSpan.className = PLAYER_NAME_SPAN;
-    nameSpan.textContent = player.displayName();
+    nameSpan.classList.add(PLAYER_NAME_SPAN);
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
     const troopsDiv = document.createElement("div");
     troopsDiv.classList.add(PLAYER_TROOPS);
     troopsDiv.setAttribute("translate", "no");
-    troopsDiv.textContent = renderTroops(player.troops());
-    troopsDiv.style.color = this.theme.textColor(player);
-    troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.zIndex = "3";
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
 
-    // Start off invisible so it doesn't flash at 0,0
-    element.style.display = "none";
-
-    this.container.appendChild(element);
     return element;
   }
 
-  renderPlayerInfo(render: RenderInfo) {
+  private createPlayerElement(player: PlayerView): RenderInfo {
+    const element = this.basePlayerTemplate.cloneNode(true) as HTMLDivElement;
+
+    // Queryselector expensive but this runs only once per player and better maintainable
+    const nameDiv = element.querySelector(`.${PLAYER_NAME}`) as HTMLDivElement;
+    const nameSpan = element.querySelector(
+      `.${PLAYER_NAME_SPAN}`,
+    ) as HTMLSpanElement;
+    const troopsDiv = element.querySelector(
+      `.${PLAYER_TROOPS}`,
+    ) as HTMLDivElement;
+    const flagImg = element.querySelector(
+      `.${PLAYER_FLAG}`,
+    ) as HTMLImageElement;
+    const iconsDiv = element.querySelector(
+      `.${PLAYER_ICONS}`,
+    ) as HTMLDivElement;
+
+    const font = this.theme.font();
+    nameDiv.style.fontFamily = font;
+
+    const flag = player.cosmetics.flag;
+    if (flag) {
+      flagImg.src = assetUrl(flag);
+      flagImg.style.display = "block";
+    }
+
+    const renderInfo = new RenderInfo(
+      player,
+      0,
+      null,
+      0,
+      "",
+      element,
+      nameDiv,
+      nameSpan,
+      troopsDiv,
+      flagImg,
+      iconsDiv,
+    );
+
+    this.container.appendChild(element);
+    return renderInfo;
+  }
+
+  renderPlayerInfo(render: RenderInfo, transitiveTargets: PlayerView[]) {
     if (!render.player.nameLocation()) {
       return;
     }
@@ -296,22 +342,27 @@ export class NameLayer implements Layer {
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
-    // Update text sizes
+    // Update text sizes, content and color
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.fontColor = this.theme.textColor(render.player);
-
     render.nameDiv.style.fontSize = `${render.fontSize}px`;
     render.nameDiv.style.lineHeight = `${render.fontSize}px`;
-    render.nameDiv.style.color = render.fontColor;
-    if (render.flagDiv) {
-      render.flagDiv.style.height = `${render.fontSize}px`;
-    }
+    render.flagImg.style.height = `${render.fontSize}px`;
     render.troopsDiv.style.fontSize = `${render.fontSize}px`;
-    render.troopsDiv.style.color = render.fontColor;
+
+    render.nameSpan.textContent = render.player.displayName();
     render.troopsDiv.textContent = renderTroops(render.player.troops());
+
+    const fontColor = this.theme.textColor(render.player);
+    if (render.fontColor !== fontColor) {
+      render.fontColor = fontColor;
+      render.nameDiv.style.color = fontColor;
+      render.troopsDiv.style.color = fontColor;
+    }
 
     // Handle icons
     const iconSize = Math.min(render.fontSize * 1.5, 48);
+    const darkMode = this.userSettings.darkMode();
+    const darkModeStr = darkMode.toString();
 
     // Compute which icons should be shown for this player using shared logic
     const icons = getPlayerIcons({
@@ -319,6 +370,9 @@ export class NameLayer implements Layer {
       player: render.player,
       includeAllianceIcon: true,
       firstPlace: this.firstPlace,
+      darkMode: darkMode,
+      alliancesDisabled: this.alliancesDisabled,
+      transitiveTargets: transitiveTargets,
     });
 
     // Build a set of desired icon IDs
@@ -327,163 +381,172 @@ export class NameLayer implements Layer {
     // Remove any icons that are no longer needed
     for (const [id, element] of render.icons) {
       if (!desiredIconIds.has(id)) {
-        element.remove();
-        render.icons.delete(id);
+        if (id === ALLIANCE_ICON_ID) {
+          render.allianceIconRefs?.wrapper.remove();
+          render.allianceIconRefs = null;
+          render.icons.delete(ALLIANCE_ICON_ID);
+        } else {
+          element.remove();
+          render.icons.delete(id);
+        }
       }
     }
 
     // Add or update icons that should be shown
     for (const icon of icons) {
-      if (icon.kind === "emoji" && icon.text) {
-        let emojiDiv = render.icons.get(icon.id) as HTMLDivElement | undefined;
+      if (icon.kind === EMOJI_ICON_KIND && icon.text) {
+        this.handleEmojiIcon(render, icon, iconSize);
+        continue;
+      } else if (!(icon.kind === IMAGE_ICON_KIND && icon.src)) {
+        continue;
+      }
+      // Special handling for alliance icon with progress indicator
+      if (icon.id === ALLIANCE_ICON_ID) {
+        this.handleAllianceIcons(render, iconSize, darkModeStr);
+        continue; // Skip regular image handling
+      }
 
-        if (!emojiDiv) {
-          emojiDiv = document.createElement("div");
-          emojiDiv.style.position = "absolute";
-          emojiDiv.style.top = "50%";
-          emojiDiv.style.transform = "translateY(-50%)";
-          render.iconsDiv.appendChild(emojiDiv);
-          render.icons.set(icon.id, emojiDiv);
-        }
+      const imgElement = this.handleOtherIcons(
+        render,
+        icon,
+        iconSize,
+        darkModeStr,
+      );
 
-        emojiDiv.textContent = icon.text;
-        emojiDiv.style.fontSize = `${iconSize}px`;
-      } else if (icon.kind === "image" && icon.src) {
-        // Special handling for alliance icon with progress indicator
-        if (icon.id === "alliance") {
-          let allianceWrapper = render.icons.get(icon.id) as
-            | HTMLDivElement
-            | undefined;
-
-          const myPlayer = this.game.myPlayer();
-          const allianceView = myPlayer
-            ?.alliances()
-            .find((a) => a.other === render.player.id());
-
-          let fraction = 0;
-          let hasExtensionRequest = false;
-          if (allianceView) {
-            const remaining = Math.max(
-              0,
-              allianceView.expiresAt - this.game.ticks(),
-            );
-            const duration = Math.max(1, this.game.config().allianceDuration());
-            fraction = Math.max(0, Math.min(1, remaining / duration));
-            hasExtensionRequest = allianceView.hasExtensionRequest;
-          }
-
-          if (!allianceWrapper) {
-            allianceWrapper = createAllianceProgressIcon(
-              iconSize,
-              fraction,
-              hasExtensionRequest,
-              this.userSettings.darkMode(),
-            );
-            render.iconsDiv.appendChild(allianceWrapper);
-            render.icons.set(icon.id, allianceWrapper);
-          } else {
-            // Update existing alliance icon
-            allianceWrapper.style.width = `${iconSize}px`;
-            allianceWrapper.style.height = `${iconSize}px`;
-            allianceWrapper.style.flexShrink = "0";
-
-            const overlay = allianceWrapper.querySelector(
-              ".alliance-progress-overlay",
-            ) as HTMLDivElement | null;
-            if (overlay) {
-              overlay.style.clipPath = computeAllianceClipPath(fraction);
-            }
-
-            const questionMark = allianceWrapper.querySelector(
-              ".alliance-question-mark",
-            ) as HTMLImageElement | null;
-            if (questionMark) {
-              questionMark.style.display = hasExtensionRequest
-                ? "block"
-                : "none";
-            }
-
-            // Update inner image sizes
-            const imgs = allianceWrapper.getElementsByTagName("img");
-            for (const img of imgs) {
-              img.style.width = `${iconSize}px`;
-              img.style.height = `${iconSize}px`;
-            }
-          }
-          continue; // Skip regular image handling
-        }
-
-        let imgElement = render.icons.get(icon.id) as
-          | HTMLImageElement
-          | undefined;
-
-        if (!imgElement) {
-          imgElement = this.createIconElement(icon.src, iconSize, icon.center);
-          render.iconsDiv.appendChild(imgElement);
-          render.icons.set(icon.id, imgElement);
-        }
-
-        // Update src if it changed (e.g., nuke red/white or dark-mode icons)
-        if (imgElement.src !== icon.src) {
-          imgElement.src = icon.src;
-        }
-
-        imgElement.style.width = `${iconSize}px`;
-        imgElement.style.height = `${iconSize}px`;
-
-        // Traitor flashing - smooth speed increase starting at 15s
-        if (icon.id === "traitor") {
-          const remainingTicks = render.player.getTraitorRemainingTicks();
-          // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
-          const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
-
-          if (remainingSeconds <= 15) {
-            // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
-            // Using cubic ease-out for slower, more gradual acceleration
-            const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
-            const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
-
-            // Cubic ease-out: slower acceleration, smoother transition
-            const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
-            const maxDuration = 1.0; // Slow flash at 15 seconds
-            const minDuration = 0.2; // Fast flash at 0 seconds
-            const duration =
-              minDuration + (maxDuration - minDuration) * easedProgress;
-            const animationDuration = `${duration.toFixed(2)}s`;
-
-            imgElement.style.animation = `traitorFlash ${animationDuration} infinite`;
-            imgElement.style.animationTimingFunction = "ease-in-out";
-          } else {
-            // Don't flash if more than 15 seconds remaining
-            imgElement.style.animation = "none";
-          }
-        }
+      // Traitor flashing - smooth speed increase starting at 15s
+      if (icon.id === TRAITOR_ICON_ID) {
+        this.handleTraitorIconFlashing(render.player, imgElement);
       }
     }
 
     // Position element with scale
-    // Even when positionChanged is false: Scale update otherwise sometimes only happens after seconds which looks buggy.
+    // Don't require nameLocation to be changed: Scale update otherwise sometimes only happens after seconds which looks buggy.
     // Because of sometimes overlapping delays of 20 ticks for nameLocation() (largestClusterBoundingBox in PlayerExecution)
-    // and the 500ms renderRefreshRate in NameLayer.
+    // and the 500ms renderRefreshRate in here.
     const scale = Math.min(baseSize * 0.25, 3);
-    render.element.style.transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
+    const transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
+    if (render.lastTransform !== transform) {
+      render.element.style.transform = transform;
+      render.lastTransform = transform;
+    }
   }
 
-  private createIconElement(
-    src: string,
+  private handleEmojiIcon(
+    render: RenderInfo,
+    icon: PlayerIconDescriptor,
     size: number,
-    center: boolean = false,
-  ): HTMLImageElement {
-    const icon = document.createElement("img");
-    icon.src = src;
-    icon.style.width = `${size}px`;
-    icon.style.height = `${size}px`;
-    icon.setAttribute("dark-mode", this.userSettings.darkMode().toString());
-    if (center) {
-      icon.style.position = "absolute";
-      icon.style.top = "50%";
-      icon.style.transform = "translateY(-50%)";
+  ) {
+    let emojiDiv = render.icons.get(icon.id) as HTMLDivElement | undefined;
+
+    if (!emojiDiv) {
+      emojiDiv = this.emojiTemplate.cloneNode(true) as HTMLDivElement;
+      render.iconsDiv.appendChild(emojiDiv);
+      render.icons.set(icon.id, emojiDiv);
     }
-    return icon;
+
+    emojiDiv.textContent = icon.text ?? "";
+    emojiDiv.style.fontSize = `${size}px`;
+  }
+
+  private handleAllianceIcons(
+    render: RenderInfo,
+    size: number,
+    darkMode: string,
+  ) {
+    this.myPlayer ??= this.game.myPlayer();
+    const allianceView = this.myPlayer
+      ?.alliances()
+      .find((a) => a.other === render.player.id());
+
+    let fraction = 0;
+    let hasExtensionRequest = false;
+    if (allianceView) {
+      const remaining = Math.max(0, allianceView.expiresAt - this.game.ticks());
+      fraction = Math.max(0, Math.min(1, remaining / this.allianceDuration));
+      hasExtensionRequest = allianceView.hasExtensionRequest;
+    }
+
+    if (!render.allianceIconRefs) {
+      render.allianceIconRefs = createAllianceProgressIconRefs(
+        size,
+        fraction,
+        hasExtensionRequest,
+        darkMode,
+      );
+
+      render.iconsDiv.appendChild(render.allianceIconRefs.wrapper);
+      render.icons.set(ALLIANCE_ICON_ID, render.allianceIconRefs.wrapper);
+    } else {
+      updateAllianceProgressIconRefs(
+        render.allianceIconRefs,
+        size,
+        fraction,
+        hasExtensionRequest,
+        darkMode,
+      );
+    }
+    return;
+  }
+
+  private handleOtherIcons(
+    render: RenderInfo,
+    icon: PlayerIconDescriptor,
+    size: number,
+    darkMode: string,
+  ): HTMLImageElement {
+    let imgElement = render.icons.get(icon.id) as HTMLImageElement | undefined;
+
+    if (!imgElement) {
+      imgElement = icon.center
+        ? (this.iconCenterTemplate.cloneNode(true) as HTMLImageElement)
+        : (this.iconTemplate.cloneNode(true) as HTMLImageElement);
+
+      imgElement.src = icon.src ?? "";
+      imgElement.style.width = `${size}px`;
+      imgElement.style.height = `${size}px`;
+      imgElement.setAttribute("dark-mode", darkMode);
+      render.iconsDiv.appendChild(imgElement);
+      render.icons.set(icon.id, imgElement);
+    } else {
+      // Update src if it changed (e.g., nuke red/white or dark-mode icons)
+      if (imgElement.src !== icon.src) {
+        imgElement.src = icon.src ?? "";
+      }
+
+      imgElement.style.width = `${size}px`;
+      imgElement.style.height = `${size}px`;
+      imgElement.setAttribute("dark-mode", darkMode);
+    }
+    return imgElement;
+  }
+
+  private handleTraitorIconFlashing(
+    player: PlayerView,
+    icon: HTMLImageElement,
+  ) {
+    const remainingTicks = player.getTraitorRemainingTicks();
+    // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
+    const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
+
+    if (remainingSeconds <= 15) {
+      // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
+      // Using cubic ease-out for slower, more gradual acceleration
+      const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
+      const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
+
+      // Cubic ease-out: slower acceleration, smoother transition
+      const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
+      const maxDuration = 1.0; // Slow flash at 15 seconds
+      const minDuration = 0.2; // Fast flash at 0 seconds
+      const duration =
+        minDuration + (maxDuration - minDuration) * easedProgress;
+      const animationDuration = `${duration.toFixed(2)}s`;
+
+      icon.style.animation = `traitorFlash ${animationDuration} infinite`;
+      icon.style.animationTimingFunction = "ease-in-out";
+    } else {
+      // Don't flash if more than 15 seconds remaining
+      icon.style.animation = "none";
+    }
   }
 }

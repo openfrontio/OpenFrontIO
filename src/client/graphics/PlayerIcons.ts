@@ -19,18 +19,43 @@ const questionMarkIcon = assetUrl("images/QuestionMarkIcon.svg");
 const targetIcon = assetUrl("images/TargetIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
 
-export type PlayerIconId =
-  | "crown"
-  | "traitor"
-  | "disconnected"
-  | "alliance"
-  | "alliance-request"
-  | "target"
-  | "emoji"
-  | "embargo"
-  | "nuke";
+let allianceIconTemplate: HTMLDivElement | undefined;
 
-export type PlayerIconKind = "image" | "emoji";
+export const ALLIANCE_ICON_ID = "alliance" as const;
+const ALLIANCE_PROGRESS_OVERLAY_CLASS = "alliance-progress-overlay";
+const ALLIANCE_QUESTION_MARK_CLASS = "alliance-question-mark";
+export const TRAITOR_ICON_ID = "traitor" as const;
+const CROWN_ICON_ID = "crown" as const;
+const DISCONNECTED_ICON_ID = "disconnected" as const;
+const ALLIANCE_REQUEST_ICON_ID = "alliance-request" as const;
+const TARGET_ICON_ID = "target" as const;
+const EMOJI_ICON_ID = "emoji" as const;
+const EMBARGO_ICON_ID = "embargo" as const;
+const NUKE_ICON_ID = "nuke" as const;
+
+export const IMAGE_ICON_KIND = "image" as const;
+export const EMOJI_ICON_KIND = "emoji" as const;
+
+export type PlayerIconId =
+  | typeof CROWN_ICON_ID
+  | typeof TRAITOR_ICON_ID
+  | typeof DISCONNECTED_ICON_ID
+  | typeof ALLIANCE_ICON_ID
+  | typeof ALLIANCE_REQUEST_ICON_ID
+  | typeof TARGET_ICON_ID
+  | typeof EMOJI_ICON_ID
+  | typeof EMBARGO_ICON_ID
+  | typeof NUKE_ICON_ID;
+
+export type PlayerIconKind = typeof IMAGE_ICON_KIND | typeof EMOJI_ICON_KIND;
+
+export type AllianceProgressIconRefs = {
+  wrapper: HTMLDivElement;
+  base: HTMLImageElement;
+  overlay: HTMLDivElement;
+  colored: HTMLImageElement;
+  questionMark: HTMLImageElement;
+};
 
 export interface PlayerIconDescriptor {
   id: PlayerIconId;
@@ -50,6 +75,9 @@ export interface PlayerIconParams {
   includeAllianceIcon: boolean;
   /** Player currently in first place, used for the crown icon */
   firstPlace: PlayerView | null;
+  alliancesDisabled: boolean;
+  darkMode?: boolean;
+  transitiveTargets?: PlayerView[];
 }
 
 export function getFirstPlacePlayer(game: GameView): PlayerView | null {
@@ -63,71 +91,99 @@ export function getFirstPlacePlayer(game: GameView): PlayerView | null {
 export function getPlayerIcons(
   params: PlayerIconParams,
 ): PlayerIconDescriptor[] {
-  const { game, player, includeAllianceIcon, firstPlace } = params;
+  const {
+    game,
+    player,
+    includeAllianceIcon,
+    firstPlace,
+    alliancesDisabled,
+    darkMode,
+    transitiveTargets,
+  } = params;
 
   const myPlayer = game.myPlayer();
   const userSettings = game.config().userSettings();
-  const isDarkMode = userSettings?.darkMode() ?? false;
+  const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
   const emojisEnabled = userSettings?.emojis() ?? false;
+  const alliancesOff = alliancesDisabled ?? game.config().disableAlliances();
 
   const icons: PlayerIconDescriptor[] = [];
 
   // Crown icon for first place
   if (player === firstPlace) {
-    icons.push({ id: "crown", kind: "image", src: crownIcon });
+    icons.push({ id: CROWN_ICON_ID, kind: IMAGE_ICON_KIND, src: crownIcon });
   }
 
   // Traitor icon
   if (player.isTraitor()) {
-    icons.push({ id: "traitor", kind: "image", src: traitorIcon });
+    icons.push({
+      id: TRAITOR_ICON_ID,
+      kind: IMAGE_ICON_KIND,
+      src: traitorIcon,
+    });
   }
 
   // Disconnected icon
   if (player.isDisconnected()) {
-    icons.push({ id: "disconnected", kind: "image", src: disconnectedIcon });
-  }
-
-  // Alliance icon
-  if (
-    includeAllianceIcon &&
-    myPlayer !== null &&
-    myPlayer.isAlliedWith(player)
-  ) {
-    icons.push({ id: "alliance", kind: "image", src: allianceIcon });
-  }
-
-  // Alliance request icon (theme dependent)
-  if (myPlayer !== null && player.isRequestingAllianceWith(myPlayer)) {
-    const allianceRequestIcon = isDarkMode
-      ? allianceRequestWhiteIcon
-      : allianceRequestBlackIcon;
     icons.push({
-      id: "alliance-request",
-      kind: "image",
-      src: allianceRequestIcon,
+      id: DISCONNECTED_ICON_ID,
+      kind: IMAGE_ICON_KIND,
+      src: disconnectedIcon,
     });
   }
 
+  if (!alliancesOff) {
+    // Alliance icon
+    if (
+      includeAllianceIcon &&
+      myPlayer !== null &&
+      myPlayer.isAlliedWith(player)
+    ) {
+      icons.push({
+        id: ALLIANCE_ICON_ID,
+        kind: IMAGE_ICON_KIND,
+        src: allianceIcon,
+      });
+    }
+
+    // Alliance request icon (theme dependent)
+    if (myPlayer !== null && player.isRequestingAllianceWith(myPlayer)) {
+      const allianceRequestIcon = isDarkMode
+        ? allianceRequestWhiteIcon
+        : allianceRequestBlackIcon;
+      icons.push({
+        id: ALLIANCE_REQUEST_ICON_ID,
+        kind: IMAGE_ICON_KIND,
+        src: allianceRequestIcon,
+      });
+    }
+  }
+
   // Target icon (centered on the map, but regular in overlays)
-  if (myPlayer !== null && new Set(myPlayer.transitiveTargets()).has(player)) {
-    icons.push({ id: "target", kind: "image", src: targetIcon, center: true });
+  const targets = transitiveTargets ?? myPlayer?.transitiveTargets() ?? [];
+  if (targets.includes(player)) {
+    icons.push({
+      id: TARGET_ICON_ID,
+      kind: IMAGE_ICON_KIND,
+      src: targetIcon,
+      center: true,
+    });
   }
 
   // Emoji handling
   if (emojisEnabled) {
-    const emojis = player
+    const emoji = player
       .outgoingEmojis()
-      .filter(
-        (emoji) =>
-          emoji.recipientID === AllPlayers ||
-          emoji.recipientID === myPlayer?.smallID(),
+      .find(
+        (e) =>
+          e.recipientID === AllPlayers || e.recipientID === myPlayer?.smallID(),
       );
 
-    if (emojis.length > 0) {
+    if (emoji) {
       icons.push({
-        id: "emoji",
-        kind: "emoji",
-        text: emojis[0].message,
+        id: EMOJI_ICON_ID,
+        kind: EMOJI_ICON_KIND,
+        text: emoji.message,
       });
     }
   }
@@ -135,91 +191,153 @@ export function getPlayerIcons(
   // Embargo icon (theme dependent)
   if (myPlayer?.hasEmbargo(player)) {
     const embargoIcon = isDarkMode ? embargoWhiteIcon : embargoBlackIcon;
-    icons.push({ id: "embargo", kind: "image", src: embargoIcon });
+    icons.push({
+      id: EMBARGO_ICON_ID,
+      kind: IMAGE_ICON_KIND,
+      src: embargoIcon,
+    });
   }
 
   // Nuke icon (different color depending on whether the local player is the target)
-  const nukesSentByOtherPlayer = game.units(...Nukes.types).filter((unit) => {
-    const isSendingNuke = player.id() === unit.owner().id();
-    const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
-    return isSendingNuke && notMyPlayer && unit.isActive();
-  });
+  if (!myPlayer || player.id() !== myPlayer.id()) {
+    let hasActiveNukes = false;
+    let isMyPlayerTarget = false;
+    const playerNukes = player.units(...Nukes.types);
 
-  const isMyPlayerTarget = nukesSentByOtherPlayer.some((unit) => {
-    const detonationDst = unit.targetTile();
-    if (!detonationDst || !myPlayer) return false;
-    const targetId = game.owner(detonationDst).id();
-    return targetId === myPlayer.id();
-  });
+    for (const nuke of playerNukes) {
+      if (nuke.isActive()) {
+        hasActiveNukes = true;
 
-  if (nukesSentByOtherPlayer.length > 0) {
-    const icon = isMyPlayerTarget ? nukeRedIcon : nukeWhiteIcon;
-    icons.push({ id: "nuke", kind: "image", src: icon });
+        const detonationDst = nuke.targetTile();
+        if (
+          myPlayer &&
+          detonationDst &&
+          game.owner(detonationDst).id() === myPlayer.id()
+        ) {
+          isMyPlayerTarget = true;
+          break;
+        }
+      }
+    }
+
+    if (hasActiveNukes) {
+      const icon = isMyPlayerTarget ? nukeRedIcon : nukeWhiteIcon;
+      icons.push({ id: NUKE_ICON_ID, kind: IMAGE_ICON_KIND, src: icon });
+    }
   }
 
   return icons;
 }
 
-export function createAllianceProgressIcon(
+export function createAllianceProgressIconRefs(
   size: number,
   fraction: number,
   hasExtensionRequest: boolean,
-  darkMode: boolean,
-): HTMLDivElement {
+  darkMode: string,
+): AllianceProgressIconRefs {
+  if (!allianceIconTemplate) {
+    allianceIconTemplate = document.createElement("div");
+    allianceIconTemplate.setAttribute("data-icon", ALLIANCE_ICON_ID);
+    allianceIconTemplate.style.position = "relative";
+    allianceIconTemplate.style.display = "inline-block";
+    allianceIconTemplate.style.flexShrink = "0";
+
+    const base = document.createElement("img");
+    base.src = allianceIconFaded;
+    base.style.display = "block";
+    allianceIconTemplate.appendChild(base);
+
+    const overlay = document.createElement("div");
+    overlay.className = ALLIANCE_PROGRESS_OVERLAY_CLASS;
+    overlay.style.position = "absolute";
+    overlay.style.left = "0";
+    overlay.style.top = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+
+    const colored = document.createElement("img");
+    colored.src = allianceIcon; // green icon
+    colored.style.display = "block";
+    overlay.appendChild(colored);
+
+    allianceIconTemplate.appendChild(overlay);
+
+    const questionMark = document.createElement("img");
+    questionMark.className = ALLIANCE_QUESTION_MARK_CLASS;
+    questionMark.src = questionMarkIcon;
+    questionMark.style.position = "absolute";
+    questionMark.style.left = "0";
+    questionMark.style.top = "0";
+    questionMark.style.pointerEvents = "none";
+    allianceIconTemplate.appendChild(questionMark);
+  }
+
   // Wrapper
-  const wrapper = document.createElement("div");
-  wrapper.setAttribute("data-icon", "alliance");
-  wrapper.setAttribute("dark-mode", darkMode.toString());
-  wrapper.style.position = "relative";
+  const wrapper = allianceIconTemplate.cloneNode(true) as HTMLDivElement;
+  wrapper.setAttribute("dark-mode", darkMode);
   wrapper.style.width = `${size}px`;
   wrapper.style.height = `${size}px`;
-  wrapper.style.display = "inline-block";
-  wrapper.style.flexShrink = "0";
 
   // Base faded icon (full)
-  const base = document.createElement("img");
-  base.src = allianceIconFaded;
+  // No QuerySelector here since we know the structure and it avoids overhead each call
+  const base = wrapper.childNodes[0] as HTMLImageElement;
   base.style.width = `${size}px`;
   base.style.height = `${size}px`;
-  base.style.display = "block";
-  base.setAttribute("dark-mode", darkMode.toString());
-  wrapper.appendChild(base);
+  base.setAttribute("dark-mode", darkMode);
 
   // Overlay container for green portion, clipped from the top via clip-path
-  const overlay = document.createElement("div");
-  overlay.className = "alliance-progress-overlay";
-  overlay.style.position = "absolute";
-  overlay.style.left = "0";
-  overlay.style.top = "0";
-  overlay.style.width = "100%";
-  overlay.style.height = "100%";
+  const overlay = wrapper.childNodes[1] as HTMLDivElement;
   overlay.style.clipPath = computeAllianceClipPath(fraction);
 
-  const colored = document.createElement("img");
-  colored.src = allianceIcon; // green icon
+  const colored = overlay.childNodes[0] as HTMLImageElement;
   colored.style.width = `${size}px`;
   colored.style.height = `${size}px`;
-  colored.style.display = "block";
-  colored.setAttribute("dark-mode", darkMode.toString());
-  overlay.appendChild(colored);
-
-  wrapper.appendChild(overlay);
+  colored.setAttribute("dark-mode", darkMode);
 
   // Question mark overlay (shown when there's a pending extension request)
-  const questionMark = document.createElement("img");
-  questionMark.className = "alliance-question-mark";
-  questionMark.src = questionMarkIcon;
-  questionMark.style.position = "absolute";
-  questionMark.style.left = "0";
-  questionMark.style.top = "0";
+  const questionMark = wrapper.childNodes[2] as HTMLImageElement;
   questionMark.style.width = `${size}px`;
   questionMark.style.height = `${size}px`;
   questionMark.style.display = hasExtensionRequest ? "block" : "none";
-  questionMark.style.pointerEvents = "none";
-  questionMark.setAttribute("dark-mode", darkMode.toString());
-  wrapper.appendChild(questionMark);
+  questionMark.setAttribute("dark-mode", darkMode);
 
-  return wrapper;
+  return {
+    wrapper,
+    base,
+    overlay,
+    colored,
+    questionMark,
+  };
+}
+
+export function updateAllianceProgressIconRefs(
+  refs: AllianceProgressIconRefs,
+  size: number,
+  fraction: number,
+  hasExtensionRequest: boolean,
+  darkMode: string,
+): void {
+  refs.wrapper.style.width = `${size}px`;
+  refs.wrapper.style.height = `${size}px`;
+  refs.wrapper.style.flexShrink = "0";
+
+  refs.base.style.width = `${size}px`;
+  refs.base.style.height = `${size}px`;
+  refs.base.setAttribute("dark-mode", darkMode);
+
+  refs.colored.style.width = `${size}px`;
+  refs.colored.style.height = `${size}px`;
+  refs.colored.setAttribute("dark-mode", darkMode);
+  refs.overlay.style.clipPath = computeAllianceClipPath(fraction);
+
+  if (!hasExtensionRequest) {
+    refs.questionMark.style.display = "none";
+  } else {
+    refs.questionMark.style.width = `${size}px`;
+    refs.questionMark.style.height = `${size}px`;
+    refs.questionMark.style.display = "block";
+    refs.questionMark.setAttribute("dark-mode", darkMode);
+  }
 }
 
 export function computeAllianceClipPath(fraction: number): string {
