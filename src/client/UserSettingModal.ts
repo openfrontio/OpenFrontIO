@@ -71,7 +71,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   private loadKeybindsFromStorage() {
-    const savedKeybinds = this.userSettings.getString("settings.keybinds");
+    const savedKeybinds = this.userSettings.keybinds();
     if (!savedKeybinds) return;
 
     try {
@@ -199,10 +199,7 @@ export class UserSettingModal extends BaseModal {
     }
 
     this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
-    this.userSettings.setString(
-      "settings.keybinds",
-      JSON.stringify(this.keybinds),
-    );
+    this.userSettings.setKeybinds(JSON.stringify(this.keybinds));
   }
 
   private getKeyValue(action: string): string | undefined {
@@ -254,101 +251,77 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
-  toggleDarkMode(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
+  toggleDarkMode() {
+    this.userSettings.toggleDarkMode();
 
-    if (typeof enabled !== "boolean") {
-      console.warn("Unexpected toggle event payload", e);
-      return;
-    }
+    console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
+  }
 
-    this.userSettings.setBool("settings.darkMode", enabled);
+  private toggleEmojis() {
+    this.userSettings.toggleEmojis();
 
-    if (enabled) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    console.log("🤡 Emojis:", this.userSettings.emojis() ? "ON" : "OFF");
+  }
 
-    this.dispatchEvent(
-      new CustomEvent("dark-mode-changed", {
-        detail: { darkMode: enabled },
-        bubbles: true,
-        composed: true,
-      }),
+  private toggleAlertFrame() {
+    this.userSettings.toggleAlertFrame();
+
+    console.log(
+      "🚨 Alert frame:",
+      this.userSettings.alertFrame() ? "ON" : "OFF",
     );
-
-    console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
-  private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleFxLayer() {
+    this.userSettings.toggleFxLayer();
 
-    this.userSettings.setBool("settings.emojis", enabled);
-
-    console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
+    console.log(
+      "💥 Special effects:",
+      this.userSettings.fxLayer() ? "ON" : "OFF",
+    );
   }
 
-  private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleStructureSprites() {
+    this.userSettings.toggleStructureSprites();
 
-    this.userSettings.setBool("settings.alertFrame", enabled);
-
-    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
+    console.log(
+      "🏠 Structure sprites:",
+      this.userSettings.structureSprites() ? "ON" : "OFF",
+    );
   }
 
-  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleCursorCostLabel() {
+    this.userSettings.toggleCursorCostLabel();
 
-    this.userSettings.setBool("settings.specialEffects", enabled);
-
-    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+    console.log(
+      "💰 Cursor build cost:",
+      this.userSettings.cursorCostLabel() ? "ON" : "OFF",
+    );
   }
 
-  private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleAnonymousNames() {
+    this.userSettings.toggleRandomName();
 
-    this.userSettings.setBool("settings.structureSprites", enabled);
-
-    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
+    console.log(
+      "🙈 Anonymous Names:",
+      this.userSettings.anonymousNames() ? "ON" : "OFF",
+    );
   }
 
-  private toggleCursorCostLabel(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.setBool("settings.cursorCostLabel", enabled);
-
-    console.log("💰 Cursor build cost:", enabled ? "ON" : "OFF");
+  private toggleLobbyIdVisibility() {
+    this.userSettings.toggleLobbyIdVisibility();
+    console.log(
+      "👁️ Hidden Lobby IDs:",
+      !this.userSettings.lobbyIdVisibility() ? "ON" : "OFF",
+    );
   }
 
-  private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.setBool("settings.anonymousNames", enabled);
-
-    console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
-  }
-
-  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
-    const hideIds = e.detail?.checked;
-    if (typeof hideIds !== "boolean") return;
-
-    this.userSettings.setBool("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
-    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
-  }
-
-  private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.setBool("settings.leftClickOpensMenu", enabled);
-    console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
+  private toggleLeftClickOpensMenu() {
+    this.userSettings.toggleLeftClickOpenMenu();
+    console.log(
+      "🖱️ Left Click Opens Menu:",
+      this.userSettings.leftClickOpensMenu() ? "ON" : "OFF",
+    );
 
     this.requestUpdate();
   }
@@ -357,7 +330,7 @@ export class UserSettingModal extends BaseModal {
     const value = e.detail?.value;
     if (typeof value === "number") {
       const ratio = value / 100;
-      this.userSettings.setFloat("settings.attackRatio", ratio);
+      this.userSettings.setAttackRatio(ratio);
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -373,27 +346,21 @@ export class UserSettingModal extends BaseModal {
       console.warn("Select event missing detail.value", e);
       return;
     }
-    this.userSettings.setFloat(
-      "settings.attackRatioIncrement",
-      Math.round(value),
-    );
+    this.userSettings.setAttackRatioIncrement(Math.round(value));
     this.requestUpdate();
   }
 
-  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
 
-    this.userSettings.setBool("settings.territoryPatterns", enabled);
-
-    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+    console.log(
+      "🏳️ Territory Patterns:",
+      this.userSettings.territoryPatterns() ? "ON" : "OFF",
+    );
   }
 
-  private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.setBool("settings.performanceOverlay", enabled);
+  private togglePerformanceOverlay() {
+    this.userSettings.togglePerformanceOverlay();
   }
 
   render() {
@@ -812,8 +779,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.dark_mode_desc")}"
         id="dark-mode-toggle"
         .checked=${this.userSettings.darkMode()}
-        @change=${(e: CustomEvent<{ checked: boolean }>) =>
-          this.toggleDarkMode(e)}
+        @change=${this.toggleDarkMode}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
@@ -884,10 +850,7 @@ export class UserSettingModal extends BaseModal {
         label="${translateText("user_setting.lobby_id_visibility_label")}"
         description="${translateText("user_setting.lobby_id_visibility_desc")}"
         id="lobby-id-visibility-toggle"
-        .checked=${!this.userSettings.getBool(
-          "settings.lobbyIdVisibility",
-          true,
-        )}
+        .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
 
@@ -915,7 +878,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${this.userSettings.getFloat("settings.attackRatio", 0.2) * 100}
+        .value=${this.userSettings.attackRatio() * 100}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 

@@ -30,14 +30,16 @@ export class UserSettings {
   private setCached(key: string, value: string) {
     localStorage.setItem(key, value);
     UserSettings.cache.set(key, value);
+    this.emitChange(key, value);
   }
 
   private removeCached(key: string) {
     localStorage.removeItem(key);
     UserSettings.cache.set(key, null);
+    this.emitChange(key, null);
   }
 
-  getBool(key: string, defaultValue: boolean): boolean {
+  private getBool(key: string, defaultValue: boolean): boolean {
     const value = this.getCached(key);
     if (!value) return defaultValue;
     if (value === "true") return true;
@@ -45,23 +47,21 @@ export class UserSettings {
     return defaultValue;
   }
 
-  setBool(key: string, value: boolean) {
+  private setBool(key: string, value: boolean) {
     this.setCached(key, value ? "true" : "false");
-    this.emitChange(key, value);
   }
 
-  getString(key: string, defaultValue: string = ""): string {
+  private getString(key: string, defaultValue: string = ""): string {
     const value = this.getCached(key);
     if (value === null) return defaultValue;
     return value;
   }
 
-  setString(key: string, value: string) {
+  private setString(key: string, value: string) {
     this.setCached(key, value);
-    this.emitChange(key, value);
   }
 
-  getFloat(key: string, defaultValue: number): number {
+  private getFloat(key: string, defaultValue: number): number {
     const value = this.getCached(key);
     if (!value) return defaultValue;
 
@@ -70,9 +70,8 @@ export class UserSettings {
     return floatValue;
   }
 
-  setFloat(key: string, value: number) {
+  private setFloat(key: string, value: number) {
     this.setCached(key, value.toString());
-    this.emitChange(key, value);
   }
 
   emojis() {
@@ -139,6 +138,11 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
+  // performance overlay specifically needs a direct setter as it's triggered externally via escape/f2
+  setPerformanceOverlay(value: boolean) {
+    this.setBool("settings.performanceOverlay", value);
+  }
+
   togglePerformanceOverlay() {
     this.setBool("settings.performanceOverlay", !this.performanceOverlay());
   }
@@ -172,8 +176,9 @@ export class UserSettings {
   }
 
   toggleDarkMode() {
-    this.setBool("settings.darkMode", !this.darkMode());
-    if (this.darkMode()) {
+    const nextVal = !this.darkMode();
+    this.setBool("settings.darkMode", nextVal);
+    if (nextVal) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
@@ -219,7 +224,6 @@ export class UserSettings {
     } else {
       this.setCached(PATTERN_KEY, patternName);
     }
-    this.emitChange("pattern", patternName);
   }
 
   getSelectedColor(): string | undefined {
@@ -249,14 +253,12 @@ export class UserSettings {
     if (flag === "country:xx") {
       this.clearFlag();
     } else {
-      localStorage.setItem("flag", flag);
+      this.setCached("flag", flag);
     }
-    console.log("emitting change!");
-    this.emitChange("flag", flag);
   }
 
   clearFlag(): void {
-    localStorage.removeItem("flag");
+    this.removeCached("flag");
   }
 
   backgroundMusicVolume(): number {
@@ -267,12 +269,34 @@ export class UserSettings {
     this.setFloat("settings.backgroundMusicVolume", volume);
   }
 
+  // What % attack ratio increments per click/scroll
   attackRatioIncrement(): number {
     const increment = Math.round(
       this.getFloat("settings.attackRatioIncrement", 10),
     );
     if (!Number.isFinite(increment) || increment <= 0) return 10;
     return increment;
+  }
+
+  setAttackRatioIncrement(value: number): void {
+    this.setFloat("settings.attackRatioIncrement", value);
+  }
+
+  // What % attack ratio is set to
+  attackRatio(): number {
+    return this.getFloat("settings.attackRatio", 0.2);
+  }
+
+  setAttackRatio(value: number): void {
+    this.setFloat("settings.attackRatio", value);
+  }
+
+  keybinds(): string | null {
+    return this.getString("settings.keybinds", "");
+  }
+
+  setKeybinds(value: string): void {
+    this.setString("settings.keybinds", value);
   }
 
   soundEffectsVolume(): number {
