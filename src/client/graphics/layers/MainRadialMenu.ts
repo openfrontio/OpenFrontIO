@@ -5,6 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ISoundManager } from "../../sound/ISoundManager";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildMenu } from "./BuildMenu";
@@ -13,7 +14,6 @@ import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
-import { ISoundManager } from "../../sound/ISoundManager";
 import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
   centerButtonElement,

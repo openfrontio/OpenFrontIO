@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock howler before importing SoundManager
 vi.mock("howler", () => {
@@ -31,8 +31,11 @@ vi.mock("../../../src/core/AssetUrls", () => ({
   assetUrl: (path: string) => path,
 }));
 
+import {
+  ISoundManager,
+  SoundEffect,
+} from "../../../src/client/sound/ISoundManager";
 import { SoundManager } from "../../../src/client/sound/SoundManager";
-import { ISoundManager, SoundEffect } from "../../../src/client/sound/ISoundManager";
 
 describe("SoundManager", () => {
   let soundManager: SoundManager;

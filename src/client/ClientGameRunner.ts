@@ -203,8 +203,13 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
+      const runner = currentGameRunner;
       currentGameRunner = null;
-      transport.leaveGame();
+      if (runner) {
+        runner.stop();
+      } else {
+        transport.leaveGame();
+      }
       return true;
     },
     prestart: prestartPromise,

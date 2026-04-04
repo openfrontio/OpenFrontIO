@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { ISoundManager, SoundEffect } from "../../../src/client/sound/ISoundManager";
+import {
+  ISoundManager,
+  SoundEffect,
+} from "../../../src/client/sound/ISoundManager";
 
 describe("SoundManager DI contract", () => {
   function createMockSoundManager() {

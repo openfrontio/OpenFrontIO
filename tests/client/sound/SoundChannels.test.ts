@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let nextPlayId = 1;
 const allHowlInstances: MockHowlInstance[] = [];
@@ -26,16 +26,14 @@ vi.mock("howler", () => {
     volume = vi.fn();
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
-    once = vi.fn(
-      (event: string, callback: () => void, id?: number) => {
-        if (id !== undefined) {
-          if (!this._listeners.has(event)) {
-            this._listeners.set(event, new Map());
-          }
-          this._listeners.get(event)!.set(id, callback);
+    once = vi.fn((event: string, callback: () => void, id?: number) => {
+      if (id !== undefined) {
+        if (!this._listeners.has(event)) {
+          this._listeners.set(event, new Map());
         }
-      },
-    );
+        this._listeners.get(event)!.set(id, callback);
+      }
+    });
     _listeners: Map<string, Map<number, () => void>> = new Map();
     _fireEvent(event: string, id: number) {
       const cb = this._listeners.get(event)?.get(id);
@@ -64,12 +62,12 @@ vi.mock("../../../src/core/AssetUrls", () => ({
   assetUrl: (path: string) => path,
 }));
 
-import { SoundManager } from "../../../src/client/sound/SoundManager";
 import {
-  SoundEffect,
   MAX_CONCURRENT_SOUNDS,
   SOUND_PRIORITY,
+  SoundEffect,
 } from "../../../src/client/sound/ISoundManager";
+import { SoundManager } from "../../../src/client/sound/SoundManager";
 
 describe("Sound channel management", () => {
   let sm: SoundManager;
@@ -174,7 +172,8 @@ describe("Sound channel management", () => {
     // Now we should be able to play another sound without preemption
     sm.playSoundEffect(SoundEffect.BuildPort); // id=5
     const portHowl = allHowlInstances.find(
-      (h) => h !== clickHowl && h.play.mock.results.some((r: any) => r.value === 5),
+      (h) =>
+        h !== clickHowl && h.play.mock.results.some((r: any) => r.value === 5),
     );
     // BuildPort should have played successfully
     expect(portHowl).toBeDefined();
