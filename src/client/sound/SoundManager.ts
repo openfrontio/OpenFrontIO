@@ -150,9 +150,9 @@ export class SoundManager implements ISoundManager {
         // New sound is same or lower priority, drop it
         return;
       }
-      // Preempt the lowest priority sound
+      // Remove before stop() since stop fires the 'stop' event synchronously
+      this.removeActiveSoundById(lowest.id);
       lowest.howl.stop(lowest.id);
-      this.activeSounds.splice(lowestIdx, 1);
     }
 
     const id = howl.play();
