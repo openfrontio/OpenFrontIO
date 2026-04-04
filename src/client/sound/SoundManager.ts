@@ -3,18 +3,56 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import { assetUrl } from "../../core/AssetUrls";
+import {
+  ISoundManager,
+  MAX_CONCURRENT_SOUNDS,
+  SOUND_PRIORITY,
+  SoundEffect,
+} from "./ISoundManager";
+const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
+const allianceSuggestedSound = assetUrl(
+  "sounds/effects/alliance-suggested.mp3",
+);
+const atomHitSound = assetUrl("sounds/effects/atom-hit.mp3");
+const atomLaunchSound = assetUrl("sounds/effects/atom-launch.mp3");
+const buildCitySound = assetUrl("sounds/effects/build-city.mp3");
+const buildDefensePostSound = assetUrl("sounds/effects/build-defense-post.mp3");
+const buildPortSound = assetUrl("sounds/effects/build-port.mp3");
+const buildWarshipSound = assetUrl("sounds/effects/build-warship.mp3");
+const clickSound = assetUrl("sounds/effects/click.mp3");
+const hydrogenHitSound = assetUrl("sounds/effects/hydrogen-hit.mp3");
+const hydrogenLaunchSound = assetUrl("sounds/effects/hydrogen-launch.mp3");
 const kaChingSound = assetUrl("sounds/effects/ka-ching.mp3");
+const messageSound = assetUrl("sounds/effects/message.mp3");
+const mirvLaunchSound = assetUrl("sounds/effects/mirv-launch.mp3");
+const samBuiltSound = assetUrl("sounds/effects/sam-built.mp3");
 
-export enum SoundEffect {
-  KaChing = "ka-ching",
-}
-
-class SoundManager {
+export class SoundManager implements ISoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
   private soundEffects: Map<SoundEffect, Howl> = new Map();
   private soundEffectsVolume: number = 1;
   private backgroundMusicVolume: number = 0;
+  private activeSounds: { effect: SoundEffect; howl: Howl; id: number }[] = [];
+
+  private static readonly soundEffectUrls: ReadonlyMap<SoundEffect, string> =
+    new Map([
+      [SoundEffect.KaChing, kaChingSound],
+      [SoundEffect.AtomHit, atomHitSound],
+      [SoundEffect.AtomLaunch, atomLaunchSound],
+      [SoundEffect.HydrogenHit, hydrogenHitSound],
+      [SoundEffect.HydrogenLaunch, hydrogenLaunchSound],
+      [SoundEffect.MIRVLaunch, mirvLaunchSound],
+      [SoundEffect.AllianceSuggested, allianceSuggestedSound],
+      [SoundEffect.AllianceBroken, allianceBrokenSound],
+      [SoundEffect.BuildPort, buildPortSound],
+      [SoundEffect.BuildCity, buildCitySound],
+      [SoundEffect.BuildDefensePost, buildDefensePostSound],
+      [SoundEffect.BuildWarship, buildWarshipSound],
+      [SoundEffect.SAMBuilt, samBuiltSound],
+      [SoundEffect.Message, messageSound],
+      [SoundEffect.Click, clickSound],
+    ]);
 
   constructor() {
     this.backgroundMusic = [
@@ -37,7 +75,6 @@ class SoundManager {
         volume: 0,
       }),
     ];
-    this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
   }
 
   public playBackgroundMusic(): void {
@@ -67,21 +104,53 @@ class SoundManager {
     this.playBackgroundMusic();
   }
 
-  public loadSoundEffect(name: SoundEffect, src: string): void {
-    if (!this.soundEffects.has(name)) {
-      const sound = new Howl({
-        src: [src],
-        volume: this.soundEffectsVolume,
-      });
-      this.soundEffects.set(name, sound);
-    }
+  private getOrLoadSoundEffect(name: SoundEffect): Howl | null {
+    let sound = this.soundEffects.get(name);
+    if (sound) return sound;
+    const src = SoundManager.soundEffectUrls.get(name);
+    if (!src) return null;
+    sound = new Howl({ src: [src], volume: this.soundEffectsVolume });
+    this.soundEffects.set(name, sound);
+    return sound;
+  }
+
+  private removeActiveSoundById(id: number): void {
+    this.activeSounds = this.activeSounds.filter((s) => s.id !== id);
   }
 
   public playSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.play();
+    const howl = this.getOrLoadSoundEffect(name);
+    if (!howl) return;
+
+    const priority = SOUND_PRIORITY[name];
+
+    if (this.activeSounds.length >= MAX_CONCURRENT_SOUNDS) {
+      // Find the lowest-priority active sound
+      let lowestIdx = 0;
+      for (let i = 1; i < this.activeSounds.length; i++) {
+        if (
+          SOUND_PRIORITY[this.activeSounds[i].effect] <
+          SOUND_PRIORITY[this.activeSounds[lowestIdx].effect]
+        ) {
+          lowestIdx = i;
+        }
+      }
+      const lowest = this.activeSounds[lowestIdx];
+      if (priority <= SOUND_PRIORITY[lowest.effect]) {
+        // New sound is same or lower priority, drop it
+        return;
+      }
+      // Remove before stop() since stop fires the 'stop' event synchronously
+      this.removeActiveSoundById(lowest.id);
+      lowest.howl.stop(lowest.id);
     }
+
+    const id = howl.play();
+    const entry = { effect: name, howl, id };
+    this.activeSounds.push(entry);
+
+    howl.once("end", () => this.removeActiveSoundById(id), id);
+    howl.once("stop", () => this.removeActiveSoundById(id), id);
   }
 
   public setSoundEffectsVolume(volume: number): void {
@@ -96,15 +165,6 @@ class SoundManager {
     if (sound) {
       sound.stop();
     }
-  }
-
-  public unloadSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.unload();
-      this.soundEffects.delete(name);
-    }
+    this.activeSounds = this.activeSounds.filter((s) => s.effect !== name);
   }
 }
-
-export default new SoundManager();

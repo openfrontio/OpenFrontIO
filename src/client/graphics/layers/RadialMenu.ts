@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
+import { ISoundManager, SoundEffect } from "../../sound/ISoundManager";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
@@ -99,6 +100,7 @@ export class RadialMenu implements Layer {
     private eventBus: EventBus,
     private rootMenu: MenuElement,
     private centerButtonElement: CenterButtonElement,
+    private soundManager: ISoundManager,
     config: RadialMenuConfig = {},
   ) {
     this.config = {
@@ -506,6 +508,7 @@ export class RadialMenu implements Layer {
         this.navigationInProgress
       )
         return;
+      this.soundManager.playSoundEffect(SoundEffect.Click);
 
       if (
         this.currentLevel > 0 &&

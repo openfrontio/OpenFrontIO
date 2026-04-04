@@ -50,7 +50,8 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager from "./sound/SoundManager";
+import { ISoundManager } from "./sound/ISoundManager";
+import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -202,8 +203,17 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
-      currentGameRunner = null;
-      transport.leaveGame();
+      const runner = currentGameRunner;
+      if (runner) {
+        try {
+          runner.stop();
+        } finally {
+          currentGameRunner = null;
+        }
+      } else {
+        currentGameRunner = null;
+        transport.leaveGame();
+      }
       return true;
     },
     prestart: prestartPromise,
@@ -253,7 +263,8 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const soundManager = new SoundManager();
+  const gameRenderer = createRenderer(canvas, gameView, eventBus, soundManager);
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -268,6 +279,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    soundManager,
   );
 }
 
@@ -294,6 +306,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private soundManager: ISoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -346,7 +359,7 @@ export class ClientGameRunner {
   }
 
   public start() {
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -524,7 +537,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.stopBackgroundMusic();
     if (!this.isActive) return;
 
     this.isActive = false;

@@ -5,6 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ISoundManager } from "../../sound/ISoundManager";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildMenu } from "./BuildMenu";
@@ -46,6 +47,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     private buildMenu: BuildMenu,
     private uiState: UIState,
     private playerPanel: PlayerPanel,
+    private soundManager: ISoundManager,
   ) {
     super();
 
@@ -66,6 +68,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       this.eventBus,
       rootMenuElement,
       centerButtonElement,
+      this.soundManager,
       menuConfig,
     );
 
