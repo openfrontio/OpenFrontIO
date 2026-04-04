@@ -155,10 +155,6 @@ export class RailroadLayer implements Layer {
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
 
-    // Enable smooth scaling
-    this.context.imageSmoothingEnabled = true;
-    this.context.imageSmoothingQuality = "high";
-
     // Firefox's GPU limit is 8192, only known browser issue
     const maxTextureSize = 8192;
     const scaleX = maxTextureSize / this.game.width();
@@ -173,6 +169,10 @@ export class RailroadLayer implements Layer {
       1,
       Math.floor(this.game.height() * targetScale),
     );
+
+    // Enable smooth scaling
+    this.context.imageSmoothingEnabled = true;
+    this.context.imageSmoothingQuality = "high";
 
     // Scale context so existing *2 rendering math continues to work automatically
     this.context.scale(
