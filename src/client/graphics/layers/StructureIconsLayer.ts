@@ -101,6 +101,18 @@ export class StructureIconsLayer implements Layer {
   private visibilityStateDirty = true;
   private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
+  private onWebGLContextLost: ((event: Event) => void) | null = null;
+  private onWebGLContextRestored: (() => void) | null = null;
+  private readonly onResize = () => this.resizeCanvas();
+  private readonly onToggleStructures = (e: ToggleStructuresEvent) =>
+    this.toggleStructures(e.structureTypes);
+  private readonly onMouseMove = (e: MouseMoveEvent) => this.moveGhost(e);
+  private readonly onMouseUp = (e: MouseUpEvent) =>
+    this.requestConfirmStructure(e);
+  private readonly onConfirmGhostStructure = () =>
+    this.requestConfirmStructure(
+      new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+    );
   potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
@@ -167,6 +179,22 @@ export class StructureIconsLayer implements Layer {
 
     this.renderer = renderer;
     this.rendererInitialized = true;
+    this.onWebGLContextLost = (event) => {
+      // Prevent the browser's default context-loss handling so Pixi can restore
+      // the WebGL context and we can rebuild structure renders from game state.
+      event.preventDefault();
+    };
+    this.onWebGLContextRestored = () => {
+      this.redraw();
+    };
+    this.pixicanvas.addEventListener(
+      "webglcontextlost",
+      this.onWebGLContextLost,
+    );
+    this.pixicanvas.addEventListener(
+      "webglcontextrestored",
+      this.onWebGLContextRestored,
+    );
   }
 
   shouldTransform(): boolean {
@@ -174,21 +202,38 @@ export class StructureIconsLayer implements Layer {
   }
 
   async init() {
-    this.eventBus.on(ToggleStructuresEvent, (e) =>
-      this.toggleStructures(e.structureTypes),
-    );
-    this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
+    this.eventBus.on(ToggleStructuresEvent, this.onToggleStructures);
+    this.eventBus.on(MouseMoveEvent, this.onMouseMove);
+    this.eventBus.on(MouseUpEvent, this.onMouseUp);
+    this.eventBus.on(ConfirmGhostStructureEvent, this.onConfirmGhostStructure);
 
-    this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
-    this.eventBus.on(ConfirmGhostStructureEvent, () =>
-      this.requestConfirmStructure(
-        new MouseUpEvent(this.mousePos.x, this.mousePos.y),
-      ),
-    );
-
-    window.addEventListener("resize", () => this.resizeCanvas());
+    window.addEventListener("resize", this.onResize);
     await this.setupRenderer();
     this.redraw();
+  }
+
+  dispose() {
+    this.eventBus.off(ToggleStructuresEvent, this.onToggleStructures);
+    this.eventBus.off(MouseMoveEvent, this.onMouseMove);
+    this.eventBus.off(MouseUpEvent, this.onMouseUp);
+    this.eventBus.off(ConfirmGhostStructureEvent, this.onConfirmGhostStructure);
+    window.removeEventListener("resize", this.onResize);
+
+    if (this.onWebGLContextLost) {
+      this.pixicanvas?.removeEventListener(
+        "webglcontextlost",
+        this.onWebGLContextLost,
+      );
+    }
+    if (this.onWebGLContextRestored) {
+      this.pixicanvas?.removeEventListener(
+        "webglcontextrestored",
+        this.onWebGLContextRestored,
+      );
+    }
+
+    this.onWebGLContextLost = null;
+    this.onWebGLContextRestored = null;
   }
 
   resizeCanvas() {
@@ -196,6 +241,15 @@ export class StructureIconsLayer implements Layer {
       this.pixicanvas.width = window.innerWidth;
       this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
+      this.resizeStages();
+      // Canvas size changes affect screen-space culling and icon placement, so
+      // recompute every tracked structure location after a resize/reset.
+      for (const render of this.rendersByUnitId.values()) {
+        this.computeNewLocation(render);
+      }
+      if (this.ghostUnit) {
+        this.moveGhost(new MouseMoveEvent(this.mousePos.x, this.mousePos.y));
+      }
     }
   }
 
@@ -222,6 +276,24 @@ export class StructureIconsLayer implements Layer {
 
   redraw() {
     this.resizeCanvas();
+    this.rebuildAllStructuresFromState();
+  }
+
+  rebuildAllStructuresFromState() {
+    if (!this.rendererInitialized || !this.renderer) {
+      return;
+    }
+
+    this.clearAllStructureRenders();
+
+    for (const unitView of this.game.units()) {
+      if (
+        unitView.isActive() &&
+        this.structures.has(unitView.type() as PlayerBuildableUnitType)
+      ) {
+        this.addNewStructure(unitView);
+      }
+    }
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
@@ -843,5 +915,37 @@ export class StructureIconsLayer implements Layer {
     if (this.potentialUpgrade?.unit.id() === unitId) {
       this.potentialUpgrade = undefined;
     }
+  }
+
+  private clearAllStructureRenders() {
+    this.clearStageChildren(this.iconsStage);
+    this.clearStageChildren(this.levelsStage);
+    this.clearStageChildren(this.dotsStage);
+    this.rendersByUnitId.clear();
+    this.seenUnitIds.clear();
+    this.potentialUpgrade = undefined;
+  }
+
+  /**
+   * Deep-clears a Pixi stage after renderer disruption or before a full
+   * state-sourced rebuild. Callers must repopulate the stage immediately after
+   * this cleanup because all child display objects are destroyed recursively.
+   */
+  private clearStageChildren(stage?: PIXI.Container) {
+    if (!stage) {
+      return;
+    }
+
+    for (const child of stage.removeChildren()) {
+      child.destroy({ children: true });
+    }
+  }
+
+  private resizeStages() {
+    this.iconsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.ghostStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.levelsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.dotsStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
+    this.rootStage?.setSize(this.pixicanvas.width, this.pixicanvas.height);
   }
 }
