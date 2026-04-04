@@ -64,6 +64,10 @@ Licensed under [CC0 1.0.](https://creativecommons.org/publicdomain/zero/1.0/lega
 [NASA/JPL-Caltech](https://www.jpl.nasa.gov/images/pia10748-our-milky-way-gets-a-makeover-artist-concept/)
 [Public Domain](https://www.jpl.nasa.gov/jpl-image-use-policy/)
 
+### Humid Sahara Map
+
+Source: Think Africa (https://thinkafrica.net/africanhumidperiod/)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
