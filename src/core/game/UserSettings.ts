@@ -291,7 +291,7 @@ export class UserSettings {
     this.setFloat("settings.attackRatio", value);
   }
 
-  keybinds(): string | null {
+  keybinds(): string {
     return this.getString("settings.keybinds", "");
   }
 
