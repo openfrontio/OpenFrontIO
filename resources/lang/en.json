@@ -920,7 +920,13 @@
     "selected": "selected"
   },
   "cosmetics": {
-    "artist_label": "Artist:"
+    "artist_label": "Artist:",
+    "color_label": "Color:",
+    "common": "Common",
+    "uncommon": "Uncommon",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary"
   },
   "flag_input": {
     "title": "Select Flag",

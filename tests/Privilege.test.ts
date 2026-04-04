@@ -43,6 +43,7 @@ const flagCosmetics = {
       url: "https://example.com/cool.png",
       affiliateCode: null,
       product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+      rarity: "common",
     },
   },
 };

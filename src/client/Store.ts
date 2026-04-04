@@ -159,7 +159,7 @@ export class StoreModal extends BaseModal {
 
     return html`
       <div
-        class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
         ${buttons}
       </div>
@@ -179,13 +179,7 @@ export class StoreModal extends BaseModal {
       const selectedFlag = new UserSettings().getFlag() ?? "";
       buttons.push(html`
         <flag-button
-          .flag=${{
-            key: `flag:${key}`,
-            name: flag.name,
-            url: flag.url,
-            product: flag.product,
-            artist: flag.artist,
-          }}
+          .flag=${{ ...flag, key: `flag:${key}` }}
           .selected=${selectedFlag === `flag:${key}`}
           .requiresPurchase=${rel === "purchasable"}
           .onPurchase=${() => handlePurchase(flag.product!)}
@@ -203,7 +197,7 @@ export class StoreModal extends BaseModal {
 
     return html`
       <div
-        class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
         ${buttons}
       </div>

@@ -115,7 +115,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       <div class="flex flex-col">
         <div
-          class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+          class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
         >
           ${buttons}
         </div>
