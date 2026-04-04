@@ -11,8 +11,8 @@ import { PatternDecoder } from "../../core/PatternDecoder";
 import { PlayerPattern } from "../../core/Schemas";
 import { translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
-import "./ArtistInfo";
-import "./PurchaseButton";
+import "./CosmeticContainer";
+import "./CosmeticInfo";
 
 export const BUTTON_WIDTH = 150;
 
@@ -40,6 +40,10 @@ export class PatternButton extends LitElement {
   }
 
   private handleClick() {
+    if (this.requiresPurchase) {
+      this.handlePurchase();
+      return;
+    }
     if (this.pattern === null) {
       this.onSelect?.(null);
       return;
@@ -61,57 +65,27 @@ export class PatternButton extends LitElement {
     const isDefaultPattern = this.pattern === null;
 
     return html`
-      <div
-        class="no-crazygames flex flex-col items-center justify-between gap-2 p-3 bg-white/5 backdrop-blur-sm border rounded-xl w-48 h-full transition-all duration-200 ${this
-          .selected
-          ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
-          : "hover:bg-white/10 hover:border-white/20 hover:shadow-xl border-white/10"}"
+      <cosmetic-container
+        class="no-crazygames flex flex-col items-center justify-between gap-2 p-3 w-48 h-full"
+        .rarity=${this.pattern?.rarity ?? "common"}
+        .selected=${this.selected}
+        .product=${this.requiresPurchase && this.pattern?.product
+          ? this.pattern.product
+          : null}
+        .onPurchase=${() => this.handlePurchase()}
+        .name=${isDefaultPattern
+          ? translateText("territory_patterns.pattern.default")
+          : translateCosmetic("territory_patterns.pattern", this.pattern!.name)}
       >
         <button
-          class="group relative flex flex-col items-center w-full gap-2 rounded-lg cursor-pointer transition-all duration-200
-                 disabled:cursor-not-allowed flex-1"
-          ?disabled=${this.requiresPurchase}
+          class="group relative flex flex-col items-center w-full gap-2 rounded-lg cursor-pointer transition-all duration-200 flex-1"
           @click=${this.handleClick}
         >
-          <artist-info .artist=${this.pattern?.artist}></artist-info>
-          <div class="flex flex-col items-center w-full">
-            <div
-              class="text-xs font-bold text-white uppercase tracking-wider mb-1 ${this
-                .pattern?.artist
-                ? "pr-5"
-                : ""} text-center truncate w-full ${this.requiresPurchase
-                ? "opacity-50"
-                : ""}"
-              title="${isDefaultPattern
-                ? translateText("territory_patterns.pattern.default")
-                : translateCosmetic(
-                    "territory_patterns.pattern",
-                    this.pattern!.name,
-                  )}"
-            >
-              ${isDefaultPattern
-                ? translateText("territory_patterns.pattern.default")
-                : translateCosmetic(
-                    "territory_patterns.pattern",
-                    this.pattern!.name,
-                  )}
-            </div>
-            ${this.colorPalette !== null
-              ? html`
-                  <div
-                    class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 text-center truncate w-full ${this
-                      .requiresPurchase
-                      ? "opacity-50"
-                      : ""}"
-                  >
-                    ${translateCosmetic(
-                      "territory_patterns.color_palette",
-                      this.colorPalette!.name,
-                    )}
-                  </div>
-                `
-              : html`<div class="h-[22px] mb-2 w-full"></div>`}
-          </div>
+          <cosmetic-info
+            .artist=${this.pattern?.artist}
+            .rarity=${this.pattern?.rarity}
+            .colorPalette=${this.colorPalette?.name ?? undefined}
+          ></cosmetic-info>
 
           <div
             class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 border border-white/10 group-hover:border-white/20 transition-colors duration-200 overflow-hidden"
@@ -129,16 +103,7 @@ export class PatternButton extends LitElement {
             )}
           </div>
         </button>
-
-        ${this.requiresPurchase && this.pattern?.product
-          ? html`
-              <purchase-button
-                .product=${this.pattern.product}
-                .onPurchase=${() => this.handlePurchase()}
-              ></purchase-button>
-            `
-          : null}
-      </div>
+      </cosmetic-container>
     `;
   }
 }
