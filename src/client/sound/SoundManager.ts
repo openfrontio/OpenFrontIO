@@ -104,7 +104,7 @@ export class SoundManager implements ISoundManager {
     this.playBackgroundMusic();
   }
 
-  public loadSoundEffect(name: SoundEffect, src: string): void {
+  private loadSoundEffect(name: SoundEffect, src: string): void {
     if (!this.soundEffects.has(name)) {
       const sound = new Howl({
         src: [src],
@@ -178,7 +178,7 @@ export class SoundManager implements ISoundManager {
     this.activeSounds = this.activeSounds.filter((s) => s.effect !== name);
   }
 
-  public unloadSoundEffect(name: SoundEffect): void {
+  private unloadSoundEffect(name: SoundEffect): void {
     const sound = this.soundEffects.get(name);
     if (sound) {
       sound.unload();
