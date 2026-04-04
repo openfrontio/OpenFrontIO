@@ -53,12 +53,6 @@ export class SettingsModal extends LitElement implements Layer {
   wasPausedWhenOpened = false;
 
   init() {
-    this.soundManager.setBackgroundMusicVolume(
-      this.userSettings.backgroundMusicVolume(),
-    );
-    this.soundManager.setSoundEffectsVolume(
-      this.userSettings.soundEffectsVolume(),
-    );
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;

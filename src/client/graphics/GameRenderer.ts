@@ -56,6 +56,8 @@ export function createRenderer(
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
+  soundManager.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
+  soundManager.setSoundEffectsVolume(userSettings.soundEffectsVolume());
 
   const uiState: UIState = {
     attackRatio: 20,

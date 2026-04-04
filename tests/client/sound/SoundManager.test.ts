@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock howler before importing SoundManager
+const howlCtor = vi.fn();
 vi.mock("howler", () => {
   let mockPlayId = 1;
   class MockHowl {
@@ -10,7 +11,9 @@ vi.mock("howler", () => {
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
     once = vi.fn();
-    constructor(_opts: any) {}
+    constructor(_opts: any) {
+      howlCtor(_opts);
+    }
   }
   return { Howl: MockHowl };
 });
@@ -42,6 +45,7 @@ describe("SoundManager", () => {
 
   beforeEach(() => {
     soundManager = new SoundManager();
+    howlCtor.mockClear();
   });
 
   it("implements ISoundManager interface", () => {
@@ -58,6 +62,13 @@ describe("SoundManager", () => {
     const sm1 = new SoundManager();
     const sm2 = new SoundManager();
     expect(sm1).not.toBe(sm2);
+  });
+
+  it("lazy-loads a sound effect once and reuses it", () => {
+    soundManager.playSoundEffect(SoundEffect.Click);
+    soundManager.playSoundEffect(SoundEffect.Click);
+    // Howl constructor should only be called once for Click
+    expect(howlCtor).toHaveBeenCalledTimes(1);
   });
 
   it("can be used as ISoundManager type", () => {

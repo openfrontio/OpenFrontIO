@@ -71,11 +71,13 @@ import { SoundManager } from "../../../src/client/sound/SoundManager";
 
 describe("Sound channel management", () => {
   let sm: SoundManager;
+  let baselineHowlCount = 0;
 
   beforeEach(() => {
     nextPlayId = 1;
     allHowlInstances.length = 0;
     sm = new SoundManager();
+    baselineHowlCount = allHowlInstances.length;
   });
 
   it("MAX_CONCURRENT_SOUNDS is 4", () => {
@@ -90,7 +92,7 @@ describe("Sound channel management", () => {
 
     // All 4 should have played (each lazy-loads a Howl, which calls play)
     // 3 background music Howls + 4 effect Howls = 7 total
-    const effectHowls = allHowlInstances.slice(3); // skip background music
+    const effectHowls = allHowlInstances.slice(baselineHowlCount); // skip background music
     expect(effectHowls.length).toBe(4);
     effectHowls.forEach((h) => expect(h.play).toHaveBeenCalledTimes(1));
   });
@@ -102,22 +104,18 @@ describe("Sound channel management", () => {
     sm.playSoundEffect(SoundEffect.AtomLaunch); // priority 6
     sm.playSoundEffect(SoundEffect.MIRVLaunch); // priority 6
 
-    const effectHowlsBefore = allHowlInstances.slice(3);
+    const effectHowlsBefore = allHowlInstances.slice(baselineHowlCount);
     expect(effectHowlsBefore.length).toBe(4);
 
     // Try to play a Click (priority 1) - should be dropped
     sm.playSoundEffect(SoundEffect.Click);
 
-    // No new Howl created for Click since it can't preempt
-    // Click Howl gets lazy-loaded but play should not be called on it
-    // Actually, getOrLoadSoundEffect runs first, then priority check.
-    // The Howl gets created but play() is not called on it.
-    const clickHowls = allHowlInstances.slice(3).filter((h) => {
-      // The click howl was created but play should not have been called
-      return h.play.mock.calls.length === 0;
-    });
-    // One howl was created (lazy load) but never played
-    expect(clickHowls.length).toBe(1);
+    // Total play count should still be 4 — Click was dropped
+    const totalPlayCount = allHowlInstances.reduce(
+      (sum, h) => sum + h.play.mock.calls.length,
+      0,
+    );
+    expect(totalPlayCount).toBe(4);
   });
 
   it("drops a new sound when at cap and new sound has equal priority", () => {
@@ -150,7 +148,7 @@ describe("Sound channel management", () => {
     sm.playSoundEffect(SoundEffect.BuildCity); // priority 4
 
     // The Click Howl is the lowest priority
-    const clickHowl = allHowlInstances[3]; // first effect Howl after 3 bg music
+    const clickHowl = allHowlInstances[baselineHowlCount]; // first effect Howl after 3 bg music
 
     // Play a nuke hit (priority 7) - should preempt Click
     sm.playSoundEffect(SoundEffect.AtomHit);
@@ -166,7 +164,7 @@ describe("Sound channel management", () => {
     sm.playSoundEffect(SoundEffect.BuildCity); // id=4
 
     // Simulate Click finishing naturally
-    const clickHowl = allHowlInstances[3];
+    const clickHowl = allHowlInstances[baselineHowlCount];
     clickHowl._fireEvent("end", 1);
 
     // Now we should be able to play another sound without preemption
@@ -192,7 +190,7 @@ describe("Sound channel management", () => {
     // Should be able to play another low-priority sound
     sm.playSoundEffect(SoundEffect.Click);
     // The new click should have played (check total play count on click howl)
-    const clickHowl = allHowlInstances[3];
+    const clickHowl = allHowlInstances[baselineHowlCount];
     expect(clickHowl.play).toHaveBeenCalledTimes(2);
   });
 
@@ -205,7 +203,7 @@ describe("Sound channel management", () => {
     // Play AtomLaunch (priority 6) - should preempt Click (priority 1)
     sm.playSoundEffect(SoundEffect.AtomLaunch);
 
-    const clickHowl = allHowlInstances[3]; // first effect howl = Click
+    const clickHowl = allHowlInstances[baselineHowlCount]; // first effect howl = Click
     expect(clickHowl.stop).toHaveBeenCalledWith(1);
   });
 });

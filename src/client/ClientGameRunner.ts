@@ -204,10 +204,14 @@ export function joinLobby(
       }
       console.log("leaving game");
       const runner = currentGameRunner;
-      currentGameRunner = null;
       if (runner) {
-        runner.stop();
+        try {
+          runner.stop();
+        } finally {
+          currentGameRunner = null;
+        }
       } else {
+        currentGameRunner = null;
         transport.leaveGame();
       }
       return true;
