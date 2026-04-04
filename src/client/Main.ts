@@ -15,6 +15,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
