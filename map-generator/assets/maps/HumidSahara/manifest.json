@@ -1,0 +1,217 @@
+{
+  "name": "Sahara_map",
+  "nations": [
+    {
+      "name": "MegaChad",
+      "flag": "td",
+      "coordinates": [
+        1262,
+        869
+      ]
+    },
+    {
+      "name": "senegal",
+      "flag": "sn",
+      "coordinates": [
+        241,
+        865
+      ]
+    },
+    {
+      "name": "Nigeria",
+      "flag": "ng",
+      "coordinates": [
+        963,
+        1116
+      ]
+    },
+    {
+      "name": "Egypt",
+      "flag": "eg",
+      "coordinates": [
+        1873,
+        295
+      ]
+    },
+    {
+      "name": "Lybia",
+      "flag": "ly",
+      "coordinates": [
+        1210,
+        353
+      ]
+    },
+    {
+      "name": "Morocco",
+      "flag": "ma",
+      "coordinates": [
+        508,
+        199
+      ]
+    },
+    {
+      "name": "Sudan",
+      "flag": "sd",
+      "coordinates": [
+        1946,
+        909
+      ]
+    },
+    {
+      "name": "Cameroon",
+      "flag": "cm",
+      "coordinates": [
+        1303,
+        1284
+      ]
+    },
+    {
+      "name": "Niger",
+      "flag": "ne",
+      "coordinates": [
+        922,
+        870
+      ]
+    },
+    {
+      "name": "Guniea",
+      "flag": "gh",
+      "coordinates": [
+        262,
+        1052
+      ]
+    },
+    {
+      "name": "Mali",
+      "flag": "ml",
+      "coordinates": [
+        635,
+        750
+      ]
+    },
+    {
+      "name": "Mauritania",
+      "flag": "mr",
+      "coordinates": [
+        302,
+        651
+      ]
+    },
+    {
+      "name": "Western sahara",
+      "flag": "eh",
+      "coordinates": [
+        355,
+        409
+      ]
+    },
+    {
+      "name": "Algeria",
+      "flag": "dz",
+      "coordinates": [
+        764,
+        87
+      ]
+    },
+    {
+      "name": "Tunesia",
+      "flag": "tn",
+      "coordinates": [
+        1058,
+        127
+      ]
+    },
+    {
+      "name": "Togo",
+      "flag": "tg",
+      "coordinates": [
+        679,
+        1112
+      ]
+    },
+    {
+      "name": "Central African Republic",
+      "flag": "cf",
+      "coordinates": [
+        1582,
+        1125
+      ]
+    },
+    {
+      "name": "Kenya",
+      "flag": "ke",
+      "coordinates": [
+        2021,
+        1277
+      ]
+    },
+    {
+      "name": "idehan",
+      "flag": "ly",
+      "coordinates": [
+        1309,
+        599
+      ]
+    },
+    {
+      "name": "Aghar",
+      "flag": "dz",
+      "coordinates": [
+        933,
+        554
+      ]
+    },
+    {
+      "name": "Darfur",
+      "flag": "ss",
+      "coordinates": [
+        1674,
+        814
+      ]
+    },
+    {
+      "name": "Kushites",
+      "flag": "sd",
+      "coordinates": [
+        2054,
+        637
+      ]
+    },
+    {
+      "name": "Pharao's Lands",
+      "flag": "eg",
+      "coordinates": [
+        1754,
+        510
+      ]
+    },
+    {
+      "name": "Cyrenaica",
+      "flag": "ly",
+      "coordinates": [
+        1583,
+        241
+      ]
+    }
+  ],
+  "metadata": {
+    "author": "loncile",
+    "description": "Map of africa during the humid period aprox. 9000 years ago"
+  },
+  "generatedAt": "2026-04-03T20:56:02.149Z",
+  "map": {
+    "width": 2124,
+    "height": 1420,
+    "num_land_tiles": 2134625
+  },
+  "map4x": {
+    "width": 1062,
+    "height": 710,
+    "num_land_tiles": 526897
+  },
+  "map16x": {
+    "width": 531,
+    "height": 355,
+    "num_land_tiles": 128638
+  }
+}
