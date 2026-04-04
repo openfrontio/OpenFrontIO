@@ -252,6 +252,8 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+    // Apply saved UI scale on startup
+    this.userSettings.applyUiScale();
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();

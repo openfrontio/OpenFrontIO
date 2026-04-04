@@ -194,6 +194,12 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onUiScaleChange(event: Event) {
+    const scale = parseFloat((event.target as HTMLInputElement).value);
+    this.userSettings.setUiScale(scale);
+    this.requestUpdate();
+  }
+
   render() {
     if (!this.isVisible) {
       return null;
@@ -277,6 +283,34 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${Math.round(this.userSettings.soundEffectsVolume() * 100)}%
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <img
+                src=${settingsIcon}
+                alt="uiScale"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.ui_scale_label")}
+                </div>
+                <input
+                  type="range"
+                  min="50"
+                  max="200"
+                  step="10"
+                  .value=${this.userSettings.uiScale()}
+                  @input=${this.onUiScaleChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400">
+                ${Math.round(this.userSettings.uiScale())}%
               </div>
             </div>
 
