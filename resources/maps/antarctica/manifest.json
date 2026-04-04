@@ -1,0 +1,70 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 1292228,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 79013,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 320576,
+    "width": 1000
+  },
+  "name": "antarctica",
+  "nations": [
+    {
+      "coordinates": [1159, 1261],
+      "flag": "nz",
+      "name": "New Zealand Claim"
+    },
+    {
+      "coordinates": [1409, 1571],
+      "flag": "tf",
+      "name": "French Claim"
+    },
+    {
+      "coordinates": [1681, 1093],
+      "flag": "hm",
+      "name": "Australian Claim"
+    },
+    {
+      "coordinates": [1260, 510],
+      "flag": "bv",
+      "name": "Norway Claim"
+    },
+    {
+      "coordinates": [900, 686],
+      "flag": "gb",
+      "name": "United Kingdom Claim"
+    },
+    {
+      "coordinates": [351, 703],
+      "flag": "ar",
+      "name": "Argentina Claim"
+    },
+    {
+      "coordinates": [506, 939],
+      "flag": "cl",
+      "name": "Chile Claim"
+    },
+    {
+      "coordinates": [705, 1264],
+      "flag": "aq",
+      "name": "Marie Byrd Land"
+    },
+    {
+      "coordinates": [1532, 716],
+      "flag": "aq",
+      "name": "Penguins"
+    },
+    {
+      "coordinates": [1100, 954],
+      "flag": "Cthulhu Republic",
+      "name": "Ancient Aliens"
+    }
+  ]
+}
