@@ -100,7 +100,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   private lastMouseUpdate = 0;
-  private alliancesDisabled: boolean = false;
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -118,7 +117,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.immunityBarVisible = e.visible;
     });
     this._isActive = true;
-    this.alliancesDisabled = this.game.config().disableAlliances();
   }
 
   private onMouseEvent(event: MouseMoveEvent) {
@@ -265,7 +263,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
       includeAllianceIcon: false,
       firstPlace,
-      alliancesDisabled: this.alliancesDisabled,
+      alliancesDisabled: this.game.config().disableAlliances(),
     });
 
     if (icons.length === 0) {
