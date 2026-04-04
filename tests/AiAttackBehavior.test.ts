@@ -1,5 +1,11 @@
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  GameType,
+  Player,
+  PlayerInfo,
+  PlayerType,
+} from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 
@@ -12,6 +18,7 @@ describe("Ai Attack Behavior", () => {
   // Helper function for basic test setup
   async function setupTestEnvironment() {
     const testGame = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
       infiniteTroops: true,

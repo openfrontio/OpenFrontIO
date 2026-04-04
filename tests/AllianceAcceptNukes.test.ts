@@ -3,6 +3,7 @@ import { GameUpdateType } from "src/core/game/GameUpdates";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -21,6 +22,7 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     game = await setup(
       "plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         infiniteTroops: true,
