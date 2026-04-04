@@ -145,6 +145,7 @@ export enum GameMapType {
   Aegean = "Aegean",
   MilkyWay = "MilkyWay",
   Mediterranean = "Mediterranean",
+  India = "India",
   Dyslexdria = "Dyslexdria",
 }
 
@@ -198,6 +199,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
     GameMapType.Mediterranean,
+    GameMapType.India,
   ],
   fantasy: [
     GameMapType.Pangaea,

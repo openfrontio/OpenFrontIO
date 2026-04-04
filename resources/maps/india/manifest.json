@@ -1,0 +1,240 @@
+{
+  "map": {
+    "height": 1948,
+    "num_land_tiles": 1895376,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 487,
+    "num_land_tiles": 112234,
+    "width": 512
+  },
+  "map4x": {
+    "height": 974,
+    "num_land_tiles": 465176,
+    "width": 1024
+  },
+  "name": "india",
+  "nations": [
+    {
+      "coordinates": [1599, 707],
+      "flag": "bd",
+      "name": "Bangladesh"
+    },
+    {
+      "coordinates": [1957, 837],
+      "flag": "mm",
+      "name": "Myanmar"
+    },
+    {
+      "coordinates": [1625, 386],
+      "flag": "bt",
+      "name": "Bhutan"
+    },
+    {
+      "coordinates": [1313, 402],
+      "flag": "np",
+      "name": "Nepal"
+    },
+    {
+      "coordinates": [422, 392],
+      "flag": "pk",
+      "name": "Pakistan"
+    },
+    {
+      "coordinates": [320, 179],
+      "flag": "af",
+      "name": "Afghanistan"
+    },
+    {
+      "coordinates": [1448, 51],
+      "flag": "tibet",
+      "name": "Tibet"
+    },
+    {
+      "coordinates": [1908, 51],
+      "flag": "cn",
+      "name": "China"
+    },
+    {
+      "coordinates": [1126, 1607],
+      "flag": "lk",
+      "name": "Sri Lanka"
+    },
+    {
+      "coordinates": [2014, 1784],
+      "flag": "id",
+      "name": "Indonesia"
+    },
+    {
+      "coordinates": [1797, 1315],
+      "flag": "in",
+      "name": "Andaman \u0026 Nicobar Islands"
+    },
+    {
+      "coordinates": [675, 1467],
+      "flag": "in",
+      "name": "Lakshadweep"
+    },
+    {
+      "coordinates": [705, 1643],
+      "flag": "mv",
+      "name": "Maldives"
+    },
+    {
+      "coordinates": [937, 1453],
+      "flag": "in",
+      "name": "Kerala"
+    },
+    {
+      "coordinates": [1031, 1449],
+      "flag": "in",
+      "name": "Tamil Nadu"
+    },
+    {
+      "coordinates": [846, 1208],
+      "flag": "in",
+      "name": "Karnataka"
+    },
+    {
+      "coordinates": [1066, 1158],
+      "flag": "in",
+      "name": "Andhra Pradesh"
+    },
+    {
+      "coordinates": [987, 1008],
+      "flag": "in",
+      "name": "Telangana"
+    },
+    {
+      "coordinates": [813, 883],
+      "flag": "in",
+      "name": "Maharashtra"
+    },
+    {
+      "coordinates": [743, 1062],
+      "flag": "in",
+      "name": "Goa"
+    },
+    {
+      "coordinates": [1359, 886],
+      "flag": "in",
+      "name": "Odisha"
+    },
+    {
+      "coordinates": [559, 751],
+      "flag": "in",
+      "name": "Gujarat"
+    },
+    {
+      "coordinates": [961, 717],
+      "flag": "in",
+      "name": "Madhya Pradesh"
+    },
+    {
+      "coordinates": [1081, 870],
+      "flag": "in",
+      "name": "Chhattisgarh"
+    },
+    {
+      "coordinates": [1428, 725],
+      "flag": "in",
+      "name": "West Bengal"
+    },
+    {
+      "coordinates": [1317, 717],
+      "flag": "in",
+      "name": "Jharkhand"
+    },
+    {
+      "coordinates": [1382, 556],
+      "flag": "in",
+      "name": "Bihar"
+    },
+    {
+      "coordinates": [1480, 388],
+      "flag": "in",
+      "name": "Sikkim"
+    },
+    {
+      "coordinates": [1761, 539],
+      "flag": "in",
+      "name": "Assam"
+    },
+    {
+      "coordinates": [1115, 531],
+      "flag": "in",
+      "name": "Uttar Pradesh"
+    },
+    {
+      "coordinates": [754, 527],
+      "flag": "in",
+      "name": "Rajasthan"
+    },
+    {
+      "coordinates": [1624, 507],
+      "flag": "in",
+      "name": "Meghalaya"
+    },
+    {
+      "coordinates": [1744, 675],
+      "flag": "in",
+      "name": "Tripura"
+    },
+    {
+      "coordinates": [1769, 716],
+      "flag": "in",
+      "name": "Mizoram"
+    },
+    {
+      "coordinates": [1844, 604],
+      "flag": "in",
+      "name": "Manipur"
+    },
+    {
+      "coordinates": [1924, 479],
+      "flag": "in",
+      "name": "Nagaland"
+    },
+    {
+      "coordinates": [1824, 371],
+      "flag": "in",
+      "name": "Arunachal Pradesh"
+    },
+    {
+      "coordinates": [858, 337],
+      "flag": "in",
+      "name": "Haryana"
+    },
+    {
+      "coordinates": [684, 326],
+      "flag": "in",
+      "name": "Punjab"
+    },
+    {
+      "coordinates": [1087, 290],
+      "flag": "in",
+      "name": "Uttarakhand"
+    },
+    {
+      "coordinates": [979, 149],
+      "flag": "in",
+      "name": "Himachal Pradesh"
+    },
+    {
+      "coordinates": [804, 16],
+      "flag": "",
+      "name": "Kashmir"
+    },
+    {
+      "coordinates": [43, 395],
+      "flag": "ir",
+      "name": "Iran"
+    },
+    {
+      "coordinates": [131, 10],
+      "flag": "tj",
+      "name": "Tajikistan"
+    }
+  ]
+}
