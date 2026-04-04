@@ -143,9 +143,9 @@ describe("Sound channel management", () => {
   it("preempts lowest priority sound when new sound has higher priority", () => {
     // Fill channels with low-priority sounds
     sm.playSoundEffect(SoundEffect.Click); // priority 1
-    sm.playSoundEffect(SoundEffect.Message); // priority 2
-    sm.playSoundEffect(SoundEffect.KaChing); // priority 3
-    sm.playSoundEffect(SoundEffect.BuildCity); // priority 4
+    sm.playSoundEffect(SoundEffect.KaChing); // priority 2
+    sm.playSoundEffect(SoundEffect.BuildCity); // priority 3
+    sm.playSoundEffect(SoundEffect.Message); // priority 4
 
     // The Click Howl is the lowest priority
     const clickHowl = allHowlInstances[baselineHowlCount]; // first effect Howl after 3 bg music
