@@ -71,6 +71,15 @@ describe("SoundManager", () => {
     expect(howlCtor).toHaveBeenCalledTimes(1);
   });
 
+  it("applies current volume to lazily-loaded sounds", () => {
+    soundManager.setSoundEffectsVolume(0.3);
+    soundManager.playSoundEffect(SoundEffect.Click);
+    // The Howl should have been created with volume 0.3
+    expect(howlCtor).toHaveBeenCalledWith(
+      expect.objectContaining({ volume: 0.3 }),
+    );
+  });
+
   it("can be used as ISoundManager type", () => {
     // Verify structural compatibility at runtime
     const sm: ISoundManager = soundManager;
@@ -124,11 +133,11 @@ describe("SoundEffect enum", () => {
     expect(SoundEffect.Click).toBe("click");
   });
 
-  it("is re-exported from SoundManager module", async () => {
-    const soundManagerModule = await import(
-      "../../../src/client/sound/SoundManager"
+  it("is exported from ISoundManager module, not SoundManager", async () => {
+    const iSoundManagerModule = await import(
+      "../../../src/client/sound/ISoundManager"
     );
-    expect(soundManagerModule.SoundEffect).toBeDefined();
-    expect(soundManagerModule.SoundEffect.Click).toBe("click");
+    expect(iSoundManagerModule.SoundEffect).toBeDefined();
+    expect(iSoundManagerModule.SoundEffect.Click).toBe("click");
   });
 });

@@ -119,21 +119,21 @@ describe("Sound channel management", () => {
   });
 
   it("drops a new sound when at cap and new sound has equal priority", () => {
-    // Fill with KaChing (priority 3)
+    // Fill with KaChing (priority 2)
     sm.playSoundEffect(SoundEffect.KaChing);
     sm.playSoundEffect(SoundEffect.KaChing);
     sm.playSoundEffect(SoundEffect.KaChing);
     sm.playSoundEffect(SoundEffect.KaChing);
 
-    // Try another KaChing (same priority 3) - should be dropped
+    // Try another KaChing (same priority 2) - should be dropped
     const playCountBefore = allHowlInstances
-      .slice(3)
+      .slice(baselineHowlCount)
       .reduce((sum, h) => sum + h.play.mock.calls.length, 0);
 
     sm.playSoundEffect(SoundEffect.KaChing);
 
     const playCountAfter = allHowlInstances
-      .slice(3)
+      .slice(baselineHowlCount)
       .reduce((sum, h) => sum + h.play.mock.calls.length, 0);
 
     // No additional play call

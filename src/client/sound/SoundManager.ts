@@ -104,16 +104,6 @@ export class SoundManager implements ISoundManager {
     this.playBackgroundMusic();
   }
 
-  private loadSoundEffect(name: SoundEffect, src: string): void {
-    if (!this.soundEffects.has(name)) {
-      const sound = new Howl({
-        src: [src],
-        volume: this.soundEffectsVolume,
-      });
-      this.soundEffects.set(name, sound);
-    }
-  }
-
   private getOrLoadSoundEffect(name: SoundEffect): Howl | null {
     let sound = this.soundEffects.get(name);
     if (sound) return sound;
@@ -177,15 +167,4 @@ export class SoundManager implements ISoundManager {
     }
     this.activeSounds = this.activeSounds.filter((s) => s.effect !== name);
   }
-
-  private unloadSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.unload();
-      this.soundEffects.delete(name);
-    }
-  }
 }
-
-export { SoundEffect } from "./ISoundManager";
-export type { ISoundManager } from "./ISoundManager";
