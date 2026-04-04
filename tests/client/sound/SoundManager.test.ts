@@ -2,12 +2,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Mock howler before importing SoundManager
 vi.mock("howler", () => {
+  let mockPlayId = 1;
   class MockHowl {
-    play = vi.fn();
+    play = vi.fn(() => mockPlayId++);
     stop = vi.fn();
     volume = vi.fn();
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
+    once = vi.fn();
     constructor(_opts: any) {}
   }
   return { Howl: MockHowl };
