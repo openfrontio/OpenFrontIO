@@ -150,23 +150,32 @@ export class WarshipExecution implements Execution {
   }
 
   private shootTarget() {
+    const target = this.warship.targetUnit();
+    if (target === undefined) {
+      return;
+    }
+
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
-    if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
-      if (this.warship.targetUnit()?.type() !== UnitType.TransportShip) {
-        // Warships don't need to reload when attacking transport ships.
-        this.lastShellAttack = this.mg.ticks();
-      }
+    // Keep transport shelling much faster than warship-vs-warship, but 2x slower than old "every tick" behavior.
+    const transportAttackRate = Math.max(1, Math.floor(shellAttackRate / 20));
+    const effectiveAttackRate =
+      target.type() === UnitType.TransportShip
+        ? transportAttackRate
+        : shellAttackRate;
+
+    if (this.mg.ticks() - this.lastShellAttack >= effectiveAttackRate) {
+      this.lastShellAttack = this.mg.ticks();
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),
           this.warship.owner(),
           this.warship,
-          this.warship.targetUnit()!,
+          target,
         ),
       );
-      if (!this.warship.targetUnit()!.hasHealth()) {
+      if (!target.hasHealth()) {
         // Don't send multiple shells to target that can be oneshotted
-        this.alreadySentShell.add(this.warship.targetUnit()!);
+        this.alreadySentShell.add(target);
         this.warship.setTargetUnit(undefined);
         return;
       }

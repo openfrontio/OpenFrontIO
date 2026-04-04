@@ -52,6 +52,12 @@ export class ShellExecution implements Execution {
       );
       if (result.status === PathStatus.COMPLETE) {
         this.active = false;
+        const handledTransportHit = this.applyFixedTroopLossOnTransport();
+        if (handledTransportHit) {
+          this.shell.setReachedTarget();
+          this.shell.delete(false);
+          return;
+        }
         this.target.modifyHealth(-this.effectOnTarget(), this._owner);
         this.shell.setReachedTarget();
         this.shell.delete(false);
@@ -68,8 +74,31 @@ export class ShellExecution implements Execution {
 
     const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;
-
     return Math.round((baseDamage / 250) * damageMultiplier);
+  }
+
+  private applyFixedTroopLossOnTransport(): boolean {
+    if (this.target.type() !== UnitType.TransportShip) {
+      return false;
+    }
+
+    const currentTroops = this.target.troops();
+    if (currentTroops <= 0) {
+      return true;
+    }
+
+    // Fixed troop loss per shell hit (not percentage based).
+    const fixedLossPerHit = 80000;
+    const nextTroops = Math.max(0, currentTroops - fixedLossPerHit);
+    this.target.setTroops(nextTroops);
+    this.target.touch();
+
+    if (nextTroops === 0) {
+      this.target.delete(true, this._owner);
+    }
+
+    // Transport hits are fully resolved by troop loss; skip HP damage.
+    return true;
   }
 
   public getEffectOnTargetForTesting(): number {
