@@ -6,12 +6,11 @@ import { assetUrl } from "../../core/AssetUrls";
 import { EventBus } from "../../core/EventBus";
 import { UserSettings } from "../../core/game/UserSettings";
 import {
-  ISoundManager,
   PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
   SoundEffect,
-} from "./ISoundManager";
+} from "./SoundEvents";
 const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
 const allianceSuggestedSound = assetUrl(
   "sounds/effects/alliance-suggested.mp3",
@@ -30,7 +29,7 @@ const messageSound = assetUrl("sounds/effects/message.mp3");
 const mirvLaunchSound = assetUrl("sounds/effects/mirv-launch.mp3");
 const samBuiltSound = assetUrl("sounds/effects/sam-built.mp3");
 
-export class SoundManager implements ISoundManager {
+export class SoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
   private soundEffects: Map<SoundEffect, Howl> = new Map();

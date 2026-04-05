@@ -29,12 +29,3 @@ export class SetSoundEffectsVolumeEvent implements GameEvent {
 export class SetBackgroundMusicVolumeEvent implements GameEvent {
   constructor(public readonly volume: number) {}
 }
-
-export interface ISoundManager {
-  playBackgroundMusic(): void;
-  stopBackgroundMusic(): void;
-  setBackgroundMusicVolume(volume: number): void;
-  setSoundEffectsVolume(volume: number): void;
-  playSoundEffect(name: SoundEffect): void;
-  stopSoundEffect(name: SoundEffect): void;
-}

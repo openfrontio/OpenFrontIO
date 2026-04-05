@@ -4,7 +4,7 @@ import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { ConquestUpdate, GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { PlaySoundEffectEvent, SoundEffect } from "../../sound/ISoundManager";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/SoundEvents";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";

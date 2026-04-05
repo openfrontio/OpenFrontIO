@@ -40,7 +40,7 @@ import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
   SoundEffect,
-} from "../../../src/client/sound/ISoundManager";
+} from "../../../src/client/sound/SoundEvents";
 import { SoundManager } from "../../../src/client/sound/SoundManager";
 import { EventBus } from "../../../src/core/EventBus";
 import { UserSettings } from "../../../src/core/game/UserSettings";

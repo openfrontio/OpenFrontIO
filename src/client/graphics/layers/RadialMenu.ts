@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
-import { PlaySoundEffectEvent, SoundEffect } from "../../sound/ISoundManager";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/SoundEvents";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {

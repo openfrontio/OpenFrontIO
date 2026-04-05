@@ -36,7 +36,7 @@ import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
-import { PlaySoundEffectEvent, SoundEffect } from "../../sound/ISoundManager";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/SoundEvents";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
