@@ -258,23 +258,28 @@ async function createClientGame(
 
   const canvas = createCanvas();
   const soundManager = new SoundManager(eventBus, userSettings);
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  try {
+    const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
-  console.log(
-    `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
-  );
+    console.log(
+      `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
+    );
 
-  return new ClientGameRunner(
-    lobbyConfig,
-    clientID,
-    eventBus,
-    gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
-    transport,
-    worker,
-    gameView,
-    soundManager,
-  );
+    return new ClientGameRunner(
+      lobbyConfig,
+      clientID,
+      eventBus,
+      gameRenderer,
+      new InputHandler(gameRenderer.uiState, canvas, eventBus),
+      transport,
+      worker,
+      gameView,
+      soundManager,
+    );
+  } catch (err) {
+    soundManager.dispose();
+    throw err;
+  }
 }
 
 export class ClientGameRunner {
@@ -531,7 +536,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    this.soundManager.stopBackgroundMusic();
+    this.soundManager.dispose();
     if (!this.isActive) return;
 
     this.isActive = false;

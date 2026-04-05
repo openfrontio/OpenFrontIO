@@ -35,6 +35,12 @@ export class SoundManager {
   private soundEffects: Map<SoundEffect, Howl> = new Map();
   private soundEffectsVolume: number = 1;
   private backgroundMusicVolume: number = 0;
+  private eventBus: EventBus;
+  private onPlaySoundEffect: (e: PlaySoundEffectEvent) => void;
+  private onSetBackgroundMusicVolume: (
+    e: SetBackgroundMusicVolumeEvent,
+  ) => void;
+  private onSetSoundEffectsVolume: (e: SetSoundEffectsVolumeEvent) => void;
 
   private static readonly soundEffectUrls: ReadonlyMap<SoundEffect, string> =
     new Map([
@@ -56,6 +62,7 @@ export class SoundManager {
     ]);
 
   constructor(eventBus: EventBus, userSettings: UserSettings) {
+    this.eventBus = eventBus;
     this.safely("initialize background music", () => {
       this.backgroundMusic = [
         new Howl({
@@ -80,13 +87,33 @@ export class SoundManager {
     });
     this.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
     this.setSoundEffectsVolume(userSettings.soundEffectsVolume());
-    eventBus.on(PlaySoundEffectEvent, (e) => this.playSoundEffect(e.effect));
-    eventBus.on(SetBackgroundMusicVolumeEvent, (e) =>
-      this.setBackgroundMusicVolume(e.volume),
+    this.onPlaySoundEffect = (e) => this.playSoundEffect(e.effect);
+    this.onSetBackgroundMusicVolume = (e) =>
+      this.setBackgroundMusicVolume(e.volume);
+    this.onSetSoundEffectsVolume = (e) => this.setSoundEffectsVolume(e.volume);
+    eventBus.on(PlaySoundEffectEvent, this.onPlaySoundEffect);
+    eventBus.on(SetBackgroundMusicVolumeEvent, this.onSetBackgroundMusicVolume);
+    eventBus.on(SetSoundEffectsVolumeEvent, this.onSetSoundEffectsVolume);
+  }
+
+  public dispose(): void {
+    this.eventBus.off(PlaySoundEffectEvent, this.onPlaySoundEffect);
+    this.eventBus.off(
+      SetBackgroundMusicVolumeEvent,
+      this.onSetBackgroundMusicVolume,
     );
-    eventBus.on(SetSoundEffectsVolumeEvent, (e) =>
-      this.setSoundEffectsVolume(e.volume),
-    );
+    this.eventBus.off(SetSoundEffectsVolumeEvent, this.onSetSoundEffectsVolume);
+    this.safely("stop background music", () => {
+      this.backgroundMusic.forEach((track) => track.stop());
+      this.backgroundMusic.forEach((track) => track.unload());
+    });
+    this.safely("unload sound effects", () => {
+      this.soundEffects.forEach((sound) => {
+        sound.stop();
+        sound.unload();
+      });
+      this.soundEffects.clear();
+    });
   }
 
   private safely(action: string, fn: () => void): void {

@@ -138,6 +138,40 @@ describe("SoundManager", () => {
     });
   });
 
+  it("dispose() unsubscribes from EventBus so events no longer play sounds", () => {
+    // Load a Click sound first so we can observe it
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    const clickHowl = howlInstances[howlInstances.length - 1];
+    expect(clickHowl.play).toHaveBeenCalledTimes(1);
+
+    soundManager.dispose();
+
+    // After dispose, emitting the event should not play the sound again
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    expect(clickHowl.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispose() stops and unloads all loaded sound effects", () => {
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    const clickHowl = howlInstances[howlInstances.length - 1];
+
+    soundManager.dispose();
+
+    expect(clickHowl.stop).toHaveBeenCalled();
+    expect(clickHowl.unload).toHaveBeenCalled();
+  });
+
+  it("dispose() stops and unloads background music", () => {
+    const bgHowls = howlInstances.slice(0, 3);
+
+    soundManager.dispose();
+
+    bgHowls.forEach((h) => {
+      expect(h.stop).toHaveBeenCalled();
+      expect(h.unload).toHaveBeenCalled();
+    });
+  });
+
   it("does not throw when playSoundEffect is called directly", () => {
     expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
   });

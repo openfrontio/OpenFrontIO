@@ -461,7 +461,11 @@ export class EventsDisplay extends LitElement implements Layer {
       update.recipientID,
     ) as PlayerView;
 
-    this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AllianceSuggested));
+    if (!requestor.isAlliedWith(recipient)) {
+      this.eventBus.emit(
+        new PlaySoundEffectEvent(SoundEffect.AllianceSuggested),
+      );
+    }
     this.addEvent({
       description: translateText("events_display.request_alliance", {
         name: requestor.displayName(),
