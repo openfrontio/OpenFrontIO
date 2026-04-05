@@ -16,13 +16,6 @@ export class SettingToggle extends LitElement {
   private handleChange(e: Event) {
     const input = e.target as HTMLInputElement;
     this.checked = input.checked;
-    this.dispatchEvent(
-      new CustomEvent("change", {
-        detail: { checked: this.checked },
-        bubbles: true,
-        composed: true,
-      }),
-    );
   }
 
   render() {

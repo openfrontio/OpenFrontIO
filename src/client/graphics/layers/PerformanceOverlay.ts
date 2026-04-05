@@ -1,7 +1,11 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { UserSettings } from "../../../core/game/UserSettings";
+import {
+  PERFORMANCE_OVERLAY_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../../core/game/UserSettings";
 import {
   TickMetricsEvent,
   TogglePerformanceOverlayEvent,
@@ -469,15 +473,15 @@ export class PerformanceOverlay extends LitElement implements Layer {
   ) => {
     const nextVisible = !this.isVisible;
     this.setVisible(nextVisible);
-    this.userSettings.set("settings.performanceOverlay", nextVisible);
+    this.userSettings.setPerformanceOverlay(nextVisible);
   };
 
   private onTickMetricsEvent = (event: TickMetricsEvent) => {
     this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
   };
 
-  private onUserSettingsChanged = (event: CustomEvent) => {
-    const nextVisible = (event.detail as boolean) === true;
+  private onUserSettingsChanged = (event: CustomEvent<string>) => {
+    const nextVisible = event.detail === "true";
     if (this.isVisible === nextVisible) return;
     this.setVisible(nextVisible);
   };
@@ -505,7 +509,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (!this.isUserSettingsListenerAttached) {
       globalThis.addEventListener(
-        "event:user-settings-changed:settings.performanceOverlay",
+        `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
         this.onUserSettingsChanged,
       );
       this.isUserSettingsListenerAttached = true;
@@ -517,7 +521,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (this.isUserSettingsListenerAttached) {
       globalThis.removeEventListener(
-        "event:user-settings-changed:settings.performanceOverlay",
+        `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
         this.onUserSettingsChanged,
       );
       this.isUserSettingsListenerAttached = false;
@@ -576,7 +580,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private handleClose() {
     const nextVisible = false;
     this.setVisible(nextVisible);
-    this.userSettings.set("settings.performanceOverlay", nextVisible);
+    this.userSettings.setPerformanceOverlay(nextVisible);
   }
 
   private onDragPointerMove = (e: PointerEvent) => {

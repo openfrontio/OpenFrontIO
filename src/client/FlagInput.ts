@@ -1,7 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { FlagName } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  FLAG_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { resolveFlagUrl } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -41,7 +45,7 @@ export class FlagInput extends LitElement {
     super.connectedCallback();
     this.flag = new UserSettings().getFlag() ?? "";
     window.addEventListener(
-      "event:user-settings-changed:flag",
+      `${USER_SETTINGS_CHANGED_EVENT}:${FLAG_KEY}`,
       this.updateFlag as EventListener,
     );
   }
@@ -49,7 +53,7 @@ export class FlagInput extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener(
-      "event:user-settings-changed:flag",
+      `${USER_SETTINGS_CHANGED_EVENT}:${FLAG_KEY}`,
       this.updateFlag as EventListener,
     );
   }
