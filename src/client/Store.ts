@@ -179,13 +179,7 @@ export class StoreModal extends BaseModal {
       const selectedFlag = new UserSettings().getFlag() ?? "";
       buttons.push(html`
         <flag-button
-          .flag=${{
-            key: `flag:${key}`,
-            name: flag.name,
-            url: flag.url,
-            product: flag.product,
-            artist: flag.artist,
-          }}
+          .flag=${{ ...flag, key: `flag:${key}` }}
           .selected=${selectedFlag === `flag:${key}`}
           .requiresPurchase=${rel === "purchasable"}
           .onPurchase=${() => handlePurchase(flag.product!)}

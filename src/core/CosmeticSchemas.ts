@@ -51,8 +51,17 @@ export const ColorPaletteSchema = z.object({
   secondaryColor: z.string(),
 });
 
-export const PatternSchema = z.object({
+const CosmeticSchema = z.object({
   name: CosmeticNameSchema,
+  affiliateCode: z.string().nullable(),
+  product: ProductSchema.nullable(),
+  artist: z.string().optional(),
+  rarity: z
+    .enum(["common", "uncommon", "rare", "epic", "legendary"])
+    .or(z.string()),
+});
+
+export const PatternSchema = CosmeticSchema.extend({
   pattern: PatternDataSchema,
   colorPalettes: z
     .object({
@@ -61,17 +70,10 @@ export const PatternSchema = z.object({
     })
     .array()
     .optional(),
-  affiliateCode: z.string().nullable(),
-  product: ProductSchema.nullable(),
-  artist: z.string().optional(),
 });
 
-export const FlagSchema = z.object({
-  name: CosmeticNameSchema,
+export const FlagSchema = CosmeticSchema.extend({
   url: z.string(),
-  affiliateCode: z.string().nullable(),
-  product: ProductSchema.nullable(),
-  artist: z.string().optional(),
 });
 
 // Schema for resources/cosmetics/cosmetics.json
