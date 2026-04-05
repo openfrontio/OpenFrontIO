@@ -1,3 +1,5 @@
+import { GameEvent } from "../../core/EventBus";
+
 export enum SoundEffect {
   KaChing = "ka-ching",
   AtomHit = "atom-hit",
@@ -14,6 +16,18 @@ export enum SoundEffect {
   SAMBuilt = "sam-built",
   Message = "message",
   Click = "click",
+}
+
+export class PlaySoundEffectEvent implements GameEvent {
+  constructor(public readonly effect: SoundEffect) {}
+}
+
+export class SetSoundEffectsVolumeEvent implements GameEvent {
+  constructor(public readonly volume: number) {}
+}
+
+export class SetBackgroundMusicVolumeEvent implements GameEvent {
+  constructor(public readonly volume: number) {}
 }
 
 export interface ISoundManager {

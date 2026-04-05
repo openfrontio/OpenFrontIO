@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock howler before importing SoundManager
 const howlCtor = vi.fn();
+const howlInstances: any[] = [];
 vi.mock("howler", () => {
-  let mockPlayId = 1;
   class MockHowl {
-    play = vi.fn(() => mockPlayId++);
+    play = vi.fn();
     stop = vi.fn();
     volume = vi.fn();
     playing = vi.fn().mockReturnValue(false);
@@ -13,6 +13,7 @@ vi.mock("howler", () => {
     once = vi.fn();
     constructor(_opts: any) {
       howlCtor(_opts);
+      howlInstances.push(this);
     }
   }
   return { Howl: MockHowl };
@@ -35,87 +36,120 @@ vi.mock("../../../src/core/AssetUrls", () => ({
 }));
 
 import {
-  ISoundManager,
+  PlaySoundEffectEvent,
+  SetBackgroundMusicVolumeEvent,
+  SetSoundEffectsVolumeEvent,
   SoundEffect,
 } from "../../../src/client/sound/ISoundManager";
 import { SoundManager } from "../../../src/client/sound/SoundManager";
+import { EventBus } from "../../../src/core/EventBus";
+import { UserSettings } from "../../../src/core/game/UserSettings";
+
+function createUserSettings(musicVolume = 0, sfxVolume = 1): UserSettings {
+  const settings = new UserSettings();
+  settings.setBackgroundMusicVolume(musicVolume);
+  settings.setSoundEffectsVolume(sfxVolume);
+  return settings;
+}
 
 describe("SoundManager", () => {
+  let eventBus: EventBus;
+  let userSettings: UserSettings;
   let soundManager: SoundManager;
 
   beforeEach(() => {
-    soundManager = new SoundManager();
     howlCtor.mockClear();
-  });
-
-  it("implements ISoundManager interface", () => {
-    const sm: ISoundManager = soundManager;
-    expect(sm.playBackgroundMusic).toBeDefined();
-    expect(sm.stopBackgroundMusic).toBeDefined();
-    expect(sm.setBackgroundMusicVolume).toBeDefined();
-    expect(sm.setSoundEffectsVolume).toBeDefined();
-    expect(sm.playSoundEffect).toBeDefined();
-    expect(sm.stopSoundEffect).toBeDefined();
-  });
-
-  it("is not a singleton - each instantiation creates a new instance", () => {
-    const sm1 = new SoundManager();
-    const sm2 = new SoundManager();
-    expect(sm1).not.toBe(sm2);
+    howlInstances.length = 0;
+    eventBus = new EventBus();
+    userSettings = createUserSettings();
+    soundManager = new SoundManager(eventBus, userSettings);
   });
 
   it("lazy-loads a sound effect once and reuses it", () => {
-    soundManager.playSoundEffect(SoundEffect.Click);
-    soundManager.playSoundEffect(SoundEffect.Click);
-    // Howl constructor should only be called once for Click
-    expect(howlCtor).toHaveBeenCalledTimes(1);
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    // 3 background music Howls + 1 Click Howl = 4
+    expect(howlCtor).toHaveBeenCalledTimes(4);
   });
 
-  it("applies current volume to lazily-loaded sounds", () => {
-    soundManager.setSoundEffectsVolume(0.3);
-    soundManager.playSoundEffect(SoundEffect.Click);
-    // The Howl should have been created with volume 0.3
-    expect(howlCtor).toHaveBeenCalledWith(
+  it("plays a sound effect when PlaySoundEffectEvent is emitted", () => {
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomHit));
+    // 3 bg music + 1 effect = 4. The effect is the last created Howl.
+    const effectHowl = howlInstances[howlInstances.length - 1];
+    expect(effectHowl.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies bootstrap volume from UserSettings to background music", () => {
+    const settings = createUserSettings(0.5, 1);
+    const bus = new EventBus();
+    howlCtor.mockClear();
+    howlInstances.length = 0;
+    new SoundManager(bus, settings);
+    // All 3 background music Howls should have volume set to 0.5
+    const bgHowls = howlInstances.slice(0, 3);
+    bgHowls.forEach((h) => {
+      expect(h.volume).toHaveBeenCalledWith(0.5);
+    });
+  });
+
+  it("applies current sfx volume to lazily-loaded sounds", () => {
+    const settings = createUserSettings(0, 0.3);
+    const bus = new EventBus();
+    howlCtor.mockClear();
+    howlInstances.length = 0;
+    new SoundManager(bus, settings);
+    bus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    // The Click Howl should be created with volume 0.3
+    const clickHowl = howlInstances[howlInstances.length - 1];
+    expect(howlCtor).toHaveBeenLastCalledWith(
       expect.objectContaining({ volume: 0.3 }),
     );
+    expect(clickHowl).toBeDefined();
   });
 
-  it("can be used as ISoundManager type", () => {
-    // Verify structural compatibility at runtime
-    const sm: ISoundManager = soundManager;
-    expect(() => sm.playSoundEffect(SoundEffect.Click)).not.toThrow();
-    expect(() => sm.stopSoundEffect(SoundEffect.Click)).not.toThrow();
-    expect(() => sm.setBackgroundMusicVolume(0.5)).not.toThrow();
-    expect(() => sm.setSoundEffectsVolume(0.5)).not.toThrow();
-    expect(() => sm.playBackgroundMusic()).not.toThrow();
-    expect(() => sm.stopBackgroundMusic()).not.toThrow();
+  it("responds to SetBackgroundMusicVolumeEvent", () => {
+    eventBus.emit(new SetBackgroundMusicVolumeEvent(0.7));
+    const bgHowls = howlInstances.slice(0, 3);
+    bgHowls.forEach((h) => {
+      expect(h.volume).toHaveBeenCalledWith(0.7);
+    });
   });
-});
 
-describe("ISoundManager interface", () => {
-  it("can be implemented as a mock for testing consumers", () => {
-    const mockSoundManager: ISoundManager = {
-      playBackgroundMusic: vi.fn(),
-      stopBackgroundMusic: vi.fn(),
-      setBackgroundMusicVolume: vi.fn(),
-      setSoundEffectsVolume: vi.fn(),
-      playSoundEffect: vi.fn(),
-      stopSoundEffect: vi.fn(),
-    };
+  it("responds to SetSoundEffectsVolumeEvent", () => {
+    // Load a sound first
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    const clickHowl = howlInstances[howlInstances.length - 1];
+    clickHowl.volume.mockClear();
+    eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
+    expect(clickHowl.volume).toHaveBeenCalledWith(0.4);
+  });
 
-    // Verify mock works correctly
-    mockSoundManager.playSoundEffect(SoundEffect.Click);
-    expect(mockSoundManager.playSoundEffect).toHaveBeenCalledWith(
-      SoundEffect.Click,
-    );
+  it("clamps volume values between 0 and 1", () => {
+    eventBus.emit(new SetBackgroundMusicVolumeEvent(2));
+    const bgHowls = howlInstances.slice(0, 3);
+    bgHowls.forEach((h) => {
+      expect(h.volume).toHaveBeenCalledWith(1);
+    });
 
-    mockSoundManager.setBackgroundMusicVolume(0.5);
-    expect(mockSoundManager.setBackgroundMusicVolume).toHaveBeenCalledWith(0.5);
+    bgHowls.forEach((h) => h.volume.mockClear());
+    eventBus.emit(new SetBackgroundMusicVolumeEvent(-0.5));
+    bgHowls.forEach((h) => {
+      expect(h.volume).toHaveBeenCalledWith(0);
+    });
+  });
+
+  it("does not throw when playSoundEffect is called directly", () => {
+    expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
+  });
+
+  it("does not throw when playBackgroundMusic and stopBackgroundMusic are called", () => {
+    expect(() => soundManager.playBackgroundMusic()).not.toThrow();
+    expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
   });
 });
 
 describe("SoundEffect enum", () => {
-  it("exports all expected sound effects from ISoundManager", () => {
+  it("exports all expected sound effects", () => {
     expect(SoundEffect.KaChing).toBe("ka-ching");
     expect(SoundEffect.AtomHit).toBe("atom-hit");
     expect(SoundEffect.AtomLaunch).toBe("atom-launch");
@@ -131,13 +165,5 @@ describe("SoundEffect enum", () => {
     expect(SoundEffect.SAMBuilt).toBe("sam-built");
     expect(SoundEffect.Message).toBe("message");
     expect(SoundEffect.Click).toBe("click");
-  });
-
-  it("is exported from ISoundManager module, not SoundManager", async () => {
-    const iSoundManagerModule = await import(
-      "../../../src/client/sound/ISoundManager"
-    );
-    expect(iSoundManagerModule.SoundEffect).toBeDefined();
-    expect(iSoundManagerModule.SoundEffect.Click).toBe("click");
   });
 });

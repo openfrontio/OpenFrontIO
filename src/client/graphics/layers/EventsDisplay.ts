@@ -36,7 +36,7 @@ import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
-import { ISoundManager, SoundEffect } from "../../sound/ISoundManager";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/ISoundManager";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
@@ -72,7 +72,6 @@ export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
-  public soundManager: ISoundManager;
 
   private active: boolean = false;
   private events: GameEvent[] = [];
@@ -446,7 +445,7 @@ export class EventsDisplay extends LitElement implements Layer {
       type: MessageType.CHAT,
       unsafeDescription: false,
     });
-    this.soundManager.playSoundEffect(SoundEffect.Message);
+    this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Message));
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
@@ -462,7 +461,7 @@ export class EventsDisplay extends LitElement implements Layer {
       update.recipientID,
     ) as PlayerView;
 
-    this.soundManager.playSoundEffect(SoundEffect.AllianceSuggested);
+    this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AllianceSuggested));
     this.addEvent({
       description: translateText("events_display.request_alliance", {
         name: requestor.displayName(),
@@ -558,7 +557,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
-      this.soundManager.playSoundEffect(SoundEffect.AllianceBroken);
+      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AllianceBroken));
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
@@ -585,7 +584,7 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: update.betrayedID,
       });
     } else if (betrayed === myPlayer) {
-      this.soundManager.playSoundEffect(SoundEffect.AllianceBroken);
+      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AllianceBroken));
       const buttons = [
         {
           text: translateText("events_display.focus"),

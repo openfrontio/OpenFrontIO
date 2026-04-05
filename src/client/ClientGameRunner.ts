@@ -50,7 +50,6 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import { ISoundManager } from "./sound/ISoundManager";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -263,8 +262,8 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const soundManager = new SoundManager();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus, soundManager);
+  const soundManager = new SoundManager(eventBus, userSettings);
+  const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -306,7 +305,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
-    private soundManager: ISoundManager,
+    private soundManager: SoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }

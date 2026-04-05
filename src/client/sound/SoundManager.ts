@@ -3,7 +3,15 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import { assetUrl } from "../../core/AssetUrls";
-import { ISoundManager, SoundEffect } from "./ISoundManager";
+import { EventBus } from "../../core/EventBus";
+import { UserSettings } from "../../core/game/UserSettings";
+import {
+  ISoundManager,
+  PlaySoundEffectEvent,
+  SetBackgroundMusicVolumeEvent,
+  SetSoundEffectsVolumeEvent,
+  SoundEffect,
+} from "./ISoundManager";
 const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
 const allianceSuggestedSound = assetUrl(
   "sounds/effects/alliance-suggested.mp3",
@@ -48,7 +56,7 @@ export class SoundManager implements ISoundManager {
       [SoundEffect.Click, clickSound],
     ]);
 
-  constructor() {
+  constructor(eventBus: EventBus, userSettings: UserSettings) {
     this.backgroundMusic = [
       new Howl({
         src: [of4],
@@ -69,6 +77,15 @@ export class SoundManager implements ISoundManager {
         volume: 0,
       }),
     ];
+    this.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
+    this.setSoundEffectsVolume(userSettings.soundEffectsVolume());
+    eventBus.on(PlaySoundEffectEvent, (e) => this.playSoundEffect(e.effect));
+    eventBus.on(SetBackgroundMusicVolumeEvent, (e) =>
+      this.setBackgroundMusicVolume(e.volume),
+    );
+    eventBus.on(SetSoundEffectsVolumeEvent, (e) =>
+      this.setSoundEffectsVolume(e.volume),
+    );
   }
 
   public playBackgroundMusic(): void {

@@ -4,7 +4,7 @@ import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { ConquestUpdate, GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { ISoundManager, SoundEffect } from "../../sound/ISoundManager";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/ISoundManager";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
@@ -32,7 +32,6 @@ export class FxLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    private soundManager: ISoundManager,
   ) {
     this.theme = this.game.config().theme();
   }
@@ -102,17 +101,21 @@ export class FxLayer implements Layer {
   onUnitCreated(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.AtomBomb:
-        this.soundManager.playSoundEffect(SoundEffect.AtomLaunch);
+        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomLaunch));
         break;
       case UnitType.HydrogenBomb:
-        this.soundManager.playSoundEffect(SoundEffect.HydrogenLaunch);
+        this.eventBus.emit(
+          new PlaySoundEffectEvent(SoundEffect.HydrogenLaunch),
+        );
         break;
       case UnitType.MIRV:
-        this.soundManager.playSoundEffect(SoundEffect.MIRVLaunch);
+        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.MIRVLaunch));
         break;
       case UnitType.Warship:
         if (unit.owner() === this.game.myPlayer()) {
-          this.soundManager.playSoundEffect(SoundEffect.BuildWarship);
+          this.eventBus.emit(
+            new PlaySoundEffectEvent(SoundEffect.BuildWarship),
+          );
         }
         break;
     }
@@ -174,7 +177,7 @@ export class FxLayer implements Layer {
       return;
     }
 
-    this.soundManager.playSoundEffect(SoundEffect.KaChing);
+    this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.KaChing));
 
     if (this.fxEnabled()) {
       this.allFx.push(
@@ -235,16 +238,18 @@ export class FxLayer implements Layer {
   onStructureBuilt(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.City:
-        this.soundManager.playSoundEffect(SoundEffect.BuildCity);
+        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.BuildCity));
         break;
       case UnitType.Port:
-        this.soundManager.playSoundEffect(SoundEffect.BuildPort);
+        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.BuildPort));
         break;
       case UnitType.DefensePost:
-        this.soundManager.playSoundEffect(SoundEffect.BuildDefensePost);
+        this.eventBus.emit(
+          new PlaySoundEffectEvent(SoundEffect.BuildDefensePost),
+        );
         break;
       case UnitType.SAMLauncher:
-        this.soundManager.playSoundEffect(SoundEffect.SAMBuilt);
+        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.SAMBuilt));
         break;
     }
   }
@@ -277,7 +282,7 @@ export class FxLayer implements Layer {
       unit.type() === UnitType.HydrogenBomb
         ? SoundEffect.HydrogenHit
         : SoundEffect.AtomHit;
-    this.soundManager.playSoundEffect(sound);
+    this.eventBus.emit(new PlaySoundEffectEvent(sound));
   }
 
   handleSAMInterception(unit: UnitView) {
