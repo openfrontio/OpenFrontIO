@@ -11,8 +11,9 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 ## Installation
 
 1. Install go <https://go.dev/doc/install>
-2. Install dependencies: `go mod download`
-3. Run the generator: `go run .`
+2. Go to map-generator folder: `cd map-generator`
+3. Install dependencies: `go mod download`
+4. Run the generator for all maps: `go run .`
 
 ## Creating a new map
 
@@ -20,18 +21,23 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 2. Create `assets/maps/<map_name>/image.png`
 3. Create `assets/maps/<map_name>/info.json` with name and countries
 4. Add the map name in `main.go` The `<name>` in `{Name: "<name>"},` should match the `<map-name>` folder at `assets/maps/<map_name>`
-5. Run the generator: `go run .`
+5. Run the generator for your map: `go run . --maps=<map_name>`
+
+   By default, `go run .` will process all defined maps.
+
+   Use `--maps` to process a single map:
+
+   `go run . --maps=fourislands`
+
+   To process a subset of maps, pass a comma-separated list:
+
+   `go run . --maps=northamerica,world`
+
 6. Find the output folder at `../resources/maps/<map_name>`
-
-By default, this will process all defined maps.
-
-Use `--maps` to process a single map:
-
-`go run . --maps=fourislands`
-
-To process a subset of maps, pass a comma-separated list:
-
-`go run . --maps=northamerica,world`
+7. Go back to the root directory: `cd ..`
+8. Run Prettier: `npm run format`
+   This rewrites ALL files in place. Git figures out which files are actually changed, don't worry.
+   Alternatively, you can either run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
 
 ## Output Files
 
