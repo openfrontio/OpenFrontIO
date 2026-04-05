@@ -489,10 +489,8 @@ class Client {
       }
     };
 
-    // Apply initial state
     applyDarkMode(this.userSettings.darkMode());
 
-    // Listen for cross-component changes
     globalThis.addEventListener(
       "event:user-settings-changed:settings.darkMode",
       (e: Event) => {
