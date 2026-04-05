@@ -70,7 +70,11 @@ function getFrequencyKeys(): Set<string> {
   const content = fs.readFileSync(MAP_PLAYLIST, "utf8");
   // Extract the frequency block
   const freqMatch = content.match(/const frequency[\s\S]*?\{([\s\S]*?)\};/);
-  if (!freqMatch) return new Set();
+  if (!freqMatch) {
+    throw new Error(
+      `Failed to parse frequency record from MapPlaylist.ts (first 200 chars: ${content.slice(0, 200)})`,
+    );
+  }
   const keys = new Set<string>();
   const re = /(\w+):/g;
   let m: RegExpExecArray | null;
