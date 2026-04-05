@@ -56,26 +56,28 @@ export class SoundManager {
     ]);
 
   constructor(eventBus: EventBus, userSettings: UserSettings) {
-    this.backgroundMusic = [
-      new Howl({
-        src: [of4],
-        loop: false,
-        onend: this.playNext.bind(this),
-        volume: 0,
-      }),
-      new Howl({
-        src: [openfront],
-        loop: false,
-        onend: this.playNext.bind(this),
-        volume: 0,
-      }),
-      new Howl({
-        src: [war],
-        loop: false,
-        onend: this.playNext.bind(this),
-        volume: 0,
-      }),
-    ];
+    this.safely("initialize background music", () => {
+      this.backgroundMusic = [
+        new Howl({
+          src: [of4],
+          loop: false,
+          onend: this.playNext.bind(this),
+          volume: 0,
+        }),
+        new Howl({
+          src: [openfront],
+          loop: false,
+          onend: this.playNext.bind(this),
+          volume: 0,
+        }),
+        new Howl({
+          src: [war],
+          loop: false,
+          onend: this.playNext.bind(this),
+          volume: 0,
+        }),
+      ];
+    });
     this.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
     this.setSoundEffectsVolume(userSettings.soundEffectsVolume());
     eventBus.on(PlaySoundEffectEvent, (e) => this.playSoundEffect(e.effect));
@@ -87,25 +89,39 @@ export class SoundManager {
     );
   }
 
-  public playBackgroundMusic(): void {
-    if (
-      this.backgroundMusic.length > 0 &&
-      !this.backgroundMusic[this.currentTrack].playing()
-    ) {
-      this.backgroundMusic[this.currentTrack].play();
+  private safely(action: string, fn: () => void): void {
+    try {
+      fn();
+    } catch (err) {
+      console.error(`SoundManager: failed to ${action}`, err);
     }
   }
 
+  public playBackgroundMusic(): void {
+    this.safely("play background music", () => {
+      if (
+        this.backgroundMusic.length > 0 &&
+        !this.backgroundMusic[this.currentTrack].playing()
+      ) {
+        this.backgroundMusic[this.currentTrack].play();
+      }
+    });
+  }
+
   public stopBackgroundMusic(): void {
-    if (this.backgroundMusic.length > 0) {
-      this.backgroundMusic[this.currentTrack].stop();
-    }
+    this.safely("stop background music", () => {
+      if (this.backgroundMusic.length > 0) {
+        this.backgroundMusic[this.currentTrack].stop();
+      }
+    });
   }
 
   public setBackgroundMusicVolume(volume: number): void {
     this.backgroundMusicVolume = Math.max(0, Math.min(1, volume));
-    this.backgroundMusic.forEach((track) => {
-      track.volume(this.backgroundMusicVolume);
+    this.safely("set background music volume", () => {
+      this.backgroundMusic.forEach((track) => {
+        track.volume(this.backgroundMusicVolume);
+      });
     });
   }
 
@@ -119,29 +135,40 @@ export class SoundManager {
     if (sound) return sound;
     const src = SoundManager.soundEffectUrls.get(name);
     if (!src) return null;
-    sound = new Howl({ src: [src], volume: this.soundEffectsVolume });
-    this.soundEffects.set(name, sound);
-    return sound;
+    try {
+      sound = new Howl({ src: [src], volume: this.soundEffectsVolume });
+      this.soundEffects.set(name, sound);
+      return sound;
+    } catch (err) {
+      console.error(`SoundManager: failed to load sound ${name}`, err);
+      return null;
+    }
   }
 
   public playSoundEffect(name: SoundEffect): void {
-    const sound = this.getOrLoadSoundEffect(name);
-    if (sound) {
-      sound.play();
-    }
+    this.safely(`play sound ${name}`, () => {
+      const sound = this.getOrLoadSoundEffect(name);
+      if (sound) {
+        sound.play();
+      }
+    });
   }
 
   public setSoundEffectsVolume(volume: number): void {
     this.soundEffectsVolume = Math.max(0, Math.min(1, volume));
-    this.soundEffects.forEach((sound) => {
-      sound.volume(this.soundEffectsVolume);
+    this.safely("set sound effects volume", () => {
+      this.soundEffects.forEach((sound) => {
+        sound.volume(this.soundEffectsVolume);
+      });
     });
   }
 
   public stopSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.stop();
-    }
+    this.safely(`stop sound ${name}`, () => {
+      const sound = this.soundEffects.get(name);
+      if (sound) {
+        sound.stop();
+      }
+    });
   }
 }

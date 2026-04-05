@@ -202,15 +202,10 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
-      const runner = currentGameRunner;
-      if (runner) {
-        try {
-          runner.stop();
-        } finally {
-          currentGameRunner = null;
-        }
-      } else {
+      if (currentGameRunner) {
+        currentGameRunner.stop();
         currentGameRunner = null;
+      } else {
         transport.leaveGame();
       }
       return true;

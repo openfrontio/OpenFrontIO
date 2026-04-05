@@ -146,6 +146,41 @@ describe("SoundManager", () => {
     expect(() => soundManager.playBackgroundMusic()).not.toThrow();
     expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
   });
+
+  it("swallows errors from Howler and does not propagate", () => {
+    // Make every Howler method throw
+    howlInstances.forEach((h) => {
+      h.play.mockImplementation(() => {
+        throw new Error("audio backend failure");
+      });
+      h.stop.mockImplementation(() => {
+        throw new Error("audio backend failure");
+      });
+      h.volume.mockImplementation(() => {
+        throw new Error("audio backend failure");
+      });
+    });
+    // Force lazy-loaded Howls to also throw on play by pre-loading Click
+    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    const clickHowl = howlInstances[howlInstances.length - 1];
+    clickHowl.play.mockImplementation(() => {
+      throw new Error("audio backend failure");
+    });
+    clickHowl.stop.mockImplementation(() => {
+      throw new Error("audio backend failure");
+    });
+    clickHowl.volume.mockImplementation(() => {
+      throw new Error("audio backend failure");
+    });
+
+    // All public methods should swallow the error
+    expect(() => soundManager.playBackgroundMusic()).not.toThrow();
+    expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
+    expect(() => soundManager.setBackgroundMusicVolume(0.5)).not.toThrow();
+    expect(() => soundManager.setSoundEffectsVolume(0.5)).not.toThrow();
+    expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
+    expect(() => soundManager.stopSoundEffect(SoundEffect.Click)).not.toThrow();
+  });
 });
 
 describe("SoundEffect enum", () => {
