@@ -14,6 +14,14 @@ export class SettingToggle extends LitElement {
   }
 
   private handleChange(e: Event) {
+    // Prevent the native <input> change event to cause double triggers
+    e.stopPropagation();
+
+    console.log("SettingToggle change event:", {
+      id: this.id,
+      checked: (e.target as HTMLInputElement).checked,
+    });
+
     const input = e.target as HTMLInputElement;
     this.checked = input.checked;
     this.dispatchEvent(

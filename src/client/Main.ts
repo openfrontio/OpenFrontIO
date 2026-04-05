@@ -489,11 +489,25 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    if (this.userSettings.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    const applyDarkMode = (isDark: boolean) => {
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    };
+
+    // Apply initial state
+    applyDarkMode(this.userSettings.darkMode());
+
+    // Listen for cross-component changes
+    globalThis.addEventListener(
+      "event:user-settings-changed:settings.darkMode",
+      (e: Event) => {
+        const isDark = (e as CustomEvent).detail === "true";
+        applyDarkMode(isDark);
+      },
+    );
 
     // Attempt to join lobby
     if (document.readyState === "loading") {

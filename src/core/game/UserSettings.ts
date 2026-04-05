@@ -2,6 +2,8 @@ import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
 const PATTERN_KEY = "territoryPattern";
+const FLAG_KEY = "flag";
+const COLOR_KEY = "settings.territoryColor";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -27,16 +29,20 @@ export class UserSettings {
     return UserSettings.cache.get(key) ?? null;
   }
 
-  private setCached(key: string, value: string) {
+  private setCached(key: string, value: string, emitChange: boolean = true) {
     localStorage.setItem(key, value);
     UserSettings.cache.set(key, value);
-    this.emitChange(key, value);
+    if (emitChange) {
+      this.emitChange(key, value);
+    }
   }
 
-  private removeCached(key: string) {
+  private removeCached(key: string, emitChange: boolean = true) {
     localStorage.removeItem(key);
     UserSettings.cache.set(key, null);
-    this.emitChange(key, null);
+    if (emitChange) {
+      this.emitChange(key, null);
+    }
   }
 
   private getBool(key: string, defaultValue: boolean): boolean {
@@ -138,7 +144,7 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
-  // performance overlay specifically needs a direct setter as it's triggered externally via escape/f2
+  // Performance overlay specifically needs a direct setter for Shift-D
   setPerformanceOverlay(value: boolean) {
     this.setBool("settings.performanceOverlay", value);
   }
@@ -176,13 +182,7 @@ export class UserSettings {
   }
 
   toggleDarkMode() {
-    const nextVal = !this.darkMode();
-    this.setBool("settings.darkMode", nextVal);
-    if (nextVal) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    this.setBool("settings.darkMode", !this.darkMode());
   }
 
   // For development only. Used for testing patterns, set in the console manually.
@@ -220,31 +220,35 @@ export class UserSettings {
 
   setSelectedPatternName(patternName: string | undefined): void {
     if (patternName === undefined) {
-      this.removeCached(PATTERN_KEY);
+      this.removeCached(PATTERN_KEY, false);
     } else {
-      this.setCached(PATTERN_KEY, patternName);
+      // Don't emit default "territoryPattern" event
+      this.setCached(PATTERN_KEY, patternName, false);
     }
+    // Own "pattern" event which Store, PatternsModal and PatternsInput listen to
+    this.emitChange("pattern", patternName);
   }
 
   getSelectedColor(): string | undefined {
-    return this.getCached("settings.territoryColor") ?? undefined;
+    return this.getCached(COLOR_KEY) ?? undefined;
   }
 
   setSelectedColor(color: string | undefined): void {
     if (color === undefined) {
-      this.removeCached("settings.territoryColor");
+      this.removeCached(COLOR_KEY);
     } else {
-      this.setCached("settings.territoryColor", color);
+      this.setCached(COLOR_KEY, color);
     }
   }
 
   getFlag(): string | null {
-    let flag = this.getCached("flag");
+    let flag = this.getCached(FLAG_KEY);
     if (!flag) return null;
     // Migrate bare country codes to country: prefix
     if (!flag.startsWith("flag:") && !flag.startsWith("country:")) {
       flag = `country:${flag}`;
-      this.setCached("flag", flag);
+      // Silent migration: don't emit change event for FlagInput
+      this.setCached(FLAG_KEY, flag, false);
     }
     return flag;
   }
@@ -253,12 +257,12 @@ export class UserSettings {
     if (flag === "country:xx") {
       this.clearFlag();
     } else {
-      this.setCached("flag", flag);
+      this.setCached(FLAG_KEY, flag);
     }
   }
 
   clearFlag(): void {
-    this.removeCached("flag");
+    this.removeCached(FLAG_KEY);
   }
 
   backgroundMusicVolume(): number {

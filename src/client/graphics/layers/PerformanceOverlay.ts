@@ -476,8 +476,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
   };
 
-  private onUserSettingsChanged = (event: CustomEvent) => {
-    const nextVisible = (event.detail as boolean) === true;
+  private onUserSettingsChanged = (event: Event) => {
+    const nextVisible = (event as CustomEvent).detail === "true";
     if (this.isVisible === nextVisible) return;
     this.setVisible(nextVisible);
   };
