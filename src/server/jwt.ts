@@ -74,6 +74,7 @@ export async function getUserMe(
     const response = await fetch(config.jwtIssuer() + "/users/@me", {
       headers: {
         authorization: `Bearer ${token}`,
+        "x-api-key": config.apiKey(),
       },
     });
     if (response.status !== 200) {

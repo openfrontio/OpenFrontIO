@@ -25,6 +25,16 @@ declare global {
             },
           ) => void;
         };
+        banner: {
+          requestBanner: (options: {
+            id: string;
+            width: number;
+            height: number;
+          }) => Promise<void>;
+          requestResponsiveBanner: (containerId: string) => Promise<void>;
+          clearBanner: (containerId: string) => void;
+          clearAllBanners: () => void;
+        };
         game: {
           gameplayStart: () => Promise<void>;
           gameplayStop: () => Promise<void>;
@@ -76,11 +86,9 @@ export class CrazyGamesSDK {
       }
       return false;
     } catch (e) {
-      console.log("[CrazyGames]: ", e);
       // If we get a cross-origin error, we're definitely iframed
       // Check our own referrer as fallback
       const isCrazyGames = document.referrer.includes("crazygames");
-      console.log("[CrazyGames], contains referrer: ", isCrazyGames);
       if (isCrazyGames) {
         return true;
       }
@@ -321,6 +329,70 @@ export class CrazyGamesSDK {
       console.error(`Failed to get invite gameId:`, error);
       return null;
     }
+  }
+
+  private bottomLeftContainerId = "cg-bottom-left-ad";
+  private bottomLeftAdVisible = false;
+
+  createBottomLeftAd(): void {
+    console.log(
+      `[CrazyGames] createBottomLeftAd called, isReady=${this.isReady()}`,
+    );
+    if (!this.isReady()) {
+      console.log("[CrazyGames] SDK not ready, skipping bottom-left ad");
+      return;
+    }
+
+    if (this.bottomLeftAdVisible) {
+      console.log("[CrazyGames] Bottom-left ad already visible");
+      return;
+    }
+
+    // Remove existing container if any
+    document.getElementById(this.bottomLeftContainerId)?.remove();
+
+    const container = document.createElement("div");
+    container.id = this.bottomLeftContainerId;
+    container.style.cssText = `
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 300px;
+      height: 250px;
+      z-index: 9999;
+      pointer-events: auto;
+    `;
+    document.body.appendChild(container);
+    console.log("[CrazyGames] Created bottom-left ad container");
+
+    (async () => {
+      try {
+        await window.CrazyGames!.SDK.banner.requestBanner({
+          id: this.bottomLeftContainerId,
+          width: 300,
+          height: 250,
+        });
+        console.log("[CrazyGames] Bottom-left banner loaded");
+      } catch (e) {
+        console.log("[CrazyGames] Bottom-left banner error:", e);
+      }
+    })();
+
+    this.bottomLeftAdVisible = true;
+  }
+
+  clearBottomLeftAd(): void {
+    if (!this.bottomLeftAdVisible) return;
+
+    try {
+      window.CrazyGames!.SDK.banner.clearBanner(this.bottomLeftContainerId);
+    } catch (e) {
+      console.error("[CrazyGames] Error clearing bottom-left banner:", e);
+    }
+
+    document.getElementById(this.bottomLeftContainerId)?.remove();
+    this.bottomLeftAdVisible = false;
+    console.log("[CrazyGames] Bottom-left ad cleared");
   }
 
   requestMidgameAd(): Promise<void> {

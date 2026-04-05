@@ -101,17 +101,9 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
       // If the avatar fails to load (bad URL / CDN issue / offline), fall back
       // to the default sign-in UI instead of leaving a broken image.
       avatarEl.onerror = () => {
-        // Only handle if this is the latest update
         if (avatarEl._navToken !== navToken) return;
-        avatarEl.src = "";
-        // If the user is still logged in via email, show the email badge state.
-        const email =
-          userMeResponse !== false ? userMeResponse.user.email : undefined;
-        if (email) {
-          showEmailLoggedIn();
-        } else {
-          showSignIn();
-        }
+        avatarEl.onerror = null;
+        avatarEl.src = "https://cdn.discordapp.com/embed/avatars/0.png";
       };
       avatarEl.onload = () => {
         // Only handle if this is the latest update
