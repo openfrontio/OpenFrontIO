@@ -3,12 +3,7 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import { assetUrl } from "../../core/AssetUrls";
-import {
-  ISoundManager,
-  MAX_CONCURRENT_SOUNDS,
-  SOUND_PRIORITY,
-  SoundEffect,
-} from "./ISoundManager";
+import { ISoundManager, SoundEffect } from "./ISoundManager";
 const allianceBrokenSound = assetUrl("sounds/effects/alliance-broken.mp3");
 const allianceSuggestedSound = assetUrl(
   "sounds/effects/alliance-suggested.mp3",
@@ -33,7 +28,6 @@ export class SoundManager implements ISoundManager {
   private soundEffects: Map<SoundEffect, Howl> = new Map();
   private soundEffectsVolume: number = 1;
   private backgroundMusicVolume: number = 0;
-  private activeSounds: { effect: SoundEffect; howl: Howl; id: number }[] = [];
 
   private static readonly soundEffectUrls: ReadonlyMap<SoundEffect, string> =
     new Map([
@@ -114,43 +108,11 @@ export class SoundManager implements ISoundManager {
     return sound;
   }
 
-  private removeActiveSoundById(id: number): void {
-    this.activeSounds = this.activeSounds.filter((s) => s.id !== id);
-  }
-
   public playSoundEffect(name: SoundEffect): void {
-    const howl = this.getOrLoadSoundEffect(name);
-    if (!howl) return;
-
-    const priority = SOUND_PRIORITY[name];
-
-    if (this.activeSounds.length >= MAX_CONCURRENT_SOUNDS) {
-      // Find the lowest-priority active sound
-      let lowestIdx = 0;
-      for (let i = 1; i < this.activeSounds.length; i++) {
-        if (
-          SOUND_PRIORITY[this.activeSounds[i].effect] <
-          SOUND_PRIORITY[this.activeSounds[lowestIdx].effect]
-        ) {
-          lowestIdx = i;
-        }
-      }
-      const lowest = this.activeSounds[lowestIdx];
-      if (priority <= SOUND_PRIORITY[lowest.effect]) {
-        // New sound is same or lower priority, drop it
-        return;
-      }
-      // Remove before stop() since stop fires the 'stop' event synchronously
-      this.removeActiveSoundById(lowest.id);
-      lowest.howl.stop(lowest.id);
+    const sound = this.getOrLoadSoundEffect(name);
+    if (sound) {
+      sound.play();
     }
-
-    const id = howl.play();
-    const entry = { effect: name, howl, id };
-    this.activeSounds.push(entry);
-
-    howl.once("end", () => this.removeActiveSoundById(id), id);
-    howl.once("stop", () => this.removeActiveSoundById(id), id);
   }
 
   public setSoundEffectsVolume(volume: number): void {
@@ -165,6 +127,5 @@ export class SoundManager implements ISoundManager {
     if (sound) {
       sound.stop();
     }
-    this.activeSounds = this.activeSounds.filter((s) => s.effect !== name);
   }
 }
