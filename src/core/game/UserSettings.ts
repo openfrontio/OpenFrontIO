@@ -205,7 +205,7 @@ export class UserSettings {
 
   getSelectedPatternName(cosmetics: Cosmetics | null): PlayerPattern | null {
     if (cosmetics === null) return null;
-    let data = this.getCached(PATTERN_KEY) ?? null;
+    let data = this.getCached(PATTERN_KEY);
     if (data === null) return null;
     const patternPrefix = "pattern:";
     if (data.startsWith(patternPrefix)) {

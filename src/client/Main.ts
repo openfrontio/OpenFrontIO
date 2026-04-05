@@ -497,8 +497,8 @@ class Client {
 
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e: Event) => {
-        const isDark = (e as CustomEvent).detail === "true";
+      (e: CustomEvent<string>) => {
+        const isDark = e.detail === "true";
         applyDarkMode(isDark);
       },
     );
