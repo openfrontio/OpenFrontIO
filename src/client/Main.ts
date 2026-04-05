@@ -11,7 +11,11 @@ import {
 import { GameEnv } from "../core/configuration/Config";
 import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  DARK_MODE_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -492,7 +496,7 @@ class Client {
     applyDarkMode(this.userSettings.darkMode());
 
     globalThis.addEventListener(
-      "event:user-settings-changed:settings.darkMode",
+      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
       (e: Event) => {
         const isDark = (e as CustomEvent).detail === "true";
         applyDarkMode(isDark);

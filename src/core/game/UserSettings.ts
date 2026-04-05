@@ -1,9 +1,12 @@
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
-const PATTERN_KEY = "territoryPattern";
-const FLAG_KEY = "flag";
-const COLOR_KEY = "settings.territoryColor";
+export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+export const PATTERN_KEY = "territoryPattern";
+export const FLAG_KEY = "flag";
+export const COLOR_KEY = "settings.territoryColor";
+export const DARK_MODE_KEY = "settings.darkMode";
+export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -13,7 +16,7 @@ export class UserSettings {
       const maybeDispatch = (globalThis as any)?.dispatchEvent;
       if (typeof maybeDispatch !== "function") return;
       (globalThis as any).dispatchEvent(
-        new CustomEvent(`event:user-settings-changed:${key}`, {
+        new CustomEvent(`${USER_SETTINGS_CHANGED_EVENT}:${key}`, {
           detail: value,
         }),
       );
@@ -85,7 +88,7 @@ export class UserSettings {
   }
 
   performanceOverlay() {
-    return this.getBool("settings.performanceOverlay", false);
+    return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
   alertFrame() {
@@ -109,7 +112,7 @@ export class UserSettings {
   }
 
   darkMode() {
-    return this.getBool("settings.darkMode", false);
+    return this.getBool(DARK_MODE_KEY, false);
   }
 
   leftClickOpensMenu() {
@@ -146,11 +149,11 @@ export class UserSettings {
 
   // Performance overlay specifically needs a direct setter for Shift-D
   setPerformanceOverlay(value: boolean) {
-    this.setBool("settings.performanceOverlay", value);
+    this.setBool(PERFORMANCE_OVERLAY_KEY, value);
   }
 
   togglePerformanceOverlay() {
-    this.setBool("settings.performanceOverlay", !this.performanceOverlay());
+    this.setBool(PERFORMANCE_OVERLAY_KEY, !this.performanceOverlay());
   }
 
   toggleAlertFrame() {
@@ -182,7 +185,7 @@ export class UserSettings {
   }
 
   toggleDarkMode() {
-    this.setBool("settings.darkMode", !this.darkMode());
+    this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
   // For development only. Used for testing patterns, set in the console manually.
@@ -220,13 +223,10 @@ export class UserSettings {
 
   setSelectedPatternName(patternName: string | undefined): void {
     if (patternName === undefined) {
-      this.removeCached(PATTERN_KEY, false);
+      this.removeCached(PATTERN_KEY);
     } else {
-      // Don't emit default "territoryPattern" event
-      this.setCached(PATTERN_KEY, patternName, false);
+      this.setCached(PATTERN_KEY, patternName);
     }
-    // Own "pattern" event which Store, PatternsModal and PatternsInput listen to
-    this.emitChange("pattern", patternName);
   }
 
   getSelectedColor(): string | undefined {
