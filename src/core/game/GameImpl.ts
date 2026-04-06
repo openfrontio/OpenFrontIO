@@ -112,6 +112,8 @@ export class GameImpl implements Game {
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
   private _waterGraphVersion: number = 0;
+  private _waterGraphDirty: boolean = false;
+  private _waterGraphLastRebuildTick: number = 0;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   // Batched water conversion: tiles queued by nuke detonations, flushed every tick
@@ -331,7 +333,9 @@ export class GameImpl implements Game {
       return start;
     };
 
-    // Reusable scratch buffer for neighbors (max 8 for 2-ring)
+    // Reusable scratch buffer for neighbors.
+    // Sized to 8 to hold up to 4 cardinal neighbors from an inner ring call
+    // plus 4 from a second-ring call (pushNeighbors writes at [start..start+4)).
     const nb: TileRef[] = new Array(8);
 
     // ── 1. Propagate ocean bit ─────────────────────────────────────
@@ -535,33 +539,29 @@ export class GameImpl implements Game {
       if (!this.miniGameMap.isLand(miniTile)) continue;
       const fx = this.miniGameMap.x(miniTile) * 2;
       const fy = this.miniGameMap.y(miniTile) * 2;
-      let hasWater = false;
-      for (let dy = 0; dy < 2 && !hasWater; dy++) {
-        for (let dx = 0; dx < 2 && !hasWater; dx++) {
-          if (
-            map.isValidCoord(fx + dx, fy + dy) &&
-            this.isWater(map.ref(fx + dx, fy + dy))
-          ) {
-            hasWater = true;
+      // Require majority of source tiles (>=3 of 4) to be water
+      // to avoid prematurely converting minimap tiles
+      let waterCount = 0;
+      let totalCount = 0;
+      for (let dy = 0; dy < 2; dy++) {
+        for (let dx = 0; dx < 2; dx++) {
+          if (map.isValidCoord(fx + dx, fy + dy)) {
+            totalCount++;
+            if (this.isWater(map.ref(fx + dx, fy + dy))) {
+              waterCount++;
+            }
           }
         }
       }
-      if (hasWater) {
+      if (waterCount >= Math.min(3, totalCount)) {
         this.miniGameMap.setWater(miniTile);
         convertedMiniTiles.add(miniTile);
       }
     }
 
-    // ── 5. Full rebuild of water navigation graph ────────────────
-    if (!this._config.disableNavMesh() && convertedMiniTiles.size > 0) {
-      const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
-      this._miniWaterGraph = graphBuilder.build();
-      this._miniWaterHPA = new AStarWaterHierarchical(
-        this.miniGameMap,
-        this._miniWaterGraph,
-        { cachePaths: true },
-      );
-      this._waterGraphVersion++;
+    // ── 5. Mark water graph dirty (rebuilt lazily, throttled) ─────
+    if (convertedMiniTiles.size > 0) {
+      this._waterGraphDirty = true;
     }
   }
 
@@ -744,6 +744,25 @@ export class GameImpl implements Game {
       if (converted.length > 0) {
         this.finalizeWaterChanges(converted);
       }
+    }
+    // Throttled water graph rebuild: at most once every 20 ticks
+    const WATER_GRAPH_REBUILD_INTERVAL = 20;
+    if (
+      this._waterGraphDirty &&
+      !this._config.disableNavMesh() &&
+      this._ticks - this._waterGraphLastRebuildTick >=
+        WATER_GRAPH_REBUILD_INTERVAL
+    ) {
+      this._waterGraphDirty = false;
+      this._waterGraphLastRebuildTick = this._ticks;
+      const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
+      this._miniWaterGraph = graphBuilder.build();
+      this._miniWaterHPA = new AStarWaterHierarchical(
+        this.miniGameMap,
+        this._miniWaterGraph,
+        { cachePaths: true },
+      );
+      this._waterGraphVersion++;
     }
     this._ticks++;
     return this.updates;
