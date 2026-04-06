@@ -17,29 +17,16 @@ import {
 import { renderTroops, translateText } from "../../Utils";
 import { getColoredSprite } from "../SpriteLoader";
 import { UIState } from "../UIState";
+import { estimateBoatEtaSeconds } from "./boatEta";
 import { Layer } from "./Layer";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
+export { estimateBoatEtaSeconds };
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
-
-/** Estimates arrival time in seconds from remaining ticks and server tick interval. */
-export function estimateBoatEtaSeconds(
-  remainingTicks: number,
-  turnIntervalMs: number,
-): number {
-  if (!Number.isFinite(remainingTicks) || remainingTicks < 0) {
-    throw new Error(`Invalid remainingTicks: ${remainingTicks}`);
-  }
-  if (!Number.isFinite(turnIntervalMs) || turnIntervalMs <= 0) {
-    throw new Error(`Invalid turnIntervalMs: ${turnIntervalMs}`);
-  }
-  const secondsPerTick = turnIntervalMs / 1000;
-  return Math.ceil(remainingTicks * secondsPerTick);
-}
 
 @customElement("attacks-display")
 export class AttacksDisplay extends LitElement implements Layer {
@@ -364,13 +351,12 @@ export class AttacksDisplay extends LitElement implements Layer {
   private getBoatEtaSeconds(boat: UnitView): number | null {
     const plan = this.game.motionPlans().get(boat.id());
     if (!plan) return null;
-    const elapsed = Math.floor(
-      (this.game.ticks() - plan.startTick) / plan.ticksPerStep,
-    );
-    const remaining = plan.path.length - 1 - elapsed;
-    if (remaining <= 0) return 0;
+    const totalTicks = (plan.path.length - 1) * plan.ticksPerStep;
+    const elapsedTicks = this.game.ticks() - plan.startTick;
+    const remainingTicks = totalTicks - elapsedTicks;
+    if (remainingTicks <= 0) return 0;
     return estimateBoatEtaSeconds(
-      remaining * plan.ticksPerStep,
+      remainingTicks,
       this.game.config().serverConfig().turnIntervalMs(),
     );
   }
@@ -416,31 +402,34 @@ export class AttacksDisplay extends LitElement implements Layer {
     </div>`;
   }
 
-  private renderBoats() {
-    if (this.outgoingBoats.length === 0) return html``;
-
-    return this.outgoingBoats.map((boat) => {
-      const progress = this.getBoatProgress(boat);
-      const etaSeconds = this.getBoatEtaSeconds(boat);
-      return html`
-        <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
-        >
-          ${this.renderButton({
-            content: html`${this.renderBoatIcon(boat)}
-              <span class="inline-block min-w-[3rem] text-right"
-                >${renderTroops(boat.troops())}</span
-              >
-              ${this.renderProgressBar(progress, etaSeconds, "bg-blue-400")}
-              <span class="truncate text-xs ml-1"
-                >${this.getBoatTargetName(boat)}</span
-              >`,
-            onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
-            className:
-              "text-left text-blue-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
-            translate: false,
-          })}
-          ${!boat.retreating()
+  private renderBoatRow(
+    boat: UnitView,
+    opts: {
+      color: string;
+      barColor: string;
+      label: string;
+      showCancel: boolean;
+    },
+  ) {
+    const progress = this.getBoatProgress(boat);
+    const etaSeconds = this.getBoatEtaSeconds(boat);
+    return html`
+      <div
+        class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+      >
+        ${this.renderButton({
+          content: html`${this.renderBoatIcon(boat)}
+            <span class="inline-block min-w-[3rem] text-right"
+              >${renderTroops(boat.troops())}</span
+            >
+            ${this.renderProgressBar(progress, etaSeconds, opts.barColor)}
+            <span class="truncate text-xs ml-1">${opts.label}</span>`,
+          onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
+          className: `text-left ${opts.color} inline-flex items-center gap-0.5 lg:gap-1 min-w-0`,
+          translate: false,
+        })}
+        ${opts.showCancel
+          ? !boat.retreating()
             ? this.renderButton({
                 content: "❌",
                 onClick: () => this.emitBoatCancelIntent(boat.id()),
@@ -449,39 +438,36 @@ export class AttacksDisplay extends LitElement implements Layer {
               })
             : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
-              >`}
-        </div>
-      `;
-    });
+              >`
+          : ""}
+      </div>
+    `;
+  }
+
+  private renderBoats() {
+    if (this.outgoingBoats.length === 0) return html``;
+
+    return this.outgoingBoats.map((boat) =>
+      this.renderBoatRow(boat, {
+        color: "text-blue-400",
+        barColor: "bg-blue-400",
+        label: this.getBoatTargetName(boat),
+        showCancel: true,
+      }),
+    );
   }
 
   private renderIncomingBoats() {
     if (this.incomingBoats.length === 0) return html``;
 
-    return this.incomingBoats.map((boat) => {
-      const progress = this.getBoatProgress(boat);
-      const etaSeconds = this.getBoatEtaSeconds(boat);
-      return html`
-        <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
-        >
-          ${this.renderButton({
-            content: html`${this.renderBoatIcon(boat)}
-              <span class="inline-block min-w-[3rem] text-right"
-                >${renderTroops(boat.troops())}</span
-              >
-              ${this.renderProgressBar(progress, etaSeconds, "bg-red-400")}
-              <span class="truncate text-xs ml-1"
-                >${boat.owner()?.displayName()}</span
-              >`,
-            onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
-            className:
-              "text-left text-red-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
-            translate: false,
-          })}
-        </div>
-      `;
-    });
+    return this.incomingBoats.map((boat) =>
+      this.renderBoatRow(boat, {
+        color: "text-red-400",
+        barColor: "bg-red-400",
+        label: boat.owner()?.displayName() ?? "",
+        showCancel: false,
+      }),
+    );
   }
 
   render() {
