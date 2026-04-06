@@ -243,14 +243,13 @@ describe("SoundManager", () => {
 
 describe("Sound channel management", () => {
   let eventBus: EventBus;
-  let soundManager: SoundManager;
 
   beforeEach(() => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     nextPlayId = 1;
     eventBus = new EventBus();
-    soundManager = new SoundManager(eventBus, createUserSettings());
+    new SoundManager(eventBus, createUserSettings());
   });
 
   it("new sound always plays even when at channel cap", () => {
