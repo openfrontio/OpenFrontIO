@@ -288,7 +288,7 @@ describe("Sound channel management", () => {
     // Next sound should play without stopping anything
     clickHowl.stop.mockClear();
     eventBus.emit(new PlaySoundEffectEvent("click"));
-    expect(clickHowl.stop).not.toHaveBeenCalledWith(2);
+    expect(clickHowl.stop).not.toHaveBeenCalled();
   });
 
   it("allows up to MAX_CONCURRENT_SOUNDS without stopping any", () => {
