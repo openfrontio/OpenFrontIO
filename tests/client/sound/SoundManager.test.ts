@@ -70,7 +70,10 @@ vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
   };
 });
 
-import { SoundManager } from "../../../src/client/sound/SoundManager";
+import {
+  MAX_CONCURRENT_SOUNDS,
+  SoundManager,
+} from "../../../src/client/sound/SoundManager";
 import {
   PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
@@ -253,32 +256,28 @@ describe("Sound channel management", () => {
   });
 
   it("new sound always plays even when at channel cap", () => {
-    // Fill 8 channels
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
       eventBus.emit(new PlaySoundEffectEvent("click"));
     }
 
-    // 9th sound should still play
     eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     const atomHowl = howlInstances[howlInstances.length - 1];
     expect(atomHowl.play).toHaveBeenCalled();
   });
 
   it("stops the oldest sound when at channel cap", () => {
-    // Fill 8 channels with clicks (all use same Howl, different play IDs)
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
       eventBus.emit(new PlaySoundEffectEvent("click"));
     }
     const clickHowl = howlInstances[howlInstances.length - 1];
 
-    // The first play had id=1. Playing a 9th sound should stop id=1.
+    // The first play had id=1. Playing one more should stop id=1.
     eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     expect(clickHowl.stop).toHaveBeenCalledWith(1);
   });
 
   it("frees a channel when a sound ends naturally", () => {
-    // Fill 8 channels
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
       eventBus.emit(new PlaySoundEffectEvent("click"));
     }
     const clickHowl = howlInstances[howlInstances.length - 1];
@@ -292,8 +291,8 @@ describe("Sound channel management", () => {
     expect(clickHowl.stop).not.toHaveBeenCalledWith(2);
   });
 
-  it("allows up to 8 concurrent sounds without stopping any", () => {
-    for (let i = 0; i < 8; i++) {
+  it("allows up to MAX_CONCURRENT_SOUNDS without stopping any", () => {
+    for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
       eventBus.emit(new PlaySoundEffectEvent("click"));
     }
     const clickHowl = howlInstances[howlInstances.length - 1];

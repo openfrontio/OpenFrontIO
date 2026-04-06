@@ -12,7 +12,7 @@ import {
   soundEffectUrls,
 } from "./Sounds";
 
-const MAX_CONCURRENT_SOUNDS = 8;
+export const MAX_CONCURRENT_SOUNDS = 8;
 
 export class SoundManager {
   private backgroundMusic: Howl[] = [];
