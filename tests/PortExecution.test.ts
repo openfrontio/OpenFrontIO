@@ -131,7 +131,7 @@ describe("PortExecution", () => {
     expect(ports).not.toContain(blockedPort);
   });
 
-  test("Blocked trade route becomes eligible again after expiry", () => {
+  test("Trade route block expires at the expiry tick", () => {
     game.config().proximityBonusPortsNb = () => 0;
     game.config().tradeShipShortRangeDebuff = () => 0;
 
@@ -153,9 +153,32 @@ describe("PortExecution", () => {
     expect(
       game.isTradeRouteBlocked(port.id(), blockedPort.id(), game.ticks()),
     ).toBe(true);
+    (game as any)._ticks += 1;
     expect(
-      game.isTradeRouteBlocked(port.id(), blockedPort.id(), game.ticks() + 1),
+      game.isTradeRouteBlocked(port.id(), blockedPort.id(), game.ticks()),
     ).toBe(false);
+  });
+
+  test("Expired trade route is considered again by trading ports", () => {
+    game.config().proximityBonusPortsNb = () => 0;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+
+    player.conquer(game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    other.conquer(game.ref(0, 0));
+    const blockedPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+
+    game.blockTradeRouteUntil(port.id(), blockedPort.id(), game.ticks() + 1);
+
+    expect(execution.tradingPorts()).not.toContain(blockedPort);
+    (game as any)._ticks += 1;
     expect(execution.tradingPorts()).toContain(blockedPort);
   });
 
