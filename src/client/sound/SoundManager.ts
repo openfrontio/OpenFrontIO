@@ -70,18 +70,16 @@ export class SoundManager {
       this.onSetBackgroundMusicVolume,
     );
     this.eventBus.off(SetSoundEffectsVolumeEvent, this.onSetSoundEffectsVolume);
-    this.safely("stop background music", () => {
-      this.backgroundMusic.forEach((track) => track.stop());
-      this.backgroundMusic.forEach((track) => track.unload());
+    this.backgroundMusic.forEach((track) => {
+      this.safely("stop background track", () => track.stop());
+      this.safely("unload background track", () => track.unload());
     });
-    this.safely("unload sound effects", () => {
-      this.soundEffects.forEach((sound) => {
-        sound.stop();
-        sound.unload();
-      });
-      this.soundEffects.clear();
-      this.activeSounds = [];
+    this.soundEffects.forEach((sound) => {
+      this.safely("stop sound effect", () => sound.stop());
+      this.safely("unload sound effect", () => sound.unload());
     });
+    this.soundEffects.clear();
+    this.activeSounds = [];
   }
 
   private safely(action: string, fn: () => void): void {
@@ -150,10 +148,9 @@ export class SoundManager {
       if (!howl) return;
 
       if (this.activeSounds.length >= MAX_CONCURRENT_SOUNDS) {
-        const oldest = this.activeSounds.shift();
-        if (oldest) {
-          oldest.howl.stop(oldest.id);
-        }
+        const oldest = this.activeSounds[0];
+        oldest.howl.stop(oldest.id);
+        this.removeActiveSoundById(oldest.id);
       }
 
       const id = howl.play();
