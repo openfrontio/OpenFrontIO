@@ -3,14 +3,34 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock howler before importing SoundManager
 const howlCtor = vi.fn();
 const howlInstances: any[] = [];
+let nextPlayId = 1;
 vi.mock("howler", () => {
   class MockHowl {
-    play = vi.fn();
-    stop = vi.fn();
+    play = vi.fn(() => nextPlayId++);
+    stop = vi.fn((id?: number) => {
+      if (id !== undefined) {
+        this._fireEvent("stop", id);
+      }
+    });
     volume = vi.fn();
     playing = vi.fn().mockReturnValue(false);
     unload = vi.fn();
-    once = vi.fn();
+    once = vi.fn((event: string, callback: () => void, id?: number) => {
+      if (id !== undefined) {
+        if (!this._listeners.has(event)) {
+          this._listeners.set(event, new Map());
+        }
+        this._listeners.get(event)!.set(id, callback);
+      }
+    });
+    _listeners: Map<string, Map<number, () => void>> = new Map();
+    _fireEvent(event: string, id: number) {
+      const cb = this._listeners.get(event)?.get(id);
+      if (cb) {
+        cb();
+        this._listeners.get(event)?.delete(id);
+      }
+    }
     constructor(_opts: any) {
       howlCtor(_opts);
       howlInstances.push(this);
@@ -39,7 +59,13 @@ vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
     soundEffectUrls: new Map([
       ["click", "mock/click.mp3"],
       ["atom-hit", "mock/atom-hit.mp3"],
+      ["atom-launch", "mock/atom-launch.mp3"],
+      ["hydrogen-hit", "mock/hydrogen-hit.mp3"],
+      ["hydrogen-launch", "mock/hydrogen-launch.mp3"],
+      ["mirv-launch", "mock/mirv-launch.mp3"],
       ["ka-ching", "mock/ka-ching.mp3"],
+      ["message", "mock/message.mp3"],
+      ["build-city", "mock/build-city.mp3"],
     ]),
   };
 });
@@ -68,6 +94,7 @@ describe("SoundManager", () => {
   beforeEach(() => {
     howlCtor.mockClear();
     howlInstances.length = 0;
+    nextPlayId = 1;
     eventBus = new EventBus();
     userSettings = createUserSettings();
     soundManager = new SoundManager(eventBus, userSettings);
@@ -211,5 +238,68 @@ describe("SoundManager", () => {
     expect(() => soundManager.setSoundEffectsVolume(0.5)).not.toThrow();
     expect(() => soundManager.playSoundEffect("click")).not.toThrow();
     expect(() => soundManager.stopSoundEffect("click")).not.toThrow();
+  });
+});
+
+describe("Sound channel management", () => {
+  let eventBus: EventBus;
+  let soundManager: SoundManager;
+
+  beforeEach(() => {
+    howlCtor.mockClear();
+    howlInstances.length = 0;
+    nextPlayId = 1;
+    eventBus = new EventBus();
+    soundManager = new SoundManager(eventBus, createUserSettings());
+  });
+
+  it("new sound always plays even when at channel cap", () => {
+    // Fill 8 channels
+    for (let i = 0; i < 8; i++) {
+      eventBus.emit(new PlaySoundEffectEvent("click"));
+    }
+
+    // 9th sound should still play
+    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
+    const atomHowl = howlInstances[howlInstances.length - 1];
+    expect(atomHowl.play).toHaveBeenCalled();
+  });
+
+  it("stops the oldest sound when at channel cap", () => {
+    // Fill 8 channels with clicks (all use same Howl, different play IDs)
+    for (let i = 0; i < 8; i++) {
+      eventBus.emit(new PlaySoundEffectEvent("click"));
+    }
+    const clickHowl = howlInstances[howlInstances.length - 1];
+
+    // The first play had id=1. Playing a 9th sound should stop id=1.
+    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
+    expect(clickHowl.stop).toHaveBeenCalledWith(1);
+  });
+
+  it("frees a channel when a sound ends naturally", () => {
+    // Fill 8 channels
+    for (let i = 0; i < 8; i++) {
+      eventBus.emit(new PlaySoundEffectEvent("click"));
+    }
+    const clickHowl = howlInstances[howlInstances.length - 1];
+
+    // Simulate first sound ending naturally
+    clickHowl._fireEvent("end", 1);
+
+    // Next sound should play without stopping anything
+    clickHowl.stop.mockClear();
+    eventBus.emit(new PlaySoundEffectEvent("click"));
+    expect(clickHowl.stop).not.toHaveBeenCalledWith(2);
+  });
+
+  it("allows up to 8 concurrent sounds without stopping any", () => {
+    for (let i = 0; i < 8; i++) {
+      eventBus.emit(new PlaySoundEffectEvent("click"));
+    }
+    const clickHowl = howlInstances[howlInstances.length - 1];
+    expect(clickHowl.play).toHaveBeenCalledTimes(8);
+    // No stop calls with specific IDs (only general stop might be called)
+    expect(clickHowl.stop).not.toHaveBeenCalled();
   });
 });

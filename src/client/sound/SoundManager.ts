@@ -12,12 +12,15 @@ import {
   soundEffectUrls,
 } from "./Sounds";
 
+const MAX_CONCURRENT_SOUNDS = 8;
+
 export class SoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
   private soundEffects: Map<SoundEffect, Howl> = new Map();
   private soundEffectsVolume: number = 1;
   private backgroundMusicVolume: number = 0;
+  private activeSounds: { howl: Howl; id: number }[] = [];
   private eventBus: EventBus;
   private onPlaySoundEffect: (e: PlaySoundEffectEvent) => void;
   private onSetBackgroundMusicVolume: (
@@ -77,6 +80,7 @@ export class SoundManager {
         sound.unload();
       });
       this.soundEffects.clear();
+      this.activeSounds = [];
     });
   }
 
@@ -136,12 +140,26 @@ export class SoundManager {
     }
   }
 
+  private removeActiveSoundById(id: number): void {
+    this.activeSounds = this.activeSounds.filter((s) => s.id !== id);
+  }
+
   public playSoundEffect(name: SoundEffect): void {
     this.safely(`play sound ${name}`, () => {
-      const sound = this.getOrLoadSoundEffect(name);
-      if (sound) {
-        sound.play();
+      const howl = this.getOrLoadSoundEffect(name);
+      if (!howl) return;
+
+      if (this.activeSounds.length >= MAX_CONCURRENT_SOUNDS) {
+        const oldest = this.activeSounds.shift();
+        if (oldest) {
+          oldest.howl.stop(oldest.id);
+        }
       }
+
+      const id = howl.play();
+      this.activeSounds.push({ howl, id });
+      howl.once("end", () => this.removeActiveSoundById(id), id);
+      howl.once("stop", () => this.removeActiveSoundById(id), id);
     });
   }
 
@@ -156,9 +174,10 @@ export class SoundManager {
 
   public stopSoundEffect(name: SoundEffect): void {
     this.safely(`stop sound ${name}`, () => {
-      const sound = this.soundEffects.get(name);
-      if (sound) {
-        sound.stop();
+      const howl = this.soundEffects.get(name);
+      if (howl) {
+        howl.stop();
+        this.activeSounds = this.activeSounds.filter((s) => s.howl !== howl);
       }
     });
   }
