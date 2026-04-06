@@ -234,7 +234,7 @@ export class AbstractGraphAStar implements PathFinder<number> {
     return null;
   }
 
-  private buildPathFromGoal(goalId: number): number[] {
+  private buildPathFromGoal(goalId: number): number[] | null {
     const path: number[] = [];
     let current = goalId;
     const maxLen = this.cameFrom.length;

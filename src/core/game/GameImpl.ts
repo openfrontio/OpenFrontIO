@@ -434,13 +434,14 @@ export class GameImpl implements Game {
     // render with a lighter shade, looking like shoreline remnants.
     // Distance-limited to avoid over-propagating toward distant continents.
     const MAX_DEEP_DIST = 30;
+    const DEEP_OCEAN_MAGNITUDE = 20;
     const deepQueue: TileRef[] = [];
     for (const tile of seedCandidates) {
       if (stampArr[tile] !== stamp && this.isWater(tile)) {
         stampArr[tile] = stamp;
         distArr[tile] = 0;
-        if (this.magnitude(tile) !== 20) {
-          map.setMagnitude(tile, 20);
+        if (this.magnitude(tile) !== DEEP_OCEAN_MAGNITUDE) {
+          map.setMagnitude(tile, DEEP_OCEAN_MAGNITUDE);
           changedTiles.add(tile);
         }
         deepQueue.push(tile);
@@ -458,10 +459,10 @@ export class GameImpl implements Game {
         if (!this.isWater(n) || stampArr[n] === stamp) continue;
         const oldMag = this.magnitude(n);
         // Stop when magnitude is already high enough (deep ocean)
-        if (oldMag >= 20) continue;
+        if (oldMag >= DEEP_OCEAN_MAGNITUDE) continue;
         stampArr[n] = stamp;
         distArr[n] = dist + 1;
-        map.setMagnitude(n, 20);
+        map.setMagnitude(n, DEEP_OCEAN_MAGNITUDE);
         changedTiles.add(n);
         deepQueue.push(n);
       }
@@ -749,9 +750,11 @@ export class GameImpl implements Game {
   }
 
   private recordTileUpdate(tile: TileRef): void {
+    // Low 16 bits: tile state, bits 16-23: terrain byte
     this.tileUpdatePairs.push(
       tile,
-      this._map.tileState(tile) | (this._map.terrainByte(tile) << 16),
+      (this._map.tileState(tile) & 0xffff) |
+        (this._map.terrainByte(tile) << 16),
     );
   }
 
@@ -963,7 +966,7 @@ export class GameImpl implements Game {
 
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
-      return;
+      throw Error(`cannot conquer water`);
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
