@@ -10,7 +10,7 @@ import { translateText } from "../../Utils";
 import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
-} from "../../sound/SoundEvents";
+} from "../../sound/Sounds";
 import { Layer } from "./Layer";
 const structureIcon = assetUrl("images/CityIconWhite.svg");
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");

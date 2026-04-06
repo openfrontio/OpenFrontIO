@@ -30,18 +30,26 @@ vi.mock("../../../../proprietary/sounds/music/war.mp3", () => ({
   default: "war.mp3",
 }));
 
-// Mock assetUrl
-vi.mock("../../../src/core/AssetUrls", () => ({
-  assetUrl: (path: string) => path,
-}));
+// Mock the Sounds module so tests don't depend on actual asset paths
+vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../src/client/sound/Sounds")>();
+  return {
+    ...actual,
+    soundEffectUrls: new Map([
+      ["click", "mock/click.mp3"],
+      ["atom-hit", "mock/atom-hit.mp3"],
+      ["ka-ching", "mock/ka-ching.mp3"],
+    ]),
+  };
+});
 
+import { SoundManager } from "../../../src/client/sound/SoundManager";
 import {
   PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
-  SoundEffect,
-} from "../../../src/client/sound/SoundEvents";
-import { SoundManager } from "../../../src/client/sound/SoundManager";
+} from "../../../src/client/sound/Sounds";
 import { EventBus } from "../../../src/core/EventBus";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 
@@ -66,15 +74,14 @@ describe("SoundManager", () => {
   });
 
   it("lazy-loads a sound effect once and reuses it", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     // 3 background music Howls + 1 Click Howl = 4
     expect(howlCtor).toHaveBeenCalledTimes(4);
   });
 
   it("plays a sound effect when PlaySoundEffectEvent is emitted", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomHit));
-    // 3 bg music + 1 effect = 4. The effect is the last created Howl.
+    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     const effectHowl = howlInstances[howlInstances.length - 1];
     expect(effectHowl.play).toHaveBeenCalledTimes(1);
   });
@@ -85,7 +92,6 @@ describe("SoundManager", () => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     new SoundManager(bus, settings);
-    // All 3 background music Howls should have volume set to 0.5
     const bgHowls = howlInstances.slice(0, 3);
     bgHowls.forEach((h) => {
       expect(h.volume).toHaveBeenCalledWith(0.5);
@@ -98,13 +104,10 @@ describe("SoundManager", () => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     new SoundManager(bus, settings);
-    bus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
-    // The Click Howl should be created with volume 0.3
-    const clickHowl = howlInstances[howlInstances.length - 1];
+    bus.emit(new PlaySoundEffectEvent("click"));
     expect(howlCtor).toHaveBeenLastCalledWith(
       expect.objectContaining({ volume: 0.3 }),
     );
-    expect(clickHowl).toBeDefined();
   });
 
   it("responds to SetBackgroundMusicVolumeEvent", () => {
@@ -116,8 +119,7 @@ describe("SoundManager", () => {
   });
 
   it("responds to SetSoundEffectsVolumeEvent", () => {
-    // Load a sound first
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
     clickHowl.volume.mockClear();
     eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
@@ -139,20 +141,18 @@ describe("SoundManager", () => {
   });
 
   it("dispose() unsubscribes from EventBus so events no longer play sounds", () => {
-    // Load a Click sound first so we can observe it
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
     expect(clickHowl.play).toHaveBeenCalledTimes(1);
 
     soundManager.dispose();
 
-    // After dispose, emitting the event should not play the sound again
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     expect(clickHowl.play).toHaveBeenCalledTimes(1);
   });
 
   it("dispose() stops and unloads all loaded sound effects", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
 
     soundManager.dispose();
@@ -173,7 +173,7 @@ describe("SoundManager", () => {
   });
 
   it("does not throw when playSoundEffect is called directly", () => {
-    expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
+    expect(() => soundManager.playSoundEffect("click")).not.toThrow();
   });
 
   it("does not throw when playBackgroundMusic and stopBackgroundMusic are called", () => {
@@ -182,7 +182,6 @@ describe("SoundManager", () => {
   });
 
   it("swallows errors from Howler and does not propagate", () => {
-    // Make every Howler method throw
     howlInstances.forEach((h) => {
       h.play.mockImplementation(() => {
         throw new Error("audio backend failure");
@@ -194,8 +193,7 @@ describe("SoundManager", () => {
         throw new Error("audio backend failure");
       });
     });
-    // Force lazy-loaded Howls to also throw on play by pre-loading Click
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
     clickHowl.play.mockImplementation(() => {
       throw new Error("audio backend failure");
@@ -207,32 +205,11 @@ describe("SoundManager", () => {
       throw new Error("audio backend failure");
     });
 
-    // All public methods should swallow the error
     expect(() => soundManager.playBackgroundMusic()).not.toThrow();
     expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
     expect(() => soundManager.setBackgroundMusicVolume(0.5)).not.toThrow();
     expect(() => soundManager.setSoundEffectsVolume(0.5)).not.toThrow();
-    expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
-    expect(() => soundManager.stopSoundEffect(SoundEffect.Click)).not.toThrow();
-  });
-});
-
-describe("SoundEffect enum", () => {
-  it("exports all expected sound effects", () => {
-    expect(SoundEffect.KaChing).toBe("ka-ching");
-    expect(SoundEffect.AtomHit).toBe("atom-hit");
-    expect(SoundEffect.AtomLaunch).toBe("atom-launch");
-    expect(SoundEffect.HydrogenHit).toBe("hydrogen-hit");
-    expect(SoundEffect.HydrogenLaunch).toBe("hydrogen-launch");
-    expect(SoundEffect.MIRVLaunch).toBe("mirv-launch");
-    expect(SoundEffect.AllianceSuggested).toBe("alliance-suggested");
-    expect(SoundEffect.AllianceBroken).toBe("alliance-broken");
-    expect(SoundEffect.BuildPort).toBe("build-port");
-    expect(SoundEffect.BuildCity).toBe("build-city");
-    expect(SoundEffect.BuildDefensePost).toBe("build-defense-post");
-    expect(SoundEffect.BuildWarship).toBe("build-warship");
-    expect(SoundEffect.SAMBuilt).toBe("sam-built");
-    expect(SoundEffect.Message).toBe("message");
-    expect(SoundEffect.Click).toBe("click");
+    expect(() => soundManager.playSoundEffect("click")).not.toThrow();
+    expect(() => soundManager.stopSoundEffect("click")).not.toThrow();
   });
 });
