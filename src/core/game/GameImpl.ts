@@ -360,6 +360,7 @@ export class GameImpl implements Game {
       for (let i = 0; i < end; i++) {
         if (this.isWater(nb[i]) && !this.isOcean(nb[i])) {
           map.setOcean(nb[i]);
+          changedTiles.add(nb[i]);
           oceanQueue.push(nb[i]);
         }
       }
