@@ -935,6 +935,12 @@ export interface Game extends GameMap {
 
   /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
   queueWaterConversion(tile: TileRef): void;
+  blockTradeRouteUntil(srcPortId: number, dstPortId: number, tick: Tick): void;
+  isTradeRouteBlocked(
+    srcPortId: number,
+    dstPortId: number,
+    nowTick: Tick,
+  ): boolean;
 }
 
 export interface PlayerActions {

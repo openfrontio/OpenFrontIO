@@ -33,6 +33,7 @@ import {
   TeamGameSpawnAreas,
   TerrainType,
   TerraNullius,
+  Tick,
   Trios,
   Unit,
   UnitInfo,
@@ -73,6 +74,8 @@ export function createGame(
 
 export type CellString = string;
 
+const TRADE_ROUTE_BLOCK_DURATION_TICKS = 100;
+
 export class GameImpl implements Game {
   private _ticks = 0;
 
@@ -110,6 +113,7 @@ export class GameImpl implements Game {
   private _waterManager: WaterManager;
   private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
+  private readonly tradeRouteBlockedUntil = new Map<string, number>();
 
   constructor(
     private _humans: PlayerInfo[],
@@ -515,11 +519,55 @@ export class GameImpl implements Game {
     return packed;
   }
 
+  private makeTradeRouteKey(srcPortId: number, dstPortId: number): string {
+    return `${srcPortId}:${dstPortId}`;
+  }
+
+  private pruneExpiredTradeRouteBlocks(nowTick: Tick): void {
+    for (const [routeKey, blockedUntil] of this.tradeRouteBlockedUntil) {
+      if (blockedUntil <= nowTick) {
+        this.tradeRouteBlockedUntil.delete(routeKey);
+      }
+    }
+  }
+
+  blockTradeRouteUntil(srcPortId: number, dstPortId: number, tick: Tick): void {
+    this.pruneExpiredTradeRouteBlocks(this._ticks);
+    const routeKey = this.makeTradeRouteKey(srcPortId, dstPortId);
+    const existing = this.tradeRouteBlockedUntil.get(routeKey) ?? 0;
+    if (tick > existing) {
+      this.tradeRouteBlockedUntil.set(routeKey, tick);
+    }
+  }
+
+  isTradeRouteBlocked(
+    srcPortId: number,
+    dstPortId: number,
+    nowTick: Tick,
+  ): boolean {
+    const routeKey = this.makeTradeRouteKey(srcPortId, dstPortId);
+    const blockedUntil = this.tradeRouteBlockedUntil.get(routeKey);
+    if (blockedUntil === undefined) {
+      return false;
+    }
+    if (blockedUntil <= nowTick) {
+      this.tradeRouteBlockedUntil.delete(routeKey);
+      return false;
+    }
+    return true;
+  }
+
   private hash(): number {
+    this.pruneExpiredTradeRouteBlocks(this._ticks);
     let hash = 1;
     this._players.forEach((p) => {
       hash += p.hash();
     });
+    for (const [routeKey, blockedUntil] of Array.from(
+      this.tradeRouteBlockedUntil.entries(),
+    ).sort(([a], [b]) => a.localeCompare(b))) {
+      hash += simpleHash(routeKey) + blockedUntil;
+    }
     return hash;
   }
 
@@ -1233,6 +1281,8 @@ export class GameImpl implements Game {
     });
   }
 }
+
+export { TRADE_ROUTE_BLOCK_DURATION_TICKS };
 
 // Or a more dynamic approach that will catch new enum values:
 const createGameUpdatesMap = (): GameUpdates => {

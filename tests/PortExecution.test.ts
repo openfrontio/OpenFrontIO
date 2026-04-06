@@ -104,4 +104,79 @@ describe("PortExecution", () => {
 
     expect(ports.length).toBe(1);
   });
+
+  test("Blocked trade route is omitted from trading ports", () => {
+    game.config().proximityBonusPortsNb = () => 0;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+
+    player.conquer(game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    other.conquer(game.ref(0, 0));
+    const blockedPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+    other.conquer(game.ref(0, 1));
+    const openPort = other.buildUnit(UnitType.Port, game.ref(0, 1), {});
+
+    game.blockTradeRouteUntil(port.id(), blockedPort.id(), game.ticks() + 100);
+
+    const ports = execution.tradingPorts();
+
+    expect(ports).toContain(openPort);
+    expect(ports).not.toContain(blockedPort);
+  });
+
+  test("Blocked trade route becomes eligible again after expiry", () => {
+    game.config().proximityBonusPortsNb = () => 0;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+
+    player.conquer(game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    other.conquer(game.ref(0, 0));
+    const blockedPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+
+    game.blockTradeRouteUntil(port.id(), blockedPort.id(), game.ticks() + 1);
+
+    expect(execution.tradingPorts()).not.toContain(blockedPort);
+    expect(
+      game.isTradeRouteBlocked(port.id(), blockedPort.id(), game.ticks()),
+    ).toBe(true);
+    expect(
+      game.isTradeRouteBlocked(port.id(), blockedPort.id(), game.ticks() + 1),
+    ).toBe(false);
+    expect(execution.tradingPorts()).toContain(blockedPort);
+  });
+
+  test("Trade route blacklist affects hash and expires cleanly", () => {
+    player.conquer(game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+
+    other.conquer(game.ref(0, 0));
+    const otherPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+
+    const baseHash = (game as any).hash();
+    game.blockTradeRouteUntil(port.id(), otherPort.id(), game.ticks() + 100);
+    const blockedHash = (game as any).hash();
+    (game as any)._ticks += 100;
+    const expiredHash = (game as any).hash();
+
+    expect(blockedHash).not.toBe(baseHash);
+    expect(expiredHash).toBe(baseHash);
+  });
 });
