@@ -148,10 +148,6 @@ export class GameImpl implements Game {
       const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
       this._miniWaterGraph = graphBuilder.build();
 
-      // Initialize union-find for incremental water updates
-      const wc = this._miniWaterGraph.getWaterComponents();
-      if (wc) wc.initializeUnionFind();
-
       this._miniWaterHPA = new AStarWaterHierarchical(
         this.miniGameMap,
         this._miniWaterGraph,
@@ -299,6 +295,10 @@ export class GameImpl implements Game {
     if (!this.isLand(tile)) return;
     if (this.hasOwner(tile)) {
       throw Error(`cannot queue water conversion, tile ${tile} has owner`);
+    }
+    if (!this._config.waterNukes()) {
+      this.setFallout(tile, true);
+      return;
     }
     this._pendingWaterTiles.add(tile);
   }

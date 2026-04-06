@@ -246,6 +246,9 @@ export class DefaultConfig implements Config {
   disableAlliances(): boolean {
     return this._gameConfig.disableAlliances ?? false;
   }
+  waterNukes(): boolean {
+    return this._gameConfig.waterNukes ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }

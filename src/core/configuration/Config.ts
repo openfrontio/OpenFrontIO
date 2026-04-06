@@ -75,6 +75,7 @@ export interface Config {
   instantBuild(): boolean;
   disableNavMesh(): boolean;
   disableAlliances(): boolean;
+  waterNukes(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
