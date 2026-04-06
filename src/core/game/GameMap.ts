@@ -392,6 +392,11 @@ export class GameMapImpl implements GameMap {
     return this.state[tile];
   }
 
+  /**
+   * Update a tile from a packed uint32:
+   *   bits  0-15: tile state (owner, fallout, etc.)
+   *   bits 16-23: terrain byte (land, ocean, shoreline, magnitude)
+   */
   updateTile(tile: TileRef, packed: number): void {
     const state = packed & 0xffff;
     const terrainByte = (packed >>> 16) & 0xff;

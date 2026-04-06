@@ -339,6 +339,9 @@ export class GameImpl implements Game {
     const nb: TileRef[] = new Array(8);
 
     // ── 1. Propagate ocean bit ─────────────────────────────────────
+    // Seed from converted water tiles adjacent to existing ocean,
+    // then flood-fill through ALL connected water (not just converted)
+    // so pre-existing lake tiles that are now connected to ocean get the bit.
     const oceanQueue: TileRef[] = [];
     for (const tile of converted) {
       const end = pushNeighbors(tile, nb, 0);
@@ -355,7 +358,7 @@ export class GameImpl implements Game {
       const tile = oceanQueue[oHead++];
       const end = pushNeighbors(tile, nb, 0);
       for (let i = 0; i < end; i++) {
-        if (converted.has(nb[i]) && !this.isOcean(nb[i])) {
+        if (this.isWater(nb[i]) && !this.isOcean(nb[i])) {
           map.setOcean(nb[i]);
           oceanQueue.push(nb[i]);
         }
@@ -411,7 +414,11 @@ export class GameImpl implements Game {
         }
       }
     }
-    // BFS outward through water, stopping at convergence
+    // BFS outward through water, stopping at convergence.
+    // Tiles in seedCandidates (blast-zone ring) are always enqueued even
+    // if their magnitude already matches, because stale tiles may exist
+    // just beyond them. Outside the ring, convergence-stopping is safe
+    // and avoids flooding the entire ocean.
     let magHead = 0;
     while (magHead < magQueue.length) {
       const tile = magQueue[magHead++];
@@ -423,12 +430,15 @@ export class GameImpl implements Game {
         const n = nb[i];
         if (!this.isWater(n) || stampArr[n] === stamp) continue;
         const oldMag = this.magnitude(n);
-        if (oldMag === nextMag) continue;
+        // Skip if magnitude already correct AND tile is outside the blast zone
+        if (oldMag === nextMag && !seedCandidates.has(n)) continue;
         stampArr[n] = stamp;
         distArr[n] = nextDist;
-        map.setMagnitude(n, nextMag);
-        changedTiles.add(n);
         magQueue.push(n);
+        if (oldMag !== nextMag) {
+          map.setMagnitude(n, nextMag);
+          changedTiles.add(n);
+        }
       }
     }
     // Phase 2: For unreached seed candidates (e.g. fully destroyed island

@@ -468,6 +468,7 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.waterNukes = false;
 
     this.leaveLobbyOnClose = true;
   }

@@ -87,22 +87,26 @@ describe("Water Nukes", () => {
       }
     });
 
-    test("queueWaterConversion skips owned tiles at flush time", () => {
-      // Conquer the target tile so it's owned
+    test("queueWaterConversion skips tiles conquered before flush", () => {
+      // Pick an unowned land tile and queue it for water conversion directly
       const target = game.ref(10, 10);
+      expect(game.isLand(target)).toBe(true);
+      expect(game.hasOwner(target)).toBe(false);
+
+      // Queue the tile for water conversion (simulates nuke queueing)
+      game.queueWaterConversion(target);
+
+      // Another actor conquers the tile before the tick flushes the queue
       player.conquer(target);
       expect(game.hasOwner(target)).toBe(true);
 
-      // Directly queue water conversion — this tile is unowned at queue time
-      // But we need to test the flush-time check. Let's use a tile that gets
-      // conquered between queueing and flushing.
-      // Instead, verify that nuking an owned tile relinquishes it first,
-      // then the tile becomes water.
-      launchNukeAt(game, player, target);
-      tickUntilNukeLands(game);
+      // Flush: the pending conversion should be skipped because the tile is now owned
+      game.executeNextTick();
 
-      expect(game.isWater(target)).toBe(true);
-      expect(game.hasOwner(target)).toBe(false);
+      // Tile should remain land and owned
+      expect(game.isLand(target)).toBe(true);
+      expect(game.hasOwner(target)).toBe(true);
+      expect(game.isWater(target)).toBe(false);
     });
 
     test("waterGraphVersion increments after water conversion", async () => {

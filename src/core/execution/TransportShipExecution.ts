@@ -193,15 +193,17 @@ export class TransportShipExecution implements Execution {
       this._waterGraphVersion = this.mg.waterGraphVersion();
       this.pathFinder = PathFinding.Water(this.mg);
       this.motionPlanDst = null; // Force motion plan re-recording
+    }
 
-      // Auto-retreat if destination was destroyed by nuke (turned to water)
-      if (this.dst !== null && this.mg.isWater(this.dst)) {
-        if (!this.boat.retreating()) {
-          this.boat.orderBoatRetreat();
-        }
-        // Reset cached retreat destination so it's recomputed from current position
-        this.retreatDst = null;
+    // Auto-retreat if destination was destroyed by nuke (turned to water)
+    // Checked every tick (not just on graph rebuild) because graph rebuilds
+    // are throttled and the tile may already be water before the version bumps.
+    if (this.dst !== null && this.mg.isWater(this.dst)) {
+      if (!this.boat.retreating()) {
+        this.boat.orderBoatRetreat();
       }
+      // Reset cached retreat destination so it's recomputed from current position
+      this.retreatDst = null;
     }
 
     if (this.boat.retreating()) {
