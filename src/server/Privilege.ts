@@ -84,7 +84,9 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
   });
   return {
     hasMatch: (input: string) =>
-      substringMatcher.hasMatch(input) || collapseMatcher.hasMatch(input),
+      input.toLowerCase().includes("kkk") ||
+      substringMatcher.hasMatch(input) ||
+      collapseMatcher.hasMatch(input),
     getAllMatches: (input: string, sorted?: boolean) => [
       ...substringMatcher.getAllMatches(input, sorted),
       ...collapseMatcher.getAllMatches(input, sorted),
@@ -118,7 +120,9 @@ function censorUsernameWithMatcher(
     ? username.replace(`[${clanTag}]`, "").trim()
     : username;
 
-  const clanTagIsProfane = clanTag ? matcher.hasMatch(clanTag) : false;
+  const clanTagIsProfane = clanTag
+    ? matcher.hasMatch(clanTag) || clanTag.toLowerCase() === "ss"
+    : false;
   const usernameIsProfane = matcher.hasMatch(nameWithoutClan);
 
   const censoredName = usernameIsProfane

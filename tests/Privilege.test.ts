@@ -131,6 +131,13 @@ describe("UsernameCensor", () => {
       // "snigger" is whitelisted in englishDataset
       expect(matcher.hasMatch("snigger")).toBe(false);
     });
+
+    test("catches kkk as substring", () => {
+      expect(matcher.hasMatch("kkk")).toBe(true);
+      expect(matcher.hasMatch("KKK")).toBe(true);
+      expect(matcher.hasMatch("kkklover")).toBe(true);
+      expect(matcher.hasMatch("ilovekkkboys")).toBe(true);
+    });
   });
 
   describe("censorUsername", () => {
@@ -184,6 +191,15 @@ describe("UsernameCensor", () => {
       test("removes clan tag containing banned word as substring (≤5 chars)", () => {
         expect(checker.censorUsername("[JEWS]CoolPlayer")).toBe("CoolPlayer");
         expect(checker.censorUsername("[NAZI]CoolPlayer")).toBe("CoolPlayer");
+      });
+
+      test("removes [SS] clan tag", () => {
+        expect(checker.censorUsername("[SS]Player")).toBe("Player");
+        expect(checker.censorUsername("[ss]Player")).toBe("Player");
+      });
+
+      test("removes [KKK] clan tag", () => {
+        expect(checker.censorUsername("[KKK]Player")).toBe("Player");
       });
 
       test("keeps clean clan tag when username is clean", () => {
