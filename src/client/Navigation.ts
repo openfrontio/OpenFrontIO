@@ -19,11 +19,20 @@ export function initNavigation() {
     // Close mobile sidebar if a nav item was clicked
     closeMobileSidebar();
 
-    // Hide only the currently visible modal
+    // Close the currently visible modal properly
     const visibleModal = document.querySelector(".page-content:not(.hidden)");
     if (visibleModal) {
-      visibleModal.classList.add("hidden");
-      visibleModal.classList.remove("block");
+      // If it's an open modal component, call close() for proper cleanup (onClose callback, etc.)
+      if (
+        typeof (visibleModal as any).isOpen === "function" &&
+        (visibleModal as any).isOpen() &&
+        typeof (visibleModal as any).close === "function"
+      ) {
+        (visibleModal as any).close();
+      } else {
+        visibleModal.classList.add("hidden");
+        visibleModal.classList.remove("block");
+      }
     }
 
     // Handle page-play separately (it's not a page-content element)

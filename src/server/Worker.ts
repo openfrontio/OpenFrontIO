@@ -109,9 +109,6 @@ export async function startWorker() {
   app.use(compression());
   app.use(express.json());
 
-  // Configure MIME types for webp files
-  express.static.mime.define({ "image/webp": ["webp"] });
-
   app.use(
     express.static(path.join(__dirname, "../../out"), {
       setHeaders: (res) => {

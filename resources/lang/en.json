@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -351,7 +352,11 @@
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
-    "aegean": "Aegean"
+    "aegean": "Aegean",
+    "milkyway": "Milky Way",
+    "mediterranean": "Mediterranean",
+    "dyslexdria": "Dyslexdria",
+    "greatlakes": "Great Lakes"
   },
   "map_categories": {
     "featured": "Featured",
@@ -930,18 +935,25 @@
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "catching_up": "Catching up..."
   },
+  "store": {
+    "title": "Store",
+    "patterns": "Skins",
+    "flags": "Flags",
+    "no_flags": "No flags available. Check back later for new items.",
+    "no_skins": "No skins available. Check back later for new items."
+  },
   "territory_patterns": {
     "title": "Skins",
-    "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "My Skins",
-    "all_owned": "All skins owned! Check back later for new items.",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
+  },
+  "cosmetics": {
+    "artist_label": "Artist:"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1012,6 +1024,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",

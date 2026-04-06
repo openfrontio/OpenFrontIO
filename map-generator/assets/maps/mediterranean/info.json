@@ -1,0 +1,195 @@
+{
+  "name": "mediterranean",
+  "nations": [
+    {
+      "coordinates": [141, 574],
+      "name": "Lusitania",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [464, 519],
+      "name": "Terraconensis",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [353, 787],
+      "name": "Baetica",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [699, 340],
+      "name": "Narbonensis",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [596, 91],
+      "name": "Aquitania",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [910, 218],
+      "name": "Alpes",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1053, 39],
+      "name": "Raetia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1316, 88],
+      "name": "Noricum",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1307, 479],
+      "name": "Italia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1058, 534],
+      "name": "Corsica et Sardinia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1350, 762],
+      "name": "Sicilia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1553, 42],
+      "name": "Pannonia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1522, 301],
+      "name": "Dalmatia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1910, 119],
+      "name": "Dacia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1811, 402],
+      "name": "Macedonia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1654, 560],
+      "name": "Epirus",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1774, 774],
+      "name": "Achaia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2030, 457],
+      "name": "Thracia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2114, 250],
+      "name": "Moesia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2428, 200],
+      "name": "Bosporan Kingdom",
+      "flag": ""
+    },
+    {
+      "coordinates": [2065, 690],
+      "name": "Asia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2354, 505],
+      "name": "Pontus",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2325, 669],
+      "name": "Galatia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2447, 809],
+      "name": "Cilicia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2196, 828],
+      "name": "Lycia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2379, 942],
+      "name": "Cyprus",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2516, 648],
+      "name": "Cappadocia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2772, 845],
+      "name": "Mesopotamia",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2584, 990],
+      "name": "Syria",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2490, 1141],
+      "name": "Judaea",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2481, 1292],
+      "name": "Arabia Petraea",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2263, 1240],
+      "name": "Aegyptus",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [1799, 1096],
+      "name": "Cyrenaica et Creta",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [2815, 659],
+      "name": "Sassanid Empire",
+      "flag": "Sassanid Empire"
+    },
+    {
+      "coordinates": [1091, 989],
+      "name": "Africa Proconsularis",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [597, 910],
+      "name": "Mauretania Caesariensis",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [264, 1028],
+      "name": "Mauretania Tingitania",
+      "flag": "West Roman Empire"
+    },
+    {
+      "coordinates": [584, 1199],
+      "name": "Numidia",
+      "flag": "Amazigh flag"
+    }
+  ]
+}

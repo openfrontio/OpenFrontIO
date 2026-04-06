@@ -91,7 +91,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
 
 export async function createCheckoutSession(
   priceId: string,
-  colorPaletteName: string | null,
+  colorPaletteName?: string,
 ): Promise<string | false> {
   try {
     const response = await fetch(

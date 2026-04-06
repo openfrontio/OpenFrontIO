@@ -44,10 +44,18 @@ export function normalizeAssetPath(path: string): string {
   return normalizedPath;
 }
 
+function isAbsoluteUrl(path: string): boolean {
+  return /^https?:\/\//i.test(path);
+}
+
 export function buildAssetUrl(
   path: string,
   assetManifest: AssetManifest = {},
 ): string {
+  if (isAbsoluteUrl(path)) {
+    return path;
+  }
+
   const normalizedPath = normalizeAssetPath(path);
 
   const directUrl = assetManifest[normalizedPath];
