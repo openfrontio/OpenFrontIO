@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { estimateBoatEtaSeconds } from "../../../../src/client/graphics/layers/boatEta";
 import { AttacksDisplay } from "../../../../src/client/graphics/layers/AttacksDisplay";
+import { estimateBoatEtaSeconds } from "../../../../src/client/graphics/layers/boatEta";
 import type { UnitView } from "../../../../src/core/game/GameView";
 
 describe("estimateBoatEtaSeconds", () => {
