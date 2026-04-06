@@ -905,6 +905,8 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+  /** Incremented each time the water navigation graph is rebuilt (e.g. after nuke terrain change). */
+  waterGraphVersion(): number;
 
   /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
   queueWaterConversion(tile: TileRef): void;

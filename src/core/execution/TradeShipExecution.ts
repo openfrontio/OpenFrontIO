@@ -18,6 +18,7 @@ export class TradeShipExecution implements Execution {
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
   private pathFinder: SteppingPathFinder<TileRef>;
+  private _waterGraphVersion: number = 0;
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
@@ -31,9 +32,17 @@ export class TradeShipExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     this.pathFinder = PathFinding.Water(mg);
+    this._waterGraphVersion = mg.waterGraphVersion();
   }
 
   tick(ticks: number): void {
+    // Rebuild pathfinder when water graph changes (nuke terrain conversion)
+    if (this.mg.waterGraphVersion() !== this._waterGraphVersion) {
+      this._waterGraphVersion = this.mg.waterGraphVersion();
+      this.pathFinder = PathFinding.Water(this.mg);
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
+
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,

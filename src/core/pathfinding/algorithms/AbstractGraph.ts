@@ -766,6 +766,41 @@ export class AbstractGraphBuilder {
       this.processCluster(cx, cy);
     }
 
+    // Recreate boundary nodes between rebuild zone and LEFT/TOP neighbors.
+    // processCluster only creates nodes on RIGHT and BOTTOM edges, so when
+    // the rebuild zone removes shared boundary nodes whose home clusters are
+    // to the LEFT or TOP, those nodes are never recreated by the loop above.
+    // This is critical for multiple overlapping nukes: the second nuke's
+    // rebuild zone can remove boundary nodes that the first nuke created.
+    for (const key of rebuildZone) {
+      const cx = key % this.clustersX;
+      const cy = Math.floor(key / this.clustersX);
+
+      // Left boundary: recreate nodes shared with (cx-1, cy)
+      if (cx > 0 && !rebuildZone.has(this.graph.getClusterKey(cx - 1, cy))) {
+        const baseX = cx * this.clusterSize;
+        const baseY = cy * this.clusterSize;
+        const edgeX = baseX - 1;
+        const nodes = this.findNodesOnVerticalEdge(edgeX, baseY);
+        for (const node of nodes) {
+          this.addNodeToCluster(cx - 1, cy, node);
+          this.addNodeToCluster(cx, cy, node);
+        }
+      }
+
+      // Top boundary: recreate nodes shared with (cx, cy-1)
+      if (cy > 0 && !rebuildZone.has(this.graph.getClusterKey(cx, cy - 1))) {
+        const baseX = cx * this.clusterSize;
+        const baseY = cy * this.clusterSize;
+        const edgeY = baseY - 1;
+        const nodes = this.findNodesOnHorizontalEdge(edgeY, baseX);
+        for (const node of nodes) {
+          this.addNodeToCluster(cx, cy - 1, node);
+          this.addNodeToCluster(cx, cy, node);
+        }
+      }
+    }
+
     // Track which clusters need edge rebuild (rebuild zone + any outside
     // clusters that gained new boundary nodes from processCluster)
     const edgeRebuildKeys = new Set<number>(rebuildZone);
@@ -780,6 +815,15 @@ export class AbstractGraphBuilder {
       if (cy + 1 < this.clustersY) {
         const bk = this.graph.getClusterKey(cx, cy + 1);
         if (!rebuildZone.has(bk)) edgeRebuildKeys.add(bk);
+      }
+      // Left/top boundary nodes also need edge rebuild in neighbor clusters
+      if (cx > 0) {
+        const lk = this.graph.getClusterKey(cx - 1, cy);
+        if (!rebuildZone.has(lk)) edgeRebuildKeys.add(lk);
+      }
+      if (cy > 0) {
+        const tk = this.graph.getClusterKey(cx, cy - 1);
+        if (!rebuildZone.has(tk)) edgeRebuildKeys.add(tk);
       }
     }
 

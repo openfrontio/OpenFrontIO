@@ -18,6 +18,7 @@ export class WarshipExecution implements Execution {
   private warship: Unit;
   private mg: Game;
   private pathfinder: SteppingPathFinder<TileRef>;
+  private _waterGraphVersion: number = 0;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
 
@@ -28,6 +29,7 @@ export class WarshipExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     this.pathfinder = PathFinding.Water(mg);
+    this._waterGraphVersion = mg.waterGraphVersion();
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -54,6 +56,12 @@ export class WarshipExecution implements Execution {
     if (this.warship.health() <= 0) {
       this.warship.delete();
       return;
+    }
+
+    // Rebuild pathfinder when water graph changes (nuke terrain conversion)
+    if (this.mg.waterGraphVersion() !== this._waterGraphVersion) {
+      this._waterGraphVersion = this.mg.waterGraphVersion();
+      this.pathfinder = PathFinding.Water(this.mg);
     }
 
     const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;

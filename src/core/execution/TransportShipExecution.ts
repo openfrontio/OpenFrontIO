@@ -28,6 +28,7 @@ export class TransportShipExecution implements Execution {
   private mg: Game;
   private target: Player | TerraNullius;
   private pathFinder: SteppingPathFinder<TileRef>;
+  private _waterGraphVersion: number = 0;
 
   private dst: TileRef | null;
   private src: TileRef | null;
@@ -61,6 +62,7 @@ export class TransportShipExecution implements Execution {
     this.mg = mg;
     this.target = mg.owner(this.ref);
     this.pathFinder = PathFinding.Water(mg);
+    this._waterGraphVersion = mg.waterGraphVersion();
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -184,6 +186,22 @@ export class TransportShipExecution implements Execution {
     ) {
       this.attacker = boatOwner;
       this.originalOwner = boatOwner; // for when this owner disconnects too
+    }
+
+    // Rebuild pathfinder when water graph changes (nuke terrain conversion)
+    if (this.mg.waterGraphVersion() !== this._waterGraphVersion) {
+      this._waterGraphVersion = this.mg.waterGraphVersion();
+      this.pathFinder = PathFinding.Water(this.mg);
+      this.motionPlanDst = null; // Force motion plan re-recording
+
+      // Auto-retreat if destination was destroyed by nuke (turned to water)
+      if (this.dst !== null && this.mg.isWater(this.dst)) {
+        if (!this.boat.retreating()) {
+          this.boat.orderBoatRetreat();
+        }
+        // Reset cached retreat destination so it's recomputed from current position
+        this.retreatDst = null;
+      }
     }
 
     if (this.boat.retreating()) {
