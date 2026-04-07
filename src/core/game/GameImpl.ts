@@ -1,10 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import {
-  AbstractGraph,
-  AbstractGraphBuilder,
-} from "../pathfinding/algorithms/AbstractGraph";
-import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHierarchical";
+import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { ATTACK_INDEX_SENT } from "../StatsSchemas";
@@ -52,6 +48,7 @@ import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { WaterManager } from "./WaterManager";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -109,20 +106,8 @@ export class GameImpl implements Game {
 
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
-  private _miniWaterGraph: AbstractGraph | null = null;
-  private _miniWaterHPA: AStarWaterHierarchical | null = null;
-  private _waterGraphVersion: number = 0;
-  private _waterGraphDirty: boolean = false;
-  private _waterGraphLastRebuildTick: number = 0;
+  private _waterManager: WaterManager;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
-
-  // Batched water conversion: tiles queued by nuke detonations, flushed every tick
-  private _pendingWaterTiles: Set<TileRef> = new Set();
-
-  // Reusable stamp-based distance tracking for magnitude BFS (avoids allocation per nuke)
-  private _waterDistArr: Uint16Array | null = null;
-  private _waterStampArr: Uint16Array | null = null;
-  private _waterStamp: number = 0;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -140,22 +125,16 @@ export class GameImpl implements Game {
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
+    this._waterManager = new WaterManager(
+      this._map,
+      this.miniGameMap,
+      _config.disableNavMesh(),
+    );
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
     }
     this.addPlayers();
-
-    if (!_config.disableNavMesh()) {
-      const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
-      this._miniWaterGraph = graphBuilder.build();
-
-      this._miniWaterHPA = new AStarWaterHierarchical(
-        this.miniGameMap,
-        this._miniWaterGraph,
-        { cachePaths: true },
-      );
-    }
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -302,286 +281,7 @@ export class GameImpl implements Game {
       this.setFallout(tile, true);
       return;
     }
-    this._pendingWaterTiles.add(tile);
-  }
-
-  finalizeWaterChanges(convertedTiles: Iterable<TileRef>): void {
-    const converted = new Set<TileRef>(convertedTiles);
-    if (converted.size === 0) return;
-
-    const w = this._width;
-    const totalTiles = w * this._height;
-    const map = this._map;
-
-    // Collect every tile whose terrain byte changed so we can
-    // batch-record updates once at the very end.
-    const changedTiles = new Set<TileRef>();
-    // All converted tiles definitely changed (they just became water).
-    for (const tile of converted) changedTiles.add(tile);
-
-    // Inline neighbor helper (no allocation, cardinal only)
-    const pushNeighbors = (
-      tile: TileRef,
-      out: TileRef[],
-      start: number,
-    ): number => {
-      if (tile >= w) out[start++] = (tile - w) as TileRef;
-      if (tile < totalTiles - w) out[start++] = (tile + w) as TileRef;
-      const x = tile % w;
-      if (x > 0) out[start++] = (tile - 1) as TileRef;
-      if (x < w - 1) out[start++] = (tile + 1) as TileRef;
-      return start;
-    };
-
-    // Reusable scratch buffer for neighbors.
-    // Sized to 8 to hold up to 4 cardinal neighbors from an inner ring call
-    // plus 4 from a second-ring call (pushNeighbors writes at [start..start+4)).
-    const nb: TileRef[] = new Array(8);
-
-    // ── 1. Propagate ocean bit ─────────────────────────────────────
-    // Seed from converted water tiles adjacent to existing ocean,
-    // then flood-fill through ALL connected water (not just converted)
-    // so pre-existing lake tiles that are now connected to ocean get the bit.
-    const oceanQueue: TileRef[] = [];
-    for (const tile of converted) {
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (!converted.has(nb[i]) && this.isOcean(nb[i])) {
-          map.setOcean(tile);
-          oceanQueue.push(tile);
-          break;
-        }
-      }
-    }
-    // If no converted tile is adjacent to existing ocean (e.g. all-land map),
-    // mark all converted tiles as ocean so they're navigable for ports/boats.
-    if (oceanQueue.length === 0) {
-      for (const tile of converted) {
-        map.setOcean(tile);
-        oceanQueue.push(tile);
-      }
-    }
-    let oHead = 0;
-    while (oHead < oceanQueue.length) {
-      const tile = oceanQueue[oHead++];
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (this.isWater(nb[i]) && !this.isOcean(nb[i])) {
-          map.setOcean(nb[i]);
-          changedTiles.add(nb[i]);
-          oceanQueue.push(nb[i]);
-        }
-      }
-    }
-
-    // ── 2. Recompute magnitude via BFS from remaining land outward ─
-    //    Uses stamp-based typed arrays (reused across nukes, zero alloc).
-
-    // Lazily allocate the reusable arrays
-    if (!this._waterDistArr || this._waterDistArr.length !== totalTiles) {
-      this._waterDistArr = new Uint16Array(totalTiles);
-      this._waterStampArr = new Uint16Array(totalTiles);
-      this._waterStamp = 0;
-    }
-    this._waterStamp++;
-    if (this._waterStamp >= 0xffff) {
-      // Stamp overflow — clear and restart
-      this._waterStampArr!.fill(0);
-      this._waterStamp = 1;
-    }
-    const stamp = this._waterStamp;
-    const stampArr = this._waterStampArr!;
-    const distArr = this._waterDistArr;
-
-    const magQueue: TileRef[] = [];
-
-    // Seed candidates: converted tiles + their immediate water neighbors
-    const seedCandidates = new Set<TileRef>(converted);
-    for (const tile of converted) {
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (this.isWater(nb[i]) && !converted.has(nb[i])) {
-          seedCandidates.add(nb[i]);
-        }
-      }
-    }
-    // Seed: water tiles adjacent to remaining land get distance 0
-    for (const tile of seedCandidates) {
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (this.isLand(nb[i])) {
-          if (stampArr[tile] !== stamp) {
-            stampArr[tile] = stamp;
-            distArr[tile] = 0;
-            if (this.magnitude(tile) !== 0) {
-              map.setMagnitude(tile, 0);
-              changedTiles.add(tile);
-            }
-            magQueue.push(tile);
-          }
-          break;
-        }
-      }
-    }
-    // BFS outward through water, stopping at convergence.
-    // Tiles in seedCandidates (blast-zone ring) are always enqueued even
-    // if their magnitude already matches, because stale tiles may exist
-    // just beyond them. Outside the ring, convergence-stopping is safe
-    // and avoids flooding the entire ocean.
-    let magHead = 0;
-    while (magHead < magQueue.length) {
-      const tile = magQueue[magHead++];
-      const dist = distArr[tile];
-      const nextDist = dist + 1;
-      const nextMag = Math.min(Math.ceil(nextDist / 2), 31);
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        const n = nb[i];
-        if (!this.isWater(n) || stampArr[n] === stamp) continue;
-        const oldMag = this.magnitude(n);
-        // Skip if magnitude already correct AND tile is outside the blast zone
-        if (oldMag === nextMag && !seedCandidates.has(n)) continue;
-        stampArr[n] = stamp;
-        distArr[n] = nextDist;
-        magQueue.push(n);
-        if (oldMag !== nextMag) {
-          map.setMagnitude(n, nextMag);
-          changedTiles.add(n);
-        }
-      }
-    }
-    // Phase 2: For unreached seed candidates (e.g. fully destroyed island
-    // with no remaining land nearby), propagate outward through surrounding
-    // water to fix stale low-magnitude tiles that used to be near the island.
-    // These old water tiles retain their old (low) magnitude which makes them
-    // render with a lighter shade, looking like shoreline remnants.
-    // Distance-limited to avoid over-propagating toward distant continents.
-    const MAX_DEEP_DIST = 30;
-    const DEEP_OCEAN_MAGNITUDE = 20;
-    const deepQueue: TileRef[] = [];
-    for (const tile of seedCandidates) {
-      if (stampArr[tile] !== stamp && this.isWater(tile)) {
-        stampArr[tile] = stamp;
-        distArr[tile] = 0;
-        if (this.magnitude(tile) !== DEEP_OCEAN_MAGNITUDE) {
-          map.setMagnitude(tile, DEEP_OCEAN_MAGNITUDE);
-          changedTiles.add(tile);
-        }
-        deepQueue.push(tile);
-      }
-    }
-    // BFS outward from deep-ocean seeds, fixing old low-magnitude water
-    let deepHead = 0;
-    while (deepHead < deepQueue.length) {
-      const tile = deepQueue[deepHead++];
-      const dist = distArr[tile];
-      if (dist >= MAX_DEEP_DIST) continue;
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        const n = nb[i];
-        if (!this.isWater(n) || stampArr[n] === stamp) continue;
-        const oldMag = this.magnitude(n);
-        // Stop when magnitude is already high enough (deep ocean)
-        if (oldMag >= DEEP_OCEAN_MAGNITUDE) continue;
-        stampArr[n] = stamp;
-        distArr[n] = dist + 1;
-        map.setMagnitude(n, DEEP_OCEAN_MAGNITUDE);
-        changedTiles.add(n);
-        deepQueue.push(n);
-      }
-    }
-
-    // ── 3. Fix shoreline bits ──────────────────────────────────────
-    //    Check converted tiles, their 2-ring neighbourhood, and every
-    //    tile touched by the magnitude BFS + their neighbours.
-    const tilesToCheck = new Set<TileRef>();
-    for (const tile of converted) {
-      tilesToCheck.add(tile);
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        tilesToCheck.add(nb[i]);
-        // 2nd ring — catches old shoreline water tiles around destroyed islands
-        const end2 = pushNeighbors(nb[i], nb, end);
-        for (let j = end; j < end2; j++) {
-          tilesToCheck.add(nb[j]);
-        }
-      }
-    }
-    for (let i = 0; i < magQueue.length; i++) {
-      const tile = magQueue[i];
-      tilesToCheck.add(tile);
-      const end = pushNeighbors(tile, nb, 0);
-      for (let j = 0; j < end; j++) {
-        tilesToCheck.add(nb[j]);
-      }
-    }
-    for (const tile of tilesToCheck) {
-      const tileIsLand = this.isLand(tile);
-      let hasOpposite = false;
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (this.isLand(nb[i]) !== tileIsLand) {
-          hasOpposite = true;
-          break;
-        }
-      }
-      const oldShoreline = this.isShoreline(tile);
-      if (hasOpposite) {
-        if (!oldShoreline) {
-          map.setShorelineBit(tile);
-          changedTiles.add(tile);
-        }
-      } else {
-        if (oldShoreline) {
-          map.clearShorelineBit(tile);
-          changedTiles.add(tile);
-        }
-      }
-    }
-
-    // ── Record all terrain changes in one pass ─────────────────────
-    for (const tile of changedTiles) {
-      this.recordTileUpdate(tile);
-    }
-
-    // ── 4. Update minimap terrain ──────────────────────────────────
-    const miniTilesToCheck = new Set<TileRef>();
-    const convertedMiniTiles = new Set<TileRef>();
-    for (const tile of converted) {
-      const miniX = Math.floor(this.x(tile) / 2);
-      const miniY = Math.floor(this.y(tile) / 2);
-      if (this.miniGameMap.isValidCoord(miniX, miniY)) {
-        miniTilesToCheck.add(this.miniGameMap.ref(miniX, miniY));
-      }
-    }
-    for (const miniTile of miniTilesToCheck) {
-      if (!this.miniGameMap.isLand(miniTile)) continue;
-      const fx = this.miniGameMap.x(miniTile) * 2;
-      const fy = this.miniGameMap.y(miniTile) * 2;
-      // Require majority of source tiles (>=3 of 4) to be water
-      // to avoid prematurely converting minimap tiles
-      let waterCount = 0;
-      let totalCount = 0;
-      for (let dy = 0; dy < 2; dy++) {
-        for (let dx = 0; dx < 2; dx++) {
-          if (map.isValidCoord(fx + dx, fy + dy)) {
-            totalCount++;
-            if (this.isWater(map.ref(fx + dx, fy + dy))) {
-              waterCount++;
-            }
-          }
-        }
-      }
-      if (waterCount >= Math.min(3, totalCount)) {
-        this.miniGameMap.setWater(miniTile);
-        convertedMiniTiles.add(miniTile);
-      }
-    }
-
-    // ── 5. Mark water graph dirty (rebuilt lazily, throttled) ─────
-    if (convertedMiniTiles.size > 0) {
-      this._waterGraphDirty = true;
-    }
+    this._waterManager.queueTile(tile);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -744,44 +444,10 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
-    // Flush pending water conversions in batch
-    if (this._pendingWaterTiles.size > 0) {
-      const converted: TileRef[] = [];
-      for (const tile of this._pendingWaterTiles) {
-        // Tile may have been conquered between queueing and flushing
-        if (this.isLand(tile) && !this.hasOwner(tile)) {
-          // Inline setWater without recordTileUpdate — finalizeWaterChanges
-          // records the final terrain byte after ocean/magnitude/shoreline are set
-          if (this._map.hasFallout(tile)) {
-            this._map.setFallout(tile, false);
-          }
-          this._map.setWater(tile);
-          converted.push(tile);
-        }
-      }
-      this._pendingWaterTiles.clear();
-      if (converted.length > 0) {
-        this.finalizeWaterChanges(converted);
-      }
-    }
-    // Throttled water graph rebuild: at most once every 20 ticks
-    const WATER_GRAPH_REBUILD_INTERVAL = 20;
-    if (
-      this._waterGraphDirty &&
-      !this._config.disableNavMesh() &&
-      this._ticks - this._waterGraphLastRebuildTick >=
-        WATER_GRAPH_REBUILD_INTERVAL
-    ) {
-      this._waterGraphDirty = false;
-      this._waterGraphLastRebuildTick = this._ticks;
-      const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
-      this._miniWaterGraph = graphBuilder.build();
-      this._miniWaterHPA = new AStarWaterHierarchical(
-        this.miniGameMap,
-        this._miniWaterGraph,
-        { cachePaths: true },
-      );
-      this._waterGraphVersion++;
+    // Flush pending water conversions + throttled graph rebuild
+    const waterChangedTiles = this._waterManager.tick(this._ticks);
+    for (const tile of waterChangedTiles) {
+      this.recordTileUpdate(tile);
     }
     this._ticks++;
     return this.updates;
@@ -1488,81 +1154,19 @@ export class GameImpl implements Game {
     return this._railNetwork;
   }
   miniWaterHPA(): PathFinder<number> | null {
-    return this._miniWaterHPA;
+    return this._waterManager.miniWaterHPA();
   }
   miniWaterGraph(): AbstractGraph | null {
-    return this._miniWaterGraph;
+    return this._waterManager.miniWaterGraph();
   }
   waterGraphVersion(): number {
-    return this._waterGraphVersion;
+    return this._waterManager.waterGraphVersion();
   }
   getWaterComponent(tile: TileRef): number | null {
-    // Permissive fallback for tests with disableNavMesh
-    if (!this._miniWaterGraph) return 0;
-
-    const miniX = Math.floor(this._map.x(tile) / 2);
-    const miniY = Math.floor(this._map.y(tile) / 2);
-    const miniTile = this.miniGameMap.ref(miniX, miniY);
-
-    if (this.miniGameMap.isWater(miniTile)) {
-      return this._miniWaterGraph.getComponentId(miniTile);
-    }
-
-    // Shore tile: find water neighbor (expand search for minimap resolution loss)
-    for (const n of this.miniGameMap.neighbors(miniTile)) {
-      if (this.miniGameMap.isWater(n)) {
-        return this._miniWaterGraph.getComponentId(n);
-      }
-    }
-
-    // Extended search: check 2-hop neighbors for narrow straits
-    for (const n of this.miniGameMap.neighbors(miniTile)) {
-      for (const n2 of this.miniGameMap.neighbors(n)) {
-        if (this.miniGameMap.isWater(n2)) {
-          return this._miniWaterGraph.getComponentId(n2);
-        }
-      }
-    }
-    return null;
+    return this._waterManager.getWaterComponent(tile);
   }
   hasWaterComponent(tile: TileRef, component: number): boolean {
-    // Permissive fallback for tests with disableNavMesh
-    if (!this._miniWaterGraph) return true;
-
-    const miniX = Math.floor(this._map.x(tile) / 2);
-    const miniY = Math.floor(this._map.y(tile) / 2);
-    const miniTile = this.miniGameMap.ref(miniX, miniY);
-
-    // Check miniTile itself (shore in full map may be water in minimap)
-    if (
-      this.miniGameMap.isWater(miniTile) &&
-      this._miniWaterGraph.getComponentId(miniTile) === component
-    ) {
-      return true;
-    }
-
-    // Check neighbors
-    for (const n of this.miniGameMap.neighbors(miniTile)) {
-      if (
-        this.miniGameMap.isWater(n) &&
-        this._miniWaterGraph.getComponentId(n) === component
-      ) {
-        return true;
-      }
-    }
-
-    // Extended search: check 2-hop neighbors for narrow straits
-    for (const n of this.miniGameMap.neighbors(miniTile)) {
-      for (const n2 of this.miniGameMap.neighbors(n)) {
-        if (
-          this.miniGameMap.isWater(n2) &&
-          this._miniWaterGraph.getComponentId(n2) === component
-        ) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return this._waterManager.hasWaterComponent(tile, component);
   }
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
