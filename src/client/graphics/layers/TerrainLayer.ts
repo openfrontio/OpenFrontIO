@@ -24,8 +24,9 @@ export class TerrainLayer implements Layer {
       this.redraw();
       return;
     }
-    // Repaint terrain for tiles that changed (e.g. nuke turning land to water)
-    const updatedTiles = this.game.recentlyUpdatedTiles();
+    // Repaint terrain for tiles whose terrain changed (e.g. nuke
+    // turning land to water).
+    const updatedTiles = this.game.recentlyUpdatedTerrainTiles();
     if (updatedTiles.length > 0) {
       let dirty = false;
       for (const tile of updatedTiles) {

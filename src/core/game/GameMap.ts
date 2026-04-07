@@ -67,8 +67,10 @@ export interface GameMap {
    *
    * `state` must be an unsigned 16-bit value (`0..65535`). Implementations may
    * store this in a `Uint16Array` and will truncate higher bits if provided.
+   *
+   * Returns `true` when the terrain byte changed (land/water/shoreline/magnitude).
    */
-  updateTile(tile: TileRef, state: number): void;
+  updateTile(tile: TileRef, state: number): boolean;
 
   numTilesWithFallout(): number;
 }
@@ -397,7 +399,7 @@ export class GameMapImpl implements GameMap {
    *   bits  0-15: tile state (owner, fallout, etc.)
    *   bits 16-23: terrain byte (land, ocean, shoreline, magnitude)
    */
-  updateTile(tile: TileRef, packed: number): void {
+  updateTile(tile: TileRef, packed: number): boolean {
     const state = packed & 0xffff;
     const terrainByte = (packed >>> 16) & 0xff;
 
@@ -412,13 +414,15 @@ export class GameMapImpl implements GameMap {
     }
 
     // Update terrain if the packed value includes a terrain byte that differs
-    if (this.terrain[tile] !== terrainByte) {
+    const terrainChanged = this.terrain[tile] !== terrainByte;
+    if (terrainChanged) {
       const wasLand = this.isLand(tile);
       this.terrain[tile] = terrainByte;
       const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
       if (wasLand && !isNowLand) this.numLandTiles_--;
       else if (!wasLand && isNowLand) this.numLandTiles_++;
     }
+    return terrainChanged;
   }
 }
 
