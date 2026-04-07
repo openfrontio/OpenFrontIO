@@ -141,7 +141,7 @@ export class GameServer {
       this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
     if (gameConfig.maxTimerValue !== undefined) {
-      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
@@ -150,7 +150,8 @@ export class GameServer {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
     if (gameConfig.spawnImmunityDuration !== undefined) {
-      this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
+      this.gameConfig.spawnImmunityDuration =
+        gameConfig.spawnImmunityDuration ?? undefined;
     }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
@@ -162,13 +163,14 @@ export class GameServer {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
     if (gameConfig.goldMultiplier !== undefined) {
-      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
+      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier ?? undefined;
     }
     if (gameConfig.startingGold !== undefined) {
-      this.gameConfig.startingGold = gameConfig.startingGold;
+      this.gameConfig.startingGold = gameConfig.startingGold ?? undefined;
     }
     if (gameConfig.disableAlliances !== undefined) {
-      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
+      this.gameConfig.disableAlliances =
+        gameConfig.disableAlliances ?? undefined;
     }
   }
 

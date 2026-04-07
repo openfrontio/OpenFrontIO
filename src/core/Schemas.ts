@@ -247,15 +247,15 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
-  disableAlliances: z.boolean().optional(),
+  disableAlliances: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
-  maxTimerValue: z.number().int().min(1).max(120).optional(), // In minutes
-  spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
+  maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
+  spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  goldMultiplier: z.number().min(0.1).max(1000).optional(),
-  startingGold: z.number().int().min(0).max(1000000000).optional(),
+  goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
+  startingGold: z.number().int().min(0).max(1000000000).nullable().optional(),
 });
 
 export const TeamSchema = z.string();
