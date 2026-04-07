@@ -182,6 +182,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     const timerColor =
       this.game.config().gameConfig().maxTimerValue !== undefined &&
+      this.game.config().gameConfig().maxTimerValue !== null &&
       this.timer < 60
         ? "text-red-400"
         : "";
