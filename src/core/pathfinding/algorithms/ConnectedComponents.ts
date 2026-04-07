@@ -16,7 +16,6 @@ export class ConnectedComponents {
   private readonly lastRowStart: number;
   private readonly queue: Int32Array;
   private componentIds: Uint8Array | Uint16Array | null = null;
-  private nextId: number = 0;
 
   constructor(
     private readonly map: GameMap,
@@ -55,7 +54,6 @@ export class ConnectedComponents {
     }
 
     this.componentIds = ids;
-    this.nextId = nextId;
     DebugSpan.end();
   }
 
