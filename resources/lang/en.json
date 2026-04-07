@@ -354,7 +354,8 @@
     "aegean": "Aegean",
     "milkyway": "Milky Way",
     "mediterranean": "Mediterranean",
-    "dyslexdria": "Dyslexdria"
+    "dyslexdria": "Dyslexdria",
+    "greatlakes": "Great Lakes"
   },
   "map_categories": {
     "featured": "Featured",
@@ -610,7 +611,7 @@
     "attack_ratio_down": "Decrease Attack Ratio",
     "attack_ratio_down_desc": "Decrease attack ratio by {amount}%",
     "attack_ratio_increment_label": "Attack Ratio Keybind Increment",
-    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press.",
+    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press/scroll.",
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
@@ -950,7 +951,14 @@
     "search": "Search..."
   },
   "cosmetics": {
-    "artist_label": "Artist:"
+    "artist_label": "Artist:",
+    "color_label": "Color:",
+    "common": "Common",
+    "uncommon": "Uncommon",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary",
+    "adfree": "ad-free for life!"
   },
   "flag_input": {
     "title": "Select Flag",

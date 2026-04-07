@@ -1,15 +1,22 @@
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
-const PATTERN_KEY = "territoryPattern";
+export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+export const PATTERN_KEY = "territoryPattern";
+export const FLAG_KEY = "flag";
+export const COLOR_KEY = "settings.territoryColor";
+export const DARK_MODE_KEY = "settings.darkMode";
+export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 
 export class UserSettings {
+  private static cache = new Map<string, string | null>();
+
   private emitChange(key: string, value: any): void {
     try {
       const maybeDispatch = (globalThis as any)?.dispatchEvent;
       if (typeof maybeDispatch !== "function") return;
       (globalThis as any).dispatchEvent(
-        new CustomEvent(`event:user-settings-changed:${key}`, {
+        new CustomEvent(`${USER_SETTINGS_CHANGED_EVENT}:${key}`, {
           detail: value,
         }),
       );
@@ -18,147 +25,167 @@ export class UserSettings {
     }
   }
 
-  get(key: string, defaultValue: boolean): boolean {
-    const value = localStorage.getItem(key);
+  private getCached(key: string): string | null {
+    if (!UserSettings.cache.has(key)) {
+      UserSettings.cache.set(key, localStorage.getItem(key));
+    }
+    return UserSettings.cache.get(key) ?? null;
+  }
+
+  private setCached(key: string, value: string, emitChange: boolean = true) {
+    localStorage.setItem(key, value);
+    UserSettings.cache.set(key, value);
+    if (emitChange) {
+      this.emitChange(key, value);
+    }
+  }
+
+  private removeCached(key: string, emitChange: boolean = true) {
+    localStorage.removeItem(key);
+    UserSettings.cache.set(key, null);
+    if (emitChange) {
+      this.emitChange(key, null);
+    }
+  }
+
+  private getBool(key: string, defaultValue: boolean): boolean {
+    const value = this.getCached(key);
     if (!value) return defaultValue;
-
     if (value === "true") return true;
-
     if (value === "false") return false;
-
     return defaultValue;
   }
 
-  set(key: string, value: boolean) {
-    localStorage.setItem(key, value ? "true" : "false");
-    this.emitChange(key, value);
+  private setBool(key: string, value: boolean) {
+    this.setCached(key, value ? "true" : "false");
   }
 
-  getFloat(key: string, defaultValue: number): number {
-    const value = localStorage.getItem(key);
+  private getString(key: string, defaultValue: string = ""): string {
+    const value = this.getCached(key);
+    if (value === null) return defaultValue;
+    return value;
+  }
+
+  private setString(key: string, value: string) {
+    this.setCached(key, value);
+  }
+
+  private getFloat(key: string, defaultValue: number): number {
+    const value = this.getCached(key);
     if (!value) return defaultValue;
 
     const floatValue = parseFloat(value);
     if (isNaN(floatValue)) return defaultValue;
-
     return floatValue;
   }
 
-  setFloat(key: string, value: number) {
-    localStorage.setItem(key, value.toString());
-    this.emitChange(key, value);
+  private setFloat(key: string, value: number) {
+    this.setCached(key, value.toString());
   }
 
   emojis() {
-    return this.get("settings.emojis", true);
+    return this.getBool("settings.emojis", true);
   }
 
   performanceOverlay() {
-    return this.get("settings.performanceOverlay", false);
+    return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
   alertFrame() {
-    return this.get("settings.alertFrame", true);
+    return this.getBool("settings.alertFrame", true);
   }
 
   anonymousNames() {
-    return this.get("settings.anonymousNames", false);
+    return this.getBool("settings.anonymousNames", false);
   }
 
   lobbyIdVisibility() {
-    return this.get("settings.lobbyIdVisibility", true);
+    return this.getBool("settings.lobbyIdVisibility", true);
   }
 
   fxLayer() {
-    return this.get("settings.specialEffects", true);
+    return this.getBool("settings.specialEffects", true);
   }
 
   structureSprites() {
-    return this.get("settings.structureSprites", true);
+    return this.getBool("settings.structureSprites", true);
   }
 
   darkMode() {
-    return this.get("settings.darkMode", false);
+    return this.getBool(DARK_MODE_KEY, false);
   }
 
   leftClickOpensMenu() {
-    return this.get("settings.leftClickOpensMenu", false);
+    return this.getBool("settings.leftClickOpensMenu", false);
   }
 
   territoryPatterns() {
-    return this.get("settings.territoryPatterns", true);
+    return this.getBool("settings.territoryPatterns", true);
   }
 
   attackingTroopsOverlay() {
-    return this.get("settings.attackingTroopsOverlay", true);
+    return this.getBool("settings.attackingTroopsOverlay", true);
   }
 
   toggleAttackingTroopsOverlay() {
-    this.set("settings.attackingTroopsOverlay", !this.attackingTroopsOverlay());
+    this.setBool(
+      "settings.attackingTroopsOverlay",
+      !this.attackingTroopsOverlay(),
+    );
   }
 
   cursorCostLabel() {
-    const legacy = this.get("settings.ghostPricePill", true);
-    return this.get("settings.cursorCostLabel", legacy);
-  }
-
-  focusLocked() {
-    return false;
-    // TODO: re-enable when performance issues are fixed.
-    this.get("settings.focusLocked", true);
+    const legacy = this.getBool("settings.ghostPricePill", true);
+    return this.getBool("settings.cursorCostLabel", legacy);
   }
 
   toggleLeftClickOpenMenu() {
-    this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
-  }
-
-  toggleFocusLocked() {
-    this.set("settings.focusLocked", !this.focusLocked());
+    this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
 
   toggleEmojis() {
-    this.set("settings.emojis", !this.emojis());
+    this.setBool("settings.emojis", !this.emojis());
+  }
+
+  // Performance overlay specifically needs a direct setter for Shift-D
+  setPerformanceOverlay(value: boolean) {
+    this.setBool(PERFORMANCE_OVERLAY_KEY, value);
   }
 
   togglePerformanceOverlay() {
-    this.set("settings.performanceOverlay", !this.performanceOverlay());
+    this.setBool(PERFORMANCE_OVERLAY_KEY, !this.performanceOverlay());
   }
 
   toggleAlertFrame() {
-    this.set("settings.alertFrame", !this.alertFrame());
+    this.setBool("settings.alertFrame", !this.alertFrame());
   }
 
   toggleRandomName() {
-    this.set("settings.anonymousNames", !this.anonymousNames());
+    this.setBool("settings.anonymousNames", !this.anonymousNames());
   }
 
   toggleLobbyIdVisibility() {
-    this.set("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
+    this.setBool("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
   }
 
   toggleFxLayer() {
-    this.set("settings.specialEffects", !this.fxLayer());
+    this.setBool("settings.specialEffects", !this.fxLayer());
   }
 
   toggleStructureSprites() {
-    this.set("settings.structureSprites", !this.structureSprites());
+    this.setBool("settings.structureSprites", !this.structureSprites());
   }
 
   toggleCursorCostLabel() {
-    this.set("settings.cursorCostLabel", !this.cursorCostLabel());
+    this.setBool("settings.cursorCostLabel", !this.cursorCostLabel());
   }
 
   toggleTerritoryPatterns() {
-    this.set("settings.territoryPatterns", !this.territoryPatterns());
+    this.setBool("settings.territoryPatterns", !this.territoryPatterns());
   }
 
   toggleDarkMode() {
-    this.set("settings.darkMode", !this.darkMode());
-    if (this.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
   // For development only. Used for testing patterns, set in the console manually.
@@ -178,7 +205,7 @@ export class UserSettings {
 
   getSelectedPatternName(cosmetics: Cosmetics | null): PlayerPattern | null {
     if (cosmetics === null) return null;
-    let data = localStorage.getItem(PATTERN_KEY) ?? null;
+    let data = this.getCached(PATTERN_KEY);
     if (data === null) return null;
     const patternPrefix = "pattern:";
     if (data.startsWith(patternPrefix)) {
@@ -196,34 +223,32 @@ export class UserSettings {
 
   setSelectedPatternName(patternName: string | undefined): void {
     if (patternName === undefined) {
-      localStorage.removeItem(PATTERN_KEY);
+      this.removeCached(PATTERN_KEY);
     } else {
-      localStorage.setItem(PATTERN_KEY, patternName);
+      this.setCached(PATTERN_KEY, patternName);
     }
-    this.emitChange("pattern", patternName);
   }
 
   getSelectedColor(): string | undefined {
-    const data = localStorage.getItem("settings.territoryColor") ?? undefined;
-    if (data === undefined) return undefined;
-    return data;
+    return this.getCached(COLOR_KEY) ?? undefined;
   }
 
   setSelectedColor(color: string | undefined): void {
     if (color === undefined) {
-      localStorage.removeItem("settings.territoryColor");
+      this.removeCached(COLOR_KEY);
     } else {
-      localStorage.setItem("settings.territoryColor", color);
+      this.setCached(COLOR_KEY, color);
     }
   }
 
   getFlag(): string | null {
-    let flag = localStorage.getItem("flag");
+    let flag = this.getCached(FLAG_KEY);
     if (!flag) return null;
     // Migrate bare country codes to country: prefix
     if (!flag.startsWith("flag:") && !flag.startsWith("country:")) {
       flag = `country:${flag}`;
-      localStorage.setItem("flag", flag);
+      // Silent migration: don't emit change event for FlagInput
+      this.setCached(FLAG_KEY, flag, false);
     }
     return flag;
   }
@@ -232,14 +257,12 @@ export class UserSettings {
     if (flag === "country:xx") {
       this.clearFlag();
     } else {
-      localStorage.setItem("flag", flag);
+      this.setCached(FLAG_KEY, flag);
     }
-    console.log("emitting change!");
-    this.emitChange("flag", flag);
   }
 
   clearFlag(): void {
-    localStorage.removeItem("flag");
+    this.removeCached(FLAG_KEY);
   }
 
   backgroundMusicVolume(): number {
@@ -250,12 +273,34 @@ export class UserSettings {
     this.setFloat("settings.backgroundMusicVolume", volume);
   }
 
+  // What % attack ratio increments per click/scroll
   attackRatioIncrement(): number {
     const increment = Math.round(
       this.getFloat("settings.attackRatioIncrement", 10),
     );
     if (!Number.isFinite(increment) || increment <= 0) return 10;
     return increment;
+  }
+
+  setAttackRatioIncrement(value: number): void {
+    this.setFloat("settings.attackRatioIncrement", value);
+  }
+
+  // What % attack ratio is set to
+  attackRatio(): number {
+    return this.getFloat("settings.attackRatio", 0.2);
+  }
+
+  setAttackRatio(value: number): void {
+    this.setFloat("settings.attackRatio", value);
+  }
+
+  keybinds(): string {
+    return this.getString("settings.keybinds", "");
+  }
+
+  setKeybinds(value: string): void {
+    this.setString("settings.keybinds", value);
   }
 
   soundEffectsVolume(): number {

@@ -11,7 +11,11 @@ import {
 import { GameEnv } from "../core/configuration/Config";
 import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  DARK_MODE_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -27,8 +31,8 @@ import "./GameModeSelector";
 import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
-import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
+import { HomepagePromos } from "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -60,7 +64,6 @@ import {
 } from "./Utils";
 import "./components/DesktopNavBar";
 import "./components/Footer";
-import "./components/HomeFooterAd";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
@@ -244,7 +247,6 @@ class Client {
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
 
-  private gutterAds: GutterAds;
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
@@ -304,10 +306,9 @@ class Client {
       }
     });
 
-    const gutterAds = document.querySelector("gutter-ads");
-    if (!(gutterAds instanceof GutterAds))
-      throw new Error("Missing gutter-ads");
-    this.gutterAds = gutterAds;
+    const gutterAds = document.querySelector("homepage-promos");
+    if (!(gutterAds instanceof HomepagePromos))
+      throw new Error("Missing homepage-promos");
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
@@ -481,11 +482,23 @@ class Client {
       this.joinModal.eventBus = this.eventBus;
     }
 
-    if (this.userSettings.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    const applyDarkMode = (isDark: boolean) => {
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    };
+
+    applyDarkMode(this.userSettings.darkMode());
+
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
+      (e: CustomEvent<string>) => {
+        const isDark = e.detail === "true";
+        applyDarkMode(isDark);
+      },
+    );
 
     // Attempt to join lobby
     if (document.readyState === "loading") {
@@ -778,7 +791,7 @@ class Client {
         "token-login",
         "matchmaking-modal",
         "lang-selector",
-        "gutter-ads",
+        "homepage-promos",
       ].forEach((tag) => {
         const modal = document.querySelector(tag) as HTMLElement & {
           close?: () => void;
