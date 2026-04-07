@@ -171,7 +171,7 @@ export class GameServer {
       this.gameConfig.disableAlliances = gameConfig.disableAlliances;
     }
     if (gameConfig.waterNukes !== undefined) {
-      this.gameConfig.waterNukes = gameConfig.waterNukes;
+      this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
   }
 

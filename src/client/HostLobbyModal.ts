@@ -816,7 +816,7 @@ export class HostLobbyModal extends BaseModal {
                 ? Math.round(this.startingGoldValue * 1_000_000)
                 : undefined,
             disableAlliances: this.disableAlliances || undefined,
-            waterNukes: this.waterNukes || undefined,
+            waterNukes: this.waterNukes ? true : null,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
