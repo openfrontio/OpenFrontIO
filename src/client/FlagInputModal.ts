@@ -41,12 +41,7 @@ export class FlagInputModal extends BaseModal {
       .map(
         ([key, flag]) => html`
           <flag-button
-            .flag=${{
-              key: `flag:${key}`,
-              name: flag.name,
-              url: flag.url,
-              artist: flag.artist,
-            }}
+            .flag=${{ ...flag, key: `flag:${key}` }}
             .selected=${selectedFlag === `flag:${key}`}
             .onSelect=${onSelect}
           ></flag-button>
@@ -88,7 +83,7 @@ export class FlagInputModal extends BaseModal {
 
     return html`
       <div
-        class="pt-1 flex flex-wrap gap-1.5 justify-center items-stretch content-start"
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
         ${noFlag} ${cosmeticFlags} ${countryFlags}
       </div>

@@ -36,6 +36,7 @@ import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
+import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
@@ -444,6 +445,7 @@ export class EventsDisplay extends LitElement implements Layer {
       type: MessageType.CHAT,
       unsafeDescription: false,
     });
+    this.eventBus.emit(new PlaySoundEffectEvent("message"));
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
@@ -459,6 +461,9 @@ export class EventsDisplay extends LitElement implements Layer {
       update.recipientID,
     ) as PlayerView;
 
+    if (!requestor.isAlliedWith(recipient)) {
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-suggested"));
+    }
     this.addEvent({
       description: translateText("events_display.request_alliance", {
         name: requestor.displayName(),
@@ -554,6 +559,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
@@ -580,6 +586,7 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: update.betrayedID,
       });
     } else if (betrayed === myPlayer) {
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
       const buttons = [
         {
           text: translateText("events_display.focus"),

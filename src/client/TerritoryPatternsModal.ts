@@ -3,7 +3,11 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, Pattern } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  PATTERN_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/NotLoggedInWarning";
@@ -42,7 +46,7 @@ export class TerritoryPatternsModal extends BaseModal {
       },
     );
     window.addEventListener(
-      "event:user-settings-changed:pattern",
+      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onPatternSelected,
     );
   }
@@ -50,7 +54,7 @@ export class TerritoryPatternsModal extends BaseModal {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener(
-      "event:user-settings-changed:pattern",
+      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onPatternSelected,
     );
   }
@@ -131,7 +135,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       <div class="flex flex-col">
         <div
-          class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+          class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
         >
           ${buttons}
         </div>
