@@ -1,7 +1,8 @@
 import { Worker } from "cluster";
 import winston from "winston";
 import { ServerConfig } from "../core/configuration/Config";
-import { PublicGameInfo, PublicGameType } from "../core/Schemas";
+import { GameMapType } from "../core/game/Game";
+import { GameID, PublicGameInfo, PublicGameType } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
   MasterCreateGame,
@@ -9,6 +10,7 @@ import {
   MasterUpdateGame,
   WorkerMessageSchema,
 } from "./IPCBridgeSchema";
+import { JoinRateTracker } from "./JoinRateTracker";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
@@ -19,12 +21,31 @@ export interface MasterLobbyServiceOptions {
   log: typeof logger;
 }
 
+interface TrackedLobby {
+  gameType: PublicGameType;
+  map: GameMapType;
+  createdAt: number;
+  lastNumClients: number;
+}
+
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
   private readonly workerLobbies = new Map<number, PublicGameInfo[]>();
   private readonly readyWorkers = new Set<number>();
   private started = false;
+
+  /**
+   * Tracks lobbies we've seen so we can measure join rate on completion.
+   * recordLobby() feeds samples into joinRateTracker when lobbies complete.
+   *
+   * TODO: Wire joinRateTracker.getFrequencyMultipliers() into
+   * MapPlaylist.buildMapsList() to dynamically weight map selection based
+   * on observed join rates — popular maps would appear more often in the
+   * generated playlists.
+   */
+  private readonly trackedLobbies = new Map<GameID, TrackedLobby>();
+  private readonly joinRateTracker = new JoinRateTracker();
 
   constructor(
     private config: ServerConfig,
@@ -80,6 +101,56 @@ export class MasterLobbyService {
     }
   }
 
+  /**
+   * Detects lobbies that disappeared (transitioned to Active) and records
+   * their join rate so the playlist can boost popular maps.
+   */
+  private recordCompletedLobbies() {
+    // Collect all current lobby IDs
+    const currentLobbyIds = new Set<GameID>();
+    for (const lobbies of this.workerLobbies.values()) {
+      for (const lobby of lobbies) {
+        currentLobbyIds.add(lobby.gameID);
+      }
+    }
+
+    // Any tracked lobby not in current set has completed
+    for (const [gameID, tracked] of this.trackedLobbies) {
+      if (!currentLobbyIds.has(gameID)) {
+        const durationMs = Date.now() - tracked.createdAt;
+        // Look up final numClients from last known snapshot
+        const numClients = tracked.lastNumClients;
+        if (numClients > 0 && durationMs > 0) {
+          this.joinRateTracker.recordLobby(
+            tracked.gameType,
+            tracked.map,
+            numClients,
+            durationMs,
+          );
+        }
+        this.trackedLobbies.delete(gameID);
+      }
+    }
+
+    // Track any new lobbies we haven't seen yet
+    for (const lobbies of this.workerLobbies.values()) {
+      for (const lobby of lobbies) {
+        const existing = this.trackedLobbies.get(lobby.gameID);
+        if (existing) {
+          // Update last known client count
+          existing.lastNumClients = lobby.numClients;
+        } else if (lobby.gameConfig) {
+          this.trackedLobbies.set(lobby.gameID, {
+            gameType: lobby.publicGameType,
+            map: lobby.gameConfig.gameMap,
+            createdAt: Date.now(),
+            lastNumClients: lobby.numClients,
+          });
+        }
+      }
+    }
+  }
+
   private getAllLobbies(): Record<PublicGameType, PublicGameInfo[]> {
     const lobbies = Array.from(this.workerLobbies.values()).flat();
 
@@ -110,6 +181,7 @@ export class MasterLobbyService {
   }
 
   private broadcastLobbies() {
+    this.recordCompletedLobbies();
     const msg = {
       type: "lobbiesBroadcast",
       publicGames: {
