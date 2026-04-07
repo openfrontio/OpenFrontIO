@@ -12,8 +12,8 @@ import {
 import { TileRef } from "../game/GameMap";
 import { MotionPlanRecord } from "../game/MotionPlans";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -27,8 +27,7 @@ export class TransportShipExecution implements Execution {
 
   private mg: Game;
   private target: Player | TerraNullius;
-  private pathFinder: SteppingPathFinder<TileRef>;
-  private _waterGraphVersion: number = 0;
+  private pathFinder: WaterPathFinder;
 
   private dst: TileRef | null;
   private src: TileRef | null;
@@ -61,8 +60,7 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
     this.mg = mg;
     this.target = mg.owner(this.ref);
-    this.pathFinder = PathFinding.Water(mg);
-    this._waterGraphVersion = mg.waterGraphVersion();
+    this.pathFinder = new WaterPathFinder(mg);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -188,10 +186,7 @@ export class TransportShipExecution implements Execution {
       this.originalOwner = boatOwner; // for when this owner disconnects too
     }
 
-    // Rebuild pathfinder when water graph changes (nuke terrain conversion)
-    if (this.mg.waterGraphVersion() !== this._waterGraphVersion) {
-      this._waterGraphVersion = this.mg.waterGraphVersion();
-      this.pathFinder = PathFinding.Water(this.mg);
+    if (this.pathFinder.rebuilt) {
       this.motionPlanDst = null; // Force motion plan re-recording
     }
 

@@ -8,8 +8,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { findClosestBy } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -17,8 +17,7 @@ export class TradeShipExecution implements Execution {
   private mg: Game;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: SteppingPathFinder<TileRef>;
-  private _waterGraphVersion: number = 0;
+  private pathFinder: WaterPathFinder;
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
@@ -31,15 +30,11 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinding.Water(mg);
-    this._waterGraphVersion = mg.waterGraphVersion();
+    this.pathFinder = new WaterPathFinder(mg);
   }
 
   tick(ticks: number): void {
-    // Rebuild pathfinder when water graph changes (nuke terrain conversion)
-    if (this.mg.waterGraphVersion() !== this._waterGraphVersion) {
-      this._waterGraphVersion = this.mg.waterGraphVersion();
-      this.pathFinder = PathFinding.Water(this.mg);
+    if (this.pathFinder.rebuilt) {
       this.motionPlanDst = null; // Force motion plan re-recording
     }
 
