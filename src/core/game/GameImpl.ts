@@ -353,6 +353,14 @@ export class GameImpl implements Game {
         }
       }
     }
+    // If no converted tile is adjacent to existing ocean (e.g. all-land map),
+    // mark all converted tiles as ocean so they're navigable for ports/boats.
+    if (oceanQueue.length === 0) {
+      for (const tile of converted) {
+        map.setOcean(tile);
+        oceanQueue.push(tile);
+      }
+    }
     let oHead = 0;
     while (oHead < oceanQueue.length) {
       const tile = oceanQueue[oHead++];
