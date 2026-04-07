@@ -234,6 +234,7 @@ export const GameConfigSchema = z.object({
       isNukesDisabled: z.boolean().optional(),
       isSAMsDisabled: z.boolean().optional(),
       isPeaceTime: z.boolean().optional(),
+      isWaterNukes: z.boolean().optional(),
     })
     .optional(),
   nations: z

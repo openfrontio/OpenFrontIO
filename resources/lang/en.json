@@ -515,7 +515,9 @@
     "sams_disabled": "SAMs Disabled",
     "sams_disabled_label": "SAMs",
     "peace_time": "4min Peace",
-    "peace_time_label": "PVP Immunity"
+    "peace_time_label": "PVP Immunity",
+    "water_nukes": "Water Nukes",
+    "water_nukes_label": "Water Nukes"
   },
   "select_lang": {
     "title": "Select Language"

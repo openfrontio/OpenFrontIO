@@ -267,6 +267,7 @@ export interface PublicGameModifiers {
   isNukesDisabled?: boolean;
   isSAMsDisabled?: boolean;
   isPeaceTime?: boolean;
+  isWaterNukes?: boolean;
 }
 
 export interface UnitInfo {

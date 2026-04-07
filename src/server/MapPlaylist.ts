@@ -116,12 +116,13 @@ type ModifierKey =
   | "isPortsDisabled"
   | "isNukesDisabled"
   | "isSAMsDisabled"
-  | "isPeaceTime";
+  | "isPeaceTime"
+  | "isWaterNukes";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(2).fill("isRandomSpawn"),
-  ...Array<ModifierKey>(5).fill("isCompact"),
+  ...Array<ModifierKey>(4).fill("isCompact"),
   ...Array<ModifierKey>(2).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
   ...Array<ModifierKey>(3).fill("startingGold1M"),
@@ -133,6 +134,7 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isNukesDisabled"),
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
+  ...Array<ModifierKey>(3).fill("isWaterNukes"),
 ];
 
 // Modifiers that cannot be active at the same time.
@@ -142,6 +144,7 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold25M", "startingGold1M"],
   ["isHardNations", "startingGold25M"],
   ["isNukesDisabled", "isSAMsDisabled"],
+  ["isNukesDisabled", "isWaterNukes"],
 ];
 
 export class MapPlaylist {
@@ -254,6 +257,7 @@ export class MapPlaylist {
       isNukesDisabled,
       isSAMsDisabled,
       isPeaceTime,
+      isWaterNukes,
     } = poolResult;
 
     // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
@@ -277,7 +281,8 @@ export class MapPlaylist {
           !isPortsDisabled &&
           !isNukesDisabled &&
           !isSAMsDisabled &&
-          !isPeaceTime
+          !isPeaceTime &&
+          !isWaterNukes
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
@@ -294,6 +299,7 @@ export class MapPlaylist {
             isNukesDisabled,
             isSAMsDisabled,
             isPeaceTime,
+            isWaterNukes,
           } = fallback);
           ({ isHardNations } = fallback);
         }
@@ -353,6 +359,7 @@ export class MapPlaylist {
         isNukesDisabled,
         isSAMsDisabled,
         isPeaceTime,
+        isWaterNukes,
       },
       startingGold,
       goldMultiplier,
@@ -374,6 +381,7 @@ export class MapPlaylist {
         peaceTimeDuration ??
         this.getSpawnImmunityDuration(playerTeams, startingGold),
       disabledUnits,
+      waterNukes: isWaterNukes ? true : undefined,
     } satisfies GameConfig;
   }
 
@@ -551,6 +559,7 @@ export class MapPlaylist {
       isNukesDisabled: selected.has("isNukesDisabled") || undefined,
       isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
       isPeaceTime: selected.has("isPeaceTime") || undefined,
+      isWaterNukes: selected.has("isWaterNukes") || undefined,
     };
   }
 
