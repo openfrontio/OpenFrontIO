@@ -7,6 +7,7 @@ export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
+export const KEYBINDS_KEY = "settings.keybinds";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -40,7 +41,7 @@ export class UserSettings {
     }
   }
 
-  private removeCached(key: string, emitChange: boolean = true) {
+  public removeCached(key: string, emitChange: boolean = true) {
     localStorage.removeItem(key);
     UserSettings.cache.set(key, null);
     if (emitChange) {
@@ -296,11 +297,11 @@ export class UserSettings {
   }
 
   keybinds(): string {
-    return this.getString("settings.keybinds", "");
+    return this.getString(KEYBINDS_KEY, "");
   }
 
   setKeybinds(value: string): void {
-    this.setString("settings.keybinds", value);
+    this.setString(KEYBINDS_KEY, value);
   }
 
   soundEffectsVolume(): number {

@@ -2,6 +2,7 @@ import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
+import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -24,10 +25,9 @@ export class HelpModal extends BaseModal {
 
   private getKeybinds(): Record<string, string> {
     let saved: Record<string, string> = {};
+    const userSettings = new UserSettings();
     try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
+      const parsed = JSON.parse(userSettings.keybinds() || "{}");
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {

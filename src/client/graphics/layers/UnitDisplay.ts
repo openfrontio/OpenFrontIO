@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import {
   GhostStructureChangedEvent,
   ToggleStructureEvent,
@@ -52,8 +53,9 @@ export class UnitDisplay extends LitElement implements Layer {
 
   init() {
     const config = this.game.config();
+    const userSettings = new UserSettings();
 
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
+    const savedKeybinds = userSettings.keybinds();
     if (savedKeybinds) {
       try {
         this.keybinds = JSON.parse(savedKeybinds);

@@ -185,9 +185,7 @@ export class InputHandler {
   initialize() {
     let saved: Record<string, string> = {};
     try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
+      const parsed = JSON.parse(this.userSettings.keybinds() || "{}");
       // flatten { key: {key, value} } → { key: value } and accept legacy string values
       saved = Object.fromEntries(
         Object.entries(parsed)
