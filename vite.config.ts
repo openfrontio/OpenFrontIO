@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
       "images/GameplayScreenshot.png",
       assetManifest,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.png", assetManifest),
+    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
     desktopLogoImageUrl: buildAssetUrl("images/OpenFront.png", assetManifest),
     mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
   };
