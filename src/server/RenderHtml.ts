@@ -23,9 +23,9 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
       "images/GameplayScreenshot.png",
       assetManifest,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+    backgroundImageUrl: buildAssetUrl("images/background.png", assetManifest),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.png", assetManifest),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
   });
 }
 
