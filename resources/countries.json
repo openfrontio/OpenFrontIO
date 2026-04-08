@@ -1302,6 +1302,11 @@
     "name": "Maine"
   },
   {
+    "code": "Massachusetts",
+    "continent": "North America",
+    "name": "Massachusetts"
+  },
+  {
     "code": "mw",
     "continent": "Africa",
     "name": "Malawi"
