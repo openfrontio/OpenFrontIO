@@ -727,6 +727,11 @@
     "name": "Falkland Islands"
   },
   {
+    "code": "fareasternrepublic",
+    "continent": "Asia",
+    "name": "Far Eastern Republic"
+  },
+  {
     "code": "fo",
     "continent": "Europe",
     "name": "Faroe Islands"
@@ -2175,6 +2180,11 @@
     "name": "Tajikistan"
   },
   {
+    "code": "tannutuva",
+    "continent": "Asia",
+    "name": "Tannu Tuva"
+  },
+  {
     "code": "tz",
     "continent": "Africa",
     "name": "Tanzania"
@@ -2283,6 +2293,11 @@
     "code": "ua",
     "continent": "Europe",
     "name": "Ukraine"
+  },
+  {
+    "code": "Ukraine SSR",
+    "continent": "Europe",
+    "name": "Ukraine SSR"
   },
   {
     "code": "1_Ulaid",
