@@ -249,9 +249,11 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
-      const emittedTypes = mockEmit.mock.calls.map((call) => call[0].constructor.name);
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
       expect(emittedTypes).toContain("MouseUpEvent");
       expect(emittedTypes).not.toContain("ContextMenuEvent");
     });
@@ -269,7 +271,9 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler["onContextMenu"](mouseEvent);
 
       expect(preventDefaultSpy).toHaveBeenCalled();
-      const emittedTypes = mockEmit.mock.calls.map((call) => call[0].constructor.name);
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
       expect(emittedTypes).not.toContain("ContextMenuEvent");
     });
   });
