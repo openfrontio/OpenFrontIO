@@ -71,52 +71,35 @@ export class UserSettingModal extends BaseModal {
   }
 
   private loadKeybindsFromStorage() {
-    const savedKeybinds = this.userSettings.keybinds();
-    try {
-      const parsed = JSON.parse(savedKeybinds);
-      if (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        !Array.isArray(parsed)
-      ) {
-        const isValid = Object.values(parsed).every((entry) => {
-          if (
-            typeof entry !== "object" ||
-            entry === null ||
-            Array.isArray(entry)
-          ) {
-            return false;
-          }
-          if (!("key" in entry) || typeof (entry as any).key !== "string") {
-            return false;
-          }
-          if (!("value" in entry)) {
-            return false;
-          }
-          const value = (entry as any).value;
-          if (typeof value === "string") {
-            return true;
-          }
-          if (Array.isArray(value)) {
-            return value.every((v) => typeof v === "string");
-          }
-          return false;
-        });
+    const parsed = this.userSettings.parsedKeybinds();
+    if (Object.keys(parsed).length === 0) return;
 
-        if (isValid) {
-          this.keybinds = parsed;
-        } else {
-          console.warn(
-            "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
-          );
-        }
-      } else {
-        console.warn(
-          "Invalid keybinds data: expected non-array object. Ignoring saved data.",
-        );
+    const isValid = Object.values(parsed).every((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+        return false;
       }
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
+      if (!("key" in entry) || typeof (entry as any).key !== "string") {
+        return false;
+      }
+      if (!("value" in entry)) {
+        return false;
+      }
+      const value = (entry as any).value;
+      if (typeof value === "string") {
+        return true;
+      }
+      if (Array.isArray(value)) {
+        return value.every((v) => typeof v === "string");
+      }
+      return false;
+    });
+
+    if (isValid) {
+      this.keybinds = parsed;
+    } else {
+      console.warn(
+        "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
+      );
     }
   }
 

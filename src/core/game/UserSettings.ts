@@ -284,12 +284,26 @@ export class UserSettings {
     this.setFloat("settings.attackRatio", value);
   }
 
-  keybinds(): string {
-    return this.getString(KEYBINDS_KEY, "{}");
+  // In case localStorage was manually edited to be invalid, return an empty object
+  parsedKeybinds(): Record<string, any> {
+    const raw = this.getString(KEYBINDS_KEY, "{}");
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (e) {
+      console.warn("Invalid keybinds JSON:", e);
+    }
+    return {};
   }
 
-  setKeybinds(value: string): void {
-    this.setString(KEYBINDS_KEY, value);
+  setKeybinds(value: string | Record<string, any>): void {
+    if (typeof value === "string") {
+      this.setString(KEYBINDS_KEY, value);
+    } else {
+      this.setString(KEYBINDS_KEY, JSON.stringify(value));
+    }
   }
 
   soundEffectsVolume(): number {

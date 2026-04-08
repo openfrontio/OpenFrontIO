@@ -26,20 +26,17 @@ export class HelpModal extends BaseModal {
   private getKeybinds(): Record<string, string> {
     let saved: Record<string, string> = {};
     const userSettings = new UserSettings();
-    try {
-      const parsed = JSON.parse(userSettings.keybinds());
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            if (this.isKeybindObject(v)) return [k, v.value];
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
-          })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
+    const parsed = userSettings.parsedKeybinds();
+
+    saved = Object.fromEntries(
+      Object.entries(parsed)
+        .map(([k, v]) => {
+          if (this.isKeybindObject(v)) return [k, v.value];
+          if (typeof v === "string") return [k, v];
+          return [k, undefined];
+        })
+        .filter(([, v]) => typeof v === "string" && v !== "Null"),
+    ) as Record<string, string>;
 
     const isMac = Platform.isMac;
     return {

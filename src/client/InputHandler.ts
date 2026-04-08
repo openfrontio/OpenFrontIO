@@ -185,31 +185,27 @@ export class InputHandler {
 
   initialize() {
     let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(this.userSettings.keybinds());
-      // flatten { key: {key, value} } → { key: value } and accept legacy string values
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            // Extract value from nested object or plain string
-            let val: unknown;
-            if (v && typeof v === "object" && "value" in v) {
-              val = (v as { value: unknown }).value;
-            } else {
-              val = v;
-            }
+    const parsed = this.userSettings.parsedKeybinds();
 
-            // Map invalid values to undefined (filtered later)
-            if (typeof val !== "string") {
-              return [k, undefined];
-            }
-            return [k, val];
-          })
-          .filter(([, v]) => typeof v === "string"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
+    // flatten { key: {key, value} } → { key: value } and accept legacy string values
+    saved = Object.fromEntries(
+      Object.entries(parsed)
+        .map(([k, v]) => {
+          // Extract value from nested object or plain string
+          let val: unknown;
+          if (v && typeof v === "object" && "value" in v) {
+            val = (v as { value: unknown }).value;
+          } else {
+            val = v;
+          }
+          // Map invalid values to undefined (filtered later)
+          if (typeof val !== "string") {
+            return [k, undefined];
+          }
+          return [k, val];
+        })
+        .filter(([, v]) => typeof v === "string"),
+    ) as Record<string, string>;
 
     // Mac users might have different keybinds
     const isMac = Platform.isMac;
