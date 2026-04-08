@@ -429,6 +429,11 @@
     "name": "China"
   },
   {
+    "code": "Chaldea",
+    "continent": "Asia",
+    "name": "Chaldea"
+  },
+  {
     "code": "Chinook",
     "continent": "North America",
     "name": "Chinook"
