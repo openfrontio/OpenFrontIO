@@ -47,6 +47,7 @@ vi.mock("../../../../src/client/graphics/layers/RadialMenu", () => ({
 }));
 
 import { PlayerInfoOverlay } from "../../../../src/client/graphics/layers/PlayerInfoOverlay";
+import { translateText } from "../../../../src/client/Utils";
 import { UnitType } from "../../../../src/core/game/Game";
 
 function makeOverlay(gameOverrides: Record<string, unknown> = {}) {
@@ -158,6 +159,28 @@ describe("PlayerInfoOverlay", () => {
       expect((overlay as any).isWater).toBe(false);
       expect((overlay as any).player).toBeNull();
       expect((overlay as any)._isInfoVisible).toBe(true);
+    });
+
+    test("render uses water title translation key", () => {
+      const { overlay } = makeOverlay();
+      overlay.maybeShow(100, 100);
+      (overlay as any)._isActive = true;
+      overlay.render();
+      expect(translateText).toHaveBeenCalledWith(
+        "player_info_overlay.water_title",
+      );
+    });
+
+    test("render uses wilderness title translation key", () => {
+      const { overlay } = makeOverlay({
+        isLand: vi.fn(() => true),
+      });
+      overlay.maybeShow(100, 100);
+      (overlay as any)._isActive = true;
+      overlay.render();
+      expect(translateText).toHaveBeenCalledWith(
+        "player_info_overlay.wilderness_title",
+      );
     });
 
     test("invalid coordinates shows nothing", () => {
