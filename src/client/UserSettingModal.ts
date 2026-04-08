@@ -72,8 +72,6 @@ export class UserSettingModal extends BaseModal {
 
   private loadKeybindsFromStorage() {
     const savedKeybinds = this.userSettings.keybinds();
-    if (!savedKeybinds) return;
-
     try {
       const parsed = JSON.parse(savedKeybinds);
       if (

@@ -297,7 +297,7 @@ export class UserSettings {
   }
 
   keybinds(): string {
-    return this.getString(KEYBINDS_KEY, "");
+    return this.getString(KEYBINDS_KEY, "{}");
   }
 
   setKeybinds(value: string): void {

@@ -27,7 +27,7 @@ export class HelpModal extends BaseModal {
     let saved: Record<string, string> = {};
     const userSettings = new UserSettings();
     try {
-      const parsed = JSON.parse(userSettings.keybinds() || "{}");
+      const parsed = JSON.parse(userSettings.keybinds());
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {

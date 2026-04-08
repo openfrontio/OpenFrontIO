@@ -55,13 +55,10 @@ export class UnitDisplay extends LitElement implements Layer {
     const config = this.game.config();
     const userSettings = new UserSettings();
 
-    const savedKeybinds = userSettings.keybinds();
-    if (savedKeybinds) {
-      try {
-        this.keybinds = JSON.parse(savedKeybinds);
-      } catch (e) {
-        console.warn("Invalid keybinds JSON:", e);
-      }
+    try {
+      this.keybinds = JSON.parse(userSettings.keybinds());
+    } catch (e) {
+      console.warn("Invalid keybinds JSON:", e);
     }
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
