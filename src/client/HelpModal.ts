@@ -14,29 +14,15 @@ export class HelpModal extends BaseModal {
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
-  private isKeybindObject(v: unknown): v is { value: string } {
-    return (
-      typeof v === "object" &&
-      v !== null &&
-      "value" in v &&
-      typeof (v as any).value === "string"
-    );
-  }
-
   private getKeybinds(): Record<string, string> {
-    let saved: Record<string, string> = {};
     const userSettings = new UserSettings();
-    const parsed = userSettings.parsedKeybinds();
+    const saved = userSettings.normalizedKeybinds();
 
-    saved = Object.fromEntries(
-      Object.entries(parsed)
-        .map(([k, v]) => {
-          if (this.isKeybindObject(v)) return [k, v.value];
-          if (typeof v === "string") return [k, v];
-          return [k, undefined];
-        })
-        .filter(([, v]) => typeof v === "string" && v !== "Null"),
-    ) as Record<string, string>;
+    for (const k in saved) {
+      if (saved[k] === "Null") {
+        delete saved[k];
+      }
+    }
 
     const isMac = Platform.isMac;
     return {

@@ -184,29 +184,7 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    let saved: Record<string, string> = {};
-    const parsed = this.userSettings.parsedKeybinds();
-
-    // flatten { key: {key, value} } → { key: value } and accept legacy string values
-    saved = Object.fromEntries(
-      Object.entries(parsed)
-        .map(([k, v]) => {
-          // Extract value from nested object or plain string
-          let val: unknown;
-          if (v && typeof v === "object" && "value" in v) {
-            val = (v as { value: unknown }).value;
-          } else {
-            val = v;
-          }
-          // Map invalid values to undefined (filtered later)
-          if (typeof val !== "string") {
-            return [k, undefined];
-          }
-          return [k, val];
-        })
-        .filter(([, v]) => typeof v === "string"),
-    ) as Record<string, string>;
-
+    const saved = this.userSettings.normalizedKeybinds();
     // Mac users might have different keybinds
     const isMac = Platform.isMac;
 

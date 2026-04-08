@@ -298,6 +298,22 @@ export class UserSettings {
     return {};
   }
 
+  // Returns a flat keybind map { action: "keyCode" }, handling nested objects and legacy strings
+  normalizedKeybinds(): Record<string, string> {
+    const parsed = this.parsedKeybinds();
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .map(([k, v]) => {
+          let val = v;
+          if (v && typeof v === "object" && "value" in v) {
+            val = v.value;
+          }
+          return [k, val];
+        })
+        .filter(([, v]) => typeof v === "string")
+    ) as Record<string, string>;
+  }
+
   setKeybinds(value: string | Record<string, any>): void {
     if (typeof value === "string") {
       this.setString(KEYBINDS_KEY, value);

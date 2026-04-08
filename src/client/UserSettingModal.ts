@@ -74,32 +74,33 @@ export class UserSettingModal extends BaseModal {
     const parsed = this.userSettings.parsedKeybinds();
     if (Object.keys(parsed).length === 0) return;
 
-    const isValid = Object.values(parsed).every((entry) => {
-      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-        return false;
-      }
-      if (!("key" in entry) || typeof (entry as any).key !== "string") {
-        return false;
-      }
-      if (!("value" in entry)) {
-        return false;
-      }
-      const value = (entry as any).value;
-      if (typeof value === "string") {
-        return true;
-      }
-      if (Array.isArray(value)) {
-        return value.every((v) => typeof v === "string");
-      }
-      return false;
-    });
+    const validated: Record<string, { value: string | string[]; key: string }> =
+      {};
 
-    if (isValid) {
-      this.keybinds = parsed;
-    } else {
-      console.warn(
-        "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
-      );
+    for (const [action, entry] of Object.entries(parsed)) {
+      if (typeof entry === "string") {
+        validated[action] = { value: entry, key: entry };
+      } else if (
+        typeof entry === "object" &&
+        entry !== null &&
+        !Array.isArray(entry)
+      ) {
+        let value = (entry as any).value ?? "Null";
+        let key = (entry as any).key ?? value;
+
+        if (
+          (typeof value === "string" ||
+            (Array.isArray(value) &&
+              value.every((v) => typeof v === "string"))) &&
+          typeof key === "string"
+        ) {
+          validated[action] = { value, key };
+        }
+      }
+    }
+
+    if (Object.keys(validated).length > 0) {
+      this.keybinds = validated;
     }
   }
 
