@@ -6,6 +6,7 @@ import {
 import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
+import { GameView } from "../src/core/game/GameView";
 
 class MockPointerEvent {
   button: number;
@@ -29,10 +30,12 @@ global.PointerEvent = MockPointerEvent as any;
 
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
+  let mockGameView: GameView;
   let eventBus: EventBus;
   let mockCanvas: HTMLCanvasElement;
 
   beforeEach(() => {
+    mockGameView = { inSpawnPhase: () => false } as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
@@ -40,6 +43,7 @@ describe("InputHandler AutoUpgrade", () => {
     eventBus = new EventBus();
 
     inputHandler = new InputHandler(
+      mockGameView,
       {
         attackRatio: 20,
         ghostStructure: null,
@@ -481,7 +485,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
     });
 
@@ -533,7 +542,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
     });
 
@@ -570,7 +584,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
     });
 
@@ -590,7 +609,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
 
       window.dispatchEvent(
@@ -616,7 +640,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
 
       window.dispatchEvent(
@@ -639,7 +668,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
 
       window.dispatchEvent(
