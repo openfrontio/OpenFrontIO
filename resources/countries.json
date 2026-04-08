@@ -419,6 +419,11 @@
     "name": "Chad"
   },
   {
+    "code": "Chaldea",
+    "continent": "Asia",
+    "name": "Chaldea"
+  },
+  {
     "code": "cl",
     "continent": "South America",
     "name": "Chile"
@@ -427,11 +432,6 @@
     "code": "cn",
     "continent": "Asia",
     "name": "China"
-  },
-  {
-    "code": "Chaldea",
-    "continent": "Asia",
-    "name": "Chaldea"
   },
   {
     "code": "Chinook",
