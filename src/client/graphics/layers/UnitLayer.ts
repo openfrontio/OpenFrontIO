@@ -181,10 +181,6 @@ export class UnitLayer implements Layer {
       return;
     }
 
-    if (!this.game.isValidRef(clickRef)) {
-      return;
-    }
-
     if (this.selectedUnit) {
       // Reuse the mouse logic, send clickRef to avoid fetching it again
       this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
