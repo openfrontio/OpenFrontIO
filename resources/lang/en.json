@@ -784,6 +784,10 @@
     "show_control": "Show Control",
     "show_units": "Show Units"
   },
+  "player_info_overlay": {
+    "water_title": "Water",
+    "wilderness_title": "Wilderness"
+  },
   "events_display": {
     "events": "Events",
     "retreating": "retreating",

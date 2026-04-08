@@ -86,6 +86,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
+  private isWater: boolean = false;
+
+  @state()
+  private isWilderness: boolean = false;
+
+  @state()
   private _isInfoVisible: boolean = false;
 
   @state()
@@ -132,6 +138,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.setVisible(false);
     this.unit = null;
     this.player = null;
+    this.isWater = false;
+    this.isWilderness = false;
   }
 
   public maybeShow(x: number, y: number) {
@@ -153,6 +161,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       });
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
+      this.isWater = true;
+
       const units = this.game
         .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
         .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
@@ -160,8 +170,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
       if (units.length > 0) {
         this.unit = units[0];
-        this.setVisible(true);
       }
+
+      this.setVisible(true);
+    } else if (this.game.isLand(tile)) {
+      this.isWilderness = true;
+      this.setVisible(true);
     }
   }
 
@@ -520,6 +534,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div
           class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
         >
+          ${this.isWater
+            ? html`<div class="p-2 font-bold">
+                ${translateText("player_info_overlay.water_title")}
+              </div>`
+            : ""}
+          ${this.isWilderness
+            ? html`<div class="p-2 font-bold">
+                ${translateText("player_info_overlay.wilderness_title")}
+              </div>`
+            : ""}
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
