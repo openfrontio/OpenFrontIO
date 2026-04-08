@@ -215,7 +215,6 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private selectPattern(pattern: PlayerPattern | null) {
     this.selectedColor = null;
-    this.userSettings.setSelectedColor(undefined);
     if (pattern === null) {
       this.userSettings.setSelectedPatternName(undefined);
     } else {
