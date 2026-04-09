@@ -184,42 +184,7 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    const saved = this.userSettings.normalizedKeybinds();
-    // Mac users might have different keybinds
-    const isMac = Platform.isMac;
-
-    this.keybinds = {
-      toggleView: "Space",
-      coordinateGrid: "KeyM",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      boatAttack: "KeyB",
-      groundAttack: "KeyG",
-      swapDirection: "KeyU",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      buildCity: "Digit1",
-      buildFactory: "Digit2",
-      buildPort: "Digit3",
-      buildDefensePost: "Digit4",
-      buildMissileSilo: "Digit5",
-      buildSamLauncher: "Digit6",
-      buildWarship: "Digit7",
-      buildAtomBomb: "Digit8",
-      buildHydrogenBomb: "Digit9",
-      buildMIRV: "Digit0",
-      pauseGame: "KeyP",
-      gameSpeedUp: "Period",
-      gameSpeedDown: "Comma",
-      ...saved,
-    };
+    this.keybinds = this.userSettings.keybinds(Platform.isMac);
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));

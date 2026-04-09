@@ -15,38 +15,7 @@ export class HelpModal extends BaseModal {
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
   private getKeybinds(): Record<string, string> {
-    const userSettings = new UserSettings();
-    const saved = userSettings.normalizedKeybinds();
-
-    for (const k in saved) {
-      if (saved[k] === "Null") {
-        delete saved[k];
-      }
-    }
-
-    const isMac = Platform.isMac;
-    return {
-      toggleView: "Space",
-      coordinateGrid: "KeyM",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      swapDirection: "KeyU",
-      shiftKey: "ShiftLeft",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      resetGfx: "KeyR",
-      pauseGame: "KeyP",
-      gameSpeedUp: "Period",
-      gameSpeedDown: "Comma",
-      ...saved,
-    };
+    return new UserSettings().keybinds(Platform.isMac);
   }
 
   private getKeyLabel(code: string): string {

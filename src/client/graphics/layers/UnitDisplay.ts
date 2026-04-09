@@ -55,7 +55,7 @@ export class UnitDisplay extends LitElement implements Layer {
     const config = this.game.config();
     const userSettings = new UserSettings();
 
-    this.keybinds = userSettings.parsedKeybinds();
+    this.keybinds = userSettings.parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();

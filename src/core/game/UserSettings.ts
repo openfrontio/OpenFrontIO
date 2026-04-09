@@ -1,6 +1,42 @@
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
+export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
+  return {
+    toggleView: "Space",
+    coordinateGrid: "KeyM",
+    buildCity: "Digit1",
+    buildFactory: "Digit2",
+    buildPort: "Digit3",
+    buildDefensePost: "Digit4",
+    buildMissileSilo: "Digit5",
+    buildSamLauncher: "Digit6",
+    buildWarship: "Digit7",
+    buildAtomBomb: "Digit8",
+    buildHydrogenBomb: "Digit9",
+    buildMIRV: "Digit0",
+    attackRatioDown: "KeyT",
+    attackRatioUp: "KeyY",
+    boatAttack: "KeyB",
+    groundAttack: "KeyG",
+    swapDirection: "KeyU",
+    zoomOut: "KeyQ",
+    zoomIn: "KeyE",
+    centerCamera: "KeyC",
+    moveUp: "KeyW",
+    moveLeft: "KeyA",
+    moveDown: "KeyS",
+    moveRight: "KeyD",
+    modifierKey: isMac ? "MetaLeft" : "ControlLeft",
+    altKey: "AltLeft",
+    shiftKey: "ShiftLeft",
+    resetGfx: "KeyR",
+    pauseGame: "KeyP",
+    gameSpeedUp: "Period",
+    gameSpeedDown: "Comma",
+  };
+}
+
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
@@ -285,7 +321,7 @@ export class UserSettings {
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object
-  parsedKeybinds(): Record<string, any> {
+  parsedUserKeybinds(): Record<string, any> {
     const raw = this.getString(KEYBINDS_KEY, "{}");
     try {
       const parsed = JSON.parse(raw);
@@ -299,8 +335,8 @@ export class UserSettings {
   }
 
   // Returns a flat keybind map { action: "keyCode" }, handling nested objects and legacy strings
-  normalizedKeybinds(): Record<string, string> {
-    const parsed = this.parsedKeybinds();
+  private normalizedUserKeybinds(): Record<string, string> {
+    const parsed = this.parsedUserKeybinds();
     return Object.fromEntries(
       Object.entries(parsed)
         // Extract value from nested object or plain string, filter out non-string values
@@ -316,6 +352,23 @@ export class UserSettings {
         })
         .filter(([, v]) => typeof v === "string"),
     ) as Record<string, string>;
+  }
+
+  keybinds(isMac: boolean): Record<string, string> {
+    const merged = {
+      ...getDefaultKeybinds(isMac),
+      ...this.normalizedUserKeybinds(),
+    };
+    // Actually unbind key: if Unbind is clicked in UserSettingsModal, eg. for Attack Ratio Up,
+    // keybind is "Null". Even if it is in default kindbinds (Y), it should not work anymore.
+    // The key (Y) can now be bound to another action like Boat Attack, and no two actions listen to the same key.
+    for (const k in merged) {
+      if (merged[k] === "Null") {
+        delete merged[k];
+      }
+    }
+
+    return merged;
   }
 
   setKeybinds(value: string | Record<string, any>): void {

@@ -485,7 +485,7 @@ describe("InputHandler AutoUpgrade", () => {
       const nested = {
         moveUp: { key: "moveUp", value: "KeyZ" },
       };
-      testSettings.setKeybinds(JSON.stringify(nested));
+      testSettings.setKeybinds(nested);
 
       inputHandler.initialize();
 
@@ -493,7 +493,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("accepts legacy string values", () => {
-      testSettings.setKeybinds(JSON.stringify({ moveUp: "KeyX" }));
+      testSettings.setKeybinds({ moveUp: "KeyX" });
 
       inputHandler.initialize();
 
@@ -505,13 +505,13 @@ describe("InputHandler AutoUpgrade", () => {
         moveUp: { key: "moveUp", value: null },
         moveLeft: "Null",
       };
-      testSettings.setKeybinds(JSON.stringify(mixed));
+      testSettings.setKeybinds(mixed);
 
       inputHandler.initialize();
 
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
-      // "Null" is preserved to indicate unbound keybind
-      expect((inputHandler as any).keybinds.moveLeft).toBe("Null");
+      // "Null" entries are removed entirely to indicate unbound keybind
+      expect((inputHandler as any).keybinds.moveLeft).toBeUndefined();
     });
 
     test("handles invalid JSON gracefully and warns", () => {
@@ -645,12 +645,10 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("exact code match wins: Digit1 sets City when buildCity=Digit1 and buildFactory=Numpad1", () => {
-      testSettings.setKeybinds(
-        JSON.stringify({
-          buildCity: "Digit1",
-          buildFactory: "Numpad1",
-        }),
-      );
+      testSettings.setKeybinds({
+        buildCity: "Digit1",
+        buildFactory: "Numpad1",
+      });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -675,12 +673,10 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("exact code match wins: Numpad1 sets Factory when buildCity=Digit1 and buildFactory=Numpad1", () => {
-      testSettings.setKeybinds(
-        JSON.stringify({
-          buildCity: "Digit1",
-          buildFactory: "Numpad1",
-        }),
-      );
+      testSettings.setKeybinds({
+        buildCity: "Digit1",
+        buildFactory: "Numpad1",
+      });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -705,7 +701,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("digit alias used when no exact match: Numpad1 sets City when only buildCity=Digit1", () => {
-      testSettings.setKeybinds(JSON.stringify({ buildCity: "Digit1" }));
+      testSettings.setKeybinds({ buildCity: "Digit1" });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
