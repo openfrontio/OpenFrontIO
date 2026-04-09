@@ -1,9 +1,10 @@
+import { UIState } from "../src/client/graphics/UIState";
 import {
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   InputHandler,
 } from "../src/client/InputHandler";
-import { UIState } from "../src/client/graphics/UIState";
+import { Platform } from "../src/client/Platform";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 import { GameView } from "../src/core/game/GameView";
@@ -737,6 +738,57 @@ describe("InputHandler AutoUpgrade", () => {
       );
 
       expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+  });
+
+  describe("preventDefault is called on firefox keybinds", () => {
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      const spy = vi.spyOn(Platform, "isFirefox", "get");
+      spy.mockReturnValue(true);
+
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("should preventDefault on simple button press", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "Digit1",
+        key: "1",
+        ctrlKey: false,
+        // Required so preventDefault can be called on it.
+        cancelable: true,
+      });
+
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBeTruthy();
+    });
+
+    test("Shouldn't call preventDefault for browser shortcut like zoom", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "NumpadAdd",
+        key: "1",
+        ctrlKey: true,
+        // Required so preventDefault can be called on it.
+        cancelable: true,
+      });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBeFalsy();
     });
   });
 });

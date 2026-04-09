@@ -108,6 +108,16 @@ describe("Platform", () => {
     expect(unknownPlatform.isIOS).toBe(false);
     expect(unknownPlatform.isAndroid).toBe(false);
     expect(unknownPlatform.isLinux).toBe(false);
+    expect(unknownPlatform.isFirefox).toBe(false);
+  });
+
+  it("Detects Firefox", async () => {
+    const ffPlatform = await loadPlatform({
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0",
+    });
+
+    expect(ffPlatform.isFirefox).toBeTruthy();
   });
 
   it("reports viewport breakpoint helpers from window.innerWidth", async () => {

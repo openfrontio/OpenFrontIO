@@ -50,6 +50,8 @@ export const Platform = (() => {
     return "Unknown";
   };
 
+  const isFirefox = /Firefox/i.test(navigator.userAgent);
+
   const currentOS = extractOS();
 
   // Environment Extraction
@@ -94,6 +96,7 @@ export const Platform = (() => {
     isAndroid: currentOS === "Android",
     isLinux: currentOS === "Linux",
     isElectron: performElectronCheck(),
+    isFirefox,
 
     get isMobileWidth(): boolean {
       return isBrowser ? window.innerWidth < 768 : false;

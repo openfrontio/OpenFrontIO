@@ -151,6 +151,11 @@ export class TickMetricsEvent implements GameEvent {
   ) {}
 }
 
+// Firefox starts searching on the page if you type any sort of text.
+// We use this to match the keycodes to know when to `preventDefault`
+const TextKeyCodeRE =
+  /^(Key.*|Digit.*|Period|Comma|NumpadSubtract|NumpadAdd|Equal|Plus|Minus)$/;
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -215,6 +220,7 @@ export class InputHandler {
 
     // Mac users might have different keybinds
     const isMac = Platform.isMac;
+    const isFirefox = Platform.isFirefox;
 
     this.keybinds = {
       toggleView: "Space",
@@ -372,6 +378,19 @@ export class InputHandler {
       ) {
         e.preventDefault();
         this.eventBus.emit(new ConfirmGhostStructureEvent());
+      }
+
+      const isTextKey = TextKeyCodeRE.test(e.code);
+      const shouldPreventTextSearchInFirefox =
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.shiftKey &&
+        isTextKey &&
+        isFirefox;
+
+      if (shouldPreventTextSearchInFirefox) {
+        e.preventDefault();
       }
 
       // Don't track zoom keys when a meta/ctrl modifier is held — that means
