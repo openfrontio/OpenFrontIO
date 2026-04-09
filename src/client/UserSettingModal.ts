@@ -39,7 +39,10 @@ export class UserSettingModal extends BaseModal {
 
   private loadKeybindsFromStorage() {
     const parsed = this.userSettings.parsedUserKeybinds();
-    if (Object.keys(parsed).length === 0) return;
+    if (Object.keys(parsed).length === 0) {
+      this.userKeybinds = {};
+      return;
+    }
 
     const validated: Record<string, { value: string | string[]; key: string }> =
       {};
@@ -52,25 +55,23 @@ export class UserSettingModal extends BaseModal {
         entry !== null &&
         !Array.isArray(entry)
       ) {
-        const value = (entry as any).value ?? "Null";
-        const key =
-          (entry as any).key ??
-          (Array.isArray(value) ? (value[0] ?? "") : value);
+        const rawValue = (entry as any).value ?? "Null";
+        const value = Array.isArray(rawValue)
+          ? rawValue.find((v) => typeof v === "string")
+          : rawValue;
 
-        if (
-          (typeof value === "string" ||
-            (Array.isArray(value) &&
-              value.every((v) => typeof v === "string"))) &&
-          typeof key === "string"
-        ) {
+        const rawKey = (entry as any).key ?? value;
+        const key = Array.isArray(rawKey)
+          ? rawKey.find((v) => typeof v === "string")
+          : rawKey;
+
+        if (typeof value === "string" && typeof key === "string") {
           validated[action] = { value, key };
         }
       }
     }
 
-    if (Object.keys(validated).length > 0) {
-      this.userKeybinds = validated;
-    }
+    this.userKeybinds = validated;
   }
 
   private handleKeybindChange(
