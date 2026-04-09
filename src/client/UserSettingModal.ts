@@ -44,8 +44,7 @@ export class UserSettingModal extends BaseModal {
       return;
     }
 
-    const validated: Record<string, { value: string; key: string }> =
-      {};
+    const validated: Record<string, { value: string; key: string }> = {};
 
     for (const [action, entry] of Object.entries(parsed)) {
       if (typeof entry === "string") {
