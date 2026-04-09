@@ -81,6 +81,25 @@ export const UserMeResponseSchema = z.object({
           .optional(),
       })
       .optional(),
+    clans: z
+      .array(
+        z.object({
+          tag: z.string(),
+          name: z.string(),
+          role: z.enum(["leader", "officer", "member"]),
+          joinedAt: z.string(),
+        }),
+      )
+      .optional(),
+    clanRequests: z
+      .array(
+        z.object({
+          tag: z.string(),
+          name: z.string(),
+          createdAt: z.string(),
+        }),
+      )
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;

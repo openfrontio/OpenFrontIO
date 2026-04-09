@@ -27,13 +27,23 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
 type ClanRole = "leader" | "officer" | "member";
-type View = "browse" | "detail" | "manage" | "transfer" | "requests";
+type Tab = "my-clans" | "browse";
+type View = "list" | "detail" | "manage" | "transfer" | "requests";
 
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
-  @state() private view: View = "browse";
+  @state() private activeTab: Tab = "my-clans";
+  @state() private view: View = "list";
   @state() private loading = false;
   @state() private errorMsg = "";
+
+  // My clans (fetched from real API on open)
+  @state() private myClans: ClanInfo[] = [];
+  @state() private myPendingRequests: {
+    tag: string;
+    name: string;
+    createdAt: string;
+  }[] = [];
 
   // Browse state
   @state() private searchQuery = "";
@@ -47,6 +57,8 @@ export class ClanModal extends BaseModal {
   @state() private members: ClanMember[] = [];
   @state() private membersTotal = 0;
   @state() private memberPage = 1;
+  @state() private membersPerPage = 10;
+  @state() private memberSearch = "";
   @state() private pendingRequestCount = 0;
 
   // Manage state
@@ -64,13 +76,18 @@ export class ClanModal extends BaseModal {
   @state() private requestsPage = 1;
 
   private myPublicId: string | null = null;
+  private myClanRoles = new Map<string, ClanRole>();
 
-  private readonly membersPerPage = 20;
+  private readonly perPageOptions = [10, 25, 50];
 
   connectedCallback() {
     super.connectedCallback();
     getUserMe().then((me) => {
-      if (me) this.myPublicId = me.player.publicId;
+      if (!me) return;
+      this.myPublicId = me.player.publicId;
+      for (const c of me.player.clans ?? []) {
+        this.myClanRoles.set(c.tag, c.role);
+      }
     });
   }
 
@@ -91,15 +108,28 @@ export class ClanModal extends BaseModal {
   }
 
   protected onOpen(): void {
-    this.loadBrowse();
+    this.loadMyClans();
+    if (this.activeTab === "browse" && !this.browseData) {
+      this.loadBrowse();
+    }
+  }
+
+  private async loadMyClans() {
+    const me = await getUserMe();
+    if (!me) return;
+    this.myPendingRequests = me.player.clanRequests ?? [];
+    const tags = me.player.clans?.map((c) => c.tag) ?? [];
+    const results = await Promise.all(tags.map((tag) => fetchClanDetail(tag)));
+    this.myClans = results.filter((r): r is ClanInfo => r !== false);
   }
 
   protected onClose(): void {
-    this.view = "browse";
+    this.view = "list";
     this.selectedClan = null;
     this.searchQuery = "";
     this.transferTarget = null;
     this.memberPage = 1;
+    this.memberSearch = "";
     this.errorMsg = "";
     this.browseData = null;
   }
@@ -132,9 +162,121 @@ export class ClanModal extends BaseModal {
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
+        ${this.renderTabs()}
         <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${this.renderBrowse()}
+          ${this.activeTab === "my-clans"
+            ? this.renderMyClans()
+            : this.renderBrowse()}
         </div>
+      </div>
+    `;
+  }
+
+  // ── Tabs & My Clans ─────────────────────────────────────────────
+
+  private renderTabs() {
+    const tabs: { key: Tab; label: string }[] = [
+      { key: "my-clans", label: translateText("clan_modal.my_clans") },
+      { key: "browse", label: translateText("clan_modal.browse") },
+    ];
+
+    return html`
+      <div class="flex border-b border-white/10 px-4 lg:px-6 gap-1">
+        ${tabs.map(
+          (tab) => html`
+            <button
+              @click=${() => {
+                this.activeTab = tab.key;
+                this.view = "list";
+                this.selectedClan = null;
+                if (tab.key === "browse" && !this.browseData) {
+                  this.loadBrowse();
+                }
+              }}
+              class="px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all relative
+                ${this.activeTab === tab.key
+                ? "text-blue-400"
+                : "text-white/40 hover:text-white/70"}"
+            >
+              ${tab.label}
+              ${this.activeTab === tab.key
+                ? html`<div
+                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"
+                  ></div>`
+                : ""}
+            </button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  private renderMyClans() {
+    const hasClans = this.myClans.length > 0;
+    const hasRequests = this.myPendingRequests.length > 0;
+
+    if (!hasClans && !hasRequests) {
+      return html`
+        <div class="flex flex-col items-center justify-center p-12 text-center">
+          <p class="text-white/40 text-sm mb-4">
+            ${translateText("clan_modal.no_clans")}
+          </p>
+          <button
+            @click=${() => {
+              this.activeTab = "browse";
+              if (!this.browseData) this.loadBrowse();
+            }}
+            class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-blue-600/80 hover:bg-blue-600 border border-blue-500/50 rounded-lg transition-all"
+          >
+            ${translateText("clan_modal.browse")}
+          </button>
+        </div>
+      `;
+    }
+
+    return html`
+      <div class="p-4 lg:p-6 space-y-3">
+        ${hasRequests ? this.renderPendingRequests() : ""}
+        ${this.myClans.map((clan) => this.renderClanCard(clan))}
+      </div>
+    `;
+  }
+
+  private renderPendingRequests() {
+    return html`
+      <div class="space-y-2 mb-2">
+        <h3
+          class="text-xs font-bold uppercase tracking-wider text-amber-400/80 px-1"
+        >
+          ${translateText("clan_modal.pending_applications")}
+        </h3>
+        ${this.myPendingRequests.map(
+          (req) => html`
+            <div
+              class="flex items-center gap-3 bg-amber-500/5 rounded-xl border border-amber-500/15 p-3"
+            >
+              <div
+                class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0"
+              >
+                <span class="text-amber-400 font-bold text-xs">${req.tag}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="text-white/80 font-medium text-sm truncate block"
+                  >${req.name}</span
+                >
+                <span class="text-white/30 text-xs">
+                  ${translateText("clan_modal.applied")}
+                  ${new Date(req.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <span
+                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400/70 border border-amber-500/20"
+              >
+                ${translateText("clan_modal.pending")}
+              </span>
+            </div>
+          `,
+        )}
       </div>
     `;
   }
@@ -249,7 +391,7 @@ export class ClanModal extends BaseModal {
     `;
   }
 
-  private renderClanCard(clan: ClanInfo) {
+  private renderClanCard(clan: ClanInfo, role?: string) {
     return html`
       <button
         @click=${() => this.openClanDetail(clan.tag)}
@@ -266,13 +408,27 @@ export class ClanModal extends BaseModal {
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-white font-bold truncate">${clan.name}</span>
-              ${!clan.isOpen
+              ${role
                 ? html`<span
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full
+                      ${role === "leader"
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      : "bg-blue-500/20 text-blue-400 border border-blue-500/30"}"
+                  >
+                    ${role}
+                  </span>`
+                : ""}
+              ${clan.isOpen
+                ? html`<span
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30"
+                  >
+                    ${translateText("clan_modal.open")}
+                  </span>`
+                : html`<span
                     class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30"
                   >
                     ${translateText("clan_modal.invite_only")}
-                  </span>`
-                : ""}
+                  </span>`}
             </div>
             <div class="flex items-center gap-4 mt-1 text-xs text-white/40">
               <span>${clan.memberCount} members</span>
@@ -304,6 +460,7 @@ export class ClanModal extends BaseModal {
     this.errorMsg = "";
     this.myRole = null;
     this.pendingRequestCount = 0;
+    this.memberSearch = "";
 
     const [detail, membersRes] = await Promise.all([
       fetchClanDetail(tag),
@@ -322,19 +479,25 @@ export class ClanModal extends BaseModal {
     this.memberPage = 1;
 
     if (membersRes) {
+      // Members endpoint requires clan membership — if it succeeded, we're in.
       this.members = membersRes.results;
       this.membersTotal = membersRes.total;
       this.pendingRequestCount = membersRes.pendingRequests ?? 0;
-      // Determine our role by finding ourselves in the member list
-      if (this.myPublicId) {
-        const me = membersRes.results.find(
-          (m) => m.publicId === this.myPublicId,
-        );
+
+      // Use the role from @me if available, otherwise infer from member list.
+      const knownRole = this.myClanRoles.get(tag);
+      if (knownRole) {
+        this.myRole = knownRole;
+      } else {
+        const me = this.myPublicId
+          ? membersRes.results.find((m) => m.publicId === this.myPublicId)
+          : null;
+
         if (me) {
           this.myRole = me.role;
+        } else if (this.pendingRequestCount > 0) {
+          this.myRole = "officer";
         } else {
-          // We're a member but not on this page - fetch all to find our role
-          // or we could be a regular member (publicId hidden)
           this.myRole = "member";
         }
       }
@@ -367,14 +530,13 @@ export class ClanModal extends BaseModal {
     const isLeader = this.myRole === "leader";
     const isOfficer = this.myRole === "officer";
     const canManageRequests = isLeader || isOfficer;
-    const totalMemberPages = Math.ceil(this.membersTotal / this.membersPerPage);
 
     return html`
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: clan.name,
           onBack: () => {
-            this.view = "browse";
+            this.view = "list";
             this.selectedClan = null;
             this.myRole = null;
           },
@@ -402,7 +564,7 @@ export class ClanModal extends BaseModal {
             </div>
 
             <!-- Stats Row -->
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 gap-3">
               ${this.renderStat(
                 translateText("clan_modal.members"),
                 `${clan.memberCount}`,
@@ -413,12 +575,6 @@ export class ClanModal extends BaseModal {
                   ? translateText("clan_modal.open")
                   : translateText("clan_modal.invite_only"),
               )}
-              ${isMember
-                ? this.renderStat("Your Role", this.myRole!)
-                : this.renderStat(
-                    "Created",
-                    new Date(clan.createdAt).toLocaleDateString(),
-                  )}
             </div>
 
             <!-- Join Requests (leader/officer of invite-only clan) -->
@@ -494,18 +650,18 @@ export class ClanModal extends BaseModal {
                     >
                       ${translateText("clan_modal.members")}
                     </h3>
-                    <div class="space-y-2">
-                      ${this.members.map((m) =>
-                        this.renderMemberRow(m, canManageRequests),
-                      )}
-                    </div>
-                    ${totalMemberPages > 1
-                      ? this.renderServerPagination(
-                          this.memberPage,
-                          totalMemberPages,
-                          (p) => this.loadMemberPage(p),
-                        )
-                      : ""}
+                    ${this.renderMemberSearch()}
+                    ${(() => {
+                      const filtered = this.filterMembers(this.members);
+                      return html`
+                        <div class="space-y-2">
+                          ${this.paginateMembers(filtered).map((m) =>
+                            this.renderMemberRow(m, canManageRequests),
+                          )}
+                        </div>
+                        ${this.renderMemberPagination(filtered.length)}
+                      `;
+                    })()}
                   </div>
                 `
               : ""}
@@ -591,7 +747,7 @@ export class ClanModal extends BaseModal {
     // Go back to browse
     this.selectedClan = null;
     this.myRole = null;
-    this.view = "browse";
+    this.view = "list";
     this.loadBrowse();
   }
 
@@ -709,18 +865,20 @@ export class ClanModal extends BaseModal {
               <h3
                 class="text-sm font-bold text-white/60 uppercase tracking-wider"
               >
-                ${translateText("clan_modal.members")} (${this.membersTotal})
+                ${translateText("clan_modal.members")} (${clan.memberCount})
               </h3>
-              <div class="space-y-2">
-                ${this.members.map((m) => this.renderManageMemberRow(m))}
-              </div>
-              ${Math.ceil(this.membersTotal / this.membersPerPage) > 1
-                ? this.renderServerPagination(
-                    this.memberPage,
-                    Math.ceil(this.membersTotal / this.membersPerPage),
-                    (p) => this.loadMemberPage(p),
-                  )
-                : ""}
+              ${this.renderMemberSearch()}
+              ${(() => {
+                const filtered = this.filterMembers(this.members);
+                return html`
+                  <div class="space-y-2">
+                    ${this.paginateMembers(filtered).map((m) =>
+                      this.renderManageMemberRow(m),
+                    )}
+                  </div>
+                  ${this.renderMemberPagination(filtered.length)}
+                `;
+              })()}
             </div>
 
             <!-- Danger Zone -->
@@ -806,7 +964,7 @@ export class ClanModal extends BaseModal {
     }
     this.selectedClan = null;
     this.myRole = null;
-    this.view = "browse";
+    this.view = "list";
     this.loadBrowse();
   }
 
@@ -1191,8 +1349,116 @@ export class ClanModal extends BaseModal {
 
   // ── Shared rendering helpers ────────────────────────────────────
 
+  private filterMembers(members: ClanMember[]): ClanMember[] {
+    if (!this.memberSearch) return members;
+    const q = this.memberSearch.toLowerCase();
+    return members.filter(
+      (m) =>
+        (m.publicId?.toLowerCase().includes(q) ?? false) || m.role.includes(q),
+    );
+  }
+
+  private paginateMembers(members: ClanMember[]): ClanMember[] {
+    const start = (this.memberPage - 1) * this.membersPerPage;
+    return members.slice(start, start + this.membersPerPage);
+  }
+
+  private renderMemberSearch() {
+    return html`
+      <div class="relative">
+        <input
+          type="text"
+          .value=${this.memberSearch}
+          @input=${(e: Event) => {
+            this.memberSearch = (e.target as HTMLInputElement).value;
+            this.memberPage = 1;
+          }}
+          class="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm"
+          placeholder="${translateText(
+            "clan_modal.search_members_placeholder",
+          )}"
+        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+      </div>
+    `;
+  }
+
+  private renderMemberPagination(totalMembers: number) {
+    const totalPages = Math.ceil(totalMembers / this.membersPerPage);
+    if (totalMembers <= this.perPageOptions[0]) return html``;
+
+    return html`
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10"
+      >
+        <div class="flex items-center gap-2">
+          <span
+            class="text-[10px] font-bold text-white/40 uppercase tracking-wider"
+          >
+            ${translateText("clan_modal.per_page")}
+          </span>
+          ${this.perPageOptions.map(
+            (opt) => html`
+              <button
+                @click=${() => {
+                  this.membersPerPage = opt;
+                  this.memberPage = 1;
+                }}
+                class="px-2 py-1 text-xs font-bold rounded-lg transition-all
+                  ${this.membersPerPage === opt
+                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                  : "text-white/40 hover:text-white/70 border border-transparent"}"
+              >
+                ${opt}
+              </button>
+            `,
+          )}
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            @click=${() => (this.memberPage = Math.max(1, this.memberPage - 1))}
+            ?disabled=${this.memberPage <= 1}
+            class="px-2 py-1 text-xs font-bold rounded-lg transition-all
+              ${this.memberPage <= 1
+              ? "text-white/20 cursor-not-allowed"
+              : "text-white/60 hover:text-white hover:bg-white/10"}"
+          >
+            &lt;
+          </button>
+          <span class="text-xs text-white/50 font-medium">
+            ${this.memberPage} / ${totalPages}
+          </span>
+          <button
+            @click=${() =>
+              (this.memberPage = Math.min(totalPages, this.memberPage + 1))}
+            ?disabled=${this.memberPage >= totalPages}
+            class="px-2 py-1 text-xs font-bold rounded-lg transition-all
+              ${this.memberPage >= totalPages
+              ? "text-white/20 cursor-not-allowed"
+              : "text-white/60 hover:text-white hover:bg-white/10"}"
+          >
+            &gt;
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   private renderMemberRow(member: ClanMember, showId = false) {
-    const displayId = member.publicId ?? "---";
+    const joinDate = member.joinedAt
+      ? new Date(member.joinedAt).toLocaleDateString()
+      : "";
+
     return html`
       <div
         class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"
@@ -1200,18 +1466,53 @@ export class ClanModal extends BaseModal {
         <div
           class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-xs font-bold shrink-0"
         >
-          ${(member.publicId ?? "?").charAt(0).toUpperCase()}
+          ${member.role === "leader"
+            ? html`<svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4 text-amber-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                />
+              </svg>`
+            : html`<span
+                >${(member.publicId ?? member.role)
+                  .charAt(0)
+                  .toUpperCase()}</span
+              >`}
         </div>
         <div class="flex-1 min-w-0">
-          ${showId && member.publicId
-            ? html`<copy-button
-                compact
-                .copyText=${member.publicId}
-                .displayText=${member.publicId}
-                .showVisibilityToggle=${false}
-                .showCopyIcon=${false}
-              ></copy-button>`
-            : html`<span class="text-white/40 text-sm">${displayId}</span>`}
+          ${member.publicId
+            ? html`
+                <span class="text-white text-sm font-medium truncate block"
+                  >${member.publicId}</span
+                >
+                ${showId
+                  ? html`<copy-button
+                      compact
+                      .copyText=${member.publicId}
+                      .displayText=${member.publicId}
+                      .showVisibilityToggle=${false}
+                      .showCopyIcon=${false}
+                    ></copy-button>`
+                  : ""}
+              `
+            : html`
+                <span class="text-white/50 text-sm font-medium capitalize"
+                  >${member.role}</span
+                >
+                ${joinDate
+                  ? html`<span class="text-white/30 text-[10px] block"
+                      >Joined ${joinDate}</span
+                    >`
+                  : ""}
+              `}
         </div>
         <span
           class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0

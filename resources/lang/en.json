@@ -223,15 +223,11 @@
     "title": "Clans",
     "my_clans": "My Clans",
     "browse": "Browse",
-    "create": "Create",
     "no_clans": "You're not in any clans yet.",
     "search_placeholder": "Search by clan tag...",
     "no_results": "No clans found.",
     "invite_only": "Invite Only",
-
     "members": "Members",
-
-    "leader": "Leader",
     "status": "Status",
     "open": "Open",
     "join_clan": "Join Clan",
@@ -240,14 +236,9 @@
     "manage_clan": "Manage",
     "transfer_leadership": "Transfer Leadership",
     "clan_name": "Clan Name",
-    "clan_name_placeholder": "Enter clan name...",
-    "clan_tag": "Clan Tag",
-    "clan_tag_placeholder": "e.g. ABC",
     "description": "Description",
-    "description_placeholder": "Tell others about your clan...",
     "open_clan": "Open Clan",
     "open_clan_desc": "Anyone can join without an invite",
-    "create_clan": "Create Clan",
     "clan_settings": "Clan Settings",
     "save_changes": "Save Changes",
     "promote": "Promote",
@@ -264,7 +255,10 @@
     "no_requests": "No pending join requests.",
     "pending_requests_count": "{count, plural, one {# pending request} other {# pending requests}}",
     "approve": "Approve",
-    "deny": "Deny"
+    "deny": "Deny",
+    "pending_applications": "Pending Applications",
+    "applied": "Applied",
+    "pending": "Pending"
   },
   "account_modal": {
     "title": "Account",
