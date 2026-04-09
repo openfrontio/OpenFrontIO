@@ -91,6 +91,7 @@ type GeneratorArgs struct {
 // | :----------------- | :-------------- | :----------------- | :------------------------------- |
 // | **Alpha < 20**     | Water           | Distance to Land\* | Transparent pixels become water. |
 // | **Blue = 106**     | Water           | Distance to Land\* | Specific key color for water.    |
+// | **RGB = 24,24,24** | Oil             | 31                 | Traversible land reserved for oil. |
 // | **Blue < 140**     | Land (Plains)   | 0                  | Clamped to minimum magnitude.    |
 // | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 					 					 					 		|
 // | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 					 					 					 		|
@@ -129,14 +130,18 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 	// Process each pixel
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
-			_, _, b, a := img.At(x, y).RGBA()
+			r, g, b, a := img.At(x, y).RGBA()
 			// Convert from 16-bit to 8-bit values
+			red := uint8(r >> 8)
+			green := uint8(g >> 8)
 			alpha := uint8(a >> 8)
 			blue := uint8(b >> 8)
 
 			if alpha < 20 || blue == 106 {
 				// Transparent or specific blue value = water
 				terrain[x][y] = Terrain{Type: Water}
+			} else if red == 24 && green == 24 && blue == 24 {
+				terrain[x][y] = Terrain{Type: Land, Magnitude: 31}
 			} else {
 				// Land
 				terrain[x][y] = Terrain{Type: Land}
@@ -634,6 +639,7 @@ type RGBA struct {
 //   - Water Shoreline: (Transparent)
 //   - Deep Water: (Transparent)
 //   - Land Shoreline: `rgb(204, 203, 158)`
+//   - Oil: `rgb(36, 31, 18)`
 //   - Plains (Mag < 10): `rgb(190, 220, 138)` - `rgb(190, 202, 138)`
 //   - Highlands (Mag 10-19): `rgb(220, 203, 158)` - `rgb(238, 221, 176)`
 //   - Mountains (Mag >= 20): `rgb(240, 240, 240)` - `rgb(245, 245, 245)`
@@ -656,6 +662,10 @@ func getThumbnailColor(t Terrain) RGBA {
 	// Shoreline land
 	if t.Shoreline {
 		return RGBA{R: 204, G: 203, B: 158, A: 255}
+	}
+
+	if t.Magnitude >= 31 {
+		return RGBA{R: 36, G: 31, B: 18, A: 255}
 	}
 
 	var adjRGB float64

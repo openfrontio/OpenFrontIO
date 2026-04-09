@@ -12,6 +12,7 @@ const randomMap = assetUrl("images/RandomMap.webp");
 
 const featuredMaps: GameMapType[] = [
   GameMapType.World,
+  GameMapType.WorldOil,
   GameMapType.Europe,
   GameMapType.NorthAmerica,
   GameMapType.SouthAmerica,

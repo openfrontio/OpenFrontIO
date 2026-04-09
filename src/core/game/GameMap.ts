@@ -68,6 +68,7 @@ export interface GameMap {
 
 export class GameMapImpl implements GameMap {
   private _numTilesWithFallout = 0;
+  private static readonly OIL_MAGNITUDE = 31;
 
   private readonly terrain: Uint8Array; // Immutable terrain data
   private readonly state: Uint16Array; // Mutable game state
@@ -262,7 +263,10 @@ export class GameMapImpl implements GameMap {
   }
 
   cost(ref: TileRef): number {
-    return this.magnitude(ref) < 10 ? 2 : 1;
+    const terrainType = this.terrainType(ref);
+    return terrainType === TerrainType.Plains || terrainType === TerrainType.Oil
+      ? 2
+      : 1;
   }
 
   // if updating these magnitude values, also update
@@ -270,6 +274,7 @@ export class GameMapImpl implements GameMap {
   terrainType(ref: TileRef): TerrainType {
     if (this.isLand(ref)) {
       const magnitude = this.magnitude(ref);
+      if (magnitude === GameMapImpl.OIL_MAGNITUDE) return TerrainType.Oil;
       if (magnitude < 10) return TerrainType.Plains;
       if (magnitude < 20) return TerrainType.Highland;
       return TerrainType.Mountain;
