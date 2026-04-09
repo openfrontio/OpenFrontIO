@@ -2,8 +2,18 @@ import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
 import type { NewsItem } from "../core/ApiSchemas";
 import {
+  type ClanBrowseResponse,
+  ClanBrowseResponseSchema,
+  type ClanInfo,
+  ClanInfoSchema,
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
+  type ClanMembersResponse,
+  ClanMembersResponseSchema,
+  type ClanRequestsResponse,
+  ClanRequestsResponseSchema,
+  type ClanStats,
+  ClanStatsSchema,
   NewsItemSchema,
   PlayerProfile,
   PlayerProfileSchema,
@@ -14,6 +24,15 @@ import {
 } from "../core/ApiSchemas";
 import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
+export type {
+  ClanBrowseResponse,
+  ClanInfo,
+  ClanJoinRequest,
+  ClanMember,
+  ClanMembersResponse,
+  ClanRequestsResponse,
+  ClanStats,
+} from "../core/ApiSchemas";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -56,6 +75,9 @@ export async function fetchPlayerById(
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
+export function invalidateUserMe(): void {
+  __userMe = null;
+}
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
@@ -286,5 +308,402 @@ export async function getNews(): Promise<NewsItem[]> {
   } catch (err) {
     console.warn("getNews: request failed, using fallback", err);
     return newsItemsFallback as NewsItem[];
+  }
+}
+export async function fetchClanStats(tag: string): Promise<ClanStats | false> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return false;
+    const json = await res.json();
+    const parsed = ClanStatsSchema.safeParse(json?.clan);
+    if (!parsed.success) {
+      console.warn("fetchClanStats: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+// ── Clan API functions ──────────────────────────────────────────────
+
+async function clanFetch(
+  path: string,
+  options?: RequestInit,
+): Promise<Response> {
+  return fetch(`${getApiBase()}${path}`, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      Authorization: await getAuthHeader(),
+      ...options?.headers,
+    },
+  });
+}
+
+export async function fetchClans(
+  search?: string,
+  page = 1,
+  limit = 20,
+): Promise<ClanBrowseResponse | false> {
+  try {
+    const url = new URL(`${getApiBase()}/clans`);
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
+    if (search && (search.length >= 3 || /^[A-Za-z0-9]{2}$/.test(search)))
+      url.searchParams.set("search", search);
+    const res = await fetch(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    const parsed = ClanBrowseResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClans: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}`);
+    if (!res.ok) return false;
+    const json = await res.json();
+    const parsed = ClanInfoSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanDetail: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchClanMembers(
+  tag: string,
+  page = 1,
+  limit = 20,
+): Promise<ClanMembersResponse | false> {
+  try {
+    const url = new URL(
+      `${getApiBase()}/clans/${encodeURIComponent(tag)}/members`,
+    );
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
+    const res = await fetch(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (res.status === 403) return false;
+    if (!res.ok) return false;
+    const json = await res.json();
+    const parsed = ClanMembersResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanMembers: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+export async function joinClan(
+  tag: string,
+): Promise<{ status: "joined" | "requested" } | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/join`, {
+      method: "POST",
+    });
+    if (res.status === 409) return { error: "clan_modal.error_already_member" };
+    if (res.status === 429) return { error: "clan_modal.error_rate_limited" };
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return (await res.json()) as { status: "joined" | "requested" };
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function leaveClan(
+  tag: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/leave`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function updateClan(
+  tag: string,
+  patch: { name?: string; description?: string; isOpen?: boolean },
+): Promise<ClanInfo | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    const json = await res.json();
+    const parsed = ClanInfoSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("updateClan: Zod validation failed", parsed.error);
+      return { error: "clan_modal.error_failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function disbandClan(
+  tag: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function kickMember(
+  tag: string,
+  targetPublicId: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/kick`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetPublicId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function promoteMember(
+  tag: string,
+  targetPublicId: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/promote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetPublicId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function demoteMember(
+  tag: string,
+  targetPublicId: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/demote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetPublicId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function transferLeadership(
+  tag: string,
+  targetPublicId: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/transfer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetPublicId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function fetchClanRequests(
+  tag: string,
+  page = 1,
+  limit = 20,
+): Promise<ClanRequestsResponse | false> {
+  try {
+    const url = new URL(
+      `${getApiBase()}/clans/${encodeURIComponent(tag)}/requests`,
+    );
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
+    const res = await fetch(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    const parsed = ClanRequestsResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanRequests: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+export async function approveClanRequest(
+  tag: string,
+  targetPublicId: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/requests/approve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetPublicId }),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function denyClanRequest(
+  tag: string,
+  targetPublicId: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/requests/deny`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetPublicId }),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+}
+
+export async function withdrawClanRequest(
+  tag: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/requests/withdraw`,
+      { method: "POST" },
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        error:
+          (body as { message?: string }).message ?? "clan_modal.error_failed",
+      };
+    }
+    return true;
+  } catch {
+    return { error: "clan_modal.error_network" };
   }
 }

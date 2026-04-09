@@ -19,6 +19,7 @@ import {
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -790,6 +791,7 @@ class Client {
         "leaderboard-button",
         "token-login",
         "matchmaking-modal",
+        "clan-modal",
         "lang-selector",
         "homepage-promos",
       ].forEach((tag) => {

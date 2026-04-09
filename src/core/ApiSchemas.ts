@@ -14,7 +14,7 @@ const LeaderboardUsernameSchema = z
   .string()
   .transform(stripClanTagFromUsername)
   .pipe(z.string().min(1).max(64));
-const LeaderboardClanTagSchema = ClanTagSchema.unwrap();
+const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -81,6 +81,25 @@ export const UserMeResponseSchema = z.object({
           .optional(),
       })
       .optional(),
+    clans: z
+      .array(
+        z.object({
+          tag: RequiredClanTagSchema,
+          name: z.string(),
+          role: z.enum(["leader", "officer", "member"]),
+          joinedAt: z.iso.datetime(),
+        }),
+      )
+      .optional(),
+    clanRequests: z
+      .array(
+        z.object({
+          tag: RequiredClanTagSchema,
+          name: z.string(),
+          createdAt: z.iso.datetime(),
+        }),
+      )
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
@@ -126,7 +145,7 @@ export const PlayerProfileSchema = z.object({
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
 export const ClanLeaderboardEntrySchema = z.object({
-  clanTag: LeaderboardClanTagSchema,
+  clanTag: RequiredClanTagSchema,
   games: z.number(),
   wins: z.number(),
   losses: z.number(),
@@ -150,7 +169,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
   username: LeaderboardUsernameSchema,
-  clanTag: LeaderboardClanTagSchema.nullable().optional(),
+  clanTag: RequiredClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
@@ -179,7 +198,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   public_id: z.string(),
   user: DiscordUserSchema.nullable().optional(),
   username: LeaderboardUsernameSchema,
-  clanTag: LeaderboardClanTagSchema.nullable().optional(),
+  clanTag: RequiredClanTagSchema.nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
@@ -200,3 +219,65 @@ export const NewsItemSchema = z.object({
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
+
+// ── Clan schemas ───────────────────────────────────────────────────
+
+export const ClanInfoSchema = z.object({
+  name: z.string(),
+  tag: RequiredClanTagSchema,
+  description: z.string(),
+  isOpen: z.boolean(),
+  createdAt: z.string(),
+  memberCount: z.number(),
+});
+export type ClanInfo = z.infer<typeof ClanInfoSchema>;
+
+export const ClanBrowseResponseSchema = z.object({
+  results: ClanInfoSchema.array(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type ClanBrowseResponse = z.infer<typeof ClanBrowseResponseSchema>;
+
+export const ClanMemberSchema = z.object({
+  role: z.enum(["leader", "officer", "member"]),
+  joinedAt: z.string(),
+  publicId: z.string().nullable(),
+});
+export type ClanMember = z.infer<typeof ClanMemberSchema>;
+
+export const ClanMembersResponseSchema = z.object({
+  results: ClanMemberSchema.array(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  pendingRequests: z.number().optional(),
+});
+export type ClanMembersResponse = z.infer<typeof ClanMembersResponseSchema>;
+
+export const ClanJoinRequestSchema = z.object({
+  publicId: z.string(),
+  createdAt: z.string(),
+});
+export type ClanJoinRequest = z.infer<typeof ClanJoinRequestSchema>;
+
+export const ClanRequestsResponseSchema = z.object({
+  results: ClanJoinRequestSchema.array(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type ClanRequestsResponse = z.infer<typeof ClanRequestsResponseSchema>;
+
+export const ClanStatsSchema = z.object({
+  clanTag: z.string(),
+  games: z.number(),
+  wins: z.number(),
+  losses: z.number(),
+  teamTypeWL: z.record(
+    z.string(),
+    z.object({ wl: z.tuple([z.number(), z.number()]) }),
+  ),
+});
+export type ClanStats = z.infer<typeof ClanStatsSchema>;
