@@ -36,23 +36,6 @@ class TradeStationStopHandler implements TrainStopHandler {
   }
 }
 
-class OilRigStopHandler implements TrainStopHandler {
-  onStop(
-    mg: Game,
-    station: TrainStation,
-    trainExecution: TrainExecution,
-  ): void {
-    // TODOHERE: decide whether oil rigs should participate in rail economy.
-    // Possibilities:
-    // - no train interaction at all
-    // - passive bonus when connected to a factory/city network
-    // - produce a resource that trains can collect and deliver inland
-    void mg;
-    void station;
-    void trainExecution;
-  }
-}
-
 class FactoryStopHandler implements TrainStopHandler {
   onStop(
     mg: Game,
@@ -64,10 +47,11 @@ class FactoryStopHandler implements TrainStopHandler {
 export function createTrainStopHandlers(
   random: PseudoRandom,
 ): Partial<Record<UnitType, TrainStopHandler>> {
+  const tradeStationStopHandler = new TradeStationStopHandler();
   return {
-    [UnitType.City]: new TradeStationStopHandler(),
-    [UnitType.Port]: new TradeStationStopHandler(),
-    [UnitType.OilRig]: new OilRigStopHandler(),
+    [UnitType.City]: tradeStationStopHandler,
+    [UnitType.Port]: tradeStationStopHandler,
+    [UnitType.OilRig]: tradeStationStopHandler,
     [UnitType.Factory]: new FactoryStopHandler(),
   };
 }
@@ -181,9 +165,11 @@ export class Cluster {
 
   private isTradeStation(station: TrainStation): boolean {
     const type = station.unit.type();
-    // TODOHERE: decide whether oil rigs should count as a trade station
-    // for railroad routing and destination selection.
-    return type === UnitType.City || type === UnitType.Port;
+    return (
+      type === UnitType.City ||
+      type === UnitType.Port ||
+      type === UnitType.OilRig
+    );
   }
 
   has(station: TrainStation) {

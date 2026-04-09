@@ -338,6 +338,7 @@ export class AttackExecution implements Execution {
       let mag = 0;
       switch (this.mg.terrainType(neighbor)) {
         case TerrainType.Plains:
+        case TerrainType.Oil:
           mag = 1;
           break;
         case TerrainType.Highland:

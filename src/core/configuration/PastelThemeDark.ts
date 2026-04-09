@@ -57,6 +57,12 @@ export class PastelThemeDark extends PastelTheme {
           g: 180 + mag / 2,
           b: 180 + mag / 2,
         });
+      case TerrainType.Oil:
+        return colord({
+          r: 28,
+          g: 25,
+          b: 20,
+        });
     }
   }
 }

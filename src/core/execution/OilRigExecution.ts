@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
-import { Execution, Game, MessageType, Unit } from "../game/Game";
+import { Execution, Game, MessageType, Unit, UnitType } from "../game/Game";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class OilRigExecution implements Execution {
   private active = true;
@@ -21,6 +22,10 @@ export class OilRigExecution implements Execution {
 
     if (this.oilRig.isUnderConstruction()) {
       return;
+    }
+
+    if (!this.oilRig.hasTrainStation()) {
+      this.createStation();
     }
 
     if (!this.shouldGenerateCoins(ticks)) {
@@ -58,21 +63,22 @@ export class OilRigExecution implements Execution {
     }
 
     this.oilRig.owner().addGold(gold, this.oilRig.tile());
-    this.mg.displayMessage(
-      "events_display.received_gold_from_trade",
-      MessageType.RECEIVED_GOLD_FROM_TRADE,
-      this.oilRig.owner().id(),
-      gold,
-      {
-        gold: renderNumber(gold),
-        name: "Oil Rig",
-      },
-    );
   }
 
   private resolveIncomeAmount() {
     // TODOHERE: this is the main balance hook for oil rig income.
     return this.mg.config().oilRigIncome(this.oilRig.level());
+  }
+
+  private createStation(): void {
+    const nearbyFactory = this.mg.hasUnitNearby(
+      this.oilRig.tile(),
+      this.mg.config().trainStationMaxRange(),
+      UnitType.Factory,
+    );
+    if (nearbyFactory) {
+      this.mg.addExecution(new TrainStationExecution(this.oilRig));
+    }
   }
 
   isActive(): boolean {

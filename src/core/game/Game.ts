@@ -82,6 +82,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  WorldOil = "World (+oil)",
   GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
@@ -157,6 +158,7 @@ export type GameMapName = keyof typeof GameMapType;
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
+    GameMapType.WorldOil,
     GameMapType.WorldRotated,
     GameMapType.GiantWorldMap,
     GameMapType.NorthAmerica,
@@ -467,6 +469,7 @@ export enum TerrainType {
   Plains,
   Highland,
   Mountain,
+  Oil,
   Lake,
   Ocean,
 }

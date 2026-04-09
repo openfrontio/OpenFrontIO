@@ -235,8 +235,7 @@ export class RailNetworkImpl implements RailNetwork {
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
     // Factories already show their radius, so we'll exclude from ghost rails
     // in order not to clutter the interface too much.
-    // TODOHERE: if oil rigs should become railroad-connectable structures i think we need to add UnitType.OilRig to this check and the neighbor queries below.
-    if (![UnitType.City, UnitType.Port].includes(unitType)) {
+    if (![UnitType.City, UnitType.Port, UnitType.OilRig].includes(unitType)) {
       return [];
     }
 
@@ -257,6 +256,7 @@ export class RailNetworkImpl implements RailNetwork {
       UnitType.City,
       UnitType.Factory,
       UnitType.Port,
+      UnitType.OilRig,
     ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
@@ -294,7 +294,7 @@ export class RailNetworkImpl implements RailNetwork {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      [UnitType.City, UnitType.Factory, UnitType.Port, UnitType.OilRig],
     );
 
     const editedClusters = new Set<Cluster>();

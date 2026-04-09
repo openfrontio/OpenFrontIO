@@ -14,7 +14,7 @@ import {
   GhostStructureChangedEvent,
   ToggleStructureEvent,
 } from "../../InputHandler";
-import { renderNumber, translateText } from "../../Utils";
+import { formatKeyForDisplay, renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
@@ -26,9 +26,23 @@ const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
-const oilRigIcon = assetUrl("images/PortIcon.svg"); // TODOHERE
+const oilRigIcon = assetUrl("images/OilRigIcon.svg"); // TODOHERE
 const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
+
+const DEFAULT_BUILD_HOTKEYS: Record<string, string> = {
+  buildCity: "Digit1",
+  buildFactory: "Digit2",
+  buildPort: "Digit3",
+  buildOilRig: "KeyR",
+  buildDefensePost: "Digit4",
+  buildMissileSilo: "Digit5",
+  buildSamLauncher: "Digit6",
+  buildWarship: "Digit7",
+  buildAtomBomb: "Digit8",
+  buildHydrogenBomb: "Digit9",
+  buildMIRV: "Digit0",
+};
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
@@ -52,13 +66,35 @@ export class UnitDisplay extends LitElement implements Layer {
     return this;
   }
 
+  private getSavedKeybindValue(entry: unknown): string | null {
+    if (typeof entry === "string") return entry;
+    if (
+      typeof entry === "object" &&
+      entry !== null &&
+      "value" in entry &&
+      typeof (entry as { value: unknown }).value === "string"
+    ) {
+      return (entry as { value: string }).value;
+    }
+    return null;
+  }
+
   init() {
     const config = this.game.config();
 
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
       try {
-        this.keybinds = JSON.parse(savedKeybinds);
+        const parsed = JSON.parse(savedKeybinds) as Record<string, unknown>;
+        this.keybinds = Object.fromEntries(
+          Object.entries(parsed)
+            .map(([key, entry]) => {
+              const value = this.getSavedKeybindValue(entry);
+              if (!value || value === "Null") return [key, undefined];
+              return [key, { value, key: formatKeyForDisplay(value) }];
+            })
+            .filter(([, entry]) => entry !== undefined),
+        ) as Record<string, { value: string; key: string }>;
       } catch (e) {
         console.warn("Invalid keybinds JSON:", e);
       }
@@ -139,77 +175,88 @@ export class UnitDisplay extends LitElement implements Layer {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.keybinds["buildCity"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildCity),
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.keybinds["buildFactory"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildFactory),
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.keybinds["buildPort"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildPort),
           )}
           ${this.renderUnitItem(
             oilRigIcon,
             this._oilRig,
             UnitType.OilRig,
             "oil_rig",
-            this.keybinds["buildOilRig"]?.key ?? "None",
+            this.keybinds["buildOilRig"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildOilRig),
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.keybinds["buildDefensePost"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildDefensePost),
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.keybinds["buildMissileSilo"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildMissileSilo),
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.keybinds["buildSamLauncher"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildSamLauncher),
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.keybinds["buildWarship"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildWarship),
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.keybinds["buildAtomBomb"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildAtomBomb),
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.keybinds["buildHydrogenBomb"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildHydrogenBomb),
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.keybinds["buildMIRV"]?.key ??
+              formatKeyForDisplay(DEFAULT_BUILD_HOTKEYS.buildMIRV),
           )}
         </div>
       </div>

@@ -182,6 +182,12 @@ export class PastelTheme implements Theme {
           g: 230 + mag / 2,
           b: 230 + mag / 2,
         });
+      case TerrainType.Oil:
+        return colord({
+          r: 42,
+          g: 38,
+          b: 32,
+        });
     }
   }
 

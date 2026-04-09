@@ -9,6 +9,7 @@ import {
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 const anchorIcon = assetUrl("images/AnchorIcon.png");
+const oilRigIcon = assetUrl("images/OilDropIcon.png");
 const cityIcon = assetUrl("images/CityIcon.png");
 const factoryIcon = assetUrl("images/FactoryUnit.png");
 const missileSiloIcon = assetUrl("images/MissileSiloUnit.png");
@@ -18,7 +19,7 @@ const shieldIcon = assetUrl("images/ShieldIcon.png");
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",
   [UnitType.Port]: "pentagon",
-  [UnitType.OilRig]: "pentagon", // TODOHERE
+  [UnitType.OilRig]: "septagon",
   [UnitType.Factory]: "circle",
   [UnitType.DefensePost]: "octagon",
   [UnitType.SAMLauncher]: "square",
@@ -37,6 +38,7 @@ export const ICON_SIZE = {
   circle: 28,
   octagon: 28,
   pentagon: 30,
+  septagon: 30,
   square: 28,
   triangle: 28,
   cross: 20,
@@ -47,6 +49,7 @@ export type ShapeType =
   | "triangle"
   | "square"
   | "pentagon"
+  | "septagon"
   | "octagon"
   | "circle"
   | "cross";
@@ -66,7 +69,7 @@ export class SpriteFactory {
     [UnitType.Factory, { iconPath: factoryIcon, image: null }],
     [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
     [UnitType.Port, { iconPath: anchorIcon, image: null }],
-    [UnitType.OilRig, { iconPath: anchorIcon, image: null }], // TODOHERE
+    [UnitType.OilRig, { iconPath: oilRigIcon, image: null }], // TODOHERE
     [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
     [UnitType.SAMLauncher, { iconPath: SAMMissileIcon, image: null }],
   ]);
@@ -367,6 +370,29 @@ export class SpriteFactory {
           context.stroke();
         }
         break;
+      case "septagon":
+        {
+          const cx = halfIconSize;
+          const cy = halfIconSize;
+          const r = halfIconSize - 1;
+          const step = (Math.PI * 2) / 7;
+
+          context.beginPath();
+          for (let i = 0; i < 7; i++) {
+            const angle = step * i - Math.PI / 2;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) {
+              context.moveTo(x, y);
+            } else {
+              context.lineTo(x, y);
+            }
+          }
+          context.closePath();
+          context.fill();
+          context.stroke();
+        }
+        break;
       case "cross": {
         context.strokeStyle = "rgba(0, 0, 0, 1)";
         context.fillStyle = "rgba(0, 0, 0, 1)";
@@ -424,6 +450,7 @@ export class SpriteFactory {
         square: [5, 5],
         octagon: [6, 6],
         pentagon: [7, 7],
+        septagon: [6, 6],
         circle: [6, 6],
         cross: [0, 0],
       };

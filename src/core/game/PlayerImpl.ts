@@ -35,6 +35,7 @@ import {
   Relation,
   Structures,
   Team,
+  TerrainType,
   TerraNullius,
   Tick,
   Unit,
@@ -1241,10 +1242,13 @@ export class PlayerImpl implements Player {
   }
 
   oilRigSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
-    // TODOHERE: oil rigs currently reuse port placement rules.
-    // If rigs later need stricter offshore placement, resource deposits,
-    // or distance-from-shore constraints, this should diverge from portSpawn().
-    return this.portSpawn(tile, validTiles);
+    const tiles = validTiles ?? this.validStructureSpawnTiles(tile);
+    for (const t of tiles) {
+      if (this.mg.terrainType(t) === TerrainType.Oil) {
+        return t;
+      }
+    }
+    return false;
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {

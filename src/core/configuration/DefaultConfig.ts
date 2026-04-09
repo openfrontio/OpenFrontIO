@@ -336,19 +336,13 @@ export class DefaultConfig implements Config {
   }
 
   oilRigIncomeInterval(): Tick {
-    // TODOHERE: decide how frequently oil rigs should pay out.
-    // A dedicated interval lets us tune oil rigs independently from ports/trade ships.
-    return 10 * 10;
+    // Pay oil rig income once per real-time second.
+    return Math.max(1, Math.round(1000 / this.serverConfig().turnIntervalMs()));
   }
 
   oilRigIncome(level: number): Gold {
-    // TODOHERE: replace this placeholder with the real oil rig economy formula.
-    // Suggestions:
-    // - flat passive income per interval
-    // - scale with rig level
-    // - optionally scale with nearby ocean depth / map resource data later
-    void level;
-    return 0n;
+    // Oil rigs provide $1K/sec per rig level, so upgrades stack linearly.
+    return BigInt(Math.max(1, level)) * 1_000n;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -601,6 +595,7 @@ export class DefaultConfig implements Config {
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
+      case TerrainType.Oil:
         mag = 80;
         speed = 16.5;
         break;
