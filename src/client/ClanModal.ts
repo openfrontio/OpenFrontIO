@@ -379,12 +379,25 @@ export class ClanModal extends BaseModal {
   private async handleWithdrawRequest(tag: string) {
     const result = await withdrawClanRequest(tag);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     invalidateUserMe();
     this.myPendingRequests = this.myPendingRequests.filter(
       (r) => r.tag !== tag,
+    );
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.join_request_cancelled"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
     );
     if (this.myPendingRequests.length === 0) {
       this.view = "list";
@@ -402,7 +415,7 @@ export class ClanModal extends BaseModal {
     );
     this.loading = false;
     if (!data) {
-      this.errorMsg = "Failed to load clans";
+      this.errorMsg = translateText("clan_modal.failed_to_load_clan");
       return;
     }
     this.browseData = data;
@@ -588,7 +601,15 @@ export class ClanModal extends BaseModal {
     this.loading = false;
 
     if (!detail) {
-      this.errorMsg = "Failed to load clan";
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("clan_modal.failed_to_load_clan"),
+            color: "red",
+            duration: 3500,
+          },
+        }),
+      );
       return;
     }
 
@@ -670,14 +691,11 @@ export class ClanModal extends BaseModal {
 
         <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
           <div class="space-y-6">
-            ${this.errorMsg
-              ? html`<p class="text-red-400 text-sm">${this.errorMsg}</p>`
-              : ""}
-
             <!-- Description -->
             <div class="bg-white/5 rounded-xl border border-white/10 p-5">
               <p class="text-white/70 text-sm">
-                ${clan.description || "No description"}
+                ${clan.description ||
+                translateText("clan_modal.no_description")}
               </p>
             </div>
 
@@ -846,7 +864,11 @@ export class ClanModal extends BaseModal {
     this.errorMsg = "";
     const result = await joinClan(this.selectedClan.tag);
     if ("error" in result) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     invalidateUserMe();
@@ -854,9 +876,19 @@ export class ClanModal extends BaseModal {
       this.myClanRoles.set(this.selectedClan.tag, "member");
       await this.openClanDetail(this.selectedClan.tag);
     } else {
-      // Refresh pending requests and show them
+      // Refresh pending requests and go back to my clans
       await this.loadMyClans();
-      this.errorMsg = "Join request sent! Waiting for approval.";
+      this.view = "list";
+      this.activeTab = "my-clans";
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("clan_modal.join_request_sent"),
+            color: "green",
+            duration: 3500,
+          },
+        }),
+      );
     }
   }
 
@@ -865,7 +897,11 @@ export class ClanModal extends BaseModal {
     this.errorMsg = "";
     const result = await leaveClan(this.selectedClan.tag);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     invalidateUserMe();
@@ -874,6 +910,15 @@ export class ClanModal extends BaseModal {
     this.myRole = null;
     this.view = "list";
     this.loadMyClans();
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.left_clan"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   // ── Manage ──────────────────────────────────────────────────────
@@ -978,7 +1023,7 @@ export class ClanModal extends BaseModal {
                 class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5 disabled:opacity-50"
               >
                 ${this.saving
-                  ? "Saving..."
+                  ? translateText("clan_modal.saving")
                   : translateText("clan_modal.save_changes")}
               </button>
             </div>
@@ -1059,32 +1104,52 @@ export class ClanModal extends BaseModal {
     this.saving = false;
 
     if ("error" in result) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
 
-    // Update local state
+    // Update local state and go back to detail view
     this.selectedClan = {
       ...this.selectedClan,
       name: result.name,
       description: result.description,
       isOpen: result.isOpen,
     };
+    this.view = "detail";
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.settings_saved"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   private async handleDisband() {
     if (!this.selectedClan) return;
     if (
       !confirm(
-        `Are you sure you want to disband [${this.selectedClan.tag}] ${this.selectedClan.name}? This cannot be undone.`,
+        translateText("clan_modal.confirm_disband", {
+          tag: this.selectedClan.tag,
+          name: this.selectedClan.name,
+        }),
       )
     )
       return;
 
-    this.errorMsg = "";
     const result = await disbandClan(this.selectedClan.tag);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     invalidateUserMe();
@@ -1092,6 +1157,15 @@ export class ClanModal extends BaseModal {
     this.myRole = null;
     this.view = "list";
     this.loadMyClans();
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.clan_disbanded"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   private renderManageMemberRow(member: ClanMember) {
@@ -1162,35 +1236,72 @@ export class ClanModal extends BaseModal {
 
   private async handlePromote(publicId: string) {
     if (!this.selectedClan) return;
-    this.errorMsg = "";
     const result = await promoteMember(this.selectedClan.tag, publicId);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     await this.loadMemberPage(this.memberPage);
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.member_promoted"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   private async handleDemote(publicId: string) {
     if (!this.selectedClan) return;
-    this.errorMsg = "";
     const result = await demoteMember(this.selectedClan.tag, publicId);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     await this.loadMemberPage(this.memberPage);
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.member_demoted"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   private async handleKick(publicId: string) {
     if (!this.selectedClan) return;
-    this.errorMsg = "";
+    if (!confirm(translateText("clan_modal.confirm_kick"))) return;
     const result = await kickMember(this.selectedClan.tag, publicId);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     await this.loadMemberPage(this.memberPage);
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.member_kicked"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
     // Update member count
     if (this.selectedClan) {
       this.selectedClan = {
@@ -1323,22 +1434,42 @@ export class ClanModal extends BaseModal {
       this.transferTarget,
     );
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     // Refresh - we're no longer leader
     await this.openClanDetail(this.selectedClan.tag);
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.leadership_transferred"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   // ── Requests ────────────────────────────────────────────────────
 
   private async openRequests() {
     if (!this.selectedClan) return;
-    this.errorMsg = "";
     this.requestsPage = 1;
     const data = await fetchClanRequests(this.selectedClan.tag, 1);
     if (!data) {
-      this.errorMsg = "Failed to load requests";
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("clan_modal.failed_to_load_requests"),
+            color: "red",
+            duration: 3500,
+          },
+        }),
+      );
       return;
     }
     this.requests = data.results;
@@ -1448,29 +1579,53 @@ export class ClanModal extends BaseModal {
 
   private async handleApprove(publicId: string) {
     if (!this.selectedClan) return;
-    this.errorMsg = "";
     const result = await approveClanRequest(this.selectedClan.tag, publicId);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     // Remove from local list
     this.requests = this.requests.filter((r) => r.publicId !== publicId);
     this.requestsTotal--;
     this.pendingRequestCount = Math.max(0, this.pendingRequestCount - 1);
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.request_approved"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   private async handleDeny(publicId: string) {
     if (!this.selectedClan) return;
-    this.errorMsg = "";
     const result = await denyClanRequest(this.selectedClan.tag, publicId);
     if (result !== true) {
-      this.errorMsg = result.error;
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: result.error, color: "red", duration: 3500 },
+        }),
+      );
       return;
     }
     this.requests = this.requests.filter((r) => r.publicId !== publicId);
     this.requestsTotal--;
     this.pendingRequestCount = Math.max(0, this.pendingRequestCount - 1);
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("clan_modal.request_denied"),
+          color: "green",
+          duration: 3500,
+        },
+      }),
+    );
   }
 
   // ── Shared rendering helpers ────────────────────────────────────
