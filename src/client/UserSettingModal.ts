@@ -81,7 +81,7 @@ export class UserSettingModal extends BaseModal {
   ) {
     const { action, value, key, prevValue } = e.detail;
 
-    const activeKeybinds = this.defaultKeybinds;
+    const activeKeybinds = { ...this.defaultKeybinds };
     for (const [k, v] of Object.entries(this.userKeybinds)) {
       const normalizedValue = Array.isArray(v.value)
         ? v.value[0] || ""

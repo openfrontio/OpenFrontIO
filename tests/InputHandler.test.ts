@@ -44,7 +44,7 @@ describe("InputHandler AutoUpgrade", () => {
 
   beforeEach(() => {
     testSettings = new UserSettings();
-    testSettings.removeCached(KEYBINDS_KEY);
+    testSettings.removeCached(KEYBINDS_KEY, false);
 
     mockGameView = { inSpawnPhase: () => false } as GameView;
     mockCanvas = document.createElement("canvas");
