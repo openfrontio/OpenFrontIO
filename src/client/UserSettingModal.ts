@@ -53,7 +53,9 @@ export class UserSettingModal extends BaseModal {
         !Array.isArray(entry)
       ) {
         const value = (entry as any).value ?? "Null";
-        const key = (entry as any).key ?? value;
+        const key =
+          (entry as any).key ??
+          (Array.isArray(value) ? (value[0] ?? "") : value);
 
         if (
           (typeof value === "string" ||
@@ -137,9 +139,9 @@ export class UserSettingModal extends BaseModal {
         }),
       );
 
-      const element = this.renderRoot.querySelector(
+      const element = this.renderRoot.querySelector<SettingKeybind>(
         `setting-keybind[action="${action}"]`,
-      ) satisfies SettingKeybind | null;
+      );
       if (element) {
         element.value = prevValue ?? this.defaultKeybinds[action] ?? "";
         element.requestUpdate();
