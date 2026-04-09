@@ -24,7 +24,7 @@ export class UserSettingModal extends BaseModal {
 
   @state() private userKeybinds: Record<
     string,
-    { value: string | string[]; key: string }
+    { value: string; key: string }
   > = {};
 
   connectedCallback() {
@@ -44,7 +44,7 @@ export class UserSettingModal extends BaseModal {
       return;
     }
 
-    const validated: Record<string, { value: string | string[]; key: string }> =
+    const validated: Record<string, { value: string; key: string }> =
       {};
 
     for (const [action, entry] of Object.entries(parsed)) {
@@ -86,9 +86,7 @@ export class UserSettingModal extends BaseModal {
 
     const activeKeybinds = { ...this.defaultKeybinds };
     for (const [k, v] of Object.entries(this.userKeybinds)) {
-      const normalizedValue = Array.isArray(v.value)
-        ? v.value[0] || ""
-        : v.value;
+      const normalizedValue = v.value;
       if (normalizedValue === "Null") {
         delete activeKeybinds[k];
       } else {
@@ -160,9 +158,7 @@ export class UserSettingModal extends BaseModal {
   private getKeyValue(action: string): string | undefined {
     const entry = this.userKeybinds[action];
     if (!entry) return undefined;
-    const normalizedValue = Array.isArray(entry.value)
-      ? entry.value[0] || ""
-      : entry.value;
+    const normalizedValue = entry.value;
     if (normalizedValue === "Null") return "";
     return normalizedValue || undefined;
   }
