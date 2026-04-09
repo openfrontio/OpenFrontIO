@@ -303,6 +303,7 @@ export class UserSettings {
     const parsed = this.parsedKeybinds();
     return Object.fromEntries(
       Object.entries(parsed)
+        // Extract value from nested object or plain string, filter out non-string values
         .map(([k, v]) => {
           let val = v;
           if (v && typeof v === "object" && "value" in v) {
@@ -310,7 +311,7 @@ export class UserSettings {
           }
           return [k, val];
         })
-        .filter(([, v]) => typeof v === "string")
+        .filter(([, v]) => typeof v === "string"),
     ) as Record<string, string>;
   }
 

@@ -37,9 +37,9 @@ global.PointerEvent = MockPointerEvent as any;
 
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
+  let mockGameView: GameView;
   let eventBus: EventBus;
   let mockCanvas: HTMLCanvasElement;
-  let mockGameView: GameView;
   let testSettings: UserSettings;
 
   beforeEach(() => {

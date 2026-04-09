@@ -85,8 +85,8 @@ export class UserSettingModal extends BaseModal {
         entry !== null &&
         !Array.isArray(entry)
       ) {
-        let value = (entry as any).value ?? "Null";
-        let key = (entry as any).key ?? value;
+        const value = (entry as any).value ?? "Null";
+        const key = (entry as any).key ?? value;
 
         if (
           (typeof value === "string" ||
