@@ -306,8 +306,11 @@ export class UserSettings {
         // Extract value from nested object or plain string, filter out non-string values
         .map(([k, v]) => {
           let val = v;
-          if (v && typeof v === "object" && "value" in v) {
+          if (v && typeof v === "object" && !Array.isArray(v) && "value" in v) {
             val = v.value;
+          }
+          if (Array.isArray(val) && typeof val[0] === "string") {
+            val = val[0];
           }
           return [k, val];
         })
