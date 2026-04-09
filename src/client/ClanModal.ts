@@ -1200,7 +1200,7 @@ export class ClanModal extends BaseModal {
               ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
               : "bg-white/10 text-white/40 border border-white/10"}"
         >
-          ${member.role}
+          ${this.translateRole(member.role)}
         </span>
         ${!isLeader && member.publicId
           ? html`
@@ -1347,12 +1347,13 @@ export class ClanModal extends BaseModal {
             <div class="space-y-2">
               ${nonLeaders.map(
                 (m) => html`
-                  <div
+                  <button
                     @click=${() => (this.transferTarget = m.publicId)}
-                    class="flex items-center gap-3 py-3 border-b border-white/5 last:border-0 cursor-pointer rounded-lg px-2 transition-all
+                    class="w-full flex items-center gap-3 py-3 border-b border-white/5 last:border-0 cursor-pointer rounded-lg px-2 transition-all text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50
                       ${this.transferTarget === m.publicId
                       ? "bg-amber-500/10"
                       : "hover:bg-white/5"}"
+                    aria-selected=${this.transferTarget === m.publicId}
                   >
                     <div
                       class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-xs font-bold shrink-0"
@@ -1376,7 +1377,7 @@ export class ClanModal extends BaseModal {
                         ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                         : "bg-white/10 text-white/40 border border-white/10"}"
                     >
-                      ${m.role}
+                      ${this.translateRole(m.role)}
                     </span>
                     ${this.transferTarget === m.publicId
                       ? html`<svg
@@ -1394,7 +1395,7 @@ export class ClanModal extends BaseModal {
                           />
                         </svg>`
                       : ""}
-                  </div>
+                  </button>
                 `,
               )}
             </div>
@@ -1630,6 +1631,10 @@ export class ClanModal extends BaseModal {
 
   // ── Shared rendering helpers ────────────────────────────────────
 
+  private translateRole(role: string): string {
+    return translateText(`clan_modal.role_${role}`);
+  }
+
   private filterMembers(members: ClanMember[]): ClanMember[] {
     if (!this.memberSearch) return members;
     const q = this.memberSearch.toLowerCase();
@@ -1786,11 +1791,13 @@ export class ClanModal extends BaseModal {
               `
             : html`
                 <span class="text-white/50 text-sm font-medium capitalize"
-                  >${member.role}</span
+                  >${this.translateRole(member.role)}</span
                 >
                 ${joinDate
                   ? html`<span class="text-white/30 text-[10px] block"
-                      >Joined ${joinDate}</span
+                      >${translateText("clan_modal.joined_date", {
+                        date: joinDate,
+                      })}</span
                     >`
                   : ""}
               `}
@@ -1803,7 +1810,7 @@ export class ClanModal extends BaseModal {
               ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
               : "bg-white/10 text-white/40 border border-white/10"}"
         >
-          ${member.role}
+          ${this.translateRole(member.role)}
         </span>
       </div>
     `;

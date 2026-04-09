@@ -280,7 +280,11 @@
     "request_approved": "Request approved!",
     "request_denied": "Request denied.",
     "confirm_kick": "Are you sure you want to kick this member?",
-    "confirm_disband": "Are you sure you want to disband [{tag}] {name}? This cannot be undone."
+    "confirm_disband": "Are you sure you want to disband [{tag}] {name}? This cannot be undone.",
+    "joined_date": "Joined {date}",
+    "role_leader": "Leader",
+    "role_officer": "Officer",
+    "role_member": "Member"
   },
   "account_modal": {
     "title": "Account",
