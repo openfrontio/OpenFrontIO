@@ -5,6 +5,7 @@ import {
   type ClanInfo,
   type ClanJoinRequest,
   type ClanMember,
+  type ClanStats,
   approveClanRequest,
   demoteMember,
   denyClanRequest,
@@ -13,13 +14,16 @@ import {
   fetchClanMembers,
   fetchClanRequests,
   fetchClans,
+  fetchClanStats,
   getUserMe,
+  invalidateUserMe,
   joinClan,
   kickMember,
   leaveClan,
   promoteMember,
   transferLeadership,
   updateClan,
+  withdrawClanRequest,
 } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
@@ -28,7 +32,13 @@ import { translateText } from "./Utils";
 
 type ClanRole = "leader" | "officer" | "member";
 type Tab = "my-clans" | "browse";
-type View = "list" | "detail" | "manage" | "transfer" | "requests";
+type View =
+  | "list"
+  | "detail"
+  | "manage"
+  | "transfer"
+  | "requests"
+  | "my-requests";
 
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
@@ -60,6 +70,7 @@ export class ClanModal extends BaseModal {
   @state() private membersPerPage = 10;
   @state() private memberSearch = "";
   @state() private pendingRequestCount = 0;
+  @state() private clanStats: ClanStats | null = null;
 
   // Manage state
   @state() private manageName = "";
@@ -148,6 +159,8 @@ export class ClanModal extends BaseModal {
       `;
     }
 
+    if (this.view === "my-requests") return this.renderMyRequests();
+
     if (this.selectedClan) {
       if (this.view === "manage") return this.renderManage();
       if (this.view === "transfer") return this.renderTransfer();
@@ -189,7 +202,9 @@ export class ClanModal extends BaseModal {
                 this.activeTab = tab.key;
                 this.view = "list";
                 this.selectedClan = null;
-                if (tab.key === "browse" && !this.browseData) {
+                if (tab.key === "my-clans") {
+                  this.loadMyClans();
+                } else if (!this.browseData) {
                   this.loadBrowse();
                 }
               }}
@@ -236,49 +251,144 @@ export class ClanModal extends BaseModal {
 
     return html`
       <div class="p-4 lg:p-6 space-y-3">
-        ${hasRequests ? this.renderPendingRequests() : ""}
+        ${hasRequests ? this.renderPendingRequestsButton() : ""}
         ${this.myClans.map((clan) => this.renderClanCard(clan))}
       </div>
     `;
   }
 
-  private renderPendingRequests() {
+  private renderPendingRequestsButton() {
+    const count = this.myPendingRequests.length;
     return html`
-      <div class="space-y-2 mb-2">
-        <h3
-          class="text-xs font-bold uppercase tracking-wider text-amber-400/80 px-1"
-        >
-          ${translateText("clan_modal.pending_applications")}
-        </h3>
-        ${this.myPendingRequests.map(
-          (req) => html`
-            <div
-              class="flex items-center gap-3 bg-amber-500/5 rounded-xl border border-amber-500/15 p-3"
+      <button
+        @click=${() => {
+          this.view = "my-requests";
+        }}
+        class="w-full flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/15 rounded-xl border border-amber-500/20 p-4 transition-all cursor-pointer group"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-amber-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
             >
-              <div
-                class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0"
-              >
-                <span class="text-amber-400 font-bold text-xs">${req.tag}</span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <span class="text-white/80 font-medium text-sm truncate block"
-                  >${req.name}</span
-                >
-                <span class="text-white/30 text-xs">
-                  ${translateText("clan_modal.applied")}
-                  ${new Date(req.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <span
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400/70 border border-amber-500/20"
-              >
-                ${translateText("clan_modal.pending")}
-              </span>
-            </div>
-          `,
-        )}
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <div class="text-left">
+            <span class="text-amber-400 text-sm font-bold">
+              ${translateText("clan_modal.pending_applications")}
+            </span>
+            <span class="text-amber-400/60 text-xs block">
+              ${translateText("clan_modal.pending_requests_count", {
+                count,
+              })}
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span
+            class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30"
+          >
+            ${count}
+          </span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-5 h-5 text-amber-400/40 group-hover:text-amber-400/70 transition-colors"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </div>
+      </button>
+    `;
+  }
+
+  private renderMyRequests() {
+    return html`
+      <div class="${this.modalContainerClass}">
+        ${modalHeader({
+          title: translateText("clan_modal.pending_applications"),
+          onBack: () => {
+            this.view = "list";
+          },
+          ariaLabel: translateText("common.back"),
+        })}
+        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
+          ${this.myPendingRequests.length === 0
+            ? html`<p class="text-white/40 text-sm text-center py-8">
+                ${translateText("clan_modal.no_pending_applications")}
+              </p>`
+            : html`
+                <div class="space-y-3">
+                  ${this.myPendingRequests.map(
+                    (req) => html`
+                      <div
+                        class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
+                      >
+                        <div
+                          class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0"
+                        >
+                          <span class="text-amber-400 font-bold text-xs"
+                            >${req.tag}</span
+                          >
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <span
+                            class="text-white font-bold text-sm truncate block"
+                            >${req.name}</span
+                          >
+                          <span class="text-white/30 text-xs">
+                            ${translateText("clan_modal.applied")}
+                            ${new Date(req.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <button
+                          @click=${() => this.handleWithdrawRequest(req.tag)}
+                          class="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-all cursor-pointer"
+                        >
+                          ${translateText("clan_modal.cancel_request")}
+                        </button>
+                      </div>
+                    `,
+                  )}
+                </div>
+              `}
+        </div>
       </div>
     `;
+  }
+
+  private async handleWithdrawRequest(tag: string) {
+    const result = await withdrawClanRequest(tag);
+    if (result !== true) {
+      this.errorMsg = result.error;
+      return;
+    }
+    invalidateUserMe();
+    this.myPendingRequests = this.myPendingRequests.filter(
+      (r) => r.tag !== tag,
+    );
+    if (this.myPendingRequests.length === 0) {
+      this.view = "list";
+    }
   }
 
   // ── Browse ──────────────────────────────────────────────────────
@@ -347,9 +457,13 @@ export class ClanModal extends BaseModal {
                 ${translateText("clan_modal.no_results")}
               </p>`
             : ""}
-          ${(this.browseData?.results ?? []).map((clan) =>
-            this.renderClanCard(clan),
-          )}
+          ${(this.browseData?.results ?? [])
+            .filter(
+              (clan) =>
+                !this.myClanRoles.has(clan.tag) &&
+                !this.myPendingRequests.some((r) => r.tag === clan.tag),
+            )
+            .map((clan) => this.renderClanCard(clan))}
         </div>
 
         ${totalPages > 1
@@ -462,10 +576,14 @@ export class ClanModal extends BaseModal {
     this.pendingRequestCount = 0;
     this.memberSearch = "";
 
-    const [detail, membersRes] = await Promise.all([
+    const [detail, membersRes, stats] = await Promise.all([
       fetchClanDetail(tag),
-      fetchClanMembers(tag, 1, this.membersPerPage),
+      this.myClanRoles.has(tag)
+        ? fetchClanMembers(tag, 1, this.membersPerPage)
+        : Promise.resolve(false as const),
+      fetchClanStats(tag),
     ]);
+    this.clanStats = stats || null;
 
     this.loading = false;
 
@@ -576,6 +694,9 @@ export class ClanModal extends BaseModal {
                   : translateText("clan_modal.invite_only"),
               )}
             </div>
+
+            <!-- Win/Loss Stats -->
+            ${this.clanStats ? this.renderClanWL() : ""}
 
             <!-- Join Requests (leader/officer of invite-only clan) -->
             ${canManageRequests && !clan.isOpen && this.pendingRequestCount > 0
@@ -728,10 +849,13 @@ export class ClanModal extends BaseModal {
       this.errorMsg = result.error;
       return;
     }
+    invalidateUserMe();
     if (result.status === "joined") {
-      // Refresh the detail view to show membership
+      this.myClanRoles.set(this.selectedClan.tag, "member");
       await this.openClanDetail(this.selectedClan.tag);
     } else {
+      // Refresh pending requests and show them
+      await this.loadMyClans();
       this.errorMsg = "Join request sent! Waiting for approval.";
     }
   }
@@ -744,11 +868,12 @@ export class ClanModal extends BaseModal {
       this.errorMsg = result.error;
       return;
     }
-    // Go back to browse
+    invalidateUserMe();
+    this.myClanRoles.delete(this.selectedClan.tag);
     this.selectedClan = null;
     this.myRole = null;
     this.view = "list";
-    this.loadBrowse();
+    this.loadMyClans();
   }
 
   // ── Manage ──────────────────────────────────────────────────────
@@ -962,10 +1087,11 @@ export class ClanModal extends BaseModal {
       this.errorMsg = result.error;
       return;
     }
+    invalidateUserMe();
     this.selectedClan = null;
     this.myRole = null;
     this.view = "list";
-    this.loadBrowse();
+    this.loadMyClans();
   }
 
   private renderManageMemberRow(member: ClanMember) {
@@ -1524,6 +1650,85 @@ export class ClanModal extends BaseModal {
         >
           ${member.role}
         </span>
+      </div>
+    `;
+  }
+
+  private renderClanWL() {
+    const stats = this.clanStats!;
+    if (stats.games === 0) return "";
+
+    // Team modes: named modes (Duos, Trios, Quads) + small numeric team counts (2-7)
+    const teamKeys = new Set([
+      "Duos",
+      "Trios",
+      "Quads",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+    ]);
+    let teamWins = 0;
+    let teamLosses = 0;
+    for (const [key, entry] of Object.entries(stats.teamTypeWL)) {
+      if (teamKeys.has(key)) {
+        teamWins += entry.wl[0];
+        teamLosses += entry.wl[1];
+      }
+    }
+
+    // FFA = total minus teams
+    const ffaWins = stats.wins - teamWins;
+    const ffaLosses = stats.losses - teamLosses;
+
+    const categories = [
+      { label: "FFA", wins: ffaWins, losses: ffaLosses },
+      {
+        label: translateText("clan_modal.teams"),
+        wins: teamWins,
+        losses: teamLosses,
+      },
+      {
+        label: translateText("clan_modal.overall"),
+        wins: stats.wins,
+        losses: stats.losses,
+      },
+    ];
+
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
+        <h3
+          class="text-[10px] font-bold text-white/40 uppercase tracking-wider"
+        >
+          ${translateText("clan_modal.win_loss")}
+        </h3>
+        <div class="grid grid-cols-3 gap-3">
+          ${categories.map((cat) => {
+            const total = cat.wins + cat.losses;
+            const rate = total > 0 ? Math.round((cat.wins / total) * 100) : 0;
+            return html`
+              <div class="text-center">
+                <div
+                  class="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1"
+                >
+                  ${cat.label}
+                </div>
+                <div class="text-white font-bold text-sm">
+                  ${cat.wins}W / ${cat.losses}L
+                </div>
+                <div
+                  class="text-xs ${rate >= 50
+                    ? "text-green-400/70"
+                    : "text-red-400/70"}"
+                >
+                  ${total > 0 ? `${rate}%` : "-"}
+                </div>
+              </div>
+            `;
+          })}
+        </div>
       </div>
     `;
   }

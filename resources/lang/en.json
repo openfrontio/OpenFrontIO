@@ -257,8 +257,13 @@
     "approve": "Approve",
     "deny": "Deny",
     "pending_applications": "Pending Applications",
+    "no_pending_applications": "No pending applications.",
     "applied": "Applied",
-    "pending": "Pending"
+    "pending": "Pending",
+    "cancel_request": "Cancel",
+    "win_loss": "Win / Loss",
+    "teams": "Teams",
+    "overall": "Overall"
   },
   "account_modal": {
     "title": "Account",

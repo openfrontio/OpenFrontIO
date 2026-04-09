@@ -56,6 +56,9 @@ export async function fetchPlayerById(
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
+export function invalidateUserMe(): void {
+  __userMe = null;
+}
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
@@ -330,6 +333,30 @@ export interface ClanRequestsResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+// ── Clan stats types ───────────────────────────────────────────────
+
+export interface ClanStats {
+  clanTag: string;
+  games: number;
+  wins: number;
+  losses: number;
+  teamTypeWL: Record<string, { wl: [number, number] }>;
+}
+
+export async function fetchClanStats(tag: string): Promise<ClanStats | false> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return false;
+    const data = (await res.json()) as { clan: ClanStats };
+    return data.clan;
+  } catch {
+    return false;
+  }
 }
 
 // ── Clan API functions ──────────────────────────────────────────────
@@ -618,6 +645,24 @@ export async function denyClanRequest(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetPublicId }),
       },
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { error: (body as { message?: string }).message ?? "Failed" };
+    }
+    return true;
+  } catch {
+    return { error: "Network error" };
+  }
+}
+
+export async function withdrawClanRequest(
+  tag: string,
+): Promise<true | { error: string }> {
+  try {
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/requests/withdraw`,
+      { method: "POST" },
     );
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
