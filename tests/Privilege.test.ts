@@ -25,7 +25,7 @@ const bannedWords = [
 const matcher = createMatcher(bannedWords);
 
 // Create a minimal PrivilegeCheckerImpl for testing censorUsername
-const mockCosmetics = { patterns: {}, colorPalettes: {}, flags: {} };
+const mockCosmetics = { patterns: {}, colorPalettes: {}, flags: {}, packs: {} };
 const mockDecoder = () => new Uint8Array();
 const checker = new PrivilegeCheckerImpl(
   mockCosmetics,
@@ -39,6 +39,7 @@ const flagCosmetics = {
   colorPalettes: {},
   flags: {
     cool_flag: {
+      type: "flag" as const,
       name: "cool_flag",
       url: "https://example.com/cool.png",
       affiliateCode: null,
@@ -46,6 +47,7 @@ const flagCosmetics = {
       rarity: "common",
     },
   },
+  packs: {},
 };
 const flagChecker = new PrivilegeCheckerImpl(
   flagCosmetics,

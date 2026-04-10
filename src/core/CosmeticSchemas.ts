@@ -10,6 +10,7 @@ export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
 export type PatternData = z.infer<typeof PatternDataSchema>;
+export type Cosmetic = Pattern | Flag;
 
 export const ProductSchema = z.object({
   productId: z.string(),
@@ -51,7 +52,7 @@ export const ColorPaletteSchema = z.object({
   secondaryColor: z.string(),
 });
 
-const CosmeticSchema = z.object({
+const CosmeticBaseSchema = z.object({
   name: CosmeticNameSchema,
   affiliateCode: z.string().nullable(),
   product: ProductSchema.nullable(),
@@ -61,7 +62,8 @@ const CosmeticSchema = z.object({
     .or(z.string()),
 });
 
-export const PatternSchema = CosmeticSchema.extend({
+export const PatternSchema = CosmeticBaseSchema.extend({
+  type: z.literal("pattern").default("pattern"),
   pattern: PatternDataSchema,
   colorPalettes: z
     .object({
@@ -72,9 +74,15 @@ export const PatternSchema = CosmeticSchema.extend({
     .optional(),
 });
 
-export const FlagSchema = CosmeticSchema.extend({
+export const FlagSchema = CosmeticBaseSchema.extend({
+  type: z.literal("flag").default("flag"),
   url: z.string(),
 });
+
+export const CosmeticSchema = z.discriminatedUnion("type", [
+  PatternSchema,
+  FlagSchema,
+]);
 
 // Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({

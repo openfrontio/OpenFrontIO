@@ -2,15 +2,30 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
+import { Cosmetics, Flag } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { getUserMe } from "./Api";
-import { fetchCosmetics, flagRelationship } from "./Cosmetics";
+import {
+  fetchCosmetics,
+  flagRelationship,
+  ResolvedCosmetic,
+} from "./Cosmetics";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
-import "./components/FlagButton";
+import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
+
+function countryFlag(name: string, code: string): Flag {
+  return {
+    type: "flag" as const,
+    name,
+    url: `/flags/${code}.svg`,
+    product: null,
+    rarity: "common",
+    affiliateCode: null,
+  };
+}
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends BaseModal {
@@ -26,10 +41,6 @@ export class FlagInputModal extends BaseModal {
   private renderFlags() {
     const userSettings = new UserSettings();
     const selectedFlag = userSettings.getFlag() ?? "";
-    const onSelect = (flagKey: string) => {
-      this.setFlag(flagKey);
-      this.close();
-    };
 
     const cosmeticFlags = Object.entries(this.cosmetics?.flags ?? {})
       .filter(([, flag]) => {
@@ -37,28 +48,42 @@ export class FlagInputModal extends BaseModal {
           return false;
         return flagRelationship(flag, this.userMe, null) === "owned";
       })
-      .map(
-        ([key, flag]) => html`
-          <flag-button
-            .flag=${{ ...flag, key: `flag:${key}` }}
+      .map(([key, flag]) => {
+        const r: ResolvedCosmetic = {
+          cosmetic: flag,
+          colorPalette: null,
+          relationship: "owned",
+          key: `flag:${key}`,
+        };
+        return html`
+          <cosmetic-button
+            .resolved=${r}
             .selected=${selectedFlag === `flag:${key}`}
-            .onSelect=${onSelect}
-          ></flag-button>
-        `,
-      );
+            .onSelect=${() => {
+              this.setFlag(`flag:${key}`);
+              this.close();
+            }}
+          ></cosmetic-button>
+        `;
+      });
 
+    const noFlagResolved: ResolvedCosmetic = {
+      cosmetic: countryFlag("None", "xx"),
+      colorPalette: null,
+      relationship: "owned",
+      key: "country:xx",
+    };
     const noFlag = this.search
       ? null
       : html`
-          <flag-button
-            .flag=${{
-              key: "country:xx",
-              name: "None",
-              url: "/flags/xx.svg",
-            }}
+          <cosmetic-button
+            .resolved=${noFlagResolved}
             .selected=${selectedFlag === "" || selectedFlag === "country:xx"}
-            .onSelect=${onSelect}
-          ></flag-button>
+            .onSelect=${() => {
+              this.setFlag("country:xx");
+              this.close();
+            }}
+          ></cosmetic-button>
         `;
 
     const countryFlags = Countries.filter(
@@ -66,19 +91,24 @@ export class FlagInputModal extends BaseModal {
         country.code !== "xx" &&
         !country.restricted &&
         this.includedInSearch(country),
-    ).map(
-      (country) => html`
-        <flag-button
-          .flag=${{
-            key: `country:${country.code}`,
-            name: country.name,
-            url: `/flags/${country.code}.svg`,
-          }}
+    ).map((country) => {
+      const r: ResolvedCosmetic = {
+        cosmetic: countryFlag(country.name, country.code),
+        colorPalette: null,
+        relationship: "owned",
+        key: `country:${country.code}`,
+      };
+      return html`
+        <cosmetic-button
+          .resolved=${r}
           .selected=${selectedFlag === `country:${country.code}`}
-          .onSelect=${onSelect}
-        ></flag-button>
-      `,
-    );
+          .onSelect=${() => {
+            this.setFlag(`country:${country.code}`);
+            this.close();
+          }}
+        ></cosmetic-button>
+      `;
+    });
 
     return html`
       <div

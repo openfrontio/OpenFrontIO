@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerPattern } from "../core/Schemas";
-import { renderPatternPreview } from "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternPreview";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";

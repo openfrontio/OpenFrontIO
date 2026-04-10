@@ -2,20 +2,19 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
+import { Cosmetics } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { BaseModal } from "./components/BaseModal";
-import "./components/FlagButton";
+import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
-  flagRelationship,
   getPlayerCosmetics,
   handlePurchase,
-  patternRelationship,
+  resolveCosmetics,
+  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -103,53 +102,18 @@ export class StoreModal extends BaseModal {
   }
 
   private renderPatternGrid(): TemplateResult {
-    const buttons: TemplateResult[] = [];
-    const patterns: (Pattern | null)[] = [
-      null,
-      ...Object.values(this.cosmetics?.patterns ?? {}),
-    ];
-    for (const pattern of patterns) {
-      const colorPalettes = pattern
-        ? [...(pattern.colorPalettes ?? []), null]
-        : [null];
-      for (const colorPalette of colorPalettes) {
-        let rel = "owned";
-        if (pattern) {
-          rel = patternRelationship(
-            pattern,
-            colorPalette,
-            this.userMeResponse,
-            this.affiliateCode,
-          );
-        }
-        if (rel === "blocked" || rel === "owned") {
-          continue;
-        }
-        const isDefaultPattern = pattern === null;
-        const isSelected =
-          (isDefaultPattern && this.selectedPattern === null) ||
-          (!isDefaultPattern &&
-            this.selectedPattern &&
-            this.selectedPattern.name === pattern?.name &&
-            (this.selectedPattern.colorPalette?.name ?? null) ===
-              (colorPalette?.name ?? null));
-        buttons.push(html`
-          <pattern-button
-            .pattern=${pattern}
-            .colorPalette=${this.cosmetics?.colorPalettes?.[
-              colorPalette?.name ?? ""
-            ] ?? null}
-            .requiresPurchase=${rel === "purchasable"}
-            .selected=${isSelected}
-            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
-            .onPurchase=${(p: Pattern, cp: ColorPalette | null) =>
-              handlePurchase(p.product!, cp?.name)}
-          ></pattern-button>
-        `);
-      }
-    }
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        (r.cosmetic === null || r.cosmetic.type === "pattern") &&
+        r.relationship !== "blocked" &&
+        r.relationship !== "owned",
+    );
 
-    if (buttons.length === 0) {
+    if (items.length === 0) {
       return html`<div
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
       >
@@ -161,33 +125,40 @@ export class StoreModal extends BaseModal {
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${buttons}
+        ${items.map((r) => {
+          const isSelected =
+            (r.cosmetic === null && this.selectedPattern === null) ||
+            (r.cosmetic !== null &&
+              this.selectedPattern?.name === r.cosmetic.name &&
+              (this.selectedPattern?.colorPalette?.name ?? null) ===
+                (r.colorPalette?.name ?? null));
+          return html`
+            <cosmetic-button
+              .resolved=${r}
+              .selected=${isSelected}
+              .onSelect=${(rc: ResolvedCosmetic) => this.selectCosmetic(rc)}
+              .onPurchase=${(rc: ResolvedCosmetic) =>
+                handlePurchase(rc.cosmetic!.product!, rc.colorPalette?.name)}
+            ></cosmetic-button>
+          `;
+        })}
       </div>
     `;
   }
 
   private renderFlagGrid(): TemplateResult {
-    const buttons: TemplateResult[] = [];
-    const flags = Object.entries(this.cosmetics?.flags ?? {});
-    for (const [key, flag] of flags) {
-      const rel = flagRelationship(
-        flag,
-        this.userMeResponse,
-        this.affiliateCode,
-      );
-      if (rel === "blocked" || rel === "owned") continue;
-      const selectedFlag = new UserSettings().getFlag() ?? "";
-      buttons.push(html`
-        <flag-button
-          .flag=${{ ...flag, key: `flag:${key}` }}
-          .selected=${selectedFlag === `flag:${key}`}
-          .requiresPurchase=${rel === "purchasable"}
-          .onPurchase=${() => handlePurchase(flag.product!)}
-        ></flag-button>
-      `);
-    }
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        r.cosmetic?.type === "flag" &&
+        r.relationship !== "blocked" &&
+        r.relationship !== "owned",
+    );
 
-    if (buttons.length === 0) {
+    if (items.length === 0) {
       return html`<div
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
       >
@@ -195,11 +166,21 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
 
+    const selectedFlag = new UserSettings().getFlag() ?? "";
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${buttons}
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .selected=${selectedFlag === r.key}
+              .onPurchase=${(rc: ResolvedCosmetic) =>
+                handlePurchase(rc.cosmetic!.product!)}
+            ></cosmetic-button>
+          `,
+        )}
       </div>
     `;
   }
@@ -259,6 +240,22 @@ export class StoreModal extends BaseModal {
     this.isActive = false;
     this.affiliateCode = null;
     super.close();
+  }
+
+  private selectCosmetic(resolved: ResolvedCosmetic) {
+    const c = resolved.cosmetic;
+    if (c === null) {
+      this.selectPattern(null);
+      return;
+    }
+    if (c.type === "pattern") {
+      const pattern: PlayerPattern = {
+        name: c.name,
+        patternData: c.pattern,
+        colorPalette: resolved.colorPalette ?? undefined,
+      };
+      this.selectPattern(pattern);
+    }
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
