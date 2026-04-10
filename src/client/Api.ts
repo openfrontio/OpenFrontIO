@@ -2,8 +2,6 @@ import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
 import type { NewsItem } from "../core/ApiSchemas";
 import {
-  ClanLeaderboardResponse,
-  ClanLeaderboardResponseSchema,
   NewsItemSchema,
   PlayerProfile,
   PlayerProfileSchema,
@@ -56,6 +54,9 @@ export async function fetchPlayerById(
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
+export function invalidateUserMe(): void {
+  __userMe = null;
+}
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
@@ -90,10 +91,6 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     }
   })();
   return __userMe;
-}
-
-export function invalidateUserMe() {
-  __userMe = null;
 }
 
 export async function purchaseWithCurrency(
@@ -232,40 +229,6 @@ export async function fetchGameById(
     return parsed.data;
   } catch (err) {
     console.warn("fetchGameById: request failed", err);
-    return false;
-  }
-}
-
-export async function fetchClanLeaderboard(): Promise<
-  ClanLeaderboardResponse | false
-> {
-  try {
-    const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
-      headers: { Accept: "application/json" },
-    });
-
-    if (!res.ok) {
-      console.warn(
-        "fetchClanLeaderboard: unexpected status",
-        res.status,
-        res.statusText,
-      );
-      return false;
-    }
-
-    const json = await res.json();
-    const parsed = ClanLeaderboardResponseSchema.safeParse(json);
-    if (!parsed.success) {
-      console.warn(
-        "fetchClanLeaderboard: Zod validation failed",
-        parsed.error.toString(),
-      );
-      return false;
-    }
-
-    return parsed.data;
-  } catch (err) {
-    console.warn("fetchClanLeaderboard: request failed", err);
     return false;
   }
 }
