@@ -243,14 +243,14 @@ export class UserSettings {
 
   setFlag(flag: string): void {
     if (flag === "country:xx") {
-      this.clearFlag();
+      this.clearFlag(true);
     } else {
       this.setCached(FLAG_KEY, flag);
     }
   }
 
-  clearFlag(): void {
-    this.removeCached(FLAG_KEY);
+  clearFlag(emitChange: boolean = false): void {
+    this.removeCached(FLAG_KEY, emitChange);
   }
 
   backgroundMusicVolume(): number {
