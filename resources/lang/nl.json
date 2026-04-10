@@ -128,6 +128,8 @@
     "build_defense_desc": "Versterkt de verdediging rondom, binnen dit gebied krijgen grenzen een geruit patroon. Aanvallen van vijanden zijn trager en maken meer slachtoffers.",
     "build_port": "Haven",
     "build_port_desc": "Kan alleen bij water worden gebouwd. Maakt het bouwen van Oorlogsschepen mogelijk. Stuurt automatisch handelsschepen tussen je eigen havens en die van andere landen (behalve als de handel is stopgezet), wat goud oplevert voor beide partijen. Handel stopt automatisch wanneer jij een ander aanvalt of zij jou. Het wordt hervat na 5 minuten of als je bondgenoten wordt. Je kunt de handel handmatig in- of uitschakelen met \"Stop handel\" of \"Start handel\".",
+    "build_oil_rig": "Olieplatform",
+    "build_oil_rig_desc": "Kan alleen worden gebouwd op olievoorraden. Levert na verloop van tijd goud op, en treinen kunnen het aandoen als er een fabriek in de buurt is.",
     "build_warship": "Oorlogsschip",
     "build_warship_desc": "Patrouilleert in een gebied, vangt handelsschepen en vernietigt vijandelijke Boten (transsportschepen) en Oorlogsschepen. Komt vanuit de dichtstbijzijnde Haven en patrouilleert in het gebied waar je hebt geklikt om het te bouwen. Je kunt Oorlogsschepen besturen door op ze te klikken (of shift+klik als linkermuisknop is ingesteld op menu openen) en daarna op de plek waar je ze naartoe wilt laten gaan.",
     "build_silo": "Raketsilo",

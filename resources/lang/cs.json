@@ -82,6 +82,8 @@
     "build_defense_desc": "Zvyšuje obranu kolem blízkých hranic, které zobrazují šachovnicový vzor. Útoky nepřátel jsou pomalejší a utrpí větší ztráty.",
     "build_port": "Přístav",
     "build_port_desc": "Lze postavit pouze v blízkosti vody. Umožňuje stavbu Válečných lodí. Automaticky posílá obchodní lodě mezi přístavy tvojí země a jinými zeměmi (kromě případů, kdy je obchod zastaven), což dává zlato oběma stranám. Obchodování se automaticky zastaví, když zaútočíš na nebo jsi napaden*a hráčem. Obnoví se po 5 minutách nebo pokud se stanete spojenci. Můžete manuálně přepnout obchodování s hráčem pomocí \"Zastavit obchodování\" nebo \"Zahájit obchodování\".",
+    "build_oil_rig": "Ropná plošina",
+    "build_oil_rig_desc": "Lze ji postavit pouze na ropných ložiscích. Postupem času generuje zlato a vlaky ji mohou navštěvovat, pokud je poblíž továrna.",
     "build_warship": "Bitevní loď",
     "build_warship_desc": "Hlídá oblast, zachycuje nepřátelské obchodní lodě a ničí jejich čluny (přepravní lodě) a bitevní lodě. Vyplouvají z nejbližšího přístavu a hlídkují oblast, na kterou jste klikli po výběru této stavby. Válečné lodě můžete ovládat kliknutím na ně s útok-kliknutím (viz akce Útok pod Klávesovými zkratky) a poté útok-kliknutím na novou oblast, kam je chcete přesunout.",
     "build_silo": "Raketové silo",

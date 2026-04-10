@@ -109,6 +109,8 @@
     "build_defense_desc": "Erhöht die Verteidigung von anliegenden Grenzen, markiert mit einem karierten Muster. Angriffe von Feinden sind langsamer und sorgen für mehr Verluste beim Feind.",
     "build_port": "Hafen",
     "build_port_desc": "Kann nur in der Nähe von Wasser gebaut werden. Erlaubt den Bau von Kriegsschiffen. Sendet automatisch Handelsschiffe zwischen den Häfen deines Landes und anderer Länder (außer wenn der Handel gestoppt ist), wodurch beide Seiten Gold erhalten. Der Handel mit einem Spieler wird automatisch gestoppt, wenn du einen Spieler angreifst oder angegriffen wirst. Er wird nach 5 Minuten oder bei Allianz wieder aufgenommen. Du kannst den Handel manuell mit ‚Handel stoppen‘ oder ‚Handel starten‘ ein- und ausschalten.",
+    "build_oil_rig": "Ölplattform",
+    "build_oil_rig_desc": "Kann nur auf Ölvorkommen gebaut werden. Erzeugt mit der Zeit Gold, und Züge können sie anfahren, wenn eine Fabrik in der Nähe ist.",
     "build_warship": "Kriegsschiff",
     "build_warship_desc": "Patrouilliert in einem Gebiet und kapert Handelsschiffe, zerstört feindliche Kriegsschiffe und Boote (Transportschiffe). Erscheint beim nächstgelegenen Hafen und patrouilliert im Gebiet wo es gebaut wurde. Mit einem Klick auf das Kriegsschiff kann es gesteuert und mit einem weiteren Klick in ein anderes Gebiet geschickt werden.",
     "build_silo": "Raketensilo",

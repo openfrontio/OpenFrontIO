@@ -99,6 +99,8 @@
     "build_defense_desc": "Aumenta as defensas das fronteiras próximas, indicado cun padrón de cadros. Como consecuencia, os ataques inimigos son máis lentos e sofren máis perdas.",
     "build_port": "Porto",
     "build_port_desc": "Só se pode construír preto da auga. Permite a construción de buques de guerra. Envía automaticamente barcos comerciais entre os teus portos e os doutros xogadores (agás cando se interrompe o comercio), xerando ouro para ambos bandos. O comercio detense automaticamente ó atacares ou seres atacado por un xogador. Retómase despois de 5 minutos ou ó volverdes aliados. Podes alternar o comercio manualmente con \"Parar comercio\" ou \"Comezar comercio\".",
+    "build_oil_rig": "Plataforma petrolífera",
+    "build_oil_rig_desc": "Só se pode construír en xacementos de petróleo. Xera ouro co tempo, e os trens poden visitala se hai unha fábrica preto.",
     "build_warship": "Buque de guerra",
     "build_warship_desc": "Patrulla nunha zona, capturando barcos comerciais inimigos e destruíndo os seus barcos de transporte e mais os de guerra. Aparece no porto máis próximo e patrulla a zona na que fixeches clic para construílo. Podes encamiñar os teus buques facendo clic neles (consulta a acción de ataque nos atallos) e despois facendo clic no destino desexado.",
     "build_silo": "Silo nuclear",

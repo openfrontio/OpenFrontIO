@@ -153,6 +153,8 @@
     "build_defense_desc": "Suurendab kaitset lähedal asuvate piiridele, mis on märgitud ruudulise mustriga. Vaenlase rünnakud on aeglasemad ja vastase vägede kaotused suuremad.",
     "build_port": "Sadam",
     "build_port_desc": "Saab ehitada ainult vee juurde. Võimaldab ehitada sõjalaevu. Saadab automaatselt kaubalaevu sinu riigi sadamate ja teiste riikide sadamate vahel (välja arvatud juhul, kui kaubandus on peatatud), andes kulda mõlemale poolele. Kaubandus mängijaga peatub automaatselt, kui ründad või sind rünnatakse; see jätkub 5 minuti pärast või kui saate liitlasteks. Kaubandust saab käsitsi sisse või välja lülitada, kasutades „Lõpeta kaubandus“ või „Alusta kaubandust“ nuppu.",
+    "build_oil_rig": "Naftaplatvorm",
+    "build_oil_rig_desc": "Saab ehitada ainult naftamaardlatele. Aja jooksul toodab kulda ja rongid saavad seda külastada, kui läheduses on tehas.",
     "build_warship": "Sõjalaev",
     "build_warship_desc": "Patrullib piirkonnas, vallutades vaenlase kaubalaevu ja hävitades nende paate (transpordilaevu) ning teisi sõjalaevu. Tekib lähimast sadamast ja patrullib piirkonnas, kuhu selle ehitamiseks esimesena klõpsasid. Sõjalaevu saab juhtida klõpsates nende peale rünnaku nupuga (vaata tegevust „Rünnak“ Kiirklahvidest) ja seejärel klõpsates uude piirkonda, kuhu soovid seda liigutada.",
     "build_silo": "Raketi Silo",

@@ -68,6 +68,8 @@
     "build_defense_desc": "Ojačava odbranu okolnih granica. Neprijateljski napadi su sporiji i trpe više gubitaka.",
     "build_port": "Luka",
     "build_port_desc": "Automatski šalje trgovačke brodove između tvojih luka i luka drugih država (osim ako je jedno od vas kliknulo na \"obustavi trgovinu\"), nagrađujući zlatom obje strane. Omogućava izgradnju Ratnih brodova. Može se izgraditi isključivo blizu voda.",
+    "build_oil_rig": "Naftna platforma",
+    "build_oil_rig_desc": "Može se graditi samo na naftnim nalazištima. S vremenom stvara zlato, a vlakovi je mogu posjetiti ako je u blizini tvornica.",
     "build_warship": "Ratni brod",
     "build_warship_desc": "Patrolira oblašću, zarobljavajući trgovačke brodove i uništavajući neprijateljske Ratne brodove. Stvara se u najbližoj luki i patrolira oblašću gde si kliknuo pri izgradnji. Možeš vršiti kontrolu nad Ratnim brodovima tako što ćeš ih kliknuti tasterom za napad i onda kliknuti na oblast u koju želiš da ih premjestiš.",
     "build_silo": "Raketni silos",

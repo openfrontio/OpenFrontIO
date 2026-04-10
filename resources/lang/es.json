@@ -82,6 +82,8 @@
     "build_defense_desc": "Aumenta la defensa en las fronteras cercanas. Los ataques enemigos serán más lentos y tendrán más bajas.",
     "build_port": "Puerto",
     "build_port_desc": "Sólo se puede construir cerca del agua. Permite construir naves de guerra. Envía automáticamente barcos comerciales entre los puertos de tu país y otros países (excepto cuando se detiene el comercio), dando oro a ambas partes. El intercambio se detiene automáticamente cuando atacas o eres atacado por un jugador. Se reanuda después de 5 minutos o si te vuelves aliado. Puede cambiar manualmente las operaciones con \"Parar de comerciar\" o \"Empezar a comerciar\".",
+    "build_oil_rig": "Plataforma petrolífera",
+    "build_oil_rig_desc": "Solo se puede construir en yacimientos de petróleo. Genera oro con el tiempo, y los trenes pueden visitarla si hay una fábrica cerca.",
     "build_warship": "Barco de guerra",
     "build_warship_desc": "Patrulla un área, capturando barcos mercantes y destruyendo Barcos de guerra y Botes enemigos. Aparece desde el puerto más cercano y patrulla el área en el que se clicó al construirlo. Puedes controlar los Barcos de guerra haciendo clic en ellos y luego haciendo clic en el nuevo área al que quieres que se muevan.",
     "build_silo": "Silo de misiles",

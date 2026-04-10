@@ -128,6 +128,8 @@
     "build_defense_desc": "Yakındaki sınırlar etrafındaki savunmayı artırır. Düşmanlardan gelen saldırılar daha yavaştır ve daha fazla kayıp verir.",
     "build_port": "Liman",
     "build_port_desc": "Sadece su kenarında inşa edilebilir. Savaş gemileri inşa etmenizi sağlar. Ülkenizin limanları ile diğer ülkelerin limanları arasında otomatik olarak ticaret gemileri gönderir (ticaret durdurulmadıkça) ve her iki tarafa da altın kazandırır. Bir oyuncuya saldırdığınızda veya bir oyuncu tarafından saldırıya uğradığınızda, o oyuncu ile ticaret otomatik olarak durur. 5 dakika sonra veya müttefik olduğunuzda ticaret yeniden başlar. “Ticareti durdur” veya “Ticareti başlat” seçenekleriyle ticareti manuel olarak açıp kapatabilirsiniz.",
+    "build_oil_rig": "Petrol Platformu",
+    "build_oil_rig_desc": "Yalnızca petrol yataklarına inşa edilebilir. Zamanla altın üretir ve yakında bir fabrika varsa trenler ziyaret edebilir.",
     "build_warship": "Savaş Gemisi",
     "build_warship_desc": "Bir alanda devriye gezer, düşman ticaret gemilerini ele geçirir ve Teknelerini (nakliye gemileri) ve Savaş Gemilerini yok eder. En yakın Limandan doğar ve ilk inşa etmek için tıkladığınız alanı devriye gezer. Savaş Gemilerini üzerlerine saldırı-tıklayarak (Kısayollar altındaki Saldır eylemi bölümüne bakın) ve ardından hareket etmelerini istediğiniz yeni alana saldırı-tıklayarak kontrol edebilirsiniz.",
     "build_silo": "Füze Silosu",

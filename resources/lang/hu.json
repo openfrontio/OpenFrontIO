@@ -99,6 +99,8 @@
     "build_defense_desc": "Növeli a védekezést a közeli határok mentén, amelyek sakktáblaszerű mintázattal jelennek meg. Az ellenséges támadások lassabbak lesznek, és több veszteséggel járnak.",
     "build_port": "Kikötő",
     "build_port_desc": "Csak víz közelében építhető. Lehetővé teszi hadihajók építését. Automatikusan kereskedőhajókat küld az országod kikötői és más országok kikötői között (kivéve, ha a kereskedelem le van állítva), aranyat adva mindkét félnek. A kereskedelem automatikusan leáll, ha megtámadsz egy játékost, vagy téged támad meg egy játékos. 5 perc elteltével a kereskedelem automatikusan újraindul, vagy azonnal, ha szövetségesekké váltok. A kereskedelmet manuálisan is válthatod a „Kereskedelem leállítása” vagy a „Kereskedelem indítása” opcióval.",
+    "build_oil_rig": "Olajfúró torony",
+    "build_oil_rig_desc": "Csak olajmezőkön építhető. Idővel aranyat termel, és a vonatok meglátogathatják, ha van a közelben gyár.",
     "build_warship": "Hadihajó",
     "build_warship_desc": "Egy területen járőrözik, elfogja az ellenséges kereskedő hajókat, és elpusztítja azok hajóit (szállítóhajó) és Hadihajóit. A legközelebbi Kikötőből indul, és azon a területet járőrözik, ahová először kattintottál az építéshez. A Hadihajókat irányíthatod úgy, hogy támadás-kattintasz (lásd a ‘Támadás’ műveletet a Gyorsbillentyűk alatt), majd támadás-kattintasz arra az új területre, ahová szeretnéd őket mozgatni.",
     "build_silo": "Rakétasiló állomás",

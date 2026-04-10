@@ -111,6 +111,8 @@
     "build_defense_desc": "Zwiększa obronę wokół pobliskich granic, które są oznaczone wzorem w szachownicę. Ataki wrogów są wolniejsze i powodują większe straty.",
     "build_port": "Port",
     "build_port_desc": "Można budować tylko w pobliżu wody. Umożliwia budowę okrętów wojennych. Automatycznie wysyła statki handlowe między portami twojego kraju i innych krajów (chyba że handel jest wstrzymany), zapewniając złoto obu stronom. Handel z graczem zostaje automatycznie wstrzymany, gdy go zaatakujesz lub zostaniesz przez niego zaatakowany. Zostaje wznowiony po 5 minutach lub gdy zostaniecie sojusznikami. Możesz ręcznie zarządzać handlem za pomocą opcji „Zatrzymaj handel” i „Rozpocznij handel”.",
+    "build_oil_rig": "Platforma wiertnicza",
+    "build_oil_rig_desc": "Można ją zbudować tylko na złożach ropy. Z czasem generuje złoto, a pociągi mogą ją odwiedzać, jeśli w pobliżu jest fabryka.",
     "build_warship": "Okręt wojenny",
     "build_warship_desc": "Patroluje w obszarze, przechwytując wrogie statki handlowe oraz niszcząc ich łodzie (statki transportowe) i okręty wojenne. Pojawia się w najbliższym porcie i patroluje obszar, na który kliknąłeś, aby go zbudować. Możesz kontrolować okręty wojenne, klikając na nie z włączoną akcją ataku (patrz akcja Atak w skrótach klawiszowych), a następnie klikając w nowe miejsce, do którego chcesz je przesłać.",
     "build_silo": "Silos rakietowy",

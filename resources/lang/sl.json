@@ -99,6 +99,8 @@
     "build_defense_desc": "Poveča obrambo okoli bližnjih meja, ki kažejo karirast vzorec. Napadi sovražnikov so počasnejši in imajo več žrtev.",
     "build_port": "Luka",
     "build_port_desc": "Gradnja je mogoča le v bližini vode. Omogoča gradnjo bojnih ladij. Samodejno pošilja trgovske ladje med pristanišči vaše države in drugimi državami (razen ko je trgovina ustavljena), kar daje zlato obema stranema. Trgovina z igralcem se samodejno ustavi, ko napadete vi ali vas napade igralec. Nadaljuje se po 5 minutah ali če postanete zavezniki. Trgovanje lahko ročno preklapljate z »Ustavi trgovanje« ali »Začni trgovati«.",
+    "build_oil_rig": "Naftna ploščad",
+    "build_oil_rig_desc": "Zgraditi jo je mogoče le na naftnih nahajališčih. Sčasoma ustvarja zlato, vlaki pa jo lahko obiščejo, če je v bližini tovarna.",
     "build_warship": "Bojna ladja",
     "build_warship_desc": "Patruljira na območju, zajame sovražne trgovske ladje in uničuje njihove čolne (transportne ladje) in vojne ladje. Zgradi se v najbližjem pristanišču in patruljira na območju, na katerega ste najprej kliknili, da ste jo zgradili. Vojne ladje lahko nadzorujete tako, da nanje kliknete z napadom (glejte akcijo Napad pod Bližnjice) in nato s klikom na napad na novo območje, kamor jih želite premakniti.",
     "build_silo": "Raketni silos",
