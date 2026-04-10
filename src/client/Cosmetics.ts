@@ -5,6 +5,7 @@ import {
   Cosmetics,
   CosmeticsSchema,
   Flag,
+  Pack,
   Pattern,
   Product,
 } from "../core/CosmeticSchemas";
@@ -190,8 +191,8 @@ export function flagRelationship(
 }
 
 export type ResolvedCosmetic = {
-  type: "pattern" | "flag";
-  cosmetic: Pattern | Flag | null;
+  type: "pattern" | "flag" | "pack";
+  cosmetic: Pattern | Flag | Pack | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
@@ -254,6 +255,18 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `flag:${flagKey}`,
+    });
+  }
+
+  // Packs
+  for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
+    const rel = pack.product ? "purchasable" : "blocked";
+    result.push({
+      type: "pack",
+      cosmetic: pack,
+      colorPalette: null,
+      relationship: rel,
+      key: `pack:${packKey}`,
     });
   }
 

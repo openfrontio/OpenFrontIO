@@ -18,10 +18,9 @@ import { translateText } from "./Utils";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
-  @state() private activeTab: "patterns" | "flags" = "patterns";
+  @state() private activeTab: "patterns" | "flags" | "packs" = "patterns";
 
   private cosmetics: Cosmetics | null = null;
-  private userSettings: UserSettings = new UserSettings();
   private isActive = false;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
@@ -51,6 +50,15 @@ export class StoreModal extends BaseModal {
         rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
       })}
       <div class="flex items-center gap-2 justify-center pt-2">
+        <button
+          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
+            .activeTab === "packs"
+            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
+          @click=${() => (this.activeTab = "packs")}
+        >
+          ${translateText("store.packs")}
+        </button>
         <button
           class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
             .activeTab === "patterns"
@@ -149,6 +157,38 @@ export class StoreModal extends BaseModal {
     `;
   }
 
+  private renderPackGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter((r) => r.type === "pack" && r.relationship === "purchasable");
+
+    if (items.length === 0) {
+      return html`<div
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.no_packs")}
+      </div>`;
+    }
+
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${(rc: ResolvedCosmetic) =>
+                handlePurchase(rc.cosmetic!.product!)}
+            ></cosmetic-button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   render() {
     if (!this.isActive && !this.inline) return html``;
 
@@ -158,7 +198,9 @@ export class StoreModal extends BaseModal {
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
           ${this.activeTab === "patterns"
             ? this.renderPatternGrid()
-            : this.renderFlagGrid()}
+            : this.activeTab === "flags"
+              ? this.renderFlagGrid()
+              : this.renderPackGrid()}
         </div>
       </div>
     `;

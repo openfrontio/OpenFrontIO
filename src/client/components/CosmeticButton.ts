@@ -1,12 +1,14 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Flag, Pattern } from "../../core/CosmeticSchemas";
+import { Flag, Pack, Pattern } from "../../core/CosmeticSchemas";
 import { PlayerPattern } from "../../core/Schemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
+import "./CapIcon";
 import "./CosmeticContainer";
 import "./CosmeticInfo";
 import { renderPatternPreview } from "./PatternPreview";
+import "./PlutoniumIcon";
 
 @customElement("cosmetic-button")
 export class CosmeticButton extends LitElement {
@@ -38,6 +40,9 @@ export class CosmeticButton extends LitElement {
     if (this.resolved.type === "pattern") {
       return translateCosmetic("territory_patterns.pattern", c.name);
     }
+    if (this.resolved.type === "pack") {
+      return (c as Pack).displayName;
+    }
     return translateCosmetic("flags", c.name);
   }
 
@@ -53,6 +58,33 @@ export class CosmeticButton extends LitElement {
               colorPalette: this.resolved.colorPalette ?? undefined,
             };
       return renderPatternPreview(playerPattern, 150, 150);
+    }
+
+    if (this.resolved.type === "pack") {
+      const pack = this.resolved.cosmetic as Pack;
+      const isHard = pack.currency === "hard";
+      const icon = isHard
+        ? html`<plutonium-icon
+            class="flex-1 flex items-center"
+            .size=${100}
+          ></plutonium-icon>`
+        : html`<cap-icon
+            class="flex-1 flex items-center"
+            .size=${100}
+          ></cap-icon>`;
+      const colorClass = isHard ? "text-green-400" : "text-amber-700";
+      const currencyKey = isHard ? "cosmetics.hard" : "cosmetics.soft";
+      return html`<div
+        class="flex flex-col items-center justify-end h-full w-full text-center gap-1 pb-1"
+      >
+        ${icon}
+        <span class="text-lg font-black ${colorClass}"
+          >${pack.amount.toLocaleString()}</span
+        >
+        <span class="text-[10px] font-bold text-white/50 uppercase"
+          >${translateText(currencyKey)}</span
+        >
+      </div>`;
     }
 
     const c = this.resolved.cosmetic as Flag;
@@ -75,8 +107,9 @@ export class CosmeticButton extends LitElement {
   render() {
     const c = this.resolved.cosmetic;
     const isPurchasable = this.resolved.relationship === "purchasable";
-    const isPattern = this.resolved.type === "pattern";
-    const sizeClass = isPattern ? "gap-2 p-3 w-48" : "gap-1 p-1.5 w-36";
+    const type = this.resolved.type;
+    const isPattern = type === "pattern";
+    const sizeClass = type === "flag" ? "gap-1 p-1.5 w-36" : "gap-2 p-3 w-48";
     const crazygamesClass = isPattern ? "no-crazygames " : "";
 
     return html`

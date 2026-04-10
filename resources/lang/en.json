@@ -942,8 +942,11 @@
     "title": "Store",
     "patterns": "Skins",
     "flags": "Flags",
+    "packs": "Packs",
     "no_flags": "No flags available. Check back later for new items.",
-    "no_skins": "No skins available. Check back later for new items."
+    "no_skins": "No skins available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
+    "currency_pack_purchase_success": "Currency pack purchase successful!"
   },
   "territory_patterns": {
     "title": "Skins",
@@ -963,7 +966,9 @@
     "rare": "Rare",
     "epic": "Epic",
     "legendary": "Legendary",
-    "adfree": "ad-free for life!"
+    "adfree": "ad-free for life!",
+    "hard": "Plutonium",
+    "soft": "Caps"
   },
   "flag_input": {
     "title": "Select Flag",

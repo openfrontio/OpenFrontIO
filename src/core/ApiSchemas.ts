@@ -81,6 +81,12 @@ export const UserMeResponseSchema = z.object({
           .optional(),
       })
       .optional(),
+    currency: z
+      .object({
+        soft: z.coerce.number(),
+        hard: z.coerce.number(),
+      })
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
