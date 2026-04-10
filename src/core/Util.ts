@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
 import { Cell, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
@@ -344,6 +345,14 @@ export function minInt(a: bigint, b: bigint): bigint {
 export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
   const atLeastMin = maxInt(num, min);
   return minInt(atLeastMin, max);
+}
+
+export function createAnonUsername(): string {
+  const uuid = uuidv4();
+  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
+  const decimal = BigInt(`0x${cleanUuid}`);
+  const threeDigits = decimal % 1000n;
+  return "Anon" + threeDigits.toString().padStart(3, "0");
 }
 
 export function createRandomName(

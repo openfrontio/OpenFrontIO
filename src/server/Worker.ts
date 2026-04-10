@@ -16,7 +16,7 @@ import {
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
-import { generateID, replacer } from "../core/Util";
+import { createAnonUsername, generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
@@ -377,61 +377,59 @@ export async function startWorker() {
           return;
         }
 
-        // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
-        const { clanTag: censoredClanTag, username: censoredUsername } =
-          privilegeRefresher
-            .get()
-            .censor(clientMsg.username, clientMsg.clanTag ?? null);
-
-        // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization
-        if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-            clanTag: censoredClanTag,
-          })
-        ) {
-          return;
-        }
-
         let roles: string[] | undefined;
         let flares: string[] | undefined;
+        let isLoggedIn = false;
 
-        const allowedFlares = config.allowedFlares();
-        if (claims === null) {
-          if (allowedFlares !== undefined) {
-            log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
-            return;
-          }
-        } else {
-          // Verify token and get player permissions
-          const result = await getUserMe(clientMsg.token, config);
-          if (result.type === "error") {
-            log.warn(`Unauthorized: ${result.message}`, {
+        if (claims !== null) {
+          // Verify token
+          const userResult = await getUserMe(clientMsg.token, config);
+          if (userResult.type === "error") {
+            log.warn(`Unauthorized: ${userResult.message}`, {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          roles = result.response.player.roles;
-          flares = result.response.player.flares;
 
-          if (allowedFlares !== undefined) {
-            const allowed =
-              allowedFlares.length === 0 ||
-              allowedFlares.some((f) => flares?.includes(f));
-            if (!allowed) {
-              log.warn(
-                "Forbidden: player without an allowed flare attempted to join game",
-              );
-              ws.close(1002, "Forbidden");
-              return;
-            }
+          isLoggedIn =
+            userResult.response.user &&
+            (userResult.response.user?.discord !== undefined ||
+              userResult.response.user?.email !== undefined);
+
+          // get player permissions
+          roles = userResult.response.player.roles;
+          flares = userResult.response.player.flares;
+        }
+
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        let clientUsername = clientMsg.username;
+        let clientClanTag = clientMsg.clanTag;
+
+        if (isLoggedIn) {
+          ({ username: clientUsername, clanTag: clientClanTag } =
+            privilegeRefresher
+              .get()
+              .censor(clientUsername, clientClanTag ?? null));
+        } else {
+          clientClanTag = null;
+          if (!clientUsername.match(/^Anon\d{3}$/)) {
+            clientUsername = createAnonUsername();
           }
+        }
+
+        // Try to reconnect an existing client (e.g., page refresh)
+        // If successful, skip all authorization
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: clientUsername,
+            clanTag: clientClanTag,
+          })
+        ) {
+          return;
         }
 
         const cosmeticResult = privilegeRefresher
@@ -482,8 +480,8 @@ export async function startWorker() {
           roles,
           flares,
           ip,
-          censoredUsername,
-          censoredClanTag,
+          clientUsername,
+          clientClanTag,
           ws,
           cosmeticResult.cosmetics,
         );

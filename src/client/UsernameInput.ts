@@ -1,8 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { v4 as uuidv4 } from "uuid";
+import { hasLinkedAccount } from "../client/Api";
 import { translateText } from "../client/Utils";
-import { sanitizeClanTag } from "../core/Util";
+import { UserMeResponse } from "../core/ApiSchemas";
+import { createAnonUsername, sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
@@ -26,10 +27,19 @@ const clanTagKey: string = "clanTag";
 export class UsernameInput extends LitElement {
   @state() private baseUsername: string = "";
   @state() private clanTag: string = "";
+  @state() private linked = false;
 
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
   private _lastValidatedLang: string | null = null;
+
+  private _onUserMe = (event: CustomEvent<UserMeResponse | false>) => {
+    this.linked = hasLinkedAccount(event.detail);
+    if (!this.linked) {
+      this.baseUsername = createAnonUsername();
+      this.validateAndStore();
+    }
+  };
 
   // Remove static styles since we're using Tailwind
 
@@ -65,6 +75,18 @@ export class UsernameInput extends LitElement {
         this.validateAndStore();
       }
     });
+    document.addEventListener(
+      "userMeResponse",
+      this._onUserMe as EventListener,
+    );
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener(
+      "userMeResponse",
+      this._onUserMe as EventListener,
+    );
   }
 
   protected updated(): void {
@@ -91,17 +113,26 @@ export class UsernameInput extends LitElement {
       this.baseUsername = storedUsername;
       this.validateAndStore();
     } else {
-      this.baseUsername = genAnonUsername();
+      this.baseUsername = createAnonUsername();
       this.validateAndStore();
     }
   }
 
   render() {
     return html`
-      <div class="flex items-center w-full h-full gap-2">
+      <div class="relative flex items-center w-full h-full gap-2">
+        ${!this.linked
+          ? html`
+              <div
+                class="absolute inset-0 z-10 cursor-pointer"
+                @click=${() => window.showPage?.("page-account")}
+              ></div>
+            `
+          : null}
         <input
           type="text"
           .value=${this.clanTag}
+          ?disabled=${!this.linked}
           @input=${this.handleClanTagChange}
           placeholder="${translateText("username.tag")}"
           minlength="${MIN_CLAN_TAG_LENGTH}"
@@ -111,6 +142,7 @@ export class UsernameInput extends LitElement {
         <input
           type="text"
           .value=${this.baseUsername}
+          ?disabled=${!this.linked}
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
           minlength="${MIN_USERNAME_LENGTH}"
@@ -221,12 +253,4 @@ export class UsernameInput extends LitElement {
     this.showValidationFeedback();
     return false;
   }
-}
-
-export function genAnonUsername(): string {
-  const uuid = uuidv4();
-  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-  const decimal = BigInt(`0x${cleanUuid}`);
-  const threeDigits = decimal % 1000n;
-  return "Anon" + threeDigits.toString().padStart(3, "0");
 }
