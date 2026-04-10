@@ -5,7 +5,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
 } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { renderPatternPreview } from "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternPreview";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";

@@ -2,31 +2,22 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
-import {
-  PATTERN_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
-import { PlayerPattern } from "../core/Schemas";
+import { Cosmetics } from "../core/CosmeticSchemas";
+import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
-import "./components/FlagButton";
+import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
-  flagRelationship,
-  getPlayerCosmetics,
   handlePurchase,
-  patternRelationship,
+  resolveCosmetics,
+  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
-  @state() private selectedPattern: PlayerPattern | null;
-  @state() private selectedColor: string | null = null;
   @state() private activeTab: "patterns" | "flags" = "patterns";
 
   private cosmetics: Cosmetics | null = null;
@@ -34,11 +25,6 @@ export class StoreModal extends BaseModal {
   private isActive = false;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
-
-  private _onPatternSelected = async () => {
-    await this.updateFromSettings();
-    this.refresh();
-  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -48,30 +34,11 @@ export class StoreModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
-    window.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
-      this._onPatternSelected,
-    );
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    window.removeEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
-      this._onPatternSelected,
-    );
-  }
-
-  private async updateFromSettings() {
-    const cosmetics = await getPlayerCosmetics();
-    this.selectedPattern = cosmetics.pattern ?? null;
-    this.selectedColor = cosmetics.color?.color ?? null;
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
-    await this.updateFromSettings();
     this.refresh();
   }
 
@@ -107,53 +74,18 @@ export class StoreModal extends BaseModal {
   }
 
   private renderPatternGrid(): TemplateResult {
-    const buttons: TemplateResult[] = [];
-    const patterns: (Pattern | null)[] = [
-      null,
-      ...Object.values(this.cosmetics?.patterns ?? {}),
-    ];
-    for (const pattern of patterns) {
-      const colorPalettes = pattern
-        ? [...(pattern.colorPalettes ?? []), null]
-        : [null];
-      for (const colorPalette of colorPalettes) {
-        let rel = "owned";
-        if (pattern) {
-          rel = patternRelationship(
-            pattern,
-            colorPalette,
-            this.userMeResponse,
-            this.affiliateCode,
-          );
-        }
-        if (rel === "blocked" || rel === "owned") {
-          continue;
-        }
-        const isDefaultPattern = pattern === null;
-        const isSelected =
-          (isDefaultPattern && this.selectedPattern === null) ||
-          (!isDefaultPattern &&
-            this.selectedPattern &&
-            this.selectedPattern.name === pattern?.name &&
-            (this.selectedPattern.colorPalette?.name ?? null) ===
-              (colorPalette?.name ?? null));
-        buttons.push(html`
-          <pattern-button
-            .pattern=${pattern}
-            .colorPalette=${this.cosmetics?.colorPalettes?.[
-              colorPalette?.name ?? ""
-            ] ?? null}
-            .requiresPurchase=${rel === "purchasable"}
-            .selected=${isSelected}
-            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
-            .onPurchase=${(p: Pattern, cp: ColorPalette | null) =>
-              handlePurchase(p.product!, cp?.name)}
-          ></pattern-button>
-        `);
-      }
-    }
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        r.type === "pattern" &&
+        r.relationship !== "blocked" &&
+        r.relationship !== "owned",
+    );
 
-    if (buttons.length === 0) {
+    if (items.length === 0) {
       return html`<div
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
       >
@@ -165,33 +97,32 @@ export class StoreModal extends BaseModal {
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${buttons}
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${(rc: ResolvedCosmetic) =>
+                handlePurchase(rc.cosmetic!.product!, rc.colorPalette?.name)}
+            ></cosmetic-button>
+          `,
+        )}
       </div>
     `;
   }
 
   private renderFlagGrid(): TemplateResult {
-    const buttons: TemplateResult[] = [];
-    const flags = Object.entries(this.cosmetics?.flags ?? {});
-    for (const [key, flag] of flags) {
-      const rel = flagRelationship(
-        flag,
-        this.userMeResponse,
-        this.affiliateCode,
-      );
-      if (rel === "blocked" || rel === "owned") continue;
-      const selectedFlag = new UserSettings().getFlag() ?? "";
-      buttons.push(html`
-        <flag-button
-          .flag=${{ ...flag, key: `flag:${key}` }}
-          .selected=${selectedFlag === `flag:${key}`}
-          .requiresPurchase=${rel === "purchasable"}
-          .onPurchase=${() => handlePurchase(flag.product!)}
-        ></flag-button>
-      `);
-    }
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        r.type === "flag" &&
+        r.relationship !== "blocked" &&
+        r.relationship !== "owned",
+    );
 
-    if (buttons.length === 0) {
+    if (items.length === 0) {
       return html`<div
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
       >
@@ -199,11 +130,21 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
 
+    const selectedFlag = new UserSettings().getFlag() ?? "";
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${buttons}
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .selected=${selectedFlag === r.key}
+              .onPurchase=${(rc: ResolvedCosmetic) =>
+                handlePurchase(rc.cosmetic!.product!)}
+            ></cosmetic-button>
+          `,
+        )}
       </div>
     `;
   }
@@ -263,44 +204,6 @@ export class StoreModal extends BaseModal {
     this.isActive = false;
     this.affiliateCode = null;
     super.close();
-  }
-
-  private selectPattern(pattern: PlayerPattern | null) {
-    this.selectedColor = null;
-    if (pattern === null) {
-      this.userSettings.setSelectedPatternName(undefined);
-    } else {
-      const name =
-        pattern.colorPalette?.name === undefined
-          ? pattern.name
-          : `${pattern.name}:${pattern.colorPalette.name}`;
-      this.userSettings.setSelectedPatternName(`pattern:${name}`);
-    }
-    this.selectedPattern = pattern;
-    this.refresh();
-    this.showSelectedPopup(pattern);
-    this.close();
-  }
-
-  private showSelectedPopup(pattern: PlayerPattern | null) {
-    let skinName = translateText("territory_patterns.pattern.default");
-    if (pattern && pattern.name) {
-      skinName = pattern.name
-        .split("_")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-      if (pattern.colorPalette && pattern.colorPalette.name) {
-        skinName += ` (${pattern.colorPalette.name})`;
-      }
-    }
-    window.dispatchEvent(
-      new CustomEvent("show-message", {
-        detail: {
-          message: `${skinName} ${translateText("territory_patterns.selected")}`,
-          duration: 2000,
-        },
-      }),
-    );
   }
 
   public async refresh() {

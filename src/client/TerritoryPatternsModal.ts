@@ -2,7 +2,7 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics, Pattern } from "../core/CosmeticSchemas";
+import { Cosmetics } from "../core/CosmeticSchemas";
 import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -10,13 +10,15 @@ import {
 } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   getPlayerCosmetics,
-  patternRelationship,
+  resolveCosmetics,
+  ResolvedCosmetic,
+  resolvedToPlayerPattern,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -82,62 +84,39 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private renderPatternGrid(): TemplateResult {
-    const buttons: TemplateResult[] = [];
-    const patterns: (Pattern | null)[] = [
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
       null,
-      ...Object.values(this.cosmetics?.patterns ?? {}),
-    ];
-    for (const pattern of patterns) {
-      if (pattern === null && this.search) {
-        continue;
-      }
-      if (pattern !== null && !this.includedInSearch(pattern.name)) {
-        continue;
-      }
-      const colorPalettes = pattern
-        ? [...(pattern.colorPalettes ?? []), null]
-        : [null];
-      for (const colorPalette of colorPalettes) {
-        let rel = "owned";
-        if (pattern) {
-          rel = patternRelationship(
-            pattern,
-            colorPalette,
-            this.userMeResponse,
-            null,
-          );
-        }
-        if (rel !== "owned") {
-          continue;
-        }
-        const isDefaultPattern = pattern === null;
-        const isSelected =
-          (isDefaultPattern && this.selectedPattern === null) ||
-          (!isDefaultPattern &&
-            this.selectedPattern &&
-            this.selectedPattern.name === pattern?.name &&
-            (this.selectedPattern.colorPalette?.name ?? null) ===
-              (colorPalette?.name ?? null));
-        buttons.push(html`
-          <pattern-button
-            .pattern=${pattern}
-            .colorPalette=${this.cosmetics?.colorPalettes?.[
-              colorPalette?.name ?? ""
-            ] ?? null}
-            .requiresPurchase=${false}
-            .selected=${isSelected}
-            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
-          ></pattern-button>
-        `);
-      }
-    }
+    ).filter(
+      (r) =>
+        r.type === "pattern" &&
+        r.relationship === "owned" &&
+        (r.cosmetic === null
+          ? !this.search
+          : this.includedInSearch(r.cosmetic.name)),
+    );
 
     return html`
       <div class="flex flex-col">
         <div
           class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
         >
-          ${buttons}
+          ${items.map((r) => {
+            const isSelected =
+              (r.cosmetic === null && this.selectedPattern === null) ||
+              (r.cosmetic !== null &&
+                this.selectedPattern?.name === r.cosmetic.name &&
+                (this.selectedPattern?.colorPalette?.name ?? null) ===
+                  (r.colorPalette?.name ?? null));
+            return html`
+              <cosmetic-button
+                .resolved=${r}
+                .selected=${isSelected}
+                .onSelect=${(rc: ResolvedCosmetic) => this.selectCosmetic(rc)}
+              ></cosmetic-button>
+            `;
+          })}
         </div>
       </div>
     `;
@@ -211,6 +190,11 @@ export class TerritoryPatternsModal extends BaseModal {
 
   protected onClose(): void {
     this.search = "";
+  }
+
+  private selectCosmetic(resolved: ResolvedCosmetic) {
+    if (resolved.type !== "pattern") return;
+    this.selectPattern(resolvedToPlayerPattern(resolved));
   }
 
   private selectPattern(pattern: PlayerPattern | null) {

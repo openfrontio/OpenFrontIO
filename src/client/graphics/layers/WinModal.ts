@@ -6,17 +6,17 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
-import "../../components/PatternButton";
+import "../../components/CosmeticButton";
 import {
   fetchCosmetics,
   handlePurchase,
-  patternRelationship,
+  resolveCosmetics,
+  ResolvedCosmetic,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
@@ -157,54 +157,31 @@ export class WinModal extends LitElement implements Layer {
 
   async loadPatternContent() {
     const me = await getUserMe();
-    const patterns = await fetchCosmetics();
+    const cosmetics = await fetchCosmetics();
 
-    const purchasablePatterns: {
-      pattern: Pattern;
-      colorPalette: ColorPalette;
-    }[] = [];
+    const purchasable = resolveCosmetics(cosmetics, me, null).filter(
+      (r) => r.type === "pattern" && r.relationship === "purchasable",
+    );
 
-    for (const pattern of Object.values(patterns?.patterns ?? {})) {
-      for (const colorPalette of pattern.colorPalettes ?? []) {
-        if (
-          patternRelationship(pattern, colorPalette, me, null) === "purchasable"
-        ) {
-          const palette = patterns?.colorPalettes?.[colorPalette.name];
-          if (palette) {
-            purchasablePatterns.push({
-              pattern,
-              colorPalette: palette,
-            });
-          }
-        }
-      }
-    }
-
-    if (purchasablePatterns.length === 0) {
+    if (purchasable.length === 0) {
       this.patternContent = html``;
       return;
     }
 
     // Shuffle the array and take patterns based on screen size
-    const shuffled = [...purchasablePatterns].sort(() => Math.random() - 0.5);
+    const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
     const maxPatterns = Platform.isMobileWidth ? 1 : 3;
-    const selectedPatterns = shuffled.slice(
-      0,
-      Math.min(maxPatterns, shuffled.length),
-    );
+    const selected = shuffled.slice(0, Math.min(maxPatterns, shuffled.length));
 
     this.patternContent = html`
       <div class="flex gap-4 flex-wrap justify-start">
-        ${selectedPatterns.map(
-          ({ pattern, colorPalette }) => html`
-            <pattern-button
-              .pattern=${pattern}
-              .colorPalette=${colorPalette}
-              .requiresPurchase=${true}
-              .onSelect=${(p: Pattern | null) => {}}
-              .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
-                handlePurchase(p.product!, colorPalette?.name)}
-            ></pattern-button>
+        ${selected.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${(rc: ResolvedCosmetic) =>
+                handlePurchase(rc.cosmetic!.product!, rc.colorPalette?.name)}
+            ></cosmetic-button>
           `,
         )}
       </div>

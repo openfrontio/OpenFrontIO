@@ -16,7 +16,6 @@ import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
