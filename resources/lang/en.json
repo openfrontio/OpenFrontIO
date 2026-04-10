@@ -162,7 +162,7 @@
     "build_port": "Port",
     "build_port_desc": "Can only be built near water. Allows building Warships. Automatically sends trade ships between ports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade with a player stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
     "build_oil_rig": "Oil Rig",
-    "build_oil_rig_desc": "TODOHERE",
+    "build_oil_rig_desc": "Can only be built on oil deposits. Generates gold over time, and trains can visit it if a Factory is nearby.",
     "build_warship": "Warship",
     "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to.",
     "build_silo": "Missile Silo",
@@ -753,7 +753,7 @@
       "sam_launcher": "Defends against incoming nukes",
       "warship": "Captures trade ships, destroys ships and boats",
       "port": "Sends trade ships to generate gold",
-      "oil_rig": "TODOHERE",
+      "oil_rig": "Generates gold over time. Must be built on an oil deposit.",
       "defense_post": "Increases defenses of nearby borders",
       "city": "Increases max population",
       "factory": "Creates railroads and spawns trains"
