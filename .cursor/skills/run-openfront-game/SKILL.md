@@ -34,13 +34,13 @@ npm run dev
 
 ## Common variants
 
-| Goal | Command |
-|------|---------|
-| Client only (hot reload, no local game server) | `npm run start:client` |
-| Server only (dev settings) | `npm run start:server-dev` |
-| Dev client + server, API pointed at **staging** | `npm run dev:staging` |
-| Dev client + server, API pointed at **production** | `npm run dev:prod` |
-| Production build then run server (tunnel-style flow) | `npm run tunnel` |
+| Goal                                                 | Command                    |
+| ---------------------------------------------------- | -------------------------- |
+| Client only (hot reload, no local game server)       | `npm run start:client`     |
+| Server only (dev settings)                           | `npm run start:server-dev` |
+| Dev client + server, API pointed at **staging**      | `npm run dev:staging`      |
+| Dev client + server, API pointed at **production**   | `npm run dev:prod`         |
+| Production build then run server (tunnel-style flow) | `npm run tunnel`           |
 
 `start:server` runs the server without forcing `GAME_ENV=dev` (see `package.json` scripts for exact behavior).
 
