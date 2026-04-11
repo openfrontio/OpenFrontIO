@@ -134,7 +134,6 @@ export enum GameMapType {
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
   BosphorusStraits = "Bosphorus Straits",
-  BeringStrait = "Bering Strait",
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
@@ -148,7 +147,8 @@ export enum GameMapType {
   Dyslexdria = "Dyslexdria",
   GreatLakes = "Great Lakes",
   StraitOfMalacca = "Strait Of Malacca",
-  BeringSea = "Bering Sea",
+  BeringStrait = "Bering Strait",
+  Luna = "Luna",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -192,7 +192,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
     GameMapType.BosphorusStraits,
-    GameMapType.BeringStrait,
     GameMapType.Yenisei,
     GameMapType.Hawaii,
     GameMapType.Alps,
@@ -203,7 +202,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Mediterranean,
     GameMapType.GreatLakes,
     GameMapType.StraitOfMalacca,
-    GameMapType.BeringSea,
+    GameMapType.BeringStrait,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -219,6 +218,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Passage,
     GameMapType.MilkyWay,
     GameMapType.Dyslexdria,
+    GameMapType.Luna,
   ],
   arcade: [
     GameMapType.TheBox,
