@@ -648,6 +648,7 @@ export class GameView implements GameMap {
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
+  private updatedTerrainTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
 
@@ -758,12 +759,16 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
+    this.updatedTerrainTiles = [];
     const packed = this.lastUpdate.packedTileUpdates;
     for (let i = 0; i + 1 < packed.length; i += 2) {
       const tile = packed[i];
       const state = packed[i + 1];
-      this.updateTile(tile, state);
+      const terrainChanged = this.updateTile(tile, state);
       this.updatedTiles.push(tile);
+      if (terrainChanged) {
+        this.updatedTerrainTiles.push(tile);
+      }
     }
 
     if (gu.packedMotionPlans) {
@@ -1078,6 +1083,10 @@ export class GameView implements GameMap {
     return this.updatedTiles;
   }
 
+  recentlyUpdatedTerrainTiles(): TileRef[] {
+    return this.updatedTerrainTiles;
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
@@ -1261,6 +1270,24 @@ export class GameView implements GameMap {
   magnitude(ref: TileRef): number {
     return this._map.magnitude(ref);
   }
+  terrainByte(ref: TileRef): number {
+    return this._map.terrainByte(ref);
+  }
+  setWater(ref: TileRef): void {
+    this._map.setWater(ref);
+  }
+  setShorelineBit(ref: TileRef): void {
+    this._map.setShorelineBit(ref);
+  }
+  clearShorelineBit(ref: TileRef): void {
+    this._map.clearShorelineBit(ref);
+  }
+  setOcean(ref: TileRef): void {
+    this._map.setOcean(ref);
+  }
+  setMagnitude(ref: TileRef, value: number): void {
+    this._map.setMagnitude(ref, value);
+  }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);
   }
@@ -1322,8 +1349,8 @@ export class GameView implements GameMap {
   tileState(tile: TileRef): number {
     return this._map.tileState(tile);
   }
-  updateTile(tile: TileRef, state: number): void {
-    this._map.updateTile(tile, state);
+  updateTile(tile: TileRef, state: number): boolean {
+    return this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

@@ -1,9 +1,11 @@
 import { assetUrl } from "src/core/AssetUrls";
 import { UserMeResponse } from "../core/ApiSchemas";
 import {
+  ColorPalette,
   Cosmetics,
   CosmeticsSchema,
   Flag,
+  Pack,
   Pattern,
   Product,
 } from "../core/CosmeticSchemas";
@@ -188,6 +190,102 @@ export function flagRelationship(
   );
 }
 
+export type ResolvedCosmetic = {
+  type: "pattern" | "flag" | "pack";
+  cosmetic: Pattern | Flag | Pack | null;
+  colorPalette: ColorPalette | null;
+  relationship: "owned" | "purchasable" | "blocked";
+  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
+  key: string;
+};
+
+/**
+ * Resolves all cosmetics into a flat display-ready list with relationship
+ * status and resolved color palettes. Callers can filter by relationship.
+ */
+export function resolveCosmetics(
+  cosmetics: Cosmetics | null,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): ResolvedCosmetic[] {
+  if (!cosmetics) return [];
+  const result: ResolvedCosmetic[] = [];
+
+  // Default pattern (always owned)
+  result.push({
+    type: "pattern",
+    cosmetic: null,
+    colorPalette: null,
+    relationship: "owned",
+    key: "pattern:default",
+  });
+
+  // Patterns × color palettes
+  for (const [patternKey, pattern] of Object.entries(cosmetics.patterns)) {
+    const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+    for (const cp of colorPalettes) {
+      const rel = patternRelationship(
+        pattern,
+        cp,
+        userMeResponse,
+        affiliateCode,
+      );
+      const resolvedPalette = cp
+        ? (cosmetics.colorPalettes?.[cp.name] ?? null)
+        : null;
+      const key = cp
+        ? `pattern:${patternKey}:${cp.name}`
+        : `pattern:${patternKey}`;
+      result.push({
+        type: "pattern",
+        cosmetic: pattern,
+        colorPalette: resolvedPalette,
+        relationship: rel,
+        key,
+      });
+    }
+  }
+
+  // Flags
+  for (const [flagKey, flag] of Object.entries(cosmetics.flags)) {
+    const rel = flagRelationship(flag, userMeResponse, affiliateCode);
+    result.push({
+      type: "flag",
+      cosmetic: flag,
+      colorPalette: null,
+      relationship: rel,
+      key: `flag:${flagKey}`,
+    });
+  }
+
+  // Packs
+  for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
+    const rel = pack.product ? "purchasable" : "blocked";
+    result.push({
+      type: "pack",
+      cosmetic: pack,
+      colorPalette: null,
+      relationship: rel,
+      key: `pack:${packKey}`,
+    });
+  }
+
+  return result;
+}
+
+export function resolvedToPlayerPattern(
+  resolved: ResolvedCosmetic,
+): PlayerPattern | null {
+  if (resolved.type !== "pattern") return null;
+  const c = resolved.cosmetic;
+  if (c === null) return null;
+  return {
+    name: c.name,
+    patternData: (c as Pattern).pattern,
+    colorPalette: resolved.colorPalette ?? undefined,
+  };
+}
+
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
   const userSettings = new UserSettings();
   const cosmetics = await fetchCosmetics();
@@ -240,7 +338,6 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
 
   return {
     flag: flag ?? undefined,
-    color: userSettings.getSelectedColor() ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
   };
@@ -254,10 +351,6 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
 
   if (refs.flag) {
     result.flag = await resolveFlagUrl(refs.flag);
-  }
-
-  if (refs.color) {
-    result.color = { color: refs.color };
   }
 
   if (refs.patternName && cosmetics) {

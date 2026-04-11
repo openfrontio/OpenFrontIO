@@ -229,18 +229,6 @@ export class UserSettings {
     }
   }
 
-  getSelectedColor(): string | undefined {
-    return this.getCached(COLOR_KEY) ?? undefined;
-  }
-
-  setSelectedColor(color: string | undefined): void {
-    if (color === undefined) {
-      this.removeCached(COLOR_KEY);
-    } else {
-      this.setCached(COLOR_KEY, color);
-    }
-  }
-
   getFlag(): string | null {
     let flag = this.getCached(FLAG_KEY);
     if (!flag) return null;
@@ -255,14 +243,14 @@ export class UserSettings {
 
   setFlag(flag: string): void {
     if (flag === "country:xx") {
-      this.clearFlag();
+      this.clearFlag(true);
     } else {
       this.setCached(FLAG_KEY, flag);
     }
   }
 
-  clearFlag(): void {
-    this.removeCached(FLAG_KEY);
+  clearFlag(emitChange: boolean = false): void {
+    this.removeCached(FLAG_KEY, emitChange);
   }
 
   backgroundMusicVolume(): number {

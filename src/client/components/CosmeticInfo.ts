@@ -22,6 +22,9 @@ export class CosmeticInfo extends LitElement {
   @property({ type: String })
   colorPalette?: string;
 
+  @property({ type: Boolean })
+  showAdFree: boolean = false;
+
   createRenderRoot() {
     return this;
   }
@@ -53,9 +56,11 @@ export class CosmeticInfo extends LitElement {
                 ${translateText(`cosmetics.${this.rarity}`) || this.rarity}
               </div>`
             : nothing}
-          <div class="text-green-400 font-bold">
-            ${translateText("cosmetics.adfree")}
-          </div>
+          ${this.showAdFree
+            ? html`<div class="text-green-400 font-bold">
+                ${translateText("cosmetics.adfree")}
+              </div>`
+            : nothing}
           ${this.colorPalette
             ? html`<div>
                 ${translateText("cosmetics.color_label")}

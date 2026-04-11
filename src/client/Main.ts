@@ -636,6 +636,12 @@ class Client {
         return;
       }
 
+      const type = params.get("type");
+      if (type === "currency_pack") {
+        alertAndStrip(translateText("store.currency_pack_purchase_success"));
+        return;
+      }
+
       const cosmeticName = params.get("cosmetic");
       if (!cosmeticName) {
         alert("Something went wrong. Please contact support.");

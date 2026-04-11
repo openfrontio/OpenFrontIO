@@ -270,7 +270,7 @@ async function createClientGame(
       clientID,
       eventBus,
       gameRenderer,
-      new InputHandler(gameRenderer.uiState, canvas, eventBus),
+      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
       transport,
       worker,
       gameView,

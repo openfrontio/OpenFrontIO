@@ -201,6 +201,7 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -436,6 +437,7 @@
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -515,7 +517,9 @@
     "sams_disabled": "SAMs Disabled",
     "sams_disabled_label": "SAMs",
     "peace_time": "4min Peace",
-    "peace_time_label": "PVP Immunity"
+    "peace_time_label": "PVP Immunity",
+    "water_nukes": "Water Nukes",
+    "water_nukes_label": "Water Nukes"
   },
   "select_lang": {
     "title": "Select Language"
@@ -939,8 +943,11 @@
     "title": "Store",
     "patterns": "Skins",
     "flags": "Flags",
+    "packs": "Packs",
     "no_flags": "No flags available. Check back later for new items.",
-    "no_skins": "No skins available. Check back later for new items."
+    "no_skins": "No skins available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
+    "currency_pack_purchase_success": "Currency pack purchase successful!"
   },
   "territory_patterns": {
     "title": "Skins",
@@ -960,7 +967,9 @@
     "rare": "Rare",
     "epic": "Epic",
     "legendary": "Legendary",
-    "adfree": "ad-free for life!"
+    "adfree": "ad-free for life!",
+    "hard": "Plutonium",
+    "soft": "Caps"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1045,5 +1054,12 @@
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."
+  },
+  "news_box": {
+    "tournament": "TOURNAMENT",
+    "tutorial": "TUTORIAL",
+    "news": "NEWS",
+    "dismiss": "Dismiss",
+    "go_to_item": "Go to item {num}"
   }
 }

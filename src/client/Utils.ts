@@ -210,6 +210,12 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.peace_time",
     });
   }
+  if (modifiers.isWaterNukes) {
+    result.push({
+      labelKey: "public_game_modifier.water_nukes_label",
+      badgeKey: "public_game_modifier.water_nukes",
+    });
+  }
   return result;
 }
 

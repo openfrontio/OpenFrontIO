@@ -234,6 +234,7 @@ export const GameConfigSchema = z.object({
       isNukesDisabled: z.boolean().optional(),
       isSAMsDisabled: z.boolean().optional(),
       isPeaceTime: z.boolean().optional(),
+      isWaterNukes: z.boolean().optional(),
     })
     .optional(),
   nations: z
@@ -248,6 +249,7 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
+  waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
