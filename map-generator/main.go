@@ -88,7 +88,6 @@ var maps = []struct {
 	{Name: "mediterranean"},
 	{Name: "greatlakes"},
   {Name: "dyslexdria"},
-	{Name: "straitofmalacca"},
   {Name: "luna"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
