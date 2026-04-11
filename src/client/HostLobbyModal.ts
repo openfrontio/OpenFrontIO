@@ -79,6 +79,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
+  @state() private myClientID: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -94,6 +95,7 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
+    this.myClientID = event.myClientID;
     if (lobby.clients) {
       this.clients = lobby.clients;
     }
@@ -328,7 +330,7 @@ export class HostLobbyModal extends BaseModal {
             .gameMode=${this.gameMode}
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-            .currentClientID=${this.lobbyCreatorClientID}
+            .currentClientID=${this.myClientID}
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
@@ -370,7 +372,8 @@ export class HostLobbyModal extends BaseModal {
     this.startLobbyUpdates();
     this.lobbyId = generateID();
     // Note: clientID will be assigned by server when we join the lobby
-    // lobbyCreatorClientID stays empty until then
+    this.lobbyCreatorClientID = "";
+    this.myClientID = "";
 
     // Pass auth token for creator identification (server extracts persistentID from it)
     createLobby(this.lobbyId)
@@ -463,6 +466,7 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyId = "";
     this.clients = [];
     this.lobbyCreatorClientID = "";
+    this.myClientID = "";
     this.goldMultiplier = false;
     this.goldMultiplierValue = undefined;
     this.startingGold = false;

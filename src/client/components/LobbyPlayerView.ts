@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { PastelTheme } from "../../core/configuration/PastelTheme";
@@ -123,13 +123,11 @@ export class LobbyTeamView extends LitElement {
           (c) => c.clientID ?? c.username,
           (client) => {
             const displayName = this.getClientDisplayName(client);
+            const self = this.isCurrentPlayer(client);
             return html`<div
-              class="px-2 py-1 rounded-sm mb-1 text-xs text-white border
-                ${this.isCurrentPlayer(client)
-                ? "bg-sky-600/20 border-sky-500/40"
-                : "bg-gray-700/70 border-transparent"}"
+              class="px-2 py-1 rounded-sm mb-1 text-xs border bg-gray-700/70 border-transparent"
             >
-              ${displayName}
+              ${this.renderHighlightedDisplayName(displayName, self)}
             </div>`;
           },
         )}
@@ -176,7 +174,10 @@ export class LobbyTeamView extends LitElement {
             ? "current-player"
             : ""}"
         >
-          <span class="text-white">${displayName}</span>
+          ${this.renderHighlightedDisplayName(
+            displayName,
+            this.isCurrentPlayer(client),
+          )}
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
@@ -239,13 +240,13 @@ export class LobbyTeamView extends LitElement {
                 (p) => p.clientID ?? p.username,
                 (p) => {
                   const displayName = this.getClientDisplayName(p);
+                  const self = this.isCurrentPlayer(p);
                   return html` <div
-                    class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border
-                      ${this.isCurrentPlayer(p)
-                      ? "bg-sky-600/20 border-sky-500/40"
-                      : "bg-gray-700/70 border-transparent"}"
+                    class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border bg-gray-700/70 border-transparent min-w-0"
                   >
-                    <span class="truncate text-white">${displayName}</span>
+                    <span class="truncate min-w-0"
+                      >${this.renderHighlightedDisplayName(displayName, self)}</span
+                    >
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
@@ -382,6 +383,16 @@ export class LobbyTeamView extends LitElement {
 
   private isCurrentPlayer(client: ClientInfo): boolean {
     return !!this.currentClientID && client.clientID === this.currentClientID;
+  }
+
+  private renderHighlightedDisplayName(
+    displayName: string,
+    isSelf: boolean,
+  ): TemplateResult {
+    if (isSelf) {
+      return html`<span class="lobby-self-name-highlight">${displayName}</span>`;
+    }
+    return html`<span class="text-white">${displayName}</span>`;
   }
 
   private teamContainsCurrentPlayer(preview: TeamPreviewData): boolean {
