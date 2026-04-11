@@ -1,4 +1,4 @@
-import { LitElement, html, TemplateResult } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { PastelTheme } from "../../core/configuration/PastelTheme";
@@ -245,7 +245,10 @@ export class LobbyTeamView extends LitElement {
                     class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border bg-gray-700/70 border-transparent min-w-0"
                   >
                     <span class="truncate min-w-0"
-                      >${this.renderHighlightedDisplayName(displayName, self)}</span
+                      >${this.renderHighlightedDisplayName(
+                        displayName,
+                        self,
+                      )}</span
                     >
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
@@ -390,7 +393,9 @@ export class LobbyTeamView extends LitElement {
     isSelf: boolean,
   ): TemplateResult {
     if (isSelf) {
-      return html`<span class="lobby-self-name-highlight">${displayName}</span>`;
+      return html`<span class="lobby-self-name-highlight"
+        >${displayName}</span
+      >`;
     }
     return html`<span class="text-white">${displayName}</span>`;
   }
