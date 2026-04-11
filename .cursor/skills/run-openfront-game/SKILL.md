@@ -29,7 +29,7 @@ Runs the Vite dev client and the TypeScript game server with `GAME_ENV=dev`:
 npm run dev
 ```
 
-- Long-running: run in the background and tell the user how to open the app (Vite prints the local URL in the terminal; typically `http://localhost:5173` unless configured otherwise).
+- Long-running: run in the background and tell the user how to open the app (Vite prints the local URL in the terminal; this repo sets port **9000** in `vite.config.ts`, e.g. `http://localhost:9000`).
 - To avoid auto-opening a browser (if the project or environment does this), set `SKIP_BROWSER_OPEN=true` in the environment before starting.
 
 ## Common variants
