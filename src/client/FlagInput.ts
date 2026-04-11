@@ -21,12 +21,13 @@ export class FlagInput extends LitElement {
   }
 
   private updateFlag = (e: CustomEvent) => {
-    const parsed = FlagName.safeParse(e.detail);
+    const val = e.detail ?? "";
+    const parsed = FlagName.safeParse(val);
     if (!parsed.success) {
-      console.warn(`error parsing flag ${e.detail.value}, ${parsed.error}`);
+      console.warn(`error parsing flag ${val}, ${parsed.error}`);
     }
-    if (this.flag !== e.detail) {
-      this.flag = e.detail;
+    if (this.flag !== val) {
+      this.flag = val;
     }
   };
 

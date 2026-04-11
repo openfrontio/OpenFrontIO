@@ -68,7 +68,12 @@ export class AbstractGraph {
   getNodeEdges(nodeId: number): AbstractEdge[] {
     const edgeIds = this._nodeEdgeIds[nodeId];
     if (!edgeIds) return [];
-    return edgeIds.map((id) => this._edges[id]);
+    const edges: AbstractEdge[] = [];
+    for (let i = 0; i < edgeIds.length; i++) {
+      const e = this._edges[edgeIds[i]];
+      if (e) edges.push(e);
+    }
+    return edges;
   }
 
   getEdgeBetween(nodeA: number, nodeB: number): AbstractEdge | undefined {
@@ -203,7 +208,7 @@ export class AbstractGraphBuilder {
   private readonly clustersX: number;
   private readonly clustersY: number;
   private readonly tileBFS: BFSGrid;
-  private readonly waterComponents: ConnectedComponents;
+  private waterComponents: ConnectedComponents;
 
   // Build state
   private graph!: AbstractGraph;

@@ -39,6 +39,7 @@ const flagCosmetics = {
   colorPalettes: {},
   flags: {
     cool_flag: {
+      type: "flag" as const,
       name: "cool_flag",
       url: "https://example.com/cool.png",
       affiliateCode: null,
