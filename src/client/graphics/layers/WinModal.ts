@@ -14,9 +14,8 @@ import { getUserMe } from "../../Api";
 import "../../components/CosmeticButton";
 import {
   fetchCosmetics,
-  handlePurchase,
+  purchaseCosmetic,
   resolveCosmetics,
-  ResolvedCosmetic,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
@@ -179,8 +178,7 @@ export class WinModal extends LitElement implements Layer {
           (r) => html`
             <cosmetic-button
               .resolved=${r}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!, rc.colorPalette?.name)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}

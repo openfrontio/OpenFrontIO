@@ -946,7 +946,12 @@
     "no_flags": "No flags available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_packs": "No packs available. Check back later for new items.",
-    "currency_pack_purchase_success": "Currency pack purchase successful!"
+    "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "checkout_failed": "Failed to create checkout session.",
+    "login_required": "You must be logged in to purchase with currency.",
+    "not_enough_currency": "Not enough currency for this purchase.",
+    "purchase_failed": "Purchase failed. Please try again.",
+    "purchase_success": "Purchase succeeded: {name}"
   },
   "territory_patterns": {
     "title": "Skins",

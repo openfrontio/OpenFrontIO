@@ -10,9 +10,8 @@ import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
-  handlePurchase,
+  purchaseCosmetic,
   resolveCosmetics,
-  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -109,8 +108,7 @@ export class StoreModal extends BaseModal {
           (r) => html`
             <cosmetic-button
               .resolved=${r}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!, rc.colorPalette?.name)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}
@@ -148,8 +146,7 @@ export class StoreModal extends BaseModal {
             <cosmetic-button
               .resolved=${r}
               .selected=${selectedFlag === r.key}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}
@@ -180,8 +177,7 @@ export class StoreModal extends BaseModal {
           (r) => html`
             <cosmetic-button
               .resolved=${r}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}

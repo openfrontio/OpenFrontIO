@@ -47,6 +47,8 @@ describe("resolveCosmetics", () => {
       pattern: "AAAAAA",
       affiliateCode: null,
       product,
+      priceSoft: undefined,
+      priceHard: undefined,
       rarity: "common",
       colorPalettes: [
         { name: "red", isArchived: false },
@@ -226,6 +228,8 @@ describe("resolveCosmetics", () => {
       url: "https://example.com/cool.png",
       affiliateCode: null,
       product,
+      priceSoft: undefined,
+      priceHard: undefined,
       rarity: "rare",
     };
 
@@ -292,6 +296,8 @@ describe("resolveCosmetics", () => {
             pattern: "AAAAAA",
             affiliateCode: null,
             product,
+            priceSoft: null,
+            priceHard: null,
             rarity: "common",
           } as any,
         },
@@ -302,6 +308,8 @@ describe("resolveCosmetics", () => {
             url: "/flags/heart.svg",
             affiliateCode: null,
             product,
+            priceSoft: null,
+            priceHard: null,
             rarity: "common",
           } as any,
         },
