@@ -74,7 +74,7 @@ export class NationWarshipBehavior {
       }
       const tile = this.game.ref(randX, randY);
       // Sanity check
-      if (!this.game.isOcean(tile)) {
+      if (!this.game.isWater(tile)) {
         continue;
       }
       return tile;

@@ -90,13 +90,16 @@ export class TradeShipExecution implements Execution {
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
+      const myComponent = this.mg.getWaterComponent(curTile);
       const nearestPort = findClosestBy(
         tradeShipOwner.units(UnitType.Port),
         (port) => this.mg.manhattanDist(port.tile(), curTile),
         (port) =>
           port.isActive() &&
           !port.isMarkedForDeletion() &&
-          !port.isUnderConstruction(),
+          !port.isUnderConstruction() &&
+          myComponent !== null &&
+          this.mg.hasWaterComponent(port.tile(), myComponent),
       );
       if (nearestPort === null) {
         this.tradeShip.delete(false);

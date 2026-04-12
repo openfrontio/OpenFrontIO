@@ -137,7 +137,7 @@ export class UnitLayer implements Layer {
 
       clickRef = this.game.ref(cell.x, cell.y);
     }
-    if (!this.game.isOcean(clickRef)) return;
+    if (!this.game.isWater(clickRef)) return;
 
     if (this.selectedUnit) {
       this.eventBus.emit(
@@ -169,13 +169,13 @@ export class UnitLayer implements Layer {
     const clickRef = this.game.ref(cell.x, cell.y);
     if (this.game.inSpawnPhase()) {
       // No Radial Menu during spawn phase, only spawn point selection
-      if (!this.game.isOcean(clickRef)) {
+      if (!this.game.isWater(clickRef)) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       }
       return;
     }
 
-    if (!this.game.isOcean(clickRef)) {
+    if (!this.game.isWater(clickRef)) {
       // No warship to find because no Ocean tile, open Radial Menu
       this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
       return;

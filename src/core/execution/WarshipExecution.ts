@@ -254,7 +254,7 @@ export class WarshipExecution implements Execution {
       }
       const tile = this.mg.ref(x, y);
       if (
-        !this.mg.isOcean(tile) ||
+        !this.mg.isWater(tile) ||
         (!allowShoreline && this.mg.isShoreline(tile))
       ) {
         attempts++;

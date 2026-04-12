@@ -1222,7 +1222,7 @@ export class PlayerImpl implements Player {
         manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
       ),
     )
-      .filter((t) => this.mg.owner(t) === this && this.mg.isOceanShore(t))
+      .filter((t) => this.mg.owner(t) === this && this.mg.isShore(t))
       .sort(
         (a, b) =>
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
@@ -1239,7 +1239,7 @@ export class PlayerImpl implements Player {
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {
-    if (!this.mg.isOcean(tile)) {
+    if (!this.mg.isWater(tile)) {
       return false;
     }
 

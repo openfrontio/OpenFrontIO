@@ -165,9 +165,35 @@ export class NationStructureBehavior {
     return false;
   }
 
+  /**
+   * Returns true if the player has coastal tiles adjacent to a water body that
+   * is also reachable by at least one other player (trade partner). Ports are only
+   * useful for trade if foreign ships can reach them via connected water.
+   */
   private hasCoastalTiles(): boolean {
+    // Collect all water-component IDs reachable from this player's coast.
+    const playerComponents = new Set<number>();
     for (const tile of this.player.borderTiles()) {
-      if (this.game.isOceanShore(tile)) return true;
+      if (!this.game.isShore(tile)) continue;
+      for (const neighbor of this.game.neighbors(tile)) {
+        if (!this.game.isWater(neighbor)) continue;
+        const comp = this.game.getWaterComponent(neighbor);
+        if (comp !== null) playerComponents.add(comp);
+      }
+    }
+    if (playerComponents.size === 0) return false;
+
+    // Check if any other living player also has a coast on the same component.
+    for (const other of this.game.players()) {
+      if (other === this.player) continue;
+      for (const tile of other.borderTiles()) {
+        if (!this.game.isShore(tile)) continue;
+        for (const neighbor of this.game.neighbors(tile)) {
+          if (!this.game.isWater(neighbor)) continue;
+          const comp = this.game.getWaterComponent(neighbor);
+          if (comp !== null && playerComponents.has(comp)) return true;
+        }
+      }
     }
     return false;
   }
