@@ -50,7 +50,7 @@ export const Platform = (() => {
     return "Unknown";
   };
 
-  const isFirefox = /Firefox/i.test(navigator.userAgent);
+  const isFirefox = isBrowser ? /Firefox/i.test(navigator.userAgent) : false;
 
   const currentOS = extractOS();
 

@@ -752,8 +752,8 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      const spy = vi.spyOn(Platform, "isFirefox", "get");
-      spy.mockReturnValue(true);
+
+      Platform.isFirefox = true;
 
       inputHandler = new InputHandler(
         mockGameView,
@@ -762,6 +762,10 @@ describe("InputHandler AutoUpgrade", () => {
         eventBus,
       );
       inputHandler.initialize();
+    });
+
+    afterAll(() => {
+      Platform.isFirefox = false;
     });
 
     test("should preventDefault on simple button press", () => {
