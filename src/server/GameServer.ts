@@ -548,19 +548,23 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
-      // Close lobby when host leaves before game starts
-      if (
-        !this._hasStarted &&
-        !this.isPublic() &&
-        client.persistentID === this.creatorPersistentID
-      ) {
-        this.log.info("Host left, closing lobby", {
-          gameID: this.id,
-        });
-        for (const c of [...this.activeClients]) {
-          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+
+      if (!this._hasStarted) {
+        // Remove persistentId if the game has not started to prevent going over max players
+        this.persistentIdToClientId.delete(client.persistentID);
+        // Close lobby when host leaves before game starts
+        if (
+          !this.isPublic() &&
+          client.persistentID === this.creatorPersistentID
+        ) {
+          this.log.info("Host left, closing lobby", {
+            gameID: this.id,
+          });
+          for (const c of [...this.activeClients]) {
+            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+          }
+          this._hasEnded = true;
         }
-        this._hasEnded = true;
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -578,6 +582,10 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Remove persistentId if the game has not started to prevent going over max players
+      if (!this._hasStarted) {
+        this.persistentIdToClientId.delete(client.persistentID);
+      }
     }
   }
 
