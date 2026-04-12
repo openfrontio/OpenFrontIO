@@ -52,6 +52,13 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
+  const activePostGamesGauge = meter.createObservableGauge(
+    "openfront.active_post.gauge",
+    {
+      description: "Number of active post games on this worker",
+    },
+  );
+
   const connectedClientsGauge = meter.createObservableGauge(
     "openfront.connected_clients.gauge",
     {
@@ -72,6 +79,11 @@ export function initWorkerMetrics(gameManager: GameManager): void {
 
   activeGamesGauge.addCallback((result) => {
     const count = gameManager.activeGames();
+    result.observe(count, getPromLabels());
+  });
+
+  activePostGamesGauge.addCallback((result) => {
+    const count = gameManager.activePostGames();
     result.observe(count, getPromLabels());
   });
 

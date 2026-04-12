@@ -95,6 +95,16 @@ export class GameManager {
     return this.games.size;
   }
 
+  activePostGames(): number {
+    let totalPostGames = 0;
+    this.games.forEach((game: GameServer) => {
+      if (game.phase() === GamePhase.PostGame) {
+        totalPostGames++;
+      }
+    });
+    return totalPostGames;
+  }
+
   activeClients(): number {
     let totalClients = 0;
     this.games.forEach((game: GameServer) => {

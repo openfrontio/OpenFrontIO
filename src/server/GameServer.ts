@@ -31,6 +31,7 @@ export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
   Finished = "FINISHED",
+  PostGame = "POSTGAME",
 }
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
@@ -864,6 +865,8 @@ export class GameServer {
             gameID: this.id,
           });
           return GamePhase.Finished;
+        } else if (this.winner) {
+          return GamePhase.PostGame;
         } else {
           return GamePhase.Active;
         }
@@ -887,6 +890,10 @@ export class GameServer {
     const warmupOver = now > this.startsAt! + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
+    }
+
+    if (this.winner) {
+      return GamePhase.PostGame;
     }
 
     return GamePhase.Active;
