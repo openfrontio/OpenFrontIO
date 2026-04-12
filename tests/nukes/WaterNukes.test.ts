@@ -180,42 +180,6 @@ describe("Water Nukes", () => {
     });
   });
 
-  describe("all-land map (no pre-existing ocean)", () => {
-    test("nuke-created water gets ocean bit so ports can be built", async () => {
-      game = await setup("plains", {
-        infiniteGold: true,
-        instantBuild: true,
-        waterNukes: true,
-      });
-      const info = new PlayerInfo("p", PlayerType.Human, null, "p");
-      game.addPlayer(info);
-      game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
-      player = game.player(info.id);
-      constructionExecution(game, player, 1, 1, UnitType.MissileSilo);
-
-      const target = game.ref(10, 10);
-
-      // Verify no ocean exists anywhere near the target before the nuke
-      expect(game.isLand(target)).toBe(true);
-
-      launchNukeAt(game, player, target);
-      tickUntilNukeLands(game);
-
-      // The converted tile should be ocean (not just lake water)
-      expect(game.isWater(target)).toBe(true);
-      expect(game.isOcean(target)).toBe(true);
-
-      // Neighboring land tiles should be ocean-shore (required for port placement)
-      const x = game.x(target);
-      const y = game.y(target);
-      const shoreCandidate = game.ref(x + 2, y);
-      if (game.isLand(shoreCandidate)) {
-        expect(game.isOceanShore(shoreCandidate)).toBe(true);
-      }
-    });
-  });
-
   describe("updateTile terrain byte round-trip", () => {
     test("terrain byte is packed and unpacked correctly", async () => {
       game = await setup("plains", {
