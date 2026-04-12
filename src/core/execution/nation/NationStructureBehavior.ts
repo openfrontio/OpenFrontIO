@@ -90,6 +90,7 @@ export class NationStructureBehavior {
     cluster: Cluster | null;
     weight: number;
   }> | null = null;
+  private _sharedWaterComponents: Set<number> | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -107,7 +108,8 @@ export class NationStructureBehavior {
           Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
         )
       : this.player.unitsOwned(UnitType.City);
-    const hasCoastalTiles = this.hasCoastalTiles();
+    this._sharedWaterComponents = this.sharedWaterComponents();
+    const hasCoastalTiles = this._sharedWaterComponents !== null;
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
@@ -166,11 +168,10 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Returns true if the player has coastal tiles adjacent to a water body that
-   * is also reachable by at least one other player (trade partner). Ports are only
-   * useful for trade if foreign ships can reach them via connected water.
+   * Returns the set of water components shared with at least one other player,
+   * or null if there are none.
    */
-  private hasCoastalTiles(): boolean {
+  private sharedWaterComponents(): Set<number> | null {
     // Collect all water-component IDs reachable from this player's coast.
     const playerComponents = new Set<number>();
     for (const tile of this.player.borderTiles()) {
@@ -181,9 +182,10 @@ export class NationStructureBehavior {
         if (comp !== null) playerComponents.add(comp);
       }
     }
-    if (playerComponents.size === 0) return false;
+    if (playerComponents.size === 0) return null;
 
-    // Check if any other living player also has a coast on the same component.
+    // Keep only components that at least one other player also touches.
+    const shared = new Set<number>();
     for (const other of this.game.players()) {
       if (other === this.player) continue;
       for (const tile of other.borderTiles()) {
@@ -191,11 +193,11 @@ export class NationStructureBehavior {
         for (const neighbor of this.game.neighbors(tile)) {
           if (!this.game.isWater(neighbor)) continue;
           const comp = this.game.getWaterComponent(neighbor);
-          if (comp !== null && playerComponents.has(comp)) return true;
+          if (comp !== null && playerComponents.has(comp)) shared.add(comp);
         }
       }
     }
-    return false;
+    return shared.size > 0 ? shared : null;
   }
 
   /**
@@ -497,10 +499,19 @@ export class NationStructureBehavior {
     return bestTile;
   }
 
+  /** Samples shore tiles adjacent to water reachable by another player (=> trading possible) */
   private randCoastalTileArray(numTiles: number): TileRef[] {
-    const tiles = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isShore(t),
-    );
+    const shared = this._sharedWaterComponents;
+    const tiles = Array.from(this.player.borderTiles()).filter((t) => {
+      if (!this.game.isShore(t)) return false;
+      if (shared === null) return false;
+      for (const neighbor of this.game.neighbors(t)) {
+        if (!this.game.isWater(neighbor)) continue;
+        const comp = this.game.getWaterComponent(neighbor);
+        if (comp !== null && shared.has(comp)) return true;
+      }
+      return false;
+    });
     return Array.from(this.arraySampler(tiles, numTiles));
   }
 
