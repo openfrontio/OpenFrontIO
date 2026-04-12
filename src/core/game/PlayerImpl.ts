@@ -1243,10 +1243,15 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+    const tileComponent = this.mg.getWaterComponent(tile);
     const bestPort = findClosestBy(
       this.units(UnitType.Port),
       (port) => this.mg.manhattanDist(port.tile(), tile),
-      (port) => port.isActive() && !port.isUnderConstruction(),
+      (port) =>
+        port.isActive() &&
+        !port.isUnderConstruction() &&
+        tileComponent !== null &&
+        this.mg.hasWaterComponent(port.tile(), tileComponent),
     );
 
     return bestPort?.tile() ?? false;

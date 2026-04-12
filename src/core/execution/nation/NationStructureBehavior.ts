@@ -499,7 +499,7 @@ export class NationStructureBehavior {
 
   private randCoastalTileArray(numTiles: number): TileRef[] {
     const tiles = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isOceanShore(t),
+      this.game.isShore(t),
     );
     return Array.from(this.arraySampler(tiles, numTiles));
   }
