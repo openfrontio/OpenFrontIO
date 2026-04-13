@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../core/AssetUrls";
 import "./NewsBox";
-import { openFrontLogoSvg } from "./OpenFrontLogoSvg";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
@@ -52,7 +52,11 @@ export class PlayPage extends LitElement {
             <div
               class="col-start-2 flex items-center justify-center text-[#0073b7] min-w-0"
             >
-              ${openFrontLogoSvg}
+              <img
+                src=${assetUrl("images/OpenFrontLogo.svg")}
+                alt="OpenFront"
+                class="h-full w-auto"
+              />
             </div>
 
             <div

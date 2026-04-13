@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../core/AssetUrls";
 import { NavNotificationsController } from "./NavNotificationsController";
-import { openFrontLogoSvg } from "./OpenFrontLogoSvg";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
@@ -54,7 +54,11 @@ export class DesktopNavBar extends LitElement {
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8 text-[#0073b7]">
-            ${openFrontLogoSvg}
+            <img
+              src=${assetUrl("images/OpenFrontLogo.svg")}
+              alt="OpenFront"
+              class="h-full w-auto"
+            />
           </div>
           <div
             id="game-version"
