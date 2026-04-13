@@ -91,7 +91,7 @@ type GeneratorArgs struct {
 // | :----------------- | :-------------- | :----------------- | :------------------------------- |
 // | **Alpha < 20**     | Water           | Distance to Land\* | Transparent pixels become water. |
 // | **Blue = 106**     | Water           | Distance to Land\* | Specific key color for water.    |
-// | **RGB = 24,24,24** | Oil             | 31                 | Traversible land reserved for oil. |
+// | **Near-black RGB** | Oil             | 31                 | Traversible land reserved for oil. |
 // | **Blue < 140**     | Land (Plains)   | 0                  | Clamped to minimum magnitude.    |
 // | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 					 					 					 		|
 // | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 					 					 					 		|
@@ -140,7 +140,7 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 			if alpha < 20 || blue == 106 {
 				// Transparent or specific blue value = water
 				terrain[x][y] = Terrain{Type: Water}
-			} else if red == 24 && green == 24 && blue == 24 {
+			} else if isOilColor(red, green, blue) {
 				terrain[x][y] = Terrain{Type: Land, Magnitude: 31}
 			} else {
 				// Land
@@ -208,6 +208,35 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 		},
 		Thumbnail: webp,
 	}, nil
+}
+
+func isOilColor(red, green, blue uint8) bool {
+	maxChannel := maxUint8(red, green, blue)
+	minChannel := minUint8(red, green, blue)
+
+	// Accept a small range of near-black neutral pixels so antialiased oil edges
+	// don't fall back to plains and render as a green halo.
+	return maxChannel <= 50 && maxChannel-minChannel <= 10
+}
+
+func maxUint8(values ...uint8) uint8 {
+	maxValue := values[0]
+	for _, value := range values[1:] {
+		if value > maxValue {
+			maxValue = value
+		}
+	}
+	return maxValue
+}
+
+func minUint8(values ...uint8) uint8 {
+	minValue := values[0]
+	for _, value := range values[1:] {
+		if value < minValue {
+			minValue = value
+		}
+	}
+	return minValue
 }
 
 // convertToWebP encodes raw RGBA thumbnail data into WebP format.
