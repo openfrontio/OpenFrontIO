@@ -150,6 +150,8 @@
     "build_defense_desc": "Erhöht de Verteidigung vo aliegende Gränze, markiert mit em ne karierte Muster. Agriffe von Finde si langsamer und sorge für meh Verluste bim Find.",
     "build_port": "Hafe",
     "build_port_desc": "Cha nume ir nöchi vo Wasser bout wärde. Erloubt der Bou vo Chroegsschiffe. Sändet outomatisch Handusschiff zwische de Häfe vo dim Land und angere länder (usser wenn der Handu gstoppt isch), wodüre beidi Sitte Gold erhaute. Der Handu stoppt outomatisch, wenn du attackiert wirsch oder e Spieler agriffsch. Es fahrt witer nach 5 Minutene oder wenn du Alliert wirsch. Du chasch manuell der Handu i oder usschaute mit \"Handu starte\" oder \"Handu stoppe\".",
+    "build_oil_rig": "Ölplattform",
+    "build_oil_rig_desc": "Kann nur auf Ölvorkommen gebaut werden. Erzeugt mit der Zeit Gold, und Züge können sie anfahren, wenn eine Fabrik in der Nähe ist.",
     "build_warship": "Kriegsschiff",
     "build_warship_desc": "Patrouilliert i emne Gebiet und kapert Handuschiff, zerstört findlechi Kriegsschiff und Boote (Transportschiff). Erschint bim nächschtglägene Hafe und patrouilliert im Gebiet wo es bout worde isch. Mit emne Klick uf s Kriegsschiff cha es gstürt und mit em ne witere Klick ines angeres gebiet gschickt werde.",
     "build_silo": "Raggetesilo",

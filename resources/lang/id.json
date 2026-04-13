@@ -156,6 +156,8 @@
     "build_defense_desc": "Meningkatkan pertahanan di sekitar perbatasan terdekat, yang ditandai dengan pola kotak-kotak. Serangan musuh menjadi lebih lambat dan menyebabkan lebih banyak korban.",
     "build_port": "Pelabuhan",
     "build_port_desc": "Hanya dapat dibangun di dekat air. Memungkinkan pembangunan Kapal Perang. Secara otomatis mengirim kapal dagang antara pelabuhan di negaramu dan negara lain (kecuali saat perdagangan dihentikan), yang memberikan emas bagi kedua pihak.\nPerdagangan dengan seorang pemain akan berhenti secara otomatis ketika kamu menyerang atau diserang oleh pemain tersebut. Perdagangan akan dilanjutkan kembali setelah 5 menit atau jika kalian menjadi sekutu. Kamu juga dapat mengatur perdagangan secara manual dengan memilih “Hentikan Perdagangan” atau “Mulai Perdagangan”.",
+    "build_oil_rig": "Anjungan minyak",
+    "build_oil_rig_desc": "Hanya bisa dibangun di ladang minyak. Menghasilkan emas seiring waktu, dan kereta bisa mengunjunginya jika ada pabrik di dekatnya.",
     "build_warship": "Kapal Perang",
     "build_warship_desc": "Berpatroli di suatu area, menangkap kapal dagang musuh serta menghancurkan Kapal (kapal pengangkut) dan Kapal Perang mereka. Unit ini muncul dari Pelabuhan terdekat dan akan berpatroli di area yang pertama kali kamu klik saat membangunnya.\nKamu dapat mengendalikan Kapal Perang dengan klik-serang pada unit tersebut (lihat aksi Serang pada menu Hotkeys), lalu klik-serang area baru yang ingin dituju.",
     "build_silo": "Silo Peluncur Rudal",

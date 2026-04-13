@@ -99,6 +99,8 @@
     "build_defense_desc": "Aumenta ao seu redor as defesas de fronteiras próximas, irá mostrar um padrão de xadrez. Ataques de inimigos são mais lentos e têm maior quantidade de baixas.",
     "build_port": "Porto",
     "build_port_desc": "Só pode ser construído perto de água. Permite construir Navios de Guerra. Envia automaticamente as trocas entre as portos do seu país e de outros países (exceto quando o comércio é interrompido), dando ouro para ambos os lados. Troca para automaticamente quando ataca ou é atacado por um jogador. É retomada após 5 minutos ou ao se tornar aliado. Pode alternar manualmente a negociação com \"Parar negociação\" ou \"Iniciar negociação\".",
+    "build_oil_rig": "Plataforma petrolífera",
+    "build_oil_rig_desc": "Só pode ser construída em jazidas de petróleo. Gera ouro ao longo do tempo, e os comboios podem visitá-la se houver uma fábrica por perto.",
     "build_warship": "Navio de guerra",
     "build_warship_desc": "Patrulha uma área, capturando navios de comércio inimigos e destroi os seus barcos (navios de transporte) e Navios de Guerra. Sai do porto mais próximo e patrulha a área que primeiro clicou para o construír. Pode controlar Navios de Guerra clicando neles (ver a ação de Ataque nos Atalhos) e, em seguida, clicando (botão de ataque) na nova área que pretende patrulhar.",
     "build_silo": "Silo de mísseis",

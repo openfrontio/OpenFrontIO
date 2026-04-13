@@ -153,6 +153,8 @@
     "build_defense_desc": "Reforça les defenses de les fronteres properes. Les tropes de l'enemic seran més lentes i moriran més.",
     "build_port": "Port",
     "build_port_desc": "Només es pot construir a prop de l'aigua. Permet construir vaixells de guerra. Envia automàticament vaixells de comerç entre els ports del teu país i els d'altres països (excepte quan el comerç està aturat), donant or a tots dos. El comerç amb un jugador s'atura automàticament quan ataques o ets atacat per un jugador. Es reprèn després de 5 minuts o si us alieu. Pots activar o desactivar manualment el comerç amb \"Atura el comerç\" i \"Comença el comerç\".",
+    "build_oil_rig": "Plataforma petroliera",
+    "build_oil_rig_desc": "Només es pot construir en jaciments de petroli. Genera or amb el temps, i els trens la poden visitar si hi ha una fàbrica a prop.",
     "build_warship": "Vaixell de Guerra",
     "build_warship_desc": "Patrulla per una zona, captura vaixells de comerç enemics i destrueix els seus vaixells de transport i vaixells de guerra. Apareix al port més proper i patrulla la zona que vas clicar primer per construir-lo. Pots controlar els vaixells de guerra fent clic amb el botó d'atac sobre ells (vegeu l'acció Atac a les Tecles de drecers) i després fent clic amb el botó d'atac a la nova zona on vols que es desplacin.",
     "build_silo": "Llançador de Míssils",

@@ -99,6 +99,8 @@
     "build_defense_desc": "Plialtigas la defendon ĉirkaŭ najbaraj landlimoj, kiuj montriĝas per kontrolita ŝablono. Atakoj de malamikoj estas pli malrapidaj kaj kaŭzas pli da viktimoj.",
     "build_port": "Haveno",
     "build_port_desc": "Nur povas esti konstruita apud akvo. Permesas konstrui militŝipojn. Aŭtomate sendas komercajn ŝipojn inter havenoj de via lando kaj aliaj landoj (krom kiam komerco estas haltigita), donante oron al ambaŭ flankoj. Komerci kun ludanto haltigas aŭtomate kiam vi atakas aŭ estas atakita de ludanto. Ĝi reprenas 5 minutojn poste aŭ se vi devenas aliancanoj. Vi povas permane ŝalti komercadon per \"Ĉesigi komercadon\" aŭ \"Komenci komercadon\".",
+    "build_oil_rig": "Naftoplatformo",
+    "build_oil_rig_desc": "Oni povas konstrui ĝin nur sur naftokampoj. Ĝi generas oron laŭlonge de la tempo, kaj trajnoj povas viziti ĝin se fabriko estas proksime.",
     "build_warship": "Militŝipo",
     "build_warship_desc": "Patrolas en areo, kapteblante malamikajn komercajn ŝipojn kaj detruante iliajn Boatojn (transportŝipojn) kaj Militŝipojn. Aperas ĉe la plej proksima haveno kaj patrolas la areon kie vi unue alklakis por konstrui ĝin. Vi povas regi Militŝipojn per atak-alklako (vidu agon Ataki sub Hotklavoj) kaj poste atak-alklaki la novan areon, kien vi volas, ke ili moviĝu.",
     "build_silo": "Misila silo",

@@ -99,6 +99,8 @@
     "build_defense_desc": "Lisää puolustuksen tehokkuutta rajojen läheisyydessä. Vihollisten hyökkäykset puolustustornin lähellä ovat hitaampia ja niissä on enemmän uhreja.",
     "build_port": "Satama",
     "build_port_desc": "Voidaan rakentaa vain veden läheisyyteen. Lähettää kauppa-aluksia automaattisesti sinun satamista muiden pelaajien satamiin (paitsi, jos kauppa on pysäytetty). Kauppa-alukset tuovat kultaa. Kaupankäynti pysähtyy automaattisesti, kun hyökkäät tai, kun pelaaja hyökkää sinuun. Se palaa 5 minuutin päästä tai, jos teistä tulee liittolaisia. Voit säätää manuaalisesti kaupankäyntiä päälle/pois painamalla \"Lopeta kaupankäynti\" tai \"Aloita kaupankäynti\".",
+    "build_oil_rig": "Öljynporauslautta",
+    "build_oil_rig_desc": "Voidaan rakentaa vain öljyesiintymille. Tuottaa kultaa ajan myötä, ja junat voivat vierailla siellä, jos lähistöllä on tehdas.",
     "build_warship": "Sota-alus",
     "build_warship_desc": "Partioivat alueella, vangiten vihollisen kauppa-aluksia ja tuhoten heidän veneitään (kuljetusaluksia) ja sota-aluksiaan. Lähtee lähimmästä satamasta ja partioi aluella, jota painoit rakentaaksesi sen. Voit hallita sotalaivoja napsauttamalla niitä ja valitsemalla hyökkäyksen (katso toiminto \"Hyökkäys\" pikanäppäimistä) ja sitten napsauttamalla ja valitsemalla hyökkäyksen alueelle, jonne haluat niiden siirtyvän.",
     "build_silo": "Ohjussiilo",

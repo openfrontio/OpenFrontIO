@@ -98,6 +98,8 @@
     "build_defense_desc": "Ökar försvaret runt närliggande gränser, vilket visas som ett rutigt mönster. Anfall från fiender är långsammare och tar mer skada.",
     "build_port": "Hamn",
     "build_port_desc": "Kan enbart byggas nära vatten. Tillåter byggande av Krigsskepp. Skickar automatiskt handelsbåtar mellan din hamn och andra länder. (Förutom när handel är stoppad), ger guld till båda sidorna. Handel upphör automatiskt när du anfaller eller är anfallen av en spelare. Handel återupptas efter 5 minuter eller att ni blir allierade. Du kan manuellt tillåta/blockera handel med \"Avsluta handel\" eller \"Påbörja handel\".",
+    "build_oil_rig": "Oljeplattform",
+    "build_oil_rig_desc": "Kan bara byggas på oljefyndigheter. Ger guld över tid, och tåg kan besöka den om en fabrik finns i närheten.",
     "build_warship": "Krigsfartyg",
     "build_warship_desc": "Patrullerar i ett område, fångar in fientliga handelsfartyg och förstör deras båtar (transportskepp) och Krigsskepp. Tillverkas vid den närmaste hamnen och patrullerar området där du först klickade för att bygga den. Du kan kontrollera Krigsskepp genom att anfallsklicka på dom. (Se alternativ Anfall under Snabbtangenter) och sen anfallsklicka på det nya området du vill att de ska flytta sig till.",
     "build_silo": "Missilsilo",

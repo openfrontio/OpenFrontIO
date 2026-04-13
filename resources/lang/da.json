@@ -99,6 +99,8 @@
     "build_defense_desc": "Øger forsvaret omkring nærliggende grænser, som viser et ternet mønster. Angreb fra fjender er langsommere og har flere tab.",
     "build_port": "Havn",
     "build_port_desc": "Kan kun bygges i nærheden af vand. Gør det muligt at bygge krigsskibe. Sender automatisk handelsskibe mellem havne i dit land og andre lande (undtagen når handelen er stoppet), hvilket giver guld til begge parter. Handlen stopper automatisk, når du angriber eller bliver angrebet af en spiller. Den genoptages efter 5 minutter eller, hvis I bliver allierede. Du kan manuelt skifte handel til “Stop handel” eller “Start handel”.",
+    "build_oil_rig": "Olieplatform",
+    "build_oil_rig_desc": "Kan kun bygges på oliefelter. Genererer guld over tid, og tog kan besøge den, hvis der er en fabrik i nærheden.",
     "build_warship": "Krigsskib",
     "build_warship_desc": "Patruljerer et område, erobrer fjendtlige handelsskibe og ødelægger både (transportskibe) og krigsskibe. Spawner fra den nærmeste havn og patruljerer det område, du først klikkede på for at bygge den. Du kan styre krigsskibe ved at angribe-klikke på dem (se handlingen ‘Angreb’ under Genvejstaster) og derefter angribe-klikke på det nye område, du ønsker, de skal flytte til.",
     "build_silo": "Missilsilo",

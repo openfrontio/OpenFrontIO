@@ -60,6 +60,8 @@
     "build_defense_desc": "Aumenta as defesas nas proximidades. Ataques de inimigos são mais lentos e têm mais vítimas.",
     "build_port": "Porto",
     "build_port_desc": "Envia automaticamente navios mercantes entre portos do seu país e de outros países (exceto se você clicou em \"parar comércio\" com eles ou se eles clicaram em \"parar comércio com você\"), dando ouro para ambos os lados. Permite construir Navios de Guerras. Só pode ser construído perto da água.",
+    "build_oil_rig": "Plataforma de petróleo",
+    "build_oil_rig_desc": "Só pode ser construída em depósitos de petróleo. Gera ouro com o tempo, e os trens podem visitá-la se houver uma fábrica por perto.",
     "build_warship": "Navio de Guerra",
     "build_warship_desc": "Patrulha em uma área, capturando navios mercantes e destruindo barcos e navios de guerra inimigos. É gerado do Porto e patrulha a área que você primeiro clicou para construí-lo. Você pode controlar Navios de Guerra clicando sobre eles e depois atacando a nova área para a qual você quer move-los.",
     "build_silo": "Silo de Míssil",
