@@ -1,265 +1,270 @@
 {
   "map": {
     "height": 1672,
-    "num_land_tiles": 2311229,
-    "width": 2348
+    "num_land_tiles": 2345907,
+    "width": 2904
   },
   "map16x": {
     "height": 418,
-    "num_land_tiles": 132857,
-    "width": 587
+    "num_land_tiles": 134783,
+    "width": 726
   },
   "map4x": {
     "height": 836,
-    "num_land_tiles": 561490,
-    "width": 1174
+    "num_land_tiles": 569606,
+    "width": 1452
   },
   "name": "Europe",
   "nations": [
     {
-      "coordinates": [148, 744],
+      "coordinates": [634, 781],
       "flag": "ie",
       "name": "Republic of Ireland"
     },
     {
-      "coordinates": [451, 785],
+      "coordinates": [962, 780],
       "flag": "gb-eng",
       "name": "England"
     },
     {
-      "coordinates": [285, 1253],
+      "coordinates": [935, 1289],
       "flag": "es",
       "name": "Kingdom of Spain"
     },
     {
-      "coordinates": [527, 979],
+      "coordinates": [1087, 931],
       "flag": "fr",
       "name": "French Republic"
     },
     {
-      "coordinates": [974, 1159],
+      "coordinates": [1541, 1180],
       "flag": "it",
       "name": "Italian Republic"
     },
     {
-      "coordinates": [761, 1013],
+      "coordinates": [1339, 983],
       "flag": "ch",
       "name": "Swiss Confederation"
     },
     {
-      "coordinates": [789, 451],
+      "coordinates": [1360, 428],
       "flag": "no",
       "name": "Kingdom of Norway"
     },
     {
-      "coordinates": [1034, 562],
+      "coordinates": [1605, 573],
       "flag": "se",
       "name": "Kingdom of Sweden"
     },
     {
-      "coordinates": [1368, 369],
+      "coordinates": [2007, 309],
       "flag": "fi",
       "name": "Republic of Finland"
     },
     {
-      "coordinates": [633, 802],
+      "coordinates": [1200, 830],
       "flag": "be",
       "name": "Kingdom of Belgium"
     },
     {
-      "coordinates": [647, 754],
+      "coordinates": [1264, 752],
       "flag": "nl",
       "name": "Kingdom of the Netherlands"
     },
     {
-      "coordinates": [904, 805],
+      "coordinates": [1443, 798],
       "flag": "de",
       "name": "Federal Republic of Germany"
     },
     {
-      "coordinates": [1082, 953],
+      "coordinates": [1444, 969],
       "flag": "at",
       "name": "Republic of Austria"
     },
     {
-      "coordinates": [1274, 739],
+      "coordinates": [1850, 810],
       "flag": "pl",
       "name": "Republic of Poland"
     },
     {
-      "coordinates": [1098, 872],
+      "coordinates": [1630, 909],
       "flag": "cz",
       "name": "Czech Republic"
     },
     {
-      "coordinates": [1802, 933],
+      "coordinates": [2342, 936],
       "flag": "ua",
       "name": "Ukraine"
     },
     {
-      "coordinates": [1562, 730],
+      "coordinates": [2167, 708],
       "flag": "by",
       "name": "Republic of Belarus"
     },
     {
-      "coordinates": [1533, 1039],
+      "coordinates": [2046, 990],
       "flag": "ro",
       "name": "Romania"
     },
     {
-      "coordinates": [1770, 1304],
+      "coordinates": [2432, 1265],
       "flag": "tr",
       "name": "Republic of Turkiye"
     },
     {
-      "coordinates": [180, 1525],
+      "coordinates": [769, 1535],
       "flag": "ma",
       "name": "Kingdom of Morocco"
     },
     {
-      "coordinates": [2069, 659],
+      "coordinates": [2535, 720],
       "flag": "ru",
       "name": "Russian Federation"
     },
     {
-      "coordinates": [1952, 1433],
+      "coordinates": [2539, 1455],
       "flag": "sy",
       "name": "Syrian Arab Republic"
     },
     {
-      "coordinates": [2264, 1529],
+      "coordinates": [2689, 1441],
       "flag": "iq",
       "name": "Republic of Iraq"
     },
     {
-      "coordinates": [2173, 1173],
+      "coordinates": [2748, 1138],
       "flag": "ge",
       "name": "Georgia"
     },
     {
-      "coordinates": [832, 1434],
+      "coordinates": [1389, 1473],
       "flag": "tn",
       "name": "Republic of Tunisia"
     },
     {
-      "coordinates": [517, 1483],
+      "coordinates": [1066, 1506],
       "flag": "dz",
       "name": "Algeria"
     },
     {
-      "coordinates": [89, 1292],
+      "coordinates": [680, 1254],
       "flag": "pt",
       "name": "Portuguese Republic"
     },
     {
-      "coordinates": [1335, 1312],
+      "coordinates": [1891, 1299],
       "flag": "gr",
       "name": "Hellenic Republic"
     },
     {
-      "coordinates": [1312, 1133],
+      "coordinates": [1906, 1113],
       "flag": "rs",
       "name": "Republic of Serbia"
     },
     {
-      "coordinates": [1281, 999],
+      "coordinates": [1751, 983],
       "flag": "hu",
       "name": "Republic of Hungary"
     },
     {
-      "coordinates": [1254, 899],
+      "coordinates": [1784, 908],
       "flag": "sk",
       "name": "Slovak Republic"
     },
     {
-      "coordinates": [1002, 1061],
+      "coordinates": [1624, 1038],
       "flag": "hr",
       "name": "Republic of Croatia"
     },
     {
-      "coordinates": [1174, 1108],
+      "coordinates": [1734, 1094],
       "flag": "ba",
       "name": "Bosnia and Herzegovina"
     },
     {
-      "coordinates": [1259, 1236],
+      "coordinates": [1817, 1213],
       "flag": "al",
       "name": "Republic of Albania"
     },
     {
-      "coordinates": [1556, 1200],
+      "coordinates": [2092, 1158],
       "flag": "bg",
       "name": "Republic of Bulgaria"
     },
     {
-      "coordinates": [1380, 618],
+      "coordinates": [1939, 702],
       "flag": "lt",
       "name": "Republic of Lithuania"
     },
     {
-      "coordinates": [1360, 556],
+      "coordinates": [2014, 618],
       "flag": "lv",
       "name": "Republic of Latvia"
     },
     {
-      "coordinates": [1443, 502],
+      "coordinates": [2033, 504],
       "flag": "ee",
       "name": "Republic of Estonia"
     },
     {
-      "coordinates": [278, 742],
+      "coordinates": [863, 775],
       "flag": "gb-wls",
       "name": "Wales"
     },
     {
-      "coordinates": [296, 601],
+      "coordinates": [863, 573],
       "flag": "gb-sct",
       "name": "Scotland"
     },
     {
-      "coordinates": [2300, 510],
+      "coordinates": [2688, 427],
       "flag": "ussr",
       "name": "USSR"
     },
     {
-      "coordinates": [204, 667],
+      "coordinates": [719, 685],
       "flag": "northern_ireland",
       "name": "Northern Ireland"
     },
     {
-      "coordinates": [1522, 48],
+      "coordinates": [2011, 103],
       "flag": "polar_bears",
       "name": "Polar Bears"
     },
     {
-      "coordinates": [821, 628],
+      "coordinates": [1369, 628],
       "flag": "dk",
       "name": "Kingdom of Denmark"
     },
     {
-      "coordinates": [1875, 1599],
+      "coordinates": [2406, 1638],
       "flag": "il",
       "name": "State of Israel"
     },
     {
-      "coordinates": [1691, 1667],
+      "coordinates": [2226, 1661],
       "flag": "eg",
       "name": "Arab Republic of Egypt"
     },
     {
-      "coordinates": [1115, 1650],
+      "coordinates": [1847, 1652],
       "flag": "ly",
       "name": "State of Libya"
     },
     {
-      "coordinates": [1919, 1608],
+      "coordinates": [2571, 1601],
       "flag": "jo",
       "name": "Hashemite Kingdom of Jordan"
     },
     {
-      "coordinates": [1898, 1535],
+      "coordinates": [2473, 1528],
       "flag": "lb",
       "name": "Lebanese Republic"
+    },
+    {
+      "coordinates": [254, 274],
+      "flag": "is",
+      "name": "Iceland"
     }
   ]
 }
