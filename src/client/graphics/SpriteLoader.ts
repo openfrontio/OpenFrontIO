@@ -115,6 +115,16 @@ export const isSpriteReady = (unit: UnitView): boolean => {
 
 const coloredSpriteCache: Map<string, HTMLCanvasElement> = new Map();
 
+function freightTint(color: Colord): Colord {
+  const rgb = color.toRgb();
+  return new Colord({
+    r: Math.min(255, Math.round(rgb.r * 0.78 + 205 * 0.22)),
+    g: Math.min(255, Math.round(rgb.g * 0.88 + 150 * 0.12)),
+    b: Math.min(255, Math.round(rgb.b * 0.7 + 55 * 0.3)),
+    a: rgb.a,
+  });
+}
+
 /**
  * Load a canvas and replace grayscale with border colors
  */
@@ -179,10 +189,16 @@ export const getColoredSprite = (
   customTerritoryColor?: Colord,
   customBorderColor?: Colord,
 ): HTMLCanvasElement => {
-  const territoryColor: Colord =
+  let territoryColor: Colord =
     customTerritoryColor ?? unit.owner().territoryColor();
-  const borderColor: Colord = customBorderColor ?? unit.owner().borderColor();
+  let borderColor: Colord = customBorderColor ?? unit.owner().borderColor();
   const spawnHighlightColor = theme.spawnHighlightColor();
+
+  if (unit.type() === UnitType.Train && unit.isLoaded()) {
+    territoryColor = freightTint(territoryColor);
+    borderColor = freightTint(borderColor);
+  }
+
   const key = computeSpriteKey(unit, territoryColor, borderColor);
   if (coloredSpriteCache.has(key)) {
     return coloredSpriteCache.get(key)!;

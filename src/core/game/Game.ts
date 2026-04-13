@@ -25,6 +25,7 @@ function isEnumValue<T extends Record<string, string | number>>(
 export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
+export type BonusIcon = "oil";
 
 export const AllPlayers = "AllPlayers" as const;
 
@@ -319,6 +320,8 @@ export enum TrainType {
   TailEngine = "TailEngine",
   Carriage = "Carriage",
 }
+
+export type TrainMission = "trade" | "freight";
 
 export const Nukes = unitTypeGroup([
   UnitType.AtomBomb,
@@ -695,7 +698,7 @@ export interface Player {
 
   // Resources & Troops
   gold(): Gold;
-  addGold(toAdd: Gold, tile?: TileRef): void;
+  addGold(toAdd: Gold, tile?: TileRef, icon?: BonusIcon): void;
   removeGold(toRemove: Gold): Gold;
   troops(): number;
   setTroops(troops: number): void;

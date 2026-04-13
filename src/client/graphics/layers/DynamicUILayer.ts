@@ -6,6 +6,7 @@ import {
   ConquestUpdate,
   GameUpdateType,
 } from "src/core/game/GameUpdates";
+import { assetUrl } from "../../../core/AssetUrls";
 import type { GameView, UnitView } from "../../../core/game/GameView";
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
@@ -19,10 +20,13 @@ import { Layer } from "./Layer";
 const TEXT_OFFSET_Y = -5;
 const TEXT_STACK_SPACING = 8;
 const TEXT_DURATION = 2500;
+const oilDropIcon = assetUrl("images/OilDropIcon.png");
 
 export class DynamicUILayer implements Layer {
   private readonly uiElements: Array<UIElement> = [];
   private lastRefresh = Date.now();
+  private readonly oilDropImage = new Image();
+  private oilDropIcon: CanvasImageSource | undefined;
 
   constructor(
     private readonly game: GameView,
@@ -31,6 +35,22 @@ export class DynamicUILayer implements Layer {
   ) {}
 
   init() {
+    this.oilDropImage.src = oilDropIcon;
+    this.oilDropImage.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = this.oilDropImage.width;
+      canvas.height = this.oilDropImage.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return;
+      }
+      ctx.drawImage(this.oilDropImage, 0, 0);
+      ctx.globalCompositeOperation = "source-in";
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = "source-over";
+      this.oilDropIcon = canvas;
+    };
     // Listen for warship move clicks for MoveIndicatorUI
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       const x = this.game.x(e.tile);
@@ -80,7 +100,7 @@ export class DynamicUILayer implements Layer {
     const troops = bonus.troops;
 
     if (gold !== 0) {
-      this.addNumber(gold, x, y, 1000, 10);
+      this.addNumber(gold, x, y, 1000, 10, bonus.icon === "oil");
       y += TEXT_STACK_SPACING; // increase y so the next popup starts below
     }
 
@@ -167,6 +187,7 @@ export class DynamicUILayer implements Layer {
     y: number,
     duration: number,
     riseDistance: number,
+    oilIcon: boolean = false,
   ) {
     if (BigInt(num) === 0n) return; // Don't show anything for 0
     const absNum =
@@ -181,6 +202,8 @@ export class DynamicUILayer implements Layer {
         y,
         duration,
         riseDistance,
+        undefined,
+        oilIcon ? this.oilDropIcon : undefined,
       ),
     );
   }

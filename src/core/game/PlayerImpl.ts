@@ -16,6 +16,7 @@ import {
   AllianceRequest,
   AllPlayers,
   Attack,
+  BonusIcon,
   BuildableUnit,
   Cell,
   ColoredTeams,
@@ -904,7 +905,7 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
-  addGold(toAdd: Gold, tile?: TileRef): void {
+  addGold(toAdd: Gold, tile?: TileRef, icon?: BonusIcon): void {
     this._gold += toAdd;
     if (tile) {
       this.mg.addUpdate({
@@ -913,6 +914,7 @@ export class PlayerImpl implements Player {
         tile,
         gold: Number(toAdd),
         troops: 0,
+        icon,
       });
     }
   }

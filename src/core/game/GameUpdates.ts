@@ -96,6 +96,7 @@ export interface BonusEventUpdate {
   tile: TileRef;
   gold: number;
   troops: number;
+  icon?: "oil";
 }
 
 export interface RailroadConstructionUpdate {

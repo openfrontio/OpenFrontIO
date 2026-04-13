@@ -47,8 +47,10 @@ function getStructureRatios(
 ): Partial<Record<UnitType, StructureRatioConfig>> {
   return {
     [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
-    // TODOHERE: give oil rigs their own nation-building ratio once their
-    // economy and placement rules are finalized.
+    [UnitType.OilRig]: {
+      ratioPerCity: 0.5,
+      perceivedCostIncreasePerOwned: 1,
+    },
     [UnitType.Factory]: {
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
@@ -115,6 +117,7 @@ export class NationStructureBehavior {
     const buildOrder: UnitType[] = [
       UnitType.DefensePost,
       UnitType.Port,
+      UnitType.OilRig,
       UnitType.Factory,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
@@ -132,8 +135,12 @@ export class NationStructureBehavior {
         continue;
       }
 
-      // Skip ports if no coastal tiles
-      if (structureType === UnitType.Port && !hasCoastalTiles) {
+      // Skip coastal structures if no coastal tiles
+      if (
+        (structureType === UnitType.Port ||
+          structureType === UnitType.OilRig) &&
+        !hasCoastalTiles
+      ) {
         continue;
       }
 
@@ -724,6 +731,7 @@ export class NationStructureBehavior {
     for (const unit of player.units(
       UnitType.City,
       UnitType.Port,
+      UnitType.OilRig,
       UnitType.Factory,
     )) {
       if (unitToCluster.has(unit)) {
@@ -749,6 +757,7 @@ export class NationStructureBehavior {
       for (const unit of neighbor.units(
         UnitType.City,
         UnitType.Port,
+        UnitType.OilRig,
         UnitType.Factory,
       )) {
         if (unitToCluster.has(unit)) {
@@ -961,6 +970,7 @@ export class NationStructureBehavior {
         case UnitType.Factory:
         case UnitType.MissileSilo:
         case UnitType.Port:
+        case UnitType.OilRig:
           protectEntries.push({
             tile: unit.tile(),
             weight: weightByLevel ? unit.level() : 1,

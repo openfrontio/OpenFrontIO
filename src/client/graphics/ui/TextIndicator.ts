@@ -22,6 +22,7 @@ export class TextIndicator implements UIElement {
       g: 255,
       b: 255,
     },
+    private icon?: CanvasImageSource,
   ) {
     this.cell = new Cell(this.x + 0.5, this.y + 0.5);
   }
@@ -49,8 +50,29 @@ export class TextIndicator implements UIElement {
     ctx.save();
     ctx.font = `${size}px ${this.font}`;
     ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha})`;
-    ctx.textAlign = "center";
-    ctx.fillText(this.text, screenPos.x, currentY);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+
+    const textWidth = ctx.measureText(this.text).width;
+    const iconSize = this.icon ? Math.round(size * 1.1) : 0;
+    const iconGap = this.icon ? Math.max(2, Math.round(size * 0.2)) : 0;
+    const totalWidth = iconSize + iconGap + textWidth;
+    let drawX = screenPos.x - totalWidth / 2;
+
+    if (this.icon) {
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(
+        this.icon,
+        drawX,
+        currentY - iconSize / 2,
+        iconSize,
+        iconSize,
+      );
+      ctx.globalAlpha = 1;
+      drawX += iconSize + iconGap;
+    }
+
+    ctx.fillText(this.text, drawX, currentY);
     ctx.restore();
 
     return true;

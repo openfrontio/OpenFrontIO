@@ -2,6 +2,7 @@ import {
   Execution,
   Game,
   Player,
+  TrainMission,
   TrainType,
   Unit,
   UnitType,
@@ -25,6 +26,7 @@ export class TrainExecution implements Execution {
   private currentRailroad: OrientedRailroad | null = null;
   private speed: number = 2;
   private _tradeStopsVisited: number = 0;
+  private readonly mission: TrainMission;
 
   constructor(
     private railNetwork: RailNetwork,
@@ -32,14 +34,30 @@ export class TrainExecution implements Execution {
     private source: TrainStation,
     private destination: TrainStation,
     private numCars: number,
-  ) {}
+    mission: TrainMission = "trade",
+  ) {
+    this.mission = mission;
+    this.hasCargo = mission === "freight";
+  }
 
   public owner(): Player {
     return this.player;
   }
 
+  public trainMission(): TrainMission {
+    return this.mission;
+  }
+
   public tradeStopsVisited(): number {
     return this._tradeStopsVisited;
+  }
+
+  public sourceUnit(): Unit {
+    return this.source.unit;
+  }
+
+  public destinationUnit(): Unit {
+    return this.destination.unit;
   }
 
   init(mg: Game, ticks: number): void {
@@ -125,9 +143,29 @@ export class TrainExecution implements Execution {
       return;
     }
     this.hasCargo = true;
+    this.train.setLoaded(true);
+    if (this.cars.length > 0) {
+      this.cars[0].setLoaded(true);
+    }
     // Starts at 1: don't load tail engine
     for (let i = 1; i < this.cars.length; i++) {
       this.cars[i].setLoaded(true);
+    }
+  }
+
+  unloadCargo() {
+    if (!this.hasCargo) {
+      return;
+    }
+    this.hasCargo = false;
+    if (this.train !== null) {
+      this.train.setLoaded(false);
+    }
+    if (this.cars.length > 0) {
+      this.cars[0].setLoaded(false);
+    }
+    for (let i = 1; i < this.cars.length; i++) {
+      this.cars[i].setLoaded(false);
     }
   }
 
@@ -145,12 +183,14 @@ export class TrainExecution implements Execution {
     const train = this.player.buildUnit(UnitType.Train, tile, {
       targetUnit: this.destination.unit,
       trainType: TrainType.Engine,
+      loaded: this.hasCargo,
     });
     // Tail is also an engine, just for cosmetics
     this.cars.push(
       this.player.buildUnit(UnitType.Train, tile, {
         targetUnit: this.destination.unit,
         trainType: TrainType.TailEngine,
+        loaded: this.hasCargo,
       }),
     );
     for (let i = 0; i < this.numCars; i++) {
@@ -267,9 +307,10 @@ export class TrainExecution implements Execution {
     }
     this.stations[1].onTrainStop(this);
     const stationType = this.stations[1].unit.type();
-    // TODOHERE: decide whether oil rigs should count as a train trade stop,
-    // a resource pickup stop, or something entirely different.
-    if (stationType === UnitType.City || stationType === UnitType.Port) {
+    if (
+      this.mission === "trade" &&
+      (stationType === UnitType.City || stationType === UnitType.Port)
+    ) {
       this._tradeStopsVisited++;
     }
     return;

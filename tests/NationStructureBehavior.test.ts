@@ -1,6 +1,7 @@
 import { vi } from "vitest";
+import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import { Difficulty, PlayerType } from "../src/core/game/Game";
+import { Difficulty, PlayerType, UnitType } from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 
@@ -308,6 +309,80 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     expect(result).toHaveLength(2);
     const tiles = result.map((r: any) => r.tile).sort();
     expect(tiles).toEqual([100, 200]);
+  });
+});
+
+describe("NationStructureBehavior.handleStructures", () => {
+  it("queues an oil rig when a nation has coastal territory and can afford one", () => {
+    const coastalTile = 123 as any;
+    const queuedExecutions: unknown[] = [];
+
+    const units = vi.fn((...types: UnitType[]) => {
+      if (types.length > 1) {
+        return [];
+      }
+      if (types[0] === UnitType.OilRig) {
+        return [];
+      }
+      return [];
+    });
+
+    const player = {
+      borderTiles: vi.fn(() => new Set([coastalTile])),
+      unitsOwned: vi.fn((type: UnitType) => {
+        switch (type) {
+          case UnitType.City:
+            return 4;
+          case UnitType.DefensePost:
+            return 1;
+          case UnitType.Port:
+            return 3;
+          case UnitType.Factory:
+            return 3;
+          case UnitType.OilRig:
+            return 0;
+          case UnitType.SAMLauncher:
+          case UnitType.MissileSilo:
+            return 0;
+          default:
+            return 0;
+        }
+      }),
+      units,
+      numTilesOwned: vi.fn(() => 10_000),
+      gold: vi.fn(() => 1_000_000n),
+      canBuild: vi.fn((type: UnitType, tile: unknown) =>
+        type === UnitType.OilRig && tile === coastalTile ? coastalTile : false,
+      ),
+    };
+
+    const game = {
+      config: () => ({
+        isUnitDisabled: vi.fn(() => false),
+        gameConfig: () => ({ difficulty: Difficulty.Medium }),
+        unitInfo: vi.fn(() => ({ upgradable: false })),
+      }),
+      unitInfo: vi.fn(() => ({
+        cost: vi.fn(() => 100n),
+      })),
+      isOceanShore: vi.fn((tile: unknown) => tile === coastalTile),
+      addExecution: vi.fn((execution: unknown) => {
+        queuedExecutions.push(execution);
+      }),
+    };
+
+    const behavior = new NationStructureBehavior(
+      new PseudoRandom(0),
+      game as any,
+      player as any,
+    );
+
+    vi.spyOn(behavior as any, "structureSpawnTile").mockReturnValue(coastalTile);
+
+    expect(behavior.handleStructures()).toBe(true);
+    expect(player.canBuild).toHaveBeenCalledWith(UnitType.OilRig, coastalTile);
+    expect(queuedExecutions).toHaveLength(1);
+    expect(queuedExecutions[0]).toBeInstanceOf(ConstructionExecution);
   });
 });
 

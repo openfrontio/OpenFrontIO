@@ -336,13 +336,15 @@ export class DefaultConfig implements Config {
   }
 
   oilRigIncomeInterval(): Tick {
-    // Pay oil rig income once per real-time second.
-    return Math.max(1, Math.round(1000 / this.serverConfig().turnIntervalMs()));
+    // Oil rigs dispatch freight roughly every 10 real-time seconds.
+    return Math.max(
+      1,
+      Math.round(10_000 / this.serverConfig().turnIntervalMs()),
+    );
   }
 
   oilRigIncome(level: number): Gold {
-    // Oil rigs provide $1K/sec per rig level, so upgrades stack linearly.
-    return BigInt(Math.max(1, level)) * 1_000n;
+    return toInt(Math.max(1, level) * 10_000 * this.goldMultiplier());
   }
 
   unitInfo(type: UnitType): UnitInfo {

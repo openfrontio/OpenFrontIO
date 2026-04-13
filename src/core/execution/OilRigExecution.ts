@@ -1,5 +1,5 @@
-import { renderNumber } from "../../client/Utils";
-import { Execution, Game, MessageType, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { TrainExecution } from "./TrainExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class OilRigExecution implements Execution {
@@ -11,7 +11,8 @@ export class OilRigExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.checkOffset = mg.ticks() % Math.max(1, mg.config().oilRigIncomeInterval());
+    this.checkOffset =
+      mg.ticks() % Math.max(1, mg.config().oilRigIncomeInterval());
   }
 
   tick(ticks: number): void {
@@ -28,46 +29,53 @@ export class OilRigExecution implements Execution {
       this.createStation();
     }
 
-    if (!this.shouldGenerateCoins(ticks)) {
+    if (!this.shouldSpawnFreightTrain(ticks)) {
       return;
     }
 
-    this.generateCoins(ticks);
+    this.spawnFreightTrain(ticks);
   }
 
-  private shouldGenerateCoins(ticks: number): boolean {
+  private shouldSpawnFreightTrain(ticks: number): boolean {
     const interval = Math.max(1, this.mg.config().oilRigIncomeInterval());
-
-    // TODOHERE: replace the simple timer gate with the full oil rig payout rules.
-    // possible future checks:
-    // - require adjacency to some resource node / offshore deposit
-    // - disable output while blockaded or captured recently
-    // - add warmup / depletion / storage mechanics
     void ticks;
     return (this.mg.ticks() + this.checkOffset) % interval === 0;
   }
 
-  private generateCoins(ticks: number): void {
-    const gold = this.resolveIncomeAmount();
-
-    // TODOHERE: wire in the real oil rig economy behavior.
-    // For now this method is intentionally a placeholder seam only.
-    // Likely follow-up work:
-    // - add gold to owner
-    // - display a dedicated oil-rig income message
-    // - record stats separately from trade income
+  private spawnFreightTrain(ticks: number): void {
     void ticks;
 
-    if (gold <= 0n) {
+    const sourceStation = this.mg
+      .railNetwork()
+      .stationManager()
+      .findStation(this.oilRig);
+    if (!sourceStation) {
       return;
     }
 
-    this.oilRig.owner().addGold(gold, this.oilRig.tile());
-  }
+    const cluster = sourceStation.getCluster();
+    if (!cluster) {
+      return;
+    }
 
-  private resolveIncomeAmount() {
-    // TODOHERE: this is the main balance hook for oil rig income.
-    return this.mg.config().oilRigIncome(this.oilRig.level());
+    const destination = cluster.nearestOwnedFactory(
+      sourceStation,
+      this.oilRig.owner(),
+    );
+    if (!destination) {
+      return;
+    }
+
+    this.mg.addExecution(
+      new TrainExecution(
+        this.mg.railNetwork(),
+        this.oilRig.owner(),
+        sourceStation,
+        destination,
+        5,
+        "freight",
+      ),
+    );
   }
 
   private createStation(): void {

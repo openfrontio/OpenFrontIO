@@ -18,6 +18,9 @@ class TradeStationStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
+    if (trainExecution.trainMission() !== "trade") {
+      return;
+    }
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
     const gold = mg
@@ -41,7 +44,23 @@ class FactoryStopHandler implements TrainStopHandler {
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
-  ): void {}
+  ): void {
+    if (trainExecution.trainMission() !== "freight") {
+      return;
+    }
+    if (station.unit !== trainExecution.destinationUnit()) {
+      return;
+    }
+
+    trainExecution.unloadCargo();
+    trainExecution
+      .owner()
+      .addGold(
+        mg.config().oilRigIncome(trainExecution.sourceUnit().level()),
+        station.tile(),
+        "oil",
+      );
+  }
 }
 
 export function createTrainStopHandlers(
@@ -240,6 +259,31 @@ export class Cluster {
     return tradingStations;
   }
 
+  nearestOwnedFactory(from: TrainStation, player: Player): TrainStation | null {
+    let selected: TrainStation | null = null;
+    let selectedDistance = Number.POSITIVE_INFINITY;
+
+    for (const station of this.stations) {
+      if (station === from) {
+        continue;
+      }
+      if (station.unit.type() !== UnitType.Factory) {
+        continue;
+      }
+      if (station.unit.owner() !== player) {
+        continue;
+      }
+
+      const distance = railroadDistance(from, station);
+      if (distance < selectedDistance) {
+        selected = station;
+        selectedDistance = distance;
+      }
+    }
+
+    return selected;
+  }
+
   size() {
     return this.stations.size;
   }
@@ -264,4 +308,49 @@ function rel(
     return "ally";
   }
   return "other";
+}
+
+function railroadDistance(from: TrainStation, to: TrainStation): number {
+  if (from === to) {
+    return 0;
+  }
+
+  const bestDistance = new Map<TrainStation, number>([[from, 0]]);
+  const queue: Array<{ station: TrainStation; distance: number }> = [
+    { station: from, distance: 0 },
+  ];
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.distance - b.distance);
+    const current = queue.shift()!;
+    if (
+      current.distance >
+      (bestDistance.get(current.station) ?? Number.POSITIVE_INFINITY)
+    ) {
+      continue;
+    }
+
+    for (const neighbor of current.station.neighbors()) {
+      const rail = current.station.getRailroadTo(neighbor);
+      if (!rail) {
+        continue;
+      }
+
+      const nextDistance = current.distance + rail.tiles.length;
+      if (neighbor === to) {
+        return nextDistance;
+      }
+
+      if (
+        nextDistance >= (bestDistance.get(neighbor) ?? Number.POSITIVE_INFINITY)
+      ) {
+        continue;
+      }
+
+      bestDistance.set(neighbor, nextDistance);
+      queue.push({ station: neighbor, distance: nextDistance });
+    }
+  }
+
+  return Number.POSITIVE_INFINITY;
 }

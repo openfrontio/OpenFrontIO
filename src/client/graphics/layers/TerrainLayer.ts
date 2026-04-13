@@ -60,12 +60,7 @@ export class TerrainLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.transformHandler.scale < 1) {
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = "low";
-    } else {
-      context.imageSmoothingEnabled = false;
-    }
+    context.imageSmoothingEnabled = false;
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
