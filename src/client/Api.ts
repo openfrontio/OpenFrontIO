@@ -1,7 +1,10 @@
+import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
+import type { NewsItem } from "../core/ApiSchemas";
 import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
+  NewsItemSchema,
   PlayerProfile,
   PlayerProfileSchema,
   RankedLeaderboardResponse,
@@ -261,5 +264,27 @@ export async function fetchPlayerLeaderboard(
   } catch (err) {
     console.error("fetchPlayerLeaderboard: request failed", err);
     return false;
+  }
+}
+
+export async function getNews(): Promise<NewsItem[]> {
+  try {
+    const res = await fetch(`${getApiBase()}/news.json`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status !== 200) {
+      console.warn("getNews: unexpected status", res.status);
+      return newsItemsFallback as NewsItem[];
+    }
+    const json = await res.json();
+    const parsed = z.array(NewsItemSchema).safeParse(json);
+    if (!parsed.success) {
+      console.warn("getNews: Zod validation failed", parsed.error);
+      return newsItemsFallback as NewsItem[];
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("getNews: request failed, using fallback", err);
+    return newsItemsFallback as NewsItem[];
   }
 }

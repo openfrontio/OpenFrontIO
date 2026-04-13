@@ -15,7 +15,7 @@ import { ComponentCheckTransformer } from "./transformers/ComponentCheckTransfor
 import { MiniMapTransformer } from "./transformers/MiniMapTransformer";
 import { ShoreCoercingTransformer } from "./transformers/ShoreCoercingTransformer";
 import { SmoothingWaterTransformer } from "./transformers/SmoothingWaterTransformer";
-import { PathStatus, SteppingPathFinder } from "./types";
+import { PathResult, PathStatus, SteppingPathFinder } from "./types";
 
 /**
  * Pathfinders that work with GameMap - usable in both simulation and UI layers
@@ -86,6 +86,52 @@ export class PathFinding {
     return PathFinderBuilder.create(pf).buildWithStepper({
       equals: (a, b) => a === b,
     });
+  }
+}
+
+/**
+ * Water pathfinder that auto-rebuilds when the water graph changes.
+ * Wraps SteppingPathFinder and tracks waterGraphVersion internally.
+ */
+export class WaterPathFinder implements SteppingPathFinder<TileRef> {
+  private inner: SteppingPathFinder<TileRef>;
+  private _waterGraphVersion: number;
+  private _rebuilt = false;
+
+  constructor(private game: Game) {
+    this.inner = PathFinding.Water(game);
+    this._waterGraphVersion = game.waterGraphVersion();
+  }
+
+  /** True if the pathfinder was rebuilt since the last call to `rebuilt`. Resets on read. */
+  get rebuilt(): boolean {
+    this.ensureFresh();
+    const v = this._rebuilt;
+    this._rebuilt = false;
+    return v;
+  }
+
+  private ensureFresh(): void {
+    const v = this.game.waterGraphVersion();
+    if (v !== this._waterGraphVersion) {
+      this._waterGraphVersion = v;
+      this.inner = PathFinding.Water(this.game);
+      this._rebuilt = true;
+    }
+  }
+
+  next(from: TileRef, to: TileRef, dist?: number): PathResult<TileRef> {
+    this.ensureFresh();
+    return this.inner.next(from, to, dist);
+  }
+
+  findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
+    this.ensureFresh();
+    return this.inner.findPath(from, to);
+  }
+
+  invalidate(): void {
+    this.inner.invalidate();
   }
 }
 

@@ -72,6 +72,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -299,6 +300,10 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.disable_alliances",
                     checked: this.disableAlliances,
                   },
+                  {
+                    labelKey: "host_modal.water_nukes",
+                    checked: this.waterNukes,
+                  },
                 ],
                 inputCards,
               },
@@ -463,6 +468,7 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.waterNukes = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -541,6 +547,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.disable_alliances":
         this.disableAlliances = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.water_nukes":
+        this.waterNukes = checked;
         this.putGameConfig();
         break;
       default:
@@ -789,23 +799,21 @@ export class HostLobbyModal extends BaseModal {
             disabledUnits: this.disabledUnits,
             spawnImmunityDuration: this.spawnImmunity
               ? spawnImmunityTicks
-              : undefined,
+              : null,
             playerTeams: this.teamCount,
             nations: sliderToNationsConfig(
               this.nations,
               this.defaultNationCount,
             ),
-            maxTimerValue:
-              this.maxTimer === true ? this.maxTimerValue : undefined,
+            maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
             goldMultiplier:
-              this.goldMultiplier === true
-                ? this.goldMultiplierValue
-                : undefined,
+              this.goldMultiplier === true ? this.goldMultiplierValue : null,
             startingGold:
               this.startingGold === true && this.startingGoldValue !== undefined
                 ? Math.round(this.startingGoldValue * 1_000_000)
-                : undefined,
-            disableAlliances: this.disableAlliances || undefined,
+                : null,
+            disableAlliances: this.disableAlliances || null,
+            waterNukes: this.waterNukes ? true : null,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

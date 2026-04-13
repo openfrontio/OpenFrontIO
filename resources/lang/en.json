@@ -201,6 +201,7 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -353,7 +354,12 @@
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
     "milkyway": "Milky Way",
-    "mediterranean": "Mediterranean"
+    "mediterranean": "Mediterranean",
+    "dyslexdria": "Dyslexdria",
+    "greatlakes": "Great Lakes",
+    "straitofmalacca": "Strait Of Malacca",
+    "luna": "Luna",
+    "conakry": "Conakry"
   },
   "map_categories": {
     "featured": "Featured",
@@ -432,6 +438,7 @@
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -511,7 +518,9 @@
     "sams_disabled": "SAMs Disabled",
     "sams_disabled_label": "SAMs",
     "peace_time": "4min Peace",
-    "peace_time_label": "PVP Immunity"
+    "peace_time_label": "PVP Immunity",
+    "water_nukes": "Water Nukes",
+    "water_nukes_label": "Water Nukes"
   },
   "select_lang": {
     "title": "Select Language"
@@ -609,7 +618,7 @@
     "attack_ratio_down": "Decrease Attack Ratio",
     "attack_ratio_down_desc": "Decrease attack ratio by {amount}%",
     "attack_ratio_increment_label": "Attack Ratio Keybind Increment",
-    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press.",
+    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press/scroll.",
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
@@ -935,8 +944,11 @@
     "title": "Store",
     "patterns": "Skins",
     "flags": "Flags",
+    "packs": "Packs",
     "no_flags": "No flags available. Check back later for new items.",
-    "no_skins": "No skins available. Check back later for new items."
+    "no_skins": "No skins available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
+    "currency_pack_purchase_success": "Currency pack purchase successful!"
   },
   "territory_patterns": {
     "title": "Skins",
@@ -945,10 +957,20 @@
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
   },
   "cosmetics": {
-    "artist_label": "Artist:"
+    "artist_label": "Artist:",
+    "color_label": "Color:",
+    "common": "Common",
+    "uncommon": "Uncommon",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary",
+    "adfree": "ad-free for life!",
+    "hard": "Plutonium",
+    "soft": "Caps"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1033,5 +1055,12 @@
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."
+  },
+  "news_box": {
+    "tournament": "TOURNAMENT",
+    "tutorial": "TUTORIAL",
+    "news": "NEWS",
+    "dismiss": "Dismiss",
+    "go_to_item": "Go to item {num}"
   }
 }

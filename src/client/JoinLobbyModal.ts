@@ -552,6 +552,13 @@ export class JoinLobbyModal extends BaseModal {
           .value=${translateText("common.disabled")}
         ></lobby-config-item>`,
       );
+    if (c.waterNukes)
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText("public_game_modifier.water_nukes_label")}
+          .value=${translateText("common.enabled")}
+        ></lobby-config-item>`,
+      );
     if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
       cards.push(
         html`<lobby-config-item

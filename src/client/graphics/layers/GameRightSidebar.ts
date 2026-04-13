@@ -99,7 +99,10 @@ export class GameRightSidebar extends LitElement implements Layer {
     const elapsedSeconds = Math.floor(gameTicks / 10); // 10 ticks per second
 
     if (this.game.inSpawnPhase()) {
-      this.timer = maxTimerValue !== undefined ? maxTimerValue * 60 : 0;
+      this.timer =
+        maxTimerValue !== null && maxTimerValue !== undefined
+          ? maxTimerValue * 60
+          : 0;
       return;
     }
 
@@ -107,7 +110,7 @@ export class GameRightSidebar extends LitElement implements Layer {
       return;
     }
 
-    if (maxTimerValue !== undefined) {
+    if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
     } else {
       this.timer = elapsedSeconds;
@@ -179,6 +182,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     const timerColor =
       this.game.config().gameConfig().maxTimerValue !== undefined &&
+      this.game.config().gameConfig().maxTimerValue !== null &&
       this.timer < 60
         ? "text-red-400"
         : "";

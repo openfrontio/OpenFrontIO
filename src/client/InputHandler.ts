@@ -1,6 +1,6 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
-import { UnitView } from "../core/game/GameView";
+import { GameView, UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
 import { Platform } from "./Platform";
@@ -177,6 +177,7 @@ export class InputHandler {
   private readonly userSettings: UserSettings = new UserSettings();
 
   constructor(
+    private gameView: GameView,
     public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
@@ -571,7 +572,11 @@ export class InputHandler {
         return;
       }
 
-      if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
+      if (
+        !this.userSettings.leftClickOpensMenu() ||
+        event.shiftKey ||
+        this.gameView.inSpawnPhase() // No Radial Menu during spawn phase, only spawn point selection
+      ) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
@@ -658,6 +663,9 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
     if (this.uiState.ghostStructure !== null) {
       this.setGhostStructure(null);
       return;

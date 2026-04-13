@@ -6,13 +6,17 @@ import {
 import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
+import { GameView } from "../src/core/game/GameView";
 
 class MockPointerEvent {
   button: number;
   clientX: number;
   clientY: number;
+  x: number;
+  y: number;
   pointerId: number;
   type: string;
+  pointerType: string;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -20,7 +24,10 @@ class MockPointerEvent {
     this.button = init.button;
     this.clientX = init.clientX;
     this.clientY = init.clientY;
+    this.x = init.x ?? init.clientX;
+    this.y = init.y ?? init.clientY;
     this.pointerId = init.pointerId;
+    this.pointerType = init.pointerType ?? "mouse";
     this.preventDefault = vi.fn();
   }
 }
@@ -29,10 +36,12 @@ global.PointerEvent = MockPointerEvent as any;
 
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
+  let mockGameView: GameView;
   let eventBus: EventBus;
   let mockCanvas: HTMLCanvasElement;
 
   beforeEach(() => {
+    mockGameView = { inSpawnPhase: () => false } as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
@@ -40,6 +49,7 @@ describe("InputHandler AutoUpgrade", () => {
     eventBus = new EventBus();
 
     inputHandler = new InputHandler(
+      mockGameView,
       {
         attackRatio: 20,
         ghostStructure: null,
@@ -215,6 +225,56 @@ describe("InputHandler AutoUpgrade", () => {
           y: 200.7,
         }),
       );
+    });
+  });
+
+  describe("Spawn Phase Handling", () => {
+    test("should emit MouseUpEvent and not ContextMenuEvent on left click release during spawn phase", () => {
+      mockGameView.inSpawnPhase = () => true;
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => true;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          x: 150,
+          y: 250,
+        }),
+      );
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+
+    test("should suppress/ignore context menu events during spawn phase", () => {
+      mockGameView.inSpawnPhase = () => true;
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const mouseEvent = new MouseEvent("contextmenu", {
+        clientX: 150,
+        clientY: 250,
+      });
+      const preventDefaultSpy = vi.spyOn(mouseEvent, "preventDefault");
+
+      inputHandler["onContextMenu"](mouseEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
     });
   });
 
@@ -481,7 +541,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
     });
 
@@ -533,7 +598,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
     });
 
@@ -570,7 +640,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
     });
 
@@ -590,7 +665,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
 
       window.dispatchEvent(
@@ -616,7 +696,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
 
       window.dispatchEvent(
@@ -639,7 +724,12 @@ describe("InputHandler AutoUpgrade", () => {
         overlappingRailroads: [],
         ghostRailPaths: [],
       } as UIState;
-      inputHandler = new InputHandler(uiState, mockCanvas, eventBus);
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
       inputHandler.initialize();
 
       window.dispatchEvent(

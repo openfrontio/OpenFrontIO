@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 30
     needs: [build]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
@@ -64,8 +64,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GHCR_REPO: openfront-prod
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
@@ -82,10 +80,11 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: alpha.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -102,7 +101,7 @@ jobs:
     timeout-minutes: 30
     environment: prod-beta
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -115,8 +114,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
@@ -133,10 +130,11 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: beta.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -153,7 +151,7 @@ jobs:
     timeout-minutes: 30
     environment: prod-blue
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -166,8 +164,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
@@ -184,10 +180,11 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: blue.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
@@ -204,7 +201,7 @@ jobs:
     timeout-minutes: 30
     environment: prod-green
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
@@ -217,8 +214,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
@@ -235,10 +230,11 @@ jobs:
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: green.${{ vars.DOMAIN }}
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+          while [ "$(curl -s -H "X-API-Key: ${API_KEY}" https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
             if [ "$SECONDS" -ge 300 ]; then
               echo "Timeout: deployment did not start within 5 minutes"
               exit 1
