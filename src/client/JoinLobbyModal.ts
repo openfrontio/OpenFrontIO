@@ -32,7 +32,7 @@ import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { getGamesPlayed, normaliseMapKey } from "./Utils";
+import { normaliseMapKey } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
@@ -299,15 +299,14 @@ export class JoinLobbyModal extends BaseModal {
     super.open();
     this.showNotificationPrompt = false;
 
-    // Show notification prompt on first lobby join if not already enabled/dismissed
+    // Show notification prompt whenever notifications are not enabled and not permanently dismissed
     const dismissed =
       localStorage.getItem("settings.notificationPromptDismissed") === "true";
     if (
       !dismissed &&
       !this.userSettings.browserNotifications() &&
       "Notification" in window &&
-      Notification.permission !== "denied" &&
-      getGamesPlayed() === 0
+      Notification.permission !== "denied"
     ) {
       this.showNotificationPrompt = true;
     }

@@ -545,7 +545,8 @@
     "title": "Never miss a game",
     "body": "Enable browser notifications to get alerted when your game starts, even if you switch tabs.",
     "enable": "Enable",
-    "dismiss": "Not now"
+    "dismiss": "Not now",
+    "dismiss_forever": "Don't show again"
   },
   "user_setting": {
     "title": "Settings",

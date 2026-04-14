@@ -54,10 +54,18 @@ describe("NotificationPrompt", () => {
   beforeEach(resetStorage);
   afterEach(() => vi.restoreAllMocks());
 
-  it("dismiss() persists notificationPromptDismissed", () => {
+  it("dismiss() hides prompt but does NOT write notificationPromptDismissed", () => {
     const prompt = new NotificationPrompt();
     prompt.visible = true;
     (prompt as any).dismiss();
+    expect(ls.getItem("settings.notificationPromptDismissed")).toBeNull();
+    expect(prompt.visible).toBe(false);
+  });
+
+  it("dismissForever() persists notificationPromptDismissed", () => {
+    const prompt = new NotificationPrompt();
+    prompt.visible = true;
+    (prompt as any).dismissForever();
     expect(ls.getItem("settings.notificationPromptDismissed")).toBe("true");
     expect(prompt.visible).toBe(false);
   });
@@ -98,15 +106,20 @@ describe("JoinLobbyModal notification prompt", () => {
     return m;
   }
 
-  it("shows prompt on first open when notifications not enabled", () => {
-    ls.setItem("gamesPlayed", "0");
+  it("shows prompt when notifications not enabled", () => {
     const m = makeModal();
     m.open();
     expect((m as any).showNotificationPrompt).toBe(true);
   });
 
-  it("does not show when already dismissed", () => {
-    ls.setItem("gamesPlayed", "0");
+  it("shows prompt even when gamesPlayed > 0", () => {
+    ls.setItem("gamesPlayed", "10");
+    const m = makeModal();
+    m.open();
+    expect((m as any).showNotificationPrompt).toBe(true);
+  });
+
+  it("does not show when dismissed forever", () => {
     ls.setItem("settings.notificationPromptDismissed", "true");
     const m = makeModal();
     m.open();
@@ -114,7 +127,6 @@ describe("JoinLobbyModal notification prompt", () => {
   });
 
   it("does not show when browserNotifications already enabled", () => {
-    ls.setItem("gamesPlayed", "0");
     ls.setItem("settings.browserNotifications", "true");
     (UserSettings as any).cache = new Map();
     const m = makeModal();
@@ -122,23 +134,23 @@ describe("JoinLobbyModal notification prompt", () => {
     expect((m as any).showNotificationPrompt).toBe(false);
   });
 
-  it("does not show when gamesPlayed > 0", () => {
-    ls.setItem("gamesPlayed", "3");
-    const m = makeModal();
-    m.open();
-    expect((m as any).showNotificationPrompt).toBe(false);
-  });
-
   it("does not show when Notification permission is denied", () => {
-    ls.setItem("gamesPlayed", "0");
     notifMock.permission = "denied";
     const m = makeModal();
     m.open();
     expect((m as any).showNotificationPrompt).toBe(false);
   });
 
-  it("resets prompt to false on re-open after dismiss", () => {
-    ls.setItem("gamesPlayed", "0");
+  it("shows again on re-open after dismiss (not forever)", () => {
+    const m = makeModal();
+    m.open();
+    expect((m as any).showNotificationPrompt).toBe(true);
+    (m as any).showNotificationPrompt = false;
+    m.open();
+    expect((m as any).showNotificationPrompt).toBe(true);
+  });
+
+  it("does not show on re-open after dismissForever", () => {
     const m = makeModal();
     m.open();
     expect((m as any).showNotificationPrompt).toBe(true);

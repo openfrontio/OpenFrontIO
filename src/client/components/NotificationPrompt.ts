@@ -4,7 +4,7 @@ import { translateText } from "../Utils";
 
 /**
  * A small banner shown inside the lobby when the user hasn't enabled
- * browser notifications yet. Dismissed permanently via localStorage.
+ * browser notifications yet.
  */
 @customElement("notification-prompt")
 export class NotificationPrompt extends LitElement {
@@ -23,6 +23,11 @@ export class NotificationPrompt extends LitElement {
   }
 
   private dismiss() {
+    this.visible = false;
+    this.requestUpdate();
+  }
+
+  private dismissForever() {
     localStorage.setItem("settings.notificationPromptDismissed", "true");
     this.visible = false;
     this.requestUpdate();
@@ -58,6 +63,13 @@ export class NotificationPrompt extends LitElement {
             @click=${this.dismiss}
           >
             ${translateText("notification_prompt.dismiss")}
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1 text-xs text-white/25 hover:text-white/50 transition-colors"
+            @click=${this.dismissForever}
+          >
+            ${translateText("notification_prompt.dismiss_forever")}
           </button>
         </div>
       </div>
