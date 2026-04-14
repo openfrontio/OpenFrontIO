@@ -14,7 +14,6 @@ import { TileRef } from "../src/core/game/GameMap";
 // Minimal tile ref for testing
 const TILE = 42 as TileRef;
 const PLAYER_ID = "player-1";
-const SEARCH_RADIUS = 15;
 
 /** Creates a minimal unit view stub for testing. */
 function makeUnit(id: number, type: UnitType, ownerID: string, tile = TILE) {
@@ -28,11 +27,12 @@ function makeUnit(id: number, type: UnitType, ownerID: string, tile = TILE) {
 
 /**
  * Builds a minimal ClientGameRunner stub with mocked dependencies.
- * @param buildableUnits - list returned by myPlayer.actions()
+ * @param buildableUnits - list returned by myPlayer.actions(); set canUpgrade to
+ *   a unit id to mark it upgradeable, or false to mark it as existing but blocked
+ *   (e.g. insufficient gold).
  * @param allUnits - units returned by gameView.units()
- * @param nearbySams - units returned by gameView.nearbyUnits() for SAMLauncher queries
  */
-function makeRunner(buildableUnits: any[], allUnits: any[], nearbySams: any[]) {
+function makeRunner(buildableUnits: any[], allUnits: any[]) {
   const eventBus = new EventBus();
   const emitSpy = vi.spyOn(eventBus, "emit");
 
@@ -44,11 +44,9 @@ function makeRunner(buildableUnits: any[], allUnits: any[], nearbySams: any[]) {
   const gameView = {
     units: () => allUnits,
     manhattanDist: (_a: TileRef, _b: TileRef) => 5,
-    nearbyUnits: vi.fn().mockReturnValue(nearbySams),
-    config: () => ({ structureMinDist: () => SEARCH_RADIUS }),
   };
 
-  // Minimal stub of ClientGameRunner exposing only what we need
+  // Mirrors ClientGameRunner.findAndUpgradeNearestBuilding
   const runner = {
     myPlayer,
     gameView,
@@ -90,15 +88,13 @@ function makeRunner(buildableUnits: any[], allUnits: any[], nearbySams: any[]) {
       );
 
       if (bestUpgrade.unitType !== UnitType.SAMLauncher) {
-        const myPlayerID = this.myPlayer!.id();
-        const nearbySam = this.gameView
-          .nearbyUnits(
-            tile,
-            this.gameView.config().structureMinDist(),
-            UnitType.SAMLauncher,
-          )
-          .some(({ unit }: any) => unit.owner().id() === myPlayerID);
-        if (nearbySam) return;
+        // If actions() returned a SAM entry with canUpgrade===false, a SAM
+        // exists near clickedTile but can't be afforded — do nothing.
+        const samBlockedByGold = actions.buildableUnits.some(
+          (bu: any) =>
+            bu.type === UnitType.SAMLauncher && bu.canUpgrade === false,
+        );
+        if (samBlockedByGold) return;
       }
 
       this.eventBus.emit(
@@ -118,7 +114,7 @@ describe("findAndUpgradeNearestBuilding", () => {
     test("upgrades DefensePost when it is the only upgradeable building", async () => {
       const defensePost = makeUnit(1, UnitType.DefensePost, PLAYER_ID);
       const buildableUnits = [{ type: UnitType.DefensePost, canUpgrade: 1 }];
-      const { runner, emitSpy } = makeRunner(buildableUnits, [defensePost], []);
+      const { runner, emitSpy } = makeRunner(buildableUnits, [defensePost]);
 
       await runner.findAndUpgradeNearestBuilding(TILE);
 
@@ -131,7 +127,7 @@ describe("findAndUpgradeNearestBuilding", () => {
       const buildableUnits = [
         { type: UnitType.DefensePost, canUpgrade: false },
       ];
-      const { runner, emitSpy } = makeRunner(buildableUnits, [], []);
+      const { runner, emitSpy } = makeRunner(buildableUnits, []);
 
       await runner.findAndUpgradeNearestBuilding(TILE);
 
@@ -141,38 +137,24 @@ describe("findAndUpgradeNearestBuilding", () => {
 
   describe("SAM nearby — the bug scenario", () => {
     test("does NOT upgrade DefensePost when own SAM is nearby but unaffordable", async () => {
-      // SAM exists on the map but canUpgrade=false (not enough gold)
-      const samUnit = makeUnit(10, UnitType.SAMLauncher, PLAYER_ID);
       const defensePost = makeUnit(1, UnitType.DefensePost, PLAYER_ID);
 
-      // Only DefensePost is upgradeable (SAM excluded due to insufficient gold)
+      // SAM has canUpgrade=false (exists near tile but gold insufficient)
       const buildableUnits = [
         { type: UnitType.SAMLauncher, canUpgrade: false },
         { type: UnitType.DefensePost, canUpgrade: 1 },
       ];
-
-      // nearbyUnits returns the SAM
-      const nearbySams = [{ unit: samUnit }];
-      const { runner, emitSpy } = makeRunner(
-        buildableUnits,
-        [defensePost],
-        nearbySams,
-      );
+      const { runner, emitSpy } = makeRunner(buildableUnits, [defensePost]);
 
       await runner.findAndUpgradeNearestBuilding(TILE);
 
       expect(emitSpy).not.toHaveBeenCalled();
     });
 
-    test("upgrades SAM when it IS affordable and is the closest upgradeable building", async () => {
+    test("upgrades SAM when it IS affordable", async () => {
       const samUnit = makeUnit(10, UnitType.SAMLauncher, PLAYER_ID);
       const buildableUnits = [{ type: UnitType.SAMLauncher, canUpgrade: 10 }];
-      const nearbySams = [{ unit: samUnit }];
-      const { runner, emitSpy } = makeRunner(
-        buildableUnits,
-        [samUnit],
-        nearbySams,
-      );
+      const { runner, emitSpy } = makeRunner(buildableUnits, [samUnit]);
 
       await runner.findAndUpgradeNearestBuilding(TILE);
 
@@ -181,18 +163,11 @@ describe("findAndUpgradeNearestBuilding", () => {
       );
     });
 
-    test("does not upgrade enemy SAM nearby — upgrades own DefensePost instead", async () => {
-      const enemySam = makeUnit(10, UnitType.SAMLauncher, "enemy-player");
+    test("upgrades DefensePost when no SAM entry exists in buildableUnits at all", async () => {
+      // No SAM in buildableUnits means no SAM near this tile — normal upgrade
       const defensePost = makeUnit(1, UnitType.DefensePost, PLAYER_ID);
       const buildableUnits = [{ type: UnitType.DefensePost, canUpgrade: 1 }];
-
-      // nearbyUnits returns an enemy SAM — should not block the upgrade
-      const nearbySams = [{ unit: enemySam }];
-      const { runner, emitSpy } = makeRunner(
-        buildableUnits,
-        [defensePost],
-        nearbySams,
-      );
+      const { runner, emitSpy } = makeRunner(buildableUnits, [defensePost]);
 
       await runner.findAndUpgradeNearestBuilding(TILE);
 
@@ -216,13 +191,11 @@ describe("findAndUpgradeNearestBuilding", () => {
         { type: UnitType.Factory, canUpgrade: 2 },
       ];
 
-      // Override manhattanDist to return different distances
-      const { runner, emitSpy } = makeRunner(
-        buildableUnits,
-        [defensePost, factory],
-        [],
-      );
-      runner.gameView.manhattanDist = (a: TileRef, b: TileRef) =>
+      const { runner, emitSpy } = makeRunner(buildableUnits, [
+        defensePost,
+        factory,
+      ]);
+      runner.gameView.manhattanDist = (_a: TileRef, b: TileRef) =>
         b === (10 as TileRef) ? 3 : 8;
 
       await runner.findAndUpgradeNearestBuilding(TILE);
@@ -232,7 +205,7 @@ describe("findAndUpgradeNearestBuilding", () => {
       );
     });
 
-    test("upgrades SAM when both SAM and DefensePost are upgradeable and SAM is nearby", async () => {
+    test("upgrades SAM when both SAM and DefensePost are upgradeable and SAM is closer", async () => {
       const samUnit = makeUnit(
         10,
         UnitType.SAMLauncher,
@@ -249,13 +222,11 @@ describe("findAndUpgradeNearestBuilding", () => {
         { type: UnitType.SAMLauncher, canUpgrade: 10 },
         { type: UnitType.DefensePost, canUpgrade: 1 },
       ];
-      const nearbySams = [{ unit: samUnit }];
-      const { runner, emitSpy } = makeRunner(
-        buildableUnits,
-        [samUnit, defensePost],
-        nearbySams,
-      );
-      runner.gameView.manhattanDist = (a: TileRef, b: TileRef) =>
+      const { runner, emitSpy } = makeRunner(buildableUnits, [
+        samUnit,
+        defensePost,
+      ]);
+      runner.gameView.manhattanDist = (_a: TileRef, b: TileRef) =>
         b === (5 as TileRef) ? 2 : 10;
 
       await runner.findAndUpgradeNearestBuilding(TILE);

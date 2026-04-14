@@ -659,26 +659,21 @@ export class ClientGameRunner {
       }
 
       // If the closest upgradeable unit is a SAM, upgrade it.
-      // If the closest upgradeable unit is NOT a SAM but there's an own SAM
-      // nearby (within the same search radius), prefer doing nothing — the
-      // player most likely middle-clicked the SAM intending to upgrade it but
-      // couldn't afford it, and we must not spend gold on a different building.
+      // If the closest upgradeable unit is NOT a SAM, but actions() found a SAM
+      // entry with canUpgrade===false (SAM exists near clickedTile but can't be
+      // afforded right now), do nothing — the player intended to upgrade that
+      // SAM and we must not spend their gold on a different building.
       const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
       if (!bestUpgrade) {
         return;
       }
 
       if (bestUpgrade.unitType !== UnitType.SAMLauncher) {
-        const myPlayerID = this.myPlayer!.id();
-        const nearbySam = this.gameView
-          .nearbyUnits(
-            clickedTile,
-            this.gameView.config().structureMinDist(),
-            UnitType.SAMLauncher,
-          )
-          .some(({ unit }) => unit.owner().id() === myPlayerID);
-        if (nearbySam) {
-          // Clicked near a SAM that can't be upgraded — do nothing.
+        const samBlockedByGold = actions.buildableUnits.some(
+          (bu) => bu.type === UnitType.SAMLauncher && bu.canUpgrade === false,
+        );
+        if (samBlockedByGold) {
+          // A SAM near clickedTile exists but can't be upgraded yet — do nothing.
           return;
         }
       }
