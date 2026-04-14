@@ -27,15 +27,17 @@ import {
   GameType,
   HumansVsNations,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { normaliseMapKey } from "./Utils";
+import { getGamesPlayed, normaliseMapKey } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
+import "./components/NotificationPrompt";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
@@ -48,6 +50,9 @@ export class JoinLobbyModal extends BaseModal {
   @state() private players: ClientInfo[] = [];
   @state() private playerCount: number = 0;
   @state() private gameConfig: GameConfig | null = null;
+  @state() private showNotificationPrompt = false;
+
+  private userSettings = new UserSettings();
   @state() private currentLobbyId: string = "";
   @state() private currentClientID: string = "";
   @state() private nationCount: number = 0;
@@ -117,6 +122,10 @@ export class JoinLobbyModal extends BaseModal {
                 `
               : undefined,
         })}
+        <notification-prompt
+          .visible=${this.showNotificationPrompt}
+          @enable=${this.handleEnableNotifications}
+        ></notification-prompt>
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           ${this.isConnecting
             ? html`
@@ -288,6 +297,20 @@ export class JoinLobbyModal extends BaseModal {
 
   public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
     super.open();
+
+    // Show notification prompt on first lobby join if not already enabled/dismissed
+    const dismissed =
+      localStorage.getItem("settings.notificationPromptDismissed") === "true";
+    if (
+      !dismissed &&
+      !this.userSettings.browserNotifications() &&
+      "Notification" in window &&
+      Notification.permission !== "denied" &&
+      getGamesPlayed() === 0
+    ) {
+      this.showNotificationPrompt = true;
+    }
+
     if (lobbyId) {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
@@ -421,6 +444,14 @@ export class JoinLobbyModal extends BaseModal {
   public closeWithoutLeaving() {
     this.leaveLobbyOnClose = false;
     this.close();
+  }
+
+  private handleEnableNotifications() {
+    this.userSettings.toggleBrowserNotifications();
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    this.showNotificationPrompt = false;
   }
 
   private updateHistory(url: string): void {

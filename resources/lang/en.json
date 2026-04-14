@@ -541,6 +541,12 @@
     "mirv": "MIRV",
     "factory": "Factory"
   },
+  "notification_prompt": {
+    "title": "Never miss a game",
+    "body": "Enable browser notifications to get alerted when your game starts, even if you switch tabs.",
+    "enable": "Enable",
+    "dismiss": "Not now"
+  },
   "user_setting": {
     "title": "Settings",
     "tab_basic": "Basic Settings",
