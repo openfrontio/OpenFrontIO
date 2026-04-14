@@ -23,6 +23,9 @@ export class NotificationPrompt extends LitElement {
   }
 
   private dismiss() {
+    this.dispatchEvent(
+      new CustomEvent("dismiss", { bubbles: true, composed: true }),
+    );
     this.visible = false;
     this.requestUpdate();
   }
@@ -33,6 +36,9 @@ export class NotificationPrompt extends LitElement {
     } catch (e) {
       console.warn("[NotificationPrompt] Failed to persist dismissal:", e);
     } finally {
+      this.dispatchEvent(
+        new CustomEvent("dismiss-forever", { bubbles: true, composed: true }),
+      );
       this.visible = false;
       this.requestUpdate();
     }

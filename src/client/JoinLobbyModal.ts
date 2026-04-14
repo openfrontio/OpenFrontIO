@@ -125,6 +125,12 @@ export class JoinLobbyModal extends BaseModal {
         <notification-prompt
           .visible=${this.showNotificationPrompt}
           @enable=${this.handleEnableNotifications}
+          @dismiss=${() => {
+            this.showNotificationPrompt = false;
+          }}
+          @dismiss-forever=${() => {
+            this.showNotificationPrompt = false;
+          }}
         ></notification-prompt>
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           ${this.isConnecting
