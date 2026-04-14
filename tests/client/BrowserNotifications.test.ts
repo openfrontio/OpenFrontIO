@@ -6,9 +6,15 @@ import { UserSettings } from "../../src/core/game/UserSettings";
 const store: Record<string, string> = {};
 const ls = {
   getItem: (k: string) => store[k] ?? null,
-  setItem: (k: string, v: string) => { store[k] = v; },
-  removeItem: (k: string) => { delete store[k]; },
-  clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  setItem: (k: string, v: string) => {
+    store[k] = v;
+  },
+  removeItem: (k: string) => {
+    delete store[k];
+  },
+  clear: () => {
+    Object.keys(store).forEach((k) => delete store[k]);
+  },
 };
 vi.stubGlobal("localStorage", ls);
 
@@ -63,16 +69,24 @@ describe("NotificationPrompt", () => {
     (prompt as any).handleEnable();
     expect(ls.getItem("settings.notificationPromptDismissed")).toBeNull();
     expect(prompt.visible).toBe(false);
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ type: "enable" }));
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "enable" }),
+    );
   });
 });
 
 describe("JoinLobbyModal notification prompt", () => {
-  let notifMock: { permission: NotificationPermission; requestPermission: ReturnType<typeof vi.fn> };
+  let notifMock: {
+    permission: NotificationPermission;
+    requestPermission: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     resetStorage();
-    notifMock = { permission: "default", requestPermission: vi.fn().mockResolvedValue("granted") };
+    notifMock = {
+      permission: "default",
+      requestPermission: vi.fn().mockResolvedValue("granted"),
+    };
     vi.stubGlobal("Notification", notifMock);
   });
 
@@ -135,11 +149,17 @@ describe("JoinLobbyModal notification prompt", () => {
 });
 
 describe("JoinLobbyModal.handleEnableNotifications", () => {
-  let notifMock: { permission: NotificationPermission; requestPermission: ReturnType<typeof vi.fn> };
+  let notifMock: {
+    permission: NotificationPermission;
+    requestPermission: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     resetStorage();
-    notifMock = { permission: "default", requestPermission: vi.fn().mockResolvedValue("granted") };
+    notifMock = {
+      permission: "default",
+      requestPermission: vi.fn().mockResolvedValue("granted"),
+    };
     vi.stubGlobal("Notification", notifMock);
   });
 
