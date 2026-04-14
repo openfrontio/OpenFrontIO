@@ -16,6 +16,7 @@ const TILE = 42 as TileRef;
 const PLAYER_ID = "player-1";
 const SEARCH_RADIUS = 15;
 
+/** Creates a minimal unit view stub for testing. */
 function makeUnit(id: number, type: UnitType, ownerID: string, tile = TILE) {
   return {
     id: () => id,
@@ -25,6 +26,12 @@ function makeUnit(id: number, type: UnitType, ownerID: string, tile = TILE) {
   };
 }
 
+/**
+ * Builds a minimal ClientGameRunner stub with mocked dependencies.
+ * @param buildableUnits - list returned by myPlayer.actions()
+ * @param allUnits - units returned by gameView.units()
+ * @param nearbySams - units returned by gameView.nearbyUnits() for SAMLauncher queries
+ */
 function makeRunner(buildableUnits: any[], allUnits: any[], nearbySams: any[]) {
   const eventBus = new EventBus();
   const emitSpy = vi.spyOn(eventBus, "emit");
