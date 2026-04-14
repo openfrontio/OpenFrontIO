@@ -46,12 +46,14 @@ export class NotificationPrompt extends LitElement {
         </div>
         <div class="flex flex-col gap-1.5 shrink-0">
           <button
+            type="button"
             class="px-3 py-1 text-xs font-semibold bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/40 rounded-lg text-blue-300 transition-colors"
             @click=${this.handleEnable}
           >
             ${translateText("notification_prompt.enable")}
           </button>
           <button
+            type="button"
             class="px-3 py-1 text-xs text-white/40 hover:text-white/70 transition-colors"
             @click=${this.dismiss}
           >
