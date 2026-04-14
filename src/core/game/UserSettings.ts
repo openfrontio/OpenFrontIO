@@ -44,6 +44,7 @@ export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
+export const BROWSER_NOTIFICATIONS_KEY = "settings.browserNotifications";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -126,6 +127,14 @@ export class UserSettings {
 
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
+  }
+
+  browserNotifications() {
+    return this.getBool(BROWSER_NOTIFICATIONS_KEY, false);
+  }
+
+  toggleBrowserNotifications() {
+    this.setBool(BROWSER_NOTIFICATIONS_KEY, !this.browserNotifications());
   }
 
   alertFrame() {

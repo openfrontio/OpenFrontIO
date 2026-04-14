@@ -480,7 +480,9 @@
   "game_starting_modal": {
     "title": "Game is Starting...",
     "credits": "Credits",
-    "code_license": "Code licensed under AGPL-3.0 (no warranty)"
+    "code_license": "Code licensed under AGPL-3.0 (no warranty)",
+    "notification_title": "OpenFront - Game Starting!",
+    "notification_body": "Your game is starting. Come back to play!"
   },
   "difficulty": {
     "difficulty": "Nation difficulty",
@@ -549,6 +551,8 @@
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
+    "browser_notifications_label": "Browser Notifications",
+    "browser_notifications_desc": "Send a browser notification when a game starts while you are on another tab.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "structure_sprites_label": "Structure Sprites",

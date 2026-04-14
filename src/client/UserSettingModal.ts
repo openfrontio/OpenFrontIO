@@ -222,6 +222,14 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleBrowserNotifications() {
+    this.userSettings.toggleBrowserNotifications();
+    console.log(
+      "🔔 Browser Notifications:",
+      this.userSettings.browserNotifications() ? "ON" : "OFF",
+    );
+  }
+
   private toggleFxLayer() {
     this.userSettings.toggleFxLayer();
 
@@ -748,6 +756,15 @@ export class UserSettingModal extends BaseModal {
         id="alert-frame-toggle"
         .checked=${this.userSettings.alertFrame()}
         @change=${this.toggleAlertFrame}
+      ></setting-toggle>
+
+      <!-- 🔔 Browser Notifications -->
+      <setting-toggle
+        label="${translateText("user_setting.browser_notifications_label")}"
+        description="${translateText("user_setting.browser_notifications_desc")}"
+        id="browser-notifications-toggle"
+        .checked=${this.userSettings.browserNotifications()}
+        @change=${this.toggleBrowserNotifications}
       ></setting-toggle>
 
       <!-- 💥 Special effects -->
