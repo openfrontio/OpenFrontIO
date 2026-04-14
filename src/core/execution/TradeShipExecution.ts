@@ -22,6 +22,8 @@ export class TradeShipExecution implements Execution {
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
 
+  private static _staggerCounter = 0;
+
   constructor(
     private origOwner: Player,
     private srcPort: Unit,
@@ -30,7 +32,9 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = new WaterPathFinder(mg);
+    const stagger =
+      TradeShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    this.pathFinder = new WaterPathFinder(mg, stagger);
   }
 
   tick(ticks: number): void {
