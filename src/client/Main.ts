@@ -870,10 +870,13 @@ class Client {
     const send = () => {
       if (document.visibilityState !== "visible") {
         try {
-          new Notification("OpenFront - Game Starting!", {
-            body: "Your game is starting. Come back to play!",
-            icon: "/favicon.ico",
-          });
+          new Notification(
+            translateText("game_starting_modal.notification_title"),
+            {
+              body: translateText("game_starting_modal.notification_body"),
+              icon: "/favicon.ico",
+            },
+          );
         } catch (e) {
           console.warn("[Notification] Failed to send notification:", e);
         }
