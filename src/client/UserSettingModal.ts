@@ -228,6 +228,14 @@ export class UserSettingModal extends BaseModal {
       "🔔 Browser Notifications:",
       this.userSettings.browserNotifications() ? "ON" : "OFF",
     );
+    // Request permission immediately when the user enables the setting
+    if (
+      this.userSettings.browserNotifications() &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission();
+    }
   }
 
   private toggleFxLayer() {
@@ -761,7 +769,9 @@ export class UserSettingModal extends BaseModal {
       <!-- 🔔 Browser Notifications -->
       <setting-toggle
         label="${translateText("user_setting.browser_notifications_label")}"
-        description="${translateText("user_setting.browser_notifications_desc")}"
+        description="${translateText(
+          "user_setting.browser_notifications_desc",
+        )}"
         id="browser-notifications-toggle"
         .checked=${this.userSettings.browserNotifications()}
         @change=${this.toggleBrowserNotifications}

@@ -865,13 +865,15 @@ class Client {
   private sendGameStartNotification() {
     if (!this.userSettings.browserNotifications()) return;
     if (!("Notification" in window)) return;
-    if (document.visibilityState === "visible") return;
 
     const send = () => {
-      new Notification("OpenFront - Game Starting!", {
-        body: "Your game is starting. Come back to play!",
-        icon: "/favicon.ico",
-      });
+      // Only notify if the tab is not currently visible
+      if (document.visibilityState !== "visible") {
+        new Notification("OpenFront - Game Starting!", {
+          body: "Your game is starting. Come back to play!",
+          icon: "/favicon.ico",
+        });
+      }
     };
 
     if (Notification.permission === "granted") {
