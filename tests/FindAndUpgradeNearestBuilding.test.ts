@@ -4,6 +4,13 @@ import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 
+/**
+ * NOTE: The `findAndUpgradeNearestBuilding` function below is a test-local
+ * mirror of `ClientGameRunner.findAndUpgradeNearestBuilding` (src/client/ClientGameRunner.ts).
+ * If you change the production logic, update this stub accordingly so the
+ * tests remain meaningful.
+ */
+
 // Minimal tile ref for testing
 const TILE = 42 as TileRef;
 const PLAYER_ID = "player-1";
@@ -67,15 +74,6 @@ function makeRunner(buildableUnits: any[], allUnits: any[], nearbySams: any[]) {
       }
 
       if (upgradeUnits.length === 0) {
-        const myPlayerID = this.myPlayer!.id();
-        const nearbySam = this.gameView
-          .nearbyUnits(
-            tile,
-            this.gameView.config().structureMinDist(),
-            UnitType.SAMLauncher,
-          )
-          .some(({ unit }: any) => unit.owner().id() === myPlayerID);
-        if (nearbySam) return;
         return;
       }
 

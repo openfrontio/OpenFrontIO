@@ -655,20 +655,6 @@ export class ClientGameRunner {
       }
 
       if (upgradeUnits.length === 0) {
-        // No upgradeable buildings found. Check if there's a SAM nearby that
-        // simply can't be upgraded yet (e.g. not enough gold). If so, do
-        // nothing — don't fall through to upgrading some other building.
-        const myPlayerID = this.myPlayer!.id();
-        const nearbySam = this.gameView
-          .nearbyUnits(
-            clickedTile,
-            this.gameView.config().structureMinDist(),
-            UnitType.SAMLauncher,
-          )
-          .some(({ unit }) => unit.owner().id() === myPlayerID);
-        if (nearbySam) {
-          return;
-        }
         return;
       }
 
