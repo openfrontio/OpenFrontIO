@@ -271,7 +271,7 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 0n;
     }
-    return BigInt(this._gameConfig.startingGold ?? 0);
+    return this.startingGoldFor(playerInfo);
   }
 
   trainSpawnRate(numPlayerFactories: number): number {
@@ -396,7 +396,10 @@ export class DefaultConfig implements Config {
       case UnitType.MIRV:
         info = {
           cost: (game: Game, player: Player) => {
-            if (player.type() === PlayerType.Human && this.infiniteGold()) {
+            if (
+              player.type() === PlayerType.Human &&
+              this.hasInfiniteGoldFor(player)
+            ) {
               return 0n;
             }
             return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
@@ -478,12 +481,55 @@ export class DefaultConfig implements Config {
     return info;
   }
 
+  private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
+    if (this.infiniteGold()) return true;
+    const hc = this._gameConfig.hostCheats;
+    return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
+  }
+
+  private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
+    if (this.infiniteTroops()) return true;
+    return (
+      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+      player.isLobbyCreator()
+    );
+  }
+
+  private hasInfiniteTroopsForInfo(playerInfo: PlayerInfo): boolean {
+    if (this.infiniteTroops()) return true;
+    return (
+      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+      playerInfo.isLobbyCreator
+    );
+  }
+
+  private goldMultiplierFor(player: Player | PlayerView): number {
+    const base = this.goldMultiplier();
+    const hc = this._gameConfig.hostCheats;
+    if (hc?.goldMultiplier && player.isLobbyCreator()) {
+      return hc.goldMultiplier;
+    }
+    return base;
+  }
+
+  private startingGoldFor(playerInfo: PlayerInfo): Gold {
+    const base = BigInt(this._gameConfig.startingGold ?? 0);
+    const hc = this._gameConfig.hostCheats;
+    if (hc?.startingGold && playerInfo.isLobbyCreator) {
+      return base + BigInt(hc.startingGold);
+    }
+    return base;
+  }
+
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
   ): (g: Game, p: Player) => bigint {
     return (game: Game, player: Player) => {
-      if (player.type() === PlayerType.Human && this.infiniteGold()) {
+      if (
+        player.type() === PlayerType.Human &&
+        this.hasInfiniteGoldFor(player)
+      ) {
         return 0n;
       }
       const numUnits = types.reduce(
@@ -761,12 +807,12 @@ export class DefaultConfig implements Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
-      player.type() === PlayerType.Human && this.infiniteTroops()
+      player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
@@ -833,7 +879,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplierFor(player);
     let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
       baseRate = 50n;
