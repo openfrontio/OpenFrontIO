@@ -865,24 +865,22 @@ class Client {
   private sendGameStartNotification() {
     if (!this.userSettings.browserNotifications()) return;
     if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
 
     const send = () => {
-      // Only notify if the tab is not currently visible
       if (document.visibilityState !== "visible") {
-        new Notification("OpenFront - Game Starting!", {
-          body: "Your game is starting. Come back to play!",
-          icon: "/favicon.ico",
-        });
+        try {
+          new Notification("OpenFront - Game Starting!", {
+            body: "Your game is starting. Come back to play!",
+            icon: "/favicon.ico",
+          });
+        } catch (e) {
+          console.warn("[Notification] Failed to send notification:", e);
+        }
       }
     };
 
-    if (Notification.permission === "granted") {
-      send();
-    } else if (Notification.permission === "default") {
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") send();
-      });
-    }
+    send();
   }
 
   private updateJoinUrlForShare(
