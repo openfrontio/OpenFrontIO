@@ -669,12 +669,35 @@ export class ClientGameRunner {
       }
 
       if (bestUpgrade.unitType !== UnitType.SAMLauncher) {
-        const samBlockedByGold = actions.buildableUnits.some(
+        // Block the upgrade only if an unaffordable own SAM is closer to
+        // clickedTile than the best candidate — meaning the player clicked on
+        // the SAM, not on the other building. If the SAM is farther away, the
+        // click was intentionally on the other building and we should proceed.
+        const hasBlockedSamEntry = actions.buildableUnits.some(
           (bu) => bu.type === UnitType.SAMLauncher && bu.canUpgrade === false,
         );
-        if (samBlockedByGold) {
-          // A SAM near clickedTile exists but can't be upgraded yet — do nothing.
-          return;
+        if (hasBlockedSamEntry) {
+          const myPlayerID = this.myPlayer!.id();
+          const closestSam = this.gameView
+            .nearbyUnits(
+              clickedTile,
+              this.gameView.config().structureMinDist(),
+              UnitType.SAMLauncher,
+            )
+            .filter(({ unit }) => unit.owner().id() === myPlayerID)
+            .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+          if (closestSam) {
+            const samDist = this.gameView.manhattanDist(
+              clickedTile,
+              closestSam.unit.tile(),
+            );
+            if (samDist <= bestUpgrade.distance) {
+              // SAM is at least as close as the best candidate — player clicked
+              // on the SAM, not on the other building. Do nothing.
+              return;
+            }
+          }
         }
       }
 
