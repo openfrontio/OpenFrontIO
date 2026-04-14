@@ -21,5 +21,7 @@ updates:
     groups:
       golang:
         applies-to: security-updates
-        patterns:
-          - ["*"]
+    groups:
+      golang:
+        applies-to: security-updates
+        patterns: ["*"]
