@@ -31,15 +31,20 @@ export class DiscordUserHeader extends LitElement {
   }
 
   render() {
+    const defaultAvatar = "https://cdn.discordapp.com/embed/avatars/0.png";
+    const imgSrc = this.avatarUrl ?? defaultAvatar;
     return html`
       <div class="flex items-center gap-2">
-        ${this.avatarUrl
+        ${this._data
           ? html`
               <div class="p-[3px] rounded-full bg-gray-500">
                 <img
                   class="w-12 h-12 rounded-full block"
-                  src="${this.avatarUrl}"
+                  src="${imgSrc}"
                   alt="${translateText("discord_user_header.avatar_alt")}"
+                  @error=${(e: Event) => {
+                    (e.target as HTMLImageElement).src = defaultAvatar;
+                  }}
                 />
               </div>
             `

@@ -8,16 +8,16 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
-import { distSortUnit } from "../Util";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
+import { findClosestBy } from "../Util";
 
 export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: SteppingPathFinder<TileRef>;
+  private pathFinder: WaterPathFinder;
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
@@ -30,10 +30,14 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinding.Water(mg);
+    this.pathFinder = new WaterPathFinder(mg);
   }
 
   tick(ticks: number): void {
+    if (this.pathFinder.rebuilt) {
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
+
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
@@ -80,27 +84,35 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
+    const curTile = this.tradeShip.tile();
+
     if (
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
-      const ports = this.tradeShip
-        .owner()
-        .units(UnitType.Port)
-        .sort(distSortUnit(this.mg, this.tradeShip));
-      if (ports.length === 0) {
+      const myComponent = this.mg.getWaterComponent(curTile);
+      const nearestPort = findClosestBy(
+        tradeShipOwner.units(UnitType.Port),
+        (port) => this.mg.manhattanDist(port.tile(), curTile),
+        (port) =>
+          port.isActive() &&
+          !port.isMarkedForDeletion() &&
+          !port.isUnderConstruction() &&
+          myComponent !== null &&
+          this.mg.hasWaterComponent(port.tile(), myComponent),
+      );
+      if (nearestPort === null) {
         this.tradeShip.delete(false);
         this.active = false;
         return;
       } else {
-        this._dstPort = ports[0];
+        this._dstPort = nearestPort;
         this.tradeShip.setTargetUnit(this._dstPort);
         // Plan-driven units don't emit per-tick unit updates, so force a sync for the new target.
         this.tradeShip.touch();
       }
     }
 
-    const curTile = this.tradeShip.tile();
     if (curTile === this.dstPort()) {
       this.complete();
       return;

@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Layer } from "./Layer";
 
 const AD_TYPE = "standard_iab_left1";
@@ -30,6 +31,7 @@ export class InGamePromo extends LitElement implements Layer {
       }
       if (!this.cornerAdShown) {
         this.cornerAdShown = true;
+        console.log("[InGamePromo] Spawn phase ended, triggering showAd");
         this.showAd();
       }
     }
@@ -73,15 +75,43 @@ export class InGamePromo extends LitElement implements Layer {
   }
 
   private showAd(): void {
-    if (!window.adsEnabled) return;
+    console.log(
+      `[InGamePromo] showAd called, isOnCrazyGames=${crazyGamesSDK.isOnCrazyGames()}`,
+    );
     if (window.innerWidth < 1100) return;
     if (window.innerHeight < 750) return;
+
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      this.showCrazyGamesAd();
+      return;
+    }
+
+    if (!window.adsEnabled) return;
 
     this.shouldShow = true;
     this.requestUpdate();
 
     this.updateComplete.then(() => {
       this.loadAd();
+    });
+  }
+
+  private showCrazyGamesAd(): void {
+    console.log(
+      `[InGamePromo] showCrazyGamesAd called, isReady=${crazyGamesSDK.isReady()}, width=${window.innerWidth}, height=${window.innerHeight}`,
+    );
+    if (!crazyGamesSDK.isReady()) {
+      console.log(
+        "[InGamePromo] CrazyGames SDK not ready, skipping in-game ad",
+      );
+      return;
+    }
+
+    this.requestUpdate();
+
+    this.updateComplete.then(() => {
+      console.log("[InGamePromo] DOM updated, calling createBottomLeftAd");
+      crazyGamesSDK.createBottomLeftAd();
     });
   }
 
@@ -112,6 +142,14 @@ export class InGamePromo extends LitElement implements Layer {
 
   public hideAd(): void {
     this.destroyBottomRail();
+
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      crazyGamesSDK.clearBottomLeftAd();
+      this.shouldShow = false;
+      this.requestUpdate();
+      return;
+    }
+
     if (!window.ramp) {
       console.warn("Playwire RAMP not available for in-game ad");
       return;

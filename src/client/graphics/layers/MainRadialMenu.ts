@@ -1,5 +1,6 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -19,8 +20,8 @@ import {
   MenuElementParams,
   rootMenuElement,
 } from "./RadialMenuElements";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 import { ContextMenuEvent } from "../../InputHandler";
 

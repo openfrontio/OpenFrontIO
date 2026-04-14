@@ -35,6 +35,7 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
 
@@ -87,6 +88,8 @@ export class GameServer {
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
+  private visibleAt?: number;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -98,6 +101,9 @@ export class GameServer {
     private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+    if (startsAt !== undefined) {
+      this.visibleAt = Date.now();
+    }
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -135,7 +141,7 @@ export class GameServer {
       this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
     if (gameConfig.maxTimerValue !== undefined) {
-      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
@@ -144,7 +150,8 @@ export class GameServer {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
     if (gameConfig.spawnImmunityDuration !== undefined) {
-      this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
+      this.gameConfig.spawnImmunityDuration =
+        gameConfig.spawnImmunityDuration ?? undefined;
     }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
@@ -156,13 +163,17 @@ export class GameServer {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
     if (gameConfig.goldMultiplier !== undefined) {
-      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
+      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier ?? undefined;
     }
     if (gameConfig.startingGold !== undefined) {
-      this.gameConfig.startingGold = gameConfig.startingGold;
+      this.gameConfig.startingGold = gameConfig.startingGold ?? undefined;
     }
     if (gameConfig.disableAlliances !== undefined) {
-      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
+      this.gameConfig.disableAlliances =
+        gameConfig.disableAlliances ?? undefined;
+    }
+    if (gameConfig.waterNukes !== undefined) {
+      this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
   }
 
@@ -537,6 +548,24 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+
+      if (!this._hasStarted) {
+        // Remove persistentId if the game has not started to prevent going over max players
+        this.persistentIdToClientId.delete(client.persistentID);
+        // Close lobby when host leaves before game starts
+        if (
+          !this.isPublic() &&
+          client.persistentID === this.creatorPersistentID
+        ) {
+          this.log.info("Host left, closing lobby", {
+            gameID: this.id,
+          });
+          for (const c of [...this.activeClients]) {
+            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+          }
+          this._hasEnded = true;
+        }
+      }
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -553,11 +582,17 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Remove persistentId if the game has not started to prevent going over max players
+      if (!this._hasStarted) {
+        this.persistentIdToClientId.delete(client.persistentID);
+      }
     }
   }
 
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
+    // Record when the lobby first became visible to players, used to measure lobby fill time.
+    this.visibleAt ??= Date.now();
   }
 
   public numClients(): number {
@@ -656,6 +691,7 @@ export class GameServer {
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
+      visibleAt: this.visibleAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -839,6 +875,8 @@ export class GameServer {
         } else {
           return GamePhase.Active;
         }
+      } else if (this._hasEnded) {
+        return GamePhase.Finished;
       } else {
         return GamePhase.Lobby;
       }
@@ -1001,6 +1039,7 @@ export class GameServer {
           Date.now(),
           this.winner?.winner,
           this.createdAt,
+          this.visibleAt,
         ),
       ),
     );

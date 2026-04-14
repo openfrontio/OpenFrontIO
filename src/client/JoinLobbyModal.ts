@@ -8,6 +8,7 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -18,7 +19,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -159,7 +160,7 @@ export class JoinLobbyModal extends BaseModal {
                 class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <button
-                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-[#0073b7] hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
                   disabled
                 >
                   ${translateText("private_lobby.joined_waiting")}
@@ -373,6 +374,11 @@ export class JoinLobbyModal extends BaseModal {
     );
   }
 
+  public confirmBeforeClose(): boolean {
+    if (!this.currentLobbyId) return true;
+    return confirm(translateText("host_modal.leave_confirmation"));
+  }
+
   protected onClose(): void {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
@@ -431,7 +437,9 @@ export class JoinLobbyModal extends BaseModal {
     const c = this.gameConfig;
     const mapName = getMapName(c.gameMap);
     const normalizedMap = normaliseMapKey(c.gameMap);
-    const thumbnailUrl = `/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`;
+    const thumbnailUrl = assetUrl(
+      `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
+    );
     const isTeam = c.gameMode === GameMode.Team;
 
     let modeSubtitle: string;
@@ -542,6 +550,13 @@ export class JoinLobbyModal extends BaseModal {
             "public_game_modifier.disable_alliances_label",
           )}
           .value=${translateText("common.disabled")}
+        ></lobby-config-item>`,
+      );
+    if (c.waterNukes)
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText("public_game_modifier.water_nukes_label")}
+          .value=${translateText("common.enabled")}
         ></lobby-config-item>`,
       );
     if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
@@ -894,7 +909,7 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {

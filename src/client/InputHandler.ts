@@ -1,6 +1,6 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
-import { UnitView } from "../core/game/GameView";
+import { GameView, UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
 import { Platform } from "./Platform";
@@ -177,76 +177,14 @@ export class InputHandler {
   private readonly userSettings: UserSettings = new UserSettings();
 
   constructor(
+    private gameView: GameView,
     public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
   ) {}
 
   initialize() {
-    let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
-      // flatten { key: {key, value} } → { key: value } and accept legacy string values
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            // Extract value from nested object or plain string
-            let val: unknown;
-            if (v && typeof v === "object" && "value" in v) {
-              val = (v as { value: unknown }).value;
-            } else {
-              val = v;
-            }
-
-            // Map invalid values to undefined (filtered later)
-            if (typeof val !== "string") {
-              return [k, undefined];
-            }
-            return [k, val];
-          })
-          .filter(([, v]) => typeof v === "string"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
-
-    // Mac users might have different keybinds
-    const isMac = Platform.isMac;
-
-    this.keybinds = {
-      toggleView: "Space",
-      coordinateGrid: "KeyM",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      boatAttack: "KeyB",
-      groundAttack: "KeyG",
-      swapDirection: "KeyU",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      buildCity: "Digit1",
-      buildFactory: "Digit2",
-      buildPort: "Digit3",
-      buildDefensePost: "Digit4",
-      buildMissileSilo: "Digit5",
-      buildSamLauncher: "Digit6",
-      buildWarship: "Digit7",
-      buildAtomBomb: "Digit8",
-      buildHydrogenBomb: "Digit9",
-      buildMIRV: "Digit0",
-      pauseGame: "KeyP",
-      gameSpeedUp: "Period",
-      gameSpeedDown: "Comma",
-      ...saved,
-    };
+    this.keybinds = this.userSettings.keybinds(Platform.isMac);
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
@@ -265,6 +203,19 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
+    });
+    // Clear all tracked keys when the window loses focus so keys that had
+    // their keyup swallowed by the browser (e.g. cmd+zoom) don't stay stuck.
+    // Also release the hold-to-view state and any active pointer/drag state
+    // so the alternate view and drags aren't left latched when focus returns.
+    window.addEventListener("blur", () => {
+      this.activeKeys.clear();
+      if (this.alternateView) {
+        this.alternateView = false;
+        this.eventBus.emit(new AlternateViewEvent(false));
+      }
+      this.pointerDown = false;
+      this.pointers.clear();
     });
     this.pointers.clear();
 
@@ -310,13 +261,15 @@ export class InputHandler {
 
       if (
         this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus")
+        this.activeKeys.has("Minus") ||
+        this.activeKeys.has("NumpadSubtract")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
         this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal")
+        this.activeKeys.has("Equal") ||
+        this.activeKeys.has("NumpadAdd")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -358,7 +311,19 @@ export class InputHandler {
         this.eventBus.emit(new ConfirmGhostStructureEvent());
       }
 
+      // Don't track zoom keys when a meta/ctrl modifier is held — that means
+      // the browser is handling its own zoom (cmd+/cmd-) and the keyup will
+      // never fire, which would leave the key stuck in activeKeys forever.
+      // Also covers numpad zoom shortcuts (Ctrl+NumpadAdd/NumpadSubtract).
+      const isBrowserZoomCombo =
+        (e.metaKey || e.ctrlKey) &&
+        (e.code === "Minus" ||
+          e.code === "Equal" ||
+          e.code === "NumpadAdd" ||
+          e.code === "NumpadSubtract");
+
       if (
+        !isBrowserZoomCombo &&
         [
           this.keybinds.moveUp,
           this.keybinds.moveDown,
@@ -372,6 +337,8 @@ export class InputHandler {
           "ArrowRight",
           "Minus",
           "Equal",
+          "NumpadAdd",
+          "NumpadSubtract",
           this.keybinds.attackRatioDown,
           this.keybinds.attackRatioUp,
           this.keybinds.centerCamera,
@@ -388,6 +355,24 @@ export class InputHandler {
       const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
+      }
+
+      // When the meta (cmd) or ctrl key is released, any keys that were held
+      // simultaneously will have had their keyup swallowed by the browser
+      // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys to
+      // prevent them staying stuck in activeKeys.
+      if (
+        e.code === "MetaLeft" ||
+        e.code === "MetaRight" ||
+        e.code === "ControlLeft" ||
+        e.code === "ControlRight"
+      ) {
+        this.activeKeys.delete("Minus");
+        this.activeKeys.delete("Equal");
+        this.activeKeys.delete("NumpadAdd");
+        this.activeKeys.delete("NumpadSubtract");
+        this.activeKeys.delete(this.keybinds.zoomIn);
+        this.activeKeys.delete(this.keybinds.zoomOut);
       }
 
       if (e.code === this.keybinds.toggleView) {
@@ -524,7 +509,11 @@ export class InputHandler {
         return;
       }
 
-      if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
+      if (
+        !this.userSettings.leftClickOpensMenu() ||
+        event.shiftKey ||
+        this.gameView.inSpawnPhase() // No Radial Menu during spawn phase, only spawn point selection
+      ) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
@@ -537,8 +526,27 @@ export class InputHandler {
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
-      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
+      if (event.ctrlKey) {
+        if (!realCtrl) {
+          // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
+          // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
+          // which fire synthetic wheel events we don't want to handle.
+          if (Math.abs(event.deltaY) <= 10) {
+            this.eventBus.emit(
+              new ZoomEvent(event.x, event.y, event.deltaY * 10),
+            );
+          }
+        }
+        // Always return when ctrlKey is set — whether it's a real ctrl scroll,
+        // a pinch gesture, or a browser zoom event, none should reach the
+        // regular scroll path below.
+        return;
+      }
+      // Regular scroll wheel: ignore tiny residual momentum events that macOS
+      // keeps sending after a gesture ends (especially after browser zoom changes
+      // devicePixelRatio, which can cause these to accumulate into runaway zoom).
+      if (Math.abs(event.deltaY) < 2) return;
+      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
     }
   }
 
@@ -592,6 +600,9 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
     if (this.uiState.ghostStructure !== null) {
       this.setGhostStructure(null);
       return;

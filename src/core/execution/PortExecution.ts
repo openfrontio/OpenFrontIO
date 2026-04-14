@@ -97,10 +97,22 @@ export class PortExecution implements Execution {
   // It's a probability list, so if an element appears twice it's because it's
   // twice more likely to be picked later.
   tradingPorts(): Unit[] {
+    const sourceComponents = new Set<number>();
+    for (const neighbor of this.mg.neighbors(this.port!.tile())) {
+      if (!this.mg.isWater(neighbor)) continue;
+      const comp = this.mg.getWaterComponent(neighbor);
+      if (comp !== null) sourceComponents.add(comp);
+    }
     const ports = this.mg
       .players()
       .filter((p) => p !== this.port!.owner() && p.canTrade(this.port!.owner()))
       .flatMap((p) => p.units(UnitType.Port))
+      .filter((p) => {
+        for (const comp of sourceComponents) {
+          if (this.mg.hasWaterComponent(p.tile(), comp)) return true;
+        }
+        return false;
+      })
       .sort((p1, p2) => {
         return (
           this.mg.manhattanDist(this.port!.tile(), p1.tile()) -

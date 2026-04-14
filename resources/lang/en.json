@@ -6,6 +6,7 @@
     "lang_code": "en"
   },
   "common": {
+    "not_logged_in": "Not logged in",
     "close": "Close",
     "copy": "Copy",
     "paste": "Paste",
@@ -200,6 +201,7 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -329,6 +331,10 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "tourney1": "Tourney 2 Teams",
+    "tourney2": "Tourney 3 Teams",
+    "tourney3": "Tourney 4 Teams",
+    "tourney4": "Tourney 8 Teams",
     "passage": "Passage",
     "sierpinski": "Sierpinski",
     "thebox": "The Box",
@@ -346,12 +352,21 @@
     "niledelta": "Nile Delta",
     "arctic": "Arctic",
     "sanfrancisco": "San Francisco",
-    "aegean": "Aegean"
+    "aegean": "Aegean",
+    "milkyway": "Milky Way",
+    "mediterranean": "Mediterranean",
+    "dyslexdria": "Dyslexdria",
+    "greatlakes": "Great Lakes",
+    "straitofmalacca": "Strait Of Malacca",
+    "luna": "Luna",
+    "conakry": "Conakry",
+    "caucasus": "Caucasus"
   },
   "map_categories": {
     "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
+    "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
     "arcade": "Arcade"
@@ -424,6 +439,7 @@
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -495,7 +511,17 @@
     "starting_gold_label": "Starting Gold",
     "gold_multiplier": "x{amount} Gold Multiplier",
     "disable_alliances": "Alliances Disabled",
-    "disable_alliances_label": "Alliances"
+    "disable_alliances_label": "Alliances",
+    "ports_disabled": "Ports Disabled",
+    "ports_disabled_label": "Ports",
+    "nukes_disabled": "Nukes Disabled",
+    "nukes_disabled_label": "Nukes",
+    "sams_disabled": "SAMs Disabled",
+    "sams_disabled_label": "SAMs",
+    "peace_time": "4min Peace",
+    "peace_time_label": "PVP Immunity",
+    "water_nukes": "Water Nukes",
+    "water_nukes_label": "Water Nukes"
   },
   "select_lang": {
     "title": "Select Language"
@@ -593,7 +619,7 @@
     "attack_ratio_down": "Decrease Attack Ratio",
     "attack_ratio_down_desc": "Decrease attack ratio by {amount}%",
     "attack_ratio_increment_label": "Attack Ratio Keybind Increment",
-    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press.",
+    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press/scroll.",
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
@@ -850,7 +876,8 @@
   },
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "host_left": "The host has left the lobby."
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
@@ -914,18 +941,42 @@
     "pvp_immunity_active": "PVP immunity active for {seconds}s",
     "catching_up": "Catching up..."
   },
+  "store": {
+    "title": "Store",
+    "patterns": "Skins",
+    "flags": "Flags",
+    "packs": "Packs",
+    "no_flags": "No flags available. Check back later for new items.",
+    "no_skins": "No skins available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
+    "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "checkout_failed": "Failed to create checkout session.",
+    "login_required": "You must be logged in to purchase with currency.",
+    "not_enough_currency": "Not enough currency for this purchase.",
+    "purchase_failed": "Purchase failed. Please try again.",
+    "purchase_success": "Purchase succeeded: {name}"
+  },
   "territory_patterns": {
     "title": "Skins",
-    "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "My Skins",
-    "all_owned": "All skins owned! Check back later for new items.",
-    "not_logged_in": "Not logged in",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Select Skin",
-    "selected": "selected"
+    "selected": "selected",
+    "search": "Search..."
+  },
+  "cosmetics": {
+    "artist_label": "Artist:",
+    "color_label": "Color:",
+    "common": "Common",
+    "uncommon": "Uncommon",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary",
+    "adfree": "ad-free for life!",
+    "hard": "Plutonium",
+    "soft": "Caps"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -996,6 +1047,8 @@
     "public": "Public",
     "private": "Private",
     "solo": "Solo",
+    "ranked": "Ranked",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
@@ -1008,5 +1061,12 @@
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."
+  },
+  "news_box": {
+    "tournament": "TOURNAMENT",
+    "tutorial": "TUTORIAL",
+    "news": "NEWS",
+    "dismiss": "Dismiss",
+    "go_to_item": "Go to item {num}"
   }
 }

@@ -1,10 +1,13 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderPlayerFlag } from "../core/CustomFlag";
-import { FlagSchema } from "../core/Schemas";
+import { FlagName } from "../core/Schemas";
+import {
+  FLAG_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
+import { resolveFlagUrl } from "./Cosmetics";
 import { translateText } from "./Utils";
-
-const flagKey: string = "flag";
 
 @customElement("flag-input")
 export class FlagInput extends LitElement {
@@ -14,36 +17,17 @@ export class FlagInput extends LitElement {
   public showSelectLabel: boolean = false;
 
   private isDefaultFlagValue(flag: string): boolean {
-    return !flag || flag === "xx";
+    return !flag || flag === "xx" || flag === "country:xx";
   }
 
-  public getCurrentFlag(): string {
-    return this.flag;
-  }
-
-  private getStoredFlag(): string {
-    const storedFlag = localStorage.getItem(flagKey);
-    if (storedFlag) {
-      return storedFlag;
+  private updateFlag = (e: CustomEvent) => {
+    const val = e.detail ?? "";
+    const parsed = FlagName.safeParse(val);
+    if (!parsed.success) {
+      console.warn(`error parsing flag ${val}, ${parsed.error}`);
     }
-    return "";
-  }
-
-  private dispatchFlagEvent() {
-    this.dispatchEvent(
-      new CustomEvent("flag-change", {
-        detail: { flag: this.flag },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  private updateFlag = (ev: Event) => {
-    const e = ev as CustomEvent<{ flag: string }>;
-    if (!FlagSchema.safeParse(e.detail.flag).success) return;
-    if (this.flag !== e.detail.flag) {
-      this.flag = e.detail.flag;
+    if (this.flag !== val) {
+      this.flag = val;
     }
   };
 
@@ -60,14 +44,19 @@ export class FlagInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.flag = this.getStoredFlag();
-    this.dispatchFlagEvent();
-    window.addEventListener("flag-change", this.updateFlag as EventListener);
+    this.flag = new UserSettings().getFlag() ?? "";
+    window.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${FLAG_KEY}`,
+      this.updateFlag as EventListener,
+    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("flag-change", this.updateFlag as EventListener);
+    window.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${FLAG_KEY}`,
+      this.updateFlag as EventListener,
+    );
   }
 
   createRenderRoot() {
@@ -94,7 +83,7 @@ export class FlagInput extends LitElement {
         ></span>
         ${showSelect
           ? html`<span
-              class="text-[10px] font-medium tracking-wider text-white uppercase leading-none break-words w-full text-center px-1"
+              class="text-[7px] lg:text-[10px] font-black tracking-wider text-white uppercase leading-tight lg:leading-none w-full text-center px-0.5 lg:px-1"
             >
               ${translateText("flag_input.title")}
             </span>`
@@ -103,32 +92,26 @@ export class FlagInput extends LitElement {
     `;
   }
 
-  updated() {
+  async updated() {
     const preview = this.renderRoot.querySelector(
       "#flag-preview",
     ) as HTMLElement;
     if (!preview) return;
 
-    if (this.showSelectLabel && this.isDefaultFlagValue(this.flag)) {
+    if (this.isDefaultFlagValue(this.flag)) {
       preview.innerHTML = "";
       return;
     }
 
     preview.innerHTML = "";
 
-    if (this.flag?.startsWith("!")) {
-      renderPlayerFlag(this.flag, preview);
-    } else {
-      const img = document.createElement("img");
-      img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
-      img.className = "w-full h-full object-cover pointer-events-none";
-      img.draggable = false;
-      img.onerror = () => {
-        if (!img.src.endsWith("/flags/xx.svg")) {
-          img.src = "/flags/xx.svg";
-        }
-      };
-      preview.appendChild(img);
-    }
+    const url = await resolveFlagUrl(this.flag);
+    if (!url) return;
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.className = "w-full h-full object-cover pointer-events-none";
+    img.draggable = false;
+    preview.appendChild(img);
   }
 }

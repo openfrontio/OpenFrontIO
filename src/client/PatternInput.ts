@@ -1,7 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import {
+  PATTERN_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+} from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { renderPatternPreview } from "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternPreview";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
@@ -46,9 +50,13 @@ export class PatternInput extends LitElement {
     this.pattern = cosmetics.pattern ?? null;
     if (!this.isConnected) return;
     this.isLoading = false;
-    window.addEventListener("pattern-selected", this._onPatternSelected, {
-      signal: this._abortController.signal,
-    });
+    window.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
+      this._onPatternSelected,
+      {
+        signal: this._abortController.signal,
+      },
+    );
   }
 
   disconnectedCallback() {
@@ -79,10 +87,10 @@ export class PatternInput extends LitElement {
     }
 
     const showSelect = this.showSelectLabel && this.getIsDefaultPattern();
-    this.style.setProperty("height", "3rem");
+    this.style.setProperty("height", "2.5rem");
     this.style.setProperty(
       "width",
-      showSelect ? "clamp(6.5rem, 28vw, 9.5rem)" : "3rem",
+      showSelect ? "clamp(3.25rem, 14vw, 4.75rem)" : "2.5rem",
     );
   }
 
@@ -136,7 +144,9 @@ export class PatternInput extends LitElement {
         </span>
         ${showSelect
           ? html`<span
-              class="text-[10px] font-black text-white uppercase leading-none break-words w-full text-center px-1"
+              class="${this.adaptiveSize
+                ? "text-[7px] leading-tight px-0.5"
+                : "text-[10px] leading-none break-words px-1"} font-black text-white uppercase w-full text-center"
             >
               ${translateText("territory_patterns.select_skin")}
             </span>`

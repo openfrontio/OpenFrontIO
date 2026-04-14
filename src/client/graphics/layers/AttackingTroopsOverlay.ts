@@ -1,3 +1,4 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -6,8 +7,8 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
+const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 export function troopAttackColor(
   attackerTroops: number,
@@ -35,6 +36,7 @@ interface AttackLabel {
 
 export class AttackingTroopsOverlay implements Layer {
   private container: HTMLDivElement;
+  private labelTemplate: HTMLDivElement;
   private labels = new Map<string, AttackLabel>();
   // Guard against queuing multiple worker requests in the same tick window.
   private inFlightRequest = false;
@@ -61,6 +63,8 @@ export class AttackingTroopsOverlay implements Layer {
     // z-index 4 places labels above NameLayer (z-index 3).
     this.container.style.zIndex = "4";
     document.body.appendChild(this.container);
+
+    this.labelTemplate = this.createLabelTemplate();
 
     this.onAlternateView = (e) => {
       this.isVisible = !e.alternateView;
@@ -234,28 +238,39 @@ export class AttackingTroopsOverlay implements Layer {
     }
   }
 
-  private createLabelElement(
-    attackerTroops: number,
-    defenderTroops: number,
-    isIncoming: boolean,
-  ): HTMLDivElement {
+  private createLabelTemplate(): HTMLDivElement {
     const el = document.createElement("div");
     el.style.position = "absolute";
     el.style.display = "none";
     el.style.alignItems = "center";
     el.style.gap = "3px";
-    el.style.width = "max-content";
     el.style.whiteSpace = "nowrap";
     el.style.fontSize = "11px";
     el.style.fontWeight = "bold";
-    el.style.fontFamily = this.game.config().theme().font();
     el.style.padding = "1px 4px";
     el.style.borderRadius = "3px";
     el.style.backgroundColor = "rgba(0,0,0,0.55)";
     el.style.pointerEvents = "none";
     el.style.lineHeight = "1.3";
-    // Smooth the label to its new position as the front line advances.
     el.style.transition = "transform 0.2s ease-out";
+    el.style.width = "max-content";
+    const icon = document.createElement("img");
+    icon.style.width = "10px";
+    icon.style.height = "10px";
+    el.appendChild(icon);
+    const span = document.createElement("span");
+    span.style.minWidth = "25px";
+    el.appendChild(span);
+    return el;
+  }
+
+  private createLabelElement(
+    attackerTroops: number,
+    defenderTroops: number,
+    isIncoming: boolean,
+  ): HTMLDivElement {
+    const el = this.labelTemplate.cloneNode(true) as HTMLDivElement;
+    el.style.fontFamily = this.game.config().theme().font();
     this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
     this.container.appendChild(el);
     return el;
@@ -267,17 +282,8 @@ export class AttackingTroopsOverlay implements Layer {
     defenderTroops: number,
     isIncoming: boolean,
   ) {
-    // Reuse existing children to avoid DOM churn on every tick.
-    let icon = el.querySelector("img") as HTMLImageElement | null;
-    let span = el.querySelector("span") as HTMLSpanElement | null;
-    if (!icon || !span) {
-      icon = document.createElement("img");
-      icon.style.width = "10px";
-      icon.style.height = "10px";
-      span = document.createElement("span");
-      el.replaceChildren(icon, span);
-    }
-
+    const icon = el.children[0] as HTMLImageElement;
+    const span = el.children[1] as HTMLSpanElement;
     if (isIncoming) {
       icon.src = shieldIcon;
       span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
