@@ -3,17 +3,29 @@ import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../Utils";
 
 /**
- * A small banner shown inside the lobby when the user hasn't enabled
+ * A dismissible banner shown inside the lobby when the user hasn't enabled
  * browser notifications yet.
+ *
+ * Emits the following custom events:
+ * - `enable`          — user clicked "Enable"; parent should enable notifications
+ * - `dismiss`         — user clicked "Not now"; hides for this session only
+ * - `dismiss-forever` — user clicked "Don't show again"; persists to localStorage
+ *
+ * Visibility is controlled by the parent via the `visible` property.
  */
 @customElement("notification-prompt")
 export class NotificationPrompt extends LitElement {
+  /** Whether the banner is currently visible. Controlled by the parent. */
   @property({ type: Boolean }) visible = false;
 
   createRenderRoot() {
     return this;
   }
 
+  /**
+   * Dispatches the "enable" event and hides the prompt.
+   * The parent is responsible for actually enabling notifications.
+   */
   private handleEnable() {
     this.dispatchEvent(
       new CustomEvent("enable", { bubbles: true, composed: true }),
@@ -22,6 +34,10 @@ export class NotificationPrompt extends LitElement {
     this.requestUpdate();
   }
 
+  /**
+   * Hides the prompt for this session only (no localStorage write).
+   * Dispatches the "dismiss" event so the parent can update its state.
+   */
   private dismiss() {
     this.dispatchEvent(
       new CustomEvent("dismiss", { bubbles: true, composed: true }),
@@ -30,6 +46,12 @@ export class NotificationPrompt extends LitElement {
     this.requestUpdate();
   }
 
+  /**
+   * Persists the dismissal to localStorage so the prompt never shows again,
+   * then hides the prompt. The localStorage write is wrapped in try/catch so
+   * the prompt always closes even if storage is unavailable (e.g. private mode).
+   * Dispatches the "dismiss-forever" event so the parent can update its state.
+   */
   private dismissForever() {
     try {
       localStorage.setItem("settings.notificationPromptDismissed", "true");

@@ -862,6 +862,14 @@ class Client {
     });
   }
 
+  /**
+   * Sends a browser notification to alert the player that their game has started.
+   * Only fires when:
+   * - The user has opted in via settings
+   * - The Notification API is available
+   * - Permission has already been granted (no permission request in non-gesture context)
+   * - The tab is not currently visible
+   */
   private sendGameStartNotification() {
     if (!this.userSettings.browserNotifications()) return;
     if (!("Notification" in window)) return;

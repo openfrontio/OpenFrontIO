@@ -129,10 +129,12 @@ export class UserSettings {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
+  /** Returns true if the user has opted in to browser notifications on game start. */
   browserNotifications() {
     return this.getBool(BROWSER_NOTIFICATIONS_KEY, false);
   }
 
+  /** Toggles the browser notifications opt-in setting. */
   toggleBrowserNotifications() {
     this.setBool(BROWSER_NOTIFICATIONS_KEY, !this.browserNotifications());
   }
