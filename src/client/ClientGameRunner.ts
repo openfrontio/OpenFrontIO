@@ -654,17 +654,55 @@ export class ClientGameRunner {
         }
       }
 
-      if (upgradeUnits.length > 0) {
-        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-        if (bestUpgrade) {
-          this.eventBus.emit(
-            new SendUpgradeStructureIntentEvent(
-              bestUpgrade.unitId,
-              bestUpgrade.unitType,
-            ),
-          );
+      if (upgradeUnits.length === 0) {
+        // No upgradeable buildings found. Check if there's a SAM nearby that
+        // simply can't be upgraded yet (e.g. not enough gold). If so, do
+        // nothing — don't fall through to upgrading some other building.
+        const myPlayerID = this.myPlayer!.id();
+        const nearbySam = this.gameView
+          .nearbyUnits(
+            clickedTile,
+            this.gameView.config().structureMinDist(),
+            UnitType.SAMLauncher,
+          )
+          .some(({ unit }) => unit.owner().id() === myPlayerID);
+        if (nearbySam) {
+          return;
+        }
+        return;
+      }
+
+      // If the closest upgradeable unit is a SAM, upgrade it.
+      // If the closest upgradeable unit is NOT a SAM but there's an own SAM
+      // nearby (within the same search radius), prefer doing nothing — the
+      // player most likely middle-clicked the SAM intending to upgrade it but
+      // couldn't afford it, and we must not spend gold on a different building.
+      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+      if (!bestUpgrade) {
+        return;
+      }
+
+      if (bestUpgrade.unitType !== UnitType.SAMLauncher) {
+        const myPlayerID = this.myPlayer!.id();
+        const nearbySam = this.gameView
+          .nearbyUnits(
+            clickedTile,
+            this.gameView.config().structureMinDist(),
+            UnitType.SAMLauncher,
+          )
+          .some(({ unit }) => unit.owner().id() === myPlayerID);
+        if (nearbySam) {
+          // Clicked near a SAM that can't be upgraded — do nothing.
+          return;
         }
       }
+
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          bestUpgrade.unitId,
+          bestUpgrade.unitType,
+        ),
+      );
     });
   }
 
