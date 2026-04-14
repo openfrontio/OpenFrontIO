@@ -830,6 +830,9 @@ class Client {
       this.gameModeSelector.stop();
       incrementGamesPlayed();
 
+      // Send browser notification if tab is not visible
+      this.sendGameStartNotification();
+
       document.querySelectorAll(".ad").forEach((ad) => {
         (ad as HTMLElement).style.display = "none";
       });
@@ -857,6 +860,27 @@ class Client {
       // Store current URL for popstate confirmation
       this.currentUrl = window.location.href;
     });
+  }
+
+  private sendGameStartNotification() {
+    if (!this.userSettings.browserNotifications()) return;
+    if (!("Notification" in window)) return;
+    if (document.visibilityState === "visible") return;
+
+    const send = () => {
+      new Notification("OpenFront - Game Starting!", {
+        body: "Your game is starting. Come back to play!",
+        icon: "/favicon.ico",
+      });
+    };
+
+    if (Notification.permission === "granted") {
+      send();
+    } else if (Notification.permission === "default") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") send();
+      });
+    }
   }
 
   private updateJoinUrlForShare(

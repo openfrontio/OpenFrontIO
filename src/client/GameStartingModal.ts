@@ -1,14 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserSettings } from "../core/game/UserSettings";
 import { translateText } from "./Utils";
 
 @customElement("game-starting-modal")
 export class GameStartingModal extends LitElement {
   @state()
   isVisible = false;
-
-  private userSettings = new UserSettings();
 
   createRenderRoot() {
     return this;
@@ -54,32 +51,10 @@ export class GameStartingModal extends LitElement {
   show() {
     this.isVisible = true;
     this.requestUpdate();
-    this.sendBrowserNotification();
   }
 
   hide() {
     this.isVisible = false;
     this.requestUpdate();
-  }
-
-  private sendBrowserNotification() {
-    if (!this.userSettings.browserNotifications()) return;
-    if (!("Notification" in window)) return;
-    if (document.visibilityState === "visible") return;
-
-    const send = () => {
-      new Notification(translateText("game_starting_modal.notification_title"), {
-        body: translateText("game_starting_modal.notification_body"),
-        icon: "/favicon.ico",
-      });
-    };
-
-    if (Notification.permission === "granted") {
-      send();
-    } else if (Notification.permission === "default") {
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") send();
-      });
-    }
   }
 }
