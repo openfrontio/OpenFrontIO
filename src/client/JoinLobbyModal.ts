@@ -297,6 +297,7 @@ export class JoinLobbyModal extends BaseModal {
 
   public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
     super.open();
+    this.showNotificationPrompt = false;
 
     // Show notification prompt on first lobby join if not already enabled/dismissed
     const dismissed =
@@ -447,7 +448,9 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private handleEnableNotifications() {
-    this.userSettings.toggleBrowserNotifications();
+    if (!this.userSettings.browserNotifications()) {
+      this.userSettings.toggleBrowserNotifications();
+    }
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }

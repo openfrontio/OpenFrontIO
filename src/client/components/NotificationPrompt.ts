@@ -18,7 +18,8 @@ export class NotificationPrompt extends LitElement {
     this.dispatchEvent(
       new CustomEvent("enable", { bubbles: true, composed: true }),
     );
-    this.dismiss();
+    this.visible = false;
+    this.requestUpdate();
   }
 
   private dismiss() {
