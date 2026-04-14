@@ -28,9 +28,14 @@ export class NotificationPrompt extends LitElement {
   }
 
   private dismissForever() {
-    localStorage.setItem("settings.notificationPromptDismissed", "true");
-    this.visible = false;
-    this.requestUpdate();
+    try {
+      localStorage.setItem("settings.notificationPromptDismissed", "true");
+    } catch (e) {
+      console.warn("[NotificationPrompt] Failed to persist dismissal:", e);
+    } finally {
+      this.visible = false;
+      this.requestUpdate();
+    }
   }
 
   render() {
