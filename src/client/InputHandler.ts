@@ -265,10 +265,7 @@ export class InputHandler {
       let deltaY = 0;
 
       // Skip if shift is held down
-      if (
-        this.activeKeys.has("ShiftLeft") ||
-        this.activeKeys.has("ShiftRight")
-      ) {
+      if (this.activeKeys.has(this.keybinds.shiftKey)) {
         return;
       }
 
@@ -389,8 +386,7 @@ export class InputHandler {
           this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
-          "ShiftLeft",
-          "ShiftRight",
+          this.keybinds.shiftKey,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -398,7 +394,7 @@ export class InputHandler {
 
       // Shift = warship box selection mode.
       // If a ghost structure is active, discard it first.
-      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+      if (e.code === this.keybinds.shiftKey) {
         if (this.uiState.ghostStructure !== null) {
           this.setGhostStructure(null);
         }
@@ -504,10 +500,7 @@ export class InputHandler {
       this.activeKeys.delete(e.code);
 
       // Reset crosshair when Shift is released (unless multi-selection is still active)
-      if (
-        (e.code === "ShiftLeft" || e.code === "ShiftRight") &&
-        !this.selectionBoxActive
-      ) {
+      if (e.code === this.keybinds.shiftKey && !this.selectionBoxActive) {
         this.canvas.style.cursor = "";
       }
     });
@@ -664,10 +657,7 @@ export class InputHandler {
       const deltaY = event.clientY - this.lastPointerY;
 
       // If shift is held, draw selection box instead of panning
-      if (
-        this.activeKeys.has("ShiftLeft") ||
-        this.activeKeys.has("ShiftRight")
-      ) {
+      if (this.activeKeys.has(this.keybinds.shiftKey)) {
         this.selectionBoxActive = true;
         this.eventBus.emit(
           new WarshipSelectionBoxUpdateEvent(
