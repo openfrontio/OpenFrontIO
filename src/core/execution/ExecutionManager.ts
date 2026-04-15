@@ -16,6 +16,7 @@ import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
+import { MoveMultipleWarshipsExecution } from "./MoveMultipleWarshipsExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
 import { NoOpExecution } from "./NoOpExecution";
@@ -69,6 +70,12 @@ export class Executor {
         return new BoatRetreatExecution(player, intent.unitID);
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
+      case "move_multiple_warships":
+        return new MoveMultipleWarshipsExecution(
+          player,
+          intent.unitIds,
+          intent.tile,
+        );
       case "spawn":
         return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":

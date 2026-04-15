@@ -635,13 +635,11 @@ export class Transport {
   }
 
   private onMoveMultipleWarshipsEvent(event: MoveMultipleWarshipsIntentEvent) {
-    for (const unitId of event.unitIds) {
-      this.sendIntent({
-        type: "move_warship",
-        unitId,
-        tile: event.tile,
-      });
-    }
+    this.sendIntent({
+      type: "move_multiple_warships",
+      unitIds: event.unitIds,
+      tile: event.tile,
+    });
   }
 
   private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
