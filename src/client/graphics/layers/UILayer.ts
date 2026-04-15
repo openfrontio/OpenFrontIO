@@ -238,16 +238,8 @@ export class UILayer implements Layer {
   private drawSelectionBoxMulti(unit: UnitView) {
     if (!unit || !unit.isActive()) return;
 
-    const selectionSize = this.SELECTION_BOX_SIZE;
-    const baseOpacity = 200;
-    const pulseAmount = 55;
-    const opacity =
-      baseOpacity + Math.sin(this.selectionAnimTime * 0.1) * pulseAmount;
-
     if (this.theme === null) throw new Error("missing theme");
-    const ownerColor = unit.owner().territoryColor();
-    const selectionColor = ownerColor.lighten(0.2);
-
+    const selectionColor = unit.owner().territoryColor().lighten(0.2);
     const centerX = this.game.x(unit.tile());
     const centerY = this.game.y(unit.tile());
 
@@ -256,13 +248,33 @@ export class UILayer implements Layer {
       this.clearSelectionBox(prev.x, prev.y, prev.size);
     }
 
-    for (let x = centerX - selectionSize; x <= centerX + selectionSize; x++) {
-      for (let y = centerY - selectionSize; y <= centerY + selectionSize; y++) {
+    this.paintSelectionBoxAt(centerX, centerY, selectionColor);
+
+    this.multiSelectionBoxCenters.set(unit.id(), {
+      x: centerX,
+      y: centerY,
+      size: this.SELECTION_BOX_SIZE,
+    });
+  }
+
+  /**
+   * Shared helper: paint the dashed pulsing border pixels for a selection box.
+   */
+  private paintSelectionBoxAt(
+    centerX: number,
+    centerY: number,
+    selectionColor: Colord,
+  ) {
+    const size = this.SELECTION_BOX_SIZE;
+    const opacity = 200 + Math.sin(this.selectionAnimTime * 0.1) * 55;
+
+    for (let x = centerX - size; x <= centerX + size; x++) {
+      for (let y = centerY - size; y <= centerY + size; y++) {
         if (
-          x === centerX - selectionSize ||
-          x === centerX + selectionSize ||
-          y === centerY - selectionSize ||
-          y === centerY + selectionSize
+          x === centerX - size ||
+          x === centerX + size ||
+          y === centerY - size ||
+          y === centerY + size
         ) {
           if ((x + y) % 2 === 0) {
             this.paintCell(x, y, selectionColor, opacity);
@@ -270,12 +282,6 @@ export class UILayer implements Layer {
         }
       }
     }
-
-    this.multiSelectionBoxCenters.set(unit.id(), {
-      x: centerX,
-      y: centerY,
-      size: selectionSize,
-    });
   }
 
   /**
@@ -304,65 +310,30 @@ export class UILayer implements Layer {
       return;
     }
 
-    // Use the configured selection box size
-    const selectionSize = this.SELECTION_BOX_SIZE;
-
-    // Calculate pulsating effect based on animation time (25% variation in opacity)
-    const baseOpacity = 200;
-    const pulseAmount = 55;
-    const opacity =
-      baseOpacity + Math.sin(this.selectionAnimTime * 0.1) * pulseAmount;
-
-    // Get the unit's owner color for the box
     if (this.theme === null) throw new Error("missing theme");
-    const ownerColor = unit.owner().territoryColor();
+    const selectionColor = unit.owner().territoryColor().lighten(0.2);
+    const centerX = this.game.x(unit.tile());
+    const centerY = this.game.y(unit.tile());
 
-    // Create a brighter version of the owner color for the selection
-    const selectionColor = ownerColor.lighten(0.2);
-
-    // Get current center position
-    const center = unit.tile();
-    const centerX = this.game.x(center);
-    const centerY = this.game.y(center);
-
-    // Clear previous selection box if it exists and is different from current position
+    // Clear previous box if unit moved
     if (
       this.lastSelectionBoxCenter &&
       (this.lastSelectionBoxCenter.x !== centerX ||
         this.lastSelectionBoxCenter.y !== centerY)
     ) {
-      const lastSize = this.lastSelectionBoxCenter.size;
-      const lastX = this.lastSelectionBoxCenter.x;
-      const lastY = this.lastSelectionBoxCenter.y;
-
-      // Clear the previous selection box
-      this.clearSelectionBox(lastX, lastY, lastSize);
+      this.clearSelectionBox(
+        this.lastSelectionBoxCenter.x,
+        this.lastSelectionBoxCenter.y,
+        this.lastSelectionBoxCenter.size,
+      );
     }
 
-    // Draw the selection box
-    for (let x = centerX - selectionSize; x <= centerX + selectionSize; x++) {
-      for (let y = centerY - selectionSize; y <= centerY + selectionSize; y++) {
-        // Only draw if it's on the border (not inside or outside the box)
-        if (
-          x === centerX - selectionSize ||
-          x === centerX + selectionSize ||
-          y === centerY - selectionSize ||
-          y === centerY + selectionSize
-        ) {
-          // Create a dashed effect by only drawing some pixels
-          const dashPattern = (x + y) % 2 === 0;
-          if (dashPattern) {
-            this.paintCell(x, y, selectionColor, opacity);
-          }
-        }
-      }
-    }
+    this.paintSelectionBoxAt(centerX, centerY, selectionColor);
 
-    // Store current selection box position for next cleanup
     this.lastSelectionBoxCenter = {
       x: centerX,
       y: centerY,
-      size: selectionSize,
+      size: this.SELECTION_BOX_SIZE,
     };
   }
 

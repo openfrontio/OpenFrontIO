@@ -158,12 +158,16 @@ export class UnitLayer implements Layer {
 
     // If we have multi-selected warships, send them all to this tile
     if (this.selectedWarships.length > 0) {
-      this.eventBus.emit(
-        new MoveMultipleWarshipsIntentEvent(
-          this.selectedWarships.map((u) => u.id()),
-          clickRef,
-        ),
-      );
+      const myPlayer = this.game.myPlayer();
+      const activeIds = this.selectedWarships
+        .filter((u) => u.isActive() && u.owner() === myPlayer)
+        .map((u) => u.id());
+
+      if (activeIds.length > 0) {
+        this.eventBus.emit(
+          new MoveMultipleWarshipsIntentEvent(activeIds, clickRef),
+        );
+      }
       this.selectedWarships = [];
       this.eventBus.emit(new WarshipMultiSelectionEvent([]));
       return;
