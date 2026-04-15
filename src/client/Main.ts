@@ -8,6 +8,7 @@ import {
   GameStartInfo,
   PublicGameInfo,
 } from "../core/Schemas";
+import { createAnonUsername } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -55,7 +56,7 @@ import {
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
-import { genAnonUsername, UsernameInput } from "./UsernameInput";
+import { UsernameInput } from "./UsernameInput";
 import {
   getDiscordAvatarUrl,
   incrementGamesPlayed,
@@ -764,7 +765,7 @@ class Client {
       serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
-      playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
+      playerName: this.usernameInput?.getUsername() ?? createAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
