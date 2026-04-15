@@ -282,6 +282,7 @@ export class DefaultConfig implements Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
+    player: Player | PlayerView,
   ): Gold {
     // No penalty for the first 10 cities.
     citiesVisited = Math.max(0, citiesVisited - 9);
@@ -300,7 +301,7 @@ export class DefaultConfig implements Config {
     }
     const distPenalty = citiesVisited * 5_000;
     const gold = Math.max(5000, baseGold - distPenalty);
-    return toInt(gold * this.goldMultiplier());
+    return toInt(gold * this.goldMultiplierFor(player));
   }
 
   trainStationMinRange(): number {
@@ -313,13 +314,12 @@ export class DefaultConfig implements Config {
     return 120;
   }
 
-  tradeShipGold(dist: number): Gold {
+  tradeShipGold(dist: number, player: Player | PlayerView): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
       75_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
-    const multiplier = this.goldMultiplier();
-    return BigInt(Math.floor(baseGold * multiplier));
+    return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
