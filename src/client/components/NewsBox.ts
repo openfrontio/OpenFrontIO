@@ -24,16 +24,18 @@ export function getVisibleNewsItems(items: NewsItem[]): NewsItem[] {
   return items.filter((item) => !dismissed.has(item.id));
 }
 
-const typeLabelKeys: Record<NewsItem["type"], string> = {
+const typeLabelKeys: Record<string, string> = {
   tournament: "news_box.tournament",
   tutorial: "news_box.tutorial",
   announcement: "news_box.news",
+  warning: "news_box.warning",
 };
 
-const typeLabelColors: Record<NewsItem["type"], string> = {
+const typeLabelColors: Record<string, string> = {
   tournament: "bg-amber-500/20 text-amber-300",
   tutorial: "bg-sky-500/20 text-sky-300",
   announcement: "bg-emerald-500/20 text-emerald-300",
+  warning: "bg-red-500/20 text-red-300",
 };
 
 @customElement("news-box")

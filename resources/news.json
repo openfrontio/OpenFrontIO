@@ -1,5 +1,12 @@
 [
   {
+    "id": "firefox-performance-issues-2026",
+    "title": "Firefox Performance Issues",
+    "description": "We are aware of performance issues in Firefox. For the best experience, please use a different browser.",
+    "url": null,
+    "type": "warning"
+  },
+  {
     "id": "clan-tournament-spring-2026",
     "title": "Upcoming: Spring Clan Tournament",
     "description": "2v2 clan battles — Sign up on Discord before April 12",

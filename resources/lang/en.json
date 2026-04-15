@@ -1065,6 +1065,7 @@
     "tournament": "TOURNAMENT",
     "tutorial": "TUTORIAL",
     "news": "NEWS",
+    "warning": "WARNING",
     "dismiss": "Dismiss",
     "go_to_item": "Go to item {num}"
   }
