@@ -121,6 +121,9 @@ export class WarshipSelectionBoxCompleteEvent implements GameEvent {
 /** Emitted when the selection box is cancelled (e.g. Escape or no drag) */
 export class WarshipSelectionBoxCancelEvent implements GameEvent {}
 
+/** Emitted when the player triggers select-all-warships hotkey */
+export class SelectAllWarshipsEvent implements GameEvent {}
+
 /** Emitted when multiple warships are selected via box selection */
 export class WarshipMultiSelectionEvent implements GameEvent {
   constructor(public readonly units: UnitView[]) {}
@@ -488,6 +491,11 @@ export class InputHandler {
       if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
+      }
+
+      if (e.code === this.keybinds.selectAllWarships) {
+        e.preventDefault();
+        this.eventBus.emit(new SelectAllWarshipsEvent());
       }
 
       // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.

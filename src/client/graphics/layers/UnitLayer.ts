@@ -10,6 +10,7 @@ import {
   CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
+  SelectAllWarshipsEvent,
   TouchEvent,
   UnitSelectionEvent,
   WarshipMultiSelectionEvent,
@@ -110,6 +111,7 @@ export class UnitLayer implements Layer {
       this.onSelectionBoxCancel(),
     );
     this.eventBus.on(CloseViewEvent, () => this.onSelectionBoxCancel());
+    this.eventBus.on(SelectAllWarshipsEvent, () => this.onSelectAllWarships());
     this.redraw();
 
     loadAllSprites();
@@ -287,6 +289,25 @@ export class UnitLayer implements Layer {
   private onSelectionBoxCancel() {
     this.selectedWarships = [];
     this.eventBus.emit(new WarshipMultiSelectionEvent([]));
+  }
+
+  private onSelectAllWarships() {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+
+    const allWarships = this.game
+      .units(UnitType.Warship)
+      .filter((u) => u.isActive() && u.owner() === myPlayer);
+
+    if (allWarships.length === 0) return;
+
+    // Clear single selection if active
+    if (this.selectedUnit) {
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+    }
+
+    this.selectedWarships = allWarships;
+    this.eventBus.emit(new WarshipMultiSelectionEvent(this.selectedWarships));
   }
 
   /**

@@ -448,6 +448,14 @@ export class HelpModal extends BaseModal {
                       ${translateText("help_modal.action_warship_multiselect")}
                     </td>
                   </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.selectAllWarships)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_warship_selectall")}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
