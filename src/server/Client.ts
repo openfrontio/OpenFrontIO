@@ -14,7 +14,7 @@ export class Client {
     public readonly clientID: ClientID,
     public readonly persistentID: string,
     public readonly claims: TokenPayload | null,
-    public readonly roles: string[] | undefined,
+    public readonly role: string | null,
     public readonly flares: string[] | undefined,
     public readonly ip: string,
     public username: string,

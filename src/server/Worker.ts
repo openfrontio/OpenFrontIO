@@ -401,7 +401,6 @@ export async function startWorker() {
           return;
         }
 
-        let roles: string[] | undefined;
         let flares: string[] | undefined;
 
         const allowedFlares = config.allowedFlares();
@@ -422,7 +421,6 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          roles = result.response.player.roles;
           flares = result.response.player.flares;
 
           if (allowedFlares !== undefined) {
@@ -484,7 +482,7 @@ export async function startWorker() {
           generateID(),
           persistentId,
           claims,
-          roles,
+          claims?.role ?? null,
           flares,
           ip,
           censoredUsername,
