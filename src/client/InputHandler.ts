@@ -204,6 +204,8 @@ export class InputHandler {
 
   // Warship selection box state
   private selectionBoxActive: boolean = false;
+  // True while warships are selected via box (waiting for move target click)
+  private multiSelectionActive: boolean = false;
 
   // Touch long-press state
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -236,7 +238,8 @@ export class InputHandler {
         e.isSelected && e.unit !== null ? "crosshair" : "";
     });
     this.eventBus.on(WarshipMultiSelectionEvent, (e) => {
-      this.canvas.style.cursor = e.units.length > 0 ? "crosshair" : "";
+      this.multiSelectionActive = e.units.length > 0;
+      this.canvas.style.cursor = this.multiSelectionActive ? "crosshair" : "";
     });
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
@@ -274,6 +277,11 @@ export class InputHandler {
         this.longPressTimer = null;
       }
       this.longPressActive = false;
+      if (this.selectionBoxActive) {
+        this.selectionBoxActive = false;
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
+      this.multiSelectionActive = false;
       this.canvas.style.cursor = "";
     });
     this.pointers.clear();
@@ -517,8 +525,12 @@ export class InputHandler {
 
       this.activeKeys.delete(e.code);
 
-      // Reset crosshair when Shift is released (unless multi-selection is still active)
-      if (e.code === this.keybinds.shiftKey && !this.selectionBoxActive) {
+      // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
+      if (
+        e.code === this.keybinds.shiftKey &&
+        !this.selectionBoxActive &&
+        !this.multiSelectionActive
+      ) {
         this.canvas.style.cursor = "";
       }
     });
@@ -594,8 +606,8 @@ export class InputHandler {
     if (this.selectionBoxActive) {
       this.selectionBoxActive = false;
       const dist =
-        Math.abs(event.x - this.lastPointerDownX) +
-        Math.abs(event.y - this.lastPointerDownY);
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
       if (dist >= 10) {
         this.eventBus.emit(
           new WarshipSelectionBoxCompleteEvent(
