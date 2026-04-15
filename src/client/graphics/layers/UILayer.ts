@@ -188,6 +188,14 @@ export class UILayer implements Layer {
    */
   private onUnitSelection(event: UnitSelectionEvent) {
     if (event.isSelected) {
+      // Clear any active multi-selection boxes before applying single selection
+      if (this.multiSelectedWarships.length > 0) {
+        for (const [, center] of this.multiSelectionBoxCenters) {
+          this.clearSelectionBox(center.x, center.y, center.size);
+        }
+        this.multiSelectionBoxCenters.clear();
+        this.multiSelectedWarships = [];
+      }
       this.selectedUnit = event.unit;
       if (event.unit && event.unit.type() === UnitType.Warship) {
         this.drawSelectionBox(event.unit);
