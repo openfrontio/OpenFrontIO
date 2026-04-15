@@ -209,6 +209,14 @@ export class UILayer implements Layer {
    * Handle multi-warship box selection
    */
   private onMultiSelection(event: WarshipMultiSelectionEvent) {
+    // Clear single-selection outline if active
+    if (this.lastSelectionBoxCenter) {
+      const { x, y, size } = this.lastSelectionBoxCenter;
+      this.clearSelectionBox(x, y, size);
+      this.lastSelectionBoxCenter = null;
+      this.selectedUnit = null;
+    }
+
     // Clear previous multi-selection boxes
     for (const [, center] of this.multiSelectionBoxCenters) {
       this.clearSelectionBox(center.x, center.y, center.size);
