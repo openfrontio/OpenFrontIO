@@ -10,8 +10,8 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 /**
- * Renders the shift+drag warship selection rectangle in world-space,
- * using the same pixel-dashed style as the warship selection box in UILayer.
+ * Renders the shift+drag / touch long-press warship selection rectangle
+ * in world-space, using the same pixel-dashed style as UILayer.
  */
 export class SelectionBoxLayer implements Layer {
   private active = false;
@@ -63,7 +63,6 @@ export class SelectionBoxLayer implements Layer {
   renderLayer(context: CanvasRenderingContext2D) {
     if (!this.active || !this.ctx) return;
 
-    // Convert screen corners to world coordinates
     const topLeft = this.transformHandler.screenToWorldCoordinates(
       Math.min(this.startX, this.endX),
       Math.min(this.startY, this.endY),
@@ -78,7 +77,6 @@ export class SelectionBoxLayer implements Layer {
     const wx2 = Math.floor(bottomRight.x);
     const wy2 = Math.floor(bottomRight.y);
 
-    // Clamp to canvas bounds to avoid out-of-bounds fillRect
     const cx1 = Math.max(0, wx1);
     const cy1 = Math.max(0, wy1);
     const cx2 = Math.min(this.canvas.width - 1, wx2);
@@ -86,7 +84,6 @@ export class SelectionBoxLayer implements Layer {
 
     if (cx2 <= cx1 || cy2 <= cy1) return;
 
-    // Player color — fall back to a neutral cyan if no player yet
     const myPlayer = this.game.myPlayer();
     const baseColor = myPlayer ? myPlayer.territoryColor().lighten(0.2) : null;
     const colorStr = baseColor
@@ -94,15 +91,12 @@ export class SelectionBoxLayer implements Layer {
       : "rgba(100,200,255,0.85)";
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Draw dashed border using 4 line passes (O(n) not O(n²))
     this.ctx.fillStyle = colorStr;
-    this.drawDashedLine(this.ctx, cx1, cy1, cx2, cy1); // top
-    this.drawDashedLine(this.ctx, cx1, cy2, cx2, cy2); // bottom
-    this.drawDashedLine(this.ctx, cx1, cy1, cx1, cy2); // left
-    this.drawDashedLine(this.ctx, cx2, cy1, cx2, cy2); // right
+    this.drawDashedLine(this.ctx, cx1, cy1, cx2, cy1);
+    this.drawDashedLine(this.ctx, cx1, cy2, cx2, cy2);
+    this.drawDashedLine(this.ctx, cx1, cy1, cx1, cy2);
+    this.drawDashedLine(this.ctx, cx2, cy1, cx2, cy2);
 
-    // Subtle fill
     this.ctx.fillStyle = baseColor
       ? baseColor.alpha(0.06).toRgbString()
       : "rgba(100,200,255,0.06)";
@@ -117,7 +111,6 @@ export class SelectionBoxLayer implements Layer {
     );
   }
 
-  /** Draw a dashed 1px line using the (x+y) % 2 pattern to match UILayer style */
   private drawDashedLine(
     ctx: CanvasRenderingContext2D,
     x1: number,

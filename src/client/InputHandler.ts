@@ -126,6 +126,14 @@ export class WarshipMultiSelectionEvent implements GameEvent {
   constructor(public readonly units: UnitView[]) {}
 }
 
+/** Emitted when a touch long-press is detected (shows crosshair indicator) */
+export class TouchLongPressStartEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -197,6 +205,11 @@ export class InputHandler {
   // Warship selection box state
   private selectionBoxActive: boolean = false;
 
+  // Touch long-press state
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressActive: boolean = false;
+  private readonly LONG_PRESS_MS = 800;
+
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
@@ -256,6 +269,11 @@ export class InputHandler {
       }
       this.pointerDown = false;
       this.pointers.clear();
+      if (this.longPressTimer !== null) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressActive = false;
       this.canvas.style.cursor = "";
     });
     this.pointers.clear();
@@ -528,6 +546,22 @@ export class InputHandler {
       this.lastPointerDownY = event.clientY;
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
+
+      // Start long-press timer for touch devices
+      if (event.pointerType === "touch") {
+        this.longPressActive = false;
+        this.longPressTimer = setTimeout(() => {
+          this.longPressTimer = null;
+          this.longPressActive = true;
+          this.canvas.style.cursor = "crosshair";
+          this.eventBus.emit(
+            new TouchLongPressStartEvent(
+              this.lastPointerDownX,
+              this.lastPointerDownY,
+            ),
+          );
+        }, this.LONG_PRESS_MS);
+      }
     } else if (this.pointers.size === 2) {
       this.lastPinchDistance = this.getPinchDistance();
     }
@@ -544,6 +578,17 @@ export class InputHandler {
     }
     this.pointerDown = false;
     this.pointers.clear();
+
+    // Clean up long-press state
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    const wasLongPress = this.longPressActive;
+    this.longPressActive = false;
+    if (wasLongPress) {
+      this.canvas.style.cursor = "";
+    }
 
     // Complete selection box if it was active
     if (this.selectionBoxActive) {
@@ -656,8 +701,19 @@ export class InputHandler {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
 
-      // If shift is held, draw selection box instead of panning
-      if (this.activeKeys.has(this.keybinds.shiftKey)) {
+      // Cancel long-press if finger moved significantly before timer fires
+      if (this.longPressTimer !== null) {
+        const moveDist =
+          Math.abs(event.clientX - this.lastPointerDownX) +
+          Math.abs(event.clientY - this.lastPointerDownY);
+        if (moveDist >= 10) {
+          clearTimeout(this.longPressTimer);
+          this.longPressTimer = null;
+        }
+      }
+
+      // If shift is held OR touch long-press is active, draw selection box
+      if (this.activeKeys.has(this.keybinds.shiftKey) || this.longPressActive) {
         this.selectionBoxActive = true;
         this.eventBus.emit(
           new WarshipSelectionBoxUpdateEvent(
