@@ -120,8 +120,10 @@ export class NewsBox extends LitElement {
           <span
             class="shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded ${typeLabelColors[
               item.type
-            ]}"
-            >${translateText(typeLabelKeys[item.type])}</span
+            ] ?? typeLabelColors["announcement"]}"
+            >${translateText(
+              typeLabelKeys[item.type] ?? typeLabelKeys["announcement"],
+            )}</span
           >
           <div class="flex-1 min-w-0">
             ${item.url
