@@ -249,11 +249,7 @@ export class UILayer implements Layer {
     }
 
     for (let x = centerX - selectionSize; x <= centerX + selectionSize; x++) {
-      for (
-        let y = centerY - selectionSize;
-        y <= centerY + selectionSize;
-        y++
-      ) {
+      for (let y = centerY - selectionSize; y <= centerY + selectionSize; y++) {
         if (
           x === centerX - selectionSize ||
           x === centerX + selectionSize ||

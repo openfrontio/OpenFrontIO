@@ -810,7 +810,12 @@ describe("Warship box selection (Shift+drag)", () => {
     );
 
     expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({ startX: 100, startY: 100, endX: 200, endY: 200 }),
+      expect.objectContaining({
+        startX: 100,
+        startY: 100,
+        endX: 200,
+        endY: 200,
+      }),
     );
   });
 

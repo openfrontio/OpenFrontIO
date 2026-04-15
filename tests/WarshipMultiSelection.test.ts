@@ -90,11 +90,10 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
     game.addExecution(new WarshipExecution(w1));
 
     // player2 tries to move player1's warship
-    new MoveWarshipExecution(
-      player2,
-      w1.id(),
-      game.ref(coastX + 5, 15),
-    ).init(game, 0);
+    new MoveWarshipExecution(player2, w1.id(), game.ref(coastX + 5, 15)).init(
+      game,
+      0,
+    );
 
     expect(w1.patrolTile()).toBe(originalTile);
   });

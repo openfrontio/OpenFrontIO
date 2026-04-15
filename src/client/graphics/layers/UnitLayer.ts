@@ -261,20 +261,15 @@ export class UnitLayer implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    this.selectedWarships = this.game
-      .units(UnitType.Warship)
-      .filter((unit) => {
-        if (!unit.isActive() || unit.owner() !== myPlayer) return false;
-        const screen = this.transformHandler.worldToScreenCoordinates(
-          new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
-        );
-        return (
-          screen.x >= x1 &&
-          screen.x <= x2 &&
-          screen.y >= y1 &&
-          screen.y <= y2
-        );
-      });
+    this.selectedWarships = this.game.units(UnitType.Warship).filter((unit) => {
+      if (!unit.isActive() || unit.owner() !== myPlayer) return false;
+      const screen = this.transformHandler.worldToScreenCoordinates(
+        new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
+      );
+      return (
+        screen.x >= x1 && screen.x <= x2 && screen.y >= y1 && screen.y <= y2
+      );
+    });
 
     // Clear single selection if we got a box selection
     if (this.selectedWarships.length > 0 && this.selectedUnit) {

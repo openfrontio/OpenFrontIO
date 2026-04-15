@@ -7,7 +7,10 @@ import {
   GameUpdateType,
 } from "src/core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
-import { MoveMultipleWarshipsIntentEvent, MoveWarshipIntentEvent } from "../../Transport";
+import {
+  MoveMultipleWarshipsIntentEvent,
+  MoveWarshipIntentEvent,
+} from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { MoveIndicatorUI } from "../ui/MoveIndicatorUI";
 import { NavalTarget } from "../ui/NavalTarget";
