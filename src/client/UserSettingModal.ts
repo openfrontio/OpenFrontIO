@@ -383,6 +383,10 @@ export class UserSettingModal extends BaseModal {
 
   private renderKeybindSettings() {
     return html`
+      <p class="text-white/50 text-sm mb-4">
+        ${translateText("user_setting.keybinds_hint")}
+      </p>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"
       >
