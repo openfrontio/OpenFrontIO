@@ -70,7 +70,9 @@ describe("NewsBox", () => {
         expect(item.description).toBeDefined();
         expect(typeof item.description).toBe("string");
         expect(item.type).toBeDefined();
-        expect(["tournament", "tutorial", "announcement"]).toContain(item.type);
+        expect(["tournament", "tutorial", "announcement", "warning"]).toContain(
+          item.type,
+        );
       }
     });
 
