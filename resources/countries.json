@@ -1640,7 +1640,7 @@
     "name": "Nova Scotia"
   },
   {
-    "code": "nunavut",
+    "code": "Nunavut",
     "continent": "North America",
     "name": "Nunavut"
   },
@@ -1852,6 +1852,11 @@
     "code": "rio_de_janeiro",
     "continent": "South America",
     "name": "Rio de Janeiro"
+  },
+  {
+    "code": "SPQR",
+    "continent": "Europe",
+    "name": "Roman Empire"
   },
   {
     "code": "Romanov Russia",
@@ -2115,11 +2120,6 @@
     "name": "Sparta"
   },
   {
-    "code": "SPQR",
-    "continent": "Europe",
-    "name": "SPQR"
-  },
-  {
     "code": "lk",
     "continent": "Asia",
     "name": "Sri Lanka"
@@ -2183,6 +2183,11 @@
     "code": "tw",
     "continent": "Asia",
     "name": "Taiwan"
+  },
+  {
+    "code": "Tajik SSR",
+    "continent": "Asia",
+    "name": "Tajik SSR"
   },
   {
     "code": "tj",
@@ -2483,7 +2488,7 @@
     "name": "Yugoslavia"
   },
   {
-    "code": "yukon",
+    "code": "Yukon",
     "continent": "North America",
     "name": "Yukon"
   },

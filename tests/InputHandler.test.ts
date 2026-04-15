@@ -7,6 +7,7 @@ import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 import { GameView } from "../src/core/game/GameView";
+import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
   button: number;
@@ -39,8 +40,12 @@ describe("InputHandler AutoUpgrade", () => {
   let mockGameView: GameView;
   let eventBus: EventBus;
   let mockCanvas: HTMLCanvasElement;
+  let testSettings: UserSettings;
 
   beforeEach(() => {
+    testSettings = new UserSettings();
+    testSettings.removeCached(KEYBINDS_KEY, false);
+
     mockGameView = { inSpawnPhase: () => false } as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
@@ -476,15 +481,11 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Keybinds JSON parsing", () => {
-    beforeEach(() => {
-      localStorage.removeItem("settings.keybinds");
-    });
-
     test("parses nested object values and flattens them to strings", () => {
       const nested = {
         moveUp: { key: "moveUp", value: "KeyZ" },
       };
-      localStorage.setItem("settings.keybinds", JSON.stringify(nested));
+      testSettings.setKeybinds(nested);
 
       inputHandler.initialize();
 
@@ -492,33 +493,30 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("accepts legacy string values", () => {
-      localStorage.setItem(
-        "settings.keybinds",
-        JSON.stringify({ moveUp: "KeyX" }),
-      );
+      testSettings.setKeybinds({ moveUp: "KeyX" });
 
       inputHandler.initialize();
 
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyX");
     });
 
-    test("ignores non-string values and preserves defaults, but keeps 'Null' for unbound keys", () => {
+    test("ignores non-string values and preserves defaults, removes 'Null' for unbound keys", () => {
       const mixed = {
         moveUp: { key: "moveUp", value: null },
         moveLeft: "Null",
       };
-      localStorage.setItem("settings.keybinds", JSON.stringify(mixed));
+      testSettings.setKeybinds(mixed);
 
       inputHandler.initialize();
 
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
-      // "Null" is preserved to indicate unbound keybind
-      expect((inputHandler as any).keybinds.moveLeft).toBe("Null");
+      // "Null" entries are removed entirely to indicate unbound keybind
+      expect((inputHandler as any).keybinds.moveLeft).toBeUndefined();
     });
 
     test("handles invalid JSON gracefully and warns", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      localStorage.setItem("settings.keybinds", "not a json");
+      testSettings.setKeybinds("not a json");
 
       inputHandler.initialize();
 
@@ -533,7 +531,6 @@ describe("InputHandler AutoUpgrade", () => {
     let uiState: UIState;
 
     beforeEach(() => {
-      localStorage.removeItem("settings.keybinds");
       uiState = {
         attackRatio: 20,
         ghostStructure: null,
@@ -589,7 +586,6 @@ describe("InputHandler AutoUpgrade", () => {
 
   describe("Numpad number keys for build keybinds", () => {
     beforeEach(() => {
-      localStorage.removeItem("settings.keybinds");
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -631,7 +627,6 @@ describe("InputHandler AutoUpgrade", () => {
 
   describe("Build keybind two-phase matching (exact code first, then digit/Numpad alias)", () => {
     beforeEach(() => {
-      localStorage.removeItem("settings.keybinds");
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -650,13 +645,10 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("exact code match wins: Digit1 sets City when buildCity=Digit1 and buildFactory=Numpad1", () => {
-      localStorage.setItem(
-        "settings.keybinds",
-        JSON.stringify({
-          buildCity: "Digit1",
-          buildFactory: "Numpad1",
-        }),
-      );
+      testSettings.setKeybinds({
+        buildCity: "Digit1",
+        buildFactory: "Numpad1",
+      });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -681,13 +673,10 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("exact code match wins: Numpad1 sets Factory when buildCity=Digit1 and buildFactory=Numpad1", () => {
-      localStorage.setItem(
-        "settings.keybinds",
-        JSON.stringify({
-          buildCity: "Digit1",
-          buildFactory: "Numpad1",
-        }),
-      );
+      testSettings.setKeybinds({
+        buildCity: "Digit1",
+        buildFactory: "Numpad1",
+      });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -712,10 +701,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("digit alias used when no exact match: Numpad1 sets City when only buildCity=Digit1", () => {
-      localStorage.setItem(
-        "settings.keybinds",
-        JSON.stringify({ buildCity: "Digit1" }),
-      );
+      testSettings.setKeybinds({ buildCity: "Digit1" });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,

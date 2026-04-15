@@ -245,92 +245,114 @@ export class WaterManager {
     const distArr = this._waterDistArr;
 
     const magQueue: TileRef[] = [];
+    const h = map.height();
 
-    // Seed candidates: converted tiles + their immediate water neighbors
-    const seedCandidates = new Set<TileRef>(converted);
+    // Magnitude BFS: recompute ceil(manhattan_dist_to_nearest_coast / 2)
+    // for tiles affected by the nuke.
+    //
+    // Dirty box (±MAX_MAG_DIST from crater bounds): the region where
+    // magnitudes may have changed.  Only tiles here get updated.
+    //
+    // Seed box (±2*MAX_MAG_DIST from crater bounds): coastlines here are
+    // seeded for BFS.  This ensures that every coastline that could be
+    // nearest to a dirty-box tile is included (a dirty-box tile is at most
+    // MAX_MAG_DIST from the crater, and the nearest coast is at most
+    // MAX_MAG_DIST from the tile, so the coast is at most 2*MAX_MAG_DIST
+    // from the crater).
+    //
+    // The BFS runs WITHOUT convergence inside the seed box so that
+    // wavefronts from distant coastlines correctly reach the dirty box.
+    // BFS is clipped at the seed box boundary for performance.
+    const MAX_MAG_DIST = 62; // magnitude 31 ≈ 62 tile hops from coast
+    let cMinX = w,
+      cMaxX = 0,
+      cMinY = h,
+      cMaxY = 0;
     for (const tile of converted) {
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (map.isWater(nb[i]) && !converted.has(nb[i])) {
-          seedCandidates.add(nb[i]);
-        }
-      }
+      const tx = tile % w;
+      const ty = (tile - tx) / w;
+      if (tx < cMinX) cMinX = tx;
+      if (tx > cMaxX) cMaxX = tx;
+      if (ty < cMinY) cMinY = ty;
+      if (ty > cMaxY) cMaxY = ty;
     }
-    // Seed: water tiles adjacent to remaining land get distance 0
-    for (const tile of seedCandidates) {
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        if (map.isLand(nb[i])) {
-          if (stampArr[tile] !== stamp) {
+    // Dirty box: tiles whose magnitude may need updating.
+    const dMinX = Math.max(0, cMinX - MAX_MAG_DIST);
+    const dMaxX = Math.min(w - 1, cMaxX + MAX_MAG_DIST);
+    const dMinY = Math.max(0, cMinY - MAX_MAG_DIST);
+    const dMaxY = Math.min(h - 1, cMaxY + MAX_MAG_DIST);
+    // Seed box: coastlines here are seeded; BFS is clipped here.
+    const sMinX = Math.max(0, cMinX - MAX_MAG_DIST * 2);
+    const sMaxX = Math.min(w - 1, cMaxX + MAX_MAG_DIST * 2);
+    const sMinY = Math.max(0, cMinY - MAX_MAG_DIST * 2);
+    const sMaxY = Math.min(h - 1, cMaxY + MAX_MAG_DIST * 2);
+
+    // Seed from coastline water tiles inside the seed box.
+    for (let by = sMinY; by <= sMaxY; by++) {
+      const rowStart = by * w;
+      for (let bx = sMinX; bx <= sMaxX; bx++) {
+        const tile = (rowStart + bx) as TileRef;
+        if (!map.isWater(tile) || stampArr[tile] === stamp) continue;
+        const end = pushNeighbors(tile, nb, 0);
+        for (let i = 0; i < end; i++) {
+          if (map.isLand(nb[i])) {
             stampArr[tile] = stamp;
             distArr[tile] = 0;
-            if (map.magnitude(tile) !== 0) {
-              map.setMagnitude(tile, 0);
-              changed.add(tile);
-            }
             magQueue.push(tile);
+            break;
           }
-          break;
         }
       }
     }
-    // BFS outward through water, stopping at convergence.
+
+    // BFS outward through water, clipped to seed box.
+    // No convergence — every reachable tile inside the seed box is visited
+    // to ensure correct shortest distances reach the dirty box.
+    // Only DIRTY BOX tiles get their magnitude updated.
     let magHead = 0;
     while (magHead < magQueue.length) {
       const tile = magQueue[magHead++];
       const dist = distArr[tile];
       const nextDist = dist + 1;
-      const nextMag = Math.min(Math.ceil(nextDist / 2), 31);
       const end = pushNeighbors(tile, nb, 0);
       for (let i = 0; i < end; i++) {
         const n = nb[i];
         if (!map.isWater(n) || stampArr[n] === stamp) continue;
-        const oldMag = map.magnitude(n);
-        if (oldMag === nextMag && !seedCandidates.has(n)) continue;
+        // Clip to seed box
+        const nx = n % w;
+        const ny = (n - nx) / w;
+        if (nx < sMinX || nx > sMaxX || ny < sMinY || ny > sMaxY) continue;
         stampArr[n] = stamp;
         distArr[n] = nextDist;
         magQueue.push(n);
-        if (oldMag !== nextMag) {
-          map.setMagnitude(n, nextMag);
-          changed.add(n);
-        }
       }
     }
-    // Phase 2: unreached seed candidates (fully destroyed island)
-    const MAX_DEEP_DIST = 30;
-    const DEEP_OCEAN_MAGNITUDE = 20;
-    const deepQueue: TileRef[] = [];
-    for (const tile of seedCandidates) {
-      if (stampArr[tile] !== stamp && map.isWater(tile)) {
-        stampArr[tile] = stamp;
-        distArr[tile] = 0;
-        if (map.magnitude(tile) !== DEEP_OCEAN_MAGNITUDE) {
-          map.setMagnitude(tile, DEEP_OCEAN_MAGNITUDE);
+
+    // Update magnitudes only for dirty-box tiles.
+    for (let dy = dMinY; dy <= dMaxY; dy++) {
+      const rowStart = dy * w;
+      for (let dx = dMinX; dx <= dMaxX; dx++) {
+        const tile = (rowStart + dx) as TileRef;
+        if (!map.isWater(tile)) continue;
+        const oldMag = map.magnitude(tile);
+        let newMag: number;
+        if (stampArr[tile] === stamp) {
+          // Reached by BFS — compute magnitude from distance
+          newMag = Math.min(Math.ceil(distArr[tile] / 2), 31);
+        } else {
+          // Unreached: nearest coast is >MAX_MAG_DIST away → magnitude 31
+          newMag = 31;
+        }
+        if (oldMag !== newMag) {
+          map.setMagnitude(tile, newMag);
           changed.add(tile);
         }
-        deepQueue.push(tile);
-      }
-    }
-    let deepHead = 0;
-    while (deepHead < deepQueue.length) {
-      const tile = deepQueue[deepHead++];
-      const dist = distArr[tile];
-      if (dist >= MAX_DEEP_DIST) continue;
-      const end = pushNeighbors(tile, nb, 0);
-      for (let i = 0; i < end; i++) {
-        const n = nb[i];
-        if (!map.isWater(n) || stampArr[n] === stamp) continue;
-        const oldMag = map.magnitude(n);
-        if (oldMag >= DEEP_OCEAN_MAGNITUDE) continue;
-        stampArr[n] = stamp;
-        distArr[n] = dist + 1;
-        map.setMagnitude(n, DEEP_OCEAN_MAGNITUDE);
-        changed.add(n);
-        deepQueue.push(n);
       }
     }
 
     // ── 3. Fix shoreline bits ──────────────────────────────────────
+    // Only converted tiles changed terrain type (land→water), so only
+    // they and their 2-ring neighborhood can have shoreline bit changes.
     const tilesToCheck = new Set<TileRef>();
     for (const tile of converted) {
       tilesToCheck.add(tile);
@@ -341,14 +363,6 @@ export class WaterManager {
         for (let j = end; j < end2; j++) {
           tilesToCheck.add(nb[j]);
         }
-      }
-    }
-    for (let i = 0; i < magQueue.length; i++) {
-      const tile = magQueue[i];
-      tilesToCheck.add(tile);
-      const end = pushNeighbors(tile, nb, 0);
-      for (let j = 0; j < end; j++) {
-        tilesToCheck.add(nb[j]);
       }
     }
     for (const tile of tilesToCheck) {

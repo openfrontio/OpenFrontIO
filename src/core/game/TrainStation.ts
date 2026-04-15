@@ -29,7 +29,7 @@ class TradeStationStopHandler implements TrainStopHandler {
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
       stationOwner.addGold(gold, station.tile());
-      mg.stats().trainExternalTrade(trainOwner, gold);
+      mg.stats().trainExternalTrade(stationOwner, gold);
     }
     trainOwner.addGold(gold, station.tile());
     mg.stats().trainSelfTrade(trainOwner, gold);

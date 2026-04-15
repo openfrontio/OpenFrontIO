@@ -24,11 +24,19 @@ vi.mock("../../../src/core/PseudoRandom");
 
 describe("TrainStation", () => {
   let game: Mocked<Game>;
+  let gameStats: {
+    trainExternalTrade: ReturnType<typeof vi.fn>;
+    trainSelfTrade: ReturnType<typeof vi.fn>;
+  };
   let unit: Mocked<Unit>;
   let player: Mocked<Player>;
   let trainExecution: Mocked<TrainExecution>;
 
   beforeEach(() => {
+    gameStats = {
+      trainExternalTrade: vi.fn(),
+      trainSelfTrade: vi.fn(),
+    };
     game = {
       ticks: vi.fn().mockReturnValue(123),
       config: vi.fn().mockReturnValue({
@@ -37,16 +45,15 @@ describe("TrainStation", () => {
       }),
       addUpdate: vi.fn(),
       addExecution: vi.fn(),
-      stats: vi.fn().mockReturnValue({
-        trainExternalTrade: vi.fn(),
-        trainSelfTrade: vi.fn(),
-      }),
+      stats: vi.fn().mockReturnValue(gameStats),
     } as any;
 
     player = {
       addGold: vi.fn(),
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
+      isAlliedWith: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
       isFriendly: vi.fn().mockReturnValue(false),
     } as any;
 
@@ -87,6 +94,38 @@ describe("TrainStation", () => {
       1000n,
       unit.tile(),
     );
+  });
+
+  it("records external trade on the station owner", () => {
+    const stationOwner = {
+      addGold: vi.fn(),
+      id: 1,
+      canTrade: vi.fn().mockReturnValue(true),
+      isAlliedWith: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
+    } as any;
+    const trainOwner = {
+      addGold: vi.fn(),
+      id: 2,
+      canTrade: vi.fn().mockReturnValue(true),
+      isAlliedWith: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
+    } as any;
+
+    unit.type.mockReturnValue(UnitType.City);
+    unit.owner.mockReturnValue(stationOwner);
+    trainExecution.owner.mockReturnValue(trainOwner);
+    const station = new TrainStation(game, unit);
+
+    station.onTrainStop(trainExecution);
+
+    expect(stationOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
+    expect(trainOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
+    expect(gameStats.trainExternalTrade).toHaveBeenCalledWith(
+      stationOwner,
+      500n,
+    );
+    expect(gameStats.trainSelfTrade).toHaveBeenCalledWith(trainOwner, 500n);
   });
 
   it("passes tradeStopsVisited to trainGold", () => {
