@@ -30,6 +30,11 @@ export const TokenPayloadSchema = z.object({
   iss: z.string(),
   aud: z.string(),
   exp: z.number(),
+  role: z
+    .enum(["root", "admin", "mod", "flagged", "banned"])
+    // In case new roles are added in the future.
+    .or(z.string())
+    .optional(),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 
