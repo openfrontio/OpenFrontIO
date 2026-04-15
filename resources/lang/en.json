@@ -756,6 +756,7 @@
       "city": "Increases max population",
       "factory": "Creates railroads and spawns trains"
     },
+    "warship_shift_hint": "Hold Shift and drag to select multiple warships at once",
     "not_enough_money": "Not enough money"
   },
   "win_modal": {

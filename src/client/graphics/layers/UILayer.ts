@@ -4,7 +4,10 @@ import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { UnitSelectionEvent } from "../../InputHandler";
+import {
+  UnitSelectionEvent,
+  WarshipMultiSelectionEvent,
+} from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -35,6 +38,15 @@ export class UILayer implements Layer {
   private allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
+
+  // Keep track of multi-selected warships (box selection)
+  private multiSelectedWarships: UnitView[] = [];
+
+  // Per-unit last selection box position for multi-select cleanup
+  private multiSelectionBoxCenters: Map<
+    number,
+    { x: number; y: number; size: number }
+  > = new Map();
 
   // Keep track of previous selection box position for cleanup
   private lastSelectionBoxCenter: {
@@ -67,6 +79,24 @@ export class UILayer implements Layer {
       this.drawSelectionBox(this.selectedUnit);
     }
 
+    // Animate multi-selected warships
+    for (const unit of this.multiSelectedWarships) {
+      if (unit.isActive()) {
+        this.drawSelectionBoxMulti(unit);
+      } else {
+        // Unit was destroyed — clean up its box
+        const prev = this.multiSelectionBoxCenters.get(unit.id());
+        if (prev) {
+          this.clearSelectionBox(prev.x, prev.y, prev.size);
+          this.multiSelectionBoxCenters.delete(unit.id());
+        }
+      }
+    }
+    // Remove destroyed units from the list
+    this.multiSelectedWarships = this.multiSelectedWarships.filter((u) =>
+      u.isActive(),
+    );
+
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -79,6 +109,9 @@ export class UILayer implements Layer {
 
   init() {
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
+    this.eventBus.on(WarshipMultiSelectionEvent, (e) =>
+      this.onMultiSelection(e),
+    );
     this.redraw();
   }
 
@@ -170,6 +203,75 @@ export class UILayer implements Layer {
         this.selectedUnit = null;
       }
     }
+  }
+
+  /**
+   * Handle multi-warship box selection
+   */
+  private onMultiSelection(event: WarshipMultiSelectionEvent) {
+    // Clear previous multi-selection boxes
+    for (const [, center] of this.multiSelectionBoxCenters) {
+      this.clearSelectionBox(center.x, center.y, center.size);
+    }
+    this.multiSelectionBoxCenters.clear();
+    this.multiSelectedWarships = event.units;
+
+    // Draw boxes for all newly selected warships
+    for (const unit of this.multiSelectedWarships) {
+      if (unit.isActive()) {
+        this.drawSelectionBoxMulti(unit);
+      }
+    }
+  }
+
+  /**
+   * Draw selection box for a multi-selected warship, tracking position per unit id.
+   */
+  private drawSelectionBoxMulti(unit: UnitView) {
+    if (!unit || !unit.isActive()) return;
+
+    const selectionSize = this.SELECTION_BOX_SIZE;
+    const baseOpacity = 200;
+    const pulseAmount = 55;
+    const opacity =
+      baseOpacity + Math.sin(this.selectionAnimTime * 0.1) * pulseAmount;
+
+    if (this.theme === null) throw new Error("missing theme");
+    const ownerColor = unit.owner().territoryColor();
+    const selectionColor = ownerColor.lighten(0.2);
+
+    const centerX = this.game.x(unit.tile());
+    const centerY = this.game.y(unit.tile());
+
+    const prev = this.multiSelectionBoxCenters.get(unit.id());
+    if (prev && (prev.x !== centerX || prev.y !== centerY)) {
+      this.clearSelectionBox(prev.x, prev.y, prev.size);
+    }
+
+    for (let x = centerX - selectionSize; x <= centerX + selectionSize; x++) {
+      for (
+        let y = centerY - selectionSize;
+        y <= centerY + selectionSize;
+        y++
+      ) {
+        if (
+          x === centerX - selectionSize ||
+          x === centerX + selectionSize ||
+          y === centerY - selectionSize ||
+          y === centerY + selectionSize
+        ) {
+          if ((x + y) % 2 === 0) {
+            this.paintCell(x, y, selectionColor, opacity);
+          }
+        }
+      }
+    }
+
+    this.multiSelectionBoxCenters.set(unit.id(), {
+      x: centerX,
+      y: centerY,
+      size: selectionSize,
+    });
   }
 
   /**

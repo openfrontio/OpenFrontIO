@@ -1,18 +1,25 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
+import { Cell, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
+  CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
   TouchEvent,
   UnitSelectionEvent,
+  WarshipMultiSelectionEvent,
+  WarshipSelectionBoxCancelEvent,
+  WarshipSelectionBoxCompleteEvent,
 } from "../../InputHandler";
-import { MoveWarshipIntentEvent } from "../../Transport";
+import {
+  MoveMultipleWarshipsIntentEvent,
+  MoveWarshipIntentEvent,
+} from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -47,6 +54,9 @@ export class UnitLayer implements Layer {
 
   // Selected unit property as suggested in the review comment
   private selectedUnit: UnitView | null = null;
+
+  // Multi-selected warships (from selection box)
+  private selectedWarships: UnitView[] = [];
 
   // Configuration for unit selection
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
@@ -93,6 +103,13 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
+    this.eventBus.on(WarshipSelectionBoxCompleteEvent, (e) =>
+      this.onSelectionBoxComplete(e),
+    );
+    this.eventBus.on(WarshipSelectionBoxCancelEvent, () =>
+      this.onSelectionBoxCancel(),
+    );
+    this.eventBus.on(CloseViewEvent, () => this.onSelectionBoxCancel());
     this.redraw();
 
     loadAllSprites();
@@ -138,6 +155,19 @@ export class UnitLayer implements Layer {
       clickRef = this.game.ref(cell.x, cell.y);
     }
     if (!this.game.isWater(clickRef)) return;
+
+    // If we have multi-selected warships, send them all to this tile
+    if (this.selectedWarships.length > 0) {
+      this.eventBus.emit(
+        new MoveMultipleWarshipsIntentEvent(
+          this.selectedWarships.map((u) => u.id()),
+          clickRef,
+        ),
+      );
+      this.selectedWarships = [];
+      this.eventBus.emit(new WarshipMultiSelectionEvent([]));
+      return;
+    }
 
     if (this.selectedUnit) {
       this.eventBus.emit(
@@ -187,6 +217,12 @@ export class UnitLayer implements Layer {
       return;
     }
 
+    // Also delegate if we have multi-selected warships
+    if (this.selectedWarships.length > 0) {
+      this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
+      return;
+    }
+
     const nearbyWarships = this.findWarshipsNearCell(clickRef);
 
     if (nearbyWarships.length > 0) {
@@ -210,6 +246,48 @@ export class UnitLayer implements Layer {
     } else if (this.selectedUnit === event.unit) {
       this.selectedUnit = null;
     }
+  }
+
+  /**
+   * Handle completion of shift+drag selection box.
+   * Finds all player-owned warships within the screen rectangle.
+   */
+  private onSelectionBoxComplete(event: WarshipSelectionBoxCompleteEvent) {
+    const x1 = Math.min(event.startX, event.endX);
+    const y1 = Math.min(event.startY, event.endY);
+    const x2 = Math.max(event.startX, event.endX);
+    const y2 = Math.max(event.startY, event.endY);
+
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+
+    this.selectedWarships = this.game
+      .units(UnitType.Warship)
+      .filter((unit) => {
+        if (!unit.isActive() || unit.owner() !== myPlayer) return false;
+        const screen = this.transformHandler.worldToScreenCoordinates(
+          new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
+        );
+        return (
+          screen.x >= x1 &&
+          screen.x <= x2 &&
+          screen.y >= y1 &&
+          screen.y <= y2
+        );
+      });
+
+    // Clear single selection if we got a box selection
+    if (this.selectedWarships.length > 0 && this.selectedUnit) {
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+    }
+
+    // Notify UILayer to draw selection boxes for all selected warships
+    this.eventBus.emit(new WarshipMultiSelectionEvent(this.selectedWarships));
+  }
+
+  private onSelectionBoxCancel() {
+    this.selectedWarships = [];
+    this.eventBus.emit(new WarshipMultiSelectionEvent([]));
   }
 
   /**

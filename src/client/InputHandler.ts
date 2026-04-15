@@ -98,6 +98,34 @@ export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
 }
 
+/** Emitted while the user is drawing a shift+drag selection rectangle */
+export class WarshipSelectionBoxUpdateEvent implements GameEvent {
+  constructor(
+    public readonly startX: number,
+    public readonly startY: number,
+    public readonly endX: number,
+    public readonly endY: number,
+  ) {}
+}
+
+/** Emitted when the user releases the mouse after drawing a selection rectangle */
+export class WarshipSelectionBoxCompleteEvent implements GameEvent {
+  constructor(
+    public readonly startX: number,
+    public readonly startY: number,
+    public readonly endX: number,
+    public readonly endY: number,
+  ) {}
+}
+
+/** Emitted when the selection box is cancelled (e.g. Escape or no drag) */
+export class WarshipSelectionBoxCancelEvent implements GameEvent {}
+
+/** Emitted when multiple warships are selected via box selection */
+export class WarshipMultiSelectionEvent implements GameEvent {
+  constructor(public readonly units: UnitView[]) {}
+}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -166,6 +194,9 @@ export class InputHandler {
 
   private alternateView = false;
 
+  // Warship selection box state
+  private selectionBoxActive: boolean = false;
+
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
@@ -185,6 +216,15 @@ export class InputHandler {
 
   initialize() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
+
+    // Listen for warship selection to change cursor
+    this.eventBus.on(UnitSelectionEvent, (e) => {
+      this.canvas.style.cursor =
+        e.isSelected && e.unit !== null ? "crosshair" : "";
+    });
+    this.eventBus.on(WarshipMultiSelectionEvent, (e) => {
+      this.canvas.style.cursor = e.units.length > 0 ? "crosshair" : "";
+    });
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
@@ -216,6 +256,7 @@ export class InputHandler {
       }
       this.pointerDown = false;
       this.pointers.clear();
+      this.canvas.style.cursor = "";
     });
     this.pointers.clear();
 
@@ -301,6 +342,10 @@ export class InputHandler {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
         this.setGhostStructure(null);
+        if (this.selectionBoxActive) {
+          this.selectionBoxActive = false;
+          this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+        }
       }
 
       if (
@@ -349,6 +394,15 @@ export class InputHandler {
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
+      }
+
+      // Shift = warship box selection mode.
+      // If a ghost structure is active, discard it first.
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+        if (this.uiState.ghostStructure !== null) {
+          this.setGhostStructure(null);
+        }
+        this.canvas.style.cursor = "crosshair";
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -448,6 +502,14 @@ export class InputHandler {
       }
 
       this.activeKeys.delete(e.code);
+
+      // Reset crosshair when Shift is released (unless multi-selection is still active)
+      if (
+        (e.code === "ShiftLeft" || e.code === "ShiftRight") &&
+        !this.selectionBoxActive
+      ) {
+        this.canvas.style.cursor = "";
+      }
     });
   }
 
@@ -489,6 +551,27 @@ export class InputHandler {
     }
     this.pointerDown = false;
     this.pointers.clear();
+
+    // Complete selection box if it was active
+    if (this.selectionBoxActive) {
+      this.selectionBoxActive = false;
+      const dist =
+        Math.abs(event.x - this.lastPointerDownX) +
+        Math.abs(event.y - this.lastPointerDownY);
+      if (dist >= 10) {
+        this.eventBus.emit(
+          new WarshipSelectionBoxCompleteEvent(
+            this.lastPointerDownX,
+            this.lastPointerDownY,
+            event.clientX,
+            event.clientY,
+          ),
+        );
+        return;
+      } else {
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
+    }
 
     if (this.isModifierKeyPressed(event)) {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
@@ -580,7 +663,23 @@ export class InputHandler {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
 
-      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      // If shift is held, draw selection box instead of panning
+      if (
+        this.activeKeys.has("ShiftLeft") ||
+        this.activeKeys.has("ShiftRight")
+      ) {
+        this.selectionBoxActive = true;
+        this.eventBus.emit(
+          new WarshipSelectionBoxUpdateEvent(
+            this.lastPointerDownX,
+            this.lastPointerDownY,
+            event.clientX,
+            event.clientY,
+          ),
+        );
+      } else {
+        this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      }
 
       this.lastPointerX = event.clientX;
       this.lastPointerY = event.clientY;

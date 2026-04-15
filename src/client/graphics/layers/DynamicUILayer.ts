@@ -7,7 +7,7 @@ import {
   GameUpdateType,
 } from "src/core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
-import { MoveWarshipIntentEvent } from "../../Transport";
+import { MoveMultipleWarshipsIntentEvent, MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { MoveIndicatorUI } from "../ui/MoveIndicatorUI";
 import { NavalTarget } from "../ui/NavalTarget";
@@ -33,6 +33,11 @@ export class DynamicUILayer implements Layer {
   init() {
     // Listen for warship move clicks for MoveIndicatorUI
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
+      const x = this.game.x(e.tile);
+      const y = this.game.y(e.tile);
+      this.uiElements.push(new MoveIndicatorUI(this.transformHandler, x, y));
+    });
+    this.eventBus.on(MoveMultipleWarshipsIntentEvent, (e) => {
       const x = this.game.x(e.tile);
       const y = this.game.y(e.tile);
       this.uiElements.push(new MoveIndicatorUI(this.transformHandler, x, y));
