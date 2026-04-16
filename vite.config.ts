@@ -1,15 +1,16 @@
 import tailwindcss from "@tailwindcss/vite";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { type AssetManifest, buildAssetUrl } from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
+  getProprietaryDir,
   getResourcesDir,
   writePublicAssetManifestModule,
 } from "./src/server/PublicAssetManifest";
@@ -18,12 +19,43 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function serveProprietaryDir(dir: string): Plugin {
+  const resolvedDir = path.resolve(dir) + path.sep;
+  return {
+    name: "serve-proprietary-dir",
+    configureServer(server) {
+      // Return a function so the middleware is registered after Vite's internal
+      // static-file handler (publicDir).  This makes proprietary/ a fallback
+      // rather than taking precedence over resources/.
+      return () => {
+        server.middlewares.use((req, res, next) => {
+          if (!req.url) return next();
+          const urlPath = new URL(req.url, "http://localhost").pathname;
+          const filePath = path.resolve(
+            dir,
+            decodeURIComponent(urlPath).replace(/^\//, ""),
+          );
+          if (!filePath.startsWith(resolvedDir)) return next();
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            res.setHeader("Cache-Control", "no-cache");
+            fs.createReadStream(filePath).pipe(res);
+          } else {
+            next();
+          }
+        });
+      };
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
   const resourcesDir = getResourcesDir(__dirname);
+  const proprietaryDir = getProprietaryDir(__dirname);
+  const sourceDirs = [resourcesDir, proprietaryDir];
   const assetManifest: AssetManifest = isProduction
-    ? buildPublicAssetManifest(resourcesDir)
+    ? buildPublicAssetManifest(sourceDirs)
     : {};
   const htmlAssetData = {
     assetManifest: JSON.stringify(assetManifest),
@@ -45,7 +77,7 @@ export default defineConfig(({ mode }) => {
     closeBundle() {
       const outDir = path.join(__dirname, "static");
       copyRootPublicFiles(resourcesDir, outDir);
-      createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+      createHashedPublicAssetFiles(sourceDirs, outDir, assetManifest);
       writePublicAssetManifestModule(outDir, assetManifest);
     },
   });
@@ -91,6 +123,7 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       tsconfigPaths(),
+      ...(!isProduction ? [serveProprietaryDir(proprietaryDir)] : []),
       ...(isProduction
         ? []
         : [
@@ -106,14 +139,6 @@ export default defineConfig(({ mode }) => {
               },
             }),
           ]),
-      viteStaticCopy({
-        targets: [
-          {
-            src: "proprietary/*",
-            dest: ".",
-          },
-        ],
-      }),
       ...(isProduction ? [syncHashedPublicAssets()] : []),
       tailwindcss(),
     ],

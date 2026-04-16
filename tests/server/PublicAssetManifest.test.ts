@@ -107,11 +107,11 @@ describe("PublicAssetManifest", () => {
       "utf8",
     );
 
-    const firstManifest = buildPublicAssetManifest(resourcesDir);
+    const firstManifest = buildPublicAssetManifest([resourcesDir]);
     const firstManifestHref = firstManifest["manifest.json"];
     const firstIconHref = firstManifest["icons/app-icon.png"];
 
-    createHashedPublicAssetFiles(resourcesDir, outDir, firstManifest);
+    createHashedPublicAssetFiles([resourcesDir], outDir, firstManifest);
     const firstOutput = await fs.readFile(
       path.join(outDir, firstManifestHref.slice(1)),
       "utf8",
@@ -124,7 +124,7 @@ describe("PublicAssetManifest", () => {
     );
     clearPublicAssetManifestCache();
 
-    const secondManifest = buildPublicAssetManifest(resourcesDir);
+    const secondManifest = buildPublicAssetManifest([resourcesDir]);
     const secondManifestHref = secondManifest["manifest.json"];
     const secondIconHref = secondManifest["icons/app-icon.png"];
 
@@ -147,8 +147,8 @@ describe("PublicAssetManifest", () => {
       "utf8",
     );
 
-    const assetManifest = buildPublicAssetManifest(resourcesDir);
-    createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
 
     const emittedManifest = await emitHashedAsset(
       outDir,
@@ -164,7 +164,7 @@ describe("PublicAssetManifest", () => {
 
     await writeWebManifestFixture(resourcesDir, [{ src: "icons/missing.png" }]);
 
-    expect(() => buildPublicAssetManifest(resourcesDir)).toThrow(
+    expect(() => buildPublicAssetManifest([resourcesDir])).toThrow(
       /manifest\.json references icons\/missing\.png/i,
     );
   });
@@ -177,8 +177,8 @@ describe("PublicAssetManifest", () => {
       { src: "data:image/png;base64,AAA" },
     ]);
 
-    const assetManifest = buildPublicAssetManifest(resourcesDir);
-    createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
 
     const emittedManifest = await emitHashedAsset(
       outDir,
@@ -198,8 +198,8 @@ describe("PublicAssetManifest", () => {
       "test.png",
     );
 
-    const assetManifest = buildPublicAssetManifest(resourcesDir);
-    createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
 
     const xmlHref = assetManifest["fonts/test.xml"];
     const pngHref = assetManifest["fonts/test.png"];
@@ -220,12 +220,12 @@ describe("PublicAssetManifest", () => {
       "test.png",
     );
 
-    const firstManifest = buildPublicAssetManifest(resourcesDir);
+    const firstManifest = buildPublicAssetManifest([resourcesDir]);
 
     await fs.writeFile(path.join(resourcesDir, "fonts", "test.png"), "png-v2");
     clearPublicAssetManifestCache();
 
-    const secondManifest = buildPublicAssetManifest(resourcesDir);
+    const secondManifest = buildPublicAssetManifest([resourcesDir]);
 
     expect(firstManifest["fonts/test.png"]).not.toBe(
       secondManifest["fonts/test.png"],
@@ -250,7 +250,7 @@ describe("PublicAssetManifest", () => {
       ].join("\n"),
     );
 
-    expect(() => buildPublicAssetManifest(resourcesDir)).toThrow(
+    expect(() => buildPublicAssetManifest([resourcesDir])).toThrow(
       /missing from the asset manifest/i,
     );
   });
@@ -265,8 +265,8 @@ describe("PublicAssetManifest", () => {
       "nested-png",
     );
 
-    const assetManifest = buildPublicAssetManifest(resourcesDir);
-    createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
 
     const xmlHref = assetManifest["fonts/nested/atlas.xml"];
     const pngHref = assetManifest["fonts/nested/pages/p0.png"];
