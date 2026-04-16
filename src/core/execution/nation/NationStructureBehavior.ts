@@ -92,8 +92,10 @@ const TILES_PER_CITY_EQUIVALENT = 2000;
  * callers than a per-tick cache would.
  */
 const SHARED_WATER_CACHE_TTL_TICKS = 30;
-let sharedWaterCacheTick: number = -Infinity;
-let sharedWaterCacheByPlayer: Map<Player, Set<number> | null> | null = null;
+const sharedWaterCaches = new WeakMap<
+  Game,
+  { tick: number; byPlayer: Map<Player, Set<number> | null> }
+>();
 
 /** Sentinel added to a player's shared-water set to signal "touches ocean". */
 const OCEAN_SENTINEL = -1;
@@ -253,14 +255,15 @@ export class NationStructureBehavior {
    */
   private sharedWaterComponents(): Set<number> | null {
     const tick = this.game.ticks();
+    let cache = sharedWaterCaches.get(this.game);
     if (
-      sharedWaterCacheByPlayer === null ||
-      tick - sharedWaterCacheTick >= SHARED_WATER_CACHE_TTL_TICKS
+      cache === undefined ||
+      tick - cache.tick >= SHARED_WATER_CACHE_TTL_TICKS
     ) {
-      sharedWaterCacheByPlayer = buildSharedWaterByPlayer(this.game);
-      sharedWaterCacheTick = tick;
+      cache = { tick, byPlayer: buildSharedWaterByPlayer(this.game) };
+      sharedWaterCaches.set(this.game, cache);
     }
-    return sharedWaterCacheByPlayer.get(this.player) ?? null;
+    return cache.byPlayer.get(this.player) ?? null;
   }
 
   /**
