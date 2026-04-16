@@ -60,6 +60,9 @@ async function drain(): Promise<void> {
     const batch: GameUpdateViewData[] = [];
     const onTickUpdate = (gu: GameUpdateViewData | ErrorUpdate) => {
       if (!("updates" in gu)) {
+        if ("errMsg" in gu) {
+          sendMessage({ type: "game_error", error: gu } as WorkerMessage);
+        }
         return;
       }
       batch.push(gu);

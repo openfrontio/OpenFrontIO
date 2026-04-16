@@ -101,11 +101,12 @@ export function getAdapter(
         originalGame._stats,
       );
 
-      (clonedGame as any)._miniWaterHPA = new AStarWaterHierarchical(
-        clonedGame.miniMap(),
-        (clonedGame as any)._miniWaterGraph!,
-        { cachePaths: false },
-      );
+      (clonedGame as any)._waterManager._miniWaterHPA =
+        new AStarWaterHierarchical(
+          clonedGame.miniMap(),
+          (clonedGame as any)._waterManager._miniWaterGraph!,
+          { cachePaths: false },
+        );
 
       return PathFinding.Water(clonedGame);
     }

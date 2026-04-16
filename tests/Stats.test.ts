@@ -181,6 +181,15 @@ describe("Stats", () => {
     });
   });
 
+  test("train trade gold", () => {
+    stats.trainSelfTrade(player1, 2);
+    stats.trainExternalTrade(player2, 1);
+    expect(stats.stats()).toStrictEqual({
+      client1: { gold: [0n, 0n, 0n, 0n, 2n] },
+      client2: { gold: [0n, 0n, 0n, 0n, 0n, 1n] },
+    });
+  });
+
   test("unitBuild", () => {
     stats.unitBuild(player1, UnitType.City);
     expect(stats.stats()).toStrictEqual({

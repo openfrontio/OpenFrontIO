@@ -34,6 +34,11 @@ on:
     branches:
       - "*"
 
+  # Nightly build: rebuild and deploy main to nightly.openfront.dev
+  # 07:00 UTC = 11:00 PM PST (midnight PDT during summer)
+  schedule:
+    - cron: "0 7 * * *"
+
 permissions: {}
 
 concurrency:
@@ -42,8 +47,8 @@ concurrency:
 
 jobs:
   deploy:
-    # Don't deploy on push if this is a fork
-    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'openfrontio/OpenFrontIO' }}
+    # Don't deploy on push if this is a fork; always deploy on schedule and workflow_dispatch
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
     name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}
     runs-on: ubuntu-latest
@@ -51,7 +56,7 @@ jobs:
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
-      SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
+      SUBDOMAIN: ${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
       - uses: actions/checkout@v6
       - name: 📝 Update job summary
@@ -79,7 +84,7 @@ jobs:
           gh api octocat
       - name: 📝 Create deployment
         if: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: deployment
         env:
           ENVIRONMENT: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
@@ -129,7 +134,7 @@ jobs:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
-          HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
+          HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
@@ -161,7 +166,7 @@ jobs:
           echo "::endgroup::"
       - name: 🔄 Update deployment status
         if: ${{ always() && github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           FQDN: ${{ env.FQDN }}
           DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}

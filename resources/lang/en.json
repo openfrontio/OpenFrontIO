@@ -201,10 +201,11 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
-    "enables_title": "Enable Settings",
+    "enables_title": "Disable Units",
     "start": "Start Game",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
@@ -354,8 +355,13 @@
     "aegean": "Aegean",
     "milkyway": "Milky Way",
     "mediterranean": "Mediterranean",
-    "antarctica": "Antarctica",
-    "dyslexdria": "Dyslexdria"
+    "dyslexdria": "Dyslexdria",
+    "greatlakes": "Great Lakes",
+    "straitofmalacca": "Strait Of Malacca",
+    "luna": "Luna",
+    "conakry": "Conakry",
+    "caucasus": "Caucasus",
+    "antarctica": "Antarctica"
   },
   "map_categories": {
     "featured": "Featured",
@@ -381,7 +387,8 @@
     "disabled_units": "Disabled Units",
     "game_length": "Game length",
     "pvp_immunity": "PVP immunity duration",
-    "starting_gold": "Starting Gold"
+    "starting_gold": "Starting Gold",
+    "host_cheats": "Host Cheats"
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
@@ -434,7 +441,8 @@
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
-    "enables_title": "Enable Settings",
+    "water_nukes": "Water nukes",
+    "enables_title": "Disable Units",
     "player": "Player",
     "players": "Players",
     "nation_players": "Nations",
@@ -457,6 +465,7 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
+    "host_cheats": "Host Cheats",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {
@@ -513,7 +522,9 @@
     "sams_disabled": "SAMs Disabled",
     "sams_disabled_label": "SAMs",
     "peace_time": "4min Peace",
-    "peace_time_label": "PVP Immunity"
+    "peace_time_label": "PVP Immunity",
+    "water_nukes": "Water Nukes",
+    "water_nukes_label": "Water Nukes"
   },
   "select_lang": {
     "title": "Select Language"
@@ -611,7 +622,7 @@
     "attack_ratio_down": "Decrease Attack Ratio",
     "attack_ratio_down_desc": "Decrease attack ratio by {amount}%",
     "attack_ratio_increment_label": "Attack Ratio Keybind Increment",
-    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press.",
+    "attack_ratio_increment_desc": "How much the attack ratio keybinds change per press/scroll.",
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
@@ -937,8 +948,16 @@
     "title": "Store",
     "patterns": "Skins",
     "flags": "Flags",
+    "packs": "Packs",
     "no_flags": "No flags available. Check back later for new items.",
-    "no_skins": "No skins available. Check back later for new items."
+    "no_skins": "No skins available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
+    "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "checkout_failed": "Failed to create checkout session.",
+    "login_required": "You must be logged in to purchase with currency.",
+    "not_enough_currency": "Not enough currency for this purchase.",
+    "purchase_failed": "Purchase failed. Please try again.",
+    "purchase_success": "Purchase succeeded: {name}"
   },
   "territory_patterns": {
     "title": "Skins",
@@ -951,7 +970,16 @@
     "search": "Search..."
   },
   "cosmetics": {
-    "artist_label": "Artist:"
+    "artist_label": "Artist:",
+    "color_label": "Color:",
+    "common": "Common",
+    "uncommon": "Uncommon",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary",
+    "adfree": "ad-free for life!",
+    "hard": "Plutonium",
+    "soft": "Caps"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1036,5 +1064,12 @@
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."
+  },
+  "news_box": {
+    "tournament": "TOURNAMENT",
+    "tutorial": "TUTORIAL",
+    "news": "NEWS",
+    "dismiss": "Dismiss",
+    "go_to_item": "Go to item {num}"
   }
 }
