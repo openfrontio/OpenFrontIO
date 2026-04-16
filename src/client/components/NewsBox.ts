@@ -1,4 +1,5 @@
 import { LitElement, html, nothing } from "lit";
+import { resolveMarkdown } from "lit-markdown";
 import { customElement, state } from "lit/decorators.js";
 import type { NewsItem } from "../../core/ApiSchemas";
 import { getNews } from "../Api";
@@ -137,10 +138,13 @@ export class NewsBox extends LitElement {
               : html`<span class="text-sm font-medium text-white truncate block"
                   >${item.title}</span
                 >`}
-            <span class="text-xs text-white/50 block"
-              >${item.descriptionTranslationKey
-                ? translateText(item.descriptionTranslationKey)
-                : item.description}</span
+            <span
+              class="text-xs text-white/50 block [&_a]:text-blue-300 [&_a:hover]:text-blue-200"
+              >${resolveMarkdown(
+                item.descriptionTranslationKey
+                  ? translateText(item.descriptionTranslationKey)
+                  : (item.description ?? ""),
+              )}</span
             >
           </div>
           ${this.items.length > 1
