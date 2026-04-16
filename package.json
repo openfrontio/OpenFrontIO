@@ -104,7 +104,7 @@
     "colord": "^2.9.3",
     "colorjs.io": "^0.5.2",
     "compression": "^1.8.1",
-    "dompurify": "^3.3.2",
+    "dompurify": "^3.4.0",
     "dotenv": "^16.5.0",
     "ejs": "^3.1.10",
     "express": "^5.2.1",

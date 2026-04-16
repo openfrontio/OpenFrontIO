@@ -132,5 +132,11 @@
       "flag": "",
       "name": "[]"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      { "x": 0, "y": 0, "width": 1308, "height": 1750 },
+      { "x": 0, "y": 1750, "width": 1308, "height": 1750 }
+    ]
+  }
 }
