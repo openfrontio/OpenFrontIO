@@ -84,6 +84,95 @@ const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
+/**
+ * Per-tick cache for shared water components.
+ *
+ * `sharedWaterComponents` is called once per nation per structure-building pass,
+ * and each call previously iterated every other player's border tiles. With N
+ * nations this is O(N * total_border_tiles) per tick. All N nations share the
+ * same answer topology, so we compute it once per tick and reuse it.
+ *
+ * Ocean is always treated as shared (ports are useful as long as someone else
+ * is on the same ocean, which is effectively always true), so we skip the
+ * `getWaterComponent` call for ocean neighbors. Only lakes need
+ * the per-component shared/unshared analysis.
+ */
+let sharedWaterCacheTick: number = -1;
+let sharedWaterCacheByPlayer: Map<Player, Set<number> | null> | null = null;
+
+/** Sentinel added to a player's shared-water set to signal "touches ocean". */
+const OCEAN_SENTINEL = -1;
+
+function buildSharedWaterByPlayer(game: Game): Map<Player, Set<number> | null> {
+  // Pass 1: record which water bodies each player touches, and (only for
+  // non-bots) which players are candidate trade partners per component.
+  const playerToWater = new Map<
+    Player,
+    { hasOcean: boolean; lakes: Set<number> }
+  >();
+  const oceanPartners: Player[] = [];
+  const lakePartners = new Map<number, Player[]>();
+
+  for (const player of game.players()) {
+    let hasOcean = false;
+    const lakes = new Set<number>();
+    for (const tile of player.borderTiles()) {
+      if (!game.isShore(tile)) continue;
+      for (const neighbor of game.neighbors(tile)) {
+        if (!game.isWater(neighbor)) continue;
+        if (game.isOcean(neighbor)) {
+          hasOcean = true;
+          continue;
+        }
+        const comp = game.getWaterComponent(neighbor);
+        if (comp !== null) lakes.add(comp);
+      }
+    }
+    playerToWater.set(player, { hasOcean, lakes });
+
+    if (player.type() === PlayerType.Bot) continue;
+    if (hasOcean) oceanPartners.push(player);
+    for (const c of lakes) {
+      let arr = lakePartners.get(c);
+      if (arr === undefined) {
+        arr = [];
+        lakePartners.set(c, arr);
+      }
+      arr.push(player);
+    }
+  }
+
+  // Pass 2: a component is "shared" for player P if some *other* candidate
+  // partner on that component can trade with P (i.e. no mutual embargo).
+  const result = new Map<Player, Set<number> | null>();
+  for (const [player, { hasOcean, lakes }] of playerToWater) {
+    const shared = new Set<number>();
+
+    if (hasOcean) {
+      for (const other of oceanPartners) {
+        if (other !== player && player.canTrade(other)) {
+          shared.add(OCEAN_SENTINEL);
+          break;
+        }
+      }
+    }
+
+    for (const c of lakes) {
+      const partners = lakePartners.get(c);
+      if (partners === undefined) continue;
+      for (const other of partners) {
+        if (other !== player && player.canTrade(other)) {
+          shared.add(c);
+          break;
+        }
+      }
+    }
+
+    result.set(player, shared.size > 0 ? shared : null);
+  }
+  return result;
+}
+
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -169,35 +258,17 @@ export class NationStructureBehavior {
 
   /**
    * Returns the set of water components shared with at least one other player,
-   * or null if there are none.
+   * or null if there are none. Result is memoized globally per tick so all
+   * nations share one O(total_border_tiles) pass instead of each doing O(N *
+   * total_border_tiles) work.
    */
   private sharedWaterComponents(): Set<number> | null {
-    // Collect all water-component IDs reachable from this player's coast.
-    const playerComponents = new Set<number>();
-    for (const tile of this.player.borderTiles()) {
-      if (!this.game.isShore(tile)) continue;
-      for (const neighbor of this.game.neighbors(tile)) {
-        if (!this.game.isWater(neighbor)) continue;
-        const comp = this.game.getWaterComponent(neighbor);
-        if (comp !== null) playerComponents.add(comp);
-      }
+    const tick = this.game.ticks();
+    if (sharedWaterCacheByPlayer === null || sharedWaterCacheTick !== tick) {
+      sharedWaterCacheByPlayer = buildSharedWaterByPlayer(this.game);
+      sharedWaterCacheTick = tick;
     }
-    if (playerComponents.size === 0) return null;
-
-    // Keep only components that at least one other player also touches.
-    const shared = new Set<number>();
-    for (const other of this.game.players()) {
-      if (other === this.player) continue;
-      for (const tile of other.borderTiles()) {
-        if (!this.game.isShore(tile)) continue;
-        for (const neighbor of this.game.neighbors(tile)) {
-          if (!this.game.isWater(neighbor)) continue;
-          const comp = this.game.getWaterComponent(neighbor);
-          if (comp !== null && playerComponents.has(comp)) shared.add(comp);
-        }
-      }
-    }
-    return shared.size > 0 ? shared : null;
+    return sharedWaterCacheByPlayer.get(this.player) ?? null;
   }
 
   /**
@@ -507,6 +578,9 @@ export class NationStructureBehavior {
       if (shared === null) return false;
       for (const neighbor of this.game.neighbors(t)) {
         if (!this.game.isWater(neighbor)) continue;
+        // Ocean is always considered shared, so any ocean neighbor makes the
+        // tile a valid port site — skip the component lookup.
+        if (this.game.isOcean(neighbor)) return true;
         const comp = this.game.getWaterComponent(neighbor);
         if (comp !== null && shared.has(comp)) return true;
       }
