@@ -1,7 +1,6 @@
-import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -25,21 +24,26 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
-import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
+import {
+  EMOJI_ICON_KIND,
+  getFirstPlacePlayer,
+  getPlayerIcons,
+  IMAGE_ICON_KIND,
+} from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import allianceIcon from "/images/AllianceIcon.svg?url";
-import warshipIcon from "/images/BattleshipIconWhite.svg?url";
-import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
-import portIcon from "/images/PortIcon.svg?url";
-import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
-import soldierIcon from "/images/SoldierIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIcon.svg");
+const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+const cityIcon = assetUrl("images/CityIconWhite.svg");
+const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
+const portIcon = assetUrl("images/PortIcon.svg");
+const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -259,6 +263,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
       includeAllianceIcon: false,
       firstPlace,
+      alliancesDisabled: this.game.config().disableAlliances(),
     });
 
     if (icons.length === 0) {
@@ -267,11 +272,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`<span class="flex items-center gap-1 ml-1 shrink-0">
       ${icons.map((icon) =>
-        icon.kind === "emoji" && icon.text
+        icon.kind === EMOJI_ICON_KIND && icon.text
           ? html`<span class="text-sm shrink-0" translate="no"
               >${icon.text}</span
             >`
-          : icon.kind === "image" && icon.src
+          : icon.kind === IMAGE_ICON_KIND && icon.src
             ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
             : html``,
       )}
@@ -364,21 +369,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             )}"
           >
             ${player.cosmetics.flag
-              ? player.cosmetics.flag!.startsWith("!")
-                ? html`<div
-                    class="h-6 aspect-3/4 player-flag"
-                    ${ref((el) => {
-                      if (el instanceof HTMLElement) {
-                        requestAnimationFrame(() => {
-                          renderPlayerFlag(player.cosmetics.flag!, el);
-                        });
-                      }
-                    })}
-                  ></div>`
-                : html`<img
-                    class="h-6 aspect-3/4"
-                    src=${"/flags/" + player.cosmetics.flag! + ".svg"}
-                  />`
+              ? html`<img
+                  class="h-6 object-contain"
+                  src=${assetUrl(player.cosmetics.flag!)}
+                />`
               : html``}
             <span>${player.displayName()}</span>
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
@@ -451,7 +445,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-sky-600 transition-[width] duration-200"
+                class="h-full bg-[#0073b7] transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -524,7 +518,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

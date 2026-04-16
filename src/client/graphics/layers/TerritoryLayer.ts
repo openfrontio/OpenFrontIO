@@ -12,7 +12,6 @@ import {
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
@@ -24,7 +23,6 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
-  private userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
@@ -62,9 +60,7 @@ export class TerritoryLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    userSettings: UserSettings,
   ) {
-    this.userSettings = userSettings;
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
   }
@@ -85,7 +81,14 @@ export class TerritoryLayer implements Layer {
       this.spawnHighlight();
     }
 
-    this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
+    this.game.recentlyUpdatedTiles().forEach((t) => {
+      this.enqueueTile(t);
+      // Immediately clear territory overlay for water tiles so old
+      // borders/territory don't persist visually (e.g. after nuke turns land to water)
+      if (this.game.isWater(t)) {
+        this.clearTile(t);
+      }
+    });
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
     unitUpdates.forEach((update) => {

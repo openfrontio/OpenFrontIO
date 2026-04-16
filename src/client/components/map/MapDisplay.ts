@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
@@ -143,8 +144,7 @@ export class MapDisplay extends LitElement {
     const wins = this.readWins();
     return medalOrder.map((medal) => {
       const earned = wins.has(medal);
-      const mask =
-        "url('/images/MedalIconWhite.svg') no-repeat center / contain";
+      const mask = `url('${assetUrl("images/MedalIconWhite.svg")}') no-repeat center / contain`;
       return html`<div
         class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
         style="background-color:${colors[

@@ -1,6 +1,8 @@
 import * as d3 from "d3";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
+import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
@@ -9,7 +11,7 @@ import {
   MenuElementParams,
   TooltipKey,
 } from "./RadialMenuElements";
-import backIcon from "/images/BackIconWhite.svg?url";
+const backIcon = assetUrl("images/BackIconWhite.svg");
 
 function resolveColor(
   item: MenuElement,
@@ -505,6 +507,7 @@ export class RadialMenu implements Layer {
         this.navigationInProgress
       )
         return;
+      this.eventBus.emit(new PlaySoundEffectEvent("click"));
 
       if (
         this.currentLevel > 0 &&

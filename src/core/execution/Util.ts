@@ -39,7 +39,7 @@ export interface NukeAllianceCheckParams {
   game: Game | GameView;
   targetTile: TileRef;
   magnitude: NukeMagnitude;
-  allySmallIds: Set<number>;
+  allySmallIds?: Set<number>;
   threshold: number;
 }
 
@@ -52,7 +52,7 @@ export function wouldNukeBreakAlliance(
 ): boolean {
   const { game, targetTile, magnitude, allySmallIds, threshold } = params;
 
-  if (allySmallIds.size === 0) {
+  if (!allySmallIds || allySmallIds.size === 0) {
     return false;
   }
 

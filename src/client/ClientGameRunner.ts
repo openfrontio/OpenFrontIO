@@ -10,9 +10,9 @@ import {
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createPartialGameRecord, replacer } from "../core/Util";
+import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
+import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
@@ -50,7 +50,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager from "./sound/SoundManager";
+import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -65,14 +65,23 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
+export interface JoinLobbyResult {
+  stop: (force?: boolean) => boolean;
+  prestart: Promise<void>;
+  join: Promise<void>;
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
-  onPrestart: () => void,
-  onJoin: () => void,
-): (force?: boolean) => boolean {
+): JoinLobbyResult {
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
+
+  let resolvePrestart: () => void;
+  let resolveJoin: () => void;
+  const prestartPromise = new Promise<void>((r) => (resolvePrestart = r));
+  const joinPromise = new Promise<void>((r) => (resolveJoin = r));
 
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
@@ -106,17 +115,17 @@ export function joinLobby(
         message.gameMapSize,
         terrainMapFileLoader,
       );
-      onPrestart();
+      resolvePrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
-      onPrestart();
+      resolvePrestart();
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
-      onJoin();
+      resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
       createClientGame(
@@ -158,7 +167,16 @@ export function joinLobby(
       if (message.error === "full-lobby") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID },
+            detail: { lobby: lobbyConfig.gameID, cause: "full-lobby" },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else if (message.error === "kick_reason.host_left") {
+        alert(translateText("kick_reason.host_left"));
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
             bubbles: true,
             composed: true,
           }),
@@ -177,19 +195,23 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return (force: boolean = false) => {
-    if (!force && currentGameRunner?.shouldPreventWindowClose()) {
-      console.log("Player is active, prevent leaving game");
-
-      return false;
-    }
-
-    console.log("leaving game");
-
-    currentGameRunner = null;
-    transport.leaveGame();
-
-    return true;
+  return {
+    stop: (force: boolean = false) => {
+      if (!force && currentGameRunner?.shouldPreventWindowClose()) {
+        console.log("Player is active, prevent leaving game");
+        return false;
+      }
+      console.log("leaving game");
+      if (currentGameRunner) {
+        currentGameRunner.stop();
+        currentGameRunner = null;
+      } else {
+        transport.leaveGame();
+      }
+      return true;
+    },
+    prestart: prestartPromise,
+    join: joinPromise,
   };
 }
 
@@ -205,7 +227,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getConfig(
+  const config = await getGameLogicConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
@@ -235,22 +257,29 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const soundManager = new SoundManager(eventBus, userSettings);
+  try {
+    const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
-  console.log(
-    `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
-  );
+    console.log(
+      `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
+    );
 
-  return new ClientGameRunner(
-    lobbyConfig,
-    clientID,
-    eventBus,
-    gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
-    transport,
-    worker,
-    gameView,
-  );
+    return new ClientGameRunner(
+      lobbyConfig,
+      clientID,
+      eventBus,
+      gameRenderer,
+      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
+      transport,
+      worker,
+      gameView,
+      soundManager,
+    );
+  } catch (err) {
+    soundManager.dispose();
+    throw err;
+  }
 }
 
 export class ClientGameRunner {
@@ -276,6 +305,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private soundManager: SoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -322,12 +352,13 @@ export class ClientGameRunner {
       Date.now(),
       update.winner,
       this.lobby.gameStartInfo.lobbyCreatedAt,
+      this.lobby.gameStartInfo.visibleAt,
     );
     endGame(record);
   }
 
   public start() {
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -505,7 +536,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.dispose();
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -624,15 +655,15 @@ export class ClientGameRunner {
       }
 
       if (upgradeUnits.length > 0) {
-        upgradeUnits.sort((a, b) => a.distance - b.distance);
-        const bestUpgrade = upgradeUnits[0];
-
-        this.eventBus.emit(
-          new SendUpgradeStructureIntentEvent(
-            bestUpgrade.unitId,
-            bestUpgrade.unitType,
-          ),
-        );
+        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+        if (bestUpgrade) {
+          this.eventBus.emit(
+            new SendUpgradeStructureIntentEvent(
+              bestUpgrade.unitId,
+              bestUpgrade.unitType,
+            ),
+          );
+        }
       }
     });
   }

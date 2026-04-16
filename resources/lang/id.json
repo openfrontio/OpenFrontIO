@@ -23,7 +23,8 @@
     "none": "Tidak Satupun",
     "copied": "Tersalin",
     "click_to_copy": "Klik untuk salin",
-    "enabled": "Diaktifkan"
+    "enabled": "Diaktifkan",
+    "map_default": "Peta Default"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -42,7 +43,6 @@
     "play": "Main",
     "news": "Berita",
     "store": "Toko",
-    "store_new_badge": "BARU",
     "settings": "Pengaturan",
     "leaderboard": "Papan Peringkat",
     "account": "Akun",
@@ -89,7 +89,10 @@
     "hotkeys": "Tombol pintas",
     "table_key": "Kunci",
     "table_action": "Tindakan",
+    "action_esc": "Menutup menu. Membatalkan pratinjau pembangunan unit.",
+    "action_enter": "Membangun unit di posisi kursor",
     "action_alt_view": "Ganti Tampilan (Medan / Negara)",
+    "action_coordinate_grid": "Tampilkan/Sembunyikan grid koordinat",
     "action_attack_altclick": "Serang (saat klik kiri diatur untuk membuka menu)",
     "action_build": "Buka menu Pembangunan",
     "action_emote": "Buka menu Ekspresi",
@@ -115,7 +118,7 @@
     "ui_options": "Pilihan",
     "ui_options_desc": "Elemen-elemen berikut dapat ditemukan di dalamnya:",
     "ui_playeroverlay": "Overlay Info Pemain",
-    "ui_playeroverlay_desc": "Saat kamu mengarahkan kursor ke suatu negara, overlay Info Pemain akan ditampilkan di bawah menu Opsi. Overlay ini menampilkan jenis pemain: Manusia, Negara (bot pintar), atau Bot; sikap suatu Negara terhadapmu, mulai dari Bermusuhan hingga Ramah; serta jumlah pasukan bertahan, emas, jumlah Kapal Perang, dan berbagai bangunan yang dimiliki pemain tersebut.",
+    "ui_playeroverlay_desc": "Saat kursor diarahkan ke sebuah negara, overlay info pemain akan muncul di bawah Options. Informasi ini menampilkan jenis pemain: Human, Nation, atau Tribe. Ditampilkan juga sikap Nation terhadapmu, dari Hostile hingga Friendly. Selain itu terlihat jumlah pasukan pertahanan, emas, jumlah kapal perang, serta berbagai bangunan yang dimiliki pemain.",
     "ui_wilderness": "Alam Liar",
     "option_pause": "Jeda / Lanjutkan permainan – Hanya tersedia dalam mode single-player.",
     "option_timer": "Timer – Waktu yang telah berlalu sejak permainan dimulai.",
@@ -137,7 +140,7 @@
     "info_trade": "Gunakan “Hentikan Perdagangan” untuk berhenti memberikan emas kepada pemain tersebut dan berhenti menerima emas dari mereka melalui kapal dagang. Jika kalian berdua menekan “Mulai\".",
     "info_ally_panel": "Panel Info Sekutu",
     "info_ally_desc": "Saat kamu beraliansi dengan seorang pemain, ikon-ikon baru berikut akan tersedia:",
-    "ally_betray": "Mengkhianati sekutumu akan mengakhiri aliansi, menghentikan perdagangan, dan melemahkan pertahananmu. Perdagangan di antara kalian akan dijeda selama 5 menit (atau sampai kalian kembali menjadi sekutu), dan pemain lain juga dapat menghentikan perdagangan. Kecuali jika pemain lain tersebut memang sudah berstatus pengkhianat, kamu akan ditandai sebagai Pengkhianat selama 30 detik.\nSelama waktu ini, sebuah ikon akan muncul di atas namamu dan kamu akan menerima debuff pertahanan sebesar 50%. Bot akan lebih enggan beraliansi denganmu, dan pemain lain akan berpikir dua kali sebelum melakukannya.",
+    "ally_betray": "Mengkhianati sekutumu akan mengakhiri aliansi, menghentikan perdagangan, dan melemahkan pertahananmu. Perdagangan antara kalian dijeda selama 5 menit (atau sampai kalian bersekutu kembali), dan pemain lain juga bisa berhenti berdagang denganmu.\n\nJika pemain tersebut bukan pengkhianat, kamu akan ditandai sebagai pengkhianat selama 30 detik. Selama waktu ini, sebuah ikon akan muncul di atas namamu dan kamu menerima debuff pertahanan sebesar 50%. Suku (Tribe) akan lebih jarang bersekutu denganmu dan pemain lain akan berpikir dua kali sebelum melakukannya.",
     "ally_donate": "Donasikan sebagian pasukanmu kepada sekutu. Digunakan ketika mereka kekurangan pasukan, sedang diserang, atau membutuhkan kekuatan tambahan untuk menghancurkan musuh.",
     "ally_donate_gold": "Donasikan sebagian emasmu kepada sekutu. Digunakan saat mereka kekurangan emas dan membutuhkannya untuk membangun, atau ketika anggota tim sedang menabung untuk MIRV.",
     "build_menu_title": "Menu Pembangunan",
@@ -184,13 +187,15 @@
     "toggle_achievements": "Tampilkan / Sembunyikan pencapaian",
     "sign_in_for_achievements": "Masuk untuk melihat pencapaian",
     "options_title": "Opsi",
-    "bots": "Bot: ",
+    "bots": "Suku-suku: ",
     "bots_disabled": "Dinonaktifkan",
-    "disable_nations": "Nonaktifkan negara",
+    "nations": "Negara: ",
+    "nations_disabled": "Nonaktif",
     "instant_build": "Bangun instan",
     "infinite_gold": "Emas tak terbatas",
     "infinite_troops": "Pasukan tak terbatas",
     "compact_map": "Peta Kecil",
+    "disable_alliances": "Nonaktifkan aliansi",
     "max_timer": "Lama permainan (menit)",
     "max_timer_placeholder": "Menit",
     "max_timer_invalid": "Silakan masukkan nilai pengatur waktu maksimum yang valid (1-120 menit)",
@@ -199,8 +204,8 @@
     "options_changed_no_achievements": "Pengaturan khusus – pencapaian dinonaktifkan",
     "gold_multiplier": "Pengganda emas",
     "gold_multiplier_placeholder": "2.0x",
-    "starting_gold": "Emas awal",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold": "Emas Awal (Juta)",
+    "starting_gold_placeholder": "5"
   },
   "token_login_modal": {
     "title": "Sedang masuk...",
@@ -264,7 +269,7 @@
     "conquest_gold": "Emas pemain yang ditaklukan",
     "stolen_gold": "Dicuri oleh Kapal Perang",
     "num_of_conquests_humans": "Pemain membunuh",
-    "num_of_conquests_bots": "Bot membunuh",
+    "num_of_conquests_bots": "Suku-suku dikalahkan",
     "duration": "Durasi",
     "survival_time": "Menit Bertahan",
     "war": "Perang",
@@ -320,6 +325,7 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "passage": "Passage",
     "sierpinski": "Sierpinski",
     "thebox": "Kotak",
     "twolakes": "Dua Danau",
@@ -328,8 +334,15 @@
     "didier": "Didier",
     "didierfrance": "Didier (Prancis)",
     "amazonriver": "Sungai Amazon",
+    "bosphorusstraits": "Selat Bosphorus",
+    "beringstrait": "Selat Bering",
     "tradersdream": "Mimpi para Pedagang",
-    "hawaii": "Hawaii"
+    "hawaii": "Hawaii",
+    "alps": "Alpen",
+    "niledelta": "Delta Sungai Nil",
+    "arctic": "Arktik",
+    "sanfrancisco": "San Francisco",
+    "aegean": "Aegean"
   },
   "map_categories": {
     "featured": "Unggulan",
@@ -355,14 +368,10 @@
   },
   "public_lobby": {
     "title": "Menunggu permainan untuk dimulai...",
-    "join": "Gabung ke permainan selanjutnya",
-    "teams_Duos": "{team_count} tim berisi 2 pemain (Berdua)",
-    "teams_Trios": "{team_count} tim berisi 3 pemain (Bertiga)",
-    "teams_Quads": "{team_count} tim berisi 4 pemain (Berempat)",
     "waiting_for_players": "Menunggu pemain",
     "connecting": "Menghubungkan ke lobi...",
     "starting_in": "Dimulai dalam {time}",
-    "starting_game": "Memulai permainan…",
+    "starting_game": "Memulai…",
     "teams_hvn": "Pemain vs Negara",
     "teams_hvn_detailed": "{num} Pemain vs {num} Negara",
     "teams": "{num} tim",
@@ -376,7 +385,8 @@
     "connecting": "Menghubungkan ke server pencarian lawan...",
     "searching": "Mencari permainan...",
     "waiting_for_game": "Menunggu permainan untuk dimulai...",
-    "elo": "ELO anda: {elo}"
+    "elo": "ELO anda: {elo}",
+    "no_elo": "Belum ada ELO"
   },
   "username": {
     "enter_username": "Masukkan nama pengguna",
@@ -390,15 +400,15 @@
   },
   "host_modal": {
     "title": "Buat Lobi Tertutup",
-    "label": "Tertutup",
     "mode": "Mode",
     "team_count": "Jumlah Tim",
     "team_type": "Tipe Tim",
     "options_title": "Pilihan",
-    "bots": "Bot: ",
+    "bots": "Suku-suku: ",
     "bots_disabled": "Nonaktif",
+    "nations": "Negara: ",
+    "nations_disabled": "Nonaktif",
     "player_immunity_duration": "Durasi imunitas PVP (menit)",
-    "disable_nations": "Nonaktifkan Negara",
     "max_timer": "Lama permainan (menit)",
     "mins_placeholder": "Menit",
     "instant_build": "Bangun instan",
@@ -407,6 +417,7 @@
     "infinite_troops": "Pasukan tak terbatas",
     "donate_troops": "Donasikan pasukan",
     "compact_map": "Peta Kecil",
+    "disable_alliances": "Nonaktifkan aliansi",
     "enables_title": "Aktifkan Pengaturan",
     "player": "Pemain",
     "players": "Pemain",
@@ -424,8 +435,13 @@
     "teams_Trios": "Bertiga (tim yang terdiri dari 3 orang)",
     "teams_Quads": "Berempat (tim yang teridri dari 4 orang)",
     "teams_Humans Vs Nations": "Pemain vs Negara",
-    "starting_gold": "Emas awal",
-    "crowded": "Pengubah yang ramai"
+    "crowded": "Pengubah yang ramai",
+    "hard_nations": "Negara Sulit",
+    "gold_multiplier": "Pengganda emas",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "Emas Awal (Juta)",
+    "starting_gold_placeholder": "5",
+    "leave_confirmation": "Apakah Anda yakin ingin meninggalkan lobi?"
   },
   "team_colors": {
     "red": "Merah",
@@ -435,7 +451,9 @@
     "yellow": "Kuning",
     "orange": "Oranye",
     "green": "Hijau",
-    "bot": "Bot"
+    "bot": "Suku-suku",
+    "humans": "Manusia",
+    "nations": "Negara"
   },
   "game_starting_modal": {
     "title": "Memulai Permainan...",
@@ -453,16 +471,29 @@
     "ffa": "Siapapun bisa bergabung",
     "teams": "Tim-tim"
   },
+  "mode_selector": {
+    "teams_title": "Tim-tim",
+    "teams_count": "{teamCount} tim",
+    "teams_of": "{teamCount} tim dari {playersPerTeam}",
+    "ranked_title": "Ranked",
+    "ranked_1v1_title": "1v1",
+    "ranked_2v2_title": "2v1",
+    "coming_soon": "Segera Hadir"
+  },
   "public_game_modifier": {
     "random_spawn": "Kemunculan Acak",
     "compact_map": "Peta Kecil",
     "crowded": "Ramai",
-    "starting_gold": "Emas awal 5 Juta"
+    "hard_nations": "Negara Sulit",
+    "starting_gold": "{amount} Juta Emas Awal",
+    "gold_multiplier": "x{amount} Pengganda Emas",
+    "disable_alliances": "Aliansi Dinonaktifkan"
   },
   "select_lang": {
     "title": "Pilih Bahasa"
   },
   "unit_type": {
+    "boat": "Perahu",
     "city": "Kota",
     "defense_post": "Pos Pertahanan",
     "port": "Pelabuhan",
@@ -502,6 +533,8 @@
     "attack_ratio_desc": "Persentase pasukan yang dikirim saat menyerang (1–100%)",
     "territory_patterns_label": "🏳️ Skin Wilayah",
     "territory_patterns_desc": "Pilih apakah ingin menampilkan desain skin wilayah di dalam game",
+    "coordinate_grid_label": "Koordinat Grid",
+    "coordinate_grid_desc": "Tampilkan/Sembunyikan grid alfanumerik",
     "performance_overlay_label": "Tampilan Performa",
     "performance_overlay_desc": "Aktifkan / Nonaktifkan overlay performa.\nSaat diaktifkan, overlay performa akan ditampilkan. Tekan Shift + D saat permainan berlangsung untuk mengaktifkan atau menonaktifkannya.",
     "easter_writing_speed_label": "Multiplier Kecepatan Menulis",
@@ -540,9 +573,11 @@
     "emoji_menu_modifier_desc": "Tahan tombol ini sambil mengklik untuk membuka menu emoji.",
     "attack_ratio_controls": "Kontrol Rasio Serangan",
     "attack_ratio_up": "Tingkatkan Rasio Serangan",
-    "attack_ratio_up_desc": "Tingkatkan Rasio Serangan sebesar 10%",
+    "attack_ratio_up_desc": "Tambah rasio serangan sebesar {amount}%",
     "attack_ratio_down": "Kurangi Rasio Serangan",
-    "attack_ratio_down_desc": "Kurangi Rasio Serangan sebesar 10%",
+    "attack_ratio_down_desc": "Kurangi rasio serangan sebesar {amount}%",
+    "attack_ratio_increment_label": "Kenaikan Rasio Serangan (Keybind)",
+    "attack_ratio_increment_desc": "Seberapa besar rasio serangan berubah setiap kali tombol keybind ditekan.",
     "attack_keybinds": "Tombol pintas untuk Serangan",
     "boat_attack": "Serangan Kapal Pengangkut",
     "boat_attack_desc": "Kirim serangan kapal ke petak di bawah kursor Anda.",
@@ -662,7 +697,8 @@
       "mirv_ready": "[P1] punya cukup emas untuk meluncurkan MIRV!",
       "snowballing": "[P1] berkembang terlalu cepat!",
       "cheating": "[P1] curang!",
-      "stop_trading": "Stop berdangan dengan [P1]!"
+      "stop_trading": "Stop berdangan dengan [P1]!",
+      "stop_trading_all": "Tolong hentikan perdagangan dengan semua pemain!"
     }
   },
   "build_menu": {
@@ -758,7 +794,7 @@
   "player_type": {
     "player": "Pemain",
     "nation": "Bangsa",
-    "bot": "Bot"
+    "bot": "Suku"
   },
   "relation": {
     "hostile": "Berseteru",
@@ -840,9 +876,19 @@
     "fps": "FPS:",
     "avg_60s": "Rata-rata (60d):",
     "frame": "Bingkai:",
+    "tps": "TPS:",
+    "tps_avg_60s": "Rata-rata:",
     "tick_exec": "Eksekutif Tick:",
+    "max_label": "maks:",
     "tick_delay": "Penundaan Detik:",
-    "layers_header": "Lapisan (rata-rata / maksimum, diurutkan berdasarkan total waktu):"
+    "layers_header": "Lapisan Render",
+    "render_layers_table_header": "rata-rata / max | rata-rata tick",
+    "render_layers_summary": "Tick terakhir: {frames} frame, {ms} ms",
+    "tick_layers_header": "Lapisan Tick",
+    "tick_layers_table_header": "rata-rata / maks",
+    "tick_layers_summary": "Tick terakhir: {count} lapisan, {ms} ms",
+    "expand": "Perluas",
+    "collapse": "Ciutkan"
   },
   "heads_up_message": {
     "choose_spawn": "Pilih lokasi awal",
@@ -862,13 +908,6 @@
     "pattern": {
       "default": "Default"
     },
-    "try_me": "Coba aku!",
-    "trial_remaining": "tersisa",
-    "trial_granted": "Skin trial didapatkan!",
-    "trial_cooldown": "Hanya satu trial dalam 24 jam. Mohon coba lagi nanti.",
-    "trial_login_required": "Harus masuk untuk mencoba skin",
-    "reward_countdown": "Hadiah dalam {seconds} detik...",
-    "steam_wishlist_prompt": "Dukung OpenFront dengan cara menambahkannya di wishlist Steam Anda",
     "select_skin": "Pilih Skin",
     "selected": "dipilih"
   },
@@ -930,8 +969,6 @@
     "recent_games": "Permainan Terbaru",
     "game_id": "ID Permainan",
     "mode": "Mode",
-    "mode_ffa": "Siapapun bisa bergabung",
-    "mode_team": "Tim",
     "replay": "Tayangan ulang",
     "details": "Detail",
     "ranking": "Peringkat",
@@ -948,8 +985,6 @@
     "stats_losses": "Jumlah Kehilangan",
     "stats_wlr": "Menang:Kalah Rasio",
     "stats_games_played": "Permainan Dimainkan",
-    "mode_ffa": "Siapapun bisa bergabung",
-    "mode_team": "Tim",
     "no_stats": "Tidak ada statistik yang tercatat untuk pilihan ini."
   },
   "matchmaking_button": {

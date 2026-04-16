@@ -46,7 +46,7 @@ export class CircleArea implements UIElement {
 
     const innerDiameter =
       (this.innerDiameter / 2) * (1 - t) + this.innerDiameter * t;
-    const screenPos = this.transformHandler.worldToScreenCoordinates(this.cell);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(this.cell);
     screenPos.x = Math.round(screenPos.x);
     screenPos.y = Math.round(screenPos.y);
 

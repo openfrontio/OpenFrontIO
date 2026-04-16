@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -12,11 +13,11 @@ import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import exitIcon from "/images/ExitIconWhite.svg?url";
-import FastForwardIconSolid from "/images/FastForwardIconSolidWhite.svg?url";
-import pauseIcon from "/images/PauseIconWhite.svg?url";
-import playIcon from "/images/PlayIconWhite.svg?url";
-import settingsIcon from "/images/SettingIconWhite.svg?url";
+const exitIcon = assetUrl("images/ExitIconWhite.svg");
+const FastForwardIconSolid = assetUrl("images/FastForwardIconSolidWhite.svg");
+const pauseIcon = assetUrl("images/PauseIconWhite.svg");
+const playIcon = assetUrl("images/PlayIconWhite.svg");
+const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
@@ -98,7 +99,10 @@ export class GameRightSidebar extends LitElement implements Layer {
     const elapsedSeconds = Math.floor(gameTicks / 10); // 10 ticks per second
 
     if (this.game.inSpawnPhase()) {
-      this.timer = maxTimerValue !== undefined ? maxTimerValue * 60 : 0;
+      this.timer =
+        maxTimerValue !== null && maxTimerValue !== undefined
+          ? maxTimerValue * 60
+          : 0;
       return;
     }
 
@@ -106,7 +110,7 @@ export class GameRightSidebar extends LitElement implements Layer {
       return;
     }
 
-    if (maxTimerValue !== undefined) {
+    if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
     } else {
       this.timer = elapsedSeconds;
@@ -178,13 +182,14 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     const timerColor =
       this.game.config().gameConfig().maxTimerValue !== undefined &&
+      this.game.config().gameConfig().maxTimerValue !== null &&
       this.timer < 60
         ? "text-red-400"
         : "";
 
     return html`
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
