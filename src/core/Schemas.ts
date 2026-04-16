@@ -258,6 +258,20 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
   startingGold: z.number().int().min(0).max(1000000000).nullable().optional(),
+  hostCheats: z
+    .object({
+      infiniteGold: z.boolean().optional(),
+      infiniteTroops: z.boolean().optional(),
+      goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
+      startingGold: z
+        .number()
+        .int()
+        .min(0)
+        .max(1000000000)
+        .nullable()
+        .optional(),
+    })
+    .optional(),
 });
 
 export const TeamSchema = z.string();

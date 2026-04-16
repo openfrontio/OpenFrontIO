@@ -16,6 +16,7 @@ export class WaterManager {
   private _waterGraphLastRebuildTick: number = 0;
 
   private _pendingWaterTiles: Set<TileRef> = new Set();
+  private _dirtyMiniTiles: Set<TileRef> = new Set();
 
   // Reusable stamp-based distance tracking for magnitude BFS (avoids allocation per nuke)
   private _waterDistArr: Uint16Array | null = null;
@@ -76,8 +77,14 @@ export class WaterManager {
     ) {
       this._waterGraphDirty = false;
       this._waterGraphLastRebuildTick = currentTick;
-      const graphBuilder = new AbstractGraphBuilder(this.miniMap);
+      const graphBuilder = new AbstractGraphBuilder(
+        this.miniMap,
+        AbstractGraphBuilder.CLUSTER_SIZE,
+        this._miniWaterGraph ?? undefined,
+        this._dirtyMiniTiles.size > 0 ? this._dirtyMiniTiles : undefined,
+      );
       this._miniWaterGraph = graphBuilder.build();
+      this._dirtyMiniTiles.clear();
       this._miniWaterHPA = new AStarWaterHierarchical(
         this.miniMap,
         this._miniWaterGraph,
@@ -424,6 +431,9 @@ export class WaterManager {
     // ── 5. Mark water graph dirty (rebuilt lazily, throttled) ─────
     if (convertedMiniTiles.size > 0) {
       this._waterGraphDirty = true;
+      for (const mt of convertedMiniTiles) {
+        this._dirtyMiniTiles.add(mt);
+      }
     }
 
     // Drain changed set into output array
