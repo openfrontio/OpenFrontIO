@@ -183,13 +183,31 @@ describe("JoinLobbyModal.handleEnableNotifications", () => {
     return m;
   }
 
-  it("enables browserNotifications", () => {
+  it("enables browserNotifications when permission already granted", () => {
+    notifMock.permission = "granted";
     const m = makeModal();
     (m as any).handleEnableNotifications();
     expect((m as any).userSettings.browserNotifications()).toBe(true);
   });
 
-  it("is idempotent - calling twice does not disable", () => {
+  it("enables browserNotifications after permission resolves to granted", async () => {
+    notifMock.requestPermission = vi.fn().mockResolvedValue("granted");
+    const m = makeModal();
+    (m as any).handleEnableNotifications();
+    await Promise.resolve();
+    expect((m as any).userSettings.browserNotifications()).toBe(true);
+  });
+
+  it("does not enable browserNotifications when permission denied", async () => {
+    notifMock.requestPermission = vi.fn().mockResolvedValue("denied");
+    const m = makeModal();
+    (m as any).handleEnableNotifications();
+    await Promise.resolve();
+    expect((m as any).userSettings.browserNotifications()).toBe(false);
+  });
+
+  it("is idempotent - calling twice when granted does not disable", () => {
+    notifMock.permission = "granted";
     const m = makeModal();
     (m as any).handleEnableNotifications();
     (m as any).handleEnableNotifications();

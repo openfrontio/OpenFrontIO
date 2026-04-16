@@ -453,13 +453,24 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private handleEnableNotifications() {
-    if (!this.userSettings.browserNotifications()) {
-      this.userSettings.toggleBrowserNotifications();
-    }
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
     this.showNotificationPrompt = false;
+
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      if (!this.userSettings.browserNotifications()) {
+        this.userSettings.toggleBrowserNotifications();
+      }
+    } else if (Notification.permission === "default") {
+      Notification.requestPermission().then((permission) => {
+        if (
+          permission === "granted" &&
+          !this.userSettings.browserNotifications()
+        ) {
+          this.userSettings.toggleBrowserNotifications();
+        }
+      });
+    }
   }
 
   private updateHistory(url: string): void {
