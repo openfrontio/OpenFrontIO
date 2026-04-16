@@ -99,16 +99,17 @@ let sharedWaterCacheByPlayer: Map<Player, Set<number> | null> | null = null;
 const OCEAN_SENTINEL = -1;
 
 function buildSharedWaterByPlayer(game: Game): Map<Player, Set<number> | null> {
-  // Pass 1: record which water bodies each player touches, and (only for
-  // non-bots) which players are candidate trade partners per component.
+  // Pass 1: for each non-bot player, record which water bodies they touch and
+  // which lakes have them as a candidate trade partner.
   const playerToWater = new Map<
     Player,
     { hasOcean: boolean; lakes: Set<number> }
   >();
-  const oceanPartners: Player[] = [];
   const lakePartners = new Map<number, Player[]>();
 
   for (const player of game.players()) {
+    if (player.type() === PlayerType.Bot) continue;
+
     let hasOcean = false;
     const lakes = new Set<number>();
     for (const tile of player.borderTiles()) {
@@ -125,8 +126,6 @@ function buildSharedWaterByPlayer(game: Game): Map<Player, Set<number> | null> {
     }
     playerToWater.set(player, { hasOcean, lakes });
 
-    if (player.type() === PlayerType.Bot) continue;
-    if (hasOcean) oceanPartners.push(player);
     for (const c of lakes) {
       let arr = lakePartners.get(c);
       if (arr === undefined) {
@@ -137,20 +136,14 @@ function buildSharedWaterByPlayer(game: Game): Map<Player, Set<number> | null> {
     }
   }
 
-  // Pass 2: a component is "shared" for player P if some *other* candidate
-  // partner on that component can trade with P (i.e. no mutual embargo).
+  // Pass 2: ocean is treated as always shared (matches the short-circuit in
+  // randCoastalTileArray). Lake components are shared only if some *other*
+  // player on that component can trade with P (i.e. no mutual embargo).
   const result = new Map<Player, Set<number> | null>();
   for (const [player, { hasOcean, lakes }] of playerToWater) {
     const shared = new Set<number>();
 
-    if (hasOcean) {
-      for (const other of oceanPartners) {
-        if (other !== player && player.canTrade(other)) {
-          shared.add(OCEAN_SENTINEL);
-          break;
-        }
-      }
-    }
+    if (hasOcean) shared.add(OCEAN_SENTINEL);
 
     for (const c of lakes) {
       const partners = lakePartners.get(c);
