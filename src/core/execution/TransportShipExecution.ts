@@ -4,14 +4,16 @@ import {
   Game,
   MessageType,
   Player,
+  PlayerType,
   TerraNullius,
   Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MotionPlanRecord } from "../game/MotionPlans";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -25,11 +27,16 @@ export class TransportShipExecution implements Execution {
 
   private mg: Game;
   private target: Player | TerraNullius;
-  private pathFinder: SteppingPathFinder<TileRef>;
+  private pathFinder: WaterPathFinder;
+
+  private static _staggerCounter = 0;
 
   private dst: TileRef | null;
   private src: TileRef | null;
+  private retreatDst: TileRef | false | null = null;
   private boat: Unit;
+  private motionPlanId = 1;
+  private motionPlanDst: TileRef | null = null;
 
   private originalOwner: Player;
 
@@ -55,7 +62,9 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
     this.mg = mg;
     this.target = mg.owner(this.ref);
-    this.pathFinder = PathFinding.Water(mg);
+    const stagger =
+      TransportShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    this.pathFinder = new WaterPathFinder(mg, stagger);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -70,6 +79,16 @@ export class TransportShipExecution implements Execution {
       );
       this.active = false;
       return;
+    }
+
+    if (this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (
+        targetPlayer.type() !== PlayerType.Bot &&
+        this.attacker.type() !== PlayerType.Bot
+      ) {
+        this.rejectIncomingAllianceRequests(targetPlayer);
+      }
     }
 
     if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
@@ -108,6 +127,22 @@ export class TransportShipExecution implements Execution {
       troops: this.troops,
       targetTile: this.dst,
     });
+
+    const fullPath = this.pathFinder.findPath(this.src, this.dst) ?? [this.src];
+    if (fullPath.length === 0 || fullPath[0] !== this.src) {
+      fullPath.unshift(this.src);
+    }
+
+    const motionPlan: MotionPlanRecord = {
+      kind: "grid",
+      unitId: this.boat.id(),
+      planId: this.motionPlanId,
+      startTick: ticks + this.ticksPerMove,
+      ticksPerStep: this.ticksPerMove,
+      path: fullPath,
+    };
+    this.mg.recordMotionPlan(motionPlan);
+    this.motionPlanDst = this.dst;
 
     // Notify the target player about the incoming naval invasion
     if (this.target.id() !== mg.terraNullius().id()) {
@@ -155,28 +190,37 @@ export class TransportShipExecution implements Execution {
       this.originalOwner = boatOwner; // for when this owner disconnects too
     }
 
-    if (this.boat.retreating()) {
-      // Ensure retreat source is still valid for (new) owner
-      if (this.mg.owner(this.src!) !== this.attacker) {
-        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
-        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-        if (newSrc === false) {
-          this.src = null;
-        } else {
-          this.src = newSrc;
-        }
-      }
+    if (this.pathFinder.rebuilt) {
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
 
-      if (this.src === null) {
+    // Auto-retreat if destination was destroyed by nuke (turned to water)
+    // Checked every tick (not just on graph rebuild) because graph rebuilds
+    // are throttled and the tile may already be water before the version bumps.
+    if (this.dst !== null && this.mg.isWater(this.dst)) {
+      if (!this.boat.retreating()) {
+        this.boat.orderBoatRetreat();
+      }
+      // Reset cached retreat destination so it's recomputed from current position
+      this.retreatDst = null;
+    }
+
+    if (this.boat.retreating()) {
+      // Resolve retreat destination once, based on current boat location when retreat begins.
+      this.retreatDst ??= this.attacker.bestTransportShipSpawn(
+        this.boat.tile(),
+      );
+
+      if (this.retreatDst === false) {
         console.warn(
-          `TransportShipExecution: retreating but no src found for new attacker`,
+          `TransportShipExecution: retreating but no retreat destination found`,
         );
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;
         return;
       } else {
-        this.dst = this.src;
+        this.dst = this.retreatDst;
 
         if (this.boat.targetTile() !== this.dst) {
           this.boat.setTargetTile(this.dst);
@@ -234,8 +278,6 @@ export class TransportShipExecution implements Execution {
       case PathStatus.NEXT:
         this.boat.move(result.node);
         break;
-      case PathStatus.PENDING:
-        break;
       case PathStatus.NOT_FOUND: {
         // TODO: add to poisoned port list
         const map = this.mg.map();
@@ -249,6 +291,26 @@ export class TransportShipExecution implements Execution {
         return;
       }
     }
+
+    if (this.dst !== null && this.dst !== this.motionPlanDst) {
+      this.motionPlanId++;
+      const fullPath = this.pathFinder.findPath(this.boat.tile(), this.dst) ?? [
+        this.boat.tile(),
+      ];
+      if (fullPath.length === 0 || fullPath[0] !== this.boat.tile()) {
+        fullPath.unshift(this.boat.tile());
+      }
+
+      this.mg.recordMotionPlan({
+        kind: "grid",
+        unitId: this.boat.id(),
+        planId: this.motionPlanId,
+        startTick: ticks + this.ticksPerMove,
+        ticksPerStep: this.ticksPerMove,
+        path: fullPath,
+      });
+      this.motionPlanDst = this.dst;
+    }
   }
 
   owner(): Player {
@@ -257,5 +319,14 @@ export class TransportShipExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private rejectIncomingAllianceRequests(target: Player) {
+    const request = this.attacker
+      .incomingAllianceRequests()
+      .find((ar) => ar.requestor() === target);
+    if (request !== undefined) {
+      request.reject();
+    }
   }
 }

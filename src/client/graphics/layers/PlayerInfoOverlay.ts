@@ -1,7 +1,6 @@
-import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -19,26 +18,32 @@ import {
   TouchEvent,
 } from "../../InputHandler";
 import {
+  getTranslatedPlayerTeamLabel,
   renderDuration,
   renderNumber,
   renderTroops,
   translateText,
 } from "../../Utils";
-import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
+import {
+  EMOJI_ICON_KIND,
+  getFirstPlacePlayer,
+  getPlayerIcons,
+  IMAGE_ICON_KIND,
+} from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import allianceIcon from "/images/AllianceIcon.svg?url";
-import warshipIcon from "/images/BattleshipIconWhite.svg?url";
-import cityIcon from "/images/CityIconWhite.svg?url";
-import factoryIcon from "/images/FactoryIconWhite.svg?url";
-import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
-import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
-import portIcon from "/images/PortIcon.svg?url";
-import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
-import soldierIcon from "/images/SoldierIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIcon.svg");
+const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+const cityIcon = assetUrl("images/CityIconWhite.svg");
+const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
+const portIcon = assetUrl("images/PortIcon.svg");
+const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -258,6 +263,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
       includeAllianceIcon: false,
       firstPlace,
+      alliancesDisabled: this.game.config().disableAlliances(),
     });
 
     if (icons.length === 0) {
@@ -266,11 +272,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`<span class="flex items-center gap-1 ml-1 shrink-0">
       ${icons.map((icon) =>
-        icon.kind === "emoji" && icon.text
+        icon.kind === EMOJI_ICON_KIND && icon.text
           ? html`<span class="text-sm shrink-0" translate="no"
               >${icon.text}</span
             >`
-          : icon.kind === "image" && icon.src
+          : icon.kind === IMAGE_ICON_KIND && icon.src
             ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
             : html``,
       )}
@@ -314,19 +320,42 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         playerType = translateText("player_type.player");
         break;
     }
+    const playerTeam = getTranslatedPlayerTeamLabel(player.team());
 
     return html`
-      <div class="flex items-start gap-2 lg:gap-3 p-1.5 lg:p-2">
+      <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
         <!-- Left: Gold & Troop bar -->
-        <div class="flex flex-col gap-1 shrink-0 w-28">
-          <div
-            class="flex items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-28 lg:gap-1"
-            translate="no"
-          >
-            <img src=${goldCoinIcon} width="13" height="13" />
-            <span class="px-0.5">${renderNumber(player.gold())}</span>
+        <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
+          <div class="flex items-center gap-1">
+            <div
+              class="flex flex-1 items-center justify-center px-1 py-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm lg:gap-1"
+              translate="no"
+            >
+              <img src=${goldCoinIcon} width="13" height="13" />
+              <span class="px-0.5">${renderNumber(player.gold())}</span>
+            </div>
+            <div
+              class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
+              0
+                ? "text-sky-400"
+                : "text-white/40"} drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+              translate="no"
+            >
+              <span class="flex items-center gap-px leading-none text-xs"
+                ><img
+                  src=${soldierIcon}
+                  class="w-2.5 h-2.5"
+                  style="${attackingTroops > 0
+                    ? "filter: brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%); opacity:1"
+                    : "filter: brightness(0) invert(1); opacity:0.4"}"
+                />↑</span
+              >
+              <span class="tabular-nums leading-none text-sm mt-0.5"
+                >${renderTroops(attackingTroops)}</span
+              >
+            </div>
           </div>
-          <div class="w-28" translate="no">
+          <div class="w-28 md:w-36" translate="no">
             ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
           </div>
         </div>
@@ -340,24 +369,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             )}"
           >
             ${player.cosmetics.flag
-              ? player.cosmetics.flag!.startsWith("!")
-                ? html`<div
-                    class="h-6 aspect-3/4 player-flag"
-                    ${ref((el) => {
-                      if (el instanceof HTMLElement) {
-                        requestAnimationFrame(() => {
-                          renderPlayerFlag(player.cosmetics.flag!, el);
-                        });
-                      }
-                    })}
-                  ></div>`
-                : html`<img
-                    class="h-6 aspect-3/4"
-                    src=${"/flags/" + player.cosmetics.flag! + ".svg"}
-                  />`
+              ? html`<img
+                  class="h-6 object-contain"
+                  src=${assetUrl(player.cosmetics.flag!)}
+                />`
               : html``}
-            <span>${player.name()}</span>
-            ${player.team() !== null && player.type() !== PlayerType.Bot
+            <span>${player.displayName()}</span>
+            ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
                     >${playerType}</span
@@ -369,7 +387,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                         .theme()
                         .teamColor(player.team()!)
                         .toHex()}"
-                      >${player.team()}</span
+                      >${playerTeam}</span
                     >]</span
                   >
                 </div>`
@@ -378,7 +396,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 >`}
             ${this.renderPlayerNameIcons(player)} ${allianceHtml ?? ""}
           </div>
-          <div class="flex gap-0.5 lg:gap-1 items-center mt-1">
+          <div class="flex gap-0.5 lg:gap-1 items-center mt-0.5">
             ${this.displayUnitCount(player, UnitType.City, cityIcon)}
             ${this.displayUnitCount(player, UnitType.Factory, factoryIcon)}
             ${this.displayUnitCount(player, UnitType.Port, portIcon)}
@@ -416,24 +434,24 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mt-1 lg:mt-2 h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-5 lg:h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-green-500 transition-[width] duration-200"
+                class="h-full bg-sky-700 transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-orange-400 transition-[width] duration-200"
+                class="h-full bg-[#0073b7] transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
         </div>
         <div
-          class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
+          class="absolute inset-0 flex items-center justify-between px-1.5 text-sm font-bold leading-none pointer-events-none"
           translate="no"
         >
           <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
@@ -464,7 +482,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
-          ${unit.owner().name()}
+          ${unit.owner().displayName()}
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
@@ -494,13 +512,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-[1200px]:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="fixed top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
         style="margin-top: ${this.barOffset}px;"
         @click=${() => this.hide()}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

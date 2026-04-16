@@ -48,7 +48,7 @@ export class Target implements UIElement {
     }
     const alpha = Math.max(0, Math.min(1, BASE_ALPHA * t));
 
-    const screenPos = this.transformHandler.worldToScreenCoordinates(this.cell);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(this.cell);
     screenPos.x = Math.round(screenPos.x);
     screenPos.y = Math.round(screenPos.y);
     const transformScale = this.transformHandler.scale;

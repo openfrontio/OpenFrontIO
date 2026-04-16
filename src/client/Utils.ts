@@ -6,10 +6,12 @@ import {
   MessageType,
   PublicGameModifiers,
   Quads,
+  Team,
   Trios,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
+import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
@@ -34,9 +36,12 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
 
   // Humans vs Nations
   if (playerTeams === HumansVsNations) {
-    return translateText("public_lobby.teams_hvn_detailed", {
-      num: maxPlayers ?? 0,
-    });
+    if (maxPlayers) {
+      return translateText("public_lobby.teams_hvn_detailed", {
+        num: maxPlayers,
+      });
+    }
+    return translateText("public_lobby.teams_hvn");
   }
 
   // Named team types (Duos, Trios, Quads)
@@ -109,8 +114,12 @@ export interface ModifierInfo {
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
+  /** Parameters to pass to translateText for the badge key */
+  badgeParams?: Record<string, string | number>;
   /** The raw value if applicable (e.g. startingGold amount) */
   value?: number;
+  /** Pre-formatted display string (used instead of renderNumber when provided) */
+  formattedValue?: string;
 }
 
 /**
@@ -139,11 +148,72 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.crowded",
     });
   }
-  if (modifiers.startingGold) {
+  if (modifiers.isHardNations) {
     result.push({
-      labelKey: "host_modal.starting_gold",
+      labelKey: "host_modal.hard_nations",
+      badgeKey: "public_game_modifier.hard_nations",
+    });
+  }
+  if (modifiers.startingGold) {
+    const millions = parseFloat(
+      (modifiers.startingGold / 1_000_000).toPrecision(12),
+    );
+    result.push({
+      labelKey: "public_game_modifier.starting_gold_label",
       badgeKey: "public_game_modifier.starting_gold",
+      badgeParams: {
+        amount: millions,
+      },
       value: modifiers.startingGold,
+      formattedValue: `${millions}M`,
+    });
+  }
+  if (modifiers.goldMultiplier) {
+    result.push({
+      labelKey: "host_modal.gold_multiplier",
+      badgeKey: "public_game_modifier.gold_multiplier",
+      badgeParams: {
+        amount: modifiers.goldMultiplier,
+      },
+      value: modifiers.goldMultiplier,
+      formattedValue: `x${modifiers.goldMultiplier}`,
+    });
+  }
+  if (modifiers.isAlliancesDisabled) {
+    result.push({
+      labelKey: "public_game_modifier.disable_alliances_label",
+      badgeKey: "public_game_modifier.disable_alliances",
+      formattedValue: translateText("common.disabled"),
+    });
+  }
+  if (modifiers.isPortsDisabled) {
+    result.push({
+      labelKey: "public_game_modifier.ports_disabled_label",
+      badgeKey: "public_game_modifier.ports_disabled",
+    });
+  }
+  if (modifiers.isNukesDisabled) {
+    result.push({
+      labelKey: "public_game_modifier.nukes_disabled_label",
+      badgeKey: "public_game_modifier.nukes_disabled",
+    });
+  }
+  if (modifiers.isSAMsDisabled) {
+    result.push({
+      labelKey: "public_game_modifier.sams_disabled_label",
+      badgeKey: "public_game_modifier.sams_disabled",
+    });
+  }
+  if (modifiers.isPeaceTime) {
+    result.push({
+      labelKey: "public_game_modifier.peace_time_label",
+      badgeKey: "public_game_modifier.peace_time",
+    });
+  }
+  if (modifiers.isWaterNukes) {
+    result.push({
+      labelKey: "public_game_modifier.water_nukes_label",
+      badgeKey: "public_game_modifier.water_nukes",
     });
   }
   return result;
@@ -155,7 +225,9 @@ export function getActiveModifiers(
 export function getModifierLabels(
   modifiers: PublicGameModifiers | undefined,
 ): string[] {
-  return getActiveModifiers(modifiers).map((m) => translateText(m.badgeKey));
+  return getActiveModifiers(modifiers).map((m) =>
+    translateText(m.badgeKey, m.badgeParams),
+  );
 }
 
 export function renderDuration(totalSeconds: number): string {
@@ -318,50 +390,65 @@ export function formatDebugTranslation(
   return `${key}::${serializedParams}`;
 }
 
+const EMPTY_TRANSLATION_PARAMS: Record<string, string | number> = {};
+
+function getCachedLangSelector(): LangSelector | null {
+  const self = translateText as any;
+  const cached = self.langSelector as LangSelector | null | undefined;
+  if (cached && cached.isConnected) return cached;
+
+  const found = document.querySelector("lang-selector") as LangSelector | null;
+  self.langSelector = found ?? null;
+  return found;
+}
+
 export const translateText = (
   key: string,
-  params: Record<string, string | number> = {},
+  params?: Record<string, string | number>,
 ): string => {
   const self = translateText as any;
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
 
-  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  const langSelector = getCachedLangSelector();
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
   }
 
+  const resolvedParams = params ?? EMPTY_TRANSLATION_PARAMS;
+
   if (langSelector.currentLang === "debug") {
-    return formatDebugTranslation(key, params);
+    return formatDebugTranslation(key, resolvedParams);
   }
 
-  if (
-    !langSelector.translations ||
-    Object.keys(langSelector.translations).length === 0
-  ) {
-    return key;
-  }
+  const translations = langSelector.translations;
+  const defaultTranslations = langSelector.defaultTranslations;
+  if (!translations && !defaultTranslations) return key;
 
   if (self.lastLang !== langSelector.currentLang) {
     self.formatterCache.clear();
     self.lastLang = langSelector.currentLang;
   }
 
-  let message = langSelector.translations[key];
+  let message = translations?.[key];
+  const hasPrimaryTranslation = message !== undefined;
 
-  if (!message && langSelector.defaultTranslations) {
-    const defaultTranslations = langSelector.defaultTranslations;
-    if (defaultTranslations && defaultTranslations[key]) {
-      message = defaultTranslations[key];
-    }
+  message ??= defaultTranslations?.[key];
+
+  if (message === undefined) return key;
+
+  // Fast path: no params and no ICU placeholders.
+  if (
+    resolvedParams === EMPTY_TRANSLATION_PARAMS &&
+    message.indexOf("{") === -1
+  ) {
+    return message;
   }
-
-  if (!message) return key;
 
   try {
     const locale =
-      !langSelector.translations[key] && langSelector.currentLang !== "en"
+      !hasPrimaryTranslation && langSelector.currentLang !== "en"
         ? "en"
         : langSelector.currentLang;
     const cacheKey = `${key}:${locale}:${message}`;
@@ -372,12 +459,19 @@ export const translateText = (
       self.formatterCache.set(cacheKey, formatter);
     }
 
-    return formatter.format(params) as string;
+    return formatter.format(resolvedParams) as string;
   } catch (e) {
     console.warn("ICU format error", e);
     return message;
   }
 };
+
+export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+  if (!team) return "";
+  const translationKey = `team_colors.${team.toLowerCase()}`;
+  const translated = translateText(translationKey);
+  return translated === translationKey ? team : translated;
+}
 
 /**
  * Severity colors mapping for message types
@@ -435,21 +529,11 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌘"; // Command key
-  } else {
-    return "Ctrl";
-  }
+  return Platform.isMac ? "⌘" : "Ctrl";
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
-  if (isMac) {
-    return "⌥"; // Option key
-  } else {
-    return "Alt";
-  }
+  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {
@@ -574,4 +658,31 @@ export function getDiscordAvatarUrl(user: {
   }
 
   return null;
+}
+export function calculateServerTimeOffset(
+  serverTimeMs: number,
+  localNowMs: number = Date.now(),
+): number {
+  return serverTimeMs - localNowMs;
+}
+
+export function getServerNow(
+  serverTimeOffsetMs: number,
+  localNowMs: number = Date.now(),
+): number {
+  return localNowMs + serverTimeOffsetMs;
+}
+
+export function getSecondsUntilServerTimestamp(
+  targetServerTimestampMs: number,
+  serverTimeOffsetMs: number,
+  localNowMs: number = Date.now(),
+): number {
+  return Math.max(
+    0,
+    Math.floor(
+      (targetServerTimestampMs - getServerNow(serverTimeOffsetMs, localNowMs)) /
+        1000,
+    ),
+  );
 }

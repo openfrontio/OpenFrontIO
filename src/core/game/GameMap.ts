@@ -1,7 +1,6 @@
 import { Cell, TerrainType } from "./Game";
 
 export type TileRef = number;
-export type TileUpdate = bigint;
 
 export interface GameMap {
   ref(x: number, y: number): TileRef;
@@ -14,12 +13,19 @@ export interface GameMap {
   numLandTiles(): number;
 
   isValidCoord(x: number, y: number): boolean;
-  // Terrain getters (immutable)
+  // Terrain getters
   isLand(ref: TileRef): boolean;
   isOceanShore(ref: TileRef): boolean;
   isOcean(ref: TileRef): boolean;
   isShoreline(ref: TileRef): boolean;
   magnitude(ref: TileRef): number;
+  terrainByte(ref: TileRef): number;
+  // Terrain setters
+  setWater(ref: TileRef): void;
+  setShorelineBit(ref: TileRef): void;
+  clearShorelineBit(ref: TileRef): void;
+  setOcean(ref: TileRef): void;
+  setMagnitude(ref: TileRef, value: number): void;
   // State getters and setters (mutable)
   ownerID(ref: TileRef): number;
   hasOwner(ref: TileRef): boolean;
@@ -49,8 +55,22 @@ export interface GameMap {
     filter: (gm: GameMap, tile: TileRef) => boolean,
   ): Set<TileRef>;
 
-  toTileUpdate(tile: TileRef): bigint;
-  updateTile(tu: TileUpdate): TileRef;
+  /**
+   * Returns the packed per-tile state as an unsigned 16-bit value (`0..65535`).
+   *
+   * Backed by a `Uint16Array` in `GameMapImpl`, so callers must treat this as `uint16`.
+   */
+  tileState(tile: TileRef): number;
+
+  /**
+   * Applies a packed per-tile state value.
+   *
+   * `state` must be an unsigned 16-bit value (`0..65535`). Implementations may
+   * store this in a `Uint16Array` and will truncate higher bits if provided.
+   *
+   * Returns `true` when the terrain byte changed (land/water/shoreline/magnitude).
+   */
+  updateTile(tile: TileRef, state: number): boolean;
 
   numTilesWithFallout(): number;
 }
@@ -171,6 +191,34 @@ export class GameMapImpl implements GameMap {
 
   magnitude(ref: TileRef): number {
     return this.terrain[ref] & GameMapImpl.MAGNITUDE_MASK;
+  }
+
+  terrainByte(ref: TileRef): number {
+    return this.terrain[ref];
+  }
+
+  setWater(ref: TileRef): void {
+    if (!this.isLand(ref)) return;
+    this.terrain[ref] = 0; // Lake water: no land, no ocean, no shoreline, magnitude 0
+    this.numLandTiles_--;
+  }
+
+  setShorelineBit(ref: TileRef): void {
+    this.terrain[ref] |= 1 << GameMapImpl.SHORELINE_BIT;
+  }
+
+  clearShorelineBit(ref: TileRef): void {
+    this.terrain[ref] &= ~(1 << GameMapImpl.SHORELINE_BIT);
+  }
+
+  setOcean(ref: TileRef): void {
+    this.terrain[ref] |= 1 << GameMapImpl.OCEAN_BIT;
+  }
+
+  setMagnitude(ref: TileRef, value: number): void {
+    this.terrain[ref] =
+      (this.terrain[ref] & ~GameMapImpl.MAGNITUDE_MASK) |
+      (value & GameMapImpl.MAGNITUDE_MASK);
   }
 
   // State getters and setters (mutable)
@@ -342,21 +390,22 @@ export class GameMapImpl implements GameMap {
     return seen;
   }
 
-  toTileUpdate(tile: TileRef): bigint {
-    // Pack the tile reference and state into a bigint
-    // Format: [32 bits for tile reference][16 bits for state]
-    return (BigInt(tile) << 16n) | BigInt(this.state[tile]);
+  tileState(tile: TileRef): number {
+    return this.state[tile];
   }
 
-  updateTile(tu: TileUpdate): TileRef {
-    // Extract tile reference and state from the TileUpdate
-    // Last 16 bits are state, rest is tile reference
-    const tileRef = Number(tu >> 16n);
-    const state = Number(tu & 0xffffn);
+  /**
+   * Update a tile from a packed uint32:
+   *   bits  0-15: tile state (owner, fallout, etc.)
+   *   bits 16-23: terrain byte (land, ocean, shoreline, magnitude)
+   */
+  updateTile(tile: TileRef, packed: number): boolean {
+    const state = packed & 0xffff;
+    const terrainByte = (packed >>> 16) & 0xff;
 
-    const existingFallout = this.hasFallout(tileRef);
-    this.state[tileRef] = state;
-    const newFallout = this.hasFallout(tileRef);
+    const existingFallout = this.hasFallout(tile);
+    this.state[tile] = state;
+    const newFallout = this.hasFallout(tile);
     if (existingFallout && !newFallout) {
       this._numTilesWithFallout--;
     }
@@ -364,7 +413,16 @@ export class GameMapImpl implements GameMap {
       this._numTilesWithFallout++;
     }
 
-    return tileRef;
+    // Update terrain if the packed value includes a terrain byte that differs
+    const terrainChanged = this.terrain[tile] !== terrainByte;
+    if (terrainChanged) {
+      const wasLand = this.isLand(tile);
+      this.terrain[tile] = terrainByte;
+      const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
+      if (wasLand && !isNowLand) this.numLandTiles_--;
+      else if (!wasLand && isNowLand) this.numLandTiles_++;
+    }
+    return terrainChanged;
   }
 }
 

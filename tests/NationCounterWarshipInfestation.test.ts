@@ -141,28 +141,36 @@ describe("Counter Warship Infestation", () => {
   test("rich nation sends counter-warship in Team game when enemy team has too many warships", async () => {
     // Create players with team setup - use clan tags to group players
     const nationInfo = new PlayerInfo(
-      "[ALPHA]defender_nation",
+      "defender_nation",
       PlayerType.Nation,
       null,
       "nation_id",
+      false,
+      "ALPHA",
     );
     const allyInfo = new PlayerInfo(
-      "[ALPHA]ally_player",
+      "ally_player",
       PlayerType.Human,
       null,
       "ally_id",
+      false,
+      "ALPHA",
     );
     const enemy1Info = new PlayerInfo(
-      "[BETA]enemy_player_1",
+      "enemy_player_1",
       PlayerType.Human,
       null,
       "enemy1_id",
+      false,
+      "BETA",
     );
     const enemy2Info = new PlayerInfo(
-      "[BETA]enemy_player_2",
+      "enemy_player_2",
       PlayerType.Human,
       null,
       "enemy2_id",
+      false,
+      "BETA",
     );
 
     const game = await setup(

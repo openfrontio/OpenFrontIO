@@ -93,6 +93,7 @@ const unitOptions: { type: UnitType; translationKey: string }[] = [
   { type: UnitType.DefensePost, translationKey: "unit_type.defense_post" },
   { type: UnitType.Port, translationKey: "unit_type.port" },
   { type: UnitType.Warship, translationKey: "unit_type.warship" },
+  { type: UnitType.TransportShip, translationKey: "unit_type.boat" },
   { type: UnitType.MissileSilo, translationKey: "unit_type.missile_silo" },
   { type: UnitType.SAMLauncher, translationKey: "unit_type.sam_launcher" },
   { type: UnitType.AtomBomb, translationKey: "unit_type.atom_bomb" },
@@ -118,6 +119,12 @@ const MODE_ICON = svg`<path
 const OPTIONS_ICON = svg`<path
   fill-rule="evenodd"
   d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.922-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
+  clip-rule="evenodd"
+/>`;
+
+const HOST_CHEATS_ICON = svg`<path
+  fill-rule="evenodd"
+  d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"
   clip-rule="evenodd"
 />`;
 
@@ -185,6 +192,19 @@ export interface GameConfigSettingsData {
       labelKey: string;
       disabledKey: string;
     };
+    nations?: {
+      value: number;
+      defaultValue?: number;
+      labelKey: string;
+      disabledKey: string;
+      hidden?: boolean;
+    };
+    toggles: ToggleOptionConfig[];
+    inputCards: TemplateResult[];
+  };
+  hostCheats?: {
+    titleKey: string;
+    visible: boolean;
     toggles: ToggleOptionConfig[];
     inputCards: TemplateResult[];
   };
@@ -243,6 +263,18 @@ export class GameConfigSettings extends LitElement {
   private handleBotsChanged = (event: Event) => {
     const customEvent = event as CustomEvent<{ value: number }>;
     this.emit("bots-changed", customEvent.detail);
+  };
+
+  private handleNationsChanged = (event: Event) => {
+    const customEvent = event as CustomEvent<{ value: number }>;
+    this.emit("nations-changed", customEvent.detail);
+  };
+
+  private handleHostCheatToggle = (toggle: ToggleOptionConfig) => {
+    this.emit("host-cheat-toggle-changed", {
+      labelKey: toggle.labelKey,
+      checked: !toggle.checked,
+    });
   };
 
   private handleUnitToggle = (unit: UnitType, checked: boolean) => {
@@ -422,6 +454,26 @@ export class GameConfigSettings extends LitElement {
                 ></fluent-slider>
               </div>
 
+              ${settings.options.nations && !settings.options.nations.hidden
+                ? html`<div
+                    class="col-span-2 rounded-xl p-4 flex flex-col justify-center border transition-all duration-200 ${settings
+                      .options.nations.value > 0
+                      ? ACTIVE_CARD
+                      : INACTIVE_CARD}"
+                  >
+                    <fluent-slider
+                      min="0"
+                      max="400"
+                      step="1"
+                      .value=${settings.options.nations.value}
+                      .defaultValue=${settings.options.nations.defaultValue}
+                      defaultLabelKey="common.map_default"
+                      labelKey=${settings.options.nations.labelKey}
+                      disabledKey=${settings.options.nations.disabledKey}
+                      @value-changed=${this.handleNationsChanged}
+                    ></fluent-slider>
+                  </div>`
+                : nothing}
               ${settings.options.toggles.map((toggle) =>
                 this.renderOptionToggle(toggle),
               )}
@@ -429,6 +481,27 @@ export class GameConfigSettings extends LitElement {
             </div>
           `,
         )}
+        ${settings.hostCheats?.visible
+          ? renderSection(
+              HOST_CHEATS_ICON,
+              "text-yellow-400",
+              "bg-yellow-500/20",
+              settings.hostCheats.titleKey,
+              html`
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  ${settings.hostCheats.toggles.map((toggle) =>
+                    renderTextCardButton(
+                      translateText(toggle.labelKey),
+                      toggle.checked,
+                      () => this.handleHostCheatToggle(toggle),
+                      "p-4 text-center",
+                    ),
+                  )}
+                  ${settings.hostCheats.inputCards}
+                </div>
+              `,
+            )
+          : nothing}
         ${renderSection(
           ENABLES_ICON,
           "text-teal-400",

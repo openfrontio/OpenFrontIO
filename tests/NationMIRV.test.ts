@@ -602,16 +602,20 @@ describe("Nation MIRV Retaliation", () => {
   test("nation launches MIRV to prevent team victory when team approaches victory denial threshold (targets biggest team member)", async () => {
     // Setup game
     const teamPlayer1Info = new PlayerInfo(
-      "[ALPHA]team_player_1",
+      "team_player_1",
       PlayerType.Human,
       null,
       "team1_id",
+      false,
+      "ALPHA",
     );
     const teamPlayer2Info = new PlayerInfo(
-      "[ALPHA]team_player_2",
+      "team_player_2",
       PlayerType.Human,
       null,
       "team2_id",
+      false,
+      "ALPHA",
     );
     const nationInfo = new PlayerInfo(
       "defender_nation",

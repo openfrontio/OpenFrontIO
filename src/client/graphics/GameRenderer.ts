@@ -7,11 +7,13 @@ import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
+import { CoordinateGridLayer } from "./layers/CoordinateGridLayer";
 import { DynamicUILayer } from "./layers/DynamicUILayer";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
@@ -20,7 +22,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
-import { InGameHeaderAd } from "./layers/InGameHeaderAd";
+import { InGamePromo } from "./layers/InGamePromo";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -35,7 +37,6 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
-import { SpawnVideoAd } from "./layers/SpawnVideoReward";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -261,27 +262,20 @@ export function createRenderer(
   immunityTimer.game = game;
   immunityTimer.eventBus = eventBus;
 
-  const inGameHeaderAd = document.querySelector(
-    "in-game-header-ad",
-  ) as InGameHeaderAd;
-  if (!(inGameHeaderAd instanceof InGameHeaderAd)) {
-    console.error("in-game header ad not found");
+  const inGamePromo = document.querySelector("in-game-promo") as InGamePromo;
+  if (!(inGamePromo instanceof InGamePromo)) {
+    console.error("in-game promo not found");
   }
-  inGameHeaderAd.game = game;
-
-  const spawnVideoAd = document.querySelector("spawn-video-ad") as SpawnVideoAd;
-  if (!(spawnVideoAd instanceof SpawnVideoAd)) {
-    console.error("spawn video ad not found");
-  }
-  spawnVideoAd.game = game;
+  inGamePromo.game = game;
 
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+    new TerritoryLayer(game, eventBus, transformHandler),
     new RailroadLayer(game, eventBus, transformHandler, uiState),
+    new CoordinateGridLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
@@ -291,6 +285,7 @@ export function createRenderer(
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
+    new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     attacksDisplay,
     chatDisplay,
@@ -319,8 +314,7 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    inGameHeaderAd,
-    spawnVideoAd,
+    inGamePromo,
     alertFrame,
     performanceOverlay,
   ];
@@ -339,6 +333,8 @@ export function createRenderer(
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
+  private renderFramesSinceLastTick: number = 0;
+  private renderLayerDurationsSinceLastTick: Record<string, number> = {};
 
   constructor(
     private game: GameView,
@@ -395,7 +391,10 @@ export class GameRenderer {
   }
 
   renderGame() {
-    FrameProfiler.clear();
+    const shouldProfileFrame = FrameProfiler.isEnabled();
+    if (shouldProfileFrame) {
+      FrameProfiler.clear();
+    }
     const start = performance.now();
     // Set background
     this.context.fillStyle = this.game
@@ -429,9 +428,16 @@ export class GameRenderer {
         isTransformActive,
       );
 
-      const layerStart = FrameProfiler.start();
-      layer.renderLayer?.(this.context);
-      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
+      if (shouldProfileFrame) {
+        const layerStart = FrameProfiler.start();
+        layer.renderLayer?.(this.context);
+        FrameProfiler.end(
+          layer.constructor?.name ?? "UnknownLayer",
+          layerStart,
+        );
+      } else {
+        layer.renderLayer?.(this.context);
+      }
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -439,8 +445,15 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    const layerDurations = FrameProfiler.consume();
-    this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
+    if (shouldProfileFrame) {
+      const layerDurations = FrameProfiler.consume();
+      this.renderFramesSinceLastTick++;
+      for (const [name, ms] of Object.entries(layerDurations)) {
+        this.renderLayerDurationsSinceLastTick[name] =
+          (this.renderLayerDurationsSinceLastTick[name] ?? 0) + ms;
+      }
+      this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
+    }
 
     if (duration > 50) {
       console.warn(
@@ -451,6 +464,18 @@ export class GameRenderer {
 
   tick() {
     const nowMs = performance.now();
+    const shouldProfileTick = FrameProfiler.isEnabled();
+
+    if (shouldProfileTick) {
+      this.performanceOverlay.updateRenderPerTickMetrics(
+        this.renderFramesSinceLastTick,
+        this.renderLayerDurationsSinceLastTick,
+      );
+      this.renderFramesSinceLastTick = 0;
+      this.renderLayerDurationsSinceLastTick = {};
+    }
+
+    const tickLayerDurations: Record<string, number> = {};
 
     for (const layer of this.layers) {
       if (!layer.tick) {
@@ -470,7 +495,17 @@ export class GameRenderer {
       state.lastTickAtMs = nowMs;
       this.layerTickState.set(layer, state);
 
+      const tickStart = shouldProfileTick ? performance.now() : 0;
       layer.tick();
+      if (shouldProfileTick && tickStart !== 0) {
+        const duration = performance.now() - tickStart;
+        const label = layer.constructor?.name ?? "UnknownLayer";
+        tickLayerDurations[label] = (tickLayerDurations[label] ?? 0) + duration;
+      }
+    }
+
+    if (shouldProfileTick) {
+      this.performanceOverlay.updateTickLayerMetrics(tickLayerDurations);
     }
   }
 

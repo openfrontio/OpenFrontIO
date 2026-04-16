@@ -1,17 +1,21 @@
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode } from "../../../core/game/Game";
+import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { translateText } from "../../Utils";
+import { Platform } from "../../Platform";
+import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import leaderboardRegularIcon from "/images/LeaderboardIconRegularWhite.svg?url";
-import leaderboardSolidIcon from "/images/LeaderboardIconSolidWhite.svg?url";
-import teamRegularIcon from "/images/TeamIconRegularWhite.svg?url";
-import teamSolidIcon from "/images/TeamIconSolidWhite.svg?url";
+const leaderboardRegularIcon = assetUrl(
+  "images/LeaderboardIconRegularWhite.svg",
+);
+const leaderboardSolidIcon = assetUrl("images/LeaderboardIconSolidWhite.svg");
+const teamRegularIcon = assetUrl("images/TeamIconRegularWhite.svg");
+const teamSolidIcon = assetUrl("images/TeamIconSolidWhite.svg");
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Layer {
@@ -24,7 +28,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   @state()
   private isPlayerTeamLabelVisible = false;
   @state()
-  private playerTeam: string | null = null;
+  private playerTeam: Team | null = null;
   @state()
   private spawnBarVisible = false;
   @state()
@@ -51,7 +55,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
       this.isPlayerTeamLabelVisible = true;
     }
     // Make it visible by default on large screens
-    if (window.innerWidth >= 1024) {
+    if (Platform.isDesktopWidth) {
       // lg breakpoint
       this._shownOnInit = true;
     }
@@ -98,17 +102,10 @@ export class GameLeftSidebar extends LitElement implements Layer {
     return this.game?.config().gameConfig().gameMode === GameMode.Team;
   }
 
-  private getTranslatedPlayerTeamLabel(): string {
-    if (!this.playerTeam) return "";
-    const translationKey = `team_colors.${this.playerTeam.toLowerCase()}`;
-    const translated = translateText(translationKey);
-    return translated === translationKey ? this.playerTeam : translated;
-  }
-
   render() {
     return html`
       <aside
-        class=${`fixed top-0 min-[1200px]:top-4 left-0 min-[1200px]:left-4 z-900 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg rounded-br-lg ${this.isLeaderboardShow || this.isTeamLeaderboardShow ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
+        class=${`fixed top-0 min-[1200px]:top-4 left-0 min-[1200px]:left-4 z-900 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-br-lg ${this.isLeaderboardShow || this.isTeamLeaderboardShow ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
         style="margin-top: ${this.barOffset}px;"
@@ -179,7 +176,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
                   style="--color: ${this.playerColor.toRgbString()}"
                   class="text-(--color)"
                 >
-                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
+                  &nbsp;${getTranslatedPlayerTeamLabel(this.playerTeam)}
+                  &#10687;
                 </span>
               </div>
             `

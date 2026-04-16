@@ -1,0 +1,110 @@
+{
+  "name": "SanFrancisco",
+  "nations": [
+    {
+      "coordinates": [996, 990],
+      "name": "San Francisco",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1177, 1389],
+      "name": "San Mateo",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1323, 1598],
+      "name": "Palo Alto",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1618, 1653],
+      "name": "San Jose",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1756, 1467],
+      "name": "Fremont",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1537, 1173],
+      "name": "Hayward",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1308, 873],
+      "name": "Oakland",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1230, 514],
+      "name": "Richmond",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1635, 517],
+      "name": "Concord",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1253, 778],
+      "name": "Berkeley",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1749, 87],
+      "name": "Fairfield",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1348, 279],
+      "name": "Vallejo",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1122, 18],
+      "name": "Napa",
+      "flag": "California"
+    },
+    {
+      "coordinates": [757, 152],
+      "name": "Novato",
+      "flag": "California"
+    },
+    {
+      "coordinates": [868, 539],
+      "name": "San Rafael",
+      "flag": "California"
+    },
+    {
+      "coordinates": [930, 1233],
+      "name": "Daly City",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1955, 521],
+      "name": "Pittsburg",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1647, 849],
+      "name": "Dublin",
+      "flag": "California"
+    },
+    {
+      "coordinates": [503, 575],
+      "name": "Bolinas",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1882, 1082],
+      "name": "Livermore",
+      "flag": "California"
+    },
+    {
+      "coordinates": [215, 26],
+      "name": "Bodega Bay",
+      "flag": "California"
+    }
+  ]
+}

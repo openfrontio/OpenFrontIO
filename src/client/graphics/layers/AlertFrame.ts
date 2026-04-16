@@ -1,10 +1,11 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { PlayerType } from "../../../core/game/Game";
 import {
   BrokeAllianceUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Layer } from "./Layer";
 
@@ -198,6 +199,12 @@ export class AlertFrame extends LitElement implements Layer {
     for (const attack of incomingAttacks) {
       // Only alert for non-retreating attacks
       if (!attack.retreating && !this.seenAttackIds.has(attack.id)) {
+        const attacker = this.game.playerBySmallID(attack.attackerID);
+        if ((attacker as PlayerView).type() === PlayerType.Bot) {
+          this.seenAttackIds.add(attack.id);
+          continue;
+        }
+
         // Check if this is a retaliation (we attacked them recently)
         const ourAttackTick = this.outgoingAttackTicks.get(attack.attackerID);
         const isRetaliation =

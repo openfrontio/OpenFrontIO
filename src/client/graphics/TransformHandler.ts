@@ -70,7 +70,7 @@ export class TransformHandler {
     );
   }
 
-  worldToScreenCoordinates(cell: Cell): { x: number; y: number } {
+  worldToCanvasCoordinates(cell: Cell): { x: number; y: number } {
     // Step 1: Convert from Cell coordinates to game coordinates
     // (reverse of Math.floor operation - we'll use the exact values)
     const gameX = cell.x;
@@ -90,28 +90,47 @@ export class TransformHandler {
     const canvasY =
       (centerY - this.offsetY) * this.scale + this.game.height() / 2;
 
-    // Step 4: Convert canvas coordinates back to screen coordinates
-    const canvasRect = this.boundingRect();
-    const screenX = canvasX + canvasRect.left;
-    const screenY = canvasY + canvasRect.top;
-    return { x: screenX, y: screenY };
+    return { x: canvasX, y: canvasY };
+  }
+
+  worldToScreenCoordinates(cell: Cell): { x: number; y: number } {
+    // Step 1-3: Convert world coordinates to canvas coordinates in worldToCanvasCoordinates
+    // Step 4 only where needed: Convert canvas coordinates back to screen coordinates
+    const canvasCoords = this.worldToCanvasCoordinates(cell);
+    return this.canvasToScreenCoordinates(canvasCoords.x, canvasCoords.y);
   }
 
   screenToWorldCoordinates(screenX: number, screenY: number): Cell {
-    const canvasRect = this.boundingRect();
-    const canvasX = screenX - canvasRect.left;
-    const canvasY = screenY - canvasRect.top;
+    const canvasCoords = this.screenToCanvasCoordinates(screenX, screenY);
 
-    // Calculate the world point we want to zoom towards
     const centerX =
-      (canvasX - this.game.width() / 2) / this.scale + this.offsetX;
+      (canvasCoords.x - this.game.width() / 2) / this.scale + this.offsetX;
     const centerY =
-      (canvasY - this.game.height() / 2) / this.scale + this.offsetY;
+      (canvasCoords.y - this.game.height() / 2) / this.scale + this.offsetY;
 
     const gameX = centerX + this.game.width() / 2;
     const gameY = centerY + this.game.height() / 2;
 
     return new Cell(Math.floor(gameX), Math.floor(gameY));
+  }
+
+  canvasToScreenCoordinates(
+    canvasX: number,
+    canvasY: number,
+  ): { x: number; y: number } {
+    const canvasRect = this.boundingRect();
+    return {
+      x: canvasX + canvasRect.left,
+      y: canvasY + canvasRect.top,
+    };
+  }
+
+  screenToCanvasCoordinates(
+    screenX: number,
+    screenY: number,
+  ): { x: number; y: number } {
+    const canvasRect = this.boundingRect();
+    return { x: screenX - canvasRect.left, y: screenY - canvasRect.top };
   }
 
   screenBoundingRect(): [Cell, Cell] {
@@ -235,19 +254,19 @@ export class TransformHandler {
     // Clamp the scale to prevent extreme zooming
     this.scale = Math.max(0.2, Math.min(20, this.scale));
 
-    const canvasRect = this.boundingRect();
-    const canvasX = event.x - canvasRect.left;
-    const canvasY = event.y - canvasRect.top;
+    const canvasCoords = this.screenToCanvasCoordinates(event.x, event.y);
 
     // Calculate the world point we want to zoom towards
     const zoomPointX =
-      (canvasX - this.game.width() / 2) / oldScale + this.offsetX;
+      (canvasCoords.x - this.game.width() / 2) / oldScale + this.offsetX;
     const zoomPointY =
-      (canvasY - this.game.height() / 2) / oldScale + this.offsetY;
+      (canvasCoords.y - this.game.height() / 2) / oldScale + this.offsetY;
 
     // Adjust the offset
-    this.offsetX = zoomPointX - (canvasX - this.game.width() / 2) / this.scale;
-    this.offsetY = zoomPointY - (canvasY - this.game.height() / 2) / this.scale;
+    this.offsetX =
+      zoomPointX - (canvasCoords.x - this.game.width() / 2) / this.scale;
+    this.offsetY =
+      zoomPointY - (canvasCoords.y - this.game.height() / 2) / this.scale;
     this.clampOffsets();
     this.changed = true;
   }

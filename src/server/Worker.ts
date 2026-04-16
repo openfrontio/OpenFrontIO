@@ -3,6 +3,7 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
+import { RateLimiter } from "limiter";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
@@ -26,8 +27,10 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -48,7 +51,10 @@ export async function startWorker() {
   const app = express();
   app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 1024 * 1024, // 1MB
+  });
 
   const gm = new GameManager(config, log);
 
@@ -103,10 +109,16 @@ export async function startWorker() {
   app.use(compression());
   app.use(express.json());
 
-  // Configure MIME types for webp files
-  express.static.mime.define({ "image/webp": ["webp"] });
-
-  app.use(express.static(path.join(__dirname, "../../out")));
+  app.use(
+    express.static(path.join(__dirname, "../../out"), {
+      setHeaders: (res) => {
+        applyStaticAssetCacheControl(
+          res.setHeader.bind(res),
+          res.req.originalUrl,
+        );
+      },
+    }),
+  );
   app.use(
     "/maps",
     express.static(path.join(__dirname, "../../static/maps"), {
@@ -124,6 +136,11 @@ export async function startWorker() {
       max: 20, // 20 requests per IP per second
     }),
   );
+
+  app.use("/api", (_req, res, next) => {
+    setNoStoreHeaders(res);
+    next();
+  });
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;
@@ -185,7 +202,7 @@ export async function startWorker() {
     const game = gm.createGame(id, gc, creatorPersistentID);
 
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? GameType.Public : GameType.Private}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
     );
     res.json(game.gameInfo());
   });
@@ -286,6 +303,11 @@ export async function startWorker() {
         : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           forwarded || req.socket.remoteAddress || "unknown";
 
+      if (!getWsIpLimiter(ip).tryRemoveTokens(1)) {
+        ws.close(1008, "Rate limit exceeded");
+        return;
+      }
+
       try {
         // Parse and handle client messages
         const parsed = ClientMessageSchema.safeParse(
@@ -355,9 +377,22 @@ export async function startWorker() {
           return;
         }
 
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        const { clanTag: censoredClanTag, username: censoredUsername } =
+          privilegeRefresher
+            .get()
+            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+
         // Try to reconnect an existing client (e.g., page refresh)
         // If successful, skip all authorization
-        if (gm.rejoinClient(ws, persistentId, clientMsg.gameID)) {
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: censoredClanTag,
+          })
+        ) {
           return;
         }
 
@@ -439,11 +474,6 @@ export async function startWorker() {
           }
         }
 
-        // Censor profane usernames server-side (don't reject, just rename)
-        const censoredUsername = privilegeRefresher
-          .get()
-          .censorUsername(clientMsg.username);
-
         // Create client and add to game
         const client = new Client(
           generateID(),
@@ -453,7 +483,7 @@ export async function startWorker() {
           flares,
           ip,
           censoredUsername,
-          clientMsg.username,
+          censoredClanTag,
           ws,
           cosmeticResult.cosmetics,
         );
@@ -566,13 +596,12 @@ async function startMatchmakingPolling(gm: GameManager) {
         log.info(`Lobby poll successful:`, data);
 
         if (data.assignment) {
-          const gameConfig = playlist.get1v1Config();
-          const game = gm.createGame(gameId, gameConfig);
-          setTimeout(() => {
-            // Wait a few seconds to allow clients to connect.
-            console.log(`Starting game ${gameId}`);
-            game.start();
-          }, 7000);
+          gm.createGame(
+            gameId,
+            playlist.get1v1Config(),
+            undefined,
+            Date.now() + 7000,
+          );
         }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -600,3 +629,21 @@ function generateGameIdForWorker(): GameID | null {
   log.warn(`Failed to generate game ID for worker ${workerId}`);
   return null;
 }
+
+// Per-IP rate limiter for pre-join WebSocket messages.
+// Prevents unauthenticated connections from spamming messages
+// (e.g. pings) before joining a game.
+const wsIpLimiters = new Map<string, RateLimiter>();
+function getWsIpLimiter(ip: string): RateLimiter {
+  let limiter = wsIpLimiters.get(ip);
+  if (!limiter) {
+    limiter = new RateLimiter({
+      tokensPerInterval: 5,
+      interval: "second",
+    });
+    wsIpLimiters.set(ip, limiter);
+  }
+  return limiter;
+}
+// Clean up stale IP limiters every 10 minutes
+setInterval(() => wsIpLimiters.clear(), 10 * 60 * 1000);

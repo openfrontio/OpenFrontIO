@@ -2,12 +2,13 @@ import {
   Difficulty,
   Game,
   GameMode,
+  GameType,
   HumansVsNations,
-  isStructureType,
   Player,
   PlayerID,
   PlayerType,
   Relation,
+  Structures,
   TerraNullius,
   UnitType,
 } from "../../game/Game";
@@ -108,15 +109,15 @@ export class AiAttackBehavior {
       return;
     }
 
-    // Check if we have any ocean shore tiles to launch from
-    const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isOceanShore(t),
+    // Check if we have any shore tiles to launch from
+    const shore = Array.from(this.player.borderTiles()).filter((t) =>
+      this.game.isShore(t),
     );
-    if (oceanShore.length === 0) {
+    if (shore.length === 0) {
       return;
     }
 
-    const src = this.random.randElement(oceanShore);
+    const src = this.random.randElement(shore);
 
     // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
     let dst = this.findRandomBoatTarget(src, borderingEnemies, true);
@@ -361,7 +362,7 @@ export class AiAttackBehavior {
           n.isPlayer() &&
           n.type() === PlayerType.Bot &&
           !this.player.isFriendly(n) &&
-          n.units().some((u) => isStructureType(u.type())),
+          n.units().some((u) => Structures.has(u.type())),
       );
   }
 
@@ -419,7 +420,7 @@ export class AiAttackBehavior {
 
     const density = (p: Player) => p.troops() / p.numTilesOwned();
     const ownsStructures = (p: Player) =>
-      p.units().some((u) => isStructureType(u.type()));
+      p.units().some((u) => Structures.has(u.type()));
     const sortedBots = bots.slice().sort((a, b) => {
       const aHasStructures = ownsStructures(a);
       const bHasStructures = ownsStructures(b);
@@ -573,11 +574,11 @@ export class AiAttackBehavior {
       return null;
     }
 
-    // Check if we have any ocean shore tiles to launch from
-    const hasOceanShore = Array.from(this.player.borderTiles()).some((t) =>
-      this.game.isOceanShore(t),
+    // Check if we have any shore tiles to launch from
+    const hasShore = Array.from(this.player.borderTiles()).some((t) =>
+      this.game.isShore(t),
     );
-    if (!hasOceanShore) return null;
+    if (!hasShore) return null;
 
     const filteredPlayers = this.game.players().filter((p) => {
       if (p === this.player) return false;
@@ -608,25 +609,35 @@ export class AiAttackBehavior {
       })
       .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
 
-    // Try players in order of distance until we find one reachable by boat
+    // Try players in order of distance until we find reachable candidates
+    const reachablePlayers: Player[] = [];
     for (const entry of sortedPlayers) {
       const closest = closestTwoTiles(
         this.game,
         Array.from(this.player.borderTiles()).filter((t) =>
-          this.game.isOceanShore(t),
+          this.game.isShore(t),
         ),
         Array.from(entry.player.borderTiles()).filter((t) =>
-          this.game.isOceanShore(t),
+          this.game.isShore(t),
         ),
       );
       if (closest === null) continue;
 
       if (canBuildTransportShip(this.game, this.player, closest.y)) {
-        return entry.player;
+        reachablePlayers.push(entry.player);
+        // We only need up to 2 reachable candidates
+        if (reachablePlayers.length >= 2) break;
       }
     }
 
-    return null;
+    if (reachablePlayers.length === 0) return null;
+
+    // 33% chance to pick the second-nearest player if available
+    if (reachablePlayers.length >= 2 && this.random.chance(3)) {
+      return reachablePlayers[1];
+    }
+
+    return reachablePlayers[0];
   }
 
   private getPlayerCenter(player: Player) {
@@ -733,7 +744,7 @@ export class AiAttackBehavior {
     const botWithStructures =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
-      target.units().some((u) => isStructureType(u.type()));
+      target.units().some((u) => Structures.has(u.type()));
     // Use the expand ratio when attacking a bot that owns structures — we need to
     // recapture those structures ASAP, even before reaching the normal reserve.
     const useReserve = target.isPlayer() && !botWithStructures;
@@ -775,10 +786,8 @@ export class AiAttackBehavior {
   private sendBoatAttack(target: Player) {
     const closest = closestTwoTiles(
       this.game,
-      Array.from(this.player.borderTiles()).filter((t) =>
-        this.game.isOceanShore(t),
-      ),
-      Array.from(target.borderTiles()).filter((t) => this.game.isOceanShore(t)),
+      Array.from(this.player.borderTiles()).filter((t) => this.game.isShore(t)),
+      Array.from(target.borderTiles()).filter((t) => this.game.isShore(t)),
     );
     if (closest === null) {
       return;
@@ -833,6 +842,11 @@ export class AiAttackBehavior {
   private donateTroops(): boolean {
     // Only donate in team games
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return false;
+    }
+
+    // Don't donate in public games (To balance HvN)
+    if (this.game.config().gameConfig().gameType === GameType.Public) {
       return false;
     }
 

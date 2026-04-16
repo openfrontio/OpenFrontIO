@@ -18,7 +18,6 @@ import { colorizeCanvas } from "./SpriteLoader";
 
 type AnimatedSpriteConfig = {
   url: string;
-  frameWidth: number;
   frameCount: number;
   frameDuration: number; // ms per frame
   looping?: boolean;
@@ -29,7 +28,6 @@ type AnimatedSpriteConfig = {
 const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   [FxType.MiniFire]: {
     url: miniFire,
-    frameWidth: 7,
     frameCount: 6,
     frameDuration: 100,
     looping: true,
@@ -38,7 +36,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.MiniSmoke]: {
     url: miniSmoke,
-    frameWidth: 11,
     frameCount: 4,
     frameDuration: 120,
     looping: true,
@@ -47,7 +44,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.MiniBigSmoke]: {
     url: miniBigSmoke,
-    frameWidth: 24,
     frameCount: 5,
     frameDuration: 120,
     looping: true,
@@ -56,8 +52,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.MiniSmokeAndFire]: {
     url: miniSmokeAndFire,
-    frameWidth: 24,
-    frameCount: 5,
+    frameCount: 6,
     frameDuration: 120,
     looping: true,
     originX: 9,
@@ -65,7 +60,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.MiniExplosion]: {
     url: miniExplosion,
-    frameWidth: 13,
     frameCount: 4,
     frameDuration: 70,
     looping: false,
@@ -74,7 +68,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.Dust]: {
     url: dust,
-    frameWidth: 9,
     frameCount: 3,
     frameDuration: 100,
     looping: false,
@@ -83,7 +76,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.UnitExplosion]: {
     url: unitExplosion,
-    frameWidth: 19,
     frameCount: 4,
     frameDuration: 70,
     looping: false,
@@ -92,7 +84,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.BuildingExplosion]: {
     url: buildingExplosion,
-    frameWidth: 17,
     frameCount: 10,
     frameDuration: 70,
     looping: false,
@@ -101,7 +92,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.SinkingShip]: {
     url: sinkingShip,
-    frameWidth: 16,
     frameCount: 14,
     frameDuration: 90,
     looping: false,
@@ -110,7 +100,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.Nuke]: {
     url: nuke,
-    frameWidth: 60,
     frameCount: 9,
     frameDuration: 70,
     looping: false,
@@ -119,7 +108,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.SAMExplosion]: {
     url: SAMExplosion,
-    frameWidth: 48,
     frameCount: 9,
     frameDuration: 70,
     looping: false,
@@ -128,7 +116,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
   [FxType.Conquest]: {
     url: conquestSword,
-    frameWidth: 21,
     frameCount: 10,
     frameDuration: 90,
     looping: false,
@@ -181,7 +168,6 @@ export class AnimatedSpriteLoader {
 
     return new AnimatedSprite(
       image,
-      config.frameWidth,
       config.frameCount,
       config.frameDuration,
       config.looping ?? true,
@@ -229,7 +215,6 @@ export class AnimatedSpriteLoader {
 
     return new AnimatedSprite(
       image,
-      config.frameWidth,
       config.frameCount,
       config.frameDuration,
       config.looping ?? true,

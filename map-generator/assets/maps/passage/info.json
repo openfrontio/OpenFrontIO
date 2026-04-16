@@ -1,0 +1,69 @@
+{
+  "name": "Passage",
+  "nations": [
+    {
+      "coordinates": [256, 80],
+      "name": "Weston"
+    },
+    {
+      "coordinates": [1028, 286],
+      "name": "Ellach"
+    },
+    {
+      "coordinates": [1437, 149],
+      "name": "Prina"
+    },
+    {
+      "coordinates": [1652, 141],
+      "name": "Aros"
+    },
+    {
+      "coordinates": [1867, 270],
+      "name": "Elos"
+    },
+    {
+      "coordinates": [2138, 127],
+      "name": "Eban"
+    },
+    {
+      "coordinates": [2383, 182],
+      "name": "Kene"
+    },
+    {
+      "coordinates": [640, 136],
+      "name": "Sore"
+    },
+    {
+      "coordinates": [2789, 152],
+      "name": "Deno"
+    },
+    {
+      "coordinates": [3267, 275],
+      "name": "Calphe"
+    },
+    {
+      "coordinates": [3653, 147],
+      "name": "Modwyn"
+    },
+    {
+      "coordinates": [3888, 270],
+      "name": "Echur"
+    },
+    {
+      "coordinates": [4579, 142],
+      "name": "Eris"
+    },
+    {
+      "coordinates": [5408, 228],
+      "name": "Tuage"
+    },
+    {
+      "coordinates": [5475, 115],
+      "name": "Vola"
+    },
+    {
+      "coordinates": [5906, 364],
+      "name": "Eastos"
+    }
+  ]
+}

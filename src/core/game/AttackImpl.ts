@@ -1,4 +1,4 @@
-import { Attack, Cell, Player, TerraNullius } from "./Game";
+import { Attack, Player, TerraNullius } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { PlayerImpl } from "./PlayerImpl";
@@ -97,28 +97,89 @@ export class AttackImpl implements Attack {
     }
   }
 
-  averagePosition(): Cell | null {
+  // Returns the top 2 clustered positions of the attack's border.
+  // If the second cluster is too small, only returns the largest one.
+  clusteredPositions(): TileRef[] {
     if (this._borderSize === 0) {
-      if (this.sourceTile() === null) {
-        // No border tiles and no source tile—return a default position or throw an error
-        return null;
+      const tile = this.sourceTile();
+      return tile !== null ? [tile] : [];
+    }
+    return this.clusterBorderTiles(30, 2);
+  }
+
+  // Partitions the attack's border tiles into disconnected segments using BFS,
+  // then returns one representative tile per segment.
+  //
+  // Border tiles naturally fragment when fighting across non-contiguous
+  // territory (e.g. islands, chokepoints).
+  //
+  // Results are sorted largest-first, small clusters below minSize are
+  // dropped (the largest is always kept as a fallback), and the list is capped
+  // at maxClusters to avoid label clutter on heavily fragmented borders.
+  private clusterBorderTiles(minSize: number, maxClusters: number): TileRef[] {
+    const map = this._mg.map();
+    const visited = new Set<TileRef>();
+    const clusters: { tile: TileRef; size: number }[] = [];
+
+    for (const startTile of this._border) {
+      if (visited.has(startTile)) continue;
+
+      const queue: TileRef[] = [startTile];
+      visited.add(startTile);
+      let qi = 0;
+      let sumX = 0;
+      let sumY = 0;
+      let count = 0;
+
+      while (qi < queue.length) {
+        const t = queue[qi++];
+        sumX += map.x(t);
+        sumY += map.y(t);
+        count++;
+
+        this._mg.forEachNeighborWithDiag(t, (neighbor) => {
+          if (this._border.has(neighbor) && !visited.has(neighbor)) {
+            visited.add(neighbor);
+            queue.push(neighbor);
+          }
+        });
       }
-      // No border tiles yet—use the source tile's location
-      const tile: number = this.sourceTile()!;
-      return new Cell(this._mg.map().x(tile), this._mg.map().y(tile));
+
+      // The centroid (sumX/count, sumY/count) may not be a real border tile,
+      // so we pick whichever tile in the cluster is closest to it. This ensures
+      // the representative always sits on an actual front-line tile.
+      const cx = sumX / count;
+      const cy = sumY / count;
+      let best = queue[0];
+      let bestDist = Infinity;
+      for (const t of queue) {
+        const dx = map.x(t) - cx;
+        const dy = map.y(t) - cy;
+        const dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = t;
+        }
+      }
+      clusters.push({ tile: best, size: count });
     }
 
-    let averageX = 0;
-    let averageY = 0;
+    clusters.sort((a, b) => b.size - a.size);
 
-    for (const t of this._border) {
-      averageX += this._mg.map().x(t);
-      averageY += this._mg.map().y(t);
+    switch (clusters.length) {
+      case 0:
+        return [];
+      case 1:
+        // If there's only one cluster, return it even if it's smaller than minSize.
+        return [clusters[0].tile];
+      default: {
+        const significant = clusters.filter((c) => c.size >= minSize);
+        if (significant.length === 0) {
+          // Always keep at least the largest cluster even if it falls below minSize.
+          return [clusters[0].tile];
+        }
+        return significant.slice(0, maxClusters).map((c) => c.tile);
+      }
     }
-
-    averageX = averageX / this._borderSize;
-    averageY = averageY / this._borderSize;
-
-    return new Cell(averageX, averageY);
   }
 }

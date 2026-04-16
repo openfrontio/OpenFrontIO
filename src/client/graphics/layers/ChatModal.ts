@@ -147,7 +147,7 @@ export class ChatModal extends LitElement {
                             .toHex()};"
                           @click=${() => this.selectPlayer(player)}
                         >
-                          ${player.name()}
+                          ${player.displayName()}
                         </button>
                       `,
                     )}
@@ -216,7 +216,8 @@ export class ChatModal extends LitElement {
   private selectPlayer(player: PlayerView) {
     if (this.previewText) {
       this.previewText =
-        this.selectedPhraseTemplate?.replace("[P1]", player.name()) ?? null;
+        this.selectedPhraseTemplate?.replace("[P1]", player.displayName()) ??
+        null;
       this.selectedPlayer = player;
       this.requiresPlayerSelection = false;
       this.requestUpdate();
@@ -255,13 +256,13 @@ export class ChatModal extends LitElement {
 
   private getSortedFilteredPlayers(): PlayerView[] {
     const sorted = [...this.players].sort((a, b) =>
-      a.name().localeCompare(b.name()),
+      a.displayName().localeCompare(b.displayName()),
     );
     const filtered = sorted.filter((p) =>
-      p.name().toLowerCase().includes(this.playerSearchQuery),
+      p.displayName().toLowerCase().includes(this.playerSearchQuery),
     );
     const others = sorted.filter(
-      (p) => !p.name().toLowerCase().includes(this.playerSearchQuery),
+      (p) => !p.displayName().toLowerCase().includes(this.playerSearchQuery),
     );
     return [...filtered, ...others];
   }

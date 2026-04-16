@@ -1,0 +1,15 @@
+{
+  "name": "BeringStrait",
+  "nations": [
+    {
+      "coordinates": [1297, 287],
+      "name": "Alaska",
+      "flag": "us"
+    },
+    {
+      "coordinates": [186, 427],
+      "name": "Russia",
+      "flag": "ru"
+    }
+  ]
+}
