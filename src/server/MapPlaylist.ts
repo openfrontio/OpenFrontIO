@@ -85,7 +85,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Aegean: 6,
   MilkyWay: 8,
   Mediterranean: 6,
-  Antarctica: 2,
+  Antarctica: 1,
   Dyslexdria: 8,
   GreatLakes: 6,
   StraitOfMalacca: 4,
