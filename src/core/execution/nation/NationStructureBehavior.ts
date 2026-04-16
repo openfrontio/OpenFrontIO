@@ -85,19 +85,14 @@ const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
 /**
- * Per-tick cache for shared water components.
- *
- * `sharedWaterComponents` is called once per nation per structure-building pass,
- * and each call previously iterated every other player's border tiles. With N
- * nations this is O(N * total_border_tiles) per tick. All N nations share the
- * same answer topology, so we compute it once per tick and reuse it.
- *
- * Ocean is always treated as shared (ports are useful as long as someone else
- * is on the same ocean, which is effectively always true), so we skip the
- * `getWaterComponent` call for ocean neighbors. Only lakes need
- * the per-component shared/unshared analysis.
+ * Cache for shared water components. Rebuilt at most once every
+ * SHARED_WATER_CACHE_TTL_TICKS (3s at 10 ticks/s). Port placement is not
+ * time-critical — a nation noticing a newly-valid port site a few seconds late
+ * is fine and lets us amortize the O(total_border_tiles) build across far more
+ * callers than a per-tick cache would.
  */
-let sharedWaterCacheTick: number = -1;
+const SHARED_WATER_CACHE_TTL_TICKS = 30;
+let sharedWaterCacheTick: number = -Infinity;
 let sharedWaterCacheByPlayer: Map<Player, Set<number> | null> | null = null;
 
 /** Sentinel added to a player's shared-water set to signal "touches ocean". */
@@ -258,13 +253,17 @@ export class NationStructureBehavior {
 
   /**
    * Returns the set of water components shared with at least one other player,
-   * or null if there are none. Result is memoized globally per tick so all
-   * nations share one O(total_border_tiles) pass instead of each doing O(N *
-   * total_border_tiles) work.
+   * or null if there are none. Result is memoized globally and rebuilt at most
+   * once every SHARED_WATER_CACHE_TTL_TICKS, so all nations share one
+   * O(total_border_tiles) pass instead of each doing O(N * total_border_tiles)
+   * work.
    */
   private sharedWaterComponents(): Set<number> | null {
     const tick = this.game.ticks();
-    if (sharedWaterCacheByPlayer === null || sharedWaterCacheTick !== tick) {
+    if (
+      sharedWaterCacheByPlayer === null ||
+      tick - sharedWaterCacheTick >= SHARED_WATER_CACHE_TTL_TICKS
+    ) {
       sharedWaterCacheByPlayer = buildSharedWaterByPlayer(this.game);
       sharedWaterCacheTick = tick;
     }
