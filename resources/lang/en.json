@@ -1071,6 +1071,6 @@
     "warning": "WARNING",
     "dismiss": "Dismiss",
     "go_to_item": "Go to item {num}",
-    "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
+    "firefox_warning": "OpenFront.io doesn't perform well with Firefox-based browsers. We recommend you to use a Chromium-based browser for best performance."
   }
 }

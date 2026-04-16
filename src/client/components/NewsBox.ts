@@ -137,7 +137,7 @@ export class NewsBox extends LitElement {
               : html`<span class="text-sm font-medium text-white truncate block"
                   >${item.title}</span
                 >`}
-            <span class="text-xs text-white/50 truncate block"
+            <span class="text-xs text-white/50 block"
               >${item.descriptionTranslationKey
                 ? translateText(item.descriptionTranslationKey)
                 : item.description}</span
