@@ -112,7 +112,9 @@ describe("JoinLobbyModal notification prompt", () => {
     expect((m as any).showNotificationPrompt).toBe(true);
   });
 
-  it("shows prompt even when gamesPlayed > 0", () => {
+  it("open() is unaffected by unrelated localStorage keys", () => {
+    // Guards against accidental gating by keys like "gamesPlayed" that
+    // open() does not and should not consult.
     ls.setItem("gamesPlayed", "10");
     const m = makeModal();
     m.open();
