@@ -145,6 +145,12 @@ export enum GameMapType {
   Aegean = "Aegean",
   MilkyWay = "MilkyWay",
   Mediterranean = "Mediterranean",
+  Dyslexdria = "Dyslexdria",
+  GreatLakes = "Great Lakes",
+  StraitOfMalacca = "Strait Of Malacca",
+  Luna = "Luna",
+  Conakry = "Conakry",
+  Caucasus = "Caucasus",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -197,6 +203,10 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
     GameMapType.Mediterranean,
+    GameMapType.GreatLakes,
+    GameMapType.StraitOfMalacca,
+    GameMapType.Conakry,
+    GameMapType.Caucasus,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -211,6 +221,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TradersDream,
     GameMapType.Passage,
     GameMapType.MilkyWay,
+    GameMapType.Dyslexdria,
+    GameMapType.Luna,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -263,6 +275,7 @@ export interface PublicGameModifiers {
   isNukesDisabled?: boolean;
   isSAMsDisabled?: boolean;
   isPeaceTime?: boolean;
+  isWaterNukes?: boolean;
 }
 
 export interface UnitInfo {
@@ -910,6 +923,11 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+  /** Incremented each time the water navigation graph is rebuilt (e.g. after nuke terrain change). */
+  waterGraphVersion(): number;
+
+  /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
+  queueWaterConversion(tile: TileRef): void;
 }
 
 export interface PlayerActions {

@@ -1,7 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import {
+  PATTERN_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+} from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
-import { renderPatternPreview } from "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternPreview";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
@@ -47,7 +51,7 @@ export class PatternInput extends LitElement {
     if (!this.isConnected) return;
     this.isLoading = false;
     window.addEventListener(
-      "event:user-settings-changed:pattern",
+      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onPatternSelected,
       {
         signal: this._abortController.signal,

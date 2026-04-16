@@ -53,6 +53,11 @@ export class WorkerClient {
           }
         }
         break;
+      case "game_error":
+        if (this.gameUpdateCallback && message.error) {
+          this.gameUpdateCallback(message.error);
+        }
+        break;
 
       case "initialized":
       default:
