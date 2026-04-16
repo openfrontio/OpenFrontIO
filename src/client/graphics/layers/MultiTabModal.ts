@@ -31,7 +31,8 @@ export class MultiTabModal extends LitElement implements Layer {
     if (
       this.game.inSpawnPhase() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
-      this.game.config().serverConfig().env() === GameEnv.Dev
+      this.game.config().serverConfig().env() === GameEnv.Dev ||
+      this.game.config().isReplay()
     ) {
       return;
     }

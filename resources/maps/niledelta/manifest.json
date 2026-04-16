@@ -1,0 +1,75 @@
+{
+  "map": {
+    "height": 1280,
+    "num_land_tiles": 1363238,
+    "width": 1556
+  },
+  "map16x": {
+    "height": 320,
+    "num_land_tiles": 82743,
+    "width": 389
+  },
+  "map4x": {
+    "height": 640,
+    "num_land_tiles": 337280,
+    "width": 778
+  },
+  "name": "Nile Delta",
+  "nations": [
+    {
+      "coordinates": [305, 414],
+      "flag": "eg",
+      "name": "Alexandria"
+    },
+    {
+      "coordinates": [1146, 303],
+      "flag": "eg",
+      "name": "Damietta"
+    },
+    {
+      "coordinates": [1100, 348],
+      "flag": "eg",
+      "name": "Faraskur"
+    },
+    {
+      "coordinates": [1050, 423],
+      "flag": "eg",
+      "name": "Sheremsah"
+    },
+    {
+      "coordinates": [954, 492],
+      "flag": "eg",
+      "name": "El Senbellawein"
+    },
+    {
+      "coordinates": [920, 963],
+      "flag": "eg",
+      "name": "Aga"
+    },
+    {
+      "coordinates": [915, 547],
+      "flag": "eg",
+      "name": "Mit Ghamr"
+    },
+    {
+      "coordinates": [888, 1012],
+      "flag": "eg",
+      "name": "Cairo"
+    },
+    {
+      "coordinates": [895, 1108],
+      "flag": "eg",
+      "name": "Heliopolis"
+    },
+    {
+      "coordinates": [895, 663],
+      "flag": "eg",
+      "name": "Memphis"
+    },
+    {
+      "coordinates": [993, 579],
+      "flag": "eg",
+      "name": "El Mansoura"
+    }
+  ]
+}

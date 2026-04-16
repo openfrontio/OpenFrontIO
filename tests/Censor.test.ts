@@ -5,7 +5,9 @@ vi.mock("../src/client/Utils", () => ({
 }));
 
 import {
+  MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
+  validateClanTag,
   validateUsername,
 } from "../src/core/validations/username";
 
@@ -36,6 +38,36 @@ describe("username.ts functions", () => {
     });
     test("accepts allowed Unicode like ü", () => {
       const res = validateUsername("Üser");
+      expect(res.isValid).toBe(true);
+    });
+  });
+
+  describe("validateClanTag", () => {
+    test("accepts empty clan tag", () => {
+      const res = validateClanTag("");
+      expect(res.isValid).toBe(true);
+    });
+
+    test("rejects too short clan tag", () => {
+      const res = validateClanTag("A");
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("username.tag_too_short");
+    });
+
+    test("rejects invalid clan tag characters", () => {
+      const res = validateClanTag("A!");
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("username.tag_invalid_chars");
+    });
+
+    test("rejects too long clan tag", () => {
+      const res = validateClanTag("A".repeat(MAX_CLAN_TAG_LENGTH + 1));
+      expect(res.isValid).toBe(false);
+      expect(res.error).toBe("username.tag_too_short");
+    });
+
+    test("accepts valid clan tag", () => {
+      const res = validateClanTag("AB12");
       expect(res.isValid).toBe(true);
     });
   });

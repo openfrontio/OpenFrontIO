@@ -249,9 +249,7 @@ export class LeaderboardPlayerList extends LitElement {
                 </div>`
               : ""}
             <span class="font-bold text-blue-300 truncate text-base"
-              >${player.clanTag
-                ? player.username.replace(/^\[.*?\]\s*/, "")
-                : player.username}</span
+              >${player.username}</span
             >
           </div>
         </td>
@@ -434,14 +432,18 @@ export class LeaderboardPlayerList extends LitElement {
                           "leaderboard_modal.your_ranking",
                         )}</span
                       >
-                      <span class="font-bold text-white text-base"
-                        >${this.currentUserEntry.clanTag
-                          ? this.currentUserEntry.username.replace(
-                              /^\[.*?\]\s*/,
-                              "",
-                            )
-                          : this.currentUserEntry.username}</span
-                      >
+                      <div class="flex items-center gap-2">
+                        ${this.currentUserEntry.clanTag
+                          ? html`<div
+                              class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-300/40 text-[10px] font-bold text-blue-100 shrink-0"
+                            >
+                              ${this.currentUserEntry.clanTag}
+                            </div>`
+                          : ""}
+                        <span class="font-bold text-white text-base"
+                          >${this.currentUserEntry.username}</span
+                        >
+                      </div>
                     </div>
                     <div class="flex flex-col items-end w-20">
                       <div class="font-mono text-white font-bold text-lg">

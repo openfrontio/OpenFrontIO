@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 1171283,
+    "width": 1700
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 68060,
+    "width": 425
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 285421,
+    "width": 850
+  },
+  "name": "aegean",
+  "nations": [
+    {
+      "coordinates": [786, 1860],
+      "name": "Crete"
+    },
+    {
+      "coordinates": [1598, 1550],
+      "name": "Rhodes"
+    },
+    {
+      "coordinates": [1126, 552],
+      "name": "Lesbos"
+    },
+    {
+      "coordinates": [1128, 812],
+      "name": "Chios"
+    },
+    {
+      "coordinates": [1330, 1039],
+      "name": "Samos"
+    },
+    {
+      "coordinates": [1275, 263],
+      "name": "Troy"
+    },
+    {
+      "coordinates": [1567, 808],
+      "name": "Ephesus"
+    },
+    {
+      "coordinates": [1635, 1139],
+      "name": "Miletus"
+    },
+    {
+      "coordinates": [891, 295],
+      "name": "Lemnos"
+    },
+    {
+      "coordinates": [1382, 27],
+      "name": "Thrace"
+    },
+    {
+      "coordinates": [1599, 431],
+      "name": "Achaemenid Empire",
+      "flag": "Achaemenid Empire"
+    },
+    {
+      "coordinates": [762, 35],
+      "name": "Thasos"
+    },
+    {
+      "coordinates": [491, 894],
+      "name": "Athens",
+      "flag": "Athens"
+    },
+    {
+      "coordinates": [222, 1183],
+      "name": "Sparta",
+      "flag": "Sparta"
+    },
+    {
+      "coordinates": [446, 104],
+      "name": "Macedonia",
+      "flag": "Macedonia"
+    },
+    {
+      "coordinates": [175, 456],
+      "name": "Thessaly"
+    },
+    {
+      "coordinates": [71, 713],
+      "name": "Aetolia"
+    },
+    {
+      "coordinates": [534, 761],
+      "name": "Euboea"
+    },
+    {
+      "coordinates": [26, 984],
+      "name": "Olympia"
+    },
+    {
+      "coordinates": [826, 1020],
+      "name": "Andros"
+    },
+    {
+      "coordinates": [1146, 1078],
+      "name": "Icaria"
+    },
+    {
+      "coordinates": [989, 1250],
+      "name": "Naxos"
+    },
+    {
+      "coordinates": [969, 1475],
+      "name": "Thera"
+    },
+    {
+      "coordinates": [937, 1371],
+      "name": "Ios"
+    },
+    {
+      "coordinates": [1403, 1337],
+      "name": "Cos"
+    },
+    {
+      "coordinates": [688, 1377],
+      "name": "Melos"
+    },
+    {
+      "coordinates": [723, 643],
+      "name": "Scyros"
+    },
+    {
+      "coordinates": [324, 1520],
+      "name": "Cythera"
+    },
+    {
+      "coordinates": [1416, 1755],
+      "name": "Carpathos"
+    }
+  ]
+}

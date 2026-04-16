@@ -3,7 +3,6 @@ import { customElement } from "lit/decorators.js";
 import { tempTokenLogin } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 

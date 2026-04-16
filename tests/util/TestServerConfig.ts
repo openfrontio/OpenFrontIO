@@ -80,7 +80,13 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   getRandomPublicGameModifiers(): PublicGameModifiers {
-    return { isCompact: false, isRandomSpawn: false, isCrowded: false };
+    return {
+      isCompact: false,
+      isRandomSpawn: false,
+      isCrowded: false,
+      isHardNations: false,
+      isAlliancesDisabled: false,
+    };
   }
   async supportsCompactMapForTeams(): Promise<boolean> {
     throw new Error("Method not implemented.");

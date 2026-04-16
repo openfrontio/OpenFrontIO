@@ -8,8 +8,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
@@ -17,7 +17,7 @@ export class WarshipExecution implements Execution {
   private random: PseudoRandom;
   private warship: Unit;
   private mg: Game;
-  private pathfinder: SteppingPathFinder<TileRef>;
+  private pathfinder: WaterPathFinder;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
 
@@ -27,7 +27,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinding.Water(mg);
+    this.pathfinder = new WaterPathFinder(mg);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -190,9 +190,6 @@ export class WarshipExecution implements Execution {
         case PathStatus.NEXT:
           this.warship.move(result.node);
           break;
-        case PathStatus.PENDING:
-          this.warship.touch();
-          break;
         case PathStatus.NOT_FOUND: {
           console.log(`path not found to target`);
           break;
@@ -221,9 +218,6 @@ export class WarshipExecution implements Execution {
       case PathStatus.NEXT:
         this.warship.move(result.node);
         break;
-      case PathStatus.PENDING:
-        this.warship.touch();
-        return;
       case PathStatus.NOT_FOUND: {
         console.log(`path not found to target`);
         break;
@@ -260,7 +254,7 @@ export class WarshipExecution implements Execution {
       }
       const tile = this.mg.ref(x, y);
       if (
-        !this.mg.isOcean(tile) ||
+        !this.mg.isWater(tile) ||
         (!allowShoreline && this.mg.isShoreline(tile))
       ) {
         attempts++;

@@ -7,87 +7,69 @@ vi.mock("../../src/client/Utils", () => ({
 
 // Avoid any audio side effects.
 vi.mock("../../src/client/sound/SoundManager", () => ({
-  default: {
+  SoundManager: vi.fn().mockImplementation(() => ({
     playBackgroundMusic: vi.fn(),
     stopBackgroundMusic: vi.fn(),
-  },
+  })),
 }));
 
 const fetchCosmeticsMock = vi.fn();
-const handlePurchaseMock = vi.fn();
+const purchaseCosmeticMock = vi.fn();
 vi.mock("../../src/client/Cosmetics", () => ({
   fetchCosmetics: (...args: any[]) => fetchCosmeticsMock(...args),
-  handlePurchase: (...args: any[]) => handlePurchaseMock(...args),
+  purchaseCosmetic: (...args: any[]) => purchaseCosmeticMock(...args),
   // Not needed in this suite
   patternRelationship: () => "blocked",
+  resolveCosmetics: () => [],
 }));
 
-// Mock PatternButton so SkinTestWinModal can render a purchase click target in JSDOM.
-vi.mock("../../src/client/components/PatternButton", () => {
-  class PatternButton extends HTMLElement {
-    private _pattern: any = null;
-    private _colorPalette: any = null;
-    private _requiresPurchase = false;
-    private _onPurchase?: (pattern: any, colorPalette: any) => void;
+// Mock CosmeticButton so SkinTestWinModal can render a purchase click target in JSDOM.
+vi.mock("../../src/client/components/CosmeticButton", () => {
+  class CosmeticButton extends HTMLElement {
+    private _resolved: any = null;
+    private _onPurchase?: (resolved: any, method: string) => void;
 
-    get pattern() {
-      return this._pattern;
+    get resolved() {
+      return this._resolved;
     }
-    set pattern(v: any) {
-      this._pattern = v;
-      this.render();
-    }
-
-    get colorPalette() {
-      return this._colorPalette;
-    }
-    set colorPalette(v: any) {
-      this._colorPalette = v;
-      this.render();
-    }
-
-    get requiresPurchase() {
-      return this._requiresPurchase;
-    }
-    set requiresPurchase(v: boolean) {
-      this._requiresPurchase = v;
-      this.render();
+    set resolved(v: any) {
+      this._resolved = v;
+      this.renderBtn();
     }
 
     get onPurchase() {
       return this._onPurchase;
     }
-    set onPurchase(v: ((pattern: any, colorPalette: any) => void) | undefined) {
+    set onPurchase(v: ((resolved: any, method: string) => void) | undefined) {
       this._onPurchase = v;
-      this.render();
+      this.renderBtn();
     }
 
     connectedCallback() {
-      this.render();
+      this.renderBtn();
     }
 
-    render() {
+    renderBtn() {
       this.innerHTML = "";
-      if (this.requiresPurchase && this.onPurchase && this.pattern) {
+      if (this._resolved && this._onPurchase) {
         const btn = document.createElement("button");
         btn.setAttribute("data-testid", "buy-skin");
         btn.textContent = "territory_patterns.purchase";
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
-          this.onPurchase?.(this.pattern, this.colorPalette ?? null);
+          this._onPurchase?.(this._resolved, "dollar");
         });
         this.appendChild(btn);
       }
     }
   }
 
-  if (!customElements.get("pattern-button")) {
-    customElements.define("pattern-button", PatternButton);
+  if (!customElements.get("cosmetic-button")) {
+    customElements.define("cosmetic-button", CosmeticButton);
   }
 
   return {
-    PatternButton,
-    renderPatternPreview: () => "",
+    CosmeticButton,
   };
 });
 
@@ -207,6 +189,7 @@ describe("Skin test game flow", () => {
       transport,
       worker,
       gameView,
+      { playBackgroundMusic: vi.fn() } as any,
     ) as any;
 
     // Seed the private myPlayer field so showSkinTestModal can resolve the pattern.
@@ -251,7 +234,9 @@ describe("Skin test game flow", () => {
 
     buyBtn!.click();
 
-    expect(handlePurchaseMock).toHaveBeenCalledTimes(1);
-    expect(handlePurchaseMock.mock.calls[0][0].name).toBe("purch_pattern");
+    expect(purchaseCosmeticMock).toHaveBeenCalledTimes(1);
+    expect(purchaseCosmeticMock.mock.calls[0][0].cosmetic.name).toBe(
+      "purch_pattern",
+    );
   });
 });

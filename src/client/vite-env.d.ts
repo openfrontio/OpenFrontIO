@@ -10,11 +10,6 @@ declare module "*.md" {
   export default mdContent;
 }
 
-declare module "*.md?url" {
-  const mdUrl: string;
-  export default mdUrl;
-}
-
 declare module "*.html" {
   const htmlContent: string;
   export default htmlContent;
@@ -38,9 +33,4 @@ declare module "*.txt?raw" {
 declare module "*.webp" {
   const webpContent: string;
   export default webpContent;
-}
-
-declare module "*.svg?url" {
-  const svgUrl: string;
-  export default svgUrl;
 }

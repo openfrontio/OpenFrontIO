@@ -1,10 +1,14 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { fetchCosmetics, handlePurchase } from "../../Cosmetics";
+import {
+  fetchCosmetics,
+  purchaseCosmetic,
+  ResolvedCosmetic,
+} from "../../Cosmetics";
 import { translateText } from "../../Utils";
-import "../../components/PatternButton";
+import "../../components/CosmeticButton";
 import { Layer } from "./Layer";
 
 export class ShowSkinTestModalEvent {
@@ -162,17 +166,20 @@ export class SkinTestWinModal extends LitElement implements Layer {
             </div>
           </div>
 
-          <!-- Reuse pattern button for visual and purchase actions if needed, or custom buy button -->
+          <!-- Display the skin with purchase option -->
           ${this.pattern
             ? html`
                 <div class="scale-110">
-                  <pattern-button
-                    .pattern=${this.pattern}
-                    .colorPalette=${this.colorPalette}
-                    .requiresPurchase=${true}
-                    .onPurchase=${(p: Pattern, c: ColorPalette | null) =>
-                      handlePurchase(p, c)}
-                  ></pattern-button>
+                  <cosmetic-button
+                    .resolved=${{
+                      type: "pattern",
+                      cosmetic: this.pattern,
+                      colorPalette: this.colorPalette,
+                      relationship: "purchasable",
+                      key: `pattern:${this.pattern.name}${this.colorPalette ? `:${this.colorPalette.name}` : ""}`,
+                    } satisfies ResolvedCosmetic}
+                    .onPurchase=${purchaseCosmetic}
+                  ></cosmetic-button>
                 </div>
               `
             : html``}

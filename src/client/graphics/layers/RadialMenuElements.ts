@@ -1,13 +1,16 @@
+import { assetUrl } from "../../../core/AssetUrls";
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
+  BuildableAttacks,
   PlayerActions,
-  StructureTypes,
+  PlayerBuildableUnitType,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
@@ -18,18 +21,18 @@ import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import boatIcon from "/images/BoatIconWhite.svg?url";
-import buildIcon from "/images/BuildIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
-import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import infoIcon from "/images/InfoIcon.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
-import targetIcon from "/images/TargetIconWhite.svg?url";
-import traitorIcon from "/images/TraitorIconWhite.svg?url";
-import xIcon from "/images/XIcon.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const boatIcon = assetUrl("images/BoatIconWhite.svg");
+const buildIcon = assetUrl("images/BuildIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const infoIcon = assetUrl("images/InfoIcon.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
+const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -80,32 +83,32 @@ export interface CenterButtonElement {
 }
 
 export const COLORS = {
-  build: "#ebe250",
-  building: "#2c2c2c",
-  boat: "#3f6ab1",
-  ally: "#53ac75",
-  breakAlly: "#c74848",
-  breakAllyNoDebuff: "#d4882b",
-  delete: "#ff0000",
-  info: "#64748B",
-  target: "#ff0000",
-  attack: "#ff0000",
+  build: "#e6c74a",
+  building: "#1e3a5f",
+  boat: "#2a82c9",
+  ally: "#4ade80",
+  breakAlly: "#dc2626",
+  breakAllyNoDebuff: "#d97706",
+  delete: "#ef4444",
+  info: "#475569",
+  target: "#ef4444",
+  attack: "#ef4444",
   infoDetails: "#7f8c8d",
-  infoEmoji: "#f1c40f",
-  trade: "#008080",
-  embargo: "#6600cc",
+  infoEmoji: "#fbbf24",
+  trade: "#0891b2",
+  embargo: "#7c3aed",
   tooltip: {
-    cost: "#ffd700",
-    count: "#aaa",
+    cost: "#f59e0b",
+    count: "#94a3b8",
   },
   chat: {
-    default: "#66c",
-    help: "#4caf50",
-    attack: "#f44336",
-    defend: "#2196f3",
-    greet: "#ff9800",
-    misc: "#9c27b0",
-    warnings: "#e3c532",
+    default: "#6366f1",
+    help: "#22c55e",
+    attack: "#ef4444",
+    defend: "#3b82f6",
+    greet: "#f97316",
+    misc: "#a855f7",
+    warnings: "#fbbf24",
   },
 };
 
@@ -376,40 +379,34 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
-function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const units: Set<UnitType> = new Set<UnitType>();
+function getAllEnabledUnits(
+  myPlayer: boolean,
+  config: Config,
+): Set<PlayerBuildableUnitType> {
+  const units: Set<PlayerBuildableUnitType> =
+    new Set<PlayerBuildableUnitType>();
 
-  const addIfEnabled = (unitType: UnitType) => {
+  const addIfEnabled = (unitType: PlayerBuildableUnitType) => {
     if (!config.isUnitDisabled(unitType)) {
       units.add(unitType);
     }
   };
 
   if (myPlayer) {
-    StructureTypes.forEach(addIfEnabled);
+    Structures.types.forEach(addIfEnabled);
   } else {
-    addIfEnabled(UnitType.Warship);
-    addIfEnabled(UnitType.HydrogenBomb);
-    addIfEnabled(UnitType.MIRV);
-    addIfEnabled(UnitType.AtomBomb);
+    BuildableAttacks.types.forEach(addIfEnabled);
   }
 
   return units;
 }
-
-const ATTACK_UNIT_TYPES: UnitType[] = [
-  UnitType.AtomBomb,
-  UnitType.MIRV,
-  UnitType.HydrogenBomb,
-  UnitType.Warship,
-];
 
 function createMenuElements(
   params: MenuElementParams,
   filterType: "attack" | "build",
   elementIdPrefix: string,
 ): MenuElement[] {
-  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+  const unitTypes: Set<PlayerBuildableUnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
     params.game.config(),
   );
@@ -419,22 +416,23 @@ function createMenuElements(
       (item) =>
         unitTypes.has(item.unitType) &&
         (filterType === "attack"
-          ? ATTACK_UNIT_TYPES.includes(item.unitType)
-          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
+          ? BuildableAttacks.has(item.unitType)
+          : !BuildableAttacks.has(item.unitType)),
     )
     .map((item: BuildItemDisplay) => {
-      const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);
       return {
         id: `${elementIdPrefix}_${item.unitType}`,
         name: item.key
           ? item.key.replace("unit_type.", "")
           : item.unitType.toString(),
-        disabled: () => !canBuildOrUpgrade,
-        color: canBuildOrUpgrade
-          ? filterType === "attack"
-            ? COLORS.attack
-            : COLORS.building
-          : undefined,
+        disabled: (p: MenuElementParams) =>
+          !p.buildMenu.canBuildOrUpgrade(item),
+        color: (p: MenuElementParams) =>
+          p.buildMenu.canBuildOrUpgrade(item)
+            ? filterType === "attack"
+              ? COLORS.attack
+              : COLORS.building
+            : COLORS.building,
         icon: item.icon,
         tooltipItems: [
           { text: translateText(item.key ?? ""), className: "title" },
@@ -459,7 +457,7 @@ function createMenuElements(
           if (buildableUnit === undefined) {
             return;
           }
-          if (canBuildOrUpgrade) {
+          if (params.buildMenu.canBuildOrUpgrade(item)) {
             params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
           }
           params.closeMenu();
@@ -488,7 +486,7 @@ const donateGoldRadialElement: MenuElement = {
     params.game.inSpawnPhase() ||
     !params.playerActions?.interaction?.canDonateGold,
   icon: donateGoldIcon,
-  color: "#EAB308",
+  color: "#f59e0b",
   action: (params: MenuElementParams) => {
     if (!params.selected) return;
     params.playerPanel.openSendGoldModal(
@@ -558,14 +556,11 @@ export const deleteUnitElement: MenuElement = {
           DELETE_SELECTION_RADIUS,
       );
 
-    if (myUnits.length > 0) {
-      myUnits.sort(
-        (a, b) =>
-          params.game.manhattanDist(a.tile(), params.tile) -
-          params.game.manhattanDist(b.tile(), params.tile),
-      );
-
-      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
+    const closestUnit = findClosestBy(myUnits, (unit) =>
+      params.game.manhattanDist(unit.tile(), params.tile),
+    );
+    if (closestUnit) {
+      params.playerActionHandler.handleDeleteUnit(closestUnit.id());
     }
 
     params.closeMenu();

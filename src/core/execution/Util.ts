@@ -1,5 +1,5 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, Player, StructureTypes } from "../game/Game";
+import { Game, Player, Structures } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
 import { GameView } from "../game/GameView";
 
@@ -39,7 +39,7 @@ export interface NukeAllianceCheckParams {
   game: Game | GameView;
   targetTile: TileRef;
   magnitude: NukeMagnitude;
-  allySmallIds: Set<number>;
+  allySmallIds?: Set<number>;
   threshold: number;
 }
 
@@ -52,7 +52,7 @@ export function wouldNukeBreakAlliance(
 ): boolean {
   const { game, targetTile, magnitude, allySmallIds, threshold } = params;
 
-  if (allySmallIds.size === 0) {
+  if (!allySmallIds || allySmallIds.size === 0) {
     return false;
   }
 
@@ -60,7 +60,7 @@ export function wouldNukeBreakAlliance(
   const wouldDestroyAlliedStructure = game.anyUnitNearby(
     targetTile,
     magnitude.outer,
-    StructureTypes,
+    Structures.types,
     (unit) =>
       unit.owner().isPlayer() && allySmallIds.has(unit.owner().smallID()),
   );
@@ -119,7 +119,7 @@ export function listNukeBreakAlliance(
 
   // Also check if any allied structures would be destroyed
   game
-    .nearbyUnits(targetTile, magnitude.outer, StructureTypes)
+    .nearbyUnits(targetTile, magnitude.outer, Structures.types)
     .forEach(({ unit }) =>
       playersToBreakAllianceWith.add(unit.owner().smallID()),
     );

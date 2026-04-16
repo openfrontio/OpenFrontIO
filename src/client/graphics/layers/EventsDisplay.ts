@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -35,13 +36,14 @@ import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
+import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
-import allianceIcon from "/images/AllianceIconWhite.svg?url";
-import chatIcon from "/images/ChatIconWhite.svg?url";
-import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
-import nukeIcon from "/images/NukeIconWhite.svg?url";
-import swordIcon from "/images/SwordIconWhite.svg?url";
+const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
+const nukeIcon = assetUrl("images/NukeIconWhite.svg");
+const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 interface GameEvent {
   description: string;
@@ -283,7 +285,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.addEvent({
         description: translateText("events_display.about_to_expire", {
-          name: other.name(),
+          name: other.displayName(),
         }),
         type: MessageType.RENEW_ALLIANCE,
         duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
@@ -296,7 +298,7 @@ export class EventsDisplay extends LitElement implements Layer {
           },
           {
             text: translateText("events_display.renew_alliance", {
-              name: other.name(),
+              name: other.displayName(),
             }),
             className: "btn",
             action: () =>
@@ -443,6 +445,7 @@ export class EventsDisplay extends LitElement implements Layer {
       type: MessageType.CHAT,
       unsafeDescription: false,
     });
+    this.eventBus.emit(new PlaySoundEffectEvent("message"));
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
@@ -458,9 +461,12 @@ export class EventsDisplay extends LitElement implements Layer {
       update.recipientID,
     ) as PlayerView;
 
+    if (!requestor.isAlliedWith(recipient)) {
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-suggested"));
+    }
     this.addEvent({
       description: translateText("events_display.request_alliance", {
-        name: requestor.name(),
+        name: requestor.displayName(),
       }),
       buttons: [
         {
@@ -525,7 +531,7 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
     this.addEvent({
       description: translateText("events_display.alliance_request_status", {
-        name: recipient.name(),
+        name: recipient.displayName(),
         status: update.accepted
           ? translateText("events_display.alliance_accepted")
           : translateText("events_display.alliance_rejected"),
@@ -553,6 +559,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
@@ -569,7 +576,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.addEvent({
         description: translateText("events_display.betrayal_description", {
-          name: betrayed.name(),
+          name: betrayed.displayName(),
           malusPercent: malusPercent,
           durationText: durationText,
         }),
@@ -579,6 +586,7 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: update.betrayedID,
       });
     } else if (betrayed === myPlayer) {
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
       const buttons = [
         {
           text: translateText("events_display.focus"),
@@ -589,7 +597,7 @@ export class EventsDisplay extends LitElement implements Layer {
       ];
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
-          name: traitor.name(),
+          name: traitor.displayName(),
         }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
@@ -616,7 +624,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.alliance_expired", {
-        name: other.name(),
+        name: other.displayName(),
       }),
       type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
@@ -626,6 +634,8 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private onAllianceExtensionEvent(update: AllianceExtensionUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || myPlayer.smallID() !== update.playerID) return;
     this.removeAllianceRenewalEvents(update.allianceID);
     this.requestUpdate();
   }
@@ -639,8 +649,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.attack_request", {
-        name: other.name(),
-        target: target.name(),
+        name: other.displayName(),
+        target: target.displayName(),
       }),
       type: MessageType.ATTACK_REQUEST,
       highlight: true,
@@ -792,9 +802,7 @@ export class EventsDisplay extends LitElement implements Layer {
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
-            <div
-              class="relative w-fit min-[1200px]:bottom-4 min-[1200px]:right-4 z-50"
-            >
+            <div class="relative w-fit z-50">
               ${this.renderButton({
                 content: html`
                   <span class="flex items-center gap-2">
@@ -809,18 +817,18 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg max-sm:rounded-tr-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/92 backdrop-blur-sm",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full min-[1200px]:bottom-4 min-[1200px]:right-4 z-50 min-[1200px]:w-96 backdrop-blur-sm"
+              class="relative w-full z-50 min-[1200px]:w-96 backdrop-blur-sm"
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg sm:rounded-tl-lg"
+                class="w-full p-2 lg:p-3 bg-gray-800/92 backdrop-blur-sm sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
               >
                 <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
@@ -864,7 +872,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
+                class="bg-gray-800/92 backdrop-blur-sm max-h-[15vh] lg:max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
               >
                 <div>
                   <table

@@ -8,17 +8,21 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
-import { distSortUnit } from "../Util";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
+import { findClosestBy } from "../Util";
 
 export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: SteppingPathFinder<TileRef>;
+  private pathFinder: WaterPathFinder;
   private tilesTraveled = 0;
+  private motionPlanId = 1;
+  private motionPlanDst: TileRef | null = null;
+
+  private static _staggerCounter = 0;
 
   constructor(
     private origOwner: Player,
@@ -28,10 +32,16 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinding.Water(mg);
+    const stagger =
+      TradeShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    this.pathFinder = new WaterPathFinder(mg, stagger);
   }
 
   tick(ticks: number): void {
+    if (this.pathFinder.rebuilt) {
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
+
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
@@ -78,38 +88,63 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
+    const curTile = this.tradeShip.tile();
+
     if (
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
-      const ports = this.tradeShip
-        .owner()
-        .units(UnitType.Port)
-        .sort(distSortUnit(this.mg, this.tradeShip));
-      if (ports.length === 0) {
+      const myComponent = this.mg.getWaterComponent(curTile);
+      const nearestPort = findClosestBy(
+        tradeShipOwner.units(UnitType.Port),
+        (port) => this.mg.manhattanDist(port.tile(), curTile),
+        (port) =>
+          port.isActive() &&
+          !port.isMarkedForDeletion() &&
+          !port.isUnderConstruction() &&
+          myComponent !== null &&
+          this.mg.hasWaterComponent(port.tile(), myComponent),
+      );
+      if (nearestPort === null) {
         this.tradeShip.delete(false);
         this.active = false;
         return;
       } else {
-        this._dstPort = ports[0];
+        this._dstPort = nearestPort;
         this.tradeShip.setTargetUnit(this._dstPort);
+        // Plan-driven units don't emit per-tick unit updates, so force a sync for the new target.
+        this.tradeShip.touch();
       }
     }
 
-    const curTile = this.tradeShip.tile();
     if (curTile === this.dstPort()) {
       this.complete();
       return;
     }
 
-    const result = this.pathFinder.next(curTile, this._dstPort.tile());
+    const dst = this._dstPort.tile();
+    const result = this.pathFinder.next(curTile, dst);
 
     switch (result.status) {
-      case PathStatus.PENDING:
-        // Fire unit event to rerender.
-        this.tradeShip.move(curTile);
-        break;
       case PathStatus.NEXT:
+        if (dst !== this.motionPlanDst) {
+          this.motionPlanId++;
+          const from = result.node;
+          const path = this.pathFinder.findPath(from, dst) ?? [from];
+          if (path.length === 0 || path[0] !== from) {
+            path.unshift(from);
+          }
+
+          this.mg.recordMotionPlan({
+            kind: "grid",
+            unitId: this.tradeShip.id(),
+            planId: this.motionPlanId,
+            startTick: ticks + 1,
+            ticksPerStep: 1,
+            path,
+          });
+          this.motionPlanDst = dst;
+        }
         // Update safeFromPirates status
         if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
           this.tradeShip.setSafeFromPirates();
@@ -119,21 +154,23 @@ export class TradeShipExecution implements Execution {
         break;
       case PathStatus.COMPLETE:
         this.complete();
-        break;
+        return;
       case PathStatus.NOT_FOUND:
         console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
         this.active = false;
-        break;
+        return;
     }
   }
 
   private complete() {
     this.active = false;
     this.tradeShip!.delete(false);
-    const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
+    const gold = this.mg
+      .config()
+      .tradeShipGold(this.tilesTraveled, this.tradeShip!.owner());
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());

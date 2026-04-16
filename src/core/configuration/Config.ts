@@ -74,6 +74,8 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   disableNavMesh(): boolean;
+  disableAlliances(): boolean;
+  waterNukes(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
@@ -126,12 +128,16 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipShortRangeDebuff(): number;
-  tradeShipGold(dist: number): Gold;
+  tradeShipGold(dist: number, player: Player | PlayerView): Gold;
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number;
-  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainGold(
+    rel: "self" | "team" | "ally" | "other",
+    citiesVisited: number,
+    player: Player | PlayerView,
+  ): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;

@@ -1,3 +1,5 @@
+import { Platform } from "../Platform";
+
 export type RendererType = "Canvas2D" | "WebGL1" | "WebGL2";
 
 export interface BrowserInfo {
@@ -48,7 +50,7 @@ export async function collectGraphicsDiagnostics(
 
   const uaData = (navigator as any).userAgentData;
 
-  const os = uaData?.platform ?? detectOS(navigator.userAgent);
+  const os = Platform.os;
 
   const browser: BrowserInfo = {
     engine: uaData?.brands
@@ -129,13 +131,4 @@ export async function collectGraphicsDiagnostics(
     rendering,
     power,
   };
-}
-
-function detectOS(ua: string): string {
-  if (/windows nt/i.test(ua)) return "Windows";
-  if (/mac os x/i.test(ua)) return "macOS";
-  if (/android/i.test(ua)) return "Android";
-  if (/iphone|ipad|ipod/i.test(ua)) return "iOS";
-  if (/linux/i.test(ua)) return "Linux";
-  return "Unknown";
 }

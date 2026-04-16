@@ -116,12 +116,20 @@ class SAMTargetingSystem {
       detectionRange,
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) => {
-        return (
-          isUnit(unit) &&
-          unit.owner() !== this.sam.owner() &&
-          !this.sam.owner().isFriendly(unit.owner()) &&
-          !unit.targetedBySAM()
-        );
+        if (!isUnit(unit) || unit.targetedBySAM()) return false;
+        if (unit.owner() === this.sam.owner()) return false;
+
+        const samOwner = this.sam.owner();
+        const nukeOwner = unit.owner();
+
+        // After game-over in team games, SAMs also target teammate nukes (aftergame fun)
+        if (samOwner.isFriendly(nukeOwner)) {
+          return (
+            this.mg.getWinner() !== null && samOwner.isOnSameTeam(nukeOwner)
+          );
+        }
+
+        return true;
       },
     );
 
@@ -271,7 +279,18 @@ export class SAMLauncherExecution implements Execution {
       ({ unit }) => {
         if (!isUnit(unit)) return false;
         if (unit.owner() === this.player) return false;
-        if (this.player.isFriendly(unit.owner())) return false;
+
+        // After game-over in team games, SAMs also target teammate MIRVs (aftergame fun)
+        const nukeOwner = unit.owner();
+        if (this.player.isFriendly(nukeOwner)) {
+          if (
+            this.mg.getWinner() === null ||
+            !this.player.isOnSameTeam(nukeOwner)
+          ) {
+            return false;
+          }
+        }
+
         const dst = unit.targetTile();
         return (
           this.sam !== null &&

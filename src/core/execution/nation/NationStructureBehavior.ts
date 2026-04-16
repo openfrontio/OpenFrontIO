@@ -5,7 +5,7 @@ import {
   Player,
   PlayerType,
   Relation,
-  StructureTypes,
+  Structures,
   Unit,
   UnitType,
 } from "../../game/Game";
@@ -90,6 +90,7 @@ export class NationStructureBehavior {
     cluster: Cluster | null;
     weight: number;
   }> | null = null;
+  private _sharedWaterComponents: Set<number> | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -107,7 +108,8 @@ export class NationStructureBehavior {
           Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
         )
       : this.player.unitsOwned(UnitType.City);
-    const hasCoastalTiles = this.hasCoastalTiles();
+    this._sharedWaterComponents = this.sharedWaterComponents();
+    const hasCoastalTiles = this._sharedWaterComponents !== null;
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
@@ -165,11 +167,37 @@ export class NationStructureBehavior {
     return false;
   }
 
-  private hasCoastalTiles(): boolean {
+  /**
+   * Returns the set of water components shared with at least one other player,
+   * or null if there are none.
+   */
+  private sharedWaterComponents(): Set<number> | null {
+    // Collect all water-component IDs reachable from this player's coast.
+    const playerComponents = new Set<number>();
     for (const tile of this.player.borderTiles()) {
-      if (this.game.isOceanShore(tile)) return true;
+      if (!this.game.isShore(tile)) continue;
+      for (const neighbor of this.game.neighbors(tile)) {
+        if (!this.game.isWater(neighbor)) continue;
+        const comp = this.game.getWaterComponent(neighbor);
+        if (comp !== null) playerComponents.add(comp);
+      }
     }
-    return false;
+    if (playerComponents.size === 0) return null;
+
+    // Keep only components that at least one other player also touches.
+    const shared = new Set<number>();
+    for (const other of this.game.players()) {
+      if (other === this.player) continue;
+      for (const tile of other.borderTiles()) {
+        if (!this.game.isShore(tile)) continue;
+        for (const neighbor of this.game.neighbors(tile)) {
+          if (!this.game.isWater(neighbor)) continue;
+          const comp = this.game.getWaterComponent(neighbor);
+          if (comp !== null && playerComponents.has(comp)) shared.add(comp);
+        }
+      }
+    }
+    return shared.size > 0 ? shared : null;
   }
 
   /**
@@ -356,7 +384,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(...StructureTypes).length / tilesOwned
+      ? this.player.units(...Structures.types).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 
@@ -471,10 +499,19 @@ export class NationStructureBehavior {
     return bestTile;
   }
 
+  /** Samples shore tiles adjacent to water reachable by another player (=> trading possible) */
   private randCoastalTileArray(numTiles: number): TileRef[] {
-    const tiles = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isOceanShore(t),
-    );
+    const shared = this._sharedWaterComponents;
+    const tiles = Array.from(this.player.borderTiles()).filter((t) => {
+      if (!this.game.isShore(t)) return false;
+      if (shared === null) return false;
+      for (const neighbor of this.game.neighbors(t)) {
+        if (!this.game.isWater(neighbor)) continue;
+        const comp = this.game.getWaterComponent(neighbor);
+        if (comp !== null && shared.has(comp)) return true;
+      }
+      return false;
+    });
     return Array.from(this.arraySampler(tiles, numTiles));
   }
 
@@ -697,7 +734,10 @@ export class NationStructureBehavior {
       unitToCluster.set(station.unit, station.getCluster());
     }
 
-    const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
+    const maxTradeGold = Math.max(
+      Number(game.config().trainGold("ally", 0, player)),
+      1,
+    );
     const result: Array<{
       tile: TileRef;
       cluster: Cluster | null;
@@ -705,7 +745,8 @@ export class NationStructureBehavior {
     }> = [];
 
     // Own structures — weighted by "self" trade gold.
-    const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
+    const selfWeight =
+      Number(game.config().trainGold("self", 0, player)) / maxTradeGold;
     for (const unit of player.units(
       UnitType.City,
       UnitType.Port,
@@ -730,7 +771,8 @@ export class NationStructureBehavior {
         : player.isAlliedWith(neighbor)
           ? "ally"
           : "other";
-      const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
+      const weight =
+        Number(game.config().trainGold(relType, 0, player)) / maxTradeGold;
       for (const unit of neighbor.units(
         UnitType.City,
         UnitType.Port,

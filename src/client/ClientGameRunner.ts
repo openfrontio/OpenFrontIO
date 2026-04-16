@@ -10,11 +10,11 @@ import {
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createPartialGameRecord, replacer } from "../core/Util";
+import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
+import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import { TestSkinExecution } from "../core/execution/TestSkinExecution";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -53,13 +53,14 @@ import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import { ShowSkinTestModalEvent } from "./graphics/layers/SkinTestWinModal";
-import SoundManager from "./sound/SoundManager";
+import { SoundManager } from "./sound/SoundManager";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
+  playerClanTag: string | null;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -69,14 +70,23 @@ export interface LobbyConfig {
   isSkinTest?: boolean;
 }
 
+export interface JoinLobbyResult {
+  stop: (force?: boolean) => boolean;
+  prestart: Promise<void>;
+  join: Promise<void>;
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
-  onPrestart: () => void,
-  onJoin: () => void,
-): (force?: boolean) => boolean {
+): JoinLobbyResult {
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
+
+  let resolvePrestart: () => void;
+  let resolveJoin: () => void;
+  const prestartPromise = new Promise<void>((r) => (resolvePrestart = r));
+  const joinPromise = new Promise<void>((r) => (resolveJoin = r));
 
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
@@ -110,17 +120,17 @@ export function joinLobby(
         message.gameMapSize,
         terrainMapFileLoader,
       );
-      onPrestart();
+      resolvePrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
-      onPrestart();
+      resolvePrestart();
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
-      onJoin();
+      resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
       createClientGame(
@@ -162,7 +172,16 @@ export function joinLobby(
       if (message.error === "full-lobby") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID },
+            detail: { lobby: lobbyConfig.gameID, cause: "full-lobby" },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else if (message.error === "kick_reason.host_left") {
+        alert(translateText("kick_reason.host_left"));
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
             bubbles: true,
             composed: true,
           }),
@@ -181,25 +200,29 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return (force: boolean = false) => {
-    if (!force && currentGameRunner?.shouldPreventWindowClose()) {
-      console.log("Player is active, prevent leaving game");
-
-      return false;
-    }
-
-    console.log("leaving game");
-
-    currentGameRunner = null;
-    transport.leaveGame();
-
-    return true;
+  return {
+    stop: (force: boolean = false) => {
+      if (!force && currentGameRunner?.shouldPreventWindowClose()) {
+        console.log("Player is active, prevent leaving game");
+        return false;
+      }
+      console.log("leaving game");
+      if (currentGameRunner) {
+        currentGameRunner.stop();
+        currentGameRunner = null;
+      } else {
+        transport.leaveGame();
+      }
+      return true;
+    },
+    prestart: prestartPromise,
+    join: joinPromise,
   };
 }
 
 async function createClientGame(
   lobbyConfig: LobbyConfig,
-  clientID: ClientID,
+  clientID: ClientID | undefined,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
@@ -209,7 +232,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getConfig(
+  const config = await getGameLogicConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
@@ -233,28 +256,36 @@ async function createClientGame(
     gameMap,
     clientID,
     lobbyConfig.playerName,
+    lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
     lobbyConfig.isSkinTest,
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const soundManager = new SoundManager(eventBus, userSettings);
+  try {
+    const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
-  console.log(
-    `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
-  );
+    console.log(
+      `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
+    );
 
-  return new ClientGameRunner(
-    lobbyConfig,
-    clientID,
-    eventBus,
-    gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
-    transport,
-    worker,
-    gameView,
-  );
+    return new ClientGameRunner(
+      lobbyConfig,
+      clientID,
+      eventBus,
+      gameRenderer,
+      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
+      transport,
+      worker,
+      gameView,
+      soundManager,
+    );
+  } catch (err) {
+    soundManager.dispose();
+    throw err;
+  }
 }
 
 export class ClientGameRunner {
@@ -274,13 +305,14 @@ export class ClientGameRunner {
 
   constructor(
     private lobby: LobbyConfig,
-    private clientID: ClientID,
+    private clientID: ClientID | undefined,
     private eventBus: EventBus,
     private renderer: GameRenderer,
     private input: InputHandler,
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private soundManager: SoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -310,13 +342,14 @@ export class ClientGameRunner {
   }
 
   private async saveGame(update: WinUpdate) {
-    if (this.myPlayer === null) {
+    if (!this.clientID) {
       return;
     }
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
+        clanTag: this.lobby.playerClanTag ?? null,
         clientID: this.clientID,
         stats: update.allPlayersStats[this.clientID],
       },
@@ -335,12 +368,13 @@ export class ClientGameRunner {
       Date.now(),
       update.winner,
       this.lobby.gameStartInfo.lobbyCreatedAt,
+      this.lobby.gameStartInfo.visibleAt,
     );
     endGame(record);
   }
 
   public start() {
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -364,7 +398,7 @@ export class ClientGameRunner {
       // Start a fresh TestSkinExecution which manages its own modal timeout
       this.testSkinExecution = new TestSkinExecution(
         this.gameView,
-        this.clientID,
+        this.clientID!,
         () => this.isActive,
         () => {
           // Called when execution requests the modal be shown — stop the game and
@@ -434,15 +468,6 @@ export class ClientGameRunner {
         }
       }
     });
-
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
       console.log("Connected to game server!");
@@ -561,7 +586,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.dispose();
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -605,11 +630,12 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile).then((actions) => {
+    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -617,7 +643,7 @@ export class ClientGameRunner {
             this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canAutoBoat(actions, tile)) {
+      } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -639,6 +665,7 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
@@ -652,7 +679,7 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer!.actions(clickedTile, Structures.types).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -680,15 +707,15 @@ export class ClientGameRunner {
       }
 
       if (upgradeUnits.length > 0) {
-        upgradeUnits.sort((a, b) => a.distance - b.distance);
-        const bestUpgrade = upgradeUnits[0];
-
-        this.eventBus.emit(
-          new SendUpgradeStructureIntentEvent(
-            bestUpgrade.unitId,
-            bestUpgrade.unitType,
-          ),
-        );
+        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+        if (bestUpgrade) {
+          this.eventBus.emit(
+            new SendUpgradeStructureIntentEvent(
+              bestUpgrade.unitId,
+              bestUpgrade.unitType,
+            ),
+          );
+        }
       }
     });
   }
@@ -700,20 +727,23 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) === false) {
-        console.warn(
-          "Boat attack triggered but can't send Transport Ship to tile",
-        );
-        return;
-      }
-      this.sendBoatAttackIntent(tile);
-    });
+    this.myPlayer
+      .buildables(tile, [UnitType.TransportShip])
+      .then((buildables) => {
+        if (this.canBoatAttack(buildables) !== false) {
+          this.sendBoatAttackIntent(tile);
+        } else {
+          console.warn(
+            "Boat attack triggered but can't send Transport Ship to tile",
+          );
+        }
+      });
   }
 
   private doGroundAttackUnderCursor(): void {
@@ -723,12 +753,13 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
+      if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
+    this.myPlayer.actions(tile, null).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -757,10 +788,8 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions): false | TileRef {
-    const bu = actions.buildableUnits.find(
-      (bu) => bu.type === UnitType.TransportShip,
-    );
+  private canBoatAttack(buildables: BuildableUnit[]): false | TileRef {
+    const bu = buildables.find((bu) => bu.type === UnitType.TransportShip);
     return bu?.canBuild ?? false;
   }
 
@@ -775,10 +804,10 @@ export class ClientGameRunner {
     );
   }
 
-  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
+  private canAutoBoat(buildables: BuildableUnit[], tile: TileRef): boolean {
     if (!this.gameView.isLand(tile)) return false;
 
-    const canBuild = this.canBoatAttack(actions);
+    const canBuild = this.canBoatAttack(buildables);
     if (canBuild === false) return false;
 
     // TODO: Global enable flag

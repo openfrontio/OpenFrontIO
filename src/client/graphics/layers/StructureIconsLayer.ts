@@ -2,19 +2,23 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
+  PlayerBuildableUnitType,
   PlayerID,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  ConfirmGhostStructureEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
@@ -39,7 +43,12 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
-import bitmapFont from "/fonts/round_6x6_modified.xml?url";
+const bitmapFont = assetUrl("fonts/round_6x6_modified.xml");
+
+/** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
+export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
+  return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+}
 
 extend([a11yPlugin]);
 
@@ -77,20 +86,21 @@ export class StructureIconsLayer implements Layer {
   private readonly theme: Theme;
   private renderer: PIXI.Renderer | null = null;
   private rendererInitialized: boolean = false;
-  private renders: StructureRenderInfo[] = [];
-  private readonly seenUnits: Set<UnitView> = new Set();
+  private readonly rendersByUnitId: Map<number, StructureRenderInfo> =
+    new Map();
+  private readonly seenUnitIds: Set<number> = new Set();
+  private readonly connectedAllySmallIds: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
   private factory: SpriteFactory;
-  private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
-    [UnitType.City, { visible: true }],
-    [UnitType.Factory, { visible: true }],
-    [UnitType.DefensePost, { visible: true }],
-    [UnitType.Port, { visible: true }],
-    [UnitType.MissileSilo, { visible: true }],
-    [UnitType.SAMLauncher, { visible: true }],
-  ]);
+  private readonly structures: Map<
+    PlayerBuildableUnitType,
+    { visible: boolean }
+  > = new Map(Structures.types.map((type) => [type, { visible: true }]));
   private lastGhostQueryAt: number;
+  private visibilityStateDirty = true;
+  private pendingConfirm: MouseUpEvent | null = null;
+  private hasHiddenStructure = false;
   potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
@@ -169,7 +179,12 @@ export class StructureIconsLayer implements Layer {
     );
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
-    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+    this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
+    this.eventBus.on(ConfirmGhostStructureEvent, () =>
+      this.requestConfirmStructure(
+        new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+      ),
+    );
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
@@ -185,18 +200,22 @@ export class StructureIconsLayer implements Layer {
   }
 
   tick() {
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
-      ?.forEach((unitView) => {
-        if (unitView === undefined) return;
+    const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
+    if (unitUpdates) {
+      for (let i = 0, len = unitUpdates.length; i < len; i++) {
+        const unitView = this.game.unit(unitUpdates[i].id);
+        if (unitView === undefined) {
+          continue;
+        }
 
+        const unitId = unitView.id();
         if (unitView.isActive()) {
           this.handleActiveUnit(unitView);
-        } else if (this.seenUnits.has(unitView)) {
+        } else if (this.seenUnitIds.has(unitId)) {
           this.handleInactiveUnit(unitView);
         }
-      });
+      }
+    }
     this.renderSprites =
       this.game.config().userSettings()?.structureSprites() ?? true;
   }
@@ -224,7 +243,7 @@ export class StructureIconsLayer implements Layer {
     this.renderGhost();
 
     if (this.transformHandler.hasChanged()) {
-      for (const render of this.renders) {
+      for (const render of this.rendersByUnitId.values()) {
         this.computeNewLocation(render);
       }
     }
@@ -246,14 +265,12 @@ export class StructureIconsLayer implements Layer {
     if (now - this.lastGhostQueryAt < 50) {
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
     this.lastGhostQueryAt = now;
     let tileRef: TileRef | undefined;
-    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
+    const tile = this.transformHandler.screenToWorldCoordinates(
+      this.mousePos.x,
+      this.mousePos.y,
+    );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
     }
@@ -269,13 +286,21 @@ export class StructureIconsLayer implements Layer {
       (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
     ) {
       // Only check connected allies - nuking disconnected allies doesn't cause a traitor debuff
-      const allies = myPlayer.allies().filter((a) => !a.isDisconnected());
-      if (allies.length > 0) {
+      this.connectedAllySmallIds.clear();
+      const allies = myPlayer.allies();
+      for (let i = 0; i < allies.length; i++) {
+        const ally = allies[i];
+        if (!ally.isDisconnected()) {
+          this.connectedAllySmallIds.add(ally.smallID());
+        }
+      }
+
+      if (this.connectedAllySmallIds.size > 0) {
         targetingAlly = wouldNukeBreakAlliance({
           game: this.game,
           targetTile: tileRef,
           magnitude: this.game.config().nukeMagnitudes(nukeType),
-          allySmallIds: new Set(allies.map((a) => a.smallID())),
+          allySmallIds: this.connectedAllySmallIds,
           threshold: this.game.config().nukeAllianceBreakThreshold(),
         });
       }
@@ -283,8 +308,8 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
-      .then((actions) => {
+      ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
+      .then((buildables) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];
           this.potentialUpgrade.dotContainer.filters = [];
@@ -293,9 +318,12 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.container.filters = [];
         }
 
-        if (!this.ghostUnit) return;
+        if (!this.ghostUnit) {
+          this.pendingConfirm = null;
+          return;
+        }
 
-        const unit = actions.buildableUnits.find(
+        const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
         const showPrice = this.game.config().userSettings().cursorCostLabel();
@@ -308,6 +336,7 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
+          this.pendingConfirm = null;
           return;
         }
 
@@ -318,11 +347,14 @@ export class StructureIconsLayer implements Layer {
         this.updateGhostRange(targetLevel, targetingAlly);
 
         if (unit.canUpgrade) {
-          this.potentialUpgrade = this.renders.find(
-            (r) =>
-              r.unit.id() === unit.canUpgrade &&
-              r.unit.owner().id() === this.game.myPlayer()?.id(),
-          );
+          this.potentialUpgrade = this.rendersByUnitId.get(unit.canUpgrade);
+          if (
+            this.potentialUpgrade &&
+            this.potentialUpgrade.unit.owner().id() !==
+              this.game.myPlayer()?.id()
+          ) {
+            this.potentialUpgrade = undefined;
+          }
           if (this.potentialUpgrade) {
             this.potentialUpgrade.iconContainer.filters = [
               new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
@@ -352,6 +384,14 @@ export class StructureIconsLayer implements Layer {
             : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
         this.ghostUnit.container.scale.set(s);
         this.ghostUnit.range?.scale.set(this.transformHandler.scale);
+
+        if (this.pendingConfirm !== null) {
+          const ev = this.pendingConfirm;
+          this.pendingConfirm = null;
+          if (this.isGhostReadyForConfirm()) {
+            this.createStructure(ev);
+          }
+        }
       });
   }
 
@@ -382,6 +422,30 @@ export class StructureIconsLayer implements Layer {
       .fill({ color: 0x000000, alpha: 0.65 });
   }
 
+  /**
+   * True when the ghost exists and buildableUnit has been refreshed (canBuild or canUpgrade set).
+   * Used to avoid running createStructure before renderGhost's async buildables() has updated the ghost.
+   */
+  private isGhostReadyForConfirm(): boolean {
+    if (!this.ghostUnit) return false;
+    const bu = this.ghostUnit.buildableUnit;
+    return bu.canBuild !== false || bu.canUpgrade !== false;
+  }
+
+  /**
+   * Request confirm (place/upgrade): run createStructure now if ghost is ready, otherwise defer until
+   * renderGhost's buildables() callback has updated the ghost. Shared by Enter (ConfirmGhostStructureEvent)
+   * and mouse click (MouseUpEvent) so numpad-select-then-confirm works.
+   */
+  private requestConfirmStructure(e: MouseUpEvent): void {
+    if (!this.ghostUnit && !this.uiState.ghostStructure) return;
+    if (this.isGhostReadyForConfirm()) {
+      this.createStructure(e);
+    } else {
+      this.pendingConfirm = e;
+    }
+  }
+
   private createStructure(e: MouseUpEvent) {
     if (!this.ghostUnit) return;
     if (
@@ -391,11 +455,7 @@ export class StructureIconsLayer implements Layer {
       this.removeGhostStructure();
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-    const x = e.x - rect.left;
-    const y = e.y - rect.top;
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
@@ -403,6 +463,7 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.buildableUnit.type,
         ),
       );
+      this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       const unitType = this.ghostUnit.buildableUnit.type;
       const rocketDirectionUp =
@@ -416,8 +477,12 @@ export class StructureIconsLayer implements Layer {
           rocketDirectionUp,
         ),
       );
+      if (!shouldPreserveGhostAfterBuild(unitType)) {
+        this.removeGhostStructure();
+      }
+    } else {
+      this.removeGhostStructure();
     }
-    this.removeGhostStructure();
   }
 
   private moveGhost(e: MouseMoveEvent) {
@@ -425,28 +490,25 @@ export class StructureIconsLayer implements Layer {
     this.mousePos.y = e.y;
 
     if (!this.ghostUnit) return;
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-
-    const localX = e.x - rect.left;
-    const localY = e.y - rect.top;
-    this.ghostUnit.container.position.set(localX, localY);
-    this.ghostUnit.range?.position.set(localX, localY);
+    const local = this.transformHandler.screenToCanvasCoordinates(e.x, e.y);
+    this.ghostUnit.container.position.set(local.x, local.y);
+    this.ghostUnit.range?.position.set(local.x, local.y);
   }
 
-  private createGhostStructure(type: UnitType | null) {
+  private createGhostStructure(type: PlayerBuildableUnitType | null) {
     const player = this.game.myPlayer();
     if (!player) return;
     if (type === null) {
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
+    const local = this.transformHandler.screenToCanvasCoordinates(
+      this.mousePos.x,
+      this.mousePos.y,
+    );
     const ghost = this.factory.createGhostContainer(
       player,
       this.ghostStage,
-      { x: localX, y: localY },
+      { x: local.x, y: local.y },
       type,
     );
     this.ghostUnit = {
@@ -472,6 +534,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private clearGhostStructure() {
+    this.pendingConfirm = null;
     if (this.ghostUnit) {
       this.ghostUnit.container.destroy();
       this.ghostUnit.range?.destroy();
@@ -540,25 +603,44 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
-  private toggleStructures(toggleStructureType: UnitType[] | null): void {
+  private toggleStructures(
+    toggleStructureType: PlayerBuildableUnitType[] | null,
+  ): void {
     for (const [structureType, infos] of this.structures) {
       infos.visible =
         toggleStructureType?.indexOf(structureType) !== -1 ||
         toggleStructureType === null;
     }
-    for (const render of this.renders) {
+    this.visibilityStateDirty = true;
+    for (const render of this.rendersByUnitId.values()) {
       this.modifyVisibility(render);
     }
+  }
+
+  private refreshVisibilityStateCache() {
+    if (!this.visibilityStateDirty) {
+      return;
+    }
+
+    this.hasHiddenStructure = false;
+    for (const infos of this.structures.values()) {
+      if (infos.visible === false) {
+        this.hasHiddenStructure = true;
+        break;
+      }
+    }
+
+    this.visibilityStateDirty = false;
   }
 
   private findRenderByUnit(
     unitView: UnitView,
   ): StructureRenderInfo | undefined {
-    return this.renders.find((render) => render.unit.id() === unitView.id());
+    return this.rendersByUnitId.get(unitView.id());
   }
 
   private handleActiveUnit(unitView: UnitView) {
-    if (this.seenUnits.has(unitView)) {
+    if (this.seenUnitIds.has(unitView.id())) {
       const render = this.findRenderByUnit(unitView);
       if (render) {
         this.checkForConstructionState(render, unitView);
@@ -566,12 +648,18 @@ export class StructureIconsLayer implements Layer {
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
-    } else if (this.structures.has(unitView.type())) {
+    } else if (
+      this.structures.has(unitView.type() as PlayerBuildableUnitType)
+    ) {
       this.addNewStructure(unitView);
     }
   }
 
   private handleInactiveUnit(unitView: UnitView) {
+    if (!this.seenUnitIds.has(unitView.id())) {
+      return;
+    }
+
     const render = this.findRenderByUnit(unitView);
     if (render) {
       this.deleteStructure(render);
@@ -579,20 +667,15 @@ export class StructureIconsLayer implements Layer {
   }
 
   private modifyVisibility(render: StructureRenderInfo) {
-    const structureType = render.unit.type();
+    this.refreshVisibilityStateCache();
+
+    const structureType = render.unit.type() as PlayerBuildableUnitType;
     const structureInfos = this.structures.get(structureType);
 
-    let focusStructure = false;
-    for (const infos of this.structures.values()) {
-      if (infos.visible === false) {
-        focusStructure = true;
-        break;
-      }
-    }
     if (structureInfos) {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
-      if (structureInfos.visible && focusStructure) {
+      if (structureInfos.visible && this.hasHiddenStructure) {
         render.iconContainer.filters = [
           new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
         ];
@@ -657,7 +740,7 @@ export class StructureIconsLayer implements Layer {
   private computeNewLocation(render: StructureRenderInfo) {
     const tile = render.unit.tile();
     const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
-    const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
+    const screenPos = this.transformHandler.worldToCanvasCoordinates(worldPos);
     screenPos.x = Math.round(screenPos.x);
 
     const scale = this.transformHandler.scale;
@@ -714,7 +797,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private addNewStructure(unitView: UnitView) {
-    this.seenUnits.add(unitView);
+    this.seenUnitIds.add(unitView.id());
     const render = new StructureRenderInfo(
       unitView,
       unitView.owner().id(),
@@ -724,7 +807,7 @@ export class StructureIconsLayer implements Layer {
       unitView.level(),
       unitView.isUnderConstruction(),
     );
-    this.renders.push(render);
+    this.rendersByUnitId.set(unitView.id(), render);
     this.computeNewLocation(render);
     this.modifyVisibility(render);
   }
@@ -754,7 +837,11 @@ export class StructureIconsLayer implements Layer {
     render.iconContainer?.destroy();
     render.levelContainer?.destroy();
     render.dotContainer?.destroy();
-    this.renders = this.renders.filter((r) => r.unit !== render.unit);
-    this.seenUnits.delete(render.unit);
+    const unitId = render.unit.id();
+    this.rendersByUnitId.delete(unitId);
+    this.seenUnitIds.delete(unitId);
+    if (this.potentialUpgrade?.unit.id() === unitId) {
+      this.potentialUpgrade = undefined;
+    }
   }
 }

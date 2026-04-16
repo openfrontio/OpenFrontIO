@@ -1,3 +1,4 @@
+import { assetUrl } from "../AssetUrls";
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
@@ -36,25 +37,25 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         })
         .then((buf) => new Uint8Array(buf));
 
-    const mapBasePath = `/maps/${fileName}`;
+    const mapAssetUrl = (path: string) => assetUrl(`maps/${fileName}/${path}`);
 
     const mapData = {
-      mapBin: this.createLazyLoader(() => loadBinary(`${mapBasePath}/map.bin`)),
+      mapBin: this.createLazyLoader(() => loadBinary(mapAssetUrl("map.bin"))),
       map4xBin: this.createLazyLoader(() =>
-        loadBinary(`${mapBasePath}/map4x.bin`),
+        loadBinary(mapAssetUrl("map4x.bin")),
       ),
       map16xBin: this.createLazyLoader(() =>
-        loadBinary(`${mapBasePath}/map16x.bin`),
+        loadBinary(mapAssetUrl("map16x.bin")),
       ),
       manifest: this.createLazyLoader(() =>
-        fetch(`${mapBasePath}/manifest.json`).then((res) => {
+        fetch(mapAssetUrl("manifest.json")).then((res) => {
           if (!res.ok) {
-            throw new Error(`Failed to load ${mapBasePath}/manifest.json`);
+            throw new Error(`Failed to load ${mapAssetUrl("manifest.json")}`);
           }
           return res.json() as Promise<MapManifest>;
         }),
       ),
-      webpPath: `${mapBasePath}/thumbnail.webp`,
+      webpPath: mapAssetUrl("thumbnail.webp"),
     } satisfies MapData;
 
     this.maps.set(map, mapData);

@@ -1,0 +1,52 @@
+{
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 905705,
+    "width": 1500
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 54860,
+    "width": 375
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 224342,
+    "width": 750
+  },
+  "name": "Tourney4",
+  "nations": [
+    {
+      "coordinates": [568, 309],
+      "name": "North North West"
+    },
+    {
+      "coordinates": [308, 562],
+      "name": "West North West"
+    },
+    {
+      "coordinates": [945, 303],
+      "name": "North North East"
+    },
+    {
+      "coordinates": [1188, 556],
+      "name": "East North East"
+    },
+    {
+      "coordinates": [1196, 931],
+      "name": "East South East"
+    },
+    {
+      "coordinates": [941, 1178],
+      "name": "South South East"
+    },
+    {
+      "coordinates": [564, 1185],
+      "name": "South South West"
+    },
+    {
+      "coordinates": [315, 927],
+      "name": "West South West"
+    }
+  ]
+}

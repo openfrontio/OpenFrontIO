@@ -15,7 +15,7 @@ import { ComponentCheckTransformer } from "./transformers/ComponentCheckTransfor
 import { MiniMapTransformer } from "./transformers/MiniMapTransformer";
 import { ShoreCoercingTransformer } from "./transformers/ShoreCoercingTransformer";
 import { SmoothingWaterTransformer } from "./transformers/SmoothingWaterTransformer";
-import { PathStatus, SteppingPathFinder } from "./types";
+import { PathResult, PathStatus, SteppingPathFinder } from "./types";
 
 /**
  * Pathfinders that work with GameMap - usable in both simulation and UI layers
@@ -86,6 +86,81 @@ export class PathFinding {
     return PathFinderBuilder.create(pf).buildWithStepper({
       equals: (a, b) => a === b,
     });
+  }
+}
+
+/**
+ * Water pathfinder that auto-rebuilds when the water graph changes.
+ * Wraps SteppingPathFinder and tracks waterGraphVersion internally.
+ */
+export class WaterPathFinder implements SteppingPathFinder<TileRef> {
+  private inner: SteppingPathFinder<TileRef>;
+  private _waterGraphVersion: number;
+  private _rebuilt = false;
+
+  // Stagger support: spread pathfinder rebuilds over multiple ticks so all
+  // ships don't re-run A* simultaneously after a water-nuke.
+  private _staggerCountdown: number;
+  private _pendingVersion: number = -1;
+
+  /**
+   * @param stagger - How many ticks to wait before rebuilding when the water
+   *   graph changes.  0 = immediate (default).  Pass a value spread across
+   *   [0, STAGGER_SPREAD) to distribute rebuilds over time.
+   */
+  constructor(
+    private game: Game,
+    private _stagger: number = 0,
+  ) {
+    this.inner = PathFinding.Water(game);
+    this._waterGraphVersion = game.waterGraphVersion();
+    this._staggerCountdown = 0;
+  }
+
+  /** Spread to use when auto-staggering ship pathfinders */
+  static readonly STAGGER_SPREAD = 50;
+
+  /** True if the pathfinder was rebuilt since the last call to `rebuilt`. Resets on read. */
+  get rebuilt(): boolean {
+    this.ensureFresh();
+    const v = this._rebuilt;
+    this._rebuilt = false;
+    return v;
+  }
+
+  private ensureFresh(): void {
+    const v = this.game.waterGraphVersion();
+    if (v === this._waterGraphVersion) return;
+
+    // New graph version detected — start or continue the stagger countdown.
+    if (this._pendingVersion !== v) {
+      this._pendingVersion = v;
+      this._staggerCountdown = this._stagger;
+    }
+
+    if (this._staggerCountdown > 0) {
+      this._staggerCountdown--;
+      return; // Keep using old pathfinder for now
+    }
+
+    // Countdown complete — rebuild.
+    this._waterGraphVersion = v;
+    this.inner = PathFinding.Water(this.game);
+    this._rebuilt = true;
+  }
+
+  next(from: TileRef, to: TileRef, dist?: number): PathResult<TileRef> {
+    this.ensureFresh();
+    return this.inner.next(from, to, dist);
+  }
+
+  findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
+    this.ensureFresh();
+    return this.inner.findPath(from, to);
+  }
+
+  invalidate(): void {
+    this.inner.invalidate();
   }
 }
 

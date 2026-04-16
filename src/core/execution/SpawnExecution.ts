@@ -1,10 +1,17 @@
-import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  SpawnArea,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
-import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
+import { TribeExecution } from "./TribeExecution";
 import { getSpawnTiles } from "./Util";
 
 type Spawn = { center: TileRef; tiles: TileRef[] };
@@ -64,7 +71,7 @@ export class SpawnExecution implements Execution {
     if (!player.hasSpawned()) {
       this.mg.addExecution(new PlayerExecution(player));
       if (player.type() === PlayerType.Bot) {
-        this.mg.addExecution(new BotExecution(player));
+        this.mg.addExecution(new TribeExecution(player));
       }
     }
 
@@ -90,12 +97,13 @@ export class SpawnExecution implements Execution {
       return { center, tiles };
     }
 
+    const spawnArea = this.getTeamSpawnArea();
     let tries = 0;
 
     while (tries < SpawnExecution.MAX_SPAWN_TRIES) {
       tries++;
 
-      const center = this.randTile();
+      const center = this.randTile(spawnArea);
 
       if (
         !this.mg.isLand(center) ||
@@ -137,10 +145,23 @@ export class SpawnExecution implements Execution {
     return;
   }
 
-  private randTile(): TileRef {
+  private randTile(area?: SpawnArea): TileRef {
+    if (area) {
+      const x = this.random.nextInt(area.x, area.x + area.width);
+      const y = this.random.nextInt(area.y, area.y + area.height);
+      return this.mg.ref(x, y);
+    }
     const x = this.random.nextInt(0, this.mg.width());
     const y = this.random.nextInt(0, this.mg.height());
-
     return this.mg.ref(x, y);
+  }
+
+  private getTeamSpawnArea(): SpawnArea | undefined {
+    const player = this.mg.player(this.playerInfo.id);
+    const team = player.team();
+    if (team === null) {
+      return undefined;
+    }
+    return this.mg.teamSpawnArea(team);
   }
 }
