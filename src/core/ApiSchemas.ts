@@ -69,14 +69,9 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
-    achievements: z
-      .array(
-        z.object({
-          type: z.literal("singleplayer-map"), // TODO: change the shape to be more flexible when we have more achievements
-          data: z.array(SingleplayerMapAchievementSchema),
-        }),
-      )
-      .optional(),
+    achievements: z.object({
+      singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+    }),
     leaderboard: z
       .object({
         oneVone: z
@@ -84,6 +79,12 @@ export const UserMeResponseSchema = z.object({
             elo: z.number().optional(),
           })
           .optional(),
+      })
+      .optional(),
+    currency: z
+      .object({
+        soft: z.coerce.number(),
+        hard: z.coerce.number(),
       })
       .optional(),
   }),
@@ -196,3 +197,12 @@ export const RankedLeaderboardResponseSchema = z.object({
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
 >;
+
+export const NewsItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  url: z.string().nullable().optional(),
+  type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
+});
+export type NewsItem = z.infer<typeof NewsItemSchema>;

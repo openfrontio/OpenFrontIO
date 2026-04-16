@@ -4,6 +4,7 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -50,9 +51,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   init() {
-    this.attackRatio = Number(
-      localStorage.getItem("settings.attackRatio") ?? "0.2",
-    );
+    this.attackRatio = new UserSettings().attackRatio();
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
@@ -165,7 +164,7 @@ export class ControlPanel extends LitElement implements Layer {
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-sky-600 transition-[width] duration-200"
+                class="h-full bg-[#0073b7] transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -220,7 +219,7 @@ export class ControlPanel extends LitElement implements Layer {
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-sky-600 transition-[width] duration-200"
+                class="h-full bg-[#0073b7] transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}

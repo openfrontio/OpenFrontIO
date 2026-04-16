@@ -1,9 +1,11 @@
 import { assetUrl } from "src/core/AssetUrls";
 import { UserMeResponse } from "../core/ApiSchemas";
 import {
+  ColorPalette,
   Cosmetics,
   CosmeticsSchema,
   Flag,
+  Pack,
   Pattern,
   Product,
 } from "../core/CosmeticSchemas";
@@ -13,7 +15,13 @@ import {
   PlayerPattern,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
-import { createCheckoutSession, getApiBase, getUserMe } from "./Api";
+import {
+  createCheckoutSession,
+  getApiBase,
+  getUserMe,
+  invalidateUserMe,
+  purchaseWithCurrency,
+} from "./Api";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -21,17 +29,63 @@ export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 
-export async function handlePurchase(
-  product: Product,
-  colorPaletteName?: string,
-) {
-  const url = await createCheckoutSession(product.priceId, colorPaletteName);
-  if (url === false) {
-    alert("Failed to create checkout session.");
+export type PaymentMethod = "dollar" | "hard" | "soft";
+
+export async function purchaseCosmetic(
+  resolved: ResolvedCosmetic,
+  method: PaymentMethod,
+): Promise<void> {
+  if (!resolved.cosmetic) return;
+  const c = resolved.cosmetic;
+  const colorPaletteName = resolved.colorPalette?.name;
+
+  if (method === "dollar") {
+    if (!c.product) {
+      alert(translateText("store.checkout_failed"));
+      return;
+    }
+    const url = await createCheckoutSession(
+      c.product.priceId,
+      colorPaletteName,
+    );
+    if (url === false) {
+      alert(translateText("store.checkout_failed"));
+      return;
+    }
+    window.location.href = url;
     return;
   }
 
-  window.location.href = url;
+  // Currency purchase (hard or soft)
+  const price = method === "hard" ? (c.priceHard ?? 0) : (c.priceSoft ?? 0);
+  const userMe = await getUserMe();
+  if (userMe === false) {
+    alert(translateText("store.login_required"));
+    return;
+  }
+  const balance =
+    method === "hard"
+      ? (userMe.player.currency?.hard ?? 0)
+      : (userMe.player.currency?.soft ?? 0);
+  if (balance < price) {
+    alert(translateText("store.not_enough_currency"));
+    return;
+  }
+
+  const cosmeticType = resolved.type as "pattern" | "skin" | "flag";
+  const success = await purchaseWithCurrency(
+    cosmeticType,
+    c.name,
+    method,
+    colorPaletteName,
+  );
+  if (!success) {
+    alert(translateText("store.purchase_failed"));
+    return;
+  }
+  alert(translateText("store.purchase_success", { name: c.name }));
+  invalidateUserMe();
+  window.location.reload();
 }
 
 function simpleHash(str: string): string {
@@ -100,6 +154,8 @@ export function cosmeticRelationship(
     wildcardFlare: string;
     requiredFlare: string;
     product: Product | null;
+    priceSoft?: number;
+    priceHard?: number;
     affiliateCode: string | null;
     itemAffiliateCode: string | null;
   },
@@ -116,11 +172,16 @@ export function cosmeticRelationship(
     return "owned";
   }
 
-  if (opts.product === null) {
+  if (opts.affiliateCode !== opts.itemAffiliateCode) {
     return "blocked";
   }
 
-  if (opts.affiliateCode !== opts.itemAffiliateCode) {
+  // Purchasable if any purchase method is available
+  if (opts.priceSoft !== undefined || opts.priceHard !== undefined) {
+    return "purchasable";
+  }
+
+  if (opts.product === null) {
     return "blocked";
   }
 
@@ -164,6 +225,8 @@ export function patternRelationship(
       wildcardFlare: "pattern:*",
       requiredFlare: `pattern:${pattern.name}:${colorPalette.name}`,
       product: pattern.product,
+      priceSoft: pattern.priceSoft,
+      priceHard: pattern.priceHard,
       affiliateCode,
       itemAffiliateCode: pattern.affiliateCode,
     },
@@ -181,11 +244,109 @@ export function flagRelationship(
       wildcardFlare: "flag:*",
       requiredFlare: `flag:${flag.name}`,
       product: flag.product,
+      priceSoft: flag.priceSoft,
+      priceHard: flag.priceHard,
       affiliateCode,
       itemAffiliateCode: flag.affiliateCode,
     },
     userMeResponse,
   );
+}
+
+export type ResolvedCosmetic = {
+  type: "pattern" | "flag" | "pack";
+  cosmetic: Pattern | Flag | Pack | null;
+  colorPalette: ColorPalette | null;
+  relationship: "owned" | "purchasable" | "blocked";
+  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
+  key: string;
+};
+
+/**
+ * Resolves all cosmetics into a flat display-ready list with relationship
+ * status and resolved color palettes. Callers can filter by relationship.
+ */
+export function resolveCosmetics(
+  cosmetics: Cosmetics | null,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): ResolvedCosmetic[] {
+  if (!cosmetics) return [];
+  const result: ResolvedCosmetic[] = [];
+
+  // Default pattern (always owned)
+  result.push({
+    type: "pattern",
+    cosmetic: null,
+    colorPalette: null,
+    relationship: "owned",
+    key: "pattern:default",
+  });
+
+  // Patterns × color palettes
+  for (const [patternKey, pattern] of Object.entries(cosmetics.patterns)) {
+    const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+    for (const cp of colorPalettes) {
+      const rel = patternRelationship(
+        pattern,
+        cp,
+        userMeResponse,
+        affiliateCode,
+      );
+      const resolvedPalette = cp
+        ? (cosmetics.colorPalettes?.[cp.name] ?? null)
+        : null;
+      const key = cp
+        ? `pattern:${patternKey}:${cp.name}`
+        : `pattern:${patternKey}`;
+      result.push({
+        type: "pattern",
+        cosmetic: pattern,
+        colorPalette: resolvedPalette,
+        relationship: rel,
+        key,
+      });
+    }
+  }
+
+  // Flags
+  for (const [flagKey, flag] of Object.entries(cosmetics.flags)) {
+    const rel = flagRelationship(flag, userMeResponse, affiliateCode);
+    result.push({
+      type: "flag",
+      cosmetic: flag,
+      colorPalette: null,
+      relationship: rel,
+      key: `flag:${flagKey}`,
+    });
+  }
+
+  // Packs
+  for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
+    const rel = pack.product ? "purchasable" : "blocked";
+    result.push({
+      type: "pack",
+      cosmetic: pack,
+      colorPalette: null,
+      relationship: rel,
+      key: `pack:${packKey}`,
+    });
+  }
+
+  return result;
+}
+
+export function resolvedToPlayerPattern(
+  resolved: ResolvedCosmetic,
+): PlayerPattern | null {
+  if (resolved.type !== "pattern") return null;
+  const c = resolved.cosmetic;
+  if (c === null) return null;
+  return {
+    name: c.name,
+    patternData: (c as Pattern).pattern,
+    colorPalette: resolved.colorPalette ?? undefined,
+  };
 }
 
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
@@ -240,7 +401,6 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
 
   return {
     flag: flag ?? undefined,
-    color: userSettings.getSelectedColor() ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
   };
@@ -254,10 +414,6 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
 
   if (refs.flag) {
     result.flag = await resolveFlagUrl(refs.flag);
-  }
-
-  if (refs.color) {
-    result.color = { color: refs.color };
   }
 
   if (refs.patternName && cosmetics) {

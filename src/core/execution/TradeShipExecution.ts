@@ -8,8 +8,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { findClosestBy } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -17,10 +17,12 @@ export class TradeShipExecution implements Execution {
   private mg: Game;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: SteppingPathFinder<TileRef>;
+  private pathFinder: WaterPathFinder;
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
+
+  private static _staggerCounter = 0;
 
   constructor(
     private origOwner: Player,
@@ -30,10 +32,16 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinding.Water(mg);
+    const stagger =
+      TradeShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    this.pathFinder = new WaterPathFinder(mg, stagger);
   }
 
   tick(ticks: number): void {
+    if (this.pathFinder.rebuilt) {
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
+
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
@@ -86,13 +94,16 @@ export class TradeShipExecution implements Execution {
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
+      const myComponent = this.mg.getWaterComponent(curTile);
       const nearestPort = findClosestBy(
         tradeShipOwner.units(UnitType.Port),
         (port) => this.mg.manhattanDist(port.tile(), curTile),
         (port) =>
           port.isActive() &&
           !port.isMarkedForDeletion() &&
-          !port.isUnderConstruction(),
+          !port.isUnderConstruction() &&
+          myComponent !== null &&
+          this.mg.hasWaterComponent(port.tile(), myComponent),
       );
       if (nearestPort === null) {
         this.tradeShip.delete(false);
@@ -157,7 +168,9 @@ export class TradeShipExecution implements Execution {
   private complete() {
     this.active = false;
     this.tradeShip!.delete(false);
-    const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
+    const gold = this.mg
+      .config()
+      .tradeShipGold(this.tilesTraveled, this.tradeShip!.owner());
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());

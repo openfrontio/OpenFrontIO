@@ -35,8 +35,8 @@ export default defineConfig(({ mode }) => {
       assetManifest,
     ),
     backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.png", assetManifest),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
   };
 
   const syncHashedPublicAssets = () => ({
@@ -45,8 +45,8 @@ export default defineConfig(({ mode }) => {
     closeBundle() {
       const outDir = path.join(__dirname, "static");
       copyRootPublicFiles(resourcesDir, outDir);
-      writePublicAssetManifestModule(outDir, assetManifest);
       createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+      writePublicAssetManifestModule(outDir, assetManifest);
     },
   });
 

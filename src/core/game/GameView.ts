@@ -228,14 +228,10 @@ export class PlayerView {
       );
     }
 
-    const defaultTerritoryColor = this.game
-      .config()
-      .theme()
-      .territoryColor(this);
-    const defaultBorderColor = this.game
-      .config()
-      .theme()
-      .borderColor(defaultTerritoryColor);
+    const theme = this.game.config().theme();
+
+    const defaultTerritoryColor = theme.territoryColor(this);
+    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
 
     const pattern = userSettings.territoryPatterns()
       ? this.cosmetics.pattern
@@ -258,14 +254,11 @@ export class PlayerView {
       this._territoryColor = defaultTerritoryColor;
     }
 
-    this._structureColors = this.game
-      .config()
-      .theme()
-      .structureColors(this._territoryColor);
+    this._structureColors = theme.structureColors(this._territoryColor);
 
     const maybeFocusedBorderColor =
       this.game.myClientID() === this.data.clientID
-        ? this.game.config().theme().focusedBorderColor()
+        ? theme.focusedBorderColor()
         : defaultBorderColor;
 
     this._borderColor = new Colord(
@@ -275,7 +268,6 @@ export class PlayerView {
     );
 
     // Pre-compute all border color variants once
-    const theme = this.game.config().theme();
     const baseRgb = this._borderColor.toRgb();
 
     // Neutral is just the base color
@@ -575,7 +567,33 @@ export class PlayerView {
   }
 
   transitiveTargets(): PlayerView[] {
-    return [...this.targets(), ...this.allies().flatMap((p) => p.targets())];
+    const result: PlayerView[] = [];
+
+    // Add own targets
+    for (const id of this.data.targets) {
+      result.push(this.game.playerBySmallID(id) as PlayerView);
+    }
+
+    // Add allies' targets
+    for (const allyID of this.data.allies) {
+      const ally = this.game.playerBySmallID(allyID) as PlayerView;
+      for (const targetId of ally.data.targets) {
+        result.push(this.game.playerBySmallID(targetId) as PlayerView);
+      }
+    }
+
+    // Add teammates' targets
+    if (this.data.team !== undefined) {
+      for (const p of this.game.playerViews()) {
+        if (p !== this && p.data.team === this.data.team) {
+          for (const targetId of p.data.targets) {
+            result.push(this.game.playerBySmallID(targetId) as PlayerView);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   isTraitor(): boolean {
@@ -630,6 +648,7 @@ export class GameView implements GameMap {
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
+  private updatedTerrainTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
 
@@ -740,12 +759,16 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
+    this.updatedTerrainTiles = [];
     const packed = this.lastUpdate.packedTileUpdates;
     for (let i = 0; i + 1 < packed.length; i += 2) {
       const tile = packed[i];
       const state = packed[i + 1];
-      this.updateTile(tile, state);
+      const terrainChanged = this.updateTile(tile, state);
       this.updatedTiles.push(tile);
+      if (terrainChanged) {
+        this.updatedTerrainTiles.push(tile);
+      }
     }
 
     if (gu.packedMotionPlans) {
@@ -1060,6 +1083,10 @@ export class GameView implements GameMap {
     return this.updatedTiles;
   }
 
+  recentlyUpdatedTerrainTiles(): TileRef[] {
+    return this.updatedTerrainTiles;
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
@@ -1243,6 +1270,24 @@ export class GameView implements GameMap {
   magnitude(ref: TileRef): number {
     return this._map.magnitude(ref);
   }
+  terrainByte(ref: TileRef): number {
+    return this._map.terrainByte(ref);
+  }
+  setWater(ref: TileRef): void {
+    this._map.setWater(ref);
+  }
+  setShorelineBit(ref: TileRef): void {
+    this._map.setShorelineBit(ref);
+  }
+  clearShorelineBit(ref: TileRef): void {
+    this._map.clearShorelineBit(ref);
+  }
+  setOcean(ref: TileRef): void {
+    this._map.setOcean(ref);
+  }
+  setMagnitude(ref: TileRef, value: number): void {
+    this._map.setMagnitude(ref, value);
+  }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);
   }
@@ -1304,8 +1349,8 @@ export class GameView implements GameMap {
   tileState(tile: TileRef): number {
     return this._map.tileState(tile);
   }
-  updateTile(tile: TileRef, state: number): void {
-    this._map.updateTile(tile, state);
+  updateTile(tile: TileRef, state: number): boolean {
+    return this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

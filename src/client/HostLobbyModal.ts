@@ -72,11 +72,19 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
+  @state() private hostCheatsEnabled: boolean = false;
+  @state() private hostCheatInfiniteGold: boolean = false;
+  @state() private hostCheatInfiniteTroops: boolean = false;
+  @state() private hostCheatGoldMultiplier: boolean = false;
+  @state() private hostCheatGoldMultiplierValue: number | undefined = undefined;
+  @state() private hostCheatStartingGold: boolean = false;
+  @state() private hostCheatStartingGoldValue: number | undefined = undefined;
   @state() private lobbyCreatorClientID: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
@@ -212,6 +220,45 @@ export class HostLobbyModal extends BaseModal {
       ></toggle-input-card>`,
     ];
 
+    const hostCheatInputCards = [
+      html`<toggle-input-card
+        .labelKey=${"host_modal.gold_multiplier"}
+        .checked=${this.hostCheatGoldMultiplier}
+        .inputId=${"host-cheat-gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.hostCheatGoldMultiplierValue}
+        .inputAriaLabel=${translateText("host_modal.gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "host_modal.gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleHostCheatGoldMultiplierToggle}
+        .onChange=${this.handleHostCheatGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleHostCheatGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.starting_gold"}
+        .checked=${this.hostCheatStartingGold}
+        .inputId=${"host-cheat-starting-gold-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.hostCheatStartingGoldValue}
+        .inputAriaLabel=${translateText("host_modal.starting_gold")}
+        .inputPlaceholder=${translateText(
+          "host_modal.starting_gold_placeholder",
+        )}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleHostCheatStartingGoldToggle}
+        .onChange=${this.handleHostCheatStartingGoldValueChanges}
+        .onKeyDown=${this.handleHostCheatStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
+    ];
+
     const content = html`
       <div class="${this.modalContainerClass}">
         <!-- Header -->
@@ -299,8 +346,31 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.disable_alliances",
                     checked: this.disableAlliances,
                   },
+                  {
+                    labelKey: "host_modal.water_nukes",
+                    checked: this.waterNukes,
+                  },
+                  {
+                    labelKey: "host_modal.host_cheats",
+                    checked: this.hostCheatsEnabled,
+                  },
                 ],
                 inputCards,
+              },
+              hostCheats: {
+                titleKey: "host_modal.host_cheats",
+                visible: this.hostCheatsEnabled,
+                toggles: [
+                  {
+                    labelKey: "host_modal.infinite_gold",
+                    checked: this.hostCheatInfiniteGold,
+                  },
+                  {
+                    labelKey: "host_modal.infinite_troops",
+                    checked: this.hostCheatInfiniteTroops,
+                  },
+                ],
+                inputCards: hostCheatInputCards,
               },
               unitTypes: {
                 titleKey: "host_modal.enables_title",
@@ -315,6 +385,8 @@ export class HostLobbyModal extends BaseModal {
             @bots-changed=${this.handleBotsChange}
             @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
+            @host-cheat-toggle-changed=${this
+              .handleConfigHostCheatToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
@@ -333,7 +405,7 @@ export class HostLobbyModal extends BaseModal {
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <button
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-[#0073b7] hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
             @click=${this.startGame}
             ?disabled=${this.clients.length < 2}
           >
@@ -463,6 +535,14 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.waterNukes = false;
+    this.hostCheatsEnabled = false;
+    this.hostCheatInfiniteGold = false;
+    this.hostCheatInfiniteTroops = false;
+    this.hostCheatGoldMultiplier = false;
+    this.hostCheatGoldMultiplierValue = undefined;
+    this.hostCheatStartingGold = false;
+    this.hostCheatStartingGoldValue = undefined;
 
     this.leaveLobbyOnClose = true;
   }
@@ -541,6 +621,35 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.disable_alliances":
         this.disableAlliances = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.water_nukes":
+        this.waterNukes = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.host_cheats":
+        this.hostCheatsEnabled = checked;
+        this.putGameConfig();
+        break;
+      default:
+        break;
+    }
+  };
+
+  private handleConfigHostCheatToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{
+      labelKey: string;
+      checked: boolean;
+    }>;
+    const { labelKey, checked } = customEvent.detail;
+
+    switch (labelKey) {
+      case "host_modal.infinite_gold":
+        this.hostCheatInfiniteGold = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.infinite_troops":
+        this.hostCheatInfiniteTroops = checked;
         this.putGameConfig();
         break;
       default:
@@ -674,6 +783,61 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleHostCheatGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.hostCheatGoldMultiplier = checked;
+    this.hostCheatGoldMultiplierValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleHostCheatGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
+
+  private handleHostCheatGoldMultiplierValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
+
+    if (value === undefined) {
+      this.hostCheatGoldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.hostCheatGoldMultiplierValue = value;
+    }
+    this.putGameConfig();
+  };
+
+  private handleHostCheatStartingGoldToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.hostCheatStartingGold = checked;
+    this.hostCheatStartingGoldValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleHostCheatStartingGoldValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleHostCheatStartingGoldValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, {
+      min: 0.1,
+      max: 1000,
+    });
+
+    if (value === undefined) {
+      this.hostCheatStartingGoldValue = undefined;
+      input.value = "";
+    } else {
+      this.hostCheatStartingGoldValue = value;
+    }
+    this.putGameConfig();
+  };
+
   private handleRandomSpawnChange = (val: boolean) => {
     this.randomSpawn = val;
     this.putGameConfig();
@@ -789,23 +953,36 @@ export class HostLobbyModal extends BaseModal {
             disabledUnits: this.disabledUnits,
             spawnImmunityDuration: this.spawnImmunity
               ? spawnImmunityTicks
-              : undefined,
+              : null,
             playerTeams: this.teamCount,
             nations: sliderToNationsConfig(
               this.nations,
               this.defaultNationCount,
             ),
-            maxTimerValue:
-              this.maxTimer === true ? this.maxTimerValue : undefined,
+            maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
             goldMultiplier:
-              this.goldMultiplier === true
-                ? this.goldMultiplierValue
-                : undefined,
+              this.goldMultiplier === true ? this.goldMultiplierValue : null,
             startingGold:
               this.startingGold === true && this.startingGoldValue !== undefined
                 ? Math.round(this.startingGoldValue * 1_000_000)
-                : undefined,
-            disableAlliances: this.disableAlliances || undefined,
+                : null,
+            disableAlliances: this.disableAlliances || null,
+            waterNukes: this.waterNukes ? true : null,
+            hostCheats: this.hostCheatsEnabled
+              ? {
+                  infiniteGold: this.hostCheatInfiniteGold || undefined,
+                  infiniteTroops: this.hostCheatInfiniteTroops || undefined,
+                  goldMultiplier:
+                    this.hostCheatGoldMultiplier === true
+                      ? this.hostCheatGoldMultiplierValue
+                      : null,
+                  startingGold:
+                    this.hostCheatStartingGold === true &&
+                    this.hostCheatStartingGoldValue !== undefined
+                      ? Math.round(this.hostCheatStartingGoldValue * 1_000_000)
+                      : null,
+                }
+              : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
