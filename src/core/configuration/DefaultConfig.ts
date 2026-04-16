@@ -471,6 +471,7 @@ export class DefaultConfig implements Config {
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Factory,
             UnitType.Port,
+            UnitType.OilRig,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,

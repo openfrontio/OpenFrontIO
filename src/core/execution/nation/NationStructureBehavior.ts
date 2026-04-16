@@ -6,6 +6,7 @@ import {
   PlayerType,
   Relation,
   Structures,
+  TerrainType,
   Unit,
   UnitType,
 } from "../../game/Game";
@@ -581,10 +582,35 @@ export class NationStructureBehavior {
   }
 
   private oilRigValue(): (tile: TileRef) => number {
-    // TODOHERE: oil rigs currently mirror the port heuristic.
-    // Once rigs have their own mechanic, score by whatever matters most:
-    // resource deposits, safe offshore distance, route efficiency, etc.
-    return this.portValue();
+    const game = this.game;
+    const otherUnits = this.player.units(UnitType.OilRig);
+    const { structureSpacing } = this.spacingConstants();
+    const ownedOilTiles: Set<TileRef> = new Set(
+      Array.from(this.player.tiles()).filter(
+        (tile) => game.terrainType(tile) === TerrainType.Oil,
+      ),
+    );
+
+    return (tile) => {
+      let w = 0;
+
+      // Prefer spacing from other oil rigs, same as ports.
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const [, closestOtherDist] = closestTile(game, otherTiles, tile);
+      w += Math.min(closestOtherDist, structureSpacing);
+
+      // Strongly prefer owned oil deposits, with a smaller falloff bonus for
+      // nearby deposits so the anchor tile is likely to resolve to one.
+      const [, closestOilDist] = closestTile(game, ownedOilTiles, tile);
+      if (game.terrainType(tile) === TerrainType.Oil) {
+        w += structureSpacing * 3;
+      } else if (closestOilDist < Infinity) {
+        w += Math.max(0, structureSpacing - closestOilDist);
+      }
+
+      return w;
+    };
   }
 
   /**

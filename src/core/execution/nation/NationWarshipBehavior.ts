@@ -34,8 +34,6 @@ export class NationWarshipBehavior {
     if (!this.random.chance(50)) {
       return false;
     }
-    // TODOHERE: if oil rigs should ever act as naval support structures for AI,
-    // revisit this port-only list and the one below.
     const ports = this.player.units(UnitType.Port);
     const ships = this.player.units(UnitType.Warship);
     if (
@@ -207,8 +205,6 @@ export class NationWarshipBehavior {
     }
 
     // Quit early if we don't have a port to send warships from
-    // TODOHERE: keep this in sync with the spawn-source logic above if oil rigs
-    // are ever allowed to support or spawn naval units.
     if (this.player.units(UnitType.Port).length === 0) {
       return false;
     }

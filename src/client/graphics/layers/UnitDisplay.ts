@@ -26,7 +26,7 @@ const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
-const oilRigIcon = assetUrl("images/OilRigIcon.svg"); // TODOHERE
+const oilRigIcon = assetUrl("images/OilRigIcon.svg"); 
 const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 
@@ -56,7 +56,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private _factories = 0;
   private _missileSilo = 0;
   private _port = 0;
-  private _oilRig = 0; // TODOHERE
+  private _oilRig = 0;
   private _defensePost = 0;
   private _samLauncher = 0;
   private allDisabled = false;
@@ -143,7 +143,7 @@ export class UnitDisplay extends LitElement implements Layer {
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);
-    this._oilRig = player.totalUnitLevels(UnitType.OilRig); // TODOHERE
+    this._oilRig = player.totalUnitLevels(UnitType.OilRig); 
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
