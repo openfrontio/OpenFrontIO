@@ -48,6 +48,8 @@ describe("TrainStation", () => {
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
       isFriendly: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
+      isAlliedWith: vi.fn().mockReturnValue(false),
     } as any;
 
     unit = {
@@ -62,6 +64,7 @@ describe("TrainStation", () => {
       loadCargo: vi.fn(),
       owner: vi.fn().mockReturnValue(player),
       level: vi.fn(),
+      trainMission: vi.fn().mockReturnValue("trade"),
       tradeStopsVisited: vi.fn().mockReturnValue(0),
     } as any;
   });
@@ -77,7 +80,7 @@ describe("TrainStation", () => {
 
   it("handles allied trade", () => {
     unit.type.mockReturnValue(UnitType.City);
-    player.isFriendly.mockReturnValue(true);
+    player.isAlliedWith.mockReturnValue(true);
     const station = new TrainStation(game, unit);
 
     station.onTrainStop(trainExecution);

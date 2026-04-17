@@ -1,7 +1,12 @@
 import { vi } from "vitest";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import { Difficulty, PlayerType, UnitType } from "../src/core/game/Game";
+import {
+  Difficulty,
+  PlayerType,
+  TerrainType,
+  UnitType,
+} from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 
@@ -383,6 +388,63 @@ describe("NationStructureBehavior.handleStructures", () => {
     expect(player.canBuild).toHaveBeenCalledWith(UnitType.OilRig, coastalTile);
     expect(queuedExecutions).toHaveLength(1);
     expect(queuedExecutions[0]).toBeInstanceOf(ConstructionExecution);
+  });
+});
+
+describe("NationStructureBehavior.oilRigValue", () => {
+  it("prefers oil deposit tiles over otherwise equivalent non-oil tiles", () => {
+    const oilTile = 10 as any;
+    const plainTile = 11 as any;
+    const player = {
+      units: vi.fn(() => []),
+      tiles: vi.fn(() => new Set([oilTile, plainTile])),
+    };
+    const game = {
+      config: () => ({
+        nukeMagnitudes: vi.fn(() => ({ outer: 5 })),
+      }),
+      terrainType: vi.fn((tile: unknown) =>
+        tile === oilTile ? TerrainType.Oil : TerrainType.Plains,
+      ),
+      manhattanDist: vi.fn((a: number, b: number) => Math.abs(a - b)),
+    };
+    const behavior = new NationStructureBehavior(
+      new PseudoRandom(0),
+      game as any,
+      player as any,
+    );
+
+    const valueFn = (behavior as any).oilRigValue();
+
+    expect(valueFn(oilTile)).toBeGreaterThan(valueFn(plainTile));
+  });
+
+  it("prefers tiles nearer to owned oil deposits when neither candidate is on oil", () => {
+    const oilTile = 20 as any;
+    const nearTile = 21 as any;
+    const farTile = 30 as any;
+    const player = {
+      units: vi.fn(() => []),
+      tiles: vi.fn(() => new Set([oilTile, nearTile, farTile])),
+    };
+    const game = {
+      config: () => ({
+        nukeMagnitudes: vi.fn(() => ({ outer: 5 })),
+      }),
+      terrainType: vi.fn((tile: unknown) =>
+        tile === oilTile ? TerrainType.Oil : TerrainType.Plains,
+      ),
+      manhattanDist: vi.fn((a: number, b: number) => Math.abs(a - b)),
+    };
+    const behavior = new NationStructureBehavior(
+      new PseudoRandom(0),
+      game as any,
+      player as any,
+    );
+
+    const valueFn = (behavior as any).oilRigValue();
+
+    expect(valueFn(nearTile)).toBeGreaterThan(valueFn(farTile));
   });
 });
 

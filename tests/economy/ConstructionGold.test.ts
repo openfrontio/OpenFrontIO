@@ -1,6 +1,9 @@
+import { UserSettings } from "../../src/core/game/UserSettings";
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
+import { TestConfig } from "../util/TestConfig";
+import { TestServerConfig } from "../util/TestServerConfig";
 import {
   Game,
   Player,
@@ -103,5 +106,40 @@ describe("Construction economy", () => {
     expect(game.config().unitInfo(UnitType.MIRV).cost(game, other)).toBe(
       40_000_000n,
     );
+  });
+
+  test("Ports, oil rigs, and factories share one escalating price ladder", () => {
+    const config = new TestConfig(
+      new TestServerConfig(),
+      {
+        infiniteGold: false,
+        instantBuild: false,
+      } as any,
+      new UserSettings(),
+      false,
+    );
+
+    const counts = new Map<UnitType, number>();
+    const pricingPlayer = {
+      type: () => PlayerType.Human,
+      unitsOwned: (type: UnitType) => counts.get(type) ?? 0,
+      unitsConstructed: (type: UnitType) => counts.get(type) ?? 0,
+    } as Player;
+
+    const structureCost = (type: UnitType) =>
+      config.unitInfo(type).cost({} as Game, pricingPlayer);
+
+    expect(structureCost(UnitType.Port)).toBe(125_000n);
+
+    counts.set(UnitType.Port, 1);
+    expect(structureCost(UnitType.OilRig)).toBe(250_000n);
+
+    counts.set(UnitType.OilRig, 1);
+    expect(structureCost(UnitType.Factory)).toBe(500_000n);
+
+    counts.set(UnitType.Factory, 1);
+    expect(structureCost(UnitType.Port)).toBe(1_000_000n);
+    expect(structureCost(UnitType.OilRig)).toBe(1_000_000n);
+    expect(structureCost(UnitType.Factory)).toBe(1_000_000n);
   });
 });
