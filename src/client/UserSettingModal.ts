@@ -311,7 +311,8 @@ export class UserSettingModal extends BaseModal {
 
   private changeTerritoryHighlight(e: CustomEvent<{ value: number | string }>) {
     const value = e.detail?.value;
-    if (typeof value !== "string") return;
+    if (value !== "never" && value !== "always" && value !== "onKeyPress")
+      return;
     this.userSettings.setTerritoryHighlight(value);
     this.requestUpdate();
   }

@@ -44,6 +44,7 @@ export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
+export type TerritoryHighlightMode = "always" | "onKeyPress" | "never";
 export const TERRITORY_HIGHLIGHT_KEY = "settings.territoryHighlight";
 export const KEYBINDS_KEY = "settings.keybinds";
 
@@ -223,13 +224,13 @@ export class UserSettings {
     this.setBool("settings.territoryPatterns", !this.territoryPatterns());
   }
 
-  territoryHighlight(): "always" | "onKeyPress" | "never" {
+  territoryHighlight(): TerritoryHighlightMode {
     const value = this.getString(TERRITORY_HIGHLIGHT_KEY, "never");
     if (value === "always" || value === "onKeyPress") return value;
     return "never";
   }
 
-  setTerritoryHighlight(value: string) {
+  setTerritoryHighlight(value: TerritoryHighlightMode) {
     this.setString(TERRITORY_HIGHLIGHT_KEY, value);
   }
 

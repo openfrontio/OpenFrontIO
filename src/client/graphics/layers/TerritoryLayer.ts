@@ -14,6 +14,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import {
   TERRITORY_HIGHLIGHT_KEY,
+  TerritoryHighlightMode,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../../core/game/UserSettings";
@@ -53,8 +54,17 @@ export class TerritoryLayer implements Layer {
   private highlightedTerritory: PlayerView | null = null;
 
   private alternativeView = false;
-  private highlightMode: "always" | "onKeyPress" | "never";
+  private highlightMode: TerritoryHighlightMode;
   private highlightKeyHeld = false;
+  private onHighlightSettingChanged = ((e: CustomEvent) => {
+    const value = e.detail;
+    if (value === "always" || value === "onKeyPress") {
+      this.highlightMode = value;
+    } else {
+      this.highlightMode = "never";
+    }
+    this.updateHighlightedTerritory();
+  }) as EventListener;
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -337,6 +347,7 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
+      this.updateHighlightedTerritory();
     });
     this.eventBus.on(TerritoryHighlightKeyEvent, (e) => {
       this.highlightKeyHeld = e.active;
@@ -349,15 +360,7 @@ export class TerritoryLayer implements Layer {
 
     globalThis.addEventListener?.(
       `${USER_SETTINGS_CHANGED_EVENT}:${TERRITORY_HIGHLIGHT_KEY}`,
-      ((e: CustomEvent) => {
-        const value = e.detail;
-        if (value === "always" || value === "onKeyPress") {
-          this.highlightMode = value;
-        } else {
-          this.highlightMode = "never";
-        }
-        this.updateHighlightedTerritory();
-      }) as EventListener,
+      this.onHighlightSettingChanged,
     );
 
     this.redraw();
