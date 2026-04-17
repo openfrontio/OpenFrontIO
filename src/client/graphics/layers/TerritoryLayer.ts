@@ -12,11 +12,17 @@ import {
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import {
+  TERRITORY_HIGHLIGHT_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
   DragEvent,
   MouseOverEvent,
+  TerritoryHighlightKeyEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
@@ -47,6 +53,8 @@ export class TerritoryLayer implements Layer {
   private highlightedTerritory: PlayerView | null = null;
 
   private alternativeView = false;
+  private highlightMode: "always" | "onKeyPress" | "never";
+  private highlightKeyHeld = false;
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -63,6 +71,7 @@ export class TerritoryLayer implements Layer {
   ) {
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
+    this.highlightMode = new UserSettings().territoryHighlight();
   }
 
   shouldTransform(): boolean {
@@ -329,10 +338,28 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
     });
+    this.eventBus.on(TerritoryHighlightKeyEvent, (e) => {
+      this.highlightKeyHeld = e.active;
+      this.updateHighlightedTerritory();
+    });
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
     });
+
+    globalThis.addEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${TERRITORY_HIGHLIGHT_KEY}`,
+      ((e: CustomEvent) => {
+        const value = e.detail;
+        if (value === "always" || value === "onKeyPress") {
+          this.highlightMode = value;
+        } else {
+          this.highlightMode = "never";
+        }
+        this.updateHighlightedTerritory();
+      }) as EventListener,
+    );
+
     this.redraw();
   }
 
@@ -342,7 +369,17 @@ export class TerritoryLayer implements Layer {
   }
 
   private updateHighlightedTerritory() {
-    if (!this.alternativeView) {
+    const shouldHighlight =
+      this.highlightMode === "always" ||
+      (this.highlightMode === "onKeyPress" && this.highlightKeyHeld) ||
+      this.alternativeView;
+
+    if (!shouldHighlight) {
+      if (this.highlightedTerritory) {
+        const prev = this.highlightedTerritory;
+        this.highlightedTerritory = null;
+        this.updateHighlightAlpha(prev, null);
+      }
       return;
     }
 
@@ -368,15 +405,30 @@ export class TerritoryLayer implements Layer {
     }
 
     if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
-      const territories: PlayerView[] = [];
-      if (previousTerritory) {
-        territories.push(previousTerritory);
-      }
-      if (this.highlightedTerritory) {
-        territories.push(this.highlightedTerritory);
-      }
-      this.redrawBorder(...territories);
+      this.updateHighlightAlpha(previousTerritory, this.highlightedTerritory);
     }
+  }
+
+  private updateHighlightAlpha(
+    oldPlayer: PlayerView | null,
+    newPlayer: PlayerView | null,
+  ) {
+    const data = this.imageData.data;
+    const oldID = oldPlayer?.id();
+    const newID = newPlayer?.id();
+    this.game.forEachTile((tile) => {
+      const offset = tile * 4;
+      const alpha = data[offset + 3];
+      // Only update non-border territory fill tiles (alpha 150 or 230)
+      if (alpha !== 150 && alpha !== 230) return;
+      if (!this.game.hasOwner(tile)) return;
+      const ownerID = (this.game.owner(tile) as PlayerView).id();
+      if (newID !== undefined && ownerID === newID) {
+        data[offset + 3] = 230;
+      } else if (alpha === 230 && oldID !== undefined && ownerID === oldID) {
+        data[offset + 3] = 150;
+      }
+    });
   }
 
   private getTerritoryAtCell(cell: { x: number; y: number }) {
@@ -559,15 +611,12 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const owner = this.game.owner(tile) as PlayerView;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isHighlighted =
       this.highlightedTerritory &&
       this.highlightedTerritory.id() === owner.id();
     const myPlayer = this.game.myPlayer();
 
     if (this.game.isBorder(tile)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (myPlayer) {
         const alternativeColor = this.alternateViewColor(owner);
         this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
@@ -589,7 +638,8 @@ export class TerritoryLayer implements Layer {
       // Alternative view only shows borders.
       this.clearAlternativeTile(tile);
 
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      const alpha = isHighlighted ? 230 : 150;
+      this.paintTile(this.imageData, tile, owner.territoryColor(tile), alpha);
     }
   }
 

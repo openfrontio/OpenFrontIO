@@ -309,6 +309,13 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private changeTerritoryHighlight(e: CustomEvent<{ value: number | string }>) {
+    const value = e.detail?.value;
+    if (typeof value !== "string") return;
+    this.userSettings.setTerritoryHighlight(value);
+    this.requestUpdate();
+  }
+
   private togglePerformanceOverlay() {
     this.userSettings.togglePerformanceOverlay();
   }
@@ -428,6 +435,31 @@ export class UserSettingModal extends BaseModal {
         .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
+
+      ${this.userSettings.territoryHighlight() === "onKeyPress"
+        ? html`<setting-keybind
+            action="highlightTerritory"
+            label=${translateText("user_setting.highlight_territory")}
+            description=${translateText(
+              "user_setting.highlight_territory_desc",
+            )}
+            defaultKey="KeyH"
+            .value=${this.getKeyValue("highlightTerritory")}
+            .display=${this.getKeyChar("highlightTerritory")}
+            @change=${this.handleKeybindChange}
+          ></setting-keybind>`
+        : html`<div
+            class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl opacity-50 gap-4"
+          >
+            <div class="flex flex-col flex-1 min-w-0">
+              <label class="text-white font-bold text-base block mb-1"
+                >${translateText("user_setting.highlight_territory")}</label
+              >
+              <div class="text-white/50 text-sm leading-snug">
+                ${translateText("user_setting.highlight_territory_disabled")}
+              </div>
+            </div>
+          </div>`}
 
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
@@ -832,6 +864,28 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
       ></setting-toggle>
+
+      <!-- Territory Highlight -->
+      <setting-select
+        label=${translateText("user_setting.territory_highlight_label")}
+        description=${translateText("user_setting.territory_highlight_desc")}
+        .options=${[
+          {
+            value: "never",
+            label: translateText("user_setting.territory_highlight_never"),
+          },
+          {
+            value: "always",
+            label: translateText("user_setting.territory_highlight_always"),
+          },
+          {
+            value: "onKeyPress",
+            label: translateText("user_setting.territory_highlight_on_key"),
+          },
+        ]}
+        .value=${this.userSettings.territoryHighlight()}
+        @change=${this.changeTerritoryHighlight}
+      ></setting-select>
 
       <!-- 📱 Performance Overlay -->
       <setting-toggle

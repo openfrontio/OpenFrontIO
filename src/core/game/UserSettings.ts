@@ -34,6 +34,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
+    highlightTerritory: "KeyH",
   };
 }
 
@@ -43,6 +44,7 @@ export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
+export const TERRITORY_HIGHLIGHT_KEY = "settings.territoryHighlight";
 export const KEYBINDS_KEY = "settings.keybinds";
 
 export class UserSettings {
@@ -219,6 +221,16 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.setBool("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  territoryHighlight(): "always" | "onKeyPress" | "never" {
+    const value = this.getString(TERRITORY_HIGHLIGHT_KEY, "never");
+    if (value === "always" || value === "onKeyPress") return value;
+    return "never";
+  }
+
+  setTerritoryHighlight(value: string) {
+    this.setString(TERRITORY_HIGHLIGHT_KEY, value);
   }
 
   toggleDarkMode() {

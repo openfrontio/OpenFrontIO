@@ -144,6 +144,10 @@ export class ToggleCoordinateGridEvent implements GameEvent {
   constructor(public readonly enabled: boolean) {}
 }
 
+export class TerritoryHighlightKeyEvent implements GameEvent {
+  constructor(public readonly active: boolean) {}
+}
+
 export class TickMetricsEvent implements GameEvent {
   constructor(
     public readonly tickExecutionDuration?: number,
@@ -165,6 +169,7 @@ export class InputHandler {
   private pointerDown: boolean = false;
 
   private alternateView = false;
+  private highlightKeyHeld = false;
 
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
@@ -213,6 +218,10 @@ export class InputHandler {
       if (this.alternateView) {
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
+      }
+      if (this.highlightKeyHeld) {
+        this.highlightKeyHeld = false;
+        this.eventBus.emit(new TerritoryHighlightKeyEvent(false));
       }
       this.pointerDown = false;
       this.pointers.clear();
@@ -287,6 +296,15 @@ export class InputHandler {
           this.alternateView = true;
           this.eventBus.emit(new AlternateViewEvent(true));
         }
+      }
+
+      if (
+        this.keybindMatchesEvent(e, this.keybinds.highlightTerritory) &&
+        !this.highlightKeyHeld
+      ) {
+        e.preventDefault();
+        this.highlightKeyHeld = true;
+        this.eventBus.emit(new TerritoryHighlightKeyEvent(true));
       }
 
       if (
@@ -382,6 +400,12 @@ export class InputHandler {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
+      }
+
+      if (this.keybindMatchesEvent(e, this.keybinds.highlightTerritory)) {
+        e.preventDefault();
+        this.highlightKeyHeld = false;
+        this.eventBus.emit(new TerritoryHighlightKeyEvent(false));
       }
 
       const resetKey = this.keybinds.resetGfx ?? "KeyR";
