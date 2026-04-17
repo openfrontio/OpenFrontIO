@@ -108,7 +108,7 @@ export class GameImpl implements Game {
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
   private _waterManager: WaterManager;
-  private _sharedWaterCache: SharedWaterCache = new SharedWaterCache(this);
+  private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
@@ -132,6 +132,7 @@ export class GameImpl implements Game {
       this.miniGameMap,
       _config.disableNavMesh(),
     );
+    this._sharedWaterCache = new SharedWaterCache(this);
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
