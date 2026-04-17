@@ -84,85 +84,6 @@ const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
-/**
- * Cache for shared water components. Rebuilt at most once every
- * SHARED_WATER_CACHE_TTL_TICKS (3s at 10 ticks/s). Port placement is not
- * time-critical — a nation noticing a newly-valid port site a few seconds late
- * is fine and lets us amortize the O(total_border_tiles) build across far more
- * callers than a per-tick cache would.
- */
-const SHARED_WATER_CACHE_TTL_TICKS = 30;
-const sharedWaterCaches = new WeakMap<
-  Game,
-  { tick: number; byPlayer: Map<Player, Set<number> | null> }
->();
-
-/** Sentinel added to a player's shared-water set to signal "touches ocean". */
-const OCEAN_SENTINEL = -1;
-
-function buildSharedWaterByPlayer(game: Game): Map<Player, Set<number> | null> {
-  // Pass 1: for each non-bot player, record which water bodies they touch and
-  // which lakes have them as a candidate trade partner.
-  const playerToWater = new Map<
-    Player,
-    { hasOcean: boolean; lakes: Set<number> }
-  >();
-  const lakePartners = new Map<number, Player[]>();
-
-  for (const player of game.players()) {
-    if (player.type() === PlayerType.Bot) continue;
-
-    let hasOcean = false;
-    const lakes = new Set<number>();
-    for (const tile of player.borderTiles()) {
-      if (!game.isShore(tile)) continue;
-      for (const neighbor of game.neighbors(tile)) {
-        if (!game.isWater(neighbor)) continue;
-        if (game.isOcean(neighbor)) {
-          hasOcean = true;
-          continue;
-        }
-        const comp = game.getWaterComponent(neighbor);
-        if (comp !== null) lakes.add(comp);
-      }
-    }
-    playerToWater.set(player, { hasOcean, lakes });
-
-    for (const c of lakes) {
-      let arr = lakePartners.get(c);
-      if (arr === undefined) {
-        arr = [];
-        lakePartners.set(c, arr);
-      }
-      arr.push(player);
-    }
-  }
-
-  // Pass 2: ocean is treated as always shared (matches the short-circuit in
-  // randCoastalTileArray). Lake components are shared only if some *other*
-  // player on that component can trade with P (i.e. no mutual embargo).
-  const result = new Map<Player, Set<number> | null>();
-  for (const [player, { hasOcean, lakes }] of playerToWater) {
-    const shared = new Set<number>();
-
-    if (hasOcean) shared.add(OCEAN_SENTINEL);
-
-    for (const c of lakes) {
-      const partners = lakePartners.get(c);
-      if (partners === undefined) continue;
-      for (const other of partners) {
-        if (other !== player && player.canTrade(other)) {
-          shared.add(c);
-          break;
-        }
-      }
-    }
-
-    result.set(player, shared.size > 0 ? shared : null);
-  }
-  return result;
-}
-
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -187,7 +108,7 @@ export class NationStructureBehavior {
           Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
         )
       : this.player.unitsOwned(UnitType.City);
-    this._sharedWaterComponents = this.sharedWaterComponents();
+    this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
     const hasCoastalTiles = this._sharedWaterComponents !== null;
 
     // Build order for non-city structures (priority order)
@@ -244,26 +165,6 @@ export class NationStructureBehavior {
     }
 
     return false;
-  }
-
-  /**
-   * Returns the set of water components shared with at least one other player,
-   * or null if there are none. Result is memoized globally and rebuilt at most
-   * once every SHARED_WATER_CACHE_TTL_TICKS, so all nations share one
-   * O(total_border_tiles) pass instead of each doing O(N * total_border_tiles)
-   * work.
-   */
-  private sharedWaterComponents(): Set<number> | null {
-    const tick = this.game.ticks();
-    let cache = sharedWaterCaches.get(this.game);
-    if (
-      cache === undefined ||
-      tick - cache.tick >= SHARED_WATER_CACHE_TTL_TICKS
-    ) {
-      cache = { tick, byPlayer: buildSharedWaterByPlayer(this.game) };
-      sharedWaterCaches.set(this.game, cache);
-    }
-    return cache.byPlayer.get(this.player) ?? null;
   }
 
   /**
