@@ -43,6 +43,11 @@ export const TokenPayloadSchema = z.object({
   iss: z.string(),
   aud: z.string(),
   exp: z.number(),
+  role: z
+    .enum(["root", "admin", "mod", "flagged", "banned"])
+    // In case new roles are added in the future.
+    .or(z.string())
+    .optional(),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 
@@ -201,7 +206,8 @@ export type RankedLeaderboardResponse = z.infer<
 export const NewsItemSchema = z.object({
   id: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
+  descriptionTranslationKey: z.string().optional(),
   url: z.string().nullable().optional(),
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });

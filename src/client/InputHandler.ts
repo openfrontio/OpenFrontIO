@@ -281,7 +281,7 @@ export class InputHandler {
         return;
       }
 
-      if (e.code === this.keybinds.toggleView) {
+      if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -289,7 +289,10 @@ export class InputHandler {
         }
       }
 
-      if (e.code === this.keybinds.coordinateGrid && !e.repeat) {
+      if (
+        this.keybindMatchesEvent(e, this.keybinds.coordinateGrid) &&
+        !e.repeat
+      ) {
         e.preventDefault();
         this.coordinateGridEnabled = !this.coordinateGridEnabled;
         this.eventBus.emit(
@@ -375,7 +378,7 @@ export class InputHandler {
         this.activeKeys.delete(this.keybinds.zoomOut);
       }
 
-      if (e.code === this.keybinds.toggleView) {
+      if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
@@ -387,55 +390,58 @@ export class InputHandler {
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === this.keybinds.boatAttack) {
+      if (this.keybindMatchesEvent(e, this.keybinds.boatAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
       }
 
-      if (e.code === this.keybinds.groundAttack) {
+      if (this.keybindMatchesEvent(e, this.keybinds.groundAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoGroundAttackEvent());
       }
 
-      if (e.code === this.keybinds.attackRatioDown) {
+      if (this.keybindMatchesEvent(e, this.keybinds.attackRatioDown)) {
         e.preventDefault();
         const increment = this.userSettings.attackRatioIncrement();
         this.eventBus.emit(new AttackRatioEvent(-increment));
       }
 
-      if (e.code === this.keybinds.attackRatioUp) {
+      if (this.keybindMatchesEvent(e, this.keybinds.attackRatioUp)) {
         e.preventDefault();
         const increment = this.userSettings.attackRatioIncrement();
         this.eventBus.emit(new AttackRatioEvent(increment));
       }
 
-      if (e.code === this.keybinds.centerCamera) {
+      if (this.keybindMatchesEvent(e, this.keybinds.centerCamera)) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
 
       // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
-      const matchedBuild = this.resolveBuildKeybind(e.code);
+      const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
       if (matchedBuild !== null) {
         e.preventDefault();
         this.setGhostStructure(matchedBuild);
       }
 
-      if (e.code === this.keybinds.swapDirection) {
+      if (this.keybindMatchesEvent(e, this.keybinds.swapDirection)) {
         e.preventDefault();
         const nextDirection = !this.uiState.rocketDirectionUp;
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
-      if (!e.repeat && e.code === this.keybinds.pauseGame) {
+      if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.pauseGame)) {
         e.preventDefault();
         this.eventBus.emit(new TogglePauseIntentEvent());
       }
-      if (!e.repeat && e.code === this.keybinds.gameSpeedUp) {
+      if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.gameSpeedUp)) {
         e.preventDefault();
         this.eventBus.emit(new GameSpeedUpIntentEvent());
       }
-      if (!e.repeat && e.code === this.keybinds.gameSpeedDown) {
+      if (
+        !e.repeat &&
+        this.keybindMatchesEvent(e, this.keybinds.gameSpeedDown)
+      ) {
         e.preventDefault();
         this.eventBus.emit(new GameSpeedDownIntentEvent());
       }
@@ -616,6 +622,27 @@ export class InputHandler {
   }
 
   /**
+   * Parses a keybind value that may include a "Shift+" prefix.
+   * e.g. "Shift+KeyB" → { shift: true, code: "KeyB" }
+   *      "KeyB"       → { shift: false, code: "KeyB" }
+   */
+  private parseKeybind(value: string): { shift: boolean; code: string } {
+    if (value?.startsWith("Shift+")) {
+      return { shift: true, code: value.slice(6) };
+    }
+    return { shift: false, code: value };
+  }
+
+  /**
+   * Returns true if the keyboard event matches the given keybind value,
+   * including optional Shift+ prefix support.
+   */
+  private keybindMatchesEvent(e: KeyboardEvent, keybindValue: string): boolean {
+    const parsed = this.parseKeybind(keybindValue);
+    return e.code === parsed.code && e.shiftKey === parsed.shift;
+  }
+
+  /**
    * Extracts the digit character from KeyboardEvent.code.
    * Codes look like "Digit0".."Digit9" (6 chars, digit at index 5) and
    * "Numpad0".."Numpad9" (7 chars, digit at index 6). Returns null if not a digit key.
@@ -637,17 +664,25 @@ export class InputHandler {
   }
 
   /** Strict equality only: used for first-pass exact KeyboardEvent.code match. */
-  private buildKeybindMatches(code: string, keybindValue: string): boolean {
-    return code === keybindValue;
+  private buildKeybindMatches(
+    code: string,
+    shiftKey: boolean,
+    keybindValue: string,
+  ): boolean {
+    const parsed = this.parseKeybind(keybindValue);
+    return code === parsed.code && shiftKey === parsed.shift;
   }
 
   /** Digit/Numpad alias match: used only when no exact match was found. */
   private buildKeybindMatchesDigit(
     code: string,
+    shiftKey: boolean,
     keybindValue: string,
   ): boolean {
+    const parsed = this.parseKeybind(keybindValue);
+    if (shiftKey !== parsed.shift) return false;
     const digit = this.digitFromKeyCode(code);
-    const bindDigit = this.digitFromKeyCode(keybindValue);
+    const bindDigit = this.digitFromKeyCode(parsed.code);
     return digit !== null && bindDigit !== null && digit === bindDigit;
   }
 
@@ -655,7 +690,10 @@ export class InputHandler {
    * Resolves a keyup code to a build action: exact code match first, then digit/Numpad alias.
    * Returns the UnitType to set as ghost, or null if no build keybind matched.
    */
-  private resolveBuildKeybind(code: string): PlayerBuildableUnitType | null {
+  private resolveBuildKeybind(
+    code: string,
+    shiftKey: boolean,
+  ): PlayerBuildableUnitType | null {
     const buildKeybinds: ReadonlyArray<{
       key: string;
       type: PlayerBuildableUnitType;
@@ -672,10 +710,12 @@ export class InputHandler {
       { key: "buildMIRV", type: UnitType.MIRV },
     ];
     for (const { key, type } of buildKeybinds) {
-      if (this.buildKeybindMatches(code, this.keybinds[key])) return type;
+      if (this.buildKeybindMatches(code, shiftKey, this.keybinds[key]))
+        return type;
     }
     for (const { key, type } of buildKeybinds) {
-      if (this.buildKeybindMatchesDigit(code, this.keybinds[key])) return type;
+      if (this.buildKeybindMatchesDigit(code, shiftKey, this.keybinds[key]))
+        return type;
     }
     return null;
   }

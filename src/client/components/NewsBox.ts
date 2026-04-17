@@ -1,4 +1,5 @@
 import { LitElement, html, nothing } from "lit";
+import { resolveMarkdown } from "lit-markdown";
 import { customElement, state } from "lit/decorators.js";
 import type { NewsItem } from "../../core/ApiSchemas";
 import { getNews } from "../Api";
@@ -24,16 +25,18 @@ export function getVisibleNewsItems(items: NewsItem[]): NewsItem[] {
   return items.filter((item) => !dismissed.has(item.id));
 }
 
-const typeLabelKeys: Record<NewsItem["type"], string> = {
+const typeLabelKeys: Record<string, string> = {
   tournament: "news_box.tournament",
   tutorial: "news_box.tutorial",
   announcement: "news_box.news",
+  warning: "news_box.warning",
 };
 
-const typeLabelColors: Record<NewsItem["type"], string> = {
+const typeLabelColors: Record<string, string> = {
   tournament: "bg-amber-500/20 text-amber-300",
   tutorial: "bg-sky-500/20 text-sky-300",
   announcement: "bg-emerald-500/20 text-emerald-300",
+  warning: "bg-red-500/20 text-red-300",
 };
 
 @customElement("news-box")
@@ -118,8 +121,10 @@ export class NewsBox extends LitElement {
           <span
             class="shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded ${typeLabelColors[
               item.type
-            ]}"
-            >${translateText(typeLabelKeys[item.type])}</span
+            ] ?? typeLabelColors["announcement"]}"
+            >${translateText(
+              typeLabelKeys[item.type] ?? typeLabelKeys["announcement"],
+            )}</span
           >
           <div class="flex-1 min-w-0">
             ${item.url
@@ -133,8 +138,13 @@ export class NewsBox extends LitElement {
               : html`<span class="text-sm font-medium text-white truncate block"
                   >${item.title}</span
                 >`}
-            <span class="text-xs text-white/50 truncate block"
-              >${item.description}</span
+            <span
+              class="text-xs text-white/50 block [&_a]:text-blue-300 [&_a:hover]:text-blue-200"
+              >${resolveMarkdown(
+                item.descriptionTranslationKey
+                  ? translateText(item.descriptionTranslationKey)
+                  : (item.description ?? ""),
+              )}</span
             >
           </div>
           ${this.items.length > 1

@@ -26,6 +26,11 @@
         padding-left: env(safe-area-inset-left);
       }
 
+      /* Prevent Playwire bottom rail from affecting flex layout */
+      [id^="pw-oop-bottom_rail"] {
+        position: fixed !important;
+      }
+
       /* Ensure full viewport height on iOS */
       html,
       body {
@@ -261,9 +266,7 @@
         ></ranked-modal>
       </main-layout>
 
-      <!-- Ad above footer -->
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
-        <home-footer-ad></home-footer-ad>
         <page-footer></page-footer>
       </div>
 
