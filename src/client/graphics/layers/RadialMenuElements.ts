@@ -420,18 +420,19 @@ function createMenuElements(
           : !BuildableAttacks.has(item.unitType)),
     )
     .map((item: BuildItemDisplay) => {
-      const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);
       return {
         id: `${elementIdPrefix}_${item.unitType}`,
         name: item.key
           ? item.key.replace("unit_type.", "")
           : item.unitType.toString(),
-        disabled: () => !canBuildOrUpgrade,
-        color: canBuildOrUpgrade
-          ? filterType === "attack"
-            ? COLORS.attack
-            : COLORS.building
-          : undefined,
+        disabled: (p: MenuElementParams) =>
+          !p.buildMenu.canBuildOrUpgrade(item),
+        color: (p: MenuElementParams) =>
+          p.buildMenu.canBuildOrUpgrade(item)
+            ? filterType === "attack"
+              ? COLORS.attack
+              : COLORS.building
+            : COLORS.building,
         icon: item.icon,
         tooltipItems: [
           { text: translateText(item.key ?? ""), className: "title" },
@@ -456,7 +457,7 @@ function createMenuElements(
           if (buildableUnit === undefined) {
             return;
           }
-          if (canBuildOrUpgrade) {
+          if (params.buildMenu.canBuildOrUpgrade(item)) {
             params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
           }
           params.closeMenu();

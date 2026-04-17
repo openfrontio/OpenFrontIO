@@ -1,4 +1,4 @@
-import { Theme } from "../../../core/configuration/Config";
+import { Config, Theme } from "../../../core/configuration/Config";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -8,17 +8,47 @@ export class TerrainLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
   private theme: Theme;
+  private config: Config;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
-  ) {}
+  ) {
+    this.config = this.game.config();
+  }
   shouldTransform(): boolean {
     return true;
   }
   tick() {
-    if (this.game.config().theme() !== this.theme) {
+    if (this.config.theme() !== this.theme) {
       this.redraw();
+      return;
+    }
+    // Repaint terrain for tiles whose terrain changed (e.g. nuke
+    // turning land to water).
+    const updatedTiles = this.game.recentlyUpdatedTerrainTiles();
+    if (updatedTiles.length > 0) {
+      let dirty = false;
+      for (const tile of updatedTiles) {
+        const terrainColor = this.theme.terrainColor(this.game, tile);
+        const offset = tile * 4;
+        const r = terrainColor.rgba.r;
+        const g = terrainColor.rgba.g;
+        const b = terrainColor.rgba.b;
+        if (
+          this.imageData.data[offset] !== r ||
+          this.imageData.data[offset + 1] !== g ||
+          this.imageData.data[offset + 2] !== b
+        ) {
+          this.imageData.data[offset] = r;
+          this.imageData.data[offset + 1] = g;
+          this.imageData.data[offset + 2] = b;
+          dirty = true;
+        }
+      }
+      if (dirty) {
+        this.context.putImageData(this.imageData, 0, 0);
+      }
     }
   }
 
@@ -46,7 +76,7 @@ export class TerrainLayer implements Layer {
   }
 
   initImageData() {
-    this.theme = this.game.config().theme();
+    this.theme = this.config.theme();
     this.game.forEachTile((tile) => {
       const terrainColor = this.theme.terrainColor(this.game, tile);
       // TODO: isn't tileref and index the same?

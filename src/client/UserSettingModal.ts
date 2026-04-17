@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
+import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -20,7 +20,6 @@ const DefaultKeybinds: Record<string, string> = {
   buildCity: "Digit1",
   buildFactory: "Digit2",
   buildPort: "Digit3",
-  buildOilRig: "KeyR",
   buildDefensePost: "Digit4",
   buildMissileSilo: "Digit5",
   buildSamLauncher: "Digit6",
@@ -50,15 +49,16 @@ const DefaultKeybinds: Record<string, string> = {
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
   private userSettings: UserSettings = new UserSettings();
+  private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 
   @state() private activeTab: "basic" | "keybinds" = "basic";
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
 
-  @state() private keybinds: Record<
+  @state() private userKeybinds: Record<
     string,
-    { value: string | string[]; key: string }
+    { value: string; key: string }
   > = {};
 
   connectedCallback() {
@@ -72,55 +72,39 @@ export class UserSettingModal extends BaseModal {
   }
 
   private loadKeybindsFromStorage() {
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
-    if (!savedKeybinds) return;
-
-    try {
-      const parsed = JSON.parse(savedKeybinds);
-      if (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        !Array.isArray(parsed)
-      ) {
-        const isValid = Object.values(parsed).every((entry) => {
-          if (
-            typeof entry !== "object" ||
-            entry === null ||
-            Array.isArray(entry)
-          ) {
-            return false;
-          }
-          if (!("key" in entry) || typeof (entry as any).key !== "string") {
-            return false;
-          }
-          if (!("value" in entry)) {
-            return false;
-          }
-          const value = (entry as any).value;
-          if (typeof value === "string") {
-            return true;
-          }
-          if (Array.isArray(value)) {
-            return value.every((v) => typeof v === "string");
-          }
-          return false;
-        });
-
-        if (isValid) {
-          this.keybinds = parsed;
-        } else {
-          console.warn(
-            "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
-          );
-        }
-      } else {
-        console.warn(
-          "Invalid keybinds data: expected non-array object. Ignoring saved data.",
-        );
-      }
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
+    const parsed = this.userSettings.parsedUserKeybinds();
+    if (Object.keys(parsed).length === 0) {
+      this.userKeybinds = {};
+      return;
     }
+
+    const validated: Record<string, { value: string; key: string }> = {};
+
+    for (const [action, entry] of Object.entries(parsed)) {
+      if (typeof entry === "string") {
+        validated[action] = { value: entry, key: entry };
+      } else if (
+        typeof entry === "object" &&
+        entry !== null &&
+        !Array.isArray(entry)
+      ) {
+        const rawValue = (entry as any).value ?? "Null";
+        const value = Array.isArray(rawValue)
+          ? rawValue.find((v) => typeof v === "string")
+          : rawValue;
+
+        const rawKey = (entry as any).key ?? value;
+        const key = Array.isArray(rawKey)
+          ? rawKey.find((v) => typeof v === "string")
+          : rawKey;
+
+        if (typeof value === "string" && typeof key === "string") {
+          validated[action] = { value, key };
+        }
+      }
+    }
+
+    this.userKeybinds = validated;
   }
 
   private handleKeybindChange(
@@ -133,11 +117,9 @@ export class UserSettingModal extends BaseModal {
   ) {
     const { action, value, key, prevValue } = e.detail;
 
-    const activeKeybinds: Record<string, string> = { ...DefaultKeybinds };
-    for (const [k, v] of Object.entries(this.keybinds)) {
-      const normalizedValue = Array.isArray(v.value)
-        ? v.value[0] || ""
-        : v.value;
+    const activeKeybinds = { ...this.defaultKeybinds };
+    for (const [k, v] of Object.entries(this.userKeybinds)) {
+      const normalizedValue = v.value;
       if (normalizedValue === "Null") {
         delete activeKeybinds[k];
       } else {
@@ -189,32 +171,33 @@ export class UserSettingModal extends BaseModal {
         }),
       );
 
-      const element = this.renderRoot.querySelector(
+      const element = this.renderRoot.querySelector<SettingKeybind>(
         `setting-keybind[action="${action}"]`,
-      ) as SettingKeybind;
+      );
       if (element) {
-        element.value = prevValue ?? DefaultKeybinds[action] ?? "";
+        element.value = prevValue ?? this.defaultKeybinds[action] ?? "";
         element.requestUpdate();
       }
       return;
     }
 
-    this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
-    localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
+    this.userKeybinds = {
+      ...this.userKeybinds,
+      [action]: { value: value, key: key },
+    };
+    this.userSettings.setKeybinds(this.userKeybinds);
   }
 
   private getKeyValue(action: string): string | undefined {
-    const entry = this.keybinds[action];
+    const entry = this.userKeybinds[action];
     if (!entry) return undefined;
-    const normalizedValue = Array.isArray(entry.value)
-      ? entry.value[0] || ""
-      : entry.value;
+    const normalizedValue = entry.value;
     if (normalizedValue === "Null") return "";
     return normalizedValue || undefined;
   }
 
   private getKeyChar(action: string): string {
-    const entry = this.keybinds[action];
+    const entry = this.userKeybinds[action];
     if (!entry) return "";
     return entry.key || "";
   }
@@ -252,101 +235,77 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
-  toggleDarkMode(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
+  toggleDarkMode() {
+    this.userSettings.toggleDarkMode();
 
-    if (typeof enabled !== "boolean") {
-      console.warn("Unexpected toggle event payload", e);
-      return;
-    }
+    console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
+  }
 
-    this.userSettings.set("settings.darkMode", enabled);
+  private toggleEmojis() {
+    this.userSettings.toggleEmojis();
 
-    if (enabled) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    console.log("🤡 Emojis:", this.userSettings.emojis() ? "ON" : "OFF");
+  }
 
-    this.dispatchEvent(
-      new CustomEvent("dark-mode-changed", {
-        detail: { darkMode: enabled },
-        bubbles: true,
-        composed: true,
-      }),
+  private toggleAlertFrame() {
+    this.userSettings.toggleAlertFrame();
+
+    console.log(
+      "🚨 Alert frame:",
+      this.userSettings.alertFrame() ? "ON" : "OFF",
     );
-
-    console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
-  private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleFxLayer() {
+    this.userSettings.toggleFxLayer();
 
-    this.userSettings.set("settings.emojis", enabled);
-
-    console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
+    console.log(
+      "💥 Special effects:",
+      this.userSettings.fxLayer() ? "ON" : "OFF",
+    );
   }
 
-  private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleStructureSprites() {
+    this.userSettings.toggleStructureSprites();
 
-    this.userSettings.set("settings.alertFrame", enabled);
-
-    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
+    console.log(
+      "🏠 Structure sprites:",
+      this.userSettings.structureSprites() ? "ON" : "OFF",
+    );
   }
 
-  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleCursorCostLabel() {
+    this.userSettings.toggleCursorCostLabel();
 
-    this.userSettings.set("settings.specialEffects", enabled);
-
-    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+    console.log(
+      "💰 Cursor build cost:",
+      this.userSettings.cursorCostLabel() ? "ON" : "OFF",
+    );
   }
 
-  private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleAnonymousNames() {
+    this.userSettings.toggleRandomName();
 
-    this.userSettings.set("settings.structureSprites", enabled);
-
-    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
+    console.log(
+      "🙈 Anonymous Names:",
+      this.userSettings.anonymousNames() ? "ON" : "OFF",
+    );
   }
 
-  private toggleCursorCostLabel(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.cursorCostLabel", enabled);
-
-    console.log("💰 Cursor build cost:", enabled ? "ON" : "OFF");
+  private toggleLobbyIdVisibility() {
+    this.userSettings.toggleLobbyIdVisibility();
+    console.log(
+      "👁️ Hidden Lobby IDs:",
+      !this.userSettings.lobbyIdVisibility() ? "ON" : "OFF",
+    );
   }
 
-  private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.anonymousNames", enabled);
-
-    console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
-  }
-
-  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
-    const hideIds = e.detail?.checked;
-    if (typeof hideIds !== "boolean") return;
-
-    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
-    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
-  }
-
-  private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.leftClickOpensMenu", enabled);
-    console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
+  private toggleLeftClickOpensMenu() {
+    this.userSettings.toggleLeftClickOpenMenu();
+    console.log(
+      "🖱️ Left Click Opens Menu:",
+      this.userSettings.leftClickOpensMenu() ? "ON" : "OFF",
+    );
 
     this.requestUpdate();
   }
@@ -355,7 +314,7 @@ export class UserSettingModal extends BaseModal {
     const value = e.detail?.value;
     if (typeof value === "number") {
       const ratio = value / 100;
-      localStorage.setItem("settings.attackRatio", ratio.toString());
+      this.userSettings.setAttackRatio(ratio);
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -371,27 +330,21 @@ export class UserSettingModal extends BaseModal {
       console.warn("Select event missing detail.value", e);
       return;
     }
-    this.userSettings.setFloat(
-      "settings.attackRatioIncrement",
-      Math.round(value),
-    );
+    this.userSettings.setAttackRatioIncrement(Math.round(value));
     this.requestUpdate();
   }
 
-  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
 
-    this.userSettings.set("settings.territoryPatterns", enabled);
-
-    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+    console.log(
+      "🏳️ Territory Patterns:",
+      this.userSettings.territoryPatterns() ? "ON" : "OFF",
+    );
   }
 
-  private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.performanceOverlay", enabled);
+  private togglePerformanceOverlay() {
+    this.userSettings.togglePerformanceOverlay();
   }
 
   render() {
@@ -464,6 +417,26 @@ export class UserSettingModal extends BaseModal {
 
   private renderKeybindSettings() {
     return html`
+      <div
+        class="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300/70 text-xs"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-3.5 w-3.5 shrink-0 opacity-70"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        ${translateText("user_setting.keybinds_hint")}
+      </div>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"
       >
@@ -484,7 +457,7 @@ export class UserSettingModal extends BaseModal {
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
-        defaultKey=${DefaultKeybinds.coordinateGrid}
+        defaultKey=${this.defaultKeybinds.coordinateGrid}
         .value=${this.getKeyValue("coordinateGrid")}
         .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
@@ -616,7 +589,7 @@ export class UserSettingModal extends BaseModal {
         action="modifierKey"
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
-        .defaultKey=${DefaultKeybinds.modifierKey}
+        .defaultKey=${this.defaultKeybinds.modifierKey}
         .value=${this.getKeyValue("modifierKey")}
         .display=${this.getKeyChar("modifierKey")}
         @change=${this.handleKeybindChange}
@@ -626,7 +599,7 @@ export class UserSettingModal extends BaseModal {
         action="altKey"
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
-        .defaultKey=${DefaultKeybinds.altKey}
+        .defaultKey=${this.defaultKeybinds.altKey}
         .value=${this.getKeyValue("altKey")}
         .display=${this.getKeyChar("altKey")}
         @change=${this.handleKeybindChange}
@@ -636,7 +609,7 @@ export class UserSettingModal extends BaseModal {
         action="pauseGame"
         label=${translateText("user_setting.pause_game")}
         description=${translateText("user_setting.pause_game_desc")}
-        .defaultKey=${DefaultKeybinds.pauseGame}
+        .defaultKey=${this.defaultKeybinds.pauseGame}
         .value=${this.getKeyValue("pauseGame")}
         .display=${this.getKeyChar("pauseGame")}
         @change=${this.handleKeybindChange}
@@ -646,7 +619,7 @@ export class UserSettingModal extends BaseModal {
         action="gameSpeedUp"
         label=${translateText("user_setting.game_speed_up")}
         description=${translateText("user_setting.game_speed_up_desc")}
-        .defaultKey=${DefaultKeybinds.gameSpeedUp}
+        .defaultKey=${this.defaultKeybinds.gameSpeedUp}
         .value=${this.getKeyValue("gameSpeedUp")}
         .display=${this.getKeyChar("gameSpeedUp")}
         @change=${this.handleKeybindChange}
@@ -656,7 +629,7 @@ export class UserSettingModal extends BaseModal {
         action="gameSpeedDown"
         label=${translateText("user_setting.game_speed_down")}
         description=${translateText("user_setting.game_speed_down_desc")}
-        .defaultKey=${DefaultKeybinds.gameSpeedDown}
+        .defaultKey=${this.defaultKeybinds.gameSpeedDown}
         .value=${this.getKeyValue("gameSpeedDown")}
         .display=${this.getKeyChar("gameSpeedDown")}
         @change=${this.handleKeybindChange}
@@ -722,7 +695,7 @@ export class UserSettingModal extends BaseModal {
         action="swapDirection"
         label=${translateText("user_setting.swap_direction")}
         description=${translateText("user_setting.swap_direction_desc")}
-        .defaultKey=${DefaultKeybinds.swapDirection}
+        .defaultKey=${this.defaultKeybinds.swapDirection}
         .value=${this.getKeyValue("swapDirection")}
         .display=${this.getKeyChar("swapDirection")}
         @change=${this.handleKeybindChange}
@@ -820,8 +793,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.dark_mode_desc")}"
         id="dark-mode-toggle"
         .checked=${this.userSettings.darkMode()}
-        @change=${(e: CustomEvent<{ checked: boolean }>) =>
-          this.toggleDarkMode(e)}
+        @change=${this.toggleDarkMode}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
@@ -892,7 +864,7 @@ export class UserSettingModal extends BaseModal {
         label="${translateText("user_setting.lobby_id_visibility_label")}"
         description="${translateText("user_setting.lobby_id_visibility_desc")}"
         id="lobby-id-visibility-toggle"
-        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
 
@@ -920,8 +892,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
-        100}
+        .value=${this.userSettings.attackRatio() * 100}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 

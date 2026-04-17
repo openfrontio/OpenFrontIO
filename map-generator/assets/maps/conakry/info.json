@@ -1,0 +1,105 @@
+{
+  "name": "Conakry",
+  "nations": [
+    {
+      "coordinates": [510, 420],
+      "name": "Koba-Tatema",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [680, 150],
+      "name": "Kenende",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1170, 30],
+      "name": "Dubreka",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1280, 280],
+      "name": "Tamouta",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1320, 550],
+      "name": "Ratoma",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1350, 40],
+      "name": "Coyah",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1630, 160],
+      "name": "Maferenya",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1730, 460],
+      "name": "Kaback",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [2130, 80],
+      "name": "Forecariah",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [2280, 440],
+      "name": "Laya",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1200, 910],
+      "name": "Fotoba",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1333, 835],
+      "name": "Ilot Cabri",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [716, 260],
+      "name": "Bolonta",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [870, 370],
+      "name": "Kanka",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [940, 115],
+      "name": "Mangueya",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1975, 475],
+      "name": "Yelibane",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [1900, 115],
+      "name": "Dandaya",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [80, 480],
+      "name": "Marara",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [390, 210],
+      "name": "Boufou",
+      "flag": "gn"
+    },
+    {
+      "coordinates": [180, 130],
+      "name": "Dioumaya",
+      "flag": "gn"
+    }
+  ]
+}

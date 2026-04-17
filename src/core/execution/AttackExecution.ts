@@ -283,6 +283,9 @@ export class AttackExecution implements Execution {
       if (this.mg.owner(tileToConquer) !== this.target || !onBorder) {
         continue;
       }
+      if (!this.mg.isLand(tileToConquer)) {
+        continue;
+      }
       this.addNeighbors(tileToConquer);
       const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
         .config()

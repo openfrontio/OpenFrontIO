@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import {
   GhostStructureChangedEvent,
   ToggleStructureEvent,
@@ -34,7 +35,7 @@ const DEFAULT_BUILD_HOTKEYS: Record<string, string> = {
   buildCity: "Digit1",
   buildFactory: "Digit2",
   buildPort: "Digit3",
-  buildOilRig: "KeyR",
+  buildOilRig: "KeyO",
   buildDefensePost: "Digit4",
   buildMissileSilo: "Digit5",
   buildSamLauncher: "Digit6",
@@ -81,24 +82,9 @@ export class UnitDisplay extends LitElement implements Layer {
 
   init() {
     const config = this.game.config();
+    const userSettings = new UserSettings();
 
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
-    if (savedKeybinds) {
-      try {
-        const parsed = JSON.parse(savedKeybinds) as Record<string, unknown>;
-        this.keybinds = Object.fromEntries(
-          Object.entries(parsed)
-            .map(([key, entry]) => {
-              const value = this.getSavedKeybindValue(entry);
-              if (!value || value === "Null") return [key, undefined];
-              return [key, { value, key: formatKeyForDisplay(value) }];
-            })
-            .filter(([, entry]) => entry !== undefined),
-        ) as Record<string, { value: string; key: string }>;
-      } catch (e) {
-        console.warn("Invalid keybinds JSON:", e);
-      }
-    }
+    this.keybinds = userSettings.parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();

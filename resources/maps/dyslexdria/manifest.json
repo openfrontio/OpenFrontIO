@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 1344,
-    "num_land_tiles": 1895474,
+    "num_land_tiles": 1895783,
     "width": 3080
   },
   "map16x": {
     "height": 336,
-    "num_land_tiles": 108558,
+    "num_land_tiles": 108613,
     "width": 770
   },
   "map4x": {
     "height": 672,
-    "num_land_tiles": 459771,
+    "num_land_tiles": 459895,
     "width": 1540
   },
   "name": "Dyslexdria",
@@ -193,12 +193,12 @@
     },
     {
       "coordinates": [360, 70],
-      "flag": "aq",
+      "flag": "an_pe",
       "name": "Amtarctica"
     },
     {
       "coordinates": [100, 70],
-      "flag": "aq",
+      "flag": "sardines",
       "name": "Dophlin Confeteracy"
     },
     {
@@ -208,7 +208,7 @@
     },
     {
       "coordinates": [1950, 1305],
-      "flag": "aq",
+      "flag": "santa_claus",
       "name": "Nort Pole"
     },
     {
@@ -268,7 +268,7 @@
     },
     {
       "coordinates": [1480, 865],
-      "flag": "amazonas",
+      "flag": "Cthulhu Republic",
       "name": "Anazom Warehouse"
     },
     {
@@ -338,12 +338,12 @@
     },
     {
       "coordinates": [1515, 1313],
-      "flag": "aq",
+      "flag": "polar_bears",
       "name": "Bearguin Aliance"
     },
     {
       "coordinates": [3060, 100],
-      "flag": "aq",
+      "flag": "Republic of Pirates",
       "name": "Biosphere Conmune"
     }
   ]

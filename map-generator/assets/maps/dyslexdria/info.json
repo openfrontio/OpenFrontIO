@@ -178,12 +178,12 @@
     },
     {
       "coordinates": [360, 70],
-      "flag": "aq",
+      "flag": "an_pe",
       "name": "Amtarctica"
     },
     {
       "coordinates": [100, 70],
-      "flag": "aq",
+      "flag": "sardines",
       "name": "Dophlin Confeteracy"
     },
     {
@@ -193,7 +193,7 @@
     },
     {
       "coordinates": [1950, 1305],
-      "flag": "aq",
+      "flag": "santa_claus",
       "name": "Nort Pole"
     },
     {
@@ -253,7 +253,7 @@
     },
     {
       "coordinates": [1480, 865],
-      "flag": "amazonas",
+      "flag": "Cthulhu Republic",
       "name": "Anazom Warehouse"
     },
     {
@@ -323,12 +323,12 @@
     },
     {
       "coordinates": [1515, 1313],
-      "flag": "aq",
+      "flag": "polar_bears",
       "name": "Bearguin Aliance"
     },
     {
       "coordinates": [3060, 100],
-      "flag": "aq",
+      "flag": "Republic of Pirates",
       "name": "Biosphere Conmune"
     }
   ]
