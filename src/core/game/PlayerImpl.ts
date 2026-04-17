@@ -1378,10 +1378,13 @@ export class PlayerImpl implements Player {
     return attack;
   }
   outgoingAttacks(): Attack[] {
-    return this._outgoingAttacks;
+    return this._outgoingAttacks.filter((a) => {
+      const target = a.target();
+      return !target.isPlayer() || target.isAlive();
+    });
   }
   incomingAttacks(): Attack[] {
-    return this._incomingAttacks;
+    return this._incomingAttacks.filter((a) => a.attacker().isAlive());
   }
 
   public isImmune(): boolean {
