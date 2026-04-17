@@ -40,8 +40,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   BritanniaClassic: 4,
   DeglaciatedAntarctica: 4,
   EastAsia: 5,
-  Europe: 3,
-  EuropeClassic: 3,
+  Europe: 7,
   FalklandIslands: 4,
   FaroeIslands: 4,
   FourIslands: 4,
@@ -86,7 +85,13 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Aegean: 6,
   MilkyWay: 8,
   Mediterranean: 6,
-  Jamaica: 4,
+  Jamaica: 6,
+  Dyslexdria: 8,
+  GreatLakes: 6,
+  StraitOfMalacca: 4,
+  Luna: 6,
+  Conakry: 3,
+  Caucasus: 5,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -115,12 +120,13 @@ type ModifierKey =
   | "isPortsDisabled"
   | "isNukesDisabled"
   | "isSAMsDisabled"
-  | "isPeaceTime";
+  | "isPeaceTime"
+  | "isWaterNukes";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(2).fill("isRandomSpawn"),
-  ...Array<ModifierKey>(5).fill("isCompact"),
+  ...Array<ModifierKey>(4).fill("isCompact"),
   ...Array<ModifierKey>(2).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
   ...Array<ModifierKey>(3).fill("startingGold1M"),
@@ -132,7 +138,17 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
   ...Array<ModifierKey>(1).fill("isNukesDisabled"),
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
+  ...Array<ModifierKey>(3).fill("isWaterNukes"),
 ];
+
+// Maps where water nukes have a higher chance on top of the normal pool
+// Water nukes are especially fun here
+const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
+  GameMapType.FourIslands,
+  GameMapType.Baikal,
+  GameMapType.Alps,
+  GameMapType.TheBox,
+]);
 
 // Modifiers that cannot be active at the same time.
 const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
@@ -141,6 +157,7 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold25M", "startingGold1M"],
   ["isHardNations", "startingGold25M"],
   ["isNukesDisabled", "isSAMsDisabled"],
+  ["isNukesDisabled", "isWaterNukes"],
 ];
 
 export class MapPlaylist {
@@ -225,6 +242,12 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
+    // No extreme modifiers on FourIslands - Causes 3h long stalemates
+    if (map === GameMapType.FourIslands) {
+      excludedModifiers.push("goldMultiplier");
+      excludedModifiers.push("startingGold25M");
+    }
+
     // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
     if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
@@ -234,7 +257,19 @@ export class MapPlaylist {
       excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
     }
 
-    const poolResult = this.getRandomSpecialGameModifiers(excludedModifiers);
+    // Boost water nukes chance
+    // When boosted, water nukes is forced on and takes one modifier slot.
+    const boostWaterNukes =
+      WATER_NUKES_BOOSTED_MAPS.has(map) && Math.random() < 0.5;
+    if (boostWaterNukes) {
+      excludedModifiers.push("isWaterNukes", "isNukesDisabled");
+    }
+
+    const poolResult = this.getRandomSpecialGameModifiers(
+      excludedModifiers,
+      undefined,
+      boostWaterNukes ? 1 : 0,
+    );
     let {
       isCrowded,
       startingGold,
@@ -247,7 +282,11 @@ export class MapPlaylist {
       isNukesDisabled,
       isSAMsDisabled,
       isPeaceTime,
+      isWaterNukes,
     } = poolResult;
+    if (boostWaterNukes) {
+      isWaterNukes = true;
+    }
 
     // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
     // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
@@ -270,7 +309,8 @@ export class MapPlaylist {
           !isPortsDisabled &&
           !isNukesDisabled &&
           !isSAMsDisabled &&
-          !isPeaceTime
+          !isPeaceTime &&
+          !isWaterNukes
         ) {
           excludedModifiers.push("isCrowded");
           const fallback = this.getRandomSpecialGameModifiers(
@@ -287,6 +327,7 @@ export class MapPlaylist {
             isNukesDisabled,
             isSAMsDisabled,
             isPeaceTime,
+            isWaterNukes,
           } = fallback);
           ({ isHardNations } = fallback);
         }
@@ -324,7 +365,6 @@ export class MapPlaylist {
       disabledUnits.push(UnitType.SAMLauncher);
     }
 
-    // 3min peace = 180s = 1800 ticks
     // 4min peace = 240s = 2400 ticks
     const peaceTimeDuration = isPeaceTime ? 240 * 10 : undefined;
 
@@ -347,6 +387,7 @@ export class MapPlaylist {
         isNukesDisabled,
         isSAMsDisabled,
         isPeaceTime,
+        isWaterNukes,
       },
       startingGold,
       goldMultiplier,
@@ -368,6 +409,7 @@ export class MapPlaylist {
         peaceTimeDuration ??
         this.getSpawnImmunityDuration(playerTeams, startingGold),
       disabledUnits,
+      waterNukes: isWaterNukes ? true : undefined,
     } satisfies GameConfig;
   }
 
@@ -545,6 +587,7 @@ export class MapPlaylist {
       isNukesDisabled: selected.has("isNukesDisabled") || undefined,
       isSAMsDisabled: selected.has("isSAMsDisabled") || undefined,
       isPeaceTime: selected.has("isPeaceTime") || undefined,
+      isWaterNukes: selected.has("isWaterNukes") || undefined,
     };
   }
 

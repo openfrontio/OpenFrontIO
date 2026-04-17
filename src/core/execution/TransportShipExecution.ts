@@ -12,8 +12,8 @@ import {
 import { TileRef } from "../game/GameMap";
 import { MotionPlanRecord } from "../game/MotionPlans";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -27,7 +27,9 @@ export class TransportShipExecution implements Execution {
 
   private mg: Game;
   private target: Player | TerraNullius;
-  private pathFinder: SteppingPathFinder<TileRef>;
+  private pathFinder: WaterPathFinder;
+
+  private static _staggerCounter = 0;
 
   private dst: TileRef | null;
   private src: TileRef | null;
@@ -60,7 +62,9 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
     this.mg = mg;
     this.target = mg.owner(this.ref);
-    this.pathFinder = PathFinding.Water(mg);
+    const stagger =
+      TransportShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    this.pathFinder = new WaterPathFinder(mg, stagger);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -184,6 +188,21 @@ export class TransportShipExecution implements Execution {
     ) {
       this.attacker = boatOwner;
       this.originalOwner = boatOwner; // for when this owner disconnects too
+    }
+
+    if (this.pathFinder.rebuilt) {
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
+
+    // Auto-retreat if destination was destroyed by nuke (turned to water)
+    // Checked every tick (not just on graph rebuild) because graph rebuilds
+    // are throttled and the tile may already be water before the version bumps.
+    if (this.dst !== null && this.mg.isWater(this.dst)) {
+      if (!this.boat.retreating()) {
+        this.boat.orderBoatRetreat();
+      }
+      // Reset cached retreat destination so it's recomputed from current position
+      this.retreatDst = null;
     }
 
     if (this.boat.retreating()) {

@@ -6,7 +6,6 @@ import {
   pattern,
   resolveConfusablesTransformer,
   resolveLeetSpeakTransformer,
-  skipNonAlphabeticTransformer,
   toAsciiLowerCaseTransformer,
 } from "obscenity";
 import countries from "resources/countries.json";
@@ -47,31 +46,52 @@ export const shadowNames = [
   "AlmostPottyTrained",
 ];
 
-export function createMatcher(bannedWords: string[]): RegExpMatcher {
-  const customDataset = new DataSet<{ originalWord: string }>().addAll(
+function buildDataset(bannedWords: string[], dedup: boolean) {
+  const dataset = new DataSet<{ originalWord: string }>().addAll(
     englishDataset,
   );
-
   for (const word of bannedWords) {
     try {
-      customDataset.addPhrase((phrase) =>
-        phrase.setMetadata({ originalWord: word }).addPattern(pattern`${word}`),
+      const w = dedup ? word.toLowerCase().replace(/(.)\1+/g, "$1") : word;
+      dataset.addPhrase((phrase) =>
+        phrase.setMetadata({ originalWord: word }).addPattern(pattern`${w}`),
       );
     } catch (e) {
       console.error(`Invalid banned word pattern "${word}": ${e}`);
     }
   }
+  return dataset.build();
+}
 
-  return new RegExpMatcher({
-    ...customDataset.build(),
+export function createMatcher(bannedWords: string[]): RegExpMatcher {
+  const baseTransformers = [
+    toAsciiLowerCaseTransformer(),
+    resolveConfusablesTransformer(),
+    resolveLeetSpeakTransformer(),
+  ];
+  // substringMatcher: literal patterns, no collapse — catches "niggertesting" as a substring
+  // collapseMatcher: deduped patterns + collapse transformer — catches "niiiigger", "hiiitler"
+  const substringMatcher = new RegExpMatcher({
+    ...buildDataset(bannedWords, false),
+    blacklistMatcherTransformers: baseTransformers,
+  });
+  const collapseMatcher = new RegExpMatcher({
+    ...buildDataset(bannedWords, true),
     blacklistMatcherTransformers: [
-      toAsciiLowerCaseTransformer(),
-      resolveConfusablesTransformer(),
-      resolveLeetSpeakTransformer(),
+      ...baseTransformers,
       collapseDuplicatesTransformer(),
-      skipNonAlphabeticTransformer(),
     ],
   });
+  return {
+    hasMatch: (input: string) =>
+      input.toLowerCase().includes("kkk") ||
+      substringMatcher.hasMatch(input) ||
+      collapseMatcher.hasMatch(input),
+    getAllMatches: (input: string, sorted?: boolean) => [
+      ...substringMatcher.getAllMatches(input, sorted),
+      ...collapseMatcher.getAllMatches(input, sorted),
+    ],
+  } as unknown as RegExpMatcher;
 }
 
 /**
@@ -100,7 +120,9 @@ function censorWithMatcher(
     ? shadowNames[simpleHash(username) % shadowNames.length]
     : username;
 
-  const clanTagIsProfane = clanTag ? matcher.hasMatch(clanTag) : false;
+  const clanTagIsProfane = clanTag
+    ? matcher.hasMatch(clanTag) || clanTag.toLowerCase() === "ss"
+    : false;
   const censoredClanTag =
     clanTag && !clanTagIsProfane ? clanTag.toUpperCase() : null;
 
@@ -242,8 +264,11 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
   }
 }
 
-// Default matcher with no custom banned words (just englishDataset)
-const defaultMatcher = createMatcher([]);
+// Words the englishDataset misses or only catches as standalone tokens.
+// These are always enforced even when the remote banned-words list is unavailable.
+const baselineBannedWords = ["nigger", "nigga", "chink", "spic", "kike"];
+
+const defaultMatcher = createMatcher(baselineBannedWords);
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {

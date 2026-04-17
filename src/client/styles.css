@@ -5,7 +5,7 @@
 
 @theme {
   --default-ring-width: 3px;
-  --default-ring-color: var(--color-blue-500);
+  --default-ring-color: var(text-[#0073b7]);
 }
 
 @layer base {
@@ -113,7 +113,7 @@ body {
   padding: 15px 20px;
   font-size: 16px;
   cursor: pointer;
-  background-color: #007bff;
+  background-color: #0073b7;
   color: white;
   border: none;
   border-radius: 8px;
@@ -123,7 +123,7 @@ body {
 }
 
 .start-game-button:not(:disabled):hover {
-  background-color: #0056b3;
+  background-color: #0073b7;
 }
 
 .start-game-button:disabled {
@@ -580,7 +580,7 @@ label.option-card:hover {
 /* News Button Notification */
 news-button .active button {
   position: relative;
-  border-color: #2563eb !important;
+  border-color: #0073b7 !important;
   border-width: 2px !important;
   box-shadow:
     0 0 0 1px rgba(37, 99, 235, 0.5),

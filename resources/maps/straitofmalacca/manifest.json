@@ -1,0 +1,65 @@
+{
+  "map": {
+    "height": 1644,
+    "num_land_tiles": 867389,
+    "width": 1832
+  },
+  "map16x": {
+    "height": 411,
+    "num_land_tiles": 51062,
+    "width": 458
+  },
+  "map4x": {
+    "height": 822,
+    "num_land_tiles": 212395,
+    "width": 916
+  },
+  "name": "straitofmalacca",
+  "nations": [
+    {
+      "coordinates": [1268, 730],
+      "flag": "sg",
+      "name": "Singapore"
+    },
+    {
+      "coordinates": [862, 41],
+      "flag": "th",
+      "name": "Thailand"
+    },
+    {
+      "coordinates": [1328, 1284],
+      "flag": "id",
+      "name": "Sumatra"
+    },
+    {
+      "coordinates": [1141, 1090],
+      "flag": "mm",
+      "name": "Burmese Pythons"
+    },
+    {
+      "coordinates": [210, 243],
+      "flag": "id",
+      "name": "Aceh"
+    },
+    {
+      "coordinates": [1011, 736],
+      "flag": "id",
+      "name": "Riau"
+    },
+    {
+      "coordinates": [600, 565],
+      "flag": "id",
+      "name": "Samosir"
+    },
+    {
+      "coordinates": [827, 999],
+      "flag": "id",
+      "name": "Barisan"
+    },
+    {
+      "coordinates": [1053, 333],
+      "flag": "my",
+      "name": "Malaysia"
+    }
+  ]
+}

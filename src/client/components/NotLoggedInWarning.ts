@@ -34,7 +34,7 @@ export class NotLoggedInWarning extends LitElement {
   render() {
     if (this.linked) return html``;
 
-    return html`<div class="flex items-center">
+    return html`<div class="no-crazygames flex items-center">
       <button
         class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 cursor-pointer hover:bg-red-500/30"
         data-i18n="common.not_logged_in"

@@ -63,10 +63,60 @@ export class NukeExecution implements Execution {
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
-    this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
-      const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-      return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
-    });
+
+    if (this.mg.config().waterNukes()) {
+      // Smooth irregular boundary for water nukes.
+      // Generate random radii at angular samples, then smooth them so the
+      // boundary undulates gently instead of creating spiky flower shapes.
+      // This avoids scattered land pixels that players would have to boat
+      // to individually in order to reclaim.
+      const NUM_SAMPLES = 16;
+      const radiiSq: number[] = new Array(NUM_SAMPLES);
+      for (let i = 0; i < NUM_SAMPLES; i++) {
+        radiiSq[i] = rand.nextFloat(inner2, outer2);
+      }
+      // Smooth the ring: 1 light pass (60% original, 20% each neighbour)
+      const prev = [...radiiSq];
+      for (let i = 0; i < NUM_SAMPLES; i++) {
+        const l = (i - 1 + NUM_SAMPLES) % NUM_SAMPLES;
+        const r = (i + 1) % NUM_SAMPLES;
+        radiiSq[i] = prev[i] * 0.6 + prev[l] * 0.2 + prev[r] * 0.2;
+      }
+
+      const cx = this.mg.x(this.dst);
+      const cy = this.mg.y(this.dst);
+      const outer = magnitude.outer;
+
+      const result = new Set<TileRef>();
+      const x0 = Math.max(0, cx - outer);
+      const y0 = Math.max(0, cy - outer);
+      const x1 = Math.min(this.mg.width() - 1, cx + outer);
+      const y1 = Math.min(this.mg.height() - 1, cy + outer);
+      for (let py = y0; py <= y1; py++) {
+        for (let px = x0; px <= x1; px++) {
+          const dx = px - cx;
+          const dy = py - cy;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > outer2) continue;
+          if (d2 > inner2) {
+            const angle = Math.atan2(dy, dx) + Math.PI; // [0, 2π]
+            const t = (angle / (2 * Math.PI)) * NUM_SAMPLES;
+            const i0 = Math.floor(t) % NUM_SAMPLES;
+            const i1 = (i0 + 1) % NUM_SAMPLES;
+            const frac = t - Math.floor(t);
+            const threshold = radiiSq[i0] * (1 - frac) + radiiSq[i1] * frac;
+            if (d2 > threshold) continue;
+          }
+          result.add(this.mg.ref(px, py));
+        }
+      }
+      this.tilesToDestroyCache = result;
+    } else {
+      this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
+        const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
+        return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
+      });
+    }
     return this.tilesToDestroyCache;
   }
 
@@ -266,8 +316,9 @@ export class NukeExecution implements Execution {
         tilesPerPlayers.set(owner, (tilesPerPlayers.get(owner) ?? 0) + 1);
       }
 
+      // Queue land tiles for batched water conversion
       if (mg.isLand(tile)) {
-        mg.setFallout(tile, true);
+        mg.queueWaterConversion(tile);
       }
     }
 

@@ -81,6 +81,12 @@ export const UserMeResponseSchema = z.object({
           .optional(),
       })
       .optional(),
+    currency: z
+      .object({
+        soft: z.coerce.number(),
+        hard: z.coerce.number(),
+      })
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
@@ -191,3 +197,13 @@ export const RankedLeaderboardResponseSchema = z.object({
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
 >;
+
+export const NewsItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  descriptionTranslationKey: z.string().optional(),
+  url: z.string().nullable().optional(),
+  type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
+});
+export type NewsItem = z.infer<typeof NewsItemSchema>;
