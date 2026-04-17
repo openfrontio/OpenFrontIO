@@ -248,11 +248,12 @@ export class WarshipExecution implements Execution {
     }
 
     while (expandCount < 3) {
-      const halfRange = Math.floor(warshipPatrolRange / 2);
       const x =
-        this.mg.x(patrolTile) + this.random.nextInt(-halfRange, halfRange);
+        this.mg.x(patrolTile) +
+        this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       const y =
-        this.mg.y(patrolTile) + this.random.nextInt(-halfRange, halfRange);
+        this.mg.y(patrolTile) +
+        this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
