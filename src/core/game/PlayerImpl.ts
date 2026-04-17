@@ -1378,10 +1378,7 @@ export class PlayerImpl implements Player {
     return attack;
   }
   outgoingAttacks(): Attack[] {
-    return this._outgoingAttacks.filter((a) => {
-      const target = a.target();
-      return !target.isPlayer() || target.isAlive();
-    });
+    return this._outgoingAttacks;
   }
   incomingAttacks(): Attack[] {
     return this._incomingAttacks.filter((a) => a.attacker().isAlive());
