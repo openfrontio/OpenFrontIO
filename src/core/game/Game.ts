@@ -151,7 +151,7 @@ export enum GameMapType {
   Luna = "Luna",
   Conakry = "Conakry",
   Caucasus = "Caucasus",
-  BeringSea = "BeringSea",
+  BeringSea = "Bering Sea",
 }
 
 export type GameMapName = keyof typeof GameMapType;
