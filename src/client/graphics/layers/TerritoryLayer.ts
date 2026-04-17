@@ -417,18 +417,17 @@ export class TerritoryLayer implements Layer {
     newPlayer: PlayerView | null,
   ) {
     const data = this.imageData.data;
-    const oldID = oldPlayer?.id();
-    const newID = newPlayer?.id();
+    const oldSmallID = oldPlayer?.smallID() ?? -1;
+    const newSmallID = newPlayer?.smallID() ?? -1;
     this.game.forEachTile((tile) => {
       const offset = tile * 4;
       const alpha = data[offset + 3];
       // Only update non-border territory fill tiles (alpha 150 or 230)
       if (alpha !== 150 && alpha !== 230) return;
-      if (!this.game.hasOwner(tile)) return;
-      const ownerID = (this.game.owner(tile) as PlayerView).id();
-      if (newID !== undefined && ownerID === newID) {
+      const tileOwner = this.game.ownerID(tile);
+      if (tileOwner === newSmallID) {
         data[offset + 3] = 230;
-      } else if (alpha === 230 && oldID !== undefined && ownerID === oldID) {
+      } else if (alpha === 230 && tileOwner === oldSmallID) {
         data[offset + 3] = 150;
       }
     });
@@ -616,7 +615,7 @@ export class TerritoryLayer implements Layer {
     const owner = this.game.owner(tile) as PlayerView;
     const isHighlighted =
       this.highlightedTerritory &&
-      this.highlightedTerritory.id() === owner.id();
+      this.highlightedTerritory.smallID() === owner.smallID();
     const myPlayer = this.game.myPlayer();
 
     if (this.game.isBorder(tile)) {
