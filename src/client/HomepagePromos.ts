@@ -1,10 +1,5 @@
-import { LitElement, css, html, nothing } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-
-export const FOOTER_AD_MIN_HEIGHT = 880;
-
-const FOOTER_AD_TYPE = "standard_iab_head2";
-const FOOTER_AD_CONTAINER_ID = "home-footer-ad-container";
 
 // ─── Gutter Ads ──────────────────────────────────────────────────────────────
 
@@ -13,12 +8,6 @@ export class HomepagePromos extends LitElement {
   @state() private isVisible: boolean = false;
   @state() private adLoaded: boolean = false;
   private cornerAdLoaded: boolean = false;
-  @state() private hasFooterAd: boolean = false;
-
-  private onResize = () => {
-    const isDesktop = window.innerWidth >= 640;
-    this.hasFooterAd = isDesktop && window.innerHeight >= FOOTER_AD_MIN_HEIGHT;
-  };
 
   private onUserMeResponse = () => {
     if (window.adsEnabled) {
@@ -30,6 +19,16 @@ export class HomepagePromos extends LitElement {
     }
   };
 
+  private onJoinLobby = () => {
+    this.loadBottomRail();
+  };
+
+  private onLeaveLobby = () => {
+    this.destroyBottomRail();
+  };
+
+  private bottomRailActive: boolean = false;
+
   private leftAdType: string = "standard_iab_left2";
   private rightAdType: string = "standard_iab_rght1";
   private leftContainerId: string = "gutter-ad-container-left";
@@ -39,19 +38,18 @@ export class HomepagePromos extends LitElement {
     return this;
   }
 
-  static styles = css``;
-
   connectedCallback() {
     super.connectedCallback();
-    this.onResize();
-    window.addEventListener("resize", this.onResize);
     document.addEventListener("userMeResponse", this.onUserMeResponse);
+    document.addEventListener("join-lobby", this.onJoinLobby);
+    document.addEventListener("leave-lobby", this.onLeaveLobby);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("resize", this.onResize);
     document.removeEventListener("userMeResponse", this.onUserMeResponse);
+    document.removeEventListener("join-lobby", this.onJoinLobby);
+    document.removeEventListener("leave-lobby", this.onLeaveLobby);
   }
 
   public show(): void {
@@ -63,13 +61,52 @@ export class HomepagePromos extends LitElement {
   }
 
   public close(): void {
+    this.isVisible = false;
+    this.adLoaded = false;
     try {
-      // Keep corner video ad alive.
+      // Only destroy gutter ads; bottom_rail persists into spawn phase.
       window.ramp.destroyUnits(this.leftAdType);
       window.ramp.destroyUnits(this.rightAdType);
       console.log("successfully destroyed gutter ads");
     } catch (e) {
       console.error("error destroying gutter ads", e);
+    }
+  }
+
+  public loadBottomRail(): void {
+    if (!window.adsEnabled) return;
+    if (this.bottomRailActive) return;
+    if (!window.ramp) {
+      console.warn("Playwire RAMP not available for bottom_rail ad");
+      return;
+    }
+
+    this.bottomRailActive = true;
+    try {
+      window.ramp.que.push(() => {
+        try {
+          window.ramp.spaAddAds([{ type: "bottom_rail" }]);
+          console.log("Bottom rail ad loaded");
+        } catch (e) {
+          console.error("Failed to add bottom_rail ad:", e);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to load bottom_rail ad:", error);
+    }
+  }
+
+  public destroyBottomRail(): void {
+    if (!this.bottomRailActive) return;
+    this.bottomRailActive = false;
+
+    if (!window.ramp) return;
+
+    try {
+      window.ramp.destroyUnits("pw-oop-bottom_rail");
+      console.log("Bottom rail ad destroyed");
+    } catch (e) {
+      console.error("Error destroying bottom_rail ad:", e);
     }
   }
 
@@ -149,10 +186,7 @@ export class HomepagePromos extends LitElement {
       <!-- Left Gutter Ad -->
       <div
         class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center xl:[--half-content:10.5cm] 2xl:[--half-content:12.5cm]"
-        style="left: calc(50% - var(--half-content) - 208px); top: calc(50% + 10px${this
-          .hasFooterAd
-          ? " - 1.2cm"
-          : ""});"
+        style="left: calc(50% - var(--half-content) - 208px); top: calc(50% + 10px);"
       >
         <div
           id="${this.leftContainerId}"
@@ -163,97 +197,13 @@ export class HomepagePromos extends LitElement {
       <!-- Right Gutter Ad -->
       <div
         class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-40 pointer-events-auto items-center justify-center xl:[--half-content:10.5cm] 2xl:[--half-content:12.5cm]"
-        style="left: calc(50% + var(--half-content) + 48px); top: calc(50% + 10px${this
-          .hasFooterAd
-          ? " - 1.2cm"
-          : ""});"
+        style="left: calc(50% + var(--half-content) + 48px); top: calc(50% + 10px);"
       >
         <div
           id="${this.rightContainerId}"
           class="w-full h-full flex items-center justify-center p-2"
         ></div>
       </div>
-    `;
-  }
-}
-
-// ─── Footer Ad ───────────────────────────────────────────────────────────────
-
-@customElement("home-footer-ad")
-export class HomeFooterAd extends LitElement {
-  @state() private shouldShow: boolean = false;
-
-  createRenderRoot() {
-    return this;
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    this.style.display = "contents";
-    document.addEventListener("userMeResponse", this.onUserMeResponse);
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    document.removeEventListener("userMeResponse", this.onUserMeResponse);
-    this.destroyAd();
-  }
-
-  private onUserMeResponse = () => {
-    const isDesktop = window.innerWidth >= 640;
-    if (
-      !window.adsEnabled ||
-      (isDesktop && window.innerHeight < FOOTER_AD_MIN_HEIGHT)
-    ) {
-      return;
-    }
-    this.shouldShow = true;
-    this.updateComplete.then(() => {
-      this.loadAd();
-    });
-  };
-
-  private loadAd(): void {
-    if (!window.ramp) {
-      console.warn("Playwire RAMP not available for footer ad");
-      return;
-    }
-    try {
-      window.ramp.que.push(() => {
-        try {
-          window.ramp.spaAddAds([
-            { type: FOOTER_AD_TYPE, selectorId: FOOTER_AD_CONTAINER_ID },
-          ]);
-          console.log("Footer ad loaded:", FOOTER_AD_TYPE);
-        } catch (e) {
-          console.error("Failed to add footer ad:", e);
-        }
-      });
-    } catch (error) {
-      console.error("Failed to load footer ad:", error);
-    }
-  }
-
-  private destroyAd(): void {
-    try {
-      window.ramp.destroyUnits(FOOTER_AD_TYPE);
-      console.log("successfully destroyed footer ad");
-    } catch (e) {
-      console.error("error destroying footer ad", e);
-    }
-  }
-
-  render() {
-    if (!this.shouldShow) {
-      return nothing;
-    }
-
-    return html`
-      <div
-        id="${FOOTER_AD_CONTAINER_ID}"
-        class="flex justify-center items-center w-full pointer-events-auto [&_*]:!m-0 [&_*]:!p-0"
-        style="margin: 0; padding: 0; line-height: 0;"
-      ></div>
     `;
   }
 }

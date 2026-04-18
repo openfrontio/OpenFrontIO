@@ -314,6 +314,11 @@ export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";
 
+  // Handle Shift+ prefix: format as "Shift+X"
+  if (value.startsWith("Shift+")) {
+    return "Shift+" + formatKeyForDisplay(value.slice(6));
+  }
+
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";
 

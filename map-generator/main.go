@@ -91,6 +91,7 @@ var maps = []struct {
   {Name: "luna"},
   {Name: "conakry"},
   {Name: "caucasus"},
+  {Name: "beringsea"},
   {Name: "antarctica"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},

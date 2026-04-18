@@ -185,7 +185,8 @@
     "exit_confirmation": "Are you sure you want to exit the game?",
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
-    "icon_alt_team_leaderboard": "Team Leaderboard Icon"
+    "icon_alt_team_leaderboard": "Team Leaderboard Icon",
+    "game_id_tooltip": "Game ID"
   },
   "single_modal": {
     "random_spawn": "Random spawn",
@@ -361,6 +362,7 @@
     "luna": "Luna",
     "conakry": "Conakry",
     "caucasus": "Caucasus",
+    "beringsea": "Bering Sea"
     "antarctica": "Antarctica"
   },
   "map_categories": {
@@ -546,6 +548,7 @@
     "title": "Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
+    "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "Emojis",
@@ -1069,7 +1072,9 @@
     "tournament": "TOURNAMENT",
     "tutorial": "TUTORIAL",
     "news": "NEWS",
+    "warning": "WARNING",
     "dismiss": "Dismiss",
-    "go_to_item": "Go to item {num}"
+    "go_to_item": "Go to item {num}",
+    "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
   }
 }
