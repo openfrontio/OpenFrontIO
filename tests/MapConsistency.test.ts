@@ -137,12 +137,7 @@ describe("Map consistency", () => {
       const expected = ["image.png", "info.json"];
       const allowedFiles =
         key === "WorldOil"
-          ? [
-              ...expected,
-              "OIL_EDITING.md",
-              "apply_oil_reference.py",
-              "oil_reference.png",
-            ].sort()
+          ? [...expected, "apply_oil_reference.py", "oil_reference.png"].sort()
           : expected;
       if (
         files.length !== allowedFiles.length ||
