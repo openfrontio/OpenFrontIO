@@ -311,8 +311,13 @@ export class JoinLobbyModal extends BaseModal {
     this.notificationDeniedHint = "";
 
     // Show notification prompt whenever notifications are not enabled and not permanently dismissed
-    const dismissed =
-      localStorage.getItem("settings.notificationPromptDismissed") === "true";
+    let dismissed = false;
+    try {
+      dismissed =
+        localStorage.getItem("settings.notificationPromptDismissed") === "true";
+    } catch {
+      // localStorage unavailable (e.g. SecurityError in private mode) — treat as not dismissed
+    }
     if (
       !dismissed &&
       !this.userSettings.browserNotifications() &&
