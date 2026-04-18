@@ -185,7 +185,8 @@
     "exit_confirmation": "Are you sure you want to exit the game?",
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
-    "icon_alt_team_leaderboard": "Team Leaderboard Icon"
+    "icon_alt_team_leaderboard": "Team Leaderboard Icon",
+    "game_id_tooltip": "Game ID"
   },
   "single_modal": {
     "random_spawn": "Random spawn",
