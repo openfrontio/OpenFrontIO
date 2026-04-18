@@ -72,8 +72,8 @@ export class GameList extends LitElement {
                     >
                       ${translateText("game_list.mode")}:
                       ${game.mode === GameMode.FFA
-                        ? translateText("game_list.mode_ffa")
-                        : html`${translateText("game_list.mode_team")}`}
+                        ? translateText("game_mode.ffa")
+                        : html`${translateText("game_mode.teams")}`}
                     </div>
                   </div>
                 </div>

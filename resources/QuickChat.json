@@ -237,6 +237,10 @@
     {
       "key": "stop_trading",
       "requiresPlayer": true
+    },
+    {
+      "key": "stop_trading_all",
+      "requiresPlayer": false
     }
   ]
 }

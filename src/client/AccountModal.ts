@@ -5,7 +5,8 @@ import {
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { assetUrl } from "../core/AssetUrls";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -14,8 +15,8 @@ import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
@@ -61,22 +62,22 @@ export class AccountModal extends BaseModal {
 
   render() {
     const content = this.isLoadingUser
-      ? html`
-          <div
-            class="flex flex-col items-center justify-center p-12 text-white bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 h-full min-h-[400px]"
-          >
-            <div
-              class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"
-            ></div>
-            <p class="text-white/60 font-medium tracking-wide animate-pulse">
-              ${translateText("account_modal.fetching_account")}
-            </p>
-          </div>
-        `
+      ? this.renderLoadingSpinner(
+          translateText("account_modal.fetching_account"),
+        )
       : this.renderInner();
 
     if (this.inline) {
-      return content;
+      return this.isLoadingUser
+        ? html`<div class="${this.modalContainerClass}">
+            ${modalHeader({
+              title: translateText("account_modal.title"),
+              onBack: () => this.close(),
+              ariaLabel: translateText("common.back"),
+            })}
+            ${content}
+          </div>`
+        : content;
     }
 
     return html`
@@ -99,9 +100,7 @@ export class AccountModal extends BaseModal {
     const displayId = publicId || translateText("account_modal.not_found");
 
     return html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title,
           onBack: () => this.close(),
@@ -193,12 +192,24 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  private renderCurrency(): TemplateResult {
+    const currency = this.userMeResponse?.player?.currency;
+    if (!currency) return html``;
+
+    return html`
+      <currency-display
+        .hard=${currency.hard}
+        .soft=${currency.soft}
+      ></currency-display>
+    `;
+  }
+
   private renderLoggedInAs(): TemplateResult {
     const me = this.userMeResponse?.user;
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
-          ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     } else if (me?.email) {
@@ -209,7 +220,7 @@ export class AccountModal extends BaseModal {
               account_name: me.email,
             })}
           </div>
-          ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     }
@@ -218,7 +229,7 @@ export class AccountModal extends BaseModal {
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const encodedGameId = encodeURIComponent(gameId);
     const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
 
@@ -267,6 +278,7 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
+            ${this.renderCurrency()}
           </div>
 
           <div class="space-y-6">
@@ -276,7 +288,7 @@ export class AccountModal extends BaseModal {
               class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
             >
               <img
-                src="/images/DiscordLogo.svg"
+                src=${assetUrl("images/DiscordLogo.svg")}
                 alt="Discord"
                 class="w-6 h-6 relative z-10"
               />

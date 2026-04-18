@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -31,12 +32,12 @@ export class LanguageModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="${this.modalContainerClass}"
       >
         <!-- Header -->
         ${modalHeader({
           title: translateText("select_lang.title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 
@@ -69,8 +70,8 @@ export class LanguageModal extends BaseModal {
                   @click=${() => this.selectLanguage(lang.code)}
                 >
                   <img
-                    src="/flags/${lang.svg}.svg"
-                    class="w-8 h-6 object-contain shadow-sm rounded-sm shrink-0"
+                    src=${assetUrl(`flags/${lang.svg}.svg`)}
+                    class="w-8 h-6 object-contain rounded-sm shrink-0"
                     alt="${lang.code}"
                   />
                   <div class="flex flex-col items-start min-w-0">

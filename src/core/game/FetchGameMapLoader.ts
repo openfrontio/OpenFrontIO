@@ -5,8 +5,7 @@ export class FetchGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
 
   public constructor(
-    private readonly prefix: string,
-    private readonly cacheBuster?: string,
+    private readonly pathResolver: string | ((path: string) => string),
   ) {
     this.maps = new Map<GameMapType, MapData>();
   }
@@ -31,23 +30,22 @@ export class FetchGameMapLoader implements GameMapLoader {
       map4xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map4x.bin")),
       map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
       manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
-      webpPath: async () => this.url(fileName, "thumbnail.webp"),
+      webpPath: this.url(fileName, "thumbnail.webp"),
     } satisfies MapData;
 
     this.maps.set(map, mapData);
     return mapData;
   }
 
-  private url(map: string, path: string) {
-    let url = `${this.prefix}/${map}/${path}`;
-
-    if (this.cacheBuster) {
-      url += `${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(
-        this.cacheBuster.trim(),
-      )}`;
+  private resolveUrl(path: string): string {
+    if (typeof this.pathResolver === "function") {
+      return this.pathResolver(path);
     }
+    return `${this.pathResolver}/${path}`;
+  }
 
-    return url;
+  private url(map: string, path: string) {
+    return this.resolveUrl(`${map}/${path}`);
   }
 
   private async loadBinaryFromUrl(url: string) {

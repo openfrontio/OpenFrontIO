@@ -74,7 +74,7 @@ export class NationWarshipBehavior {
       }
       const tile = this.game.ref(randX, randY);
       // Sanity check
-      if (!this.game.isOcean(tile)) {
+      if (!this.game.isWater(tile)) {
         continue;
       }
       return tile;
@@ -136,6 +136,11 @@ export class NationWarshipBehavior {
     enemy: Player,
     reason: "trade" | "transport",
   ): void {
+    // Don't retaliate against ourselves (e.g. own nuke destroyed own ship)
+    if (enemy === this.player) {
+      return;
+    }
+
     // Don't send too many warships
     if (this.player.units(UnitType.Warship).length >= 10) {
       return;

@@ -1,18 +1,18 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/ConfigLoader";
+import { getGameLogicConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
-  Attack,
-  Cell,
+  BuildableUnit,
   Game,
   GameUpdates,
   NameViewData,
   Player,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -22,11 +22,7 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-} from "./game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -35,11 +31,11 @@ import { simpleHash } from "./Util";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
-  clientID: ClientID,
+  clientID: ClientID | undefined,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameStart.config, null);
+  const config = await getGameLogicConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
@@ -54,6 +50,7 @@ export async function createGameRunner(
       p.clientID,
       random.nextID(),
       p.isLobbyCreator ?? false,
+      p.clanTag,
     );
   });
 
@@ -70,6 +67,7 @@ export async function createGameRunner(
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    gameMap.teamGameSpawnAreas,
   );
 
   const gr = new GameRunner(
@@ -100,7 +98,7 @@ export class GameRunner {
     }
     if (this.game.config().bots() > 0) {
       this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
+        ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
     if (this.game.config().spawnNations()) {
@@ -172,13 +170,13 @@ export class GameRunner {
       });
     }
 
-    // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
-    updates[GameUpdateType.Tile] = [];
+    const packedTileUpdates = this.game.drainPackedTileUpdates();
+    const packedMotionPlans = this.game.drainPackedMotionPlans();
 
     this.callBack({
       tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
+      packedTileUpdates,
+      ...(packedMotionPlans ? { packedMotionPlans } : {}),
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,
@@ -192,18 +190,30 @@ export class GameRunner {
     return Math.max(0, this.turns.length - this.currTurn);
   }
 
+  public playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[] {
+    const player = this.game.player(playerID);
+    const tile =
+      x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
+    return player.buildableUnits(tile, units);
+  }
+
   public playerActions(
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
-      canAttack: tile !== null && units === undefined && player.canAttack(tile),
-      buildableUnits: player.buildableUnits(tile, units),
+      canAttack: tile !== null && player.canAttack(tile),
+      buildableUnits: units === null ? [] : player.buildableUnits(tile, units),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
       canEmbargoAll: player.canEmbargoAll(),
     } as PlayerActions;
@@ -219,11 +229,8 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        allianceInfo: player.allianceInfo(other) ?? undefined,
       };
-      const alliance = player.allianceWith(other as Player);
-      if (alliance) {
-        actions.interaction.allianceExpiresAt = alliance.expiresAt();
-      }
     }
 
     return actions;
@@ -246,24 +253,23 @@ export class GameRunner {
     } as PlayerBorderTiles;
   }
 
-  public attackAveragePosition(
+  public attackClusteredPositions(
     playerID: number,
-    attackID: string,
-  ): Cell | null {
+    attackID?: string,
+  ): { id: string; positions: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
-    if (!player.isPlayer()) {
+    if (!player.isPlayer())
       throw new Error(`player with id ${playerID} not found`);
-    }
+    const all = [...player.outgoingAttacks(), ...player.incomingAttacks()];
+    const attacks = attackID ? all.filter((a) => a.id() === attackID) : all;
 
-    const condition = (a: Attack) => a.id() === attackID;
-    const attack =
-      player.outgoingAttacks().find(condition) ??
-      player.incomingAttacks().find(condition);
-    if (attack === undefined) {
-      return null;
-    }
-
-    return attack.averagePosition();
+    return attacks.map((a) => ({
+      id: a.id(),
+      positions: a.clusteredPositions().map((tile) => ({
+        x: this.game.map().x(tile),
+        y: this.game.map().y(tile),
+      })),
+    }));
   }
 
   public bestTransportShipSpawn(

@@ -282,6 +282,25 @@ export class NationExecution implements Execution {
       return true;
     }
 
+    const team = this.player?.team();
+    if (team !== null && team !== undefined) {
+      const area = this.mg.teamSpawnArea(team);
+      if (area !== undefined) {
+        const cell = this.nation.spawnCell;
+        const inArea =
+          cell.x >= area.x &&
+          cell.x < area.x + area.width &&
+          cell.y >= area.y &&
+          cell.y < area.y + area.height;
+        if (!inArea) {
+          this.mg.addExecution(
+            new SpawnExecution(this.gameID, this.nation.playerInfo),
+          );
+          return true;
+        }
+      }
+    }
+
     // Select a tile near the position defined in the map manifest.
     const rl = this.randomSpawnLand();
     if (rl === null) {

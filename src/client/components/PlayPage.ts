@@ -1,5 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../core/AssetUrls";
+import "./NewsBox";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
@@ -11,136 +13,108 @@ export class PlayPage extends LitElement {
     return html`
       <div
         id="page-play"
-        class="flex flex-col gap-2 w-full max-w-6xl mx-auto px-0 sm:px-4 transition-all duration-300 my-auto min-h-0"
+        class="flex flex-col gap-2 w-full px-0 lg:px-4 min-h-0"
       >
         <token-login class="absolute"></token-login>
 
-        <!-- Header / Identity Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">
+        <!-- Mobile: Fixed top bar -->
+        <div
+          class="lg:hidden fixed left-0 right-0 top-0 z-40 pt-[env(safe-area-inset-top)] bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-b border-white/10"
+        >
           <div
-            class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl relative z-20 text-sm sm:text-base shrink-0"
+            class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-14 px-2 gap-2"
           >
-            <!-- Flag -->
-            <div
-              class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center lg:hidden"
+            <button
+              id="hamburger-btn"
+              class="col-start-1 justify-self-start h-10 shrink-0 aspect-[4/3] flex text-white/90 rounded-md items-center justify-center transition-colors"
+              data-i18n-aria-label="main.menu"
+              aria-expanded="false"
+              aria-controls="sidebar-menu"
+              aria-haspopup="dialog"
+              data-i18n-title="main.menu"
             >
-              <!-- Hamburger (Mobile) -->
-              <button
-                id="hamburger-btn"
-                class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
-                data-i18n-aria-label="main.menu"
-                aria-expanded="false"
-                aria-controls="sidebar-menu"
-                aria-haspopup="dialog"
-                data-i18n-title="main.menu"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-8"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-8 h-8"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                  />
-                </svg>
-              </button>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+              </svg>
+            </button>
+
+            <div
+              class="col-start-2 flex items-center justify-center text-[#0073b7] min-w-0"
+            >
+              <img
+                src=${assetUrl("images/OpenFrontLogo.svg")}
+                alt="OpenFront"
+                class="h-full w-auto"
+              />
             </div>
 
-            <!-- Username -->
-            <div class="flex-1 min-w-0 h-[40px] sm:h-[50px] flex items-center">
-              <username-input
-                class="relative w-full h-full block text-ellipsis overflow-hidden whitespace-nowrap"
-              ></username-input>
-            </div>
-
-            <!-- Pattern button (Mobile - inside bar, Desktop - hidden here) -->
-            <pattern-input
-              id="pattern-input-mobile"
-              show-select-label
-              class="aspect-square h-[50px] sm:h-[50px] lg:hidden shrink-0"
-            ></pattern-input>
+            <div
+              aria-hidden="true"
+              class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
+            ></div>
           </div>
+        </div>
 
-          <!-- Pattern & Flag buttons (Desktop only - separate column) -->
-          <div class="hidden lg:flex lg:col-span-3">
-            <div class="w-full h-[60px] flex gap-2">
+        <div
+          class="w-full pb-4 lg:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-[2fr_1fr] lg:gap-4"
+        >
+          <!-- Mobile: spacer for fixed top bar -->
+          <div
+            class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] lg:col-span-2 -mb-4"
+          ></div>
+
+          <!-- News box above username -->
+          <news-box class="lg:col-span-2"></news-box>
+
+          <!-- Username: left col -->
+          <div
+            class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
+          >
+            <div class="flex items-center gap-2 min-w-0 w-full">
+              <username-input
+                class="flex-1 min-w-0 h-10 lg:h-[50px]"
+              ></username-input>
               <pattern-input
-                id="pattern-input-desktop"
+                id="pattern-input-mobile"
                 show-select-label
-                class="flex-1 h-full"
+                adaptive-size
+                class="shrink-0 lg:hidden"
               ></pattern-input>
               <flag-input
-                id="flag-input-desktop"
+                id="flag-input-mobile"
                 show-select-label
-                class="flex-1 h-full"
+                class="shrink-0 lg:hidden h-10 w-10"
               ></flag-input>
             </div>
           </div>
-        </div>
 
-        <!-- Primary Game Actions Area -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
-          <!-- Left Column: Featured Lobbies / Quick Play -->
-          <div class="lg:col-span-9 flex flex-col gap-6 min-w-0">
-            <!-- Public Lobby Card -->
-            <public-lobby
-              class="block w-full transition-all duration-[50ms]"
-            ></public-lobby>
-          </div>
-
-          <!-- Right Column: Custom Games & Modes -->
-          <div class="lg:col-span-3">
-            <div
-              class="group relative isolate flex flex-col w-full h-40 lg:h-96 overflow-hidden rounded-2xl transition-all duration-300"
-            >
-              <div
-                class="h-full flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl overflow-hidden"
-              >
-                <div
-                  class="py-2 bg-blue-900/20 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
-                  data-i18n="host_modal.label"
-                ></div>
-                <div class="flex-1 p-2 flex flex-row lg:flex-col gap-2">
-                  <o-button
-                    id="single-player"
-                    data-i18n-title="main.solo"
-                    translationKey="main.solo"
-                    fill
-                    class="flex-1 transition-transform"
-                  ></o-button>
-
-                  <o-button
-                    id="host-lobby-button"
-                    data-i18n-title="main.create"
-                    translationKey="main.create"
-                    fill
-                    secondary
-                    class="flex-1 opacity-90 hover:opacity-100"
-                  ></o-button>
-
-                  <o-button
-                    id="join-private-lobby-button"
-                    data-i18n-title="main.join"
-                    translationKey="main.join"
-                    fill
-                    secondary
-                    class="flex-1 opacity-90 hover:opacity-100"
-                  ></o-button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Matchmaking Buttons (Full Width across entire grid) -->
-          <div class="lg:col-span-12 flex flex-col gap-6">
-            <matchmaking-button></matchmaking-button>
+          <!-- Skin + flag: right col -->
+          <div class="hidden lg:flex h-[60px] gap-2">
+            <pattern-input
+              id="pattern-input-desktop"
+              show-select-label
+              class="flex-1 h-full"
+            ></pattern-input>
+            <flag-input
+              id="flag-input-desktop"
+              show-select-label
+              class="flex-1 h-full"
+            ></flag-input>
           </div>
         </div>
+
+        <game-mode-selector></game-mode-selector>
       </div>
     `;
   }

@@ -19,7 +19,10 @@ export class WorkerLobbyService {
     private readonly gm: GameManager,
     private readonly log: typeof logger,
   ) {
-    this.lobbiesWss = new WebSocketServer({ noServer: true });
+    this.lobbiesWss = new WebSocketServer({
+      noServer: true,
+      maxPayload: 256 * 1024,
+    });
     this.setupUpgradeHandler();
     this.setupLobbiesWebSocket();
     this.setupIPCListener();
@@ -51,10 +54,21 @@ export class WorkerLobbyService {
             msg.gameID,
             msg.gameConfig,
             undefined,
-            msg.startsAt,
+            undefined,
             msg.publicGameType,
           );
           break;
+        case "updateLobby": {
+          const game = this.gm.game(msg.gameID);
+          if (!game) {
+            this.log.warn("cannot update game, not found", {
+              gameID: msg.gameID,
+            });
+            return;
+          }
+          game.setStartsAt(msg.startsAt);
+          break;
+        }
       }
     });
   }
@@ -72,7 +86,7 @@ export class WorkerLobbyService {
         return {
           gameID: gi.gameID,
           numClients: gi.clients?.length ?? 0,
-          startsAt: gi.startsAt!,
+          startsAt: gi.startsAt,
           gameConfig: gi.gameConfig,
           publicGameType: gi.publicGameType!,
         } satisfies PublicGameInfo;
@@ -98,6 +112,9 @@ export class WorkerLobbyService {
   private setupLobbiesWebSocket() {
     this.lobbiesWss.on("connection", (ws: WebSocket) => {
       this.lobbyClients.add(ws);
+      ws.on("message", () => {
+        ws.terminate();
+      });
       ws.on("close", () => {
         this.lobbyClients.delete(ws);
       });

@@ -26,6 +26,7 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
   /^territory_patterns\.color_palette\.[^.]+$/,
   /^build_menu\.desc\.[^.]+$/,
   /^unit_type\.[^.]+$/,
+  /^news_box\.(tournament|tutorial|news|warning|firefox_warning)$/,
 ];
 
 /**
@@ -234,7 +235,7 @@ function extractDataI18nKeys(content: string): Set<string> {
 function extractTranslationKeyLikeAttrs(content: string): Set<string> {
   const keys = new Set<string>();
   const keyLikeAttrRegex =
-    /\b(?:translationKey|labelKey|disabledKey|titleKey|ariaLabelKey|placeholderKey)\s*=\s*["']([^"']+)["']/g;
+    /\b(?:translationKey|labelKey|defaultLabelKey|disabledKey|titleKey|ariaLabelKey|placeholderKey)\s*=\s*["']([^"']+)["']/g;
   let match: RegExpExecArray | null;
   while ((match = keyLikeAttrRegex.exec(content)) !== null) {
     keys.add(match[1]);

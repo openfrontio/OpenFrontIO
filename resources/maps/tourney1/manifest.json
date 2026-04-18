@@ -1,0 +1,28 @@
+{
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 984577,
+    "width": 1500
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 60237,
+    "width": 375
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 244567,
+    "width": 750
+  },
+  "name": "Tourney1",
+  "nations": [
+    {
+      "coordinates": [177, 510],
+      "name": "Left"
+    },
+    {
+      "coordinates": [847, 511],
+      "name": "Right"
+    }
+  ]
+}

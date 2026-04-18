@@ -1,0 +1,50 @@
+{
+  "name": "straitofmalacca",
+  "nations": [
+    {
+      "coordinates": [1268, 730],
+      "name": "Singapore",
+      "flag": "sg"
+    },
+    {
+      "coordinates": [862, 41],
+      "name": "Thailand",
+      "flag": "th"
+    },
+    {
+      "coordinates": [1328, 1284],
+      "name": "Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1141, 1090],
+      "name": "Burmese Pythons",
+      "flag": "mm"
+    },
+    {
+      "coordinates": [210, 243],
+      "name": "Aceh",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1011, 736],
+      "name": "Riau",
+      "flag": "id"
+    },
+    {
+      "coordinates": [600, 565],
+      "name": "Samosir",
+      "flag": "id"
+    },
+    {
+      "coordinates": [827, 999],
+      "name": "Barisan",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1053, 333],
+      "name": "Malaysia",
+      "flag": "my"
+    }
+  ]
+}

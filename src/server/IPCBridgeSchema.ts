@@ -11,6 +11,8 @@ export type WorkerReady = z.infer<typeof WorkerReadySchema>;
 export type MasterLobbiesBroadcast = z.infer<
   typeof MasterLobbiesBroadcastSchema
 >;
+
+export type MasterUpdateGame = z.infer<typeof MasterUpdateGameSchema>;
 export type MasterCreateGame = z.infer<typeof MasterCreateGameSchema>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
 export type MasterMessage = z.infer<typeof MasterMessageSchema>;
@@ -35,6 +37,12 @@ export const WorkerMessageSchema = z.discriminatedUnion("type", [
 
 // --- Master Messages ---
 
+const MasterUpdateGameSchema = z.object({
+  type: z.literal("updateLobby"),
+  gameID: z.string(),
+  startsAt: z.number(),
+});
+
 // Broadcasts all public game info to all workers.
 // Workers need information on all public lobbies so
 // it can send it to the client.
@@ -48,11 +56,11 @@ const MasterCreateGameSchema = z.object({
   type: z.literal("createGame"),
   gameID: z.string(),
   gameConfig: GameConfigSchema,
-  startsAt: z.number(),
   publicGameType: PublicGameTypeSchema,
 });
 
 export const MasterMessageSchema = z.discriminatedUnion("type", [
   MasterLobbiesBroadcastSchema,
   MasterCreateGameSchema,
+  MasterUpdateGameSchema,
 ]);

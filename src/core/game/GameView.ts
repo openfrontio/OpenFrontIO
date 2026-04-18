@@ -4,9 +4,10 @@ import { Config } from "../configuration/Config";
 import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
-import { createRandomName } from "../Util";
+import { createRandomName, formatPlayerDisplayName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
+  BuildableUnit,
   Cell,
   EmojiMessage,
   GameType,
@@ -15,6 +16,7 @@ import {
   NameViewData,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
   PlayerType,
@@ -26,7 +28,7 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
@@ -35,6 +37,7 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { MotionPlanRecord, unpackMotionPlans } from "./MotionPlans";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
@@ -82,6 +85,17 @@ export class UnitView {
     this.lastPos.push(data.pos);
     this._wasUpdated = true;
     this.data = data;
+  }
+
+  applyDerivedPosition(pos: TileRef) {
+    const prev = this.data.pos;
+    this.lastPos.push(pos);
+    this._wasUpdated = true;
+    this.data = {
+      ...this.data,
+      lastPos: prev,
+      pos,
+    };
   }
 
   id(): number {
@@ -215,14 +229,10 @@ export class PlayerView {
       );
     }
 
-    const defaultTerritoryColor = this.game
-      .config()
-      .theme()
-      .territoryColor(this);
-    const defaultBorderColor = this.game
-      .config()
-      .theme()
-      .borderColor(defaultTerritoryColor);
+    const theme = this.game.config().theme();
+
+    const defaultTerritoryColor = theme.territoryColor(this);
+    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
 
     const pattern = userSettings.territoryPatterns()
       ? this.cosmetics.pattern
@@ -245,14 +255,11 @@ export class PlayerView {
       this._territoryColor = defaultTerritoryColor;
     }
 
-    this._structureColors = this.game
-      .config()
-      .theme()
-      .structureColors(this._territoryColor);
+    this._structureColors = theme.structureColors(this._territoryColor);
 
     const maybeFocusedBorderColor =
       this.game.myClientID() === this.data.clientID
-        ? this.game.config().theme().focusedBorderColor()
+        ? theme.focusedBorderColor()
         : defaultBorderColor;
 
     this._borderColor = new Colord(
@@ -262,7 +269,6 @@ export class PlayerView {
     );
 
     // Pre-compute all border color variants once
-    const theme = this.game.config().theme();
     const baseRgb = this._borderColor.toRgb();
 
     // Neutral is just the base color
@@ -404,8 +410,23 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef, units?: UnitType[]): Promise<PlayerActions> {
+  async actions(
+    tile?: TileRef,
+    units?: readonly PlayerBuildableUnitType[] | null,
+  ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
+      this.id(),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
+      units,
+    );
+  }
+
+  async buildables(
+    tile?: TileRef,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
+    return this.game.worker.playerBuildables(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
@@ -425,11 +446,10 @@ export class PlayerView {
     return this.data.incomingAttacks;
   }
 
-  async attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
-    return this.game.worker.attackAveragePosition(playerID, attackID);
+  async attackClusteredPositions(
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
+    return this.game.worker.attackClusteredPositions(this.smallID(), attackID);
   }
 
   units(...types: UnitType[]): UnitView[] {
@@ -454,7 +474,7 @@ export class PlayerView {
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.data.name;
+      : this.data.displayName;
   }
 
   clientID(): ClientID | null {
@@ -548,7 +568,33 @@ export class PlayerView {
   }
 
   transitiveTargets(): PlayerView[] {
-    return [...this.targets(), ...this.allies().flatMap((p) => p.targets())];
+    const result: PlayerView[] = [];
+
+    // Add own targets
+    for (const id of this.data.targets) {
+      result.push(this.game.playerBySmallID(id) as PlayerView);
+    }
+
+    // Add allies' targets
+    for (const allyID of this.data.allies) {
+      const ally = this.game.playerBySmallID(allyID) as PlayerView;
+      for (const targetId of ally.data.targets) {
+        result.push(this.game.playerBySmallID(targetId) as PlayerView);
+      }
+    }
+
+    // Add teammates' targets
+    if (this.data.team !== undefined) {
+      for (const p of this.game.playerViews()) {
+        if (p !== this && p.data.team === this.data.team) {
+          for (const targetId of p.data.targets) {
+            result.push(this.game.playerBySmallID(targetId) as PlayerView);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   isTraitor(): boolean {
@@ -583,6 +629,20 @@ export class PlayerView {
   }
 }
 
+type TrainPlanState = {
+  planId: number;
+  startTick: number;
+  speed: number;
+  spacing: number;
+  carUnitIds: Uint32Array;
+  path: Uint32Array;
+  cursor: number;
+  usedTilesBuf: Uint32Array;
+  usedHead: number;
+  usedLen: number;
+  lastAdvancedTick: Tick;
+};
+
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
   private singleplayerStartTick: Tick | null = null;
@@ -590,10 +650,22 @@ export class GameView implements GameMap {
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
+  private updatedTerrainTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
+  private unitMotionPlans = new Map<
+    number,
+    {
+      planId: number;
+      startTick: number;
+      ticksPerStep: number;
+      path: Uint32Array;
+    }
+  >();
+  private trainMotionPlans = new Map<number, TrainPlanState>();
+  private trainUnitToEngine = new Map<number, number>();
 
   private toDelete = new Set<number>();
 
@@ -605,28 +677,22 @@ export class GameView implements GameMap {
     public worker: WorkerClient,
     private _config: Config,
     private _mapData: TerrainMapData,
-    private _myClientID: ClientID,
+    private _myClientID: ClientID | undefined,
     private _myUsername: string,
+    private _myClanTag: string | null,
     private _gameID: GameID,
-    private humans: Player[],
+    humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
-    // Replace the local player's username with their own stored username.
-    // This way the user does not know they are being censored.
-    for (const h of this.humans) {
-      if (h.clientID === this._myClientID) {
-        h.username = this._myUsername;
-      }
-    }
     this._cosmetics = new Map(
-      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
+      humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
-        flag: nation.flag,
+        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
       } satisfies PlayerCosmetics);
     }
   }
@@ -637,6 +703,51 @@ export class GameView implements GameMap {
 
   public updatesSinceLastTick(): GameUpdates | null {
     return this.lastUpdate?.updates ?? null;
+  }
+
+  public motionPlans(): ReadonlyMap<
+    number,
+    {
+      planId: number;
+      startTick: number;
+      ticksPerStep: number;
+      path: Uint32Array;
+    }
+  > {
+    return this.unitMotionPlans;
+  }
+
+  private motionPlannedUnitIdsCache: number[] = [];
+  private motionPlannedUnitIdsDirty = true;
+
+  private markMotionPlannedUnitIdsDirty(): void {
+    this.motionPlannedUnitIdsDirty = true;
+  }
+
+  private rebuildMotionPlannedUnitIdsCacheIfDirty(): void {
+    if (!this.motionPlannedUnitIdsDirty) {
+      return;
+    }
+    this.motionPlannedUnitIdsDirty = false;
+
+    const out = this.motionPlannedUnitIdsCache;
+    out.length = 0;
+
+    for (const unitId of this.unitMotionPlans.keys()) {
+      out.push(unitId);
+    }
+    for (const [engineId, plan] of this.trainMotionPlans) {
+      out.push(engineId);
+      for (let i = 0; i < plan.carUnitIds.length; i++) {
+        const id = plan.carUnitIds[i] >>> 0;
+        if (id !== 0) out.push(id);
+      }
+    }
+  }
+
+  public motionPlannedUnitIds(): number[] {
+    this.rebuildMotionPlannedUnitIdsCacheIfDirty();
+    return this.motionPlannedUnitIdsCache;
   }
 
   public isCatchingUp(): boolean {
@@ -650,36 +761,64 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
-    });
+    this.updatedTerrainTiles = [];
+    const packed = this.lastUpdate.packedTileUpdates;
+    for (let i = 0; i + 1 < packed.length; i += 2) {
+      const tile = packed[i];
+      const state = packed[i + 1];
+      const terrainChanged = this.updateTile(tile, state);
+      this.updatedTiles.push(tile);
+      if (terrainChanged) {
+        this.updatedTerrainTiles.push(tile);
+      }
+    }
+
+    if (gu.packedMotionPlans) {
+      const records = unpackMotionPlans(gu.packedMotionPlans);
+      this.applyMotionPlanRecords(records);
+    }
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
+    const myDisplayName = formatPlayerDisplayName(
+      this._myUsername,
+      this._myClanTag,
+    );
+
     gu.updates[GameUpdateType.Player].forEach((pu) => {
+      // Replace the local player's name/displayName with their own stored values.
+      // This way the user does not know they are being censored.
+      if (pu.clientID === this._myClientID) {
+        pu.name = this._myUsername;
+        pu.displayName = myDisplayName;
+      }
+
       this.smallIDToID.set(pu.smallID, pu.id);
-      const player = this._players.get(pu.id);
+      let player = this._players.get(pu.id);
       if (player !== undefined) {
         player.data = pu;
-        player.nameData = gu.playerNameViewData[pu.id];
+        const nextNameData = gu.playerNameViewData[pu.id];
+        if (nextNameData !== undefined) {
+          player.nameData = nextNameData;
+        }
       } else {
-        this._players.set(
-          pu.id,
-          new PlayerView(
-            this,
-            pu,
-            gu.playerNameViewData[pu.id],
-            // First check human by clientID, then check nation by name.
-            this._cosmetics.get(pu.clientID ?? "") ??
-              this._cosmetics.get(pu.name) ??
-              {},
-          ),
+        player = new PlayerView(
+          this,
+          pu,
+          gu.playerNameViewData[pu.id],
+          // First check human by clientID, then check nation by name.
+          this._cosmetics.get(pu.clientID ?? "") ??
+            this._cosmetics.get(pu.name) ??
+            {},
         );
+        this._players.set(pu.id, player);
       }
     });
 
-    this._myPlayer ??= this.playerByClientID(this._myClientID);
+    if (this._myClientID) {
+      this._myPlayer ??= this.playerByClientID(this._myClientID);
+    }
 
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
@@ -702,18 +841,258 @@ export class GameView implements GameMap {
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
         this.toDelete.add(unit.id());
+        if (this.unitMotionPlans.delete(unit.id())) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
+        this.clearTrainPlanForUnit(unit.id());
       }
     });
+
+    this.advanceMotionPlannedUnits(gu.tick);
+    this.rebuildMotionPlannedUnitIdsCacheIfDirty();
+  }
+
+  private advanceMotionPlannedUnits(currentTick: Tick): void {
+    for (const [unitId, plan] of this.unitMotionPlans) {
+      const unit = this._units.get(unitId);
+      if (!unit || !unit.isActive()) {
+        if (this.unitMotionPlans.delete(unitId)) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
+        continue;
+      }
+
+      const oldTile = unit.tile();
+      const dt = currentTick - plan.startTick;
+      const stepIndex =
+        dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
+      const lastIndex = plan.path.length - 1;
+      const idx = Math.max(0, Math.min(lastIndex, stepIndex));
+      const newTile = plan.path[idx] as TileRef;
+
+      if (newTile !== oldTile) {
+        unit.applyDerivedPosition(newTile);
+        this.unitGrid.updateUnitCell(unit);
+        continue;
+      }
+
+      // Once a plan is past its final step, `newTile` remains clamped to the last path tile.
+      // Drop finished plans to avoid repeatedly marking static units as updated each tick.
+      if (dt > 0 && stepIndex >= lastIndex) {
+        if (this.unitMotionPlans.delete(unitId)) {
+          this.markMotionPlannedUnitIdsDirty();
+        }
+      }
+    }
+
+    this.advanceTrainMotionPlannedUnits(currentTick);
+  }
+
+  private clearTrainPlanForUnit(unitId: number): void {
+    const engineId =
+      this.trainUnitToEngine.get(unitId) ??
+      (this.trainMotionPlans.has(unitId) ? unitId : null);
+    if (engineId === null) {
+      return;
+    }
+    const plan = this.trainMotionPlans.get(engineId);
+    if (!plan) {
+      this.trainUnitToEngine.delete(unitId);
+      return;
+    }
+    if (this.trainMotionPlans.delete(engineId)) {
+      this.markMotionPlannedUnitIdsDirty();
+    }
+    this.trainUnitToEngine.delete(engineId);
+    for (let i = 0; i < plan.carUnitIds.length; i++) {
+      const id = plan.carUnitIds[i] >>> 0;
+      if (id !== 0) this.trainUnitToEngine.delete(id);
+    }
+  }
+
+  private advanceTrainMotionPlannedUnits(currentTick: Tick): void {
+    const staleEngineIds: number[] = [];
+    for (const [engineId, plan] of this.trainMotionPlans) {
+      const engine = this._units.get(engineId);
+      if (!engine || !engine.isActive()) {
+        staleEngineIds.push(engineId);
+        continue;
+      }
+
+      const steps = currentTick - plan.lastAdvancedTick;
+      if (steps <= 0) {
+        continue;
+      }
+
+      const path = plan.path;
+      const lastIndex = path.length - 1;
+      const cap = plan.usedTilesBuf.length;
+
+      const pushUsed = (tile: TileRef) => {
+        if (cap === 0) return;
+        if (plan.usedLen < cap) {
+          const idx = (plan.usedHead + plan.usedLen) % cap;
+          plan.usedTilesBuf[idx] = tile >>> 0;
+          plan.usedLen++;
+        } else {
+          plan.usedTilesBuf[plan.usedHead] = tile >>> 0;
+          plan.usedHead = (plan.usedHead + 1) % cap;
+          plan.usedLen = cap;
+        }
+      };
+
+      const usedGet = (index: number): TileRef | null => {
+        if (index < 0 || index >= plan.usedLen || cap === 0) return null;
+        const idx = (plan.usedHead + index) % cap;
+        return plan.usedTilesBuf[idx] as TileRef;
+      };
+
+      let didMove = false;
+      for (let step = 0; step < steps; step++) {
+        const cursor = plan.cursor;
+        if (cursor >= lastIndex) {
+          break;
+        }
+        for (let i = 0; i < plan.speed && cursor + i < path.length; i++) {
+          pushUsed(path[cursor + i] as TileRef);
+        }
+
+        plan.cursor = Math.min(lastIndex, cursor + plan.speed);
+
+        for (let i = plan.carUnitIds.length - 1; i >= 0; --i) {
+          const carId = plan.carUnitIds[i] >>> 0;
+          if (carId === 0) continue;
+          const car = this._units.get(carId);
+          if (!car || !car.isActive()) {
+            continue;
+          }
+          const carTileIndex = (i + 1) * plan.spacing + 2;
+          const tile = usedGet(carTileIndex);
+          if (tile !== null) {
+            const oldTile = car.tile();
+            if (tile !== oldTile) {
+              car.applyDerivedPosition(tile);
+              this.unitGrid.updateUnitCell(car);
+              didMove = true;
+            }
+          }
+        }
+
+        const newEngineTile = path[plan.cursor] as TileRef;
+        const oldEngineTile = engine.tile();
+        if (newEngineTile !== oldEngineTile) {
+          engine.applyDerivedPosition(newEngineTile);
+          this.unitGrid.updateUnitCell(engine);
+          didMove = true;
+        }
+      }
+
+      plan.lastAdvancedTick = currentTick;
+
+      // Preserve the final-step redraw (plan remains for the tick where motion ends),
+      // then clear once the train has settled and no longer moves.
+      // Note: trains are currently deleted at the end of TrainExecution, and the ensuing
+      // `Unit` update (isActive=false) also clears any associated motion plan records.
+      // This expiry is defensive to avoid keeping stale plans around if that behavior changes.
+      if (!didMove && plan.cursor >= lastIndex) {
+        staleEngineIds.push(engineId);
+      }
+    }
+
+    for (const engineId of staleEngineIds) {
+      this.clearTrainPlanForUnit(engineId);
+    }
+  }
+
+  private applyMotionPlanRecords(records: readonly MotionPlanRecord[]): void {
+    for (const record of records) {
+      switch (record.kind) {
+        case "grid": {
+          if (record.ticksPerStep < 1 || record.path.length < 1) {
+            break;
+          }
+          const existing = this.unitMotionPlans.get(record.unitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+
+          const path =
+            record.path instanceof Uint32Array
+              ? record.path
+              : Uint32Array.from(record.path);
+
+          this.unitMotionPlans.set(record.unitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            ticksPerStep: record.ticksPerStep,
+            path,
+          });
+          this.markMotionPlannedUnitIdsDirty();
+          break;
+        }
+        case "train": {
+          if (record.speed < 1 || record.path.length < 1) {
+            break;
+          }
+          const existing = this.trainMotionPlans.get(record.engineUnitId);
+          if (existing && record.planId <= existing.planId) {
+            break;
+          }
+          if (existing) {
+            this.clearTrainPlanForUnit(record.engineUnitId);
+          }
+
+          const carUnitIds =
+            record.carUnitIds instanceof Uint32Array
+              ? record.carUnitIds
+              : Uint32Array.from(record.carUnitIds);
+          const path =
+            record.path instanceof Uint32Array
+              ? record.path
+              : Uint32Array.from(record.path);
+
+          const usedCap = carUnitIds.length * record.spacing + 3;
+          const usedTilesBuf = new Uint32Array(Math.max(0, usedCap));
+
+          this.trainMotionPlans.set(record.engineUnitId, {
+            planId: record.planId,
+            startTick: record.startTick,
+            speed: record.speed,
+            spacing: record.spacing,
+            carUnitIds,
+            path,
+            cursor: 0,
+            usedTilesBuf,
+            usedHead: 0,
+            usedLen: 0,
+            lastAdvancedTick: record.startTick,
+          });
+          this.markMotionPlannedUnitIdsDirty();
+
+          this.trainUnitToEngine.set(record.engineUnitId, record.engineUnitId);
+          for (let i = 0; i < carUnitIds.length; i++) {
+            const carId = carUnitIds[i] >>> 0;
+            if (carId !== 0)
+              this.trainUnitToEngine.set(carId, record.engineUnitId);
+          }
+          break;
+        }
+      }
+    }
   }
 
   recentlyUpdatedTiles(): TileRef[] {
     return this.updatedTiles;
   }
 
+  recentlyUpdatedTerrainTiles(): TileRef[] {
+    return this.updatedTerrainTiles;
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
@@ -761,7 +1140,7 @@ export class GameView implements GameMap {
     );
   }
 
-  myClientID(): ClientID {
+  myClientID(): ClientID | undefined {
     return this._myClientID;
   }
 
@@ -936,6 +1315,24 @@ export class GameView implements GameMap {
   magnitude(ref: TileRef): number {
     return this._map.magnitude(ref);
   }
+  terrainByte(ref: TileRef): number {
+    return this._map.terrainByte(ref);
+  }
+  setWater(ref: TileRef): void {
+    this._map.setWater(ref);
+  }
+  setShorelineBit(ref: TileRef): void {
+    this._map.setShorelineBit(ref);
+  }
+  clearShorelineBit(ref: TileRef): void {
+    this._map.clearShorelineBit(ref);
+  }
+  setOcean(ref: TileRef): void {
+    this._map.setOcean(ref);
+  }
+  setMagnitude(ref: TileRef, value: number): void {
+    this._map.setMagnitude(ref, value);
+  }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);
   }
@@ -994,11 +1391,11 @@ export class GameView implements GameMap {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): boolean {
+    return this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

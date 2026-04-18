@@ -1,5 +1,7 @@
 # API Usage
 
+> **Warning:** Rate limits are very strict. Join the [Discord](https://discord.gg/K9zernJB5z) to request higher rate limits.
+
 ## Games
 
 ### List Game Metadata
@@ -22,13 +24,16 @@ GET https://api.openfront.io/public/games
 - `start` (required): ISO 8601 timestamp
 - `end` (required): ISO 8601 timestamp
 - `type` (optional): Game type, must be one of `[Private, Public, Singleplayer]`
+- `mode` (optional): Game mode, must be one of `[Free For All, Team]`
+- `rankedType` (optional): Ranked type, must be one of `[unranked, 1v1]`
+- `playerTeams` (optional): Player team configuration (e.g. `Duos`)
 - `limit` (optional): Number of results (max 1000, default 50)
 - `offset` (optional): Pagination offset
 
 **Example Request:**
 
 ```bash
-curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&type=Singleplayer&limit=10&offset=5"
+curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&type=Public&mode=Team&rankedType=unranked&limit=10&offset=5"
 ```
 
 **Response:**
@@ -39,9 +44,14 @@ curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-
     "game": "ABSgwin6",
     "start": "2025-10-25T00:00:10.526Z",
     "end": "2025-10-25T00:19:45.187Z",
-    "type": "Singleplayer",
-    "mode": "Free For All",
-    "difficulty": "Medium"
+    "type": "Public",
+    "mode": "Team",
+    "difficulty": "Medium",
+    "numPlayers": 6,
+    "maxPlayers": 8,
+    "lobbyFillTime": 45000,
+    "playerTeams": "Duos",
+    "rankedType": "unranked"
   }
 ]
 ```
@@ -199,10 +209,24 @@ GET https://api.openfront.io/public/clan/:clanTag/sessions
 
 - `start` (optional): ISO 8601 timestamp
 - `end` (optional): ISO 8601 timestamp
+- `page` (optional): Page number, 1-200 (default: 1)
+- `limit` (optional): Results per page, 1-50 (default: 20)
+
+**Response:**
+
+```json
+{
+  "results": [ ... ],
+  "total": 150,
+  "page": 1,
+  "limit": 20
+}
+```
+
+Results are ordered by game start time, newest first.
 
 **Example**
 
 ```bash
-curl https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z &
-end=2025-11-18T23:59:59Z
+curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-18T23:59:59Z&limit=10&page=1"
 ```

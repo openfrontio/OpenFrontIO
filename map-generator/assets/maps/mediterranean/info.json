@@ -1,0 +1,195 @@
+{
+  "name": "mediterranean",
+  "nations": [
+    {
+      "coordinates": [141, 574],
+      "name": "Lusitania",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [464, 519],
+      "name": "Terraconensis",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [353, 787],
+      "name": "Baetica",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [699, 340],
+      "name": "Narbonensis",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [596, 91],
+      "name": "Aquitania",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [910, 218],
+      "name": "Alpes",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1053, 39],
+      "name": "Raetia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1316, 88],
+      "name": "Noricum",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1307, 479],
+      "name": "Italia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1058, 534],
+      "name": "Corsica et Sardinia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1350, 762],
+      "name": "Sicilia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1553, 42],
+      "name": "Pannonia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1522, 301],
+      "name": "Dalmatia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1910, 119],
+      "name": "Dacia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1811, 402],
+      "name": "Macedonia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1654, 560],
+      "name": "Epirus",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1774, 774],
+      "name": "Achaia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2030, 457],
+      "name": "Thracia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2114, 250],
+      "name": "Moesia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2428, 200],
+      "name": "Bosporan Kingdom",
+      "flag": ""
+    },
+    {
+      "coordinates": [2065, 690],
+      "name": "Asia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2354, 505],
+      "name": "Pontus",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2325, 669],
+      "name": "Galatia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2447, 809],
+      "name": "Cilicia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2196, 828],
+      "name": "Lycia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2379, 942],
+      "name": "Cyprus",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2516, 648],
+      "name": "Cappadocia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2772, 845],
+      "name": "Mesopotamia",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2584, 990],
+      "name": "Syria",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2490, 1141],
+      "name": "Judaea",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2481, 1292],
+      "name": "Arabia Petraea",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2263, 1240],
+      "name": "Aegyptus",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [1799, 1096],
+      "name": "Cyrenaica et Creta",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [2815, 659],
+      "name": "Sassanid Empire",
+      "flag": "Sassanid Empire"
+    },
+    {
+      "coordinates": [1091, 989],
+      "name": "Africa Proconsularis",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [597, 910],
+      "name": "Mauretania Caesariensis",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [264, 1028],
+      "name": "Mauretania Tingitania",
+      "flag": "SPQR"
+    },
+    {
+      "coordinates": [584, 1199],
+      "name": "Numidia",
+      "flag": "Amazigh flag"
+    }
+  ]
+}

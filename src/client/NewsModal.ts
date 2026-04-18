@@ -3,12 +3,11 @@ import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import version from "resources/version.txt?raw";
 import { translateText } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { normalizeNewsMarkdown } from "./NewsMarkdown";
-import changelog from "/changelog.md?url";
-import megaphone from "/images/Megaphone.svg?url";
 
 @customElement("news-modal")
 export class NewsModal extends BaseModal {
@@ -18,14 +17,10 @@ export class NewsModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("news.title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         <div
@@ -66,7 +61,7 @@ export class NewsModal extends BaseModal {
   protected onOpen(): void {
     if (!this.initialized) {
       this.initialized = true;
-      fetch(`${changelog}?v=${encodeURIComponent(version.trim())}`)
+      fetch(assetUrl("changelog.md"))
         .then((response) => (response.ok ? response.text() : "Failed to load"))
         .then((markdown) => normalizeNewsMarkdown(markdown))
         .then((markdown) => (this.markdown = markdown))
@@ -106,7 +101,7 @@ export class NewsButton extends LitElement {
       >
         <img
           class="size-[48px] dark:invert"
-          src="${megaphone}"
+          src="${assetUrl("images/Megaphone.svg")}"
           alt=${translateText("news.title")}
         />
       </button>

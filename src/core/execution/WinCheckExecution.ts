@@ -19,6 +19,10 @@ export class WinCheckExecution implements Execution {
 
   private mg: Game | null = null;
 
+  // Hard time limit (in seconds) to force a winner before the server's
+  // maxGameDuration hard kill. 170mins (10 mins before 3hrs)
+  private static readonly HARD_TIME_LIMIT_SECONDS = 170 * 60;
+
   constructor() {}
 
   init(mg: Game, ticks: number) {
@@ -67,7 +71,8 @@ export class WinCheckExecution implements Execution {
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
         this.mg.config().percentageTilesOwnedToWin() ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
-        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
+        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
+      timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
     ) {
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
@@ -101,7 +106,8 @@ export class WinCheckExecution implements Execution {
     if (
       percentage > this.mg.config().percentageTilesOwnedToWin() ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
-        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
+        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
+      timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
     ) {
       if (max[0] === ColoredTeams.Bot) return;
       this.mg.setWinner(max[0], this.mg.stats().stats());

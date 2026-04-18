@@ -3,7 +3,6 @@ import { customElement } from "lit/decorators.js";
 import { tempTokenLogin } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
@@ -26,11 +25,7 @@ export class TokenLoginModal extends BaseModal {
   render() {
     const title = translateText("token_login_modal.title");
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title,
           onBack: () => this.close(),

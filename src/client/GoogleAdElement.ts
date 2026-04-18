@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { Platform } from "./Platform";
 
 declare global {
   interface Window {
@@ -28,7 +29,7 @@ export class GoogleAdElement extends LitElement {
   }
 
   render() {
-    if (isElectron()) {
+    if (Platform.isElectron) {
       return html``;
     }
     return html`
@@ -48,6 +49,10 @@ export class GoogleAdElement extends LitElement {
   connectedCallback() {
     super.connectedCallback();
 
+    if (Platform.isElectron) {
+      return;
+    }
+
     // Wait for the component to be fully rendered
     setTimeout(() => {
       try {
@@ -60,38 +65,5 @@ export class GoogleAdElement extends LitElement {
     }, 100);
   }
 }
-
-// Check if running in Electron
-const isElectron = () => {
-  // Renderer process
-  if (
-    window !== undefined &&
-    typeof window.process === "object" &&
-    // @ts-expect-error hidden
-    window.process.type === "renderer"
-  ) {
-    return true;
-  }
-
-  // Main process
-  if (
-    process !== undefined &&
-    typeof process.versions === "object" &&
-    !!process.versions.electron
-  ) {
-    return true;
-  }
-
-  // Detect the user agent when the `nodeIntegration` option is set to false
-  if (
-    typeof navigator === "object" &&
-    typeof navigator.userAgent === "string" &&
-    navigator.userAgent.indexOf("Electron") >= 0
-  ) {
-    return true;
-  }
-
-  return false;
-};
 
 export default GoogleAdElement;

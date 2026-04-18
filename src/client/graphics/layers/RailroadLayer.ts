@@ -199,9 +199,6 @@ export class RailroadLayer implements Layer {
     if (scale <= 1) {
       return;
     }
-    if (this.existingRailroads.size === 0) {
-      return;
-    }
     this.updateRailColors();
     const rawAlpha = (scale - 1) / (2 - 1); // maps 1->0, 2->1
     const alpha = Math.max(0, Math.min(1, rawAlpha));
@@ -228,19 +225,72 @@ export class RailroadLayer implements Layer {
 
     context.save();
     context.globalAlpha = alpha;
-    this.highlightOverlappingRailroads(context);
-    context.drawImage(
-      this.canvas,
-      srcX,
-      srcY,
-      srcW,
-      srcH,
-      dstX,
-      dstY,
-      visWidth,
-      visHeight,
-    );
+
+    this.renderGhostRailroads(context);
+
+    if (this.existingRailroads.size > 0) {
+      this.highlightOverlappingRailroads(context);
+
+      context.drawImage(
+        this.canvas,
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        dstX,
+        dstY,
+        visWidth,
+        visHeight,
+      );
+    }
+
     context.restore();
+  }
+
+  private renderGhostRailroads(context: CanvasRenderingContext2D) {
+    if (
+      this.uiState.ghostStructure !== UnitType.City &&
+      this.uiState.ghostStructure !== UnitType.Port
+    )
+      return;
+    if (this.uiState.ghostRailPaths.length === 0) return;
+
+    const offsetX = -this.game.width() / 2;
+    const offsetY = -this.game.height() / 2;
+    context.fillStyle = "rgba(0, 0, 0, 0.4)";
+
+    for (const path of this.uiState.ghostRailPaths) {
+      const railTiles = computeRailTiles(this.game, path);
+      for (const railTile of railTiles) {
+        const x = this.game.x(railTile.tile);
+        const y = this.game.y(railTile.tile);
+
+        if (this.game.isWater(railTile.tile)) {
+          context.save();
+          context.fillStyle = "rgba(197, 69, 72, 0.4)";
+          const bridgeRects = getBridgeRects(railTile.type);
+          for (const [dx, dy, w, h] of bridgeRects) {
+            context.fillRect(
+              x + offsetX + dx / 2,
+              y + offsetY + dy / 2,
+              w / 2,
+              h / 2,
+            );
+          }
+          context.restore();
+        }
+
+        const railRects = getRailroadRects(railTile.type);
+        for (const [dx, dy, w, h] of railRects) {
+          context.fillRect(
+            x + offsetX + dx / 2,
+            y + offsetY + dy / 2,
+            w / 2,
+            h / 2,
+          );
+        }
+      }
+    }
   }
 
   private onRailroadSnapEvent(update: RailroadSnapUpdate) {

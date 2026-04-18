@@ -1,0 +1,225 @@
+{
+  "name": "Arctic",
+  "nations": [
+    {
+      "coordinates": [622, 1171],
+      "name": "Greenland",
+      "flag": "gl"
+    },
+    {
+      "coordinates": [632, 1438],
+      "name": "Iceland",
+      "flag": "is"
+    },
+    {
+      "coordinates": [90, 1046],
+      "name": "Quebec",
+      "flag": "Quebec"
+    },
+    {
+      "coordinates": [747, 336],
+      "name": "Alaska",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [485, 927],
+      "name": "Nunavut",
+      "flag": "Nunavut"
+    },
+    {
+      "coordinates": [432, 550],
+      "name": "Northwest Territories",
+      "flag": "northwestterritories"
+    },
+    {
+      "coordinates": [608, 447],
+      "name": "Yukon",
+      "flag": "Yukon"
+    },
+    {
+      "coordinates": [344, 320],
+      "name": "British Columbia",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [64, 601],
+      "name": "Manitoba",
+      "flag": "manitoba"
+    },
+    {
+      "coordinates": [247, 571],
+      "name": "Saskatchewan",
+      "flag": "saskatchewan"
+    },
+    {
+      "coordinates": [136, 401],
+      "name": "Alberta",
+      "flag": "alberta"
+    },
+    {
+      "coordinates": [67, 795],
+      "name": "Ontario",
+      "flag": "ontario"
+    },
+    {
+      "coordinates": [49, 1313],
+      "name": "Newfoundland and Labrador",
+      "flag": "newfoundlandandlabrador"
+    },
+    {
+      "coordinates": [74, 226],
+      "name": "United States of America",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1457, 1381],
+      "name": "Soviet Union",
+      "flag": "ussr"
+    },
+    {
+      "coordinates": [1683, 1414],
+      "name": "Kazakh SSR",
+      "flag": "Kazakh SSR"
+    },
+    {
+      "coordinates": [1709, 1603],
+      "name": "Uzbek SSR",
+      "flag": "Uzbek SSR"
+    },
+    {
+      "coordinates": [1784, 1744],
+      "name": "Turkmen SSR",
+      "flag": "Turkmen SSR"
+    },
+    {
+      "coordinates": [1803, 1265],
+      "name": "Kirghiz SSR",
+      "flag": "Kirghiz SSR"
+    },
+    {
+      "coordinates": [745, 1736],
+      "name": "United Kingdom",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [893, 1773],
+      "name": "West Germany",
+      "flag": "west_germany"
+    },
+    {
+      "coordinates": [987, 1792],
+      "name": "East Germany",
+      "flag": "east_germany"
+    },
+    {
+      "coordinates": [1333, 1774],
+      "name": "Ukrainian SSR",
+      "flag": "Ukrainian SSR"
+    },
+    {
+      "coordinates": [1194, 1814],
+      "name": "Moldavian SSR",
+      "flag": "Moldavian SSR"
+    },
+    {
+      "coordinates": [1197, 1626],
+      "name": "Byelorussian SSR",
+      "flag": "Byelorussian SSR"
+    },
+    {
+      "coordinates": [1091, 1744],
+      "name": "Polish People's Republic",
+      "flag": "pl"
+    },
+    {
+      "coordinates": [1805, 1486],
+      "name": "Tajik SSR",
+      "flag": "Tajik SSR"
+    },
+    {
+      "coordinates": [1442, 1807],
+      "name": "Georgian SSR",
+      "flag": "Georgian SSR"
+    },
+    {
+      "coordinates": [1573, 1790],
+      "name": "Azerbaijan SSR",
+      "flag": "Azerbaijan SSR"
+    },
+    {
+      "coordinates": [1089, 1519],
+      "name": "Finland",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [987, 1538],
+      "name": "Sweden",
+      "flag": "se"
+    },
+    {
+      "coordinates": [889, 1587],
+      "name": "Norway",
+      "flag": "no"
+    },
+    {
+      "coordinates": [1793, 156],
+      "name": "Japan",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1776, 517],
+      "name": "China",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1792, 774],
+      "name": "Mongolia",
+      "flag": "mn"
+    },
+    {
+      "coordinates": [1773, 961],
+      "name": "Tannu Tuva",
+      "flag": "tannutuva"
+    },
+    {
+      "coordinates": [1142, 382],
+      "name": "Far Eastern Republic",
+      "flag": "fareasternrepublic"
+    },
+    {
+      "coordinates": [1410, 625],
+      "name": "Yakut ASSR",
+      "flag": "Russian SSR"
+    },
+    {
+      "coordinates": [1817, 364],
+      "name": "North Korea",
+      "flag": "kp"
+    },
+    {
+      "coordinates": [1664, 689],
+      "name": "Buryat ASSR",
+      "flag": "Russian SSR"
+    },
+    {
+      "coordinates": [1440, 1170],
+      "name": "Komi ASSR",
+      "flag": "Russian SSR"
+    },
+    {
+      "coordinates": [1383, 875],
+      "name": "Siberia",
+      "flag": "Siberia"
+    },
+    {
+      "coordinates": [950, 1174],
+      "name": "Svalbard",
+      "flag": "sj"
+    },
+    {
+      "coordinates": [789, 1823],
+      "name": "France",
+      "flag": "fr"
+    }
+  ]
+}

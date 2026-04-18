@@ -1,12 +1,38 @@
 export function initNavigation() {
-  const showPage = (pageId: string) => {
-    (window as any).currentPageId = pageId;
+  const closeMobileSidebar = () => {
+    const sidebar = document.getElementById("sidebar-menu");
+    const backdrop = document.getElementById("mobile-menu-backdrop");
+    if (sidebar?.classList.contains("open")) {
+      sidebar.classList.remove("open");
+      backdrop?.classList.remove("open");
+      document.documentElement.classList.remove("overflow-hidden");
+      sidebar.setAttribute("aria-hidden", "true");
+      backdrop?.setAttribute("aria-hidden", "true");
+      const hb = document.getElementById("hamburger-btn");
+      if (hb) hb.setAttribute("aria-expanded", "false");
+    }
+  };
 
-    // Hide only the currently visible modal
+  const showPage = (pageId: string) => {
+    window.currentPageId = pageId;
+
+    // Close mobile sidebar if a nav item was clicked
+    closeMobileSidebar();
+
+    // Close the currently visible modal properly
     const visibleModal = document.querySelector(".page-content:not(.hidden)");
     if (visibleModal) {
-      visibleModal.classList.add("hidden");
-      visibleModal.classList.remove("block");
+      // If it's an open modal component, call close() for proper cleanup (onClose callback, etc.)
+      if (
+        typeof (visibleModal as any).isOpen === "function" &&
+        (visibleModal as any).isOpen() &&
+        typeof (visibleModal as any).close === "function"
+      ) {
+        (visibleModal as any).close();
+      } else {
+        visibleModal.classList.add("hidden");
+        visibleModal.classList.remove("block");
+      }
     }
 
     // Handle page-play separately (it's not a page-content element)
@@ -89,6 +115,13 @@ export function initNavigation() {
             ) as any;
 
             if (openModal && typeof openModal.close === "function") {
+              // Check confirmation guard before closing
+              if (
+                typeof openModal.confirmBeforeClose === "function" &&
+                !openModal.confirmBeforeClose()
+              ) {
+                return;
+              }
               // Call leaveLobby or closeAndLeave first if it exists (for lobby modals)
               if (typeof openModal.leaveLobby === "function") {
                 openModal.leaveLobby();
@@ -106,9 +139,6 @@ export function initNavigation() {
     }
   });
 
-  // Set default page to play if no menu item is active
-  const anyActive = document.querySelector(".nav-menu-item.active");
-  if (!anyActive) {
-    showPage("page-play");
-  }
+  // Ensure Play is the default visible/active page on load.
+  showPage("page-play");
 }

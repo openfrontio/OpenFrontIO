@@ -1,5 +1,6 @@
 import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { assetUrl } from "../core/AssetUrls";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/baseComponents/Modal";
@@ -8,7 +9,7 @@ import {
   collectGraphicsDiagnostics,
   GraphicsDiagnostics,
 } from "./utilities/Diagnostic";
-import infoIcon from "/images/InfoIcon.svg?url";
+const infoIcon = assetUrl("images/InfoIcon.svg");
 
 @customElement("troubleshooting-modal")
 export class TroubleshootingModal extends BaseModal {
@@ -30,11 +31,7 @@ export class TroubleshootingModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full select-text flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           titleContent: html` <div
             class="w-full flex flex-col sm:flex-row justify-between gap-2"
@@ -56,7 +53,7 @@ export class TroubleshootingModal extends BaseModal {
               ${translateText("common.copy")}
             </button>
           </div>`,
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         ${this.loading

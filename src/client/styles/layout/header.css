@@ -30,10 +30,6 @@
 }
 
 .l-header__highlightText {
-  color: #2563eb;
+  color: #0073b7;
   font-weight: 700;
-  filter: drop-shadow(1px 1px 0px rgb(255, 255, 255))
-    drop-shadow(-1px -1px 0px rgb(255, 255, 255))
-    drop-shadow(1px -1px 0px rgb(255, 255, 255))
-    drop-shadow(-1px 1px 0px rgb(255, 255, 255));
 }

@@ -12,12 +12,25 @@ import {
   TrainType,
   UnitType,
 } from "./Game";
-import { TileRef, TileUpdate } from "./GameMap";
+import { TileRef } from "./GameMap";
 
 export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
-  packedTileUpdates: BigUint64Array;
+  /**
+   * Packed tile updates as `[tileRef, state]` uint32 pairs.
+   *
+   * `tileRef` is a `TileRef` (fits in uint32), and `state` is the packed per-tile
+   * state (`uint16`) stored in a `uint32` lane.
+   */
+  packedTileUpdates: Uint32Array;
+  /**
+   * Optional packed motion plan records.
+   *
+   * When present, this buffer is expected to be transferred worker -> main
+   * (similar to `packedTileUpdates`) to avoid structured-clone copies.
+   */
+  packedMotionPlans?: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
   tickExecutionDuration?: number;
   pendingTurns?: number;
@@ -29,6 +42,7 @@ export interface ErrorUpdate {
 }
 
 export enum GameUpdateType {
+  // Tile updates are delivered via `packedTileUpdates` on the outer GameUpdateViewData.
   Tile,
   Unit,
   Player,
@@ -54,7 +68,6 @@ export enum GameUpdateType {
 }
 
 export type GameUpdate =
-  | TileUpdateWrapper
   | UnitUpdate
   | PlayerUpdate
   | AllianceRequestUpdate
@@ -110,11 +123,6 @@ export interface ConquestUpdate {
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
-}
-
-export interface TileUpdateWrapper {
-  type: GameUpdateType.Tile;
-  update: TileUpdate;
 }
 
 export interface UnitUpdate {

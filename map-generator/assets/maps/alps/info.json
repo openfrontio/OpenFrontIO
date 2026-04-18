@@ -1,0 +1,45 @@
+{
+  "name": "Alps",
+  "nations": [
+    {
+      "coordinates": [740, 620],
+      "name": "Savoy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [980, 580],
+      "name": "Switzerland",
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1220, 560],
+      "name": "Tyrol",
+      "flag": "at"
+    },
+    {
+      "coordinates": [980, 820],
+      "name": "Lombardy",
+      "flag": "it"
+    },
+    {
+      "coordinates": [1180, 820],
+      "name": "Veneto",
+      "flag": "venice"
+    },
+    {
+      "coordinates": [1320, 690],
+      "name": "Bavaria",
+      "flag": "de"
+    },
+    {
+      "coordinates": [1450, 820],
+      "name": "Slovenia",
+      "flag": "si"
+    },
+    {
+      "coordinates": [1100, 650],
+      "name": "Liechtenstein",
+      "flag": "li"
+    }
+  ]
+}

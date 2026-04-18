@@ -1,28 +1,32 @@
 import {
+  BuildableUnit,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
-  | "heartbeat"
   | "init"
   | "initialized"
   | "turn"
   | "game_update"
+  | "game_update_batch"
+  | "game_error"
   | "player_actions"
   | "player_actions_result"
+  | "player_buildables"
+  | "player_buildables_result"
   | "player_profile"
   | "player_profile_result"
   | "player_border_tiles"
   | "player_border_tiles_result"
-  | "attack_average_position"
-  | "attack_average_position_result"
+  | "attack_clustered_positions"
+  | "attack_clustered_positions_result"
   | "transport_ship_spawn"
   | "transport_ship_spawn_result";
 
@@ -32,15 +36,11 @@ interface BaseWorkerMessage {
   id?: string;
 }
 
-export interface HeartbeatMessage extends BaseWorkerMessage {
-  type: "heartbeat";
-}
-
 // Messages from main thread to worker
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
-  clientID: ClientID;
+  clientID: ClientID | undefined;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -58,17 +58,40 @@ export interface GameUpdateMessage extends BaseWorkerMessage {
   gameUpdate: GameUpdateViewData;
 }
 
+export interface GameUpdateBatchMessage extends BaseWorkerMessage {
+  type: "game_update_batch";
+  gameUpdates: GameUpdateViewData[];
+}
+
+export interface GameErrorMessage extends BaseWorkerMessage {
+  type: "game_error";
+  error: ErrorUpdate;
+}
+
 export interface PlayerActionsMessage extends BaseWorkerMessage {
   type: "player_actions";
   playerID: PlayerID;
   x?: number;
   y?: number;
-  units?: UnitType[];
+  units?: readonly PlayerBuildableUnitType[] | null;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {
   type: "player_actions_result";
   result: PlayerActions;
+}
+
+export interface PlayerBuildablesMessage extends BaseWorkerMessage {
+  type: "player_buildables";
+  playerID: PlayerID;
+  x?: number;
+  y?: number;
+  units?: readonly PlayerBuildableUnitType[];
+}
+
+export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
+  type: "player_buildables_result";
+  result: BuildableUnit[];
 }
 
 export interface PlayerProfileMessage extends BaseWorkerMessage {
@@ -91,16 +114,16 @@ export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
   result: PlayerBorderTiles;
 }
 
-export interface AttackAveragePositionMessage extends BaseWorkerMessage {
-  type: "attack_average_position";
+export interface AttackClusteredPositionsMessage extends BaseWorkerMessage {
+  type: "attack_clustered_positions";
   playerID: number;
-  attackID: string;
+  attackID?: string;
 }
 
-export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
-  type: "attack_average_position_result";
-  x: number | null;
-  y: number | null;
+export interface AttackClusteredPositionsResultMessage
+  extends BaseWorkerMessage {
+  type: "attack_clustered_positions_result";
+  attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
 
 export interface TransportShipSpawnMessage extends BaseWorkerMessage {
@@ -116,21 +139,24 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
 
 // Union types for type safety
 export type MainThreadMessage =
-  | HeartbeatMessage
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
+  | PlayerBuildablesMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
-  | AttackAveragePositionMessage
+  | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage;
 
 // Message send from worker
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
+  | GameUpdateBatchMessage
+  | GameErrorMessage
   | PlayerActionsResultMessage
+  | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
-  | AttackAveragePositionResultMessage
+  | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage;
