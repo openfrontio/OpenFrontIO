@@ -242,12 +242,17 @@ export class WarshipExecution implements Execution {
     // Get warship's water component for connectivity check
     const warshipComponent = this.mg.getWaterComponent(this.warship.tile());
 
+    const patrolTile = this.warship.patrolTile();
+    if (patrolTile === undefined) {
+      return undefined;
+    }
+
     while (expandCount < 3) {
       const x =
-        this.mg.x(this.warship.patrolTile()!) +
+        this.mg.x(patrolTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       const y =
-        this.mg.y(this.warship.patrolTile()!) +
+        this.mg.y(patrolTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       if (!this.mg.isValidCoord(x, y)) {
         continue;
