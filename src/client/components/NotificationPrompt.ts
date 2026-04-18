@@ -20,6 +20,12 @@ export class NotificationPrompt extends LitElement {
   /** Whether the banner is currently visible. Controlled by the parent. */
   @property({ type: Boolean }) visible = false;
 
+  /**
+   * Optional hint shown when the browser has denied notification permission.
+   * When set, replaces the action buttons with this message.
+   */
+  @property({ type: String }) deniedHint = "";
+
   createRenderRoot() {
     return this;
   }
@@ -92,27 +98,40 @@ export class NotificationPrompt extends LitElement {
           </div>
         </div>
         <div class="flex items-center gap-1.5 justify-end">
-          <button
-            type="button"
-            class="px-2 py-1 text-xs text-white/35 hover:text-white/60 transition-colors"
-            @click=${this.dismissForever}
-          >
-            ${translateText("notification_prompt.dismiss_forever")}
-          </button>
-          <button
-            type="button"
-            class="px-2 py-1 text-xs text-white/45 hover:text-white/70 transition-colors"
-            @click=${this.dismiss}
-          >
-            ${translateText("notification_prompt.dismiss")}
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1 text-xs font-semibold bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/40 rounded-lg text-blue-300 transition-colors"
-            @click=${this.handleEnable}
-          >
-            ${translateText("notification_prompt.enable")}
-          </button>
+          ${this.deniedHint
+            ? html`<p class="text-xs text-red-400/80 italic flex-1">
+                  ${this.deniedHint}
+                </p>
+                <button
+                  type="button"
+                  class="px-2 py-1 text-xs text-white/45 hover:text-white/70 transition-colors"
+                  @click=${this.dismiss}
+                >
+                  ${translateText("notification_prompt.dismiss")}
+                </button>`
+            : html`
+                <button
+                  type="button"
+                  class="px-2 py-1 text-xs text-white/35 hover:text-white/60 transition-colors"
+                  @click=${this.dismissForever}
+                >
+                  ${translateText("notification_prompt.dismiss_forever")}
+                </button>
+                <button
+                  type="button"
+                  class="px-2 py-1 text-xs text-white/45 hover:text-white/70 transition-colors"
+                  @click=${this.dismiss}
+                >
+                  ${translateText("notification_prompt.dismiss")}
+                </button>
+                <button
+                  type="button"
+                  class="px-3 py-1 text-xs font-semibold bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/40 rounded-lg text-blue-300 transition-colors"
+                  @click=${this.handleEnable}
+                >
+                  ${translateText("notification_prompt.enable")}
+                </button>
+              `}
         </div>
       </div>
     `;

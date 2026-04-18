@@ -51,6 +51,7 @@ export class JoinLobbyModal extends BaseModal {
   @state() private playerCount: number = 0;
   @state() private gameConfig: GameConfig | null = null;
   @state() private showNotificationPrompt = false;
+  @state() private notificationDeniedHint = "";
 
   private userSettings = new UserSettings();
   @state() private currentLobbyId: string = "";
@@ -124,12 +125,15 @@ export class JoinLobbyModal extends BaseModal {
         })}
         <notification-prompt
           .visible=${this.showNotificationPrompt}
+          .deniedHint=${this.notificationDeniedHint}
           @enable=${this.handleEnableNotifications}
           @dismiss=${() => {
             this.showNotificationPrompt = false;
+            this.notificationDeniedHint = "";
           }}
           @dismiss-forever=${() => {
             this.showNotificationPrompt = false;
+            this.notificationDeniedHint = "";
           }}
         ></notification-prompt>
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
@@ -304,6 +308,7 @@ export class JoinLobbyModal extends BaseModal {
   public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
     super.open();
     this.showNotificationPrompt = false;
+    this.notificationDeniedHint = "";
 
     // Show notification prompt whenever notifications are not enabled and not permanently dismissed
     const dismissed =
@@ -461,15 +466,28 @@ export class JoinLobbyModal extends BaseModal {
       if (!this.userSettings.browserNotifications()) {
         this.userSettings.toggleBrowserNotifications();
       }
+    } else if (Notification.permission === "denied") {
+      this.notificationDeniedHint = translateText(
+        "notification_prompt.denied_hint",
+      );
+      this.showNotificationPrompt = true;
     } else if (Notification.permission === "default") {
-      Notification.requestPermission().then((permission) => {
-        if (
-          permission === "granted" &&
-          !this.userSettings.browserNotifications()
-        ) {
-          this.userSettings.toggleBrowserNotifications();
-        }
-      });
+      Notification.requestPermission()
+        .then((permission) => {
+          if (permission === "granted") {
+            if (!this.userSettings.browserNotifications()) {
+              this.userSettings.toggleBrowserNotifications();
+            }
+          } else if (permission === "denied") {
+            this.notificationDeniedHint = translateText(
+              "notification_prompt.denied_hint",
+            );
+            this.showNotificationPrompt = true;
+          }
+        })
+        .catch((e) => {
+          console.warn("[Notifications] requestPermission failed:", e);
+        });
     }
   }
 

@@ -547,6 +547,7 @@
     "title": "Never miss a game",
     "body": "Enable browser notifications to get alerted when your game starts, even if you switch tabs.",
     "hint": "Make sure your browser allows notifications for this site.",
+    "denied_hint": "Notifications are blocked. Please allow them in your browser settings.",
     "enable": "Enable",
     "dismiss": "Not now",
     "dismiss_forever": "Don't show again"
