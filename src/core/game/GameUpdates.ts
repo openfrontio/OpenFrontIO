@@ -1,5 +1,6 @@
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import {
+  BonusIcon,
   EmojiMessage,
   GameUpdates,
   Gold,
@@ -96,7 +97,7 @@ export interface BonusEventUpdate {
   tile: TileRef;
   gold: number;
   troops: number;
-  icon?: "oil";
+  icon?: BonusIcon;
 }
 
 export interface RailroadConstructionUpdate {
