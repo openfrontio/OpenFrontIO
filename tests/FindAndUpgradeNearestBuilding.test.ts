@@ -95,28 +95,25 @@ function makeRunner(
         a.distance <= b.distance ? a : b,
       );
 
-      if (bestUpgrade.unitType !== UnitType.SAMLauncher) {
-        const hasBlockedSamEntry = actions.buildableUnits.some(
-          (bu: any) =>
-            bu.type === UnitType.SAMLauncher && bu.canUpgrade === false,
-        );
-        if (hasBlockedSamEntry) {
+      // Check if any unaffordable building is closer than bestUpgrade
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
           const myPlayerID = this.myPlayer!.id();
-          const closestSam = this.gameView
+          const closestOfType = this.gameView
             .nearbyUnits(
               tile,
               this.gameView.config().structureMinDist(),
-              UnitType.SAMLauncher,
+              bu.type,
             )
             .filter(({ unit }: any) => unit.owner().id() === myPlayerID)
             .sort((a: any, b: any) => a.distSquared - b.distSquared)[0];
 
-          if (closestSam) {
-            const samDist = this.gameView.manhattanDist(
+          if (closestOfType) {
+            const dist = this.gameView.manhattanDist(
               tile,
-              closestSam.unit.tile(),
+              closestOfType.unit.tile(),
             );
-            if (samDist <= bestUpgrade.distance) {
+            if (dist <= bestUpgrade.distance) {
               return;
             }
           }
@@ -218,6 +215,41 @@ describe("findAndUpgradeNearestBuilding", () => {
       expect(emitSpy).toHaveBeenCalledWith(
         expect.objectContaining({ unitId: 1, unitType: UnitType.DefensePost }),
       );
+    });
+
+    test("does NOT upgrade Factory when unaffordable City is closer (Evan's scenario)", async () => {
+      // City at tile 5 (dist=2, costs 1M), Factory at tile 20 (dist=10, costs 500K)
+      // Player clicked near the City — should do nothing
+      const cityTile = 5 as TileRef;
+      const factoryTile = 20 as TileRef;
+      const cityUnit = makeUnit(10, UnitType.City, PLAYER_ID, cityTile);
+      const factoryUnit = makeUnit(1, UnitType.Factory, PLAYER_ID, factoryTile);
+
+      const buildableUnits = [
+        { type: UnitType.City, canUpgrade: false },
+        { type: UnitType.Factory, canUpgrade: 1 },
+      ];
+      const distMap = new Map<TileRef, number>([
+        [cityTile, 2],
+        [factoryTile, 10],
+      ]);
+      const { runner, emitSpy } = makeRunner(
+        buildableUnits,
+        [factoryUnit],
+        [],
+        distMap,
+      );
+      // Mock nearbyUnits to return city when queried for City type
+      runner.gameView.nearbyUnits = vi.fn((tile, radius, type) => {
+        if (type === UnitType.City) {
+          return [{ unit: cityUnit, distSquared: 4 }];
+        }
+        return [];
+      });
+
+      await runner.findAndUpgradeNearestBuilding(TILE);
+
+      expect(emitSpy).not.toHaveBeenCalled();
     });
 
     test("upgrades SAM when it IS affordable", async () => {

@@ -658,44 +658,38 @@ export class ClientGameRunner {
         return;
       }
 
-      // If the closest upgradeable unit is a SAM, upgrade it.
-      // If the closest upgradeable unit is NOT a SAM, but actions() found a SAM
-      // entry with canUpgrade===false (SAM exists near clickedTile but can't be
-      // afforded right now), do nothing — the player intended to upgrade that
-      // SAM and we must not spend their gold on a different building.
+      // Upgrade the closest affordable building. But if there's an unaffordable
+      // building (any type) that's closer to clickedTile than the best candidate,
+      // do nothing — the player clicked on that unaffordable building intending
+      // to upgrade it, and we must not spend their gold on a different building.
       const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
       if (!bestUpgrade) {
         return;
       }
 
-      if (bestUpgrade.unitType !== UnitType.SAMLauncher) {
-        // Block the upgrade only if the closest own SAM to clickedTile is
-        // unaffordable AND is at least as close as the best candidate.
-        // This means the player clicked on the SAM intending to upgrade it,
-        // not on the other building.
-        const myPlayerID = this.myPlayer!.id();
-        const closestSam = this.gameView
-          .nearbyUnits(
-            clickedTile,
-            this.gameView.config().structureMinDist(),
-            UnitType.SAMLauncher,
-          )
-          .filter(({ unit }) => unit.owner().id() === myPlayerID)
-          .sort((a, b) => a.distSquared - b.distSquared)[0];
+      // Check if any unaffordable building is closer than bestUpgrade
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+          const myPlayerID = this.myPlayer!.id();
+          const closestOfType = this.gameView
+            .nearbyUnits(
+              clickedTile,
+              this.gameView.config().structureMinDist(),
+              bu.type,
+            )
+            .filter(({ unit }) => unit.owner().id() === myPlayerID)
+            .sort((a, b) => a.distSquared - b.distSquared)[0];
 
-        if (closestSam) {
-          const samDist = this.gameView.manhattanDist(
-            clickedTile,
-            closestSam.unit.tile(),
-          );
-          // canUpgrade===false for SAMLauncher means the SAM exists near
-          // clickedTile but can't be afforded (buildableUnits uses the same
-          // structureMinDist radius to find it).
-          const samIsUnaffordable = actions.buildableUnits.some(
-            (bu) => bu.type === UnitType.SAMLauncher && bu.canUpgrade === false,
-          );
-          if (samIsUnaffordable && samDist <= bestUpgrade.distance) {
-            return;
+          if (closestOfType) {
+            const dist = this.gameView.manhattanDist(
+              clickedTile,
+              closestOfType.unit.tile(),
+            );
+            if (dist <= bestUpgrade.distance) {
+              // An unaffordable building of type bu.type is at least as close
+              // as bestUpgrade — player clicked on it, not on bestUpgrade.
+              return;
+            }
           }
         }
       }
