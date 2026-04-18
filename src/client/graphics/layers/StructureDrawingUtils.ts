@@ -69,7 +69,7 @@ export class SpriteFactory {
     [UnitType.Factory, { iconPath: factoryIcon, image: null }],
     [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
     [UnitType.Port, { iconPath: anchorIcon, image: null }],
-    [UnitType.OilRig, { iconPath: oilRigIcon, image: null }], 
+    [UnitType.OilRig, { iconPath: oilRigIcon, image: null }],
     [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
     [UnitType.SAMLauncher, { iconPath: SAMMissileIcon, image: null }],
   ]);

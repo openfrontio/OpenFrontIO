@@ -135,12 +135,21 @@ describe("Map consistency", () => {
 
       const files = fs.readdirSync(dir).sort();
       const expected = ["image.png", "info.json"];
+      const allowedFiles =
+        key === "WorldOil"
+          ? [
+              ...expected,
+              "OIL_EDITING.md",
+              "apply_oil_reference.py",
+              "oil_reference.png",
+            ].sort()
+          : expected;
       if (
-        files.length !== expected.length ||
-        !files.every((f, i) => f === expected[i])
+        files.length !== allowedFiles.length ||
+        !files.every((f, i) => f === allowedFiles[i])
       ) {
         errors.push(
-          `${key}: expected [${expected.join(", ")}] but found [${files.join(", ")}]`,
+          `${key}: expected [${allowedFiles.join(", ")}] but found [${files.join(", ")}]`,
         );
       }
     }

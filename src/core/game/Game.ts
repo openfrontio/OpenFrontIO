@@ -161,7 +161,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
     GameMapType.WorldOil,
-    GameMapType.WorldRotated,
     GameMapType.GiantWorldMap,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,

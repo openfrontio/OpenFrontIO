@@ -27,7 +27,7 @@ const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
-const oilRigIcon = assetUrl("images/OilRigIcon.svg"); 
+const oilRigIcon = assetUrl("images/OilRigIcon.svg");
 const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 
@@ -129,7 +129,7 @@ export class UnitDisplay extends LitElement implements Layer {
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);
-    this._oilRig = player.totalUnitLevels(UnitType.OilRig); 
+    this._oilRig = player.totalUnitLevels(UnitType.OilRig);
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);

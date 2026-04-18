@@ -320,6 +320,8 @@ describe("NationStructureBehavior.buildReachableStations", () => {
 describe("NationStructureBehavior.handleStructures", () => {
   it("queues an oil rig when a nation has coastal territory and can afford one", () => {
     const coastalTile = 123 as any;
+    const otherCoastalTile = 456 as any;
+    const sharedWaterTile = 789 as any;
     const queuedExecutions: unknown[] = [];
 
     const units = vi.fn((...types: UnitType[]) => {
@@ -361,6 +363,10 @@ describe("NationStructureBehavior.handleStructures", () => {
       ),
     };
 
+    const otherPlayer = {
+      borderTiles: vi.fn(() => new Set([otherCoastalTile])),
+    };
+
     const game = {
       config: () => ({
         isUnitDisabled: vi.fn(() => false),
@@ -370,7 +376,19 @@ describe("NationStructureBehavior.handleStructures", () => {
       unitInfo: vi.fn(() => ({
         cost: vi.fn(() => 100n),
       })),
-      isOceanShore: vi.fn((tile: unknown) => tile === coastalTile),
+      isShore: vi.fn(
+        (tile: unknown) => tile === coastalTile || tile === otherCoastalTile,
+      ),
+      neighbors: vi.fn((tile: unknown) =>
+        tile === coastalTile || tile === otherCoastalTile
+          ? [sharedWaterTile]
+          : [],
+      ),
+      isWater: vi.fn((tile: unknown) => tile === sharedWaterTile),
+      getWaterComponent: vi.fn((tile: unknown) =>
+        tile === sharedWaterTile ? 1 : null,
+      ),
+      players: vi.fn(() => [player, otherPlayer]),
       addExecution: vi.fn((execution: unknown) => {
         queuedExecutions.push(execution);
       }),
@@ -382,7 +400,9 @@ describe("NationStructureBehavior.handleStructures", () => {
       player as any,
     );
 
-    vi.spyOn(behavior as any, "structureSpawnTile").mockReturnValue(coastalTile);
+    vi.spyOn(behavior as any, "structureSpawnTile").mockReturnValue(
+      coastalTile,
+    );
 
     expect(behavior.handleStructures()).toBe(true);
     expect(player.canBuild).toHaveBeenCalledWith(UnitType.OilRig, coastalTile);

@@ -55,8 +55,6 @@ describe("TrainStation", () => {
       isAlliedWith: vi.fn().mockReturnValue(false),
       isOnSameTeam: vi.fn().mockReturnValue(false),
       isFriendly: vi.fn().mockReturnValue(false),
-      isOnSameTeam: vi.fn().mockReturnValue(false),
-      isAlliedWith: vi.fn().mockReturnValue(false),
     } as any;
 
     unit = {

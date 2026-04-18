@@ -1,9 +1,6 @@
-import { UserSettings } from "../../src/core/game/UserSettings";
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { TestConfig } from "../util/TestConfig";
-import { TestServerConfig } from "../util/TestServerConfig";
 import {
   Game,
   Player,
@@ -11,8 +8,11 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
+import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
+import { TestConfig } from "../util/TestConfig";
+import { TestServerConfig } from "../util/TestServerConfig";
 
 describe("Construction economy", () => {
   let game: Game;
