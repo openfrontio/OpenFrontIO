@@ -477,9 +477,9 @@ export enum TerrainType {
   Plains,
   Highland,
   Mountain,
-  Oil,
   Lake,
   Ocean,
+  Oil,
 }
 
 export enum PlayerType {

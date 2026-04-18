@@ -1,12 +1,6 @@
 import { vi } from "vitest";
-import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import {
-  Difficulty,
-  PlayerType,
-  TerrainType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Difficulty, PlayerType, TerrainType } from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 
