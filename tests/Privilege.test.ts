@@ -39,10 +39,13 @@ const flagCosmetics = {
   colorPalettes: {},
   flags: {
     cool_flag: {
+      type: "flag" as const,
       name: "cool_flag",
       url: "https://example.com/cool.png",
       affiliateCode: null,
       product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+      priceSoft: undefined,
+      priceHard: undefined,
       rarity: "common",
     },
   },
@@ -226,6 +229,44 @@ describe("UsernameCensor", () => {
         const result = checker.censor("nigger", "NIG");
         expect(result.clanTag).toBeNull();
         expect(shadowNames).toContain(result.username);
+      });
+
+      describe("clan tag + username combined forms a slur", () => {
+        test("censors when clan+name combined forms hitler", () => {
+          const result = checker.censor("LER", "HIT");
+          expect(shadowNames).toContain(result.username);
+          expect(result.clanTag).toBeNull();
+        });
+
+        test("censors when clan+name combined forms hitler (split differently)", () => {
+          const result = checker.censor("TLER", "HI");
+          expect(shadowNames).toContain(result.username);
+          expect(result.clanTag).toBeNull();
+        });
+
+        test("censors when clan+name combined forms adolf", () => {
+          const result = checker.censor("OLF", "AD");
+          expect(shadowNames).toContain(result.username);
+          expect(result.clanTag).toBeNull();
+        });
+
+        test("censors when clan+name combined forms nigger", () => {
+          const result = checker.censor("ger", "NIG");
+          expect(shadowNames).toContain(result.username);
+          expect(result.clanTag).toBeNull();
+        });
+
+        test("censors when clan+name combined forms nigger (clean parts)", () => {
+          const result = checker.censor("gger", "NI");
+          expect(shadowNames).toContain(result.username);
+          expect(result.clanTag).toBeNull();
+        });
+
+        test("censors leet speak combined across clan and name", () => {
+          const result = checker.censor("g3r", "N1G");
+          expect(shadowNames).toContain(result.username);
+          expect(result.clanTag).toBeNull();
+        });
       });
     });
 

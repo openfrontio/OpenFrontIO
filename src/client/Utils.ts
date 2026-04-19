@@ -210,6 +210,12 @@ export function getActiveModifiers(
       badgeKey: "public_game_modifier.peace_time",
     });
   }
+  if (modifiers.isWaterNukes) {
+    result.push({
+      labelKey: "public_game_modifier.water_nukes_label",
+      badgeKey: "public_game_modifier.water_nukes",
+    });
+  }
   return result;
 }
 
@@ -307,6 +313,11 @@ export function formatPercentage(value: number): string {
 export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";
+
+  // Handle Shift+ prefix: format as "Shift+X"
+  if (value.startsWith("Shift+")) {
+    return "Shift+" + formatKeyForDisplay(value.slice(6));
+  }
 
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";

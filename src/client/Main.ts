@@ -32,7 +32,7 @@ import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
-import { HomepagePromos } from "./HomepagePromos";
+import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -62,6 +62,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
@@ -246,6 +247,7 @@ class Client {
   private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
     token: string;
@@ -305,10 +307,6 @@ class Client {
         await crazyGamesSDK.gameplayStop();
       }
     });
-
-    const gutterAds = document.querySelector("homepage-promos");
-    if (!(gutterAds instanceof HomepagePromos))
-      throw new Error("Missing homepage-promos");
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
@@ -636,6 +634,12 @@ class Client {
         return;
       }
 
+      const type = params.get("type");
+      if (type === "currency_pack") {
+        alertAndStrip(translateText("store.currency_pack_purchase_success"));
+        return;
+      }
+
       const cosmeticName = params.get("cosmetic");
       if (!cosmeticName) {
         alert("Something went wrong. Please contact support.");
@@ -733,6 +737,7 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
+    this.mostRecentJoinEvent = event.timeStamp;
     if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
     }
@@ -751,7 +756,7 @@ class Client {
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
-    this.lobbyHandle = joinLobby(this.eventBus, {
+    const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
@@ -761,6 +766,14 @@ class Client {
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
     });
+
+    if (this.mostRecentJoinEvent !== event.timeStamp) {
+      newLobbyHandle.stop(true);
+      console.warn("Join requested, but was superseded");
+      return;
+    }
+
+    this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
       console.log("Closing modals");

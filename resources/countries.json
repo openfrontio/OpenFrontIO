@@ -64,6 +64,11 @@
     "name": "Alaska"
   },
   {
+    "code": "alberta",
+    "continent": "North America",
+    "name": "Alberta"
+  },
+  {
     "code": "dz",
     "continent": "Africa",
     "name": "Algeria"
@@ -87,6 +92,11 @@
     "code": "am",
     "continent": "Asia",
     "name": "Armenia"
+  },
+  {
+    "code": "Armenian SSR",
+    "continent": "Asia",
+    "name": "Armenian SSR"
   },
   {
     "code": "Anarchist flag",
@@ -192,6 +202,11 @@
     "name": "Azerbaijan"
   },
   {
+    "code": "Azerbaijan SSR",
+    "continent": "Asia",
+    "name": "Azerbaijan SSR"
+  },
+  {
     "code": "Aztec Empire",
     "continent": "North America",
     "name": "Aztec Empire"
@@ -295,6 +310,11 @@
     "name": "Brazil"
   },
   {
+    "code": "britishcolumbia",
+    "continent": "North America",
+    "name": "British Columbia"
+  },
+  {
     "code": "io",
     "continent": "Asia",
     "name": "British Indian Ocean Territory"
@@ -338,6 +358,11 @@
     "code": "bi",
     "continent": "Africa",
     "name": "Burundi"
+  },
+  {
+    "code": "Byelorussian SSR",
+    "continent": "Europe",
+    "name": "Byelorussian SSR"
   },
   {
     "code": "Byzantine Empire",
@@ -417,6 +442,11 @@
     "code": "td",
     "continent": "Africa",
     "name": "Chad"
+  },
+  {
+    "code": "Chaldea",
+    "continent": "Asia",
+    "name": "Chaldea"
   },
   {
     "code": "cl",
@@ -677,6 +707,11 @@
     "name": "Estonia"
   },
   {
+    "code": "Estonian SSR",
+    "continent": "Europe",
+    "name": "Estonian SSR"
+  },
+  {
     "code": "sz",
     "continent": "Africa",
     "name": "Eswatini"
@@ -695,6 +730,11 @@
     "code": "fk",
     "continent": "South America",
     "name": "Falkland Islands"
+  },
+  {
+    "code": "fareasternrepublic",
+    "continent": "Asia",
+    "name": "Far Eastern Republic"
   },
   {
     "code": "fo",
@@ -804,6 +844,11 @@
     "code": "Georgia_US",
     "continent": "North America",
     "name": "Georgia (US State)"
+  },
+  {
+    "code": "Georgian SSR",
+    "continent": "Asia",
+    "name": "Georgian SSR"
   },
   {
     "code": "German Empire",
@@ -1036,6 +1081,16 @@
     "name": "Kansas"
   },
   {
+    "code": "Karelo-Finnish SSR",
+    "continent": "Europe",
+    "name": "Karelo-Finnish SSR"
+  },
+  {
+    "code": "Kazakh SSR",
+    "continent": "Asia",
+    "name": "Kazakh SSR"
+  },
+  {
     "code": "kz",
     "continent": "Asia",
     "name": "Kazakhstan"
@@ -1086,6 +1141,11 @@
     "name": "Kingdom of Judah"
   },
   {
+    "code": "Kirghiz SSR",
+    "continent": "Asia",
+    "name": "Kirghiz SSR"
+  },
+  {
     "code": "ki",
     "continent": "Oceania",
     "name": "Kiribati"
@@ -1133,6 +1193,11 @@
     "code": "lv",
     "continent": "Europe",
     "name": "Latvia"
+  },
+  {
+    "code": "Latvian SSR",
+    "continent": "Europe",
+    "name": "Latvian SSR"
   },
   {
     "code": "League of Nations",
@@ -1192,6 +1257,11 @@
     "name": "Lithuania"
   },
   {
+    "code": "Lithuanian SSR",
+    "continent": "Europe",
+    "name": "Lithuanian SSR"
+  },
+  {
     "code": "Louisiana",
     "continent": "North America",
     "name": "Louisiana"
@@ -1215,6 +1285,11 @@
     "code": "Macedonia",
     "continent": "Europe",
     "name": "Macedonia"
+  },
+  {
+    "code": "manitoba",
+    "continent": "North America",
+    "name": "Manitoba"
   },
   {
     "code": "mo",
@@ -1337,6 +1412,11 @@
     "name": "Missouri"
   },
   {
+    "code": "Moldavian SSR",
+    "continent": "Europe",
+    "name": "Moldavian SSR"
+  },
+  {
     "code": "md",
     "continent": "Europe",
     "name": "Moldova"
@@ -1430,9 +1510,19 @@
     "name": "Nevada"
   },
   {
+    "code": "newbrunswick",
+    "continent": "North America",
+    "name": "New Brunswick"
+  },
+  {
     "code": "nc",
     "continent": "Oceania",
     "name": "New Caledonia"
+  },
+  {
+    "code": "newfoundlandandlabrador",
+    "continent": "North America",
+    "name": "Newfoundland and Labrador"
   },
   {
     "code": "New_Hampshire",
@@ -1535,9 +1625,24 @@
     "name": "Northumbria"
   },
   {
+    "code": "northwestterritories",
+    "continent": "North America",
+    "name": "Northwest Territories"
+  },
+  {
     "code": "no",
     "continent": "Europe",
     "name": "Norway"
+  },
+  {
+    "code": "novascotia",
+    "continent": "North America",
+    "name": "Nova Scotia"
+  },
+  {
+    "code": "Nunavut",
+    "continent": "North America",
+    "name": "Nunavut"
   },
   {
     "code": "1_Occitania",
@@ -1558,6 +1663,11 @@
     "code": "om",
     "continent": "Asia",
     "name": "Oman"
+  },
+  {
+    "code": "ontario",
+    "continent": "North America",
+    "name": "Ontario"
   },
   {
     "code": "Oregon",
@@ -1664,6 +1774,11 @@
     "name": "Powys"
   },
   {
+    "code": "princeedwardisland",
+    "continent": "North America",
+    "name": "Prince Edward Island"
+  },
+  {
     "code": "provence",
     "continent": "Europe",
     "name": "Provence"
@@ -1739,6 +1854,11 @@
     "name": "Rio de Janeiro"
   },
   {
+    "code": "SPQR",
+    "continent": "Europe",
+    "name": "Roman Empire"
+  },
+  {
     "code": "Romanov Russia",
     "continent": "Europe",
     "name": "Romanov Russia"
@@ -1756,6 +1876,11 @@
     "code": "ru",
     "continent": "Europe",
     "name": "Russia"
+  },
+  {
+    "code": "Russian SSR",
+    "continent": "Europe",
+    "name": "Russian SSR"
   },
   {
     "code": "rw",
@@ -1839,6 +1964,11 @@
   {
     "code": "sardines",
     "name": "Sardines"
+  },
+  {
+    "code": "saskatchewan",
+    "continent": "North America",
+    "name": "Saskatchewan"
   },
   {
     "code": "Sassanid Empire",
@@ -1990,11 +2120,6 @@
     "name": "Sparta"
   },
   {
-    "code": "SPQR",
-    "continent": "Europe",
-    "name": "SPQR"
-  },
-  {
     "code": "lk",
     "continent": "Asia",
     "name": "Sri Lanka"
@@ -2060,9 +2185,19 @@
     "name": "Taiwan"
   },
   {
+    "code": "Tajik SSR",
+    "continent": "Asia",
+    "name": "Tajik SSR"
+  },
+  {
     "code": "tj",
     "continent": "Asia",
     "name": "Tajikistan"
+  },
+  {
+    "code": "tannutuva",
+    "continent": "Asia",
+    "name": "Tannu Tuva"
   },
   {
     "code": "tz",
@@ -2135,6 +2270,11 @@
     "name": "Türkiye"
   },
   {
+    "code": "Turkmen SSR",
+    "continent": "Asia",
+    "name": "Turkmen SSR"
+  },
+  {
     "code": "tm",
     "continent": "Asia",
     "name": "Turkmenistan"
@@ -2168,6 +2308,11 @@
     "code": "ua",
     "continent": "Europe",
     "name": "Ukraine"
+  },
+  {
+    "code": "Ukrainian SSR",
+    "continent": "Europe",
+    "name": "Ukrainian SSR"
   },
   {
     "code": "1_Ulaid",
@@ -2217,6 +2362,11 @@
     "code": "Utah",
     "continent": "North America",
     "name": "Utah"
+  },
+  {
+    "code": "Uzbek SSR",
+    "continent": "Asia",
+    "name": "Uzbek SSR"
   },
   {
     "code": "uz",
@@ -2336,6 +2486,11 @@
     "code": "yugoslavia",
     "continent": "Europe",
     "name": "Yugoslavia"
+  },
+  {
+    "code": "Yukon",
+    "continent": "North America",
+    "name": "Yukon"
   },
   {
     "code": "Zaire",

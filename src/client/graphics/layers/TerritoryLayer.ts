@@ -81,7 +81,14 @@ export class TerritoryLayer implements Layer {
       this.spawnHighlight();
     }
 
-    this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
+    this.game.recentlyUpdatedTiles().forEach((t) => {
+      this.enqueueTile(t);
+      // Immediately clear territory overlay for water tiles so old
+      // borders/territory don't persist visually (e.g. after nuke turns land to water)
+      if (this.game.isWater(t)) {
+        this.clearTile(t);
+      }
+    });
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
     unitUpdates.forEach((update) => {

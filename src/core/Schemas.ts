@@ -234,6 +234,7 @@ export const GameConfigSchema = z.object({
       isNukesDisabled: z.boolean().optional(),
       isSAMsDisabled: z.boolean().optional(),
       isPeaceTime: z.boolean().optional(),
+      isWaterNukes: z.boolean().optional(),
     })
     .optional(),
   nations: z
@@ -248,6 +249,7 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
+  waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
@@ -256,6 +258,20 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
   startingGold: z.number().int().min(0).max(1000000000).nullable().optional(),
+  hostCheats: z
+    .object({
+      infiniteGold: z.boolean().optional(),
+      infiniteTroops: z.boolean().optional(),
+      goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
+      startingGold: z
+        .number()
+        .int()
+        .min(0)
+        .max(1000000000)
+        .nullable()
+        .optional(),
+    })
+    .optional(),
 });
 
 export const TeamSchema = z.string();

@@ -172,6 +172,10 @@ export class GameServer {
       this.gameConfig.disableAlliances =
         gameConfig.disableAlliances ?? undefined;
     }
+    if (gameConfig.waterNukes !== undefined) {
+      this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
+    }
+    this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 
   private isKicked(clientID: ClientID): boolean {
@@ -343,10 +347,13 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         const bytes = Buffer.byteLength(message, "utf8");
+        const intentType =
+          clientMsg.type === "intent" ? clientMsg.intent.type : undefined;
         const rateResult = this.intentRateLimiter.check(
           client.clientID,
           clientMsg.type,
           bytes,
+          intentType,
         );
         if (rateResult === "kick") {
           this.log.warn(`Client rate limit exceeded, kicking`, {
@@ -545,19 +552,23 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
-      // Close lobby when host leaves before game starts
-      if (
-        !this._hasStarted &&
-        !this.isPublic() &&
-        client.persistentID === this.creatorPersistentID
-      ) {
-        this.log.info("Host left, closing lobby", {
-          gameID: this.id,
-        });
-        for (const c of [...this.activeClients]) {
-          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+
+      if (!this._hasStarted) {
+        // Remove persistentId if the game has not started to prevent going over max players
+        this.persistentIdToClientId.delete(client.persistentID);
+        // Close lobby when host leaves before game starts
+        if (
+          !this.isPublic() &&
+          client.persistentID === this.creatorPersistentID
+        ) {
+          this.log.info("Host left, closing lobby", {
+            gameID: this.id,
+          });
+          for (const c of [...this.activeClients]) {
+            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+          }
+          this._hasEnded = true;
         }
-        this._hasEnded = true;
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -575,6 +586,10 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Remove persistentId if the game has not started to prevent going over max players
+      if (!this._hasStarted) {
+        this.persistentIdToClientId.delete(client.persistentID);
+      }
     }
   }
 

@@ -24,47 +24,47 @@
     {
       "coordinates": [485, 927],
       "name": "Nunavut",
-      "flag": "ca"
+      "flag": "Nunavut"
     },
     {
       "coordinates": [432, 550],
       "name": "Northwest Territories",
-      "flag": "ca"
+      "flag": "northwestterritories"
     },
     {
       "coordinates": [608, 447],
       "name": "Yukon",
-      "flag": "ca"
+      "flag": "Yukon"
     },
     {
       "coordinates": [344, 320],
       "name": "British Columbia",
-      "flag": "ca"
+      "flag": "britishcolumbia"
     },
     {
       "coordinates": [64, 601],
       "name": "Manitoba",
-      "flag": "ca"
+      "flag": "manitoba"
     },
     {
       "coordinates": [247, 571],
       "name": "Saskatchewan",
-      "flag": "ca"
+      "flag": "saskatchewan"
     },
     {
       "coordinates": [136, 401],
       "name": "Alberta",
-      "flag": "ca"
+      "flag": "alberta"
     },
     {
       "coordinates": [67, 795],
       "name": "Ontario",
-      "flag": "ca"
+      "flag": "ontario"
     },
     {
       "coordinates": [49, 1313],
       "name": "Newfoundland and Labrador",
-      "flag": "ca"
+      "flag": "newfoundlandandlabrador"
     },
     {
       "coordinates": [74, 226],
@@ -74,27 +74,27 @@
     {
       "coordinates": [1457, 1381],
       "name": "Soviet Union",
-      "flag": "Communist flag"
+      "flag": "ussr"
     },
     {
       "coordinates": [1683, 1414],
       "name": "Kazakh SSR",
-      "flag": "Communist flag"
+      "flag": "Kazakh SSR"
     },
     {
       "coordinates": [1709, 1603],
       "name": "Uzbek SSR",
-      "flag": "Communist flag"
+      "flag": "Uzbek SSR"
     },
     {
       "coordinates": [1784, 1744],
       "name": "Turkmen SSR",
-      "flag": "Communist flag"
+      "flag": "Turkmen SSR"
     },
     {
       "coordinates": [1803, 1265],
       "name": "Kirghiz SSR",
-      "flag": "Communist flag"
+      "flag": "Kirghiz SSR"
     },
     {
       "coordinates": [745, 1736],
@@ -114,37 +114,37 @@
     {
       "coordinates": [1333, 1774],
       "name": "Ukrainian SSR",
-      "flag": "Communist flag"
+      "flag": "Ukrainian SSR"
     },
     {
       "coordinates": [1194, 1814],
-      "name": "Moldovan SSR",
-      "flag": "Communist flag"
+      "name": "Moldavian SSR",
+      "flag": "Moldavian SSR"
     },
     {
       "coordinates": [1197, 1626],
-      "name": "Belorussian SSR",
-      "flag": "Communist flag"
+      "name": "Byelorussian SSR",
+      "flag": "Byelorussian SSR"
     },
     {
       "coordinates": [1091, 1744],
-      "name": "Poland",
+      "name": "Polish People's Republic",
       "flag": "pl"
     },
     {
       "coordinates": [1805, 1486],
       "name": "Tajik SSR",
-      "flag": "Communist flag"
+      "flag": "Tajik SSR"
     },
     {
       "coordinates": [1442, 1807],
       "name": "Georgian SSR",
-      "flag": "Communist flag"
+      "flag": "Georgian SSR"
     },
     {
       "coordinates": [1573, 1790],
       "name": "Azerbaijan SSR",
-      "flag": "Communist flag"
+      "flag": "Azerbaijan SSR"
     },
     {
       "coordinates": [1089, 1519],
@@ -179,17 +179,17 @@
     {
       "coordinates": [1773, 961],
       "name": "Tannu Tuva",
-      "flag": "Communist flag"
+      "flag": "tannutuva"
     },
     {
       "coordinates": [1142, 382],
-      "name": "Far East",
-      "flag": "Communist flag"
+      "name": "Far Eastern Republic",
+      "flag": "fareasternrepublic"
     },
     {
       "coordinates": [1410, 625],
       "name": "Yakut ASSR",
-      "flag": "Communist flag"
+      "flag": "Russian SSR"
     },
     {
       "coordinates": [1817, 364],
@@ -199,12 +199,12 @@
     {
       "coordinates": [1664, 689],
       "name": "Buryat ASSR",
-      "flag": "Communist flag"
+      "flag": "Russian SSR"
     },
     {
       "coordinates": [1440, 1170],
       "name": "Komi ASSR",
-      "flag": "Communist flag"
+      "flag": "Russian SSR"
     },
     {
       "coordinates": [1383, 875],

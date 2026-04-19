@@ -68,7 +68,12 @@ export class AbstractGraph {
   getNodeEdges(nodeId: number): AbstractEdge[] {
     const edgeIds = this._nodeEdgeIds[nodeId];
     if (!edgeIds) return [];
-    return edgeIds.map((id) => this._edges[id]);
+    const edges: AbstractEdge[] = [];
+    for (let i = 0; i < edgeIds.length; i++) {
+      const e = this._edges[edgeIds[i]];
+      if (e) edges.push(e);
+    }
+    return edges;
   }
 
   getEdgeBetween(nodeA: number, nodeB: number): AbstractEdge | undefined {
@@ -203,7 +208,7 @@ export class AbstractGraphBuilder {
   private readonly clustersX: number;
   private readonly clustersY: number;
   private readonly tileBFS: BFSGrid;
-  private readonly waterComponents: ConnectedComponents;
+  private waterComponents: ConnectedComponents;
 
   // Build state
   private graph!: AbstractGraph;
@@ -212,9 +217,18 @@ export class AbstractGraphBuilder {
   private nextEdgeId = 0;
   private edgeBetween = new Map<number, Map<number, AbstractEdge>>();
 
+  // Partial rebuild state
+  private cleanClusters: Set<number> | null = null;
+  private oldEdgeCosts: Map<
+    number,
+    Map<number, { cost: number; clusterX: number; clusterY: number }>
+  > | null = null;
+
   constructor(
     private readonly map: GameMap,
     private readonly clusterSize: number = AbstractGraphBuilder.CLUSTER_SIZE,
+    private readonly oldGraph?: AbstractGraph,
+    private readonly dirtyMiniTiles?: Set<TileRef>,
   ) {
     this.width = map.width();
     this.height = map.height();
@@ -235,6 +249,11 @@ export class AbstractGraphBuilder {
 
     // Initialize water components
     this.waterComponents.initialize();
+
+    // Compute partial rebuild info (which clusters can skip BFS)
+    if (this.oldGraph && this.dirtyMiniTiles && this.dirtyMiniTiles.size > 0) {
+      this.computePartialRebuildInfo();
+    }
 
     // Pre-create all clusters
     for (let cy = 0; cy < this.clustersY; cy++) {
@@ -416,6 +435,14 @@ export class AbstractGraphBuilder {
   }
 
   private buildClusterConnections(cx: number, cy: number): void {
+    const clusterKey = cy * this.clustersX + cx;
+
+    // For clean clusters, copy edge costs from old graph instead of BFS
+    if (this.cleanClusters?.has(clusterKey)) {
+      this.buildClusterConnectionsFromCache(cx, cy);
+      return;
+    }
+
     const cluster = this.graph.getCluster(cx, cy);
     if (!cluster) return;
 
@@ -576,5 +603,115 @@ export class AbstractGraphBuilder {
     );
 
     return reachable;
+  }
+
+  /**
+   * Compute which clusters are "clean" (unaffected by water changes) and
+   * build a lookup of old edge costs by tile-pair for fast edge recreation.
+   */
+  private computePartialRebuildInfo(): void {
+    const dirtyMiniTiles = this.dirtyMiniTiles!;
+    const oldGraph = this.oldGraph!;
+
+    // Map dirty minimap tiles to their cluster indices
+    const primaryDirty = new Set<number>();
+    for (const tile of dirtyMiniTiles) {
+      const x = this.map.x(tile);
+      const y = this.map.y(tile);
+      const cx = Math.floor(x / this.clusterSize);
+      const cy = Math.floor(y / this.clusterSize);
+      primaryDirty.add(cy * this.clustersX + cx);
+    }
+
+    // Expand by 1-ring neighbors (gateway nodes sit on cluster boundaries
+    // and belong to both adjacent clusters)
+    const expandedDirty = new Set<number>();
+    for (const key of primaryDirty) {
+      const cy = Math.floor(key / this.clustersX);
+      const cx = key - cy * this.clustersX;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (
+            nx >= 0 &&
+            nx < this.clustersX &&
+            ny >= 0 &&
+            ny < this.clustersY
+          ) {
+            expandedDirty.add(ny * this.clustersX + nx);
+          }
+        }
+      }
+    }
+
+    // Everything not in the expanded dirty set is clean
+    this.cleanClusters = new Set();
+    const totalClusters = this.clustersX * this.clustersY;
+    for (let k = 0; k < totalClusters; k++) {
+      if (!expandedDirty.has(k)) this.cleanClusters.add(k);
+    }
+
+    // Build old edge cost lookup: (minTile, maxTile) → cost
+    this.oldEdgeCosts = new Map();
+    for (const edge of oldGraph.getAllEdges()) {
+      const nodeA = oldGraph.getNode(edge.nodeA);
+      const nodeB = oldGraph.getNode(edge.nodeB);
+      if (!nodeA || !nodeB) continue;
+
+      const tileMin = Math.min(nodeA.tile, nodeB.tile);
+      const tileMax = Math.max(nodeA.tile, nodeB.tile);
+      let inner = this.oldEdgeCosts.get(tileMin);
+      if (!inner) {
+        inner = new Map();
+        this.oldEdgeCosts.set(tileMin, inner);
+      }
+      const existing = inner.get(tileMax);
+      if (existing === undefined || edge.cost < existing.cost) {
+        inner.set(tileMax, {
+          cost: edge.cost,
+          clusterX: edge.clusterX,
+          clusterY: edge.clusterY,
+        });
+      }
+    }
+  }
+
+  /**
+   * For clean clusters: recreate edges by looking up costs from the old graph
+   * instead of running expensive BFS. The gateway nodes are at the same positions
+   * and the intra-cluster water topology hasn't changed.
+   */
+  private buildClusterConnectionsFromCache(cx: number, cy: number): void {
+    const cluster = this.graph.getCluster(cx, cy);
+    if (!cluster) return;
+
+    const nodeIds = cluster.nodeIds;
+    const nodes = nodeIds.map((id) => this.graph.getNode(id)!);
+    const oldEdgeCosts = this.oldEdgeCosts!;
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        // Skip nodes in different water components
+        if (nodes[i].componentId !== nodes[j].componentId) continue;
+
+        const tileMin = Math.min(nodes[i].tile, nodes[j].tile);
+        const tileMax = Math.max(nodes[i].tile, nodes[j].tile);
+        const entry = oldEdgeCosts.get(tileMin)?.get(tileMax);
+        if (entry !== undefined) {
+          // Preserve the ORIGINAL (clusterX, clusterY) from the old graph.
+          // The path for a boundary edge between two clusters lives in whichever
+          // cluster's BFS originally found it; attributing it to `cx,cy` here
+          // would break query-time single-cluster bounded A*.
+          this.addOrUpdateEdge(
+            nodes[i].id,
+            nodes[j].id,
+            entry.cost,
+            entry.clusterX,
+            entry.clusterY,
+          );
+        }
+      }
+    }
   }
 }

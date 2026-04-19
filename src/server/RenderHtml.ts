@@ -24,8 +24,8 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
       assetManifest,
     ),
     backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.png", assetManifest),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
   });
 }
 

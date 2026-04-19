@@ -152,8 +152,20 @@ export class CosmeticContainer extends LitElement {
   @property({ type: Object })
   product: Product | null = null;
 
+  @property({ type: Number })
+  priceHard: number | null = null;
+
+  @property({ type: Number })
+  priceSoft: number | null = null;
+
   @property({ type: Function })
-  onPurchase?: () => void;
+  onPurchaseDollar?: () => void;
+
+  @property({ type: Function })
+  onPurchaseHard?: () => void;
+
+  @property({ type: Function })
+  onPurchaseSoft?: () => void;
 
   private static _backdrop: HTMLDivElement | null = null;
   private static _ensureBackdrop(): HTMLDivElement {
@@ -205,7 +217,11 @@ export class CosmeticContainer extends LitElement {
     this.style.transition =
       "border-color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s";
     this.style.zIndex = "0";
-    this.style.cursor = this.product ? "pointer" : "";
+    const hasPurchase =
+      this.product !== null ||
+      this.priceHard !== null ||
+      this.priceSoft !== null;
+    this.style.cursor = hasPurchase ? "pointer" : "";
 
     if (this.selected) {
       this.style.boxShadow = `0 0 18px ${cfg.glow}`;
@@ -311,10 +327,16 @@ export class CosmeticContainer extends LitElement {
     if (CosmeticContainer._backdrop) {
       CosmeticContainer._backdrop.style.background = "rgba(0,0,0,0)";
     }
-    if (this.product && this.onPurchase && !this._loading) {
+    // Only auto-fire container click when there's exactly one purchase path
+    const handlers = [
+      this.onPurchaseDollar,
+      this.onPurchaseHard,
+      this.onPurchaseSoft,
+    ].filter(Boolean);
+    if (handlers.length === 1 && !this._loading) {
       this._loading = true;
       this._showLoadingOverlay();
-      Promise.resolve(this.onPurchase()).catch(() => {
+      Promise.resolve(handlers[0]!()).finally(() => {
         this._hideLoadingOverlay();
       });
     }
@@ -420,11 +442,15 @@ export class CosmeticContainer extends LitElement {
   render() {
     return html`
       <slot></slot>
-      ${this.product && this.onPurchase
+      ${this.product || this.priceHard !== null || this.priceSoft !== null
         ? html`<purchase-button
             .product=${this.product}
+            .priceHard=${this.priceHard}
+            .priceSoft=${this.priceSoft}
             .rarity=${this.rarity}
-            .onPurchase=${this.onPurchase}
+            .onPurchaseDollar=${this.onPurchaseDollar}
+            .onPurchaseHard=${this.onPurchaseHard}
+            .onPurchaseSoft=${this.onPurchaseSoft}
           ></purchase-button>`
         : null}
     `;

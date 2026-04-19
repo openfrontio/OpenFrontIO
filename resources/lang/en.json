@@ -185,7 +185,8 @@
     "exit_confirmation": "Are you sure you want to exit the game?",
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
-    "icon_alt_team_leaderboard": "Team Leaderboard Icon"
+    "icon_alt_team_leaderboard": "Team Leaderboard Icon",
+    "game_id_tooltip": "Game ID"
   },
   "single_modal": {
     "random_spawn": "Random spawn",
@@ -201,10 +202,11 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
+    "water_nukes": "Water nukes",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
-    "enables_title": "Enable Settings",
+    "enables_title": "Disable Units",
     "start": "Start Game",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
@@ -356,7 +358,11 @@
     "mediterranean": "Mediterranean",
     "dyslexdria": "Dyslexdria",
     "greatlakes": "Great Lakes",
-    "straitofmalacca": "Strait Of Malacca"
+    "straitofmalacca": "Strait Of Malacca",
+    "luna": "Luna",
+    "conakry": "Conakry",
+    "caucasus": "Caucasus",
+    "beringsea": "Bering Sea"
   },
   "map_categories": {
     "featured": "Featured",
@@ -382,7 +388,8 @@
     "disabled_units": "Disabled Units",
     "game_length": "Game length",
     "pvp_immunity": "PVP immunity duration",
-    "starting_gold": "Starting Gold"
+    "starting_gold": "Starting Gold",
+    "host_cheats": "Host Cheats"
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
@@ -435,7 +442,8 @@
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
-    "enables_title": "Enable Settings",
+    "water_nukes": "Water nukes",
+    "enables_title": "Disable Units",
     "player": "Player",
     "players": "Players",
     "nation_players": "Nations",
@@ -458,6 +466,7 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
+    "host_cheats": "Host Cheats",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {
@@ -514,7 +523,9 @@
     "sams_disabled": "SAMs Disabled",
     "sams_disabled_label": "SAMs",
     "peace_time": "4min Peace",
-    "peace_time_label": "PVP Immunity"
+    "peace_time_label": "PVP Immunity",
+    "water_nukes": "Water Nukes",
+    "water_nukes_label": "Water Nukes"
   },
   "select_lang": {
     "title": "Select Language"
@@ -536,6 +547,7 @@
     "title": "Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
+    "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "Emojis",
@@ -942,8 +954,16 @@
     "title": "Store",
     "patterns": "Skins",
     "flags": "Flags",
+    "packs": "Packs",
     "no_flags": "No flags available. Check back later for new items.",
-    "no_skins": "No skins available. Check back later for new items."
+    "no_skins": "No skins available. Check back later for new items.",
+    "no_packs": "No packs available. Check back later for new items.",
+    "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "checkout_failed": "Failed to create checkout session.",
+    "login_required": "You must be logged in to purchase with currency.",
+    "not_enough_currency": "Not enough currency for this purchase.",
+    "purchase_failed": "Purchase failed. Please try again.",
+    "purchase_success": "Purchase succeeded: {name}"
   },
   "territory_patterns": {
     "title": "Skins",
@@ -963,7 +983,9 @@
     "rare": "Rare",
     "epic": "Epic",
     "legendary": "Legendary",
-    "adfree": "ad-free for life!"
+    "adfree": "ad-free for life!",
+    "hard": "Plutonium",
+    "soft": "Caps"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -1048,5 +1070,14 @@
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."
+  },
+  "news_box": {
+    "tournament": "TOURNAMENT",
+    "tutorial": "TUTORIAL",
+    "news": "NEWS",
+    "warning": "WARNING",
+    "dismiss": "Dismiss",
+    "go_to_item": "Go to item {num}",
+    "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
   }
 }

@@ -44,6 +44,11 @@ Licensed under [Open Data Commons Open Database License (ODbL)](https://opendata
 Copernicus Global Digital Elevation Models distributed by OpenTopography.
 Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://opentopography.org/usageterms)
 
+### NASA
+
+[NASA Earth Observatory](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/)
+[Public Domain](https://www.nasa.gov/nasa-brand-center/images-and-media/)
+
 ### Hawaii Relief Map
 
 [USA Hawaii relief location map](https://commons.wikimedia.org/wiki/File:USA_Hawaii_relief_location_map.svg) by NordNordWest
@@ -72,6 +77,15 @@ Topographic map of Sumatra. Created with GMT from publicly released SRTM data. F
 CC BY-SA 3.0
 File:Sumatra Topography.png
 
+### Luna (The Moon) Map
+
+[https://svs.gsfc.nasa.gov/4720#section_credits]
+NASA's Scientific Visualization Studio
+Visualizer
+Ernie Wright (USRA) ORCID logo.
+Scientist
+Noah Petro (NASA/GSFC) ORCID logo.
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
@@ -79,3 +93,8 @@ File:Sumatra Topography.png
 Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
 Pay Per Click icon by [Fauzan Adiima](https://thenounproject.com/creator/fauzan94/) – https://thenounproject.com/icon/pay-per-click-2586454/
 Medal icon by [Snow](https://thenounproject.com/snowdoll/) – https://thenounproject.com/icon/medal-4567887/
+
+### Flags
+
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/Flag)
+Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/de/deed.en)
