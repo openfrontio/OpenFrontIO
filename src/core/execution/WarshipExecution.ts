@@ -83,7 +83,9 @@ export class WarshipExecution implements Execution {
     const patrolTile = this.warship.patrolTile()!;
     const patrolRangeSquared = config.warshipPatrolRange() ** 2;
 
-    const warshipComponent = mg.getWaterComponent(this.warship.tile());
+    // Lazy: only computed if a TradeShip candidate forces the component check.
+    // `undefined` = not yet computed; `null` = computed, no component found.
+    let warshipComponent: number | null | undefined = undefined;
 
     const ships = mg.nearbyUnits(
       this.warship.tile()!,
@@ -116,6 +118,9 @@ export class WarshipExecution implements Execution {
           continue;
         }
 
+        if (warshipComponent === undefined) {
+          warshipComponent = mg.getWaterComponent(this.warship.tile());
+        }
         if (
           warshipComponent !== null &&
           !mg.hasWaterComponent(unit.tile(), warshipComponent)
