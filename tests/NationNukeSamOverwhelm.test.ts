@@ -4,6 +4,7 @@ import { SAMLauncherExecution } from "../src/core/execution/SAMLauncherExecution
 import {
   Cell,
   Difficulty,
+  GameType,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -19,6 +20,7 @@ describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
     // trajectory is interceptable, keeping bestValue ≤ 0 and triggering
     // maybeDestroyEnemySam.
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       difficulty: Difficulty.Impossible,
       infiniteGold: true,
       instantBuild: true,

@@ -3,6 +3,7 @@ import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBeh
 import {
   AllianceRequest,
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -19,6 +20,7 @@ let allianceBehavior: NationAllianceBehavior;
 describe("AllianceBehavior.handleAllianceRequests", () => {
   beforeEach(async () => {
     game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
