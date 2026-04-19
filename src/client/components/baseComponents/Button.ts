@@ -14,7 +14,7 @@ export class OButton extends LitElement {
   @property({ type: Boolean }) fill = false;
   @property({ type: Boolean }) submit = false;
   private static readonly BASE_CLASS =
-    "bg-sky-600 hover:bg-sky-700 text-white font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all duration-300 transform hover:-translate-y-px outline-none border border-transparent text-center text-base lg:text-lg whitespace-normal break-words leading-tight overflow-hidden relative";
+    "bg-[#0073b7] hover:bg-sky-700 text-white font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all duration-300 transform hover:-translate-y-px outline-none border border-transparent text-center text-base lg:text-lg whitespace-normal break-words leading-tight overflow-hidden relative";
 
   createRenderRoot() {
     return this;

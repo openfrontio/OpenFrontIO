@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1600,
+    "num_land_tiles": 1615723,
+    "width": 2500
+  },
+  "map16x": {
+    "height": 400,
+    "num_land_tiles": 96268,
+    "width": 625
+  },
+  "map4x": {
+    "height": 800,
+    "num_land_tiles": 397269,
+    "width": 1250
+  },
+  "name": "Bering Sea",
+  "nations": [
+    {
+      "coordinates": [1043, 121],
+      "flag": "polar_bears",
+      "name": "Polar Bears"
+    },
+    {
+      "coordinates": [1725, 158],
+      "flag": "Alaska",
+      "name": "Utqiaġvik"
+    },
+    {
+      "coordinates": [2152, 270],
+      "flag": "Alaska",
+      "name": "Prudhoe Bay"
+    },
+    {
+      "coordinates": [1973, 828],
+      "flag": "Alaska",
+      "name": "Anchorage"
+    },
+    {
+      "coordinates": [2389, 1070],
+      "flag": "Alaska",
+      "name": "Juneau"
+    },
+    {
+      "coordinates": [2381, 800],
+      "flag": "ca",
+      "name": "Whitehorse"
+    },
+    {
+      "coordinates": [1561, 452],
+      "flag": "Alaska",
+      "name": "Kotzebue"
+    },
+    {
+      "coordinates": [1491, 621],
+      "flag": "Alaska",
+      "name": "Nome"
+    },
+    {
+      "coordinates": [1609, 918],
+      "flag": "Alaska",
+      "name": "Bethel"
+    },
+    {
+      "coordinates": [1820, 1084],
+      "flag": "Alaska",
+      "name": "Kodiak"
+    },
+    {
+      "coordinates": [1979, 625],
+      "flag": "Alaska",
+      "name": "Fairbanks"
+    },
+    {
+      "coordinates": [2062, 468],
+      "flag": "Alaska",
+      "name": "Fort Yukon"
+    },
+    {
+      "coordinates": [1425, 1283],
+      "flag": "Alaska",
+      "name": "Unalaska"
+    },
+    {
+      "coordinates": [375, 1298],
+      "flag": "ru",
+      "name": "Petropavlovsk-Kamchatsky"
+    },
+    {
+      "coordinates": [479, 1107],
+      "flag": "ru",
+      "name": "Ust-Kamchatsk"
+    },
+    {
+      "coordinates": [965, 710],
+      "flag": "ru",
+      "name": "Anadyr"
+    },
+    {
+      "coordinates": [583, 749],
+      "flag": "ru",
+      "name": "Kamenskoye"
+    },
+    {
+      "coordinates": [1192, 588],
+      "flag": "ru",
+      "name": "Provideniya"
+    },
+    {
+      "coordinates": [718, 366],
+      "flag": "ru",
+      "name": "Bilibino"
+    },
+    {
+      "coordinates": [1048, 493],
+      "flag": "ru",
+      "name": "Egvekinot"
+    },
+    {
+      "coordinates": [410, 275],
+      "flag": "ru",
+      "name": "Chersky"
+    },
+    {
+      "coordinates": [254, 417],
+      "flag": "ru",
+      "name": "Srednekolymsk"
+    },
+    {
+      "coordinates": [127, 565],
+      "flag": "ru",
+      "name": "Zyryanka"
+    },
+    {
+      "coordinates": [161, 917],
+      "flag": "ru",
+      "name": "Magadan"
+    }
+  ]
+}

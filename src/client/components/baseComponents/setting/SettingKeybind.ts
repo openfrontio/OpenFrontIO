@@ -100,17 +100,32 @@ export class SettingKeybind extends LitElement {
       return;
     }
 
+    // Don't capture lone modifier keys — wait for the actual key
+    if (
+      e.code === "ShiftLeft" ||
+      e.code === "ShiftRight" ||
+      e.code === "ControlLeft" ||
+      e.code === "ControlRight" ||
+      e.code === "AltLeft" ||
+      e.code === "AltRight" ||
+      e.code === "MetaLeft" ||
+      e.code === "MetaRight"
+    ) {
+      return;
+    }
+
     // Prevent default only for keys we're actually capturing
     e.preventDefault();
 
-    const code = e.code;
+    const code = e.shiftKey ? `Shift+${e.code}` : e.code;
+    const displayKey = e.shiftKey ? `Shift+${e.key.toUpperCase()}` : e.key;
     const prevValue = this.value;
 
     // Temporarily set the value to the new code for validation in parent
     this.value = code;
 
     const event = new CustomEvent("change", {
-      detail: { action: this.action, value: code, key: e.key, prevValue },
+      detail: { action: this.action, value: code, key: displayKey, prevValue },
       bubbles: true,
       composed: true,
     });

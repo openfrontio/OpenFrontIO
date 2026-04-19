@@ -357,6 +357,11 @@ export async function startWorker() {
         }
         const { persistentId, claims } = result;
 
+        if (claims?.role === "banned") {
+          ws.close(1002, "Account Banned");
+          return;
+        }
+
         if (clientMsg.type === "rejoin") {
           log.info("rejoining game", {
             gameID: clientMsg.gameID,

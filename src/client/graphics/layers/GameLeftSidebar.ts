@@ -133,6 +133,13 @@ export class GameLeftSidebar extends LitElement implements Layer {
               height="20"
             />
           </div>
+          ${this.isLeaderboardShow || this.isTeamLeaderboardShow
+            ? html`<span
+                class="ml-auto text-[10px] text-slate-500 select-all leading-none self-start"
+                title=${translateText("help_modal.game_id_tooltip")}
+                >${this.game?.gameID() ?? ""}</span
+              >`
+            : null}
           ${this.isTeamGame
             ? html`
                 <div

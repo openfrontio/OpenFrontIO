@@ -26,6 +26,11 @@
         padding-left: env(safe-area-inset-left);
       }
 
+      /* Prevent Playwire bottom rail from affecting flex layout */
+      [id^="pw-oop-bottom_rail"] {
+        position: fixed !important;
+      }
+
       /* Ensure full viewport height on iOS */
       html,
       body {
@@ -64,10 +69,10 @@
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
       );
-      document.documentElement.style.setProperty(
-        "--desktop-logo-image-url",
-        `url("<%- desktopLogoImageUrl %>")`,
-      );
+      // document.documentElement.style.setProperty(
+      //   "--desktop-logo-image-url",
+      //   `url("<%- desktopLogoImageUrl %>")`,
+      // );
       document.documentElement.style.setProperty(
         "--mobile-logo-image-url",
         `url("<%- mobileLogoImageUrl %>")`,
@@ -178,7 +183,7 @@
         class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
       ></div>
 
-      <gutter-ads></gutter-ads>
+      <homepage-promos></homepage-promos>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -261,9 +266,7 @@
         ></ranked-modal>
       </main-layout>
 
-      <!-- Ad above footer -->
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
-        <home-footer-ad></home-footer-ad>
         <page-footer></page-footer>
       </div>
 

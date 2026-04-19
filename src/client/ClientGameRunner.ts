@@ -50,7 +50,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager from "./sound/SoundManager";
+import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -202,8 +202,12 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
-      currentGameRunner = null;
-      transport.leaveGame();
+      if (currentGameRunner) {
+        currentGameRunner.stop();
+        currentGameRunner = null;
+      } else {
+        transport.leaveGame();
+      }
       return true;
     },
     prestart: prestartPromise,
@@ -253,22 +257,29 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const soundManager = new SoundManager(eventBus, userSettings);
+  try {
+    const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
-  console.log(
-    `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
-  );
+    console.log(
+      `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
+    );
 
-  return new ClientGameRunner(
-    lobbyConfig,
-    clientID,
-    eventBus,
-    gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
-    transport,
-    worker,
-    gameView,
-  );
+    return new ClientGameRunner(
+      lobbyConfig,
+      clientID,
+      eventBus,
+      gameRenderer,
+      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
+      transport,
+      worker,
+      gameView,
+      soundManager,
+    );
+  } catch (err) {
+    soundManager.dispose();
+    throw err;
+  }
 }
 
 export class ClientGameRunner {
@@ -294,6 +305,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private soundManager: SoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -346,7 +358,7 @@ export class ClientGameRunner {
   }
 
   public start() {
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -524,7 +536,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.dispose();
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -642,17 +654,52 @@ export class ClientGameRunner {
         }
       }
 
-      if (upgradeUnits.length > 0) {
-        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-        if (bestUpgrade) {
-          this.eventBus.emit(
-            new SendUpgradeStructureIntentEvent(
-              bestUpgrade.unitId,
-              bestUpgrade.unitType,
-            ),
-          );
+      if (upgradeUnits.length === 0) {
+        return;
+      }
+
+      // Upgrade the closest affordable building. But if there's an unaffordable
+      // building (any type) that's closer to clickedTile than the best candidate,
+      // do nothing — the player clicked on that unaffordable building intending
+      // to upgrade it, and we must not spend their gold on a different building.
+      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+      if (!bestUpgrade) {
+        return;
+      }
+
+      // Check if any unaffordable building is closer than bestUpgrade
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+          const myPlayerID = this.myPlayer!.id();
+          const closestOfType = this.gameView
+            .nearbyUnits(
+              clickedTile,
+              this.gameView.config().structureMinDist(),
+              bu.type,
+            )
+            .filter(({ unit }) => unit.owner().id() === myPlayerID)
+            .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+          if (closestOfType) {
+            const dist = this.gameView.manhattanDist(
+              clickedTile,
+              closestOfType.unit.tile(),
+            );
+            if (dist <= bestUpgrade.distance) {
+              // An unaffordable building of type bu.type is at least as close
+              // as bestUpgrade — player clicked on it, not on bestUpgrade.
+              return;
+            }
+          }
         }
       }
+
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          bestUpgrade.unitId,
+          bestUpgrade.unitType,
+        ),
+      );
     });
   }
 

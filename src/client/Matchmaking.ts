@@ -6,7 +6,6 @@ import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";

@@ -23,7 +23,8 @@
     "none": "空",
     "copied": "已复制！",
     "click_to_copy": "点击复制",
-    "enabled": "已启用"
+    "enabled": "已启用",
+    "map_default": "地图默认值"
   },
   "main": {
     "title": "OpenFront (内测版)",
@@ -42,7 +43,6 @@
     "play": "游戏",
     "news": "公告",
     "store": "商店",
-    "store_new_badge": "新的",
     "settings": "设置",
     "leaderboard": "排行榜",
     "account": "账号",
@@ -89,7 +89,10 @@
     "hotkeys": "快捷键",
     "table_key": "键",
     "table_action": "动作",
+    "action_esc": "关闭菜单。取消单位建造预览。",
+    "action_enter": "在光标下建造单位",
     "action_alt_view": "备选视图 (地形/国家)",
+    "action_coordinate_grid": "切换坐标网格叠层",
     "action_attack_altclick": "攻击 (当左键单击被设置为打开菜单时)",
     "action_build": "打开建造菜单",
     "action_emote": "打开表情菜单",
@@ -115,7 +118,7 @@
     "ui_options": "选项",
     "ui_options_desc": "内含以下内容：",
     "ui_playeroverlay": "玩家信息叠层",
-    "ui_playeroverlay_desc": "当鼠标悬停在一个国家上时，玩家信息叠层将显示在“选项”下方。它将显示该玩家的类型，包括真人玩家、国家（智能AI）或机器人；还会显示该国对你的态度 (从敌对到友好)；该国防守军队数量，黄金，军舰及各种建筑物的数量。",
+    "ui_playeroverlay_desc": "当鼠标悬停在一个国家上时，玩家信息叠层将显示在“选项”下方。它将显示该玩家的类型，包括真人玩家、国家（智能AI）或部落；还会显示该国对你的态度 (从敌对到友好)；显示该国防守军队数量，黄金，军舰及各种建筑物的数量。",
     "ui_wilderness": "荒野",
     "option_pause": "暂停/继续游戏 - 仅在单人模式下有效。",
     "option_timer": "计时器 - 自游戏开始以来经过的时长。",
@@ -137,7 +140,7 @@
     "info_trade": "点击“停止交易”将停止与该玩家的商船贸易互惠。如果再次点击“开始交易”可重启贸易关系。",
     "info_ally_panel": "盟友信息面板",
     "info_ally_desc": "当你与其他玩家结盟时，下列新图标将可用：",
-    "ally_betray": "背叛你的盟友，终结联盟，停止贸易，并削弱你的防御。与其的交易将暂停5分钟 (或直到你们再次结盟)，且其他人也可能与您停止交易。你将被标记为背叛者30秒，但其他背叛者玩家看不到该标记。在此期间，一个图表将显示在你的名字里，且你将获得50%的防御减益效果。机器人将更不愿与你结盟，其他玩家与你结盟时也将再三考虑。",
+    "ally_betray": "背叛你的盟友，终止联盟，停止贸易，并削弱你的防御。与其的交易将暂停5分钟 (或直到你们再次结盟)，且其他人也可能与您停止交易。除非对方玩家本身就是背叛者，否则你将被标记为背叛者30秒。在此期间，一个图标将显示在你的名字上方，且你将获得50%的防御减益效果。部落将更不愿与你结盟，其他玩家与你结盟时也将再三考虑。",
     "ally_donate": "捐赠一些军队给盟友。用于当他们军队不足且被攻击时，或者他们需要额外的力量来击垮敌人时。",
     "ally_donate_gold": "捐赠一些金钱给盟友。用于当他们没钱且需要建造建筑时，或者你的队友正在攒钱造MIRV时。",
     "build_menu_title": "建造菜单",
@@ -184,13 +187,15 @@
     "toggle_achievements": "切换成就",
     "sign_in_for_achievements": "登录以获取成就",
     "options_title": "选项",
-    "bots": "机器人： ",
+    "bots": "部落：",
     "bots_disabled": "已禁用",
-    "disable_nations": "禁用国家",
+    "nations": "国家：",
+    "nations_disabled": "已禁用",
     "instant_build": "立即建造",
     "infinite_gold": "无限黄金",
     "infinite_troops": "无限军队",
     "compact_map": "紧凑地图",
+    "disable_alliances": "禁用结盟",
     "max_timer": "游戏时长（分钟）",
     "max_timer_placeholder": "分钟",
     "max_timer_invalid": "请输入一个有效的最大计时器值（1-120分钟）",
@@ -199,8 +204,8 @@
     "options_changed_no_achievements": "自定义设置 - 成就已禁用",
     "gold_multiplier": "黄金乘数",
     "gold_multiplier_placeholder": "2.0x",
-    "starting_gold": "开局黄金",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold": "初始黄金（M）",
+    "starting_gold_placeholder": "5"
   },
   "token_login_modal": {
     "title": "正在登录……",
@@ -264,7 +269,7 @@
     "conquest_gold": "已抢夺黄金",
     "stolen_gold": "被军舰偷走",
     "num_of_conquests_humans": "玩家击杀数",
-    "num_of_conquests_bots": "机器人击杀数",
+    "num_of_conquests_bots": "部落击杀数",
     "duration": "时长",
     "survival_time": "存活时长",
     "war": "战争",
@@ -320,6 +325,7 @@
     "svalmel": "斯瓦尔梅尔",
     "manicouagan": "马尼夸根陨石坑",
     "lemnos": "利姆诺斯岛",
+    "passage": "海上航线",
     "sierpinski": "谢尔宾斯基分形",
     "thebox": "沙盒",
     "twolakes": "双湖",
@@ -328,8 +334,15 @@
     "didier": "迪迪埃",
     "didierfrance": "迪迪埃（法国）",
     "amazonriver": "亚马逊河",
+    "bosphorusstraits": "博斯普鲁斯海峡",
+    "beringstrait": "白令海峡",
     "tradersdream": "商人之梦",
-    "hawaii": "夏威夷"
+    "hawaii": "夏威夷",
+    "alps": "阿尔卑斯山",
+    "niledelta": "尼罗河三角洲",
+    "arctic": "北极地区",
+    "sanfrancisco": "旧金山",
+    "aegean": "爱琴海"
   },
   "map_categories": {
     "featured": "精选",
@@ -355,14 +368,10 @@
   },
   "public_lobby": {
     "title": "正在等待游戏开始……",
-    "join": "加入下一场游戏",
-    "teams_Duos": "{team_count} 个 2 人小队",
-    "teams_Trios": "{team_count} 个 3 人小队",
-    "teams_Quads": "{team_count} 个 4 人小队",
     "waiting_for_players": "正在等待玩家",
     "connecting": "正在连接到房间……",
     "starting_in": "在 {time} 后开始",
-    "starting_game": "正在启动游戏……",
+    "starting_game": "正在开始……",
     "teams_hvn": "人类 VS 国家",
     "teams_hvn_detailed": "{num} 个人类 VS {num} 个国家",
     "teams": "{num} 个队伍",
@@ -376,7 +385,8 @@
     "connecting": "正在连接到匹配服务器……",
     "searching": "正在搜索游戏……",
     "waiting_for_game": "正在等待游戏开始……",
-    "elo": "你的 ELO 分：{elo}"
+    "elo": "你的 ELO 分：{elo}",
+    "no_elo": "暂无ELO"
   },
   "username": {
     "enter_username": "输入用户名",
@@ -390,15 +400,14 @@
   },
   "host_modal": {
     "title": "创建私人房间",
-    "label": "私有",
     "mode": "模式",
     "team_count": "队伍数量",
-    "team_type": "队伍类型",
     "options_title": "选项",
-    "bots": "机器人： ",
+    "bots": "部落：",
     "bots_disabled": "禁用",
+    "nations": "国家：",
+    "nations_disabled": "已禁用",
     "player_immunity_duration": "PVP 豁免期限（分钟）",
-    "disable_nations": "禁用国家",
     "max_timer": "游戏时长（分钟）",
     "mins_placeholder": "分钟",
     "instant_build": "立即建造",
@@ -407,6 +416,7 @@
     "infinite_troops": "无限军队",
     "donate_troops": "捐赠军队",
     "compact_map": "紧凑地图",
+    "disable_alliances": "禁用结盟",
     "enables_title": "启用设置",
     "player": "玩家",
     "players": "玩家",
@@ -424,8 +434,14 @@
     "teams_Trios": "3人小队",
     "teams_Quads": "4人小队",
     "teams_Humans Vs Nations": "人类 VS 国家",
-    "starting_gold": "开局黄金",
-    "crowded": "密度修改器"
+    "crowded": "密度修改器",
+    "hard_nations": "困难的国家",
+    "gold_multiplier": "黄金乘数",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "初始黄金（M）",
+    "starting_gold_placeholder": "5",
+    "leave_confirmation": "确定要离开房间吗？",
+    "team_type": "队伍类型"
   },
   "team_colors": {
     "red": "红色",
@@ -435,7 +451,9 @@
     "yellow": "黄色",
     "orange": "橙色",
     "green": "绿色",
-    "bot": "机器人"
+    "bot": "部落",
+    "humans": "人类",
+    "nations": "国家"
   },
   "game_starting_modal": {
     "title": "游戏正在启动...",
@@ -453,16 +471,29 @@
     "ffa": "混战",
     "teams": "团队"
   },
+  "mode_selector": {
+    "teams_title": "队伍",
+    "teams_count": "{teamCount} 个队伍",
+    "teams_of": "{teamCount} 个队伍，每队 {playersPerTeam} 人",
+    "ranked_title": "排位赛",
+    "ranked_1v1_title": "1v1",
+    "ranked_2v2_title": "2v2",
+    "coming_soon": "即将推出"
+  },
   "public_game_modifier": {
     "random_spawn": "随机出生点",
     "compact_map": "紧凑地图",
     "crowded": "密度",
-    "starting_gold": "开局黄金 5M"
+    "hard_nations": "困难的国家",
+    "starting_gold": "{amount}M 初始黄金",
+    "gold_multiplier": "x{amount} 黄金乘数",
+    "disable_alliances": "结盟已禁用"
   },
   "select_lang": {
     "title": "选择语言"
   },
   "unit_type": {
+    "boat": "船",
     "city": "城市",
     "defense_post": "要塞",
     "port": "港口",
@@ -502,6 +533,8 @@
     "attack_ratio_desc": "你要派出多少比例的军队进攻 (1–100%)",
     "territory_patterns_label": "🏳️ 领土皮肤",
     "territory_patterns_desc": "选择是否在游戏中显示领土皮肤",
+    "coordinate_grid_label": "坐标网格",
+    "coordinate_grid_desc": "切换字母数字网格叠层",
     "performance_overlay_label": "性能叠层",
     "performance_overlay_desc": "切换性能叠层。启用后将显示性能叠层。在游戏过程中按下 Shift+D 可进行切换。",
     "easter_writing_speed_label": "写入速度乘数",
@@ -540,9 +573,11 @@
     "emoji_menu_modifier_desc": "按住此键并点击以打开 Emoji 表情菜单。",
     "attack_ratio_controls": "攻击比例控制",
     "attack_ratio_up": "增加攻击比例",
-    "attack_ratio_up_desc": "增加 10% 攻击比例",
+    "attack_ratio_up_desc": "增加 {amount}% 攻击比例",
     "attack_ratio_down": "降低攻击比例",
-    "attack_ratio_down_desc": "降低 10% 攻击比例",
+    "attack_ratio_down_desc": "降低 {amount}% 攻击比例",
+    "attack_ratio_increment_label": "攻击比例调整快捷键单次增减量",
+    "attack_ratio_increment_desc": "每次按下攻击比例增减快捷键时的变化值。",
     "attack_keybinds": "攻击快捷键",
     "boat_attack": "船只攻击",
     "boat_attack_desc": "向鼠标所指地块发送船只攻击。",
@@ -662,7 +697,8 @@
       "mirv_ready": "[P1] 有足够的金钱来发射 MIRV！",
       "snowballing": "[P1] 滚雪球滚得太快了！",
       "cheating": "[P1] 正在作弊！",
-      "stop_trading": "别跟 [P1] 交易！"
+      "stop_trading": "别跟 [P1] 交易！",
+      "stop_trading_all": "请停止与所有人交易！"
     }
   },
   "build_menu": {
@@ -758,7 +794,7 @@
   "player_type": {
     "player": "玩家",
     "nation": "国家",
-    "bot": "机器人"
+    "bot": "部落"
   },
   "relation": {
     "hostile": "敌对",
@@ -840,9 +876,19 @@
     "fps": "FPS：",
     "avg_60s": "平均值(60秒)：",
     "frame": "帧：",
+    "tps": "TPS：",
+    "tps_avg_60s": "平均：",
     "tick_exec": "Tick 执行：",
+    "max_label": "最大：",
     "tick_delay": "Tick 延迟：",
-    "layers_header": "图层（平均值 / 最大值，按总时间排序）："
+    "layers_header": "渲染层",
+    "render_layers_table_header": "平均 / 最大 | tick 平均",
+    "render_layers_summary": "最后一个 tick：{frames} 帧，{ms}ms",
+    "tick_layers_header": "Tick 层",
+    "tick_layers_table_header": "平均 / 最大",
+    "tick_layers_summary": "最后一个 tick：{count} 层，{ms}ms",
+    "expand": "扩展",
+    "collapse": "收起"
   },
   "heads_up_message": {
     "choose_spawn": "选择出生点",
@@ -854,23 +900,16 @@
   },
   "territory_patterns": {
     "title": "皮肤",
-    "colors": "颜色",
     "purchase": "购买",
-    "show_only_owned": "我的皮肤",
-    "all_owned": "您已拥有所有皮肤！请稍后再来查看新皮肤。",
-    "not_logged_in": "未登录",
     "pattern": {
       "default": "默认"
     },
-    "try_me": "试试我！",
-    "trial_remaining": "剩余",
-    "trial_granted": "皮肤试用获得了批准！",
-    "trial_cooldown": "每24小时只能试用一次。请稍后再试。",
-    "trial_login_required": "必须登录才能试用皮肤",
-    "reward_countdown": "在 {seconds} 秒内获得奖励……",
-    "steam_wishlist_prompt": "请将 OpenFront 添加到 Steam 愿望单来支持我们",
     "select_skin": "选择皮肤",
-    "selected": "已选择"
+    "selected": "已选择",
+    "colors": "颜色",
+    "show_only_owned": "我的皮肤",
+    "all_owned": "您已拥有所有皮肤！请稍后再来查看新皮肤。",
+    "not_logged_in": "未登录"
   },
   "flag_input": {
     "title": "选择旗帜",
@@ -930,8 +969,6 @@
     "recent_games": "近期对局",
     "game_id": "游戏 ID",
     "mode": "模式",
-    "mode_ffa": "混战",
-    "mode_team": "团队",
     "replay": "回放",
     "details": "详情",
     "ranking": "排行",
@@ -948,8 +985,6 @@
     "stats_losses": "败场数",
     "stats_wlr": "胜败比",
     "stats_games_played": "游戏场数",
-    "mode_ffa": "混战",
-    "mode_team": "团队",
     "no_stats": "所选项没有统计记录。"
   },
   "matchmaking_button": {

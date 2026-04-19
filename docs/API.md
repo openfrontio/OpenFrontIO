@@ -1,5 +1,7 @@
 # API Usage
 
+> **Warning:** Rate limits are very strict. Join the [Discord](https://discord.gg/K9zernJB5z) to request higher rate limits.
+
 ## Games
 
 ### List Game Metadata
@@ -207,10 +209,24 @@ GET https://api.openfront.io/public/clan/:clanTag/sessions
 
 - `start` (optional): ISO 8601 timestamp
 - `end` (optional): ISO 8601 timestamp
+- `page` (optional): Page number, 1-200 (default: 1)
+- `limit` (optional): Results per page, 1-50 (default: 20)
+
+**Response:**
+
+```json
+{
+  "results": [ ... ],
+  "total": 150,
+  "page": 1,
+  "limit": 20
+}
+```
+
+Results are ordered by game start time, newest first.
 
 **Example**
 
 ```bash
-curl https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z &
-end=2025-11-18T23:59:59Z
+curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-18T23:59:59Z&limit=10&page=1"
 ```
