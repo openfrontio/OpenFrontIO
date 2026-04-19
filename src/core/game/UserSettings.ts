@@ -387,18 +387,24 @@ export class UserSettings {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
 
+  private normalizeUiScale(scale: number): number {
+    if (!Number.isFinite(scale)) return 100;
+    const stepped = Math.round(scale / 10) * 10;
+    return Math.max(50, Math.min(200, stepped));
+  }
+
   uiScale(): number {
-    return this.getFloat("settings.uiScale", 100);
+    return this.normalizeUiScale(this.getFloat("settings.uiScale", 100));
   }
 
   setUiScale(scale: number): void {
-    const clamped = Math.max(50, Math.min(200, scale));
-    this.setFloat("settings.uiScale", clamped);
-    this.applyUiScale(clamped);
+    const normalized = this.normalizeUiScale(scale);
+    this.setFloat("settings.uiScale", normalized);
+    this.applyUiScale(normalized);
   }
 
   applyUiScale(scale?: number): void {
-    const value = scale ?? this.uiScale();
+    const value = this.normalizeUiScale(scale ?? this.uiScale());
     if (typeof document !== "undefined") {
       document.documentElement.style.zoom = (value / 100).toString();
     }

@@ -288,12 +288,7 @@ export class SettingsModal extends LitElement implements Layer {
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
             >
-              <img
-                src=${settingsIcon}
-                alt="uiScale"
-                width="20"
-                height="20"
-              />
+              <img src=${settingsIcon} alt="uiScale" width="20" height="20" />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.ui_scale_label")}
