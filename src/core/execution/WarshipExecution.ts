@@ -83,6 +83,8 @@ export class WarshipExecution implements Execution {
     const patrolTile = this.warship.patrolTile()!;
     const patrolRangeSquared = config.warshipPatrolRange() ** 2;
 
+    const warshipComponent = mg.getWaterComponent(this.warship.tile());
+
     const ships = mg.nearbyUnits(
       this.warship.tile()!,
       config.warshipTargettingRange(),
@@ -113,6 +115,14 @@ export class WarshipExecution implements Execution {
         ) {
           continue;
         }
+
+        if (
+          warshipComponent !== null &&
+          !mg.hasWaterComponent(unit.tile(), warshipComponent)
+        ) {
+          continue;
+        }
+
         if (
           mg.euclideanDistSquared(patrolTile, unit.tile()) > patrolRangeSquared
         ) {
@@ -220,6 +230,7 @@ export class WarshipExecution implements Execution {
         break;
       case PathStatus.NOT_FOUND: {
         console.log(`path not found to target`);
+        this.warship.setTargetTile(undefined);
         break;
       }
     }
