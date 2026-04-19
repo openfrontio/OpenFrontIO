@@ -1,0 +1,170 @@
+{
+  "map": {
+    "height": 1556,
+    "num_land_tiles": 432881,
+    "width": 2748
+  },
+  "map16x": {
+    "height": 389,
+    "num_land_tiles": 24122,
+    "width": 687
+  },
+  "map4x": {
+    "height": 778,
+    "num_land_tiles": 103799,
+    "width": 1374
+  },
+  "name": "caribbean",
+  "nations": [
+    {
+      "coordinates": [543, 325],
+      "flag": "Florida",
+      "name": "Florida"
+    },
+    {
+      "coordinates": [53, 963],
+      "flag": "mx",
+      "name": "Mexico"
+    },
+    {
+      "coordinates": [53, 1395],
+      "flag": "bz",
+      "name": "Belize"
+    },
+    {
+      "coordinates": [347, 1500],
+      "flag": "hn",
+      "name": "Honduras"
+    },
+    {
+      "coordinates": [787, 706],
+      "flag": "cu",
+      "name": "Cuba"
+    },
+    {
+      "coordinates": [1033, 1030],
+      "flag": "jm",
+      "name": "Jamaica"
+    },
+    {
+      "coordinates": [1463, 582],
+      "flag": "tc",
+      "name": "Turks and Caicos"
+    },
+    {
+      "coordinates": [846, 421],
+      "flag": "bs",
+      "name": "Bahamas"
+    },
+    {
+      "coordinates": [671, 1003],
+      "flag": "ky",
+      "name": "Cayman Islands"
+    },
+    {
+      "coordinates": [1497, 846],
+      "flag": "ht",
+      "name": "Haiti"
+    },
+    {
+      "coordinates": [1696, 839],
+      "flag": "do",
+      "name": "Dominican Republic"
+    },
+    {
+      "coordinates": [2015, 813],
+      "flag": "pr",
+      "name": "Puerto Rico"
+    },
+    {
+      "coordinates": [1619, 1547],
+      "flag": "co",
+      "name": "Colombia"
+    },
+    {
+      "coordinates": [2170, 1535],
+      "flag": "ve",
+      "name": "Venezuela"
+    },
+    {
+      "coordinates": [2643, 1544],
+      "flag": "gy",
+      "name": "Guyana"
+    },
+    {
+      "coordinates": [2640, 1422],
+      "flag": "tt",
+      "name": "Trinidad and Tobago"
+    },
+    {
+      "coordinates": [2731, 1145],
+      "flag": "bb",
+      "name": "Barbados"
+    },
+    {
+      "coordinates": [2566, 1285],
+      "flag": "gd",
+      "name": "Grenada"
+    },
+    {
+      "coordinates": [2585, 1171],
+      "flag": "vc",
+      "name": "St Vincent \u0026 the Grenadines"
+    },
+    {
+      "coordinates": [2591, 1106],
+      "flag": "lc",
+      "name": "Saint Lucia"
+    },
+    {
+      "coordinates": [2568, 1030],
+      "flag": "mq",
+      "name": "Martinique"
+    },
+    {
+      "coordinates": [2529, 972],
+      "flag": "dm",
+      "name": "Dominica"
+    },
+    {
+      "coordinates": [2484, 906],
+      "flag": "gp",
+      "name": "Guadeloupe"
+    },
+    {
+      "coordinates": [2358, 824],
+      "flag": "kn",
+      "name": "Saint Kitts and Nevis"
+    },
+    {
+      "coordinates": [2453, 831],
+      "flag": "ag",
+      "name": "Antigua and Barbuda"
+    },
+    {
+      "coordinates": [2426, 869],
+      "flag": "ms",
+      "name": "Montserrat"
+    },
+    {
+      "coordinates": [2319, 763],
+      "flag": "sx",
+      "name": "Sint Maarten"
+    },
+    {
+      "coordinates": [2170, 826],
+      "flag": "vi",
+      "name": "Virgin Islands"
+    },
+    {
+      "coordinates": [1921, 1426],
+      "flag": "bq",
+      "name": "Dutch Caribbean"
+    },
+    {
+      "coordinates": [2736, 11],
+      "flag": "bm",
+      "name": "Bermuda"
+    }
+  ]
+}
