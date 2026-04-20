@@ -7,6 +7,7 @@ import {
   PlayerID,
   Relation,
   TerrainType,
+  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -89,7 +90,8 @@ export class NationExecution implements Execution {
       this.behaviorsInitialized &&
       this.player !== null &&
       this.player.isAlive() &&
-      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy &&
+      this.player.unitsConstructed(UnitType.Port)
     ) {
       this.warshipBehavior.trackShipsAndRetaliate();
     }
