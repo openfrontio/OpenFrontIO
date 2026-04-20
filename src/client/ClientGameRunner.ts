@@ -57,6 +57,7 @@ export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
+  playerRole: string | null;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -259,7 +260,12 @@ async function createClientGame(
   const canvas = createCanvas();
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
-    const gameRenderer = createRenderer(canvas, gameView, eventBus);
+    const gameRenderer = createRenderer(
+      canvas,
+      gameView,
+      eventBus,
+      lobbyConfig.playerRole,
+    );
 
     console.log(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
