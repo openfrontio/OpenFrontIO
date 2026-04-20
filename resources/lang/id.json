@@ -402,7 +402,6 @@
     "title": "Buat Lobi Tertutup",
     "mode": "Mode",
     "team_count": "Jumlah Tim",
-    "team_type": "Tipe Tim",
     "options_title": "Pilihan",
     "bots": "Suku-suku: ",
     "bots_disabled": "Nonaktif",
@@ -441,7 +440,8 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Emas Awal (Juta)",
     "starting_gold_placeholder": "5",
-    "leave_confirmation": "Apakah Anda yakin ingin meninggalkan lobi?"
+    "leave_confirmation": "Apakah Anda yakin ingin meninggalkan lobi?",
+    "team_type": "Tipe Tim"
   },
   "team_colors": {
     "red": "Merah",
@@ -900,16 +900,16 @@
   },
   "territory_patterns": {
     "title": "Tampilan",
-    "colors": "Warna-Warna",
     "purchase": "Beli",
-    "show_only_owned": "Skin Saya",
-    "all_owned": "Semua skin sudah dimiliki! Silakan periksa kembali nanti untuk item baru.",
-    "not_logged_in": "Belum masuk",
     "pattern": {
       "default": "Default"
     },
     "select_skin": "Pilih Skin",
-    "selected": "dipilih"
+    "selected": "dipilih",
+    "colors": "Warna-Warna",
+    "show_only_owned": "Skin Saya",
+    "all_owned": "Semua skin sudah dimiliki! Silakan periksa kembali nanti untuk item baru.",
+    "not_logged_in": "Belum masuk"
   },
   "flag_input": {
     "title": "Pilih Bendera",

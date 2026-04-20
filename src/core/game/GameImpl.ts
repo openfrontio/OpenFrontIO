@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
@@ -107,6 +108,7 @@ export class GameImpl implements Game {
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
   private _waterManager: WaterManager;
+  private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
@@ -130,6 +132,7 @@ export class GameImpl implements Game {
       this.miniGameMap,
       _config.disableNavMesh(),
     );
+    this._sharedWaterCache = new SharedWaterCache(this);
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -1167,6 +1170,9 @@ export class GameImpl implements Game {
   }
   hasWaterComponent(tile: TileRef, component: number): boolean {
     return this._waterManager.hasWaterComponent(tile, component);
+  }
+  sharedWaterComponents(player: Player): Set<number> | null {
+    return this._sharedWaterCache.get(player);
   }
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {

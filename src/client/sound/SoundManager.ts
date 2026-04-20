@@ -1,7 +1,5 @@
 import { Howl } from "howler";
-import of4 from "../../../proprietary/sounds/music/of4.mp3";
-import openfront from "../../../proprietary/sounds/music/openfront.mp3";
-import war from "../../../proprietary/sounds/music/war.mp3";
+import { assetUrl } from "../../core/AssetUrls";
 import { EventBus } from "../../core/EventBus";
 import { UserSettings } from "../../core/game/UserSettings";
 import {
@@ -33,19 +31,19 @@ export class SoundManager {
     this.safely("initialize background music", () => {
       this.backgroundMusic = [
         new Howl({
-          src: [of4],
+          src: [assetUrl("sounds/music/of4.mp3")],
           loop: false,
           onend: this.playNext.bind(this),
           volume: 0,
         }),
         new Howl({
-          src: [openfront],
+          src: [assetUrl("sounds/music/openfront.mp3")],
           loop: false,
           onend: this.playNext.bind(this),
           volume: 0,
         }),
         new Howl({
-          src: [war],
+          src: [assetUrl("sounds/music/war.mp3")],
           loop: false,
           onend: this.playNext.bind(this),
           volume: 0,

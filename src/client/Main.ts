@@ -32,7 +32,7 @@ import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
-import { HomepagePromos } from "./HomepagePromos";
+import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -62,6 +62,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
@@ -306,10 +307,6 @@ class Client {
         await crazyGamesSDK.gameplayStop();
       }
     });
-
-    const gutterAds = document.querySelector("homepage-promos");
-    if (!(gutterAds instanceof HomepagePromos))
-      throw new Error("Missing homepage-promos");
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
