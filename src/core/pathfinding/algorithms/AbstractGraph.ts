@@ -219,7 +219,10 @@ export class AbstractGraphBuilder {
 
   // Partial rebuild state
   private cleanClusters: Set<number> | null = null;
-  private oldEdgeCosts: Map<number, Map<number, number>> | null = null;
+  private oldEdgeCosts: Map<
+    number,
+    Map<number, { cost: number; clusterX: number; clusterY: number }>
+  > | null = null;
 
   constructor(
     private readonly map: GameMap,
@@ -664,8 +667,12 @@ export class AbstractGraphBuilder {
         this.oldEdgeCosts.set(tileMin, inner);
       }
       const existing = inner.get(tileMax);
-      if (existing === undefined || edge.cost < existing) {
-        inner.set(tileMax, edge.cost);
+      if (existing === undefined || edge.cost < existing.cost) {
+        inner.set(tileMax, {
+          cost: edge.cost,
+          clusterX: edge.clusterX,
+          clusterY: edge.clusterY,
+        });
       }
     }
   }
@@ -690,9 +697,19 @@ export class AbstractGraphBuilder {
 
         const tileMin = Math.min(nodes[i].tile, nodes[j].tile);
         const tileMax = Math.max(nodes[i].tile, nodes[j].tile);
-        const cost = oldEdgeCosts.get(tileMin)?.get(tileMax);
-        if (cost !== undefined) {
-          this.addOrUpdateEdge(nodes[i].id, nodes[j].id, cost, cx, cy);
+        const entry = oldEdgeCosts.get(tileMin)?.get(tileMax);
+        if (entry !== undefined) {
+          // Preserve the ORIGINAL (clusterX, clusterY) from the old graph.
+          // The path for a boundary edge between two clusters lives in whichever
+          // cluster's BFS originally found it; attributing it to `cx,cy` here
+          // would break query-time single-cluster bounded A*.
+          this.addOrUpdateEdge(
+            nodes[i].id,
+            nodes[j].id,
+            entry.cost,
+            entry.clusterX,
+            entry.clusterY,
+          );
         }
       }
     }
