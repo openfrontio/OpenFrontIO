@@ -1,0 +1,30 @@
+{
+  "name": "GigaBox",
+  "nations": [
+    {
+      "name": "The Top Left",
+      "flag": "dm",
+      "coordinates": [40, 38]
+    },
+    {
+      "name": "The Bottom Left",
+      "flag": "dm",
+      "coordinates": [40, 2444]
+    },
+    {
+      "name": "The Top Right",
+      "flag": "dm",
+      "coordinates": [3148, 52]
+    },
+    {
+      "name": "The Bottom Right",
+      "flag": "dm",
+      "coordinates": [3104, 2416]
+    },
+    {
+      "name": "The Center of All",
+      "flag": "aq",
+      "coordinates": [1548, 1183]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "GigaBox",
+  "nations": [
+    {
+      "name": "The Top Left",
+      "flag": "dm",
+      "coordinates": [40, 38]
+    },
+    {
+      "name": "The Bottom Left",
+      "flag": "dm",
+      "coordinates": [40, 2444]
+    },
+    {
+      "name": "The Top Right",
+      "flag": "dm",
+      "coordinates": [3148, 52]
+    },
+    {
+      "name": "The Bottom Right",
+      "flag": "dm",
+      "coordinates": [3104, 2416]
+    },
+    {
+      "name": "The Center of All",
+      "flag": "aq",
+      "coordinates": [1548, 1183]
+    }
+  ],
+  "map": {
+    "width": 3224,
+    "height": 2500,
+    "num_land_tiles": 8060000
+  },
+  "map4x": {
+    "width": 1612,
+    "height": 1250,
+    "num_land_tiles": 2015000
+  },
+  "map16x": {
+    "width": 806,
+    "height": 625,
+    "num_land_tiles": 503750
+  }
+}
