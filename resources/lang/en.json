@@ -185,7 +185,8 @@
     "exit_confirmation": "Are you sure you want to exit the game?",
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
-    "icon_alt_team_leaderboard": "Team Leaderboard Icon"
+    "icon_alt_team_leaderboard": "Team Leaderboard Icon",
+    "game_id_tooltip": "Game ID"
   },
   "single_modal": {
     "random_spawn": "Random spawn",
@@ -361,7 +362,8 @@
     "straitofmalacca": "Strait Of Malacca",
     "luna": "Luna",
     "conakry": "Conakry",
-    "caucasus": "Caucasus"
+    "caucasus": "Caucasus",
+    "beringsea": "Bering Sea"
   },
   "map_categories": {
     "featured": "Featured",
@@ -546,6 +548,7 @@
     "title": "Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
+    "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "Emojis",

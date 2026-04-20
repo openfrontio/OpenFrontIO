@@ -654,17 +654,52 @@ export class ClientGameRunner {
         }
       }
 
-      if (upgradeUnits.length > 0) {
-        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-        if (bestUpgrade) {
-          this.eventBus.emit(
-            new SendUpgradeStructureIntentEvent(
-              bestUpgrade.unitId,
-              bestUpgrade.unitType,
-            ),
-          );
+      if (upgradeUnits.length === 0) {
+        return;
+      }
+
+      // Upgrade the closest affordable building. But if there's an unaffordable
+      // building (any type) that's closer to clickedTile than the best candidate,
+      // do nothing — the player clicked on that unaffordable building intending
+      // to upgrade it, and we must not spend their gold on a different building.
+      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+      if (!bestUpgrade) {
+        return;
+      }
+
+      // Check if any unaffordable building is closer than bestUpgrade
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+          const myPlayerID = this.myPlayer!.id();
+          const closestOfType = this.gameView
+            .nearbyUnits(
+              clickedTile,
+              this.gameView.config().structureMinDist(),
+              bu.type,
+            )
+            .filter(({ unit }) => unit.owner().id() === myPlayerID)
+            .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+          if (closestOfType) {
+            const dist = this.gameView.manhattanDist(
+              clickedTile,
+              closestOfType.unit.tile(),
+            );
+            if (dist <= bestUpgrade.distance) {
+              // An unaffordable building of type bu.type is at least as close
+              // as bestUpgrade — player clicked on it, not on bestUpgrade.
+              return;
+            }
+          }
         }
       }
+
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          bestUpgrade.unitId,
+          bestUpgrade.unitType,
+        ),
+      );
     });
   }
 

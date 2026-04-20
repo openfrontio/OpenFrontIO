@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 3500,
-    "num_land_tiles": 1625125,
+    "num_land_tiles": 1646031,
     "width": 1308
   },
   "map16x": {
     "height": 875,
-    "num_land_tiles": 92808,
+    "num_land_tiles": 93510,
     "width": 327
   },
   "map4x": {
     "height": 1750,
-    "num_land_tiles": 392778,
+    "num_land_tiles": 398022,
     "width": 654
   },
   "name": "Luna",
@@ -57,7 +57,7 @@
       "name": "Apollo 13"
     },
     {
-      "coordinates": [650, 1750],
+      "coordinates": [656, 1750],
       "flag": "us",
       "name": "Artemis II"
     },

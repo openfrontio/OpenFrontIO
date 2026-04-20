@@ -383,6 +383,26 @@ export class UserSettingModal extends BaseModal {
 
   private renderKeybindSettings() {
     return html`
+      <div
+        class="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300/70 text-xs"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-3.5 w-3.5 shrink-0 opacity-70"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        ${translateText("user_setting.keybinds_hint")}
+      </div>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"
       >
