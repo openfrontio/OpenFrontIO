@@ -176,9 +176,6 @@ export class WarshipExecution implements Execution {
     ) {
       return false;
     }
-    if (this.findRetreatAggroTarget() !== undefined) {
-      return false;
-    }
     const ports = this.warship.owner().units(UnitType.Port);
     return ports.length > 0;
   }
@@ -324,12 +321,7 @@ export class WarshipExecution implements Execution {
     if (retreatAggroTarget) {
       this.warship.setTargetUnit(retreatAggroTarget);
       this.shootTarget();
-      return true;
-    }
-
-    if (this.isFullyHealed()) {
-      this.cancelRepairRetreat();
-      return false;
+      // Fall through — continue retreating toward port even while firing back.
     }
 
     if (!this.refreshRetreatPortTile()) {
@@ -363,7 +355,11 @@ export class WarshipExecution implements Execution {
         this.docked = true;
         return true;
       } else {
-        // Port is full - don't cancel retreat, keep waiting near port
+        // Port is full - wait near port, but leave if already fully healed
+        if (this.isFullyHealed()) {
+          this.cancelRepairRetreat();
+          return false;
+        }
         return true;
       }
     }
