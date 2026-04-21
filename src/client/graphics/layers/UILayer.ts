@@ -321,7 +321,7 @@ export class UILayer implements Layer {
       this.multiSelectionBoxCenters.clear();
       this.multiSelectedWarships = [];
 
-      if (event.units.length > 0) {
+      if ((event.units ?? []).length > 0) {
         // Multi-selection
         this.multiSelectedWarships = event.units;
         for (const unit of this.multiSelectedWarships) {
