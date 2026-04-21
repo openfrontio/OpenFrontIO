@@ -397,8 +397,8 @@ export class UnitLayer implements Layer {
     ctx.moveTo(cx - 1.5, cy);
     ctx.lineTo(cx + 1.5, cy);
     ctx.stroke();
-    // Neon green cross on top
-    ctx.strokeStyle = "rgb(57,255,20)";
+    // Dark green cross on top
+    ctx.strokeStyle = "rgb(0,140,0)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(cx, cy - 1.5);
