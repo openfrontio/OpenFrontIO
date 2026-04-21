@@ -909,11 +909,11 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("crosshair");
   });
 
-  test("ShiftRight keydown also sets cursor to crosshair", () => {
+  test("ShiftRight keydown does not set cursor to crosshair", () => {
     // ShiftRight is not the default shiftKey keybind (ShiftLeft is).
     // This test verifies the configured shiftKey works, not a hardcoded ShiftRight.
-    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
-    expect(mockCanvas.style.cursor).toBe("crosshair");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftRight" }));
+    expect(mockCanvas.style.cursor).not.toBe("crosshair");
   });
 
   test("Shift keyup resets cursor when no selection box active", () => {

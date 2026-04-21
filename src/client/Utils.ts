@@ -380,7 +380,7 @@ export function formatKeyForDisplay(value: string): string {
     Backslash: "\\",
     Shift: "Shift ⇧",
     ShiftLeft: "Shift ⇧",
-    ShiftRight: "Shift ⇧",
+    ShiftRight: "⇧ Shift",
     Control: "Ctrl",
     // "Alt Gr" emits ControlLeft+Alt in Windows on many keyboard layouts and we catch the first code.
     // Is undiscernable normally from ControlLeft but user sees "alt gr" on the key so display it too
@@ -389,7 +389,7 @@ export function formatKeyForDisplay(value: string): string {
     Alt: Platform.isMac ? "⌥" : "Alt",
     AltLeft: Platform.isMac ? "⌥" : "Alt",
     AltRight: Platform.isMac ? "⌥" : "Alt",
-    Metat: Platform.isMac ? "⌘" : "⊞",
+    Meta: Platform.isMac ? "⌘" : "⊞",
     MetaLeft: Platform.isMac ? "⌘" : "⊞", //"⊞" is Windows key, "⌘" is Command key on Mac
     MetaRight: Platform.isMac ? "⌘" : "⊞",
     Escape: "Esc", // Cannot be bound to action by user, but used as reserved key

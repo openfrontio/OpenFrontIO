@@ -384,7 +384,8 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.emojiMenuModifier)}
+                        ${this.renderKey("Alt")}
+                        <!-- Listens to e.altKey, either AltLeft or AltRight -->
                         <span class="text-white/40 font-bold">+</span>
                         ${this.renderKey(keybinds.resetGfx)}
                       </div>

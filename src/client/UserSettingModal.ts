@@ -90,8 +90,9 @@ export class UserSettingModal extends BaseModal {
     const { action, value, prevValue } = e.detail;
     let { key } = e.detail;
 
+    // TODO: remove after testing
     console.info(
-      "handleKeybindChange recieved value: " + value,
+      "handleKeybindChange received value: " + value,
       ", key: " + key,
     );
 
