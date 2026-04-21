@@ -117,30 +117,10 @@ export function renderClanWL(stats: ClanStats): TemplateResult | string {
       <h3 class="text-[10px] font-bold text-white/40 uppercase tracking-wider">
         ${translateText("clan_modal.win_loss")}
       </h3>
-      <div class="grid grid-cols-3 gap-3">
-        ${categories.map((cat) => {
-          const total = cat.wins + cat.losses;
-          const rate = total > 0 ? Math.round((cat.wins / total) * 100) : 0;
-          return html`
-            <div class="text-center">
-              <div
-                class="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1"
-              >
-                ${cat.label}
-              </div>
-              <div class="text-white font-bold text-sm">
-                ${cat.wins}W / ${cat.losses}L
-              </div>
-              <div
-                class="text-xs ${rate >= 50
-                  ? "text-green-400/70"
-                  : "text-red-400/70"}"
-              >
-                ${total > 0 ? `${rate}%` : "-"}
-              </div>
-            </div>
-          `;
-        })}
+      <div class="space-y-1.5">
+        ${categories.map((cat) =>
+          renderWLBarRow(cat.label, cat.wins, cat.losses),
+        )}
       </div>
     </div>
   `;
@@ -288,63 +268,73 @@ const statBuckets = [
   { key: "ranked" as const, labelKey: "clan_modal.stats_ranked" },
 ];
 
+function renderWLBarRow(
+  label: string,
+  wins: number,
+  losses: number,
+): TemplateResult {
+  const total = wins + losses;
+  const hasGames = total > 0;
+  const rate = hasGames ? Math.round((wins / total) * 100) : 0;
+  const winPct = hasGames ? (wins / total) * 100 : 0;
+  const lossPct = hasGames ? 100 - winPct : 0;
+  const rateClass = !hasGames
+    ? "text-white/25"
+    : rate >= 50
+      ? "text-green-400"
+      : "text-red-400/90";
+  return html`
+    <div class="flex items-center gap-2">
+      <span
+        class="text-[10px] font-bold uppercase tracking-wider text-white/50 w-14 shrink-0 truncate"
+        title=${label}
+      >
+        ${label}
+      </span>
+      <div
+        class="flex-1 flex h-5 rounded-md overflow-hidden bg-white/5 text-[11px] font-bold text-white tabular-nums"
+        role="img"
+        aria-label="${wins} wins, ${losses} losses"
+      >
+        ${wins > 0
+          ? html`<div
+              class="bg-blue-500 flex items-center px-1.5 overflow-hidden whitespace-nowrap"
+              style="width:${winPct}%"
+            >
+              ${wins}W
+            </div>`
+          : ""}
+        ${losses > 0
+          ? html`<div
+              class="bg-red-500 flex items-center justify-end px-1.5 overflow-hidden whitespace-nowrap"
+              style="width:${lossPct}%"
+            >
+              ${losses}L
+            </div>`
+          : ""}
+      </div>
+      <span
+        class="text-xs font-bold shrink-0 tabular-nums w-9 text-right ${rateClass}"
+      >
+        ${hasGames ? `${rate}%` : "—"}
+      </span>
+    </div>
+  `;
+}
+
 export function renderMemberStats(
   stats: ClanMemberStats | undefined,
 ): TemplateResult | string {
   if (!stats) return "";
   return html`
     <div class="mt-1.5 space-y-1">
-      ${statBuckets.map(({ key, labelKey }) => {
-        const { wins, losses } = stats[key];
-        const total = wins + losses;
-        const hasGames = total > 0;
-        const rate = hasGames ? Math.round((wins / total) * 100) : 0;
-        const winPct = hasGames ? (wins / total) * 100 : 0;
-        const lossPct = hasGames ? 100 - winPct : 0;
-        const rateClass = !hasGames
-          ? "text-white/25"
-          : rate >= 50
-            ? "text-green-400"
-            : "text-red-400/90";
-        const label = translateText(labelKey);
-        return html`
-          <div class="flex items-center gap-2">
-            <span
-              class="text-[10px] font-bold uppercase tracking-wider text-white/50 w-14 shrink-0 truncate"
-              title=${label}
-            >
-              ${label}
-            </span>
-            <div
-              class="flex-1 flex h-5 rounded-md overflow-hidden bg-white/5 text-[11px] font-bold text-white tabular-nums"
-              role="img"
-              aria-label="${wins} wins, ${losses} losses"
-            >
-              ${wins > 0
-                ? html`<div
-                    class="bg-blue-500 flex items-center px-1.5 overflow-hidden whitespace-nowrap"
-                    style="width:${winPct}%"
-                  >
-                    ${wins}W
-                  </div>`
-                : ""}
-              ${losses > 0
-                ? html`<div
-                    class="bg-red-500 flex items-center justify-end px-1.5 overflow-hidden whitespace-nowrap"
-                    style="width:${lossPct}%"
-                  >
-                    ${losses}L
-                  </div>`
-                : ""}
-            </div>
-            <span
-              class="text-xs font-bold shrink-0 tabular-nums w-9 text-right ${rateClass}"
-            >
-              ${hasGames ? `${rate}%` : "—"}
-            </span>
-          </div>
-        `;
-      })}
+      ${statBuckets.map(({ key, labelKey }) =>
+        renderWLBarRow(
+          translateText(labelKey),
+          stats[key].wins,
+          stats[key].losses,
+        ),
+      )}
     </div>
   `;
 }
