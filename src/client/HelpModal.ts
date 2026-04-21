@@ -762,6 +762,8 @@ export class HelpModal extends BaseModal {
                   <li class="flex items-center gap-3">
                     <img
                       src=${assetUrl("images/BuildIconWhite.svg")}
+                      alt=""
+                      aria-hidden="true"
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.upgrade_health")}</span>
@@ -769,6 +771,8 @@ export class HelpModal extends BaseModal {
                   <li class="flex items-center gap-3">
                     <img
                       src=${assetUrl("images/DonateGoldIconWhite.svg")}
+                      alt=""
+                      aria-hidden="true"
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.upgrade_economy")}</span>
@@ -776,6 +780,8 @@ export class HelpModal extends BaseModal {
                   <li class="flex items-center gap-3">
                     <img
                       src=${assetUrl("images/InfoIcon.svg")}
+                      alt=""
+                      aria-hidden="true"
                       class="w-8 h-8 scale-75 origin-left"
                     />
                     <span>${translateText("help_modal.upgrade_defense")}</span>
