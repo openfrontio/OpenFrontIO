@@ -379,10 +379,13 @@ export class UnitLayer implements Layer {
     const y = this.game.y(unit.tile());
     const ctx = this.context;
     ctx.save();
+    // Black border: 5px arms, 3px wide bars
+    ctx.fillStyle = "rgb(0,0,0)";
+    ctx.fillRect(x - 1, y - 2, 3, 7);
+    ctx.fillRect(x - 2, y - 1, 7, 3);
+    // Neon green cross: 3px arms, 1px wide bars
     ctx.fillStyle = "rgb(57,255,20)";
-    // Vertical bar: 1px wide, 3px tall, centered
     ctx.fillRect(x, y - 1, 1, 3);
-    // Horizontal bar: 3px wide, 1px tall, centered
     ctx.fillRect(x - 1, y, 3, 1);
     ctx.restore();
   }
