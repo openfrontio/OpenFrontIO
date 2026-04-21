@@ -361,7 +361,8 @@ export class UnitLayer implements Layer {
 
   private handleWarShipEvent(unit: UnitView) {
     if (unit.retreating()) {
-      this.drawSprite(unit, colord("rgb(0,180,255)"));
+      this.drawSprite(unit);
+      this.drawRetreatCross(unit);
       return;
     }
 
@@ -371,6 +372,19 @@ export class UnitLayer implements Layer {
     }
 
     this.drawSprite(unit);
+  }
+
+  private drawRetreatCross(unit: UnitView) {
+    const x = this.game.x(unit.tile());
+    const y = this.game.y(unit.tile());
+    const ctx = this.context;
+    ctx.save();
+    ctx.fillStyle = "rgb(0,180,255)";
+    // Vertical bar: 1px wide, 5px tall, centered
+    ctx.fillRect(x, y - 2, 1, 5);
+    // Horizontal bar: 5px wide, 1px tall, centered
+    ctx.fillRect(x - 2, y, 5, 1);
+    ctx.restore();
   }
 
   private handleShellEvent(unit: UnitView) {
