@@ -82,6 +82,7 @@ export interface Config {
   playerTeams(): TeamCountConfig;
   goldMultiplier(): number;
   startingGold(playerInfo: PlayerInfo): Gold;
+  startingOwnedTiles(playerInfo: PlayerInfo): TileRef[] | undefined;
 
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;

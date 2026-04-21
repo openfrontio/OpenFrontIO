@@ -96,6 +96,7 @@ export class SpawnExecution implements Execution {
 
       return { center, tiles };
     }
+    //if (this.mg.config().startingOwnedTiles(player));
 
     const spawnArea = this.getTeamSpawnArea();
     let tries = 0;
