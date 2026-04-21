@@ -13,14 +13,10 @@ import {
   SelectAllWarshipsEvent,
   TouchEvent,
   UnitSelectionEvent,
-  WarshipMultiSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
 } from "../../InputHandler";
-import {
-  MoveMultipleWarshipsIntentEvent,
-  MoveWarshipIntentEvent,
-} from "../../Transport";
+import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -166,18 +162,16 @@ export class UnitLayer implements Layer {
         .map((u) => u.id());
 
       if (activeIds.length > 0) {
-        this.eventBus.emit(
-          new MoveMultipleWarshipsIntentEvent(activeIds, clickRef),
-        );
+        this.eventBus.emit(new MoveWarshipIntentEvent(activeIds, clickRef));
       }
       this.selectedWarships = [];
-      this.eventBus.emit(new WarshipMultiSelectionEvent([]));
+      this.eventBus.emit(new UnitSelectionEvent(null, false));
       return;
     }
 
     if (this.selectedUnit) {
       this.eventBus.emit(
-        new MoveWarshipIntentEvent(this.selectedUnit.id(), clickRef),
+        new MoveWarshipIntentEvent([this.selectedUnit.id()], clickRef),
       );
       // Deselect
       this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
@@ -283,12 +277,14 @@ export class UnitLayer implements Layer {
     }
 
     // Notify UILayer to draw selection boxes for all selected warships
-    this.eventBus.emit(new WarshipMultiSelectionEvent(this.selectedWarships));
+    this.eventBus.emit(
+      new UnitSelectionEvent(null, true, this.selectedWarships),
+    );
   }
 
   private onSelectionBoxCancel() {
     this.selectedWarships = [];
-    this.eventBus.emit(new WarshipMultiSelectionEvent([]));
+    this.eventBus.emit(new UnitSelectionEvent(null, false));
   }
 
   private onSelectAllWarships() {
@@ -307,7 +303,9 @@ export class UnitLayer implements Layer {
     }
 
     this.selectedWarships = allWarships;
-    this.eventBus.emit(new WarshipMultiSelectionEvent(this.selectedWarships));
+    this.eventBus.emit(
+      new UnitSelectionEvent(null, true, this.selectedWarships),
+    );
   }
 
   /**

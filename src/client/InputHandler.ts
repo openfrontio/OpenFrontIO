@@ -27,12 +27,16 @@ export class TouchEvent implements GameEvent {
 }
 
 /**
- * Event emitted when a unit is selected or deselected
+ * Event emitted when one or more warships are selected or deselected.
+ * For single selection: unit is set, units is empty.
+ * For multi selection: units contains all selected warships, unit is null.
+ * For deselection: isSelected is false.
  */
 export class UnitSelectionEvent implements GameEvent {
   constructor(
     public readonly unit: UnitView | null,
     public readonly isSelected: boolean,
+    public readonly units: UnitView[] = [],
   ) {}
 }
 
@@ -123,11 +127,6 @@ export class WarshipSelectionBoxCancelEvent implements GameEvent {}
 
 /** Emitted when the player triggers select-all-warships hotkey */
 export class SelectAllWarshipsEvent implements GameEvent {}
-
-/** Emitted when multiple warships are selected via box selection */
-export class WarshipMultiSelectionEvent implements GameEvent {
-  constructor(public readonly units: UnitView[]) {}
-}
 
 /** Emitted when a touch long-press is detected (shows crosshair indicator) */
 export class TouchLongPressStartEvent implements GameEvent {
@@ -237,12 +236,15 @@ export class InputHandler {
 
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
-      this.canvas.style.cursor =
-        e.isSelected && e.unit !== null ? "crosshair" : "";
-    });
-    this.eventBus.on(WarshipMultiSelectionEvent, (e) => {
-      this.multiSelectionActive = e.units.length > 0;
-      this.canvas.style.cursor = this.multiSelectionActive ? "crosshair" : "";
+      if (e.isSelected) {
+        this.multiSelectionActive = e.units.length > 0;
+        this.canvas.style.cursor = "crosshair";
+      } else {
+        this.multiSelectionActive = false;
+        if (!this.selectionBoxActive) {
+          this.canvas.style.cursor = "";
+        }
+      }
     });
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));

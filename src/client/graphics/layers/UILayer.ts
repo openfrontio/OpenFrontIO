@@ -5,8 +5,11 @@ import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  CloseViewEvent,
   UnitSelectionEvent,
-  WarshipMultiSelectionEvent,
+  WarshipSelectionBoxCancelEvent,
+  WarshipSelectionBoxCompleteEvent,
+  WarshipSelectionBoxUpdateEvent,
 } from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
@@ -57,6 +60,16 @@ export class UILayer implements Layer {
 
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
+
+  // Selection box (drag rectangle) state
+  private selectionBoxActive = false;
+  private selectionBoxStartX = 0;
+  private selectionBoxStartY = 0;
+  private selectionBoxEndX = 0;
+  private selectionBoxEndY = 0;
+  private selectionBoxCanvas: HTMLCanvasElement =
+    document.createElement("canvas");
+  private selectionBoxCtx: CanvasRenderingContext2D | null = null;
 
   constructor(
     private game: GameView,
@@ -109,9 +122,25 @@ export class UILayer implements Layer {
 
   init() {
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
-    this.eventBus.on(WarshipMultiSelectionEvent, (e) =>
-      this.onMultiSelection(e),
-    );
+    this.eventBus.on(WarshipSelectionBoxUpdateEvent, (e) => {
+      this.selectionBoxActive = true;
+      this.selectionBoxStartX = e.startX;
+      this.selectionBoxStartY = e.startY;
+      this.selectionBoxEndX = e.endX;
+      this.selectionBoxEndY = e.endY;
+    });
+    const clearBox = () => {
+      this.selectionBoxActive = false;
+      this.selectionBoxCtx?.clearRect(
+        0,
+        0,
+        this.selectionBoxCanvas.width,
+        this.selectionBoxCanvas.height,
+      );
+    };
+    this.eventBus.on(WarshipSelectionBoxCompleteEvent, clearBox);
+    this.eventBus.on(WarshipSelectionBoxCancelEvent, clearBox);
+    this.eventBus.on(CloseViewEvent, clearBox);
     this.redraw();
   }
 
@@ -123,14 +152,101 @@ export class UILayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    if (this.selectionBoxActive) {
+      this.renderSelectionBox(context);
+    }
+  }
+
+  private renderSelectionBox(context: CanvasRenderingContext2D) {
+    if (!this.selectionBoxCtx) return;
+
+    const topLeft = this.transformHandler.screenToWorldCoordinates(
+      Math.min(this.selectionBoxStartX, this.selectionBoxEndX),
+      Math.min(this.selectionBoxStartY, this.selectionBoxEndY),
+    );
+    const bottomRight = this.transformHandler.screenToWorldCoordinates(
+      Math.max(this.selectionBoxStartX, this.selectionBoxEndX),
+      Math.max(this.selectionBoxStartY, this.selectionBoxEndY),
+    );
+
+    const cx1 = Math.max(0, Math.floor(topLeft.x));
+    const cy1 = Math.max(0, Math.floor(topLeft.y));
+    const cx2 = Math.min(
+      this.selectionBoxCanvas.width - 1,
+      Math.floor(bottomRight.x),
+    );
+    const cy2 = Math.min(
+      this.selectionBoxCanvas.height - 1,
+      Math.floor(bottomRight.y),
+    );
+
+    if (cx2 <= cx1 || cy2 <= cy1) return;
+
+    const myPlayer = this.game.myPlayer();
+    const baseColor = myPlayer ? myPlayer.territoryColor().lighten(0.2) : null;
+    const colorStr = baseColor
+      ? baseColor.alpha(0.85).toRgbString()
+      : "rgba(100,200,255,0.85)";
+
+    this.selectionBoxCtx.clearRect(
+      0,
+      0,
+      this.selectionBoxCanvas.width,
+      this.selectionBoxCanvas.height,
+    );
+    this.selectionBoxCtx.fillStyle = colorStr;
+    this.drawDashedLine(this.selectionBoxCtx, cx1, cy1, cx2, cy1);
+    this.drawDashedLine(this.selectionBoxCtx, cx1, cy2, cx2, cy2);
+    this.drawDashedLine(this.selectionBoxCtx, cx1, cy1, cx1, cy2);
+    this.drawDashedLine(this.selectionBoxCtx, cx2, cy1, cx2, cy2);
+
+    this.selectionBoxCtx.fillStyle = baseColor
+      ? baseColor.alpha(0.06).toRgbString()
+      : "rgba(100,200,255,0.06)";
+    this.selectionBoxCtx.fillRect(
+      cx1 + 1,
+      cy1 + 1,
+      cx2 - cx1 - 1,
+      cy2 - cy1 - 1,
+    );
+
+    context.drawImage(
+      this.selectionBoxCanvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+  }
+
+  private drawDashedLine(
+    ctx: CanvasRenderingContext2D,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ) {
+    if (x1 === x2) {
+      for (let y = y1; y <= y2; y++) {
+        if ((x1 + y) % 2 === 0) ctx.fillRect(x1, y, 1, 1);
+      }
+    } else {
+      for (let x = x1; x <= x2; x++) {
+        if ((x + y1) % 2 === 0) ctx.fillRect(x, y1, 1, 1);
+      }
+    }
   }
 
   redraw() {
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
-
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+
+    this.selectionBoxCanvas = document.createElement("canvas");
+    this.selectionBoxCanvas.width = this.game.width();
+    this.selectionBoxCanvas.height = this.game.height();
+    this.selectionBoxCtx = this.selectionBoxCanvas.getContext("2d");
   }
 
   onUnitEvent(unit: UnitView) {
@@ -184,59 +300,55 @@ export class UILayer implements Layer {
   }
 
   /**
-   * Handle the unit selection event
+   * Handle the unit selection event (single or multi).
+   * When event.units.length > 0 it's a multi-selection from box/select-all.
+   * When event.unit is set it's a single warship selection.
+   * When event.isSelected is false it clears all selection state.
    */
   private onUnitSelection(event: UnitSelectionEvent) {
     if (event.isSelected) {
-      // Clear any active multi-selection boxes before applying single selection
-      if (this.multiSelectedWarships.length > 0) {
-        for (const [, center] of this.multiSelectionBoxCenters) {
-          this.clearSelectionBox(center.x, center.y, center.size);
-        }
-        this.multiSelectionBoxCenters.clear();
-        this.multiSelectedWarships = [];
-      }
-      this.selectedUnit = event.unit;
-      if (event.unit && event.unit.type() === UnitType.Warship) {
-        this.drawSelectionBox(event.unit);
-      }
-    } else {
-      if (this.selectedUnit === event.unit) {
-        // Clear the selection box
-        if (this.lastSelectionBoxCenter) {
-          const { x, y, size } = this.lastSelectionBoxCenter;
-          this.clearSelectionBox(x, y, size);
-          this.lastSelectionBoxCenter = null;
-        }
+      // Always clear single-selection outline first
+      if (this.lastSelectionBoxCenter) {
+        const { x, y, size } = this.lastSelectionBoxCenter;
+        this.clearSelectionBox(x, y, size);
+        this.lastSelectionBoxCenter = null;
         this.selectedUnit = null;
       }
-    }
-  }
-
-  /**
-   * Handle multi-warship box selection
-   */
-  private onMultiSelection(event: WarshipMultiSelectionEvent) {
-    // Clear single-selection outline if active
-    if (this.lastSelectionBoxCenter) {
-      const { x, y, size } = this.lastSelectionBoxCenter;
-      this.clearSelectionBox(x, y, size);
-      this.lastSelectionBoxCenter = null;
-      this.selectedUnit = null;
-    }
-
-    // Clear previous multi-selection boxes
-    for (const [, center] of this.multiSelectionBoxCenters) {
-      this.clearSelectionBox(center.x, center.y, center.size);
-    }
-    this.multiSelectionBoxCenters.clear();
-    this.multiSelectedWarships = event.units;
-
-    // Draw boxes for all newly selected warships
-    for (const unit of this.multiSelectedWarships) {
-      if (unit.isActive()) {
-        this.drawSelectionBoxMulti(unit);
+      // Always clear previous multi-selection boxes
+      for (const [, center] of this.multiSelectionBoxCenters) {
+        this.clearSelectionBox(center.x, center.y, center.size);
       }
+      this.multiSelectionBoxCenters.clear();
+      this.multiSelectedWarships = [];
+
+      if (event.units.length > 0) {
+        // Multi-selection
+        this.multiSelectedWarships = event.units;
+        for (const unit of this.multiSelectedWarships) {
+          if (unit.isActive()) {
+            this.drawSelectionBoxMulti(unit);
+          }
+        }
+      } else {
+        // Single selection
+        this.selectedUnit = event.unit;
+        if (event.unit && event.unit.type() === UnitType.Warship) {
+          this.drawSelectionBox(event.unit);
+        }
+      }
+    } else {
+      // Deselect everything
+      if (this.lastSelectionBoxCenter) {
+        const { x, y, size } = this.lastSelectionBoxCenter;
+        this.clearSelectionBox(x, y, size);
+        this.lastSelectionBoxCenter = null;
+      }
+      this.selectedUnit = null;
+      for (const [, center] of this.multiSelectionBoxCenters) {
+        this.clearSelectionBox(center.x, center.y, center.size);
+      }
+      this.multiSelectionBoxCenters.clear();
+      this.multiSelectedWarships = [];
     }
   }
 

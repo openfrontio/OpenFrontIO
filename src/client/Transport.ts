@@ -160,13 +160,6 @@ export class SendHashEvent implements GameEvent {
 
 export class MoveWarshipIntentEvent implements GameEvent {
   constructor(
-    public readonly unitId: number,
-    public readonly tile: number,
-  ) {}
-}
-
-export class MoveMultipleWarshipsIntentEvent implements GameEvent {
-  constructor(
     public readonly unitIds: number[],
     public readonly tile: number,
   ) {}
@@ -256,10 +249,6 @@ export class Transport {
 
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
-    });
-
-    this.eventBus.on(MoveMultipleWarshipsIntentEvent, (e) => {
-      this.onMoveMultipleWarshipsEvent(e);
     });
 
     this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
@@ -629,14 +618,6 @@ export class Transport {
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
       type: "move_warship",
-      unitId: event.unitId,
-      tile: event.tile,
-    });
-  }
-
-  private onMoveMultipleWarshipsEvent(event: MoveMultipleWarshipsIntentEvent) {
-    this.sendIntent({
-      type: "move_multiple_warships",
       unitIds: event.unitIds,
       tile: event.tile,
     });

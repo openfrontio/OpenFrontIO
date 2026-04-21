@@ -15,7 +15,7 @@ let game: Game;
 let player1: Player;
 let player2: Player;
 
-describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
+describe("Warship multi-selection (MoveWarshipExecution)", () => {
   beforeEach(async () => {
     game = await setup(
       "half_land_half_ocean",
@@ -30,7 +30,7 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
     player2 = game.player("p2");
   });
 
-  test("moving multiple warships via individual MoveWarshipExecutions all update patrol tiles", () => {
+  test("moving multiple warships via array MoveWarshipExecution updates all patrol tiles", () => {
     const w1 = player1.buildUnit(UnitType.Warship, game.ref(coastX + 1, 10), {
       patrolTile: game.ref(coastX + 1, 10),
     });
@@ -45,12 +45,15 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
     game.addExecution(new WarshipExecution(w2));
     game.addExecution(new WarshipExecution(w3));
 
-    // Simulate what MoveMultipleWarshipsIntentEvent does on the server:
-    // one MoveWarshipExecution per warship, all to the same tile
     const sharedTarget = game.ref(coastX + 5, 15);
-    game.addExecution(new MoveWarshipExecution(player1, w1.id(), sharedTarget));
-    game.addExecution(new MoveWarshipExecution(player1, w2.id(), sharedTarget));
-    game.addExecution(new MoveWarshipExecution(player1, w3.id(), sharedTarget));
+    // Single execution with array of ids — the new unified API
+    game.addExecution(
+      new MoveWarshipExecution(
+        player1,
+        [w1.id(), w2.id(), w3.id()],
+        sharedTarget,
+      ),
+    );
 
     executeTicks(game, 5);
 
@@ -73,8 +76,8 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
     const target1 = game.ref(coastX + 3, 12);
     const target2 = game.ref(coastX + 4, 14);
 
-    game.addExecution(new MoveWarshipExecution(player1, w1.id(), target1));
-    game.addExecution(new MoveWarshipExecution(player1, w2.id(), target2));
+    game.addExecution(new MoveWarshipExecution(player1, [w1.id()], target1));
+    game.addExecution(new MoveWarshipExecution(player1, [w2.id()], target2));
 
     executeTicks(game, 5);
 
@@ -89,8 +92,7 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
     });
     game.addExecution(new WarshipExecution(w1));
 
-    // player2 tries to move player1's warship
-    new MoveWarshipExecution(player2, w1.id(), game.ref(coastX + 5, 15)).init(
+    new MoveWarshipExecution(player2, [w1.id()], game.ref(coastX + 5, 15)).init(
       game,
       0,
     );
@@ -106,7 +108,7 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
 
     const exec = new MoveWarshipExecution(
       player1,
-      w1.id(),
+      [w1.id()],
       game.ref(coastX + 5, 15),
     );
     expect(() => exec.init(game, 0)).not.toThrow();
@@ -130,12 +132,13 @@ describe("Warship multi-selection (MoveWarshipExecution batch)", () => {
     const target = game.ref(coastX + 5, 15);
 
     // player1 sends both IDs — but w2 belongs to player2
-    game.addExecution(new MoveWarshipExecution(player1, w1.id(), target));
-    new MoveWarshipExecution(player1, w2.id(), target).init(game, 0);
+    game.addExecution(
+      new MoveWarshipExecution(player1, [w1.id(), w2.id()], target),
+    );
 
     executeTicks(game, 5);
 
     expect(w1.patrolTile()).toBe(target);
-    expect(w2.patrolTile()).toBe(p2tile); // unchanged
+    expect(w2.patrolTile()).toBe(p2tile); // unchanged — wrong owner
   });
 });
