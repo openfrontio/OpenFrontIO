@@ -379,14 +379,27 @@ export class UnitLayer implements Layer {
     const y = this.game.y(unit.tile());
     const ctx = this.context;
     ctx.save();
-    // Black border: 5px arms, 3px wide bars
-    ctx.fillStyle = "rgb(0,0,0)";
-    ctx.fillRect(x - 1, y - 2, 3, 7);
-    ctx.fillRect(x - 2, y - 1, 7, 3);
-    // Neon green cross: 3px arms, 1px wide bars
-    ctx.fillStyle = "rgb(57,255,20)";
-    ctx.fillRect(x, y - 1, 1, 3);
-    ctx.fillRect(x - 1, y, 3, 1);
+    const cx = x + 0.5;
+    const cy = y + 0.5;
+    ctx.lineCap = "square";
+    // Black border: lineWidth 1.67 = 1px green + 2 × ~0.33px border on all sides
+    ctx.strokeStyle = "rgb(0,0,0)";
+    ctx.lineWidth = 1.67;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 1.5);
+    ctx.lineTo(cx, cy + 1.5);
+    ctx.moveTo(cx - 1.5, cy);
+    ctx.lineTo(cx + 1.5, cy);
+    ctx.stroke();
+    // Neon green cross on top
+    ctx.strokeStyle = "rgb(57,255,20)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 1.5);
+    ctx.lineTo(cx, cy + 1.5);
+    ctx.moveTo(cx - 1.5, cy);
+    ctx.lineTo(cx + 1.5, cy);
+    ctx.stroke();
     ctx.restore();
   }
 
