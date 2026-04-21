@@ -74,14 +74,15 @@ describe("renderMemberStats", () => {
     expect(host.textContent?.trim()).toBe("");
   });
 
-  it("renders W/L counts and win-rate per bucket", () => {
+  it("renders W/L labels inside bar segments and the win-rate per bucket", () => {
     const host = renderTo(renderMemberStats(stats));
     const text = host.textContent?.replace(/\s+/g, " ") ?? "";
-    // Each cell shows `wins / losses` numerically
-    expect(text).toContain("2 / 4");
-    expect(text).toContain("5 / 1");
-    expect(text).toContain("0 / 0");
-    // Win-rate badge, and em-dash placeholder for empty bucket
+    // Each bucket with games shows `{wins}W` and `{losses}L` inside segments
+    expect(text).toContain("2W");
+    expect(text).toContain("4L");
+    expect(text).toContain("5W");
+    expect(text).toContain("1L");
+    // Win-rate, and em-dash placeholder for empty bucket
     expect(text).toContain("33%");
     expect(text).toContain("83%");
     expect(text).toContain("—");
@@ -90,7 +91,7 @@ describe("renderMemberStats", () => {
   it("renders a proportional win-loss bar when there are games", () => {
     const host = renderTo(renderMemberStats(stats));
     const bars = host.querySelectorAll<HTMLDivElement>("[style*='width']");
-    // Two bars per bucket with games (ffa: 2, team: 2). Ranked has 0 games → no bars.
+    // Two segments per bucket with games (ffa: 2, team: 2). Ranked has 0 games → no segments.
     expect(bars.length).toBe(4);
     const widths = Array.from(bars).map((b) =>
       (b.getAttribute("style") ?? "").replace(/\s+/g, ""),
