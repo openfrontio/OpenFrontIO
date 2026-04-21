@@ -729,6 +729,7 @@ export class WarshipExecution implements Execution {
   }
 
   private huntDownTradeShip() {
+    this.warship.setUnderFire();
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
       const result = this.pathfinder.next(
