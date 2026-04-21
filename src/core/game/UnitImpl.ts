@@ -22,6 +22,7 @@ export class UnitImpl implements Unit {
   private _health: bigint;
   private _lastTile: TileRef;
   private _retreating: boolean = false;
+  private _docked: boolean = false;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -129,6 +130,7 @@ export class UnitImpl implements Unit {
       isActive: this._active,
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
+      docked: this._docked,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -342,6 +344,17 @@ export class UnitImpl implements Unit {
   setRetreating(retreating: boolean): void {
     if (this._retreating !== retreating) {
       this._retreating = retreating;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  isDocked(): boolean {
+    return this._docked;
+  }
+
+  setDocked(docked: boolean): void {
+    if (this._docked !== docked) {
+      this._docked = docked;
       this.mg.addUpdate(this.toUpdate());
     }
   }

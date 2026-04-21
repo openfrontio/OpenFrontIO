@@ -124,6 +124,12 @@ export class UnitView {
     }
     return this.data.retreating;
   }
+  isDocked(): boolean {
+    return this.data.docked;
+  }
+  setDocked(_docked: boolean): void {
+    throw new Error("setDocked is not supported on UnitView");
+  }
   tile(): TileRef {
     return this.data.pos;
   }
