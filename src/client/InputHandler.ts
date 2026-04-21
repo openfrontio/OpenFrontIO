@@ -212,6 +212,7 @@ export class InputHandler {
   // Touch long-press state
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressActive: boolean = false;
+  private suppressNextTap: boolean = false;
   private readonly LONG_PRESS_MS = 800;
 
   private moveInterval: NodeJS.Timeout | null = null;
@@ -282,6 +283,7 @@ export class InputHandler {
         this.longPressTimer = null;
       }
       this.longPressActive = false;
+      this.suppressNextTap = false;
       if (this.selectionBoxActive) {
         this.selectionBoxActive = false;
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
@@ -620,6 +622,11 @@ export class InputHandler {
     this.longPressActive = false;
     if (wasLongPress) {
       this.canvas.style.cursor = "";
+      // If long-press fired but no drag happened (selectionBoxActive is false),
+      // suppress the tap so we don't emit a spurious TouchEvent
+      if (!this.selectionBoxActive) {
+        this.suppressNextTap = true;
+      }
     }
 
     // Complete selection box if it was active
@@ -657,6 +664,11 @@ export class InputHandler {
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (event.pointerType === "touch") {
+        if (this.suppressNextTap) {
+          this.suppressNextTap = false;
+          event.preventDefault();
+          return;
+        }
         this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();
         return;
@@ -744,8 +756,13 @@ export class InputHandler {
         }
       }
 
-      // If shift is held OR touch long-press is active, draw selection box
-      if (this.activeKeys.has(this.keybinds.shiftKey) || this.longPressActive) {
+      // If shift is held OR touch long-press is active OR selection box already
+      // started, continue emitting selection box updates
+      if (
+        this.selectionBoxActive ||
+        this.activeKeys.has(this.keybinds.shiftKey) ||
+        this.longPressActive
+      ) {
         this.selectionBoxActive = true;
         this.eventBus.emit(
           new WarshipSelectionBoxUpdateEvent(

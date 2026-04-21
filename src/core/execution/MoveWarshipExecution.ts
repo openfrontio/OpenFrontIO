@@ -13,10 +13,13 @@ export class MoveWarshipExecution implements Execution {
       console.warn(`MoveWarshipExecution: position ${this.position} not valid`);
       return;
     }
-    for (const unitId of this.unitIds) {
-      const warship = this.owner
-        .units(UnitType.Warship)
-        .find((u) => u.id() === unitId);
+    // Cache warship list and build a lookup map — avoids repeated iteration
+    const warshipMap = new Map(
+      this.owner.units(UnitType.Warship).map((u) => [u.id(), u]),
+    );
+    // Deduplicate ids so each warship is only moved once
+    for (const unitId of new Set(this.unitIds)) {
+      const warship = warshipMap.get(unitId);
       if (!warship) {
         console.warn(`MoveWarshipExecution: warship ${unitId} not found`);
         continue;
