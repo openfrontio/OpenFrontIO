@@ -361,7 +361,11 @@ export class UnitLayer implements Layer {
 
   private handleWarShipEvent(unit: UnitView) {
     if (unit.retreating() && unit.isActive()) {
-      this.drawSprite(unit);
+      if (unit.targetUnitId()) {
+        this.drawSprite(unit, colord("rgb(200,0,0)"));
+      } else {
+        this.drawSprite(unit);
+      }
       this.drawRetreatCross(unit);
       return;
     }
@@ -375,6 +379,8 @@ export class UnitLayer implements Layer {
   }
 
   private drawRetreatCross(unit: UnitView) {
+    // Blink: 500ms on, 500ms off
+    if (Math.floor(Date.now() / 500) % 2 === 0) return;
     const x = this.game.x(unit.tile());
     const y = this.game.y(unit.tile());
     const ctx = this.context;
