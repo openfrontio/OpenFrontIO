@@ -614,7 +614,7 @@ export interface Unit {
   isDocked(): boolean;
   setDocked(docked: boolean): void;
   isInCombat(): boolean;
-  setUnderFire(): void;
+  setInCombat(): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;

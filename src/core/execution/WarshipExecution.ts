@@ -710,7 +710,7 @@ export class WarshipExecution implements Execution {
         // Warships don't need to reload when attacking transport ships.
         this.lastShellAttack = this.mg.ticks();
       }
-      this.warship.setUnderFire();
+      this.warship.setInCombat();
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),
@@ -729,7 +729,7 @@ export class WarshipExecution implements Execution {
   }
 
   private huntDownTradeShip() {
-    this.warship.setUnderFire();
+    this.warship.setInCombat();
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
       const result = this.pathfinder.next(

@@ -368,7 +368,7 @@ export class UnitImpl implements Unit {
     return this.mg.ticks() - this._lastCombatTick <= 3;
   }
 
-  setUnderFire(): void {
+  setInCombat(): void {
     this._lastCombatTick = this.mg.ticks();
     this.mg.addUpdate(this.toUpdate());
   }

@@ -133,8 +133,8 @@ export class UnitView {
   isInCombat(): boolean {
     return this.data.inCombat;
   }
-  setUnderFire(): void {
-    throw new Error("setUnderFire is not supported on UnitView");
+  setInCombat(): void {
+    throw new Error("setInCombat is not supported on UnitView");
   }
   tile(): TileRef {
     return this.data.pos;
