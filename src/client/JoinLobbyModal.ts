@@ -636,7 +636,7 @@ export class JoinLobbyModal extends BaseModal {
             ${cards}
           </div>`
         : html``}
-      ${this.renderDisabledUnits()}
+      ${this.renderDisabledUnits()} ${this.renderHostCheats()}
     `;
   }
 
@@ -687,6 +687,64 @@ export class JoinLobbyModal extends BaseModal {
             `;
           })}
         </div>
+      </div>
+    `;
+  }
+
+  private renderHostCheats(): TemplateResult {
+    if (!this.gameConfig?.hostCheats) {
+      return html``;
+    }
+
+    const hc = this.gameConfig.hostCheats;
+    const items: TemplateResult[] = [];
+
+    if (hc.infiniteGold)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("host_modal.infinite_gold")}
+        </span>`,
+      );
+    if (hc.infiniteTroops)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("host_modal.infinite_troops")}
+        </span>`,
+      );
+    if (hc.goldMultiplier)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("host_modal.gold_multiplier")}: x${hc.goldMultiplier}
+        </span>`,
+      );
+    if (hc.startingGold)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("private_lobby.starting_gold")}:
+          ${parseFloat((hc.startingGold / 1_000_000).toPrecision(12))}M
+        </span>`,
+      );
+
+    if (items.length === 0) return html``;
+
+    return html`
+      <div
+        class="mt-4 mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
+      >
+        <div
+          class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2"
+        >
+          ${translateText("private_lobby.host_cheats")}
+        </div>
+        <div class="flex flex-wrap gap-2">${items}</div>
       </div>
     `;
   }

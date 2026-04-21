@@ -188,7 +188,8 @@
     "exit_confirmation": "Are you sure you want to exit the game?",
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
-    "icon_alt_team_leaderboard": "Team Leaderboard Icon"
+    "icon_alt_team_leaderboard": "Team Leaderboard Icon",
+    "game_id_tooltip": "Game ID"
   },
   "single_modal": {
     "random_spawn": "Random spawn",
@@ -208,7 +209,7 @@
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
-    "enables_title": "Enable Settings",
+    "enables_title": "Disable Units",
     "start": "Start Game",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
@@ -363,7 +364,8 @@
     "straitofmalacca": "Strait Of Malacca",
     "luna": "Luna",
     "conakry": "Conakry",
-    "caucasus": "Caucasus"
+    "caucasus": "Caucasus",
+    "beringsea": "Bering Sea"
   },
   "map_categories": {
     "featured": "Featured",
@@ -389,7 +391,8 @@
     "disabled_units": "Disabled Units",
     "game_length": "Game length",
     "pvp_immunity": "PVP immunity duration",
-    "starting_gold": "Starting Gold"
+    "starting_gold": "Starting Gold",
+    "host_cheats": "Host Cheats"
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
@@ -443,7 +446,7 @@
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
     "water_nukes": "Water nukes",
-    "enables_title": "Enable Settings",
+    "enables_title": "Disable Units",
     "player": "Player",
     "players": "Players",
     "nation_players": "Nations",
@@ -466,6 +469,7 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
+    "host_cheats": "Host Cheats",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {
@@ -546,6 +550,7 @@
     "title": "Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
+    "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "Emojis",
@@ -881,6 +886,7 @@
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
     "lobby_creator": "Kicked by lobby creator",
+    "admin": "Kicked by an admin",
     "host_left": "The host has left the lobby."
   },
   "send_troops_modal": {
@@ -1070,7 +1076,9 @@
     "tournament": "TOURNAMENT",
     "tutorial": "TUTORIAL",
     "news": "NEWS",
+    "warning": "WARNING",
     "dismiss": "Dismiss",
-    "go_to_item": "Go to item {num}"
+    "go_to_item": "Go to item {num}",
+    "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
   }
 }

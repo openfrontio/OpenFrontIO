@@ -402,7 +402,6 @@
     "title": "Створення приватного лобі",
     "mode": "Режим",
     "team_count": "Кількість команд",
-    "team_type": "Тип команди",
     "options_title": "Налаштування",
     "bots": "Племена: ",
     "bots_disabled": "Відключені",
@@ -441,7 +440,8 @@
     "gold_multiplier_placeholder": "2.0х",
     "starting_gold": "Початкове золото (мільйони)",
     "starting_gold_placeholder": "5",
-    "leave_confirmation": "Ви впевнені, що хочете вийти з лобі?"
+    "leave_confirmation": "Ви впевнені, що хочете вийти з лобі?",
+    "team_type": "Тип команди"
   },
   "team_colors": {
     "red": "Червоний",
@@ -900,16 +900,16 @@
   },
   "territory_patterns": {
     "title": "Скіни",
-    "colors": "Кольори",
     "purchase": "Придбати",
-    "show_only_owned": "Мої скіни",
-    "all_owned": "Усі скіни придбані! Повертайтеся пізніше за новими товарами.",
-    "not_logged_in": "Вхід не здійснено",
     "pattern": {
       "default": "Типово"
     },
     "select_skin": "Оберіть скін",
-    "selected": "обрано"
+    "selected": "обрано",
+    "colors": "Кольори",
+    "show_only_owned": "Мої скіни",
+    "all_owned": "Усі скіни придбані! Повертайтеся пізніше за новими товарами.",
+    "not_logged_in": "Вхід не здійснено"
   },
   "flag_input": {
     "title": "Вибір прапора",

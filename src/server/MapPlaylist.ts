@@ -37,7 +37,6 @@ const frequency: Partial<Record<GameMapName, number>> = {
   BetweenTwoSeas: 5,
   BlackSea: 6,
   Britannia: 5,
-  BritanniaClassic: 4,
   DeglaciatedAntarctica: 4,
   EastAsia: 5,
   Europe: 7,
@@ -72,7 +71,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Didier: 1,
   AmazonRiver: 3,
   BosphorusStraits: 3,
-  BeringStrait: 4,
+  BeringStrait: 2,
   Sierpinski: 10,
   TheBox: 3,
   Yenisei: 6,
@@ -91,6 +90,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Luna: 6,
   Conakry: 3,
   Caucasus: 5,
+  BeringSea: 5,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [

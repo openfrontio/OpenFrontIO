@@ -402,7 +402,6 @@
     "title": "Создание приватного лобби",
     "mode": "Режим",
     "team_count": "Количество команд",
-    "team_type": "Тип команды",
     "options_title": "Настройки",
     "bots": "Племена: ",
     "bots_disabled": "Отключены",
@@ -441,7 +440,8 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Начальное золото (миллионы)",
     "starting_gold_placeholder": "5",
-    "leave_confirmation": "Вы уверены, что хотите покинуть лобби?"
+    "leave_confirmation": "Вы уверены, что хотите покинуть лобби?",
+    "team_type": "Тип команды"
   },
   "team_colors": {
     "red": "Красный",
@@ -900,16 +900,16 @@
   },
   "territory_patterns": {
     "title": "Скины",
-    "colors": "Цвета",
     "purchase": "Купить",
-    "show_only_owned": "Мои скины",
-    "all_owned": "Все скины куплены! Возвращайтесь позже за новыми товарами.",
-    "not_logged_in": "Вы не авторизованы",
     "pattern": {
       "default": "По умолчанию"
     },
     "select_skin": "Выберете скин",
-    "selected": "выбрано"
+    "selected": "выбрано",
+    "colors": "Цвета",
+    "show_only_owned": "Мои скины",
+    "all_owned": "Все скины куплены! Возвращайтесь позже за новыми товарами.",
+    "not_logged_in": "Вы не авторизованы"
   },
   "flag_input": {
     "title": "Выберите флаг",

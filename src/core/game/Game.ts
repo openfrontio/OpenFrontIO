@@ -151,6 +151,7 @@ export enum GameMapType {
   Luna = "Luna",
   Conakry = "Conakry",
   Caucasus = "Caucasus",
+  BeringSea = "Bering Sea",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -207,6 +208,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfMalacca,
     GameMapType.Conakry,
     GameMapType.Caucasus,
+    GameMapType.BeringSea,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -922,6 +924,12 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+  /**
+   * Returns the set of water components that `player` shares with at least one
+   * valid trade partner (cached). Used by nation AI for port-placement
+   * heuristics. `null` means no usable water body for ports.
+   */
+  sharedWaterComponents(player: Player): Set<number> | null;
   /** Incremented each time the water navigation graph is rebuilt (e.g. after nuke terrain change). */
   waterGraphVersion(): number;
 
