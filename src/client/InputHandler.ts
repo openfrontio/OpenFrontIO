@@ -237,10 +237,16 @@ export class InputHandler {
 
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
-      if (e.isSelected) {
-        this.multiSelectionActive = e.units.length > 0;
+      if (e.isSelected && (e.units ?? []).length > 0) {
+        // Multi-selection active
+        this.multiSelectionActive = true;
+        this.canvas.style.cursor = "crosshair";
+      } else if (e.isSelected) {
+        // Single warship selected — cursor crosshair, but not multi
+        this.multiSelectionActive = false;
         this.canvas.style.cursor = "crosshair";
       } else {
+        // Deselected
         this.multiSelectionActive = false;
         if (!this.selectionBoxActive) {
           this.canvas.style.cursor = "";
@@ -250,6 +256,7 @@ export class InputHandler {
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    window.addEventListener("pointercancel", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
       (e) => {
@@ -284,11 +291,11 @@ export class InputHandler {
       }
       this.longPressActive = false;
       this.suppressNextTap = false;
-      if (this.selectionBoxActive) {
+      if (this.selectionBoxActive || this.multiSelectionActive) {
         this.selectionBoxActive = false;
+        this.multiSelectionActive = false;
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
-      this.multiSelectionActive = false;
       this.canvas.style.cursor = "";
     });
     this.pointers.clear();
@@ -375,8 +382,9 @@ export class InputHandler {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
         this.setGhostStructure(null);
-        if (this.selectionBoxActive) {
+        if (this.selectionBoxActive || this.multiSelectionActive) {
           this.selectionBoxActive = false;
+          this.multiSelectionActive = false;
           this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
         }
       }
