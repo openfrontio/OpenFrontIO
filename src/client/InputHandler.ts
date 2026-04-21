@@ -222,6 +222,7 @@ export class InputHandler {
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
+  private readonly DRAG_THRESHOLD_PX = 10;
 
   private readonly userSettings: UserSettings = new UserSettings();
 
@@ -588,6 +589,10 @@ export class InputHandler {
       // Start long-press timer for touch devices
       if (event.pointerType === "touch") {
         this.longPressActive = false;
+        if (this.longPressTimer !== null) {
+          clearTimeout(this.longPressTimer);
+          this.longPressTimer = null;
+        }
         this.longPressTimer = setTimeout(() => {
           this.longPressTimer = null;
           this.longPressActive = true;
@@ -649,7 +654,7 @@ export class InputHandler {
       const dist =
         Math.abs(event.clientX - this.lastPointerDownX) +
         Math.abs(event.clientY - this.lastPointerDownY);
-      if (dist >= 10) {
+      if (dist >= this.DRAG_THRESHOLD_PX) {
         this.eventBus.emit(
           new WarshipSelectionBoxCompleteEvent(
             this.lastPointerDownX,
@@ -665,10 +670,12 @@ export class InputHandler {
     }
 
     if (this.isModifierKeyPressed(event)) {
+      this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
     if (this.isAltKeyPressed(event)) {
+      this.suppressNextTap = false;
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -676,7 +683,7 @@ export class InputHandler {
     const dist =
       Math.abs(event.x - this.lastPointerDownX) +
       Math.abs(event.y - this.lastPointerDownY);
-    if (dist < 10) {
+    if (dist < this.DRAG_THRESHOLD_PX) {
       if (event.pointerType === "touch") {
         if (this.suppressNextTap) {
           this.suppressNextTap = false;
@@ -764,7 +771,7 @@ export class InputHandler {
         const moveDist =
           Math.abs(event.clientX - this.lastPointerDownX) +
           Math.abs(event.clientY - this.lastPointerDownY);
-        if (moveDist >= 10) {
+        if (moveDist >= this.DRAG_THRESHOLD_PX) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
         }
