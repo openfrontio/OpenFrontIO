@@ -224,18 +224,12 @@ export class UnitImpl implements Unit {
     );
   }
 
-  private scaledMaxHealth(): bigint {
-    const base = this.info().maxHealth ?? 1;
-    if (this._level <= 1) return toInt(base);
-    return toInt(Math.round(base * Math.pow(1.15, this._level - 1)));
-  }
-
   modifyHealth(delta: number, attacker?: Player): void {
     const previousHealth = this._health;
     const nextHealth = withinInt(
       this._health + toInt(delta),
       0n,
-      this.hasHealth() ? this.scaledMaxHealth() : toInt(1),
+      toInt(this.info().maxHealth ?? 1),
     );
 
     if (nextHealth === previousHealth) {
