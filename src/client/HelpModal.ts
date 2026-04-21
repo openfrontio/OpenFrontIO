@@ -761,7 +761,7 @@ export class HelpModal extends BaseModal {
                 <ul class="space-y-3">
                   <li class="flex items-center gap-3">
                     <img
-                      src=${assetUrl("images/BuildIconWhite.svg")}
+                      src=${assetUrl("images/CityIconWhite.svg")}
                       alt=""
                       aria-hidden="true"
                       class="w-8 h-8 scale-75 origin-left"
@@ -770,7 +770,7 @@ export class HelpModal extends BaseModal {
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src=${assetUrl("images/DonateGoldIconWhite.svg")}
+                      src=${assetUrl("images/TargetIconWhite.svg")}
                       alt=""
                       aria-hidden="true"
                       class="w-8 h-8 scale-75 origin-left"
@@ -779,7 +779,7 @@ export class HelpModal extends BaseModal {
                   </li>
                   <li class="flex items-center gap-3">
                     <img
-                      src=${assetUrl("images/InfoIcon.svg")}
+                      src=${assetUrl("images/NukeIconWhite.svg")}
                       alt=""
                       aria-hidden="true"
                       class="w-8 h-8 scale-75 origin-left"

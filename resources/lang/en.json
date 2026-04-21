@@ -187,11 +187,11 @@
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
     "icon_alt_team_leaderboard": "Team Leaderboard Icon",
     "game_id_tooltip": "Game ID",
-    "upgrade_title": "Building Upgrades",
-    "upgrade_desc": "Upgrade your buildings to increase their health and defense.",
-    "upgrade_health": "Most buildings can be upgraded to significantly increase their Max Health.",
-    "upgrade_economy": "Upgrading Cities increases your resource generation and Gold income.",
-    "upgrade_defense": "Upgrading defensive structures increases their attack damage and operational range."
+    "upgrade_title": "Building Mechanics",
+    "upgrade_desc": "Buildings can be military (square icons) or economic (round icons). All buildings cost Gold and some have specific placement requirements, such as Ports which must be built near water.",
+    "upgrade_health": "Buildings (except Defense Posts) are transferred to the conquering player if their territory changes owners.",
+    "upgrade_economy": "Players can destroy their own buildings through the radial menu (30s timer).",
+    "upgrade_defense": "Nukes will destroy all buildings within their explosion radius."
   },
   "single_modal": {
     "random_spawn": "Random spawn",
