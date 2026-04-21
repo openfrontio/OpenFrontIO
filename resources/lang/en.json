@@ -186,7 +186,12 @@
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
     "icon_alt_team_leaderboard": "Team Leaderboard Icon",
-    "game_id_tooltip": "Game ID"
+    "game_id_tooltip": "Game ID",
+    "upgrade_title": "Building Upgrades",
+    "upgrade_desc": "Upgrade your buildings to increase their health and defense.",
+    "upgrade_health": "Most buildings can be upgraded to significantly increase their Max Health.",
+    "upgrade_economy": "Upgrading Cities increases your resource generation and Gold income.",
+    "upgrade_defense": "Upgrading defensive structures increases their attack damage and operational range."
   },
   "single_modal": {
     "random_spawn": "Random spawn",

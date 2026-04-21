@@ -720,6 +720,71 @@ export class HelpModal extends BaseModal {
             </div>
           </section>
 
+          <!-- Building Upgrades Section -->
+          <section class="mb-8">
+            <div class="flex items-center gap-3 mb-6">
+              <!-- Set the icon color to blue to match the rest of the UI -->
+              <div class="text-blue-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+              </div>
+              <h3
+                class="text-xl font-bold uppercase tracking-widest text-white/90"
+              >
+                ${translateText("help_modal.upgrade_title")}
+              </h3>
+              <div
+                class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+              ></div>
+            </div>
+
+            <div
+              class="bg-black/20 rounded-xl border border-white/10 p-6 flex flex-col md:flex-row gap-6 hover:bg-white/5 transition-colors"
+            >
+              <div class="text-white/70 text-sm w-full">
+                <p class="mb-4 leading-relaxed">
+                  ${translateText("help_modal.upgrade_desc")}
+                </p>
+
+                <!-- List of upgrades with missing icons populated -->
+                <ul class="space-y-3">
+                  <li class="flex items-center gap-3">
+                    <img
+                      src=${assetUrl("images/BuildIconWhite.svg")}
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
+                    <span>${translateText("help_modal.upgrade_health")}</span>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <img
+                      src=${assetUrl("images/DonateGoldIconWhite.svg")}
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
+                    <span>${translateText("help_modal.upgrade_economy")}</span>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <img
+                      src=${assetUrl("images/InfoIcon.svg")}
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
+                    <span>${translateText("help_modal.upgrade_defense")}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
           <!-- Info/Ally Panels Section -->
           <section class="mb-8">
             <div class="flex items-center gap-3 mb-6">
