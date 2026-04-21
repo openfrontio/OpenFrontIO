@@ -53,6 +53,14 @@ export class ShellExecution implements Execution {
       if (result.status === PathStatus.COMPLETE) {
         this.active = false;
         this.target.modifyHealth(-this.effectOnTarget(), this._owner);
+        // Award a level if the shell killed its target
+        if (
+          !this.target.isActive() &&
+          this.ownerUnit.isActive() &&
+          this.ownerUnit.type() === UnitType.Warship
+        ) {
+          this.ownerUnit.increaseLevel();
+        }
         this.shell.setReachedTarget();
         this.shell.delete(false);
         return;
@@ -68,8 +76,12 @@ export class ShellExecution implements Execution {
 
     const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;
+    const levelMultiplier =
+      this.ownerUnit.type() === UnitType.Warship
+        ? Math.pow(1.15, this.ownerUnit.level() - 1)
+        : 1;
 
-    return Math.round((baseDamage / 250) * damageMultiplier);
+    return Math.round((baseDamage / 250) * damageMultiplier * levelMultiplier);
   }
 
   public getEffectOnTargetForTesting(): number {

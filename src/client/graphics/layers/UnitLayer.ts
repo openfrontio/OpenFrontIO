@@ -293,7 +293,11 @@ export class UnitLayer implements Layer {
       .filter((unitView) => isSpriteReady(unitView))
       .forEach((unitView) => {
         const sprite = getColoredSprite(unitView, this.theme);
-        const clearsize = sprite.width + 1;
+        const drawSize =
+          unitView.type() === UnitType.Warship
+            ? Math.round(sprite.width * Math.pow(1.15, unitView.level() - 1))
+            : sprite.width;
+        const clearsize = drawSize + 1;
         const lastX = this.game.x(unitView.lastTile());
         const lastY = this.game.y(unitView.lastTile());
         this.context.clearRect(
@@ -388,7 +392,7 @@ export class UnitLayer implements Layer {
     const cx = x + 0.5;
     const cy = y + 0.5;
     ctx.lineCap = "square";
-    ctx.strokeStyle = "rgb(0,140,0)";
+    ctx.strokeStyle = "rgb(36, 36, 36)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(cx, cy - 1.5);
@@ -641,12 +645,16 @@ export class UnitLayer implements Layer {
         this.context.save();
         this.context.globalAlpha = 0.5;
       }
+      const drawSize =
+        unit.type() === UnitType.Warship
+          ? Math.round(sprite.width * Math.pow(1.15, unit.level() - 1))
+          : sprite.width;
       this.context.drawImage(
         sprite,
-        Math.round(x - sprite.width / 2),
-        Math.round(y - sprite.height / 2),
-        sprite.width,
-        sprite.width,
+        Math.round(x - drawSize / 2),
+        Math.round(y - drawSize / 2),
+        drawSize,
+        drawSize,
       );
       if (!targetable) {
         this.context.restore();
