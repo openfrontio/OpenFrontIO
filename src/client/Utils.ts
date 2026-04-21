@@ -295,6 +295,26 @@ export function formatPercentage(value: number): string {
   return perc.toFixed(1) + "%";
 }
 
+let cachedKeyboardLayoutMap: Map<string, string> | null = null;
+let triedGetKeyboardLayoutMap = false;
+
+export async function getKeyboardLayoutMap(): Promise<Map<
+  string,
+  string
+> | null> {
+  if (triedGetKeyboardLayoutMap) return cachedKeyboardLayoutMap;
+
+  triedGetKeyboardLayoutMap = true;
+  if (navigator.keyboard) {
+    try {
+      cachedKeyboardLayoutMap = await navigator.keyboard.getLayoutMap();
+    } catch (e) {
+      console.warn("Failed to fetch keyboard layout map", e);
+    }
+  }
+  return cachedKeyboardLayoutMap;
+}
+
 /**
  * Formats a keyboard key code for user-friendly display.
  * Handles empty values, spaces, and normalizes key codes like "Digit1" and "KeyA".
@@ -311,11 +331,30 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("") // returns ""
  */
 export function formatKeyForDisplay(value: string): string {
+  // TODO remove after testing
+  console.info("formatKeyForDisplay recieved: " + value);
+
   // Handle empty string
   if (!value) return "";
 
+  // Keyboard API years old, only supported in Chromium
+  // keyboardLayoutMap translates "KeyW" to "Z" on AZERTY for example
+  // Or layouts, e.g. Thai keyboard, that we may not support in the code below
+  // It doesn't know about Alt, AltGr, Ctrl etc. though.
+  if (!triedGetKeyboardLayoutMap) {
+    getKeyboardLayoutMap();
+  } else if (cachedKeyboardLayoutMap) {
+    const key = cachedKeyboardLayoutMap.get(value);
+    if (key) return key;
+  }
+
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";
+
+  // Handle Shift+ prefix: format as "Shift+X"
+  if (value.startsWith("Shift+")) {
+    return "Shift+" + formatKeyForDisplay(value.slice(6));
+  }
 
   // Handle DigitN pattern (e.g., "Digit1" -> "1")
   if (/^Digit\d$/.test(value)) {
@@ -325,6 +364,57 @@ export function formatKeyForDisplay(value: string): string {
   // Handle KeyX pattern (e.g., "KeyA" -> "A")
   if (/^Key[A-Z]$/.test(value)) {
     return value.replace("Key", "");
+  }
+
+  const physicalMap: Record<string, string> = {
+    BracketLeft: "[",
+    BracketRight: "]",
+    Backquote: "`",
+    Quote: "'",
+    Minus: "-",
+    Equal: "=",
+    Semicolon: ";",
+    Comma: ",",
+    Period: ".",
+    Slash: "/",
+    Backslash: "\\",
+    Shift: "Shift ⇧",
+    ShiftLeft: "Shift ⇧",
+    ShiftRight: "Shift ⇧",
+    Control: "Ctrl",
+    // "Alt Gr" emits ControlLeft+Alt in Windows on many keyboard layouts and we catch the first code. 
+    // Is undiscernable normally from ControlLeft but user sees "alt gr" on the key so display it too
+    ControlLeft: "Ctrl / Alt Gr",
+    ControlRight: "Ctrl",
+    Alt: Platform.isMac ? "⌥" : "Alt",
+    AltLeft: Platform.isMac ? "⌥" : "Alt",
+    AltRight: Platform.isMac ? "⌥" : "Alt",
+    Metat: Platform.isMac ? "⌘" : "⊞",
+    MetaLeft: Platform.isMac ? "⌘" : "⊞", //"⊞" is Windows key, "⌘" is Command key on Mac
+    MetaRight: Platform.isMac ? "⌘" : "⊞",
+    Escape: "Esc", // Cannot be bound to action by user, but used as reserved key
+    Enter: Platform.isMac ? "↵ Return" : "↵ Enter", // Called "Return" on Mac, "Enter" on Windows
+    ArrowUp: "↑",
+    ArrowDown: "↓",
+    ArrowLeft: "←",
+    ArrowRight: "→",
+    NumpadAdd: "Num +",
+    NumpadMultiply: "Num *",
+    NumpadSubtract: "Num -",
+    NumpadDivide: "Num /",
+    NumpadDecimal: "Num .",
+    NumpadEnter: "Num Enter", // Called "Enter" on most Mac and Windows keyboards
+    NumLock: "Num Lock",
+  };
+
+  if (physicalMap[value]) {
+    return physicalMap[value];
+  }
+
+  // TODO: display Numpad digits as only 0-9, no Num prefix
+  // Also handle Numpadx the same as Digitx in InputHandler, just like it already does for building structures
+  if (value.startsWith("Numpad")) {
+    return `Num ${value.slice(6)}`;
   }
 
   // Fallback: capitalize first letter
@@ -526,14 +616,6 @@ export function getMessageTypeClasses(type: MessageType): string {
       console.warn(`Message type ${type} has no explicit color`);
       return severityColors["white"];
   }
-}
-
-export function getModifierKey(): string {
-  return Platform.isMac ? "⌘" : "Ctrl";
-}
-
-export function getAltKey(): string {
-  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

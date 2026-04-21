@@ -34,3 +34,12 @@ declare module "*.webp" {
   const webpContent: string;
   export default webpContent;
 }
+
+// keyboard API is 'Expirimental' even if 8 years old because only supported in Chromium
+// but we want to use it without having to cast 'as any', so define it here.
+// https://developer.mozilla.org/en-US/docs/Web/API/Keyboard_API
+interface Navigator {
+  keyboard?: {
+    getLayoutMap(): Promise<Map<string, string>>;
+  };
+}

@@ -58,6 +58,7 @@ import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import {
   getDiscordAvatarUrl,
+  getKeyboardLayoutMap,
   incrementGamesPlayed,
   isInIframe,
   translateText,
@@ -257,6 +258,8 @@ class Client {
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
+    // Prefetch keyboard layout for use by formatKeyForDisplay
+    getKeyboardLayoutMap();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");

@@ -1,12 +1,14 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { Platform } from "src/client/Platform";
 import { formatKeyForDisplay, translateText } from "../../../../client/Utils";
+import { KeybindAction, KeyUnbound } from "../../../../core/game/UserSettings";
 
 @customElement("setting-keybind")
 export class SettingKeybind extends LitElement {
   @property() label = "Setting";
   @property() description = "";
-  @property({ type: String, reflect: true }) action = "";
+  @property({ type: String, reflect: true }) action!: KeybindAction;
   @property({ type: String }) defaultKey = "";
   @property({ type: String }) value = "";
   @property({ type: String }) display = "";
@@ -78,7 +80,7 @@ export class SettingKeybind extends LitElement {
   }
 
   private displayKey(key: string): string {
-    if (!key || key === "Null") return translateText("common.none");
+    if (!key || key === KeyUnbound) return translateText("common.none");
     return formatKeyForDisplay(key);
   }
 
@@ -90,6 +92,7 @@ export class SettingKeybind extends LitElement {
   private handleKeydown(e: KeyboardEvent) {
     if (!this.listening) return;
 
+    // TODO: add Enter, and ARROW KEYS (just like Alt+R, etc should be in new reserved keys enum in UserSettings or so)
     // Allow Tab and Escape to work normally (don't trap focus)
     if (e.key === "Tab" || e.key === "Escape") {
       if (e.key === "Escape") {
@@ -100,17 +103,47 @@ export class SettingKeybind extends LitElement {
       return;
     }
 
+    console.log("Keydown event:", e);
+
+    // On Windows, Meta (Win) key always opens Start Menu
+    // Don't allow binding, this will lead to frustration
+    // On Apple, Meta (Cmd) key is commonly used as modifier, so allow it
+    if (
+      Platform.isWindows &&
+      (e.code === "MetaLeft" || e.code === "MetaRight")
+    ) {
+      return;
+    }
+
+    // - Don't capture lone Shift — wait for the actual key
+    // - Lone Meta (if not Windows), Ctrl and Alt are allowed: for buildMenuModifier and emojiMenuModifier,
+    // and to prevent setting a Ctrl+key/Alt+key etc combos in the future if code further down would come to accept other combos,
+    // (to prevent issues with browser combos like Ctrl+T or Alt+N which should keep working)
+    // and to prevent e.g. AltGr+8 from confusingly showing as e.key "3/4", even when e.code is still just "Digit8", since AltGr is Ctrl+Alt in Windows
+    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+      return;
+    }
+
     // Prevent default only for keys we're actually capturing
     e.preventDefault();
 
-    const code = e.code;
+    // buildMenuModifier and emojiMenuModifier should not get combo key:
+    // because they work as 'modifier'+left mouse click already, and
+    // Shift+click is reserved for attack when leftClickOpensMenu is false.
+    const noShiftModifier =
+      this.action === KeybindAction.buildMenuModifier ||
+      this.action === KeybindAction.emojiMenuModifier;
+
+    const code = !noShiftModifier && e.shiftKey ? `Shift+${e.code}` : e.code;
+    const displayKey =
+      !noShiftModifier && e.shiftKey ? `Shift+${e.key.toUpperCase()}` : e.key;
     const prevValue = this.value;
 
     // Temporarily set the value to the new code for validation in parent
-    this.value = code;
+    this.value = code;   
 
     const event = new CustomEvent("change", {
-      detail: { action: this.action, value: code, key: e.key, prevValue },
+      detail: { action: this.action, value: code, key: displayKey, prevValue },
       bubbles: true,
       composed: true,
     });
@@ -142,12 +175,12 @@ export class SettingKeybind extends LitElement {
   }
 
   private unbindKey() {
-    this.value = "Null";
+    this.value = KeyUnbound;
     this.dispatchEvent(
       new CustomEvent("change", {
         detail: {
           action: this.action,
-          value: "Null",
+          value: KeyUnbound,
           key: "",
         },
         bubbles: true,

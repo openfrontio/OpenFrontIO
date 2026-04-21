@@ -7,7 +7,11 @@ import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 import { GameView } from "../src/core/game/GameView";
-import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
+import {
+  KEYBINDS_KEY,
+  KeyUnbound,
+  UserSettings,
+} from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
   button: number;
@@ -38,15 +42,23 @@ global.PointerEvent = MockPointerEvent as any;
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
   let mockGameView: GameView;
+  let mockUIState: UIState;
   let eventBus: EventBus;
   let mockCanvas: HTMLCanvasElement;
   let testSettings: UserSettings;
 
   beforeEach(() => {
     testSettings = new UserSettings();
-    testSettings.removeCached(KEYBINDS_KEY, false);
+    testSettings.removeUserKeybinds(false);
 
     mockGameView = { inSpawnPhase: () => false } as GameView;
+    mockUIState = {
+      attackRatio: 20,
+      ghostStructure: null,
+      rocketDirectionUp: true,
+      overlappingRailroads: [],
+      ghostRailPaths: [],
+    };
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
@@ -55,13 +67,7 @@ describe("InputHandler AutoUpgrade", () => {
 
     inputHandler = new InputHandler(
       mockGameView,
-      {
-        attackRatio: 20,
-        ghostStructure: null,
-        rocketDirectionUp: true,
-        overlappingRailroads: [],
-        ghostRailPaths: [],
-      },
+      mockUIState,
       mockCanvas,
       eventBus,
     );
@@ -238,6 +244,7 @@ describe("InputHandler AutoUpgrade", () => {
       mockGameView.inSpawnPhase = () => true;
       const mockEmit = vi.spyOn(eventBus, "emit");
 
+      inputHandler.initialize();
       inputHandler["userSettings"].leftClickOpensMenu = () => true;
 
       const pointerEvent = new PointerEvent("pointerup", {
@@ -485,7 +492,7 @@ describe("InputHandler AutoUpgrade", () => {
       const nested = {
         moveUp: { key: "moveUp", value: "KeyZ" },
       };
-      testSettings.setKeybinds(nested);
+      testSettings.setUserKeybinds(nested);
 
       inputHandler.initialize();
 
@@ -493,30 +500,33 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("accepts legacy string values", () => {
-      testSettings.setKeybinds({ moveUp: "KeyX" });
+      testSettings.setUserKeybinds({ moveUp: "KeyX" });
 
       inputHandler.initialize();
 
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyX");
     });
 
-    test("ignores non-string values and preserves defaults, removes 'Null' for unbound keys", () => {
+    test("ignores non-string values and preserves defaults, removes KeyUnbound keys", () => {
       const mixed = {
         moveUp: { key: "moveUp", value: null },
-        moveLeft: "Null",
+        moveLeft: KeyUnbound,
       };
-      testSettings.setKeybinds(mixed);
+      testSettings.setUserKeybinds(mixed);
 
       inputHandler.initialize();
 
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
-      // "Null" entries are removed entirely to indicate unbound keybind
+      // KeyUnbound entries are removed entirely to indicate unbound keybind
       expect((inputHandler as any).keybinds.moveLeft).toBeUndefined();
     });
 
     test("handles invalid JSON gracefully and warns", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      testSettings.setKeybinds("not a json");
+      // in case someone tried to directly save it in localStorage,
+      // because it's not possible to send a non-Object to setKeybinds
+      (UserSettings as any).cache.delete(KEYBINDS_KEY);
+      localStorage.setItem(KEYBINDS_KEY, "not a json");
 
       inputHandler.initialize();
 
@@ -645,7 +655,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("exact code match wins: Digit1 sets City when buildCity=Digit1 and buildFactory=Numpad1", () => {
-      testSettings.setKeybinds({
+      testSettings.setUserKeybinds({
         buildCity: "Digit1",
         buildFactory: "Numpad1",
       });
@@ -673,7 +683,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("exact code match wins: Numpad1 sets Factory when buildCity=Digit1 and buildFactory=Numpad1", () => {
-      testSettings.setKeybinds({
+      testSettings.setUserKeybinds({
         buildCity: "Digit1",
         buildFactory: "Numpad1",
       });
@@ -701,7 +711,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("digit alias used when no exact match: Numpad1 sets City when only buildCity=Digit1", () => {
-      testSettings.setKeybinds({ buildCity: "Digit1" });
+      testSettings.setUserKeybinds({ buildCity: "Digit1" });
       inputHandler.destroy();
       const uiState: UIState = {
         attackRatio: 20,
@@ -723,6 +733,140 @@ describe("InputHandler AutoUpgrade", () => {
       );
 
       expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    });
+  });
+
+  describe("Shift+ keybind support", () => {
+    let uiState: UIState;
+
+    beforeEach(() => {
+      inputHandler.destroy();
+      uiState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+    });
+
+    test("Shift+Digit1 sets City when buildCity is bound to Shift+Digit1", () => {
+      testSettings.setUserKeybinds({ buildCity: "Shift+Digit1" });
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", shiftKey: true }),
+      );
+
+      expect(uiState.ghostStructure).toBe(UnitType.City);
+    });
+
+    test("plain Digit1 does NOT trigger buildCity when bound to Shift+Digit1", () => {
+      testSettings.setUserKeybinds({ buildCity: "Shift+Digit1" });
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", shiftKey: false }),
+      );
+
+      expect(uiState.ghostStructure).toBeNull();
+    });
+
+    test("Shift+KeyB triggers boatAttack when bound to Shift+KeyB", () => {
+      testSettings.setUserKeybinds({ boatAttack: "Shift+KeyB" });
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyB", shiftKey: true }),
+      );
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("DoBoatAttackEvent");
+    });
+
+    test("plain KeyB does NOT trigger boatAttack when bound to Shift+KeyB", () => {
+      testSettings.setUserKeybinds({ boatAttack: "Shift+KeyB" });
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyB", shiftKey: false }),
+      );
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("DoBoatAttackEvent");
+    });
+
+    test("Shift+Digit1 and Digit1 can be bound to different actions without conflict", () => {
+      testSettings.setUserKeybinds({
+        buildCity: "Digit1",
+        buildFactory: "Shift+Digit1",
+      });
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", shiftKey: false }),
+      );
+      expect(uiState.ghostStructure).toBe(UnitType.City);
+
+      uiState.ghostStructure = null;
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Digit1", shiftKey: true }),
+      );
+      expect(uiState.ghostStructure).toBe(UnitType.Factory);
+    });
+
+    test("Numpad alias works with Shift+Digit keybind", () => {
+      testSettings.setUserKeybinds({ buildCity: "Shift+Digit1" });
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad1", shiftKey: true }),
+      );
+
+      expect(uiState.ghostStructure).toBe(UnitType.City);
     });
   });
 });

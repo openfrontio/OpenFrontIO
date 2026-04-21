@@ -1,7 +1,12 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
+import {
+  getDefaultKeybinds,
+  KeybindAction,
+  KeyUnbound,
+  UserSettings,
+} from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -22,9 +27,8 @@ export class UserSettingModal extends BaseModal {
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
 
-  @state() private userKeybinds: Record<
-    string,
-    { value: string; key: string }
+  @state() private userKeybinds: Partial<
+    Record<KeybindAction, { value: string; key: string }>
   > = {};
 
   connectedCallback() {
@@ -44,7 +48,9 @@ export class UserSettingModal extends BaseModal {
       return;
     }
 
-    const validated: Record<string, { value: string; key: string }> = {};
+    const validated: Partial<
+      Record<KeybindAction, { value: string; key: string }>
+    > = {};
 
     for (const [action, entry] of Object.entries(parsed)) {
       if (typeof entry === "string") {
@@ -54,12 +60,12 @@ export class UserSettingModal extends BaseModal {
         entry !== null &&
         !Array.isArray(entry)
       ) {
-        const rawValue = (entry as any).value ?? "Null";
+        const rawValue = entry.value ?? KeyUnbound;
         const value = Array.isArray(rawValue)
           ? rawValue.find((v) => typeof v === "string")
           : rawValue;
 
-        const rawKey = (entry as any).key ?? value;
+        const rawKey = entry.key ?? value;
         const key = Array.isArray(rawKey)
           ? rawKey.find((v) => typeof v === "string")
           : rawKey;
@@ -75,29 +81,38 @@ export class UserSettingModal extends BaseModal {
 
   private handleKeybindChange(
     e: CustomEvent<{
-      action: string;
+      action: KeybindAction;
       value: string;
       key: string;
       prevValue?: string;
     }>,
   ) {
-    const { action, value, key, prevValue } = e.detail;
+    let { action, value, key, prevValue } = e.detail;
+
+    console.info(
+      "handleKeybindChange recieved value: " + value,
+      ", key: " + key,
+    );
+
+    // Don't display "Dead" for Quote / Backquote https://en.wikipedia.org/wiki/QWERTY#US-International
+    // nor "Unidentified" for some keys in Firefox ("" in Chrome). Empty the key to use value (key code).
+    key = key === "Dead" || key === "Unidentified" ? "" : key;
 
     const activeKeybinds = { ...this.defaultKeybinds };
-    for (const [k, v] of Object.entries(this.userKeybinds)) {
-      const normalizedValue = v.value;
-      if (normalizedValue === "Null") {
-        delete activeKeybinds[k];
+    for (const [action, codeAndKey] of Object.entries(this.userKeybinds)) {
+      const normalizedCode = codeAndKey.value;
+      if (normalizedCode === KeyUnbound) {
+        delete activeKeybinds[action];
       } else {
-        activeKeybinds[k] = normalizedValue;
+        activeKeybinds[action] = normalizedCode;
       }
     }
 
-    const values = Object.entries(activeKeybinds)
-      .filter(([k]) => k !== action)
-      .map(([, v]) => v);
+    const codes = Object.entries(activeKeybinds)
+      .filter(([a]) => a !== action)
+      .map(([, code]) => code);
 
-    if (values.includes(value) && value !== "Null") {
+    if (codes.includes(value) && value !== KeyUnbound) {
       const displayKey = formatKeyForDisplay(key || value);
       window.dispatchEvent(
         new CustomEvent("show-message", {
@@ -142,7 +157,6 @@ export class UserSettingModal extends BaseModal {
       );
       if (element) {
         element.value = prevValue ?? this.defaultKeybinds[action] ?? "";
-        element.requestUpdate();
       }
       return;
     }
@@ -151,18 +165,18 @@ export class UserSettingModal extends BaseModal {
       ...this.userKeybinds,
       [action]: { value: value, key: key },
     };
-    this.userSettings.setKeybinds(this.userKeybinds);
+    this.userSettings.setUserKeybinds(this.userKeybinds);
   }
 
-  private getKeyValue(action: string): string | undefined {
+  private getKeyValue(action: KeybindAction): string | undefined {
     const entry = this.userKeybinds[action];
     if (!entry) return undefined;
     const normalizedValue = entry.value;
-    if (normalizedValue === "Null") return "";
+    if (normalizedValue === KeyUnbound) return "";
     return normalizedValue || undefined;
   }
 
-  private getKeyChar(action: string): string {
+  private getKeyChar(action: KeybindAction): string {
     const entry = this.userKeybinds[action];
     if (!entry) return "";
     return entry.key || "";
@@ -383,6 +397,26 @@ export class UserSettingModal extends BaseModal {
 
   private renderKeybindSettings() {
     return html`
+      <div
+        class="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300/70 text-xs"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-3.5 w-3.5 shrink-0 opacity-70"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        ${translateText("user_setting.keybinds_hint")}
+      </div>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"
       >
@@ -390,22 +424,22 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="toggleView"
+        action=${KeybindAction.toggleView}
         label=${translateText("user_setting.toggle_view")}
         description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
-        .value=${this.getKeyValue("toggleView")}
-        .display=${this.getKeyChar("toggleView")}
+        .defaultKey=${this.defaultKeybinds.toggleView}
+        .value=${this.getKeyValue(KeybindAction.toggleView)}
+        .display=${this.getKeyChar(KeybindAction.toggleView)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="coordinateGrid"
+        action=${KeybindAction.coordinateGrid}
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
-        defaultKey=${this.defaultKeybinds.coordinateGrid}
-        .value=${this.getKeyValue("coordinateGrid")}
-        .display=${this.getKeyChar("coordinateGrid")}
+        .defaultKey=${this.defaultKeybinds.coordinateGrid}
+        .value=${this.getKeyValue(KeybindAction.coordinateGrid)}
+        .display=${this.getKeyChar(KeybindAction.coordinateGrid)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -416,102 +450,102 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="buildCity"
+        action=${KeybindAction.buildCity}
         label=${translateText("user_setting.build_city")}
         description=${translateText("user_setting.build_city_desc")}
-        defaultKey="Digit1"
-        .value=${this.getKeyValue("buildCity")}
-        .display=${this.getKeyChar("buildCity")}
+        .defaultKey=${this.defaultKeybinds.buildCity}
+        .value=${this.getKeyValue(KeybindAction.buildCity)}
+        .display=${this.getKeyChar(KeybindAction.buildCity)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildFactory"
+        action=${KeybindAction.buildFactory}
         label=${translateText("user_setting.build_factory")}
         description=${translateText("user_setting.build_factory_desc")}
-        defaultKey="Digit2"
-        .value=${this.getKeyValue("buildFactory")}
-        .display=${this.getKeyChar("buildFactory")}
+        .defaultKey=${this.defaultKeybinds.buildFactory}
+        .value=${this.getKeyValue(KeybindAction.buildFactory)}
+        .display=${this.getKeyChar(KeybindAction.buildFactory)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildPort"
+        action=${KeybindAction.buildPort}
         label=${translateText("user_setting.build_port")}
         description=${translateText("user_setting.build_port_desc")}
-        defaultKey="Digit3"
-        .value=${this.getKeyValue("buildPort")}
-        .display=${this.getKeyChar("buildPort")}
+        .defaultKey=${this.defaultKeybinds.buildPort}
+        .value=${this.getKeyValue(KeybindAction.buildPort)}
+        .display=${this.getKeyChar(KeybindAction.buildPort)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildDefensePost"
+        action=${KeybindAction.buildDefensePost}
         label=${translateText("user_setting.build_defense_post")}
         description=${translateText("user_setting.build_defense_post_desc")}
-        defaultKey="Digit4"
-        .value=${this.getKeyValue("buildDefensePost")}
-        .display=${this.getKeyChar("buildDefensePost")}
+        .defaultKey=${this.defaultKeybinds.buildDefensePost}
+        .value=${this.getKeyValue(KeybindAction.buildDefensePost)}
+        .display=${this.getKeyChar(KeybindAction.buildDefensePost)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildMissileSilo"
+        action=${KeybindAction.buildMissileSilo}
         label=${translateText("user_setting.build_missile_silo")}
         description=${translateText("user_setting.build_missile_silo_desc")}
-        defaultKey="Digit5"
-        .value=${this.getKeyValue("buildMissileSilo")}
-        .display=${this.getKeyChar("buildMissileSilo")}
+        .defaultKey=${this.defaultKeybinds.buildMissileSilo}
+        .value=${this.getKeyValue(KeybindAction.buildMissileSilo)}
+        .display=${this.getKeyChar(KeybindAction.buildMissileSilo)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildSamLauncher"
+        action=${KeybindAction.buildSamLauncher}
         label=${translateText("user_setting.build_sam_launcher")}
         description=${translateText("user_setting.build_sam_launcher_desc")}
-        defaultKey="Digit6"
-        .value=${this.getKeyValue("buildSamLauncher")}
-        .display=${this.getKeyChar("buildSamLauncher")}
+        .defaultKey=${this.defaultKeybinds.buildSamLauncher}
+        .value=${this.getKeyValue(KeybindAction.buildSamLauncher)}
+        .display=${this.getKeyChar(KeybindAction.buildSamLauncher)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildWarship"
+        action=${KeybindAction.buildWarship}
         label=${translateText("user_setting.build_warship")}
         description=${translateText("user_setting.build_warship_desc")}
-        defaultKey="Digit7"
-        .value=${this.getKeyValue("buildWarship")}
-        .display=${this.getKeyChar("buildWarship")}
+        .defaultKey=${this.defaultKeybinds.buildWarship}
+        .value=${this.getKeyValue(KeybindAction.buildWarship)}
+        .display=${this.getKeyChar(KeybindAction.buildWarship)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildAtomBomb"
+        action=${KeybindAction.buildAtomBomb}
         label=${translateText("user_setting.build_atom_bomb")}
         description=${translateText("user_setting.build_atom_bomb_desc")}
-        defaultKey="Digit8"
-        .value=${this.getKeyValue("buildAtomBomb")}
-        .display=${this.getKeyChar("buildAtomBomb")}
+        .defaultKey=${this.defaultKeybinds.buildAtomBomb}
+        .value=${this.getKeyValue(KeybindAction.buildAtomBomb)}
+        .display=${this.getKeyChar(KeybindAction.buildAtomBomb)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildHydrogenBomb"
+        action=${KeybindAction.buildHydrogenBomb}
         label=${translateText("user_setting.build_hydrogen_bomb")}
         description=${translateText("user_setting.build_hydrogen_bomb_desc")}
-        defaultKey="Digit9"
-        .value=${this.getKeyValue("buildHydrogenBomb")}
-        .display=${this.getKeyChar("buildHydrogenBomb")}
+        .defaultKey=${this.defaultKeybinds.buildHydrogenBomb}
+        .value=${this.getKeyValue(KeybindAction.buildHydrogenBomb)}
+        .display=${this.getKeyChar(KeybindAction.buildHydrogenBomb)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildMIRV"
+        action=${KeybindAction.buildMIRV}
         label=${translateText("user_setting.build_mirv")}
         description=${translateText("user_setting.build_mirv_desc")}
-        defaultKey="Digit0"
-        .value=${this.getKeyValue("buildMIRV")}
-        .display=${this.getKeyChar("buildMIRV")}
+        .defaultKey=${this.defaultKeybinds.buildMIRV}
+        .value=${this.getKeyValue(KeybindAction.buildMIRV)}
+        .display=${this.getKeyChar(KeybindAction.buildMIRV)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -522,52 +556,52 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="modifierKey"
+        action=${KeybindAction.buildMenuModifier}
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.modifierKey}
-        .value=${this.getKeyValue("modifierKey")}
-        .display=${this.getKeyChar("modifierKey")}
+        .defaultKey=${this.defaultKeybinds.buildMenuModifier}
+        .value=${this.getKeyValue(KeybindAction.buildMenuModifier)}
+        .display=${this.getKeyChar(KeybindAction.buildMenuModifier)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="altKey"
+        action=${KeybindAction.emojiMenuModifier}
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.altKey}
-        .value=${this.getKeyValue("altKey")}
-        .display=${this.getKeyChar("altKey")}
+        .defaultKey=${this.defaultKeybinds.emojiMenuModifier}
+        .value=${this.getKeyValue(KeybindAction.emojiMenuModifier)}
+        .display=${this.getKeyChar(KeybindAction.emojiMenuModifier)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="pauseGame"
+        action=${KeybindAction.pauseGame}
         label=${translateText("user_setting.pause_game")}
         description=${translateText("user_setting.pause_game_desc")}
         .defaultKey=${this.defaultKeybinds.pauseGame}
-        .value=${this.getKeyValue("pauseGame")}
-        .display=${this.getKeyChar("pauseGame")}
+        .value=${this.getKeyValue(KeybindAction.pauseGame)}
+        .display=${this.getKeyChar(KeybindAction.pauseGame)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="gameSpeedUp"
+        action=${KeybindAction.gameSpeedUp}
         label=${translateText("user_setting.game_speed_up")}
         description=${translateText("user_setting.game_speed_up_desc")}
         .defaultKey=${this.defaultKeybinds.gameSpeedUp}
-        .value=${this.getKeyValue("gameSpeedUp")}
-        .display=${this.getKeyChar("gameSpeedUp")}
+        .value=${this.getKeyValue(KeybindAction.gameSpeedUp)}
+        .display=${this.getKeyChar(KeybindAction.gameSpeedUp)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="gameSpeedDown"
+        action=${KeybindAction.gameSpeedDown}
         label=${translateText("user_setting.game_speed_down")}
         description=${translateText("user_setting.game_speed_down_desc")}
         .defaultKey=${this.defaultKeybinds.gameSpeedDown}
-        .value=${this.getKeyValue("gameSpeedDown")}
-        .display=${this.getKeyChar("gameSpeedDown")}
+        .value=${this.getKeyValue(KeybindAction.gameSpeedDown)}
+        .display=${this.getKeyChar(KeybindAction.gameSpeedDown)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -578,26 +612,28 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="attackRatioDown"
+        action=${KeybindAction.attackRatioDown}
         label=${translateText("user_setting.attack_ratio_down")}
         description=${translateText("user_setting.attack_ratio_down_desc", {
           amount: this.userSettings.attackRatioIncrement(),
         })}
-        defaultKey="KeyT"
-        .value=${this.getKeyValue("attackRatioDown")}
-        .display=${this.getKeyChar("attackRatioDown")}
+        .defaultKey=${this.defaultKeybinds.attackRatioDown}
+        .value=${this.getKeyValue(KeybindAction.attackRatioDown)}
+        .display=${this.getKeyChar(KeybindAction.attackRatioDown)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="attackRatioUp"
+        action=${KeybindAction.attackRatioUp}
         label=${translateText("user_setting.attack_ratio_up")}
         description=${translateText("user_setting.attack_ratio_up_desc", {
           amount: this.userSettings.attackRatioIncrement(),
         })}
-        defaultKey="KeyY"
-        .value=${this.getKeyValue("attackRatioUp")}
-        .display=${this.getKeyChar("attackRatioUp")}
+        .defaultKey=${this.defaultKeybinds.attackRatioUp}
+        .value=${this.getKeyValue(KeybindAction.attackRatioUp)}
+        .display=${formatKeyForDisplay(
+          this.getKeyValue(KeybindAction.attackRatioUp as KeybindAction) || "",
+        )}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -608,32 +644,32 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="boatAttack"
+        action=${KeybindAction.boatAttack}
         label=${translateText("user_setting.boat_attack")}
         description=${translateText("user_setting.boat_attack_desc")}
-        defaultKey="KeyB"
-        .value=${this.getKeyValue("boatAttack")}
-        .display=${this.getKeyChar("boatAttack")}
+        .defaultKey=${this.defaultKeybinds.boatAttack}
+        .value=${this.getKeyValue(KeybindAction.boatAttack)}
+        .display=${this.getKeyChar(KeybindAction.boatAttack)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="groundAttack"
+        action=${KeybindAction.groundAttack}
         label=${translateText("user_setting.ground_attack")}
         description=${translateText("user_setting.ground_attack_desc")}
-        defaultKey="KeyG"
-        .value=${this.getKeyValue("groundAttack")}
-        .display=${this.getKeyChar("groundAttack")}
+        .defaultKey=${this.defaultKeybinds.groundAttack}
+        .value=${this.getKeyValue(KeybindAction.groundAttack)}
+        .display=${this.getKeyChar(KeybindAction.groundAttack)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="swapDirection"
+        action=${KeybindAction.swapDirection}
         label=${translateText("user_setting.swap_direction")}
         description=${translateText("user_setting.swap_direction_desc")}
         .defaultKey=${this.defaultKeybinds.swapDirection}
-        .value=${this.getKeyValue("swapDirection")}
-        .display=${this.getKeyChar("swapDirection")}
+        .value=${this.getKeyValue(KeybindAction.swapDirection)}
+        .display=${this.getKeyChar(KeybindAction.swapDirection)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -644,22 +680,22 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="zoomOut"
+        action=${KeybindAction.zoomOut}
         label=${translateText("user_setting.zoom_out")}
         description=${translateText("user_setting.zoom_out_desc")}
-        defaultKey="KeyQ"
-        .value=${this.getKeyValue("zoomOut")}
-        .display=${this.getKeyChar("zoomOut")}
+        .defaultKey=${this.defaultKeybinds.zoomOut}
+        .value=${this.getKeyValue(KeybindAction.zoomOut)}
+        .display=${this.getKeyChar(KeybindAction.zoomOut)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="zoomIn"
+        action=${KeybindAction.zoomIn}
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
-        defaultKey="KeyE"
-        .value=${this.getKeyValue("zoomIn")}
-        .display=${this.getKeyChar("zoomIn")}
+        .defaultKey=${this.defaultKeybinds.zoomIn}
+        .value=${this.getKeyValue(KeybindAction.zoomIn)}
+        .display=${this.getKeyChar(KeybindAction.zoomIn)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -670,52 +706,52 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="centerCamera"
+        action=${KeybindAction.centerCamera}
         label=${translateText("user_setting.center_camera")}
         description=${translateText("user_setting.center_camera_desc")}
-        defaultKey="KeyC"
-        .value=${this.getKeyValue("centerCamera")}
-        .display=${this.getKeyChar("centerCamera")}
+        .defaultKey=${this.defaultKeybinds.centerCamera}
+        .value=${this.getKeyValue(KeybindAction.centerCamera)}
+        .display=${this.getKeyChar(KeybindAction.centerCamera)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="moveUp"
+        action=${KeybindAction.moveUp}
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        defaultKey="KeyW"
-        .value=${this.getKeyValue("moveUp")}
-        .display=${this.getKeyChar("moveUp")}
+        .defaultKey=${this.defaultKeybinds.moveUp}
+        .value=${this.getKeyValue(KeybindAction.moveUp)}
+        .display=${this.getKeyChar(KeybindAction.moveUp)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="moveLeft"
+        action=${KeybindAction.moveLeft}
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        defaultKey="KeyA"
-        .value=${this.getKeyValue("moveLeft")}
-        .display=${this.getKeyChar("moveLeft")}
+        .defaultKey=${this.defaultKeybinds.moveLeft}
+        .value=${this.getKeyValue(KeybindAction.moveLeft)}
+        .display=${this.getKeyChar(KeybindAction.moveLeft)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="moveDown"
+        action=${KeybindAction.moveDown}
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        defaultKey="KeyS"
-        .value=${this.getKeyValue("moveDown")}
-        .display=${this.getKeyChar("moveDown")}
+        .defaultKey=${this.defaultKeybinds.moveDown}
+        .value=${this.getKeyValue(KeybindAction.moveDown)}
+        .display=${this.getKeyChar(KeybindAction.moveDown)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="moveRight"
+        action=${KeybindAction.moveRight}
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        defaultKey="KeyD"
-        .value=${this.getKeyValue("moveRight")}
-        .display=${this.getKeyChar("moveRight")}
+        .defaultKey=${this.defaultKeybinds.moveRight}
+        .value=${this.getKeyValue(KeybindAction.moveRight)}
+        .display=${this.getKeyChar(KeybindAction.moveRight)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
     `;

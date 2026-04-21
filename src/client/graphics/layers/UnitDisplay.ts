@@ -10,7 +10,7 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
+import { KeybindAction, UserSettings } from "../../../core/game/UserSettings";
 import {
   GhostStructureChangedEvent,
   ToggleStructureEvent,
@@ -36,7 +36,9 @@ export class UnitDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public uiState: UIState;
   private playerBuildables: BuildableUnit[] | null = null;
-  private keybinds: Record<string, { value: string; key: string }> = {};
+  private keybinds: Partial<
+    Record<KeybindAction, { value: string; key: string }>
+  > = {};
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
@@ -53,9 +55,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
   init() {
     const config = this.game.config();
-    const userSettings = new UserSettings();
-
-    this.keybinds = userSettings.parsedUserKeybinds();
+    this.keybinds = new UserSettings().parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
@@ -131,70 +131,70 @@ export class UnitDisplay extends LitElement implements Layer {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.keybinds.buildCity?.key ?? "",
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.keybinds.buildFactory?.key ?? "",
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.keybinds.buildPort?.key ?? "",
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.keybinds.buildDefensePost?.key ?? "",
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.keybinds.buildMissileSilo?.key ?? "",
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.keybinds.buildSamLauncher?.key ?? "",
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.keybinds.buildWarship?.key ?? "",
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.keybinds.buildAtomBomb?.key ?? "",
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.keybinds.buildHydrogenBomb?.key ?? "",
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.keybinds.buildMIRV?.key ?? "",
           )}
         </div>
       </div>

@@ -1,39 +1,83 @@
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
-export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
+// ADD Reserved keys here or in Utils.ts:
+// (maybe also comment about Shift+left quick being reserved for future devs, see HelpModal, code in onPointerUp in InputHandler: when leftClickOpensMenu is false, Shift+left click is hardcoded to be attack. So it should not be used elsewhere where modifier+click is expected)
+// Shift+D for performance overlay, Alt+R for reset gfx (NO not reserved anymore, can be changed with fallback removed), Escape for menu close and cancel ghost build, Enter for confirm Ghost build
+// But also browser combos: Ctrl+Shift+I for dev tools, etc. Shift+Tab for backwards tabbing through fields. Alt+N for new browser screen, etc. If we won't just suppress Alt/Ctrl etc alltogether or if used in combination (but then confusing things could still happen)
+// These keys won't be available for binding in UserSettingsModal.
+
+export const KeyUnbound = "Null";
+
+export enum KeybindAction {
+  toggleView = "toggleView",
+  coordinateGrid = "coordinateGrid",
+  buildCity = "buildCity",
+  buildFactory = "buildFactory",
+  buildPort = "buildPort",
+  buildDefensePost = "buildDefensePost",
+  buildMissileSilo = "buildMissileSilo",
+  buildSamLauncher = "buildSamLauncher",
+  buildWarship = "buildWarship",
+  buildAtomBomb = "buildAtomBomb",
+  buildHydrogenBomb = "buildHydrogenBomb",
+  buildMIRV = "buildMIRV",
+  attackRatioDown = "attackRatioDown",
+  attackRatioUp = "attackRatioUp",
+  boatAttack = "boatAttack",
+  groundAttack = "groundAttack",
+  swapDirection = "swapDirection",
+  zoomOut = "zoomOut",
+  zoomIn = "zoomIn",
+  centerCamera = "centerCamera",
+  moveUp = "moveUp",
+  moveLeft = "moveLeft",
+  moveDown = "moveDown",
+  moveRight = "moveRight",
+  buildMenuModifier = "buildMenuModifier",
+  emojiMenuModifier = "emojiMenuModifier",
+  shiftKey = "shiftKey",
+  resetGfx = "resetGfx",
+  pauseGame = "pauseGame",
+  gameSpeedUp = "gameSpeedUp",
+  gameSpeedDown = "gameSpeedDown",
+}
+
+export function getDefaultKeybinds(
+  isMac: boolean,
+): Record<KeybindAction, string> {
   return {
-    toggleView: "Space",
-    coordinateGrid: "KeyM",
-    buildCity: "Digit1",
-    buildFactory: "Digit2",
-    buildPort: "Digit3",
-    buildDefensePost: "Digit4",
-    buildMissileSilo: "Digit5",
-    buildSamLauncher: "Digit6",
-    buildWarship: "Digit7",
-    buildAtomBomb: "Digit8",
-    buildHydrogenBomb: "Digit9",
-    buildMIRV: "Digit0",
-    attackRatioDown: "KeyT",
-    attackRatioUp: "KeyY",
-    boatAttack: "KeyB",
-    groundAttack: "KeyG",
-    swapDirection: "KeyU",
-    zoomOut: "KeyQ",
-    zoomIn: "KeyE",
-    centerCamera: "KeyC",
-    moveUp: "KeyW",
-    moveLeft: "KeyA",
-    moveDown: "KeyS",
-    moveRight: "KeyD",
-    modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-    altKey: "AltLeft",
-    shiftKey: "ShiftLeft",
-    resetGfx: "KeyR",
-    pauseGame: "KeyP",
-    gameSpeedUp: "Period",
-    gameSpeedDown: "Comma",
+    [KeybindAction.toggleView]: "Space",
+    [KeybindAction.coordinateGrid]: "KeyM",
+    [KeybindAction.buildCity]: "Digit1",
+    [KeybindAction.buildFactory]: "Digit2",
+    [KeybindAction.buildPort]: "Digit3",
+    [KeybindAction.buildDefensePost]: "Digit4",
+    [KeybindAction.buildMissileSilo]: "Digit5",
+    [KeybindAction.buildSamLauncher]: "Digit6",
+    [KeybindAction.buildWarship]: "Digit7",
+    [KeybindAction.buildAtomBomb]: "Digit8",
+    [KeybindAction.buildHydrogenBomb]: "Digit9",
+    [KeybindAction.buildMIRV]: "Digit0",
+    [KeybindAction.attackRatioDown]: "KeyT",
+    [KeybindAction.attackRatioUp]: "KeyY",
+    [KeybindAction.boatAttack]: "KeyB",
+    [KeybindAction.groundAttack]: "KeyG",
+    [KeybindAction.swapDirection]: "KeyU",
+    [KeybindAction.zoomOut]: "KeyQ",
+    [KeybindAction.zoomIn]: "KeyE",
+    [KeybindAction.centerCamera]: "KeyC",
+    [KeybindAction.moveUp]: "KeyW",
+    [KeybindAction.moveLeft]: "KeyA",
+    [KeybindAction.moveDown]: "KeyS",
+    [KeybindAction.moveRight]: "KeyD",
+    [KeybindAction.buildMenuModifier]: isMac ? "MetaLeft" : "ControlLeft",
+    [KeybindAction.emojiMenuModifier]: "AltLeft",
+    [KeybindAction.shiftKey]: "ShiftLeft",
+    [KeybindAction.resetGfx]: "KeyR",
+    [KeybindAction.pauseGame]: "KeyP",
+    [KeybindAction.gameSpeedUp]: "Period",
+    [KeybindAction.gameSpeedDown]: "Comma",
   };
 }
 
@@ -77,7 +121,7 @@ export class UserSettings {
     }
   }
 
-  public removeCached(key: string, emitChange: boolean = true) {
+  private removeCached(key: string, emitChange: boolean = true) {
     localStorage.removeItem(key);
     UserSettings.cache.set(key, null);
     if (emitChange) {
@@ -321,7 +365,7 @@ export class UserSettings {
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object
-  parsedUserKeybinds(): Record<string, any> {
+  parsedUserKeybinds(): Partial<Record<KeybindAction, any>> {
     const raw = this.getString(KEYBINDS_KEY, "{}");
     try {
       const parsed = JSON.parse(raw);
@@ -334,49 +378,54 @@ export class UserSettings {
     return {};
   }
 
-  // Returns a flat keybind map { action: "keyCode" }, handling nested objects and legacy strings
-  private normalizedUserKeybinds(): Record<string, string> {
+  // Returns a flat keybind map { action: "code" }, handling nested objects and legacy strings
+  private normalizedUserKeybinds(): Record<KeybindAction, string> {
     const parsed = this.parsedUserKeybinds();
     return Object.fromEntries(
       Object.entries(parsed)
         // Extract value from nested object or plain string, filter out non-string values
-        .map(([k, v]) => {
-          let val = v;
-          if (v && typeof v === "object" && !Array.isArray(v) && "value" in v) {
-            val = v.value;
+        .map(([action, codeAndKey]) => {
+          let code = codeAndKey;
+          if (
+            codeAndKey &&
+            typeof codeAndKey === "object" &&
+            !Array.isArray(codeAndKey) &&
+            "value" in codeAndKey
+          ) {
+            code = codeAndKey.value;
           }
-          if (Array.isArray(val) && typeof val[0] === "string") {
-            val = val[0];
+          if (Array.isArray(code) && typeof code[0] === "string") {
+            code = code[0];
           }
-          return [k, val];
+          return [action, code];
         })
-        .filter(([, v]) => typeof v === "string"),
-    ) as Record<string, string>;
+        .filter(([, code]) => typeof code === "string"),
+    );
   }
 
-  keybinds(isMac: boolean): Record<string, string> {
-    const merged = {
+  keybinds(isMac: boolean): Record<KeybindAction, string> {
+    const mergedKeybinds = {
       ...getDefaultKeybinds(isMac),
       ...this.normalizedUserKeybinds(),
     };
     // Actually unbind key: if Unbind is clicked in UserSettingsModal, eg. for Attack Ratio Up,
-    // keybind is "Null". Even if it is in default kindbinds (Y), it should not work anymore.
+    // keybind is KeyUnbound. Even if it is in default kindbinds (Y), it should not work anymore.
     // The key (Y) can now be bound to another action like Boat Attack, and no two actions listen to the same key.
-    for (const k in merged) {
-      if (merged[k] === "Null") {
-        delete merged[k];
+    for (const action in mergedKeybinds) {
+      if (mergedKeybinds[action] === KeyUnbound) {
+        delete mergedKeybinds[action];
       }
     }
 
-    return merged;
+    return mergedKeybinds;
   }
 
-  setKeybinds(value: string | Record<string, any>): void {
-    if (typeof value === "string") {
-      this.setString(KEYBINDS_KEY, value);
-    } else {
-      this.setString(KEYBINDS_KEY, JSON.stringify(value));
-    }
+  setUserKeybinds(value: Record<string, any>): void {
+    this.setString(KEYBINDS_KEY, JSON.stringify(value));
+  }
+
+  removeUserKeybinds(emitChange: boolean = true): void {
+    this.removeCached(KEYBINDS_KEY, emitChange);
   }
 
   soundEffectsVolume(): number {

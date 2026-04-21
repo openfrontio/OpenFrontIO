@@ -1,8 +1,12 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
+import {
+  formatKeyForDisplay,
+  translateText,
+  TUTORIAL_VIDEO_URL,
+} from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
-import { UserSettings } from "../core/game/UserSettings";
+import { KeybindAction, UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -11,46 +15,15 @@ import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
-  @state() private keybinds: Record<string, string> = this.getKeybinds();
+  @state() private keybinds: Record<KeybindAction, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
-  private getKeybinds(): Record<string, string> {
+  private getKeybinds(): Record<KeybindAction, string> {
     return new UserSettings().keybinds(Platform.isMac);
   }
 
-  private getKeyLabel(code: string): string {
-    if (!code) return "";
-
-    const specialLabels: Record<string, string> = {
-      ShiftLeft: "⇧ Shift",
-      ShiftRight: "⇧ Shift",
-      ControlLeft: "Ctrl",
-      ControlRight: "Ctrl",
-      AltLeft: "Alt",
-      AltRight: "Alt",
-      MetaLeft: "⌘",
-      MetaRight: "⌘",
-      Space: "Space",
-      Escape: "Esc",
-      Enter: "↵ Return",
-      ArrowUp: "↑",
-      ArrowDown: "↓",
-      ArrowLeft: "←",
-      ArrowRight: "→",
-      Period: ">",
-      Comma: "<",
-    };
-
-    if (specialLabels[code]) return specialLabels[code];
-    if (code.startsWith("Key") && code.length === 4) return code.slice(3);
-    if (code.startsWith("Digit")) return code.slice(5);
-    if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
-
-    return code;
-  }
-
   private renderKey(code: string) {
-    const label = this.getKeyLabel(code);
+    const label = formatKeyForDisplay(code);
     return html`<span
       class="inline-block min-w-[32px] text-center px-2 py-1 rounded bg-[#2a2a2a] border-b-2 border-[#1a1a1a] text-white font-mono text-xs font-bold mx-0.5"
       >${label}</span
@@ -283,7 +256,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.modifierKey)}
+                        ${this.renderKey(keybinds.buildMenuModifier)}
                         <span class="text-white/40 font-bold">+</span>
                         <div
                           class="w-5 h-8 border border-white/40 rounded-full relative"
@@ -304,7 +277,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.altKey)}
+                        ${this.renderKey(keybinds.emojiMenuModifier)}
                         <span class="text-white/40 font-bold">+</span>
                         <div
                           class="w-5 h-8 border border-white/40 rounded-full relative"
@@ -411,7 +384,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.altKey)}
+                        ${this.renderKey(keybinds.emojiMenuModifier)}
                         <span class="text-white/40 font-bold">+</span>
                         ${this.renderKey(keybinds.resetGfx)}
                       </div>
