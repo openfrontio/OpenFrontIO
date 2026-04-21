@@ -312,8 +312,9 @@ export class UILayer implements Layer {
         const { x, y, size } = this.lastSelectionBoxCenter;
         this.clearSelectionBox(x, y, size);
         this.lastSelectionBoxCenter = null;
-        this.selectedUnit = null;
       }
+      // selectedUnit is always reset regardless of lastSelectionBoxCenter
+      this.selectedUnit = null;
       // Always clear previous multi-selection boxes
       for (const [, center] of this.multiSelectionBoxCenters) {
         this.clearSelectionBox(center.x, center.y, center.size);

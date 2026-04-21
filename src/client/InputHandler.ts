@@ -585,6 +585,16 @@ export class InputHandler {
         }, this.LONG_PRESS_MS);
       }
     } else if (this.pointers.size === 2) {
+      // Second finger down — cancel any pending long-press to avoid
+      // triggering selection mode mid-pinch
+      if (this.longPressTimer !== null) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      if (this.longPressActive) {
+        this.longPressActive = false;
+        this.canvas.style.cursor = "";
+      }
       this.lastPinchDistance = this.getPinchDistance();
     }
   }

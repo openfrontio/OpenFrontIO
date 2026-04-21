@@ -4,7 +4,7 @@ import { TileRef } from "../game/GameMap";
 export class MoveWarshipExecution implements Execution {
   constructor(
     private readonly owner: Player,
-    private readonly unitIds: number | number[],
+    private readonly unitIds: number[],
     private readonly position: TileRef,
   ) {}
 
@@ -13,17 +13,16 @@ export class MoveWarshipExecution implements Execution {
       console.warn(`MoveWarshipExecution: position ${this.position} not valid`);
       return;
     }
-    const ids = Array.isArray(this.unitIds) ? this.unitIds : [this.unitIds];
-    for (const unitId of ids) {
+    for (const unitId of this.unitIds) {
       const warship = this.owner
         .units(UnitType.Warship)
         .find((u) => u.id() === unitId);
       if (!warship) {
-        console.warn("MoveWarshipExecution: warship not found");
+        console.warn(`MoveWarshipExecution: warship ${unitId} not found`);
         continue;
       }
       if (!warship.isActive()) {
-        console.warn("MoveWarshipExecution: warship is not active");
+        console.warn(`MoveWarshipExecution: warship ${unitId} is not active`);
         continue;
       }
       warship.setPatrolTile(this.position);
