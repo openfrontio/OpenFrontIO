@@ -9,7 +9,16 @@ updates:
     groups:
       updates:
         applies-to: version-updates
-        patterns: ["*"] #wildcard, needs brackets as bugfix apparently
+        patterns: ["*"] # wildcard, needs brackets as bugfix apparently
       security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: "gomod"
+    directory: "/map-generator"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0 # exclude version updates
+    groups:
+      golang:
         applies-to: security-updates
         patterns: ["*"]

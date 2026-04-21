@@ -51,6 +51,7 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  playerRole: string | null,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
@@ -203,6 +204,8 @@ export function createRenderer(
   playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
+
+  playerPanel.setRole(playerRole);
 
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {

@@ -84,7 +84,7 @@ jobs:
           gh api octocat
       - name: 📝 Create deployment
         if: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: deployment
         env:
           ENVIRONMENT: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
@@ -166,7 +166,7 @@ jobs:
           echo "::endgroup::"
       - name: 🔄 Update deployment status
         if: ${{ always() && github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' && steps.deployment.outcome == 'success' && steps.deployment.outputs.deployment_id != '' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           FQDN: ${{ env.FQDN }}
           DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}

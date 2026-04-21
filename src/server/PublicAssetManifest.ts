@@ -233,20 +233,44 @@ export function getResourcesDir(rootDir: string = process.cwd()): string {
   return path.join(rootDir, "resources");
 }
 
+export function getProprietaryDir(rootDir: string = process.cwd()): string {
+  return path.join(rootDir, "proprietary");
+}
+
+// Scans directories with synchronous fs.existsSync — assumes a small number of sourceDirs.
+function resolveSourceDir(relativePath: string, sourceDirs: string[]): string {
+  for (const dir of sourceDirs) {
+    const candidate = path.join(dir, relativePath);
+    if (fs.existsSync(candidate)) {
+      return dir;
+    }
+  }
+  throw new Error(
+    `Asset ${relativePath} not found in any source directory: ${sourceDirs.join(", ")}`,
+  );
+}
+
+function resolveSourceFile(relativePath: string, sourceDirs: string[]): string {
+  return path.join(resolveSourceDir(relativePath, sourceDirs), relativePath);
+}
+
 export function shouldKeepRootPublicFile(relativePath: string): boolean {
   return ROOT_PUBLIC_FILES.has(normalizeAssetPath(relativePath));
 }
 
-export function listHashedPublicAssetPaths(resourcesDir: string): string[] {
+export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
   const files = new Set<string>();
-  for (const pattern of HASHED_PUBLIC_ASSET_GLOBS) {
-    for (const file of globSync(pattern, {
-      cwd: resourcesDir,
-      nodir: true,
-      dot: false,
-      posix: true,
-    })) {
-      files.add(normalizeAssetPath(file));
+  for (const dir of sourceDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const pattern of HASHED_PUBLIC_ASSET_GLOBS) {
+      for (const file of globSync(pattern, {
+        cwd: dir,
+        nodir: true,
+        dot: false,
+        posix: true,
+      })) {
+        files.add(normalizeAssetPath(file));
+      }
     }
   }
   return [...files].sort();
@@ -264,13 +288,14 @@ export function listRootPublicFiles(resourcesDir: string): string[] {
     .sort();
 }
 
-export function buildPublicAssetManifest(resourcesDir: string): AssetManifest {
-  const cached = manifestCache.get(resourcesDir);
+export function buildPublicAssetManifest(sourceDirs: string[]): AssetManifest {
+  const cacheKey = sourceDirs.join("\0");
+  const cached = manifestCache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const hashedPublicAssetPaths = listHashedPublicAssetPaths(resourcesDir);
+  const hashedPublicAssetPaths = listHashedPublicAssetPaths(sourceDirs);
   const rawAssetPaths = hashedPublicAssetPaths.filter(
     (relativePath) => !isDerivedPublicAsset(relativePath),
   );
@@ -280,14 +305,14 @@ export function buildPublicAssetManifest(resourcesDir: string): AssetManifest {
 
   const manifest: AssetManifest = {};
   for (const relativePath of rawAssetPaths) {
-    const absolutePath = path.join(resourcesDir, relativePath);
+    const absolutePath = resolveSourceFile(relativePath, sourceDirs);
     const hash = createContentHash(absolutePath);
     manifest[relativePath] = createHashedAssetUrl(relativePath, hash);
   }
 
   for (const relativePath of derivedAssetPaths) {
     const renderedAsset = renderDerivedPublicAsset(
-      resourcesDir,
+      resolveSourceDir(relativePath, sourceDirs),
       relativePath,
       manifest,
     );
@@ -301,7 +326,7 @@ export function buildPublicAssetManifest(resourcesDir: string): AssetManifest {
     );
   }
 
-  manifestCache.set(resourcesDir, manifest);
+  manifestCache.set(cacheKey, manifest);
   return manifest;
 }
 
@@ -310,17 +335,18 @@ export function clearPublicAssetManifestCache(): void {
 }
 
 export function createHashedPublicAssetFiles(
-  resourcesDir: string,
+  sourceDirs: string[],
   outDir: string,
   assetManifest: AssetManifest,
 ): void {
   for (const [relativePath, hashedUrl] of Object.entries(assetManifest)) {
-    const sourcePath = path.join(resourcesDir, relativePath);
+    const sourceDir = resolveSourceDir(relativePath, sourceDirs);
+    const sourcePath = path.join(sourceDir, relativePath);
     const outputPath = path.join(outDir, normalizeAssetPath(hashedUrl));
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
     const renderedAsset = renderDerivedPublicAsset(
-      resourcesDir,
+      sourceDir,
       relativePath,
       assetManifest,
     );

@@ -144,7 +144,7 @@ export class PlayerImpl implements Player {
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map((a) => {
+      outgoingAttacks: this.outgoingAttacks().map((a) => {
         return {
           attackerID: a.attacker().smallID(),
           targetID: a.target().smallID(),
@@ -153,7 +153,7 @@ export class PlayerImpl implements Player {
           retreating: a.retreating(),
         } satisfies AttackUpdate;
       }),
-      incomingAttacks: this._incomingAttacks.map((a) => {
+      incomingAttacks: this.incomingAttacks().map((a) => {
         return {
           attackerID: a.attacker().smallID(),
           targetID: a.target().smallID(),
@@ -1381,7 +1381,7 @@ export class PlayerImpl implements Player {
     return this._outgoingAttacks;
   }
   incomingAttacks(): Attack[] {
-    return this._incomingAttacks;
+    return this._incomingAttacks.filter((a) => a.attacker().isAlive());
   }
 
   public isImmune(): boolean {

@@ -16,7 +16,9 @@ export class PseudoRandom {
 
   // Generates a random integer between min (inclusive) and max (exclusive).
   nextInt(min: number, max: number): number {
-    return Math.floor(this.rng() * (max - min)) + min;
+    const lo = Math.floor(min);
+    const hi = Math.floor(max);
+    return Math.floor(this.rng() * (hi - lo)) + lo;
   }
 
   // Generates a random float between min (inclusive) and max (exclusive).
