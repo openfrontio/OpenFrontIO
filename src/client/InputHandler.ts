@@ -683,7 +683,7 @@ export class InputHandler {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
     }
-    
+
     if (this.isMenuModifierPressed(event, this.keybinds.buildMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
@@ -982,8 +982,11 @@ export class InputHandler {
     this.activeKeys.clear();
   }
 
-  private isMenuModifierPressed(event: PointerEvent, modifierBind: string): boolean {
-    // Don't accept Shift: menus are meant to be modifier+click, 
+  private isMenuModifierPressed(
+    event: PointerEvent,
+    modifierBind: string,
+  ): boolean {
+    // Don't accept Shift: menus are meant to be modifier+click,
     // but Shift+click is hardcoded for attack when leftClickOpensMenu is false.
     // Do allow other keys than strict modifier keys by definition (like "keyU"),
     // because non-modifier keys could already be assigned in UserSettingModal.

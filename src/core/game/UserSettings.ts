@@ -27,7 +27,7 @@ export enum KeybindAction {
   boatAttack = "boatAttack",
   groundAttack = "groundAttack",
   breakAlliance = "breakAlliance",
-  swapDirection = "swapDirection",
+  requestAlliance = "requestAlliance",
   swapDirection = "swapDirection",
   zoomOut = "zoomOut",
   zoomIn = "zoomIn",

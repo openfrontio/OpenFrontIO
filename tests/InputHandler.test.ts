@@ -872,6 +872,7 @@ describe("InputHandler AutoUpgrade", () => {
       expect(uiState.ghostStructure).toBe(UnitType.City);
     });
   });
+});
 
 describe("Warship box selection (Shift+drag)", () => {
   let inputHandler: InputHandler;

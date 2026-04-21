@@ -140,7 +140,7 @@ export class SettingKeybind extends LitElement {
     const prevValue = this.value;
 
     // Temporarily set the value to the new code for validation in parent
-    this.value = code;   
+    this.value = code;
 
     const event = new CustomEvent("change", {
       detail: { action: this.action, value: code, key: displayKey, prevValue },

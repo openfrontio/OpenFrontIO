@@ -87,7 +87,8 @@ export class UserSettingModal extends BaseModal {
       prevValue?: string;
     }>,
   ) {
-    let { action, value, key, prevValue } = e.detail;
+    const { action, value, prevValue } = e.detail;
+    let { key } = e.detail;
 
     console.info(
       "handleKeybindChange recieved value: " + value,
@@ -631,9 +632,7 @@ export class UserSettingModal extends BaseModal {
         })}
         .defaultKey=${this.defaultKeybinds.attackRatioUp}
         .value=${this.getKeyValue(KeybindAction.attackRatioUp)}
-        .display=${formatKeyForDisplay(
-          this.getKeyValue(KeybindAction.attackRatioUp as KeybindAction) || "",
-        )}
+        .display=${this.getKeyChar(KeybindAction.attackRatioUp)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -680,22 +679,22 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="requestAlliance"
+        action=${KeybindAction.requestAlliance}
         label=${translateText("user_setting.request_alliance")}
         description=${translateText("user_setting.request_alliance_desc")}
-        defaultKey="KeyK"
-        .value=${this.getKeyValue("requestAlliance")}
-        .display=${this.getKeyChar("requestAlliance")}
+        .defaultKey=${this.defaultKeybinds.requestAlliance}
+        .value=${this.getKeyValue(KeybindAction.requestAlliance)}
+        .display=${this.getKeyChar(KeybindAction.requestAlliance)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="breakAlliance"
+        action=${KeybindAction.breakAlliance}
         label=${translateText("user_setting.break_alliance")}
         description=${translateText("user_setting.break_alliance_desc")}
-        defaultKey="KeyL"
-        .value=${this.getKeyValue("breakAlliance")}
-        .display=${this.getKeyChar("breakAlliance")}
+        .defaultKey=${this.defaultKeybinds.breakAlliance}
+        .value=${this.getKeyValue(KeybindAction.breakAlliance)}
+        .display=${this.getKeyChar(KeybindAction.breakAlliance)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

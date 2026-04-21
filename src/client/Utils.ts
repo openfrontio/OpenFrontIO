@@ -382,7 +382,7 @@ export function formatKeyForDisplay(value: string): string {
     ShiftLeft: "Shift ⇧",
     ShiftRight: "Shift ⇧",
     Control: "Ctrl",
-    // "Alt Gr" emits ControlLeft+Alt in Windows on many keyboard layouts and we catch the first code. 
+    // "Alt Gr" emits ControlLeft+Alt in Windows on many keyboard layouts and we catch the first code.
     // Is undiscernable normally from ControlLeft but user sees "alt gr" on the key so display it too
     ControlLeft: "Ctrl / Alt Gr",
     ControlRight: "Ctrl",
