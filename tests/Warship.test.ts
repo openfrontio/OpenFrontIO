@@ -164,7 +164,11 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
 
     game.addExecution(
-      new MoveWarshipExecution(player1, warship.id(), game.ref(coastX + 5, 15)),
+      new MoveWarshipExecution(
+        player1,
+        [warship.id()],
+        game.ref(coastX + 5, 15),
+      ),
     );
 
     executeTicks(game, 10);
@@ -244,7 +248,7 @@ describe("Warship", () => {
     );
     new MoveWarshipExecution(
       player2,
-      warship.id(),
+      [warship.id()],
       game.ref(coastX + 5, 15),
     ).init(game, 0);
     expect(warship.patrolTile()).toBe(originalPatrolTile);
@@ -262,7 +266,7 @@ describe("Warship", () => {
     warship.delete();
     new MoveWarshipExecution(
       player1,
-      warship.id(),
+      [warship.id()],
       game.ref(coastX + 5, 15),
     ).init(game, 0);
     expect(warship.patrolTile()).toBe(originalPatrolTile);
@@ -271,7 +275,7 @@ describe("Warship", () => {
   test("MoveWarshipExecution fails gracefully if warship not found", async () => {
     const exec = new MoveWarshipExecution(
       player1,
-      123,
+      [123],
       game.ref(coastX + 5, 15),
     );
 
