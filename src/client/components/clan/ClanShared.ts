@@ -1,5 +1,10 @@
 import { html, type TemplateResult } from "lit";
-import type { ClanJoinRequest, ClanMember, ClanStats } from "../../ClanApi";
+import type {
+  ClanJoinRequest,
+  ClanMember,
+  ClanMemberStats,
+  ClanStats,
+} from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
 export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
@@ -277,6 +282,70 @@ export function renderMemberPagination(
   `;
 }
 
+const statBuckets = [
+  { key: "ffa" as const, labelKey: "clan_modal.stats_ffa" },
+  { key: "team" as const, labelKey: "clan_modal.stats_team" },
+  { key: "ranked" as const, labelKey: "clan_modal.stats_ranked" },
+];
+
+export function renderMemberStats(
+  stats: ClanMemberStats | undefined,
+): TemplateResult | string {
+  if (!stats) return "";
+  return html`
+    <div class="grid grid-cols-3 gap-x-3 gap-y-1 mt-2.5">
+      ${statBuckets.map(({ key, labelKey }) => {
+        const { wins, losses } = stats[key];
+        const total = wins + losses;
+        const rate = total > 0 ? Math.round((wins / total) * 100) : 0;
+        const hasGames = total > 0;
+        const winPct = hasGames ? (wins / total) * 100 : 0;
+        const lossPct = hasGames ? 100 - winPct : 0;
+        const rateClass = !hasGames
+          ? "text-white/30"
+          : rate >= 50
+            ? "text-green-400"
+            : "text-red-400/90";
+        return html`
+          <div class="min-w-0">
+            <div
+              class="text-[10px] font-bold uppercase tracking-wider text-white/50 truncate mb-0.5"
+              title=${translateText(labelKey)}
+            >
+              ${translateText(labelKey)}
+            </div>
+            <div
+              class="flex items-baseline justify-between gap-1 tabular-nums mb-1"
+            >
+              <div class="flex items-baseline min-w-0">
+                <span class="text-sm font-bold text-green-400">${wins}</span>
+                <span class="text-[11px] font-bold text-white/25 mx-0.5"
+                  >/</span
+                >
+                <span class="text-sm font-bold text-red-400/80">${losses}</span>
+              </div>
+              <span class="text-[10px] font-bold shrink-0 ${rateClass}">
+                ${hasGames ? `${rate}%` : "—"}
+              </span>
+            </div>
+            <div
+              class="h-1 rounded-full overflow-hidden flex bg-white/5"
+              role="presentation"
+            >
+              ${hasGames
+                ? html`
+                    <div class="bg-green-500/70" style="width:${winPct}%"></div>
+                    <div class="bg-red-500/50" style="width:${lossPct}%"></div>
+                  `
+                : ""}
+            </div>
+          </div>
+        `;
+      })}
+    </div>
+  `;
+}
+
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
@@ -284,42 +353,45 @@ export function renderMemberRow(
   const isMe = member.publicId === myPublicId;
   return html`
     <div
-      class="flex items-center gap-3 py-2.5 px-3 rounded-xl border
+      class="flex flex-col py-2.5 px-3 rounded-xl border
         ${isMe
         ? "bg-blue-500/10 border-blue-500/20"
         : "bg-white/5 border-white/10"}"
     >
-      <div
-        class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-          ${isMe
-          ? "bg-blue-500/20 text-blue-400"
-          : "bg-white/10 text-white/50"}"
-      >
-        ${renderRoleIcon(member.role)}
-      </div>
-      <div class="flex-1 min-w-0 flex flex-col">
-        <div class="flex items-center justify-between gap-2">
-          <copy-button
-            compact
-            .copyText=${member.publicId}
-            .displayText=${member.publicId}
-            .showVisibilityToggle=${false}
-            .showCopyIcon=${false}
-          ></copy-button>
-          ${isMe
-            ? html`<span
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-blue-500/20 text-blue-400 border border-blue-500/30"
-              >
-                ${translateText("clan_modal.you")}
-              </span>`
-            : ""}
-        </div>
-        <span class="text-white/30 text-[10px]"
-          >${translateText("clan_modal.joined_date", {
-            date: formatClanDate(member.joinedAt),
-          })}</span
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+            ${isMe
+            ? "bg-blue-500/20 text-blue-400"
+            : "bg-white/10 text-white/50"}"
         >
+          ${renderRoleIcon(member.role)}
+        </div>
+        <div class="flex-1 min-w-0 flex flex-col">
+          <div class="flex items-center justify-between gap-2">
+            <copy-button
+              compact
+              .copyText=${member.publicId}
+              .displayText=${member.publicId}
+              .showVisibilityToggle=${false}
+              .showCopyIcon=${false}
+            ></copy-button>
+            ${isMe
+              ? html`<span
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                >
+                  ${translateText("clan_modal.you")}
+                </span>`
+              : ""}
+          </div>
+          <span class="text-white/30 text-[10px]"
+            >${translateText("clan_modal.joined_date", {
+              date: formatClanDate(member.joinedAt),
+            })}</span
+          >
+        </div>
       </div>
+      ${renderMemberStats(member.stats)}
     </div>
   `;
 }

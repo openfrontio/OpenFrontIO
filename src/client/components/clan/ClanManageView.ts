@@ -23,6 +23,7 @@ import {
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberSearchInput,
+  renderMemberStats,
   renderRoleIcon,
   showToast,
 } from "./ClanShared";
@@ -502,78 +503,81 @@ export class ClanManageView extends LitElement {
 
     return html`
       <div
-        class="flex items-center flex-wrap gap-1.5 py-2.5 px-3 rounded-xl border
+        class="flex flex-col py-2.5 px-3 rounded-xl border
         ${isMe
           ? "bg-blue-500/10 border-blue-500/20"
           : "bg-white/5 border-white/10"}"
       >
-        <div
-          class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+        <div class="flex items-center flex-wrap gap-1.5">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
           ${isMe
-            ? "bg-blue-500/20 text-blue-400"
-            : "bg-white/10 text-white/50"}"
-        >
-          ${renderRoleIcon(member.role)}
-        </div>
-        <copy-button
-          compact
-          .copyText=${member.publicId}
-          .displayText=${member.publicId}
-          .showVisibilityToggle=${false}
-          .showCopyIcon=${false}
-        ></copy-button>
-        <div class="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
-          ${isMe
-            ? html`<span
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                >${translateText("clan_modal.you")}</span
-              >`
-            : ""}
-          ${canPromote
-            ? html`<button
-                @click=${() => this.handlePromote(member.publicId)}
-                ?disabled=${this.memberActionPending}
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/20 hover:text-purple-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
-              >
-                ${translateText("clan_modal.promote")}
-              </button>`
-            : ""}
-          ${canDemote
-            ? html`<button
-                @click=${() => this.handleDemote(member.publicId)}
-                ?disabled=${this.memberActionPending}
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 hover:text-white/60 transition-all disabled:opacity-50 disabled:pointer-events-none"
-              >
-                ${translateText("clan_modal.demote")}
-              </button>`
-            : ""}
-          ${canModerate
-            ? html`
-                <button
-                  @click=${() => {
-                    this.confirmAction = "kick";
-                    this.confirmTargetId = member.publicId;
-                  }}
-                  ?disabled=${this.memberActionPending ||
-                  this.confirmAction !== null}
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+              ? "bg-blue-500/20 text-blue-400"
+              : "bg-white/10 text-white/50"}"
+          >
+            ${renderRoleIcon(member.role)}
+          </div>
+          <copy-button
+            compact
+            .copyText=${member.publicId}
+            .displayText=${member.publicId}
+            .showVisibilityToggle=${false}
+            .showCopyIcon=${false}
+          ></copy-button>
+          <div class="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
+            ${isMe
+              ? html`<span
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                  >${translateText("clan_modal.you")}</span
+                >`
+              : ""}
+            ${canPromote
+              ? html`<button
+                  @click=${() => this.handlePromote(member.publicId)}
+                  ?disabled=${this.memberActionPending}
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/20 hover:text-purple-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  ${translateText("clan_modal.kick")}
-                </button>
-                <button
-                  @click=${() => {
-                    this.confirmAction = "ban";
-                    this.confirmTargetId = member.publicId;
-                  }}
-                  ?disabled=${this.memberActionPending ||
-                  this.confirmAction !== null}
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  ${translateText("clan_modal.promote")}
+                </button>`
+              : ""}
+            ${canDemote
+              ? html`<button
+                  @click=${() => this.handleDemote(member.publicId)}
+                  ?disabled=${this.memberActionPending}
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 hover:text-white/60 transition-all disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  ${translateText("clan_modal.ban")}
-                </button>
-              `
-            : ""}
+                  ${translateText("clan_modal.demote")}
+                </button>`
+              : ""}
+            ${canModerate
+              ? html`
+                  <button
+                    @click=${() => {
+                      this.confirmAction = "kick";
+                      this.confirmTargetId = member.publicId;
+                    }}
+                    ?disabled=${this.memberActionPending ||
+                    this.confirmAction !== null}
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("clan_modal.kick")}
+                  </button>
+                  <button
+                    @click=${() => {
+                      this.confirmAction = "ban";
+                      this.confirmTargetId = member.publicId;
+                    }}
+                    ?disabled=${this.memberActionPending ||
+                    this.confirmAction !== null}
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("clan_modal.ban")}
+                  </button>
+                `
+              : ""}
+          </div>
         </div>
+        ${renderMemberStats(member.stats)}
       </div>
     `;
   }

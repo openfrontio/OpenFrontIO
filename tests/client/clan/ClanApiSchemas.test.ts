@@ -82,6 +82,45 @@ describe("ClanMemberSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts stats with ffa/team/ranked win-loss breakdown", () => {
+    const result = ClanMemberSchema.safeParse({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+      stats: {
+        ffa: { wins: 2, losses: 4 },
+        team: { wins: 5, losses: 1 },
+        ranked: { wins: 1, losses: 3 },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("treats stats as optional for backwards compatibility", () => {
+    const result = ClanMemberSchema.safeParse({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.stats).toBeUndefined();
+    }
+  });
+
+  it("rejects stats missing a bucket", () => {
+    const result = ClanMemberSchema.safeParse({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+      stats: {
+        ffa: { wins: 1, losses: 1 },
+        team: { wins: 1, losses: 1 },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("ClanJoinRequestSchema", () => {

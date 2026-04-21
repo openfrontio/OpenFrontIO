@@ -25,6 +25,8 @@ export type {
   ClanJoinRequest,
   ClanMember,
   ClanMembersResponse,
+  ClanMemberStats,
+  ClanMemberWL,
   ClanRequestsResponse,
   ClanStats,
 } from "../core/ClanApiSchemas";

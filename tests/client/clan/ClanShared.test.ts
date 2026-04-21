@@ -1,8 +1,14 @@
+import { render } from "lit";
 import { describe, expect, it } from "vitest";
-import type { ClanJoinRequest, ClanMember } from "../../../src/client/ClanApi";
+import type {
+  ClanJoinRequest,
+  ClanMember,
+  ClanMemberStats,
+} from "../../../src/client/ClanApi";
 import {
   filterMembersBySearch,
   filterRequestsBySearch,
+  renderMemberStats,
 } from "../../../src/client/components/clan/ClanShared";
 
 const members: ClanMember[] = [
@@ -47,6 +53,59 @@ describe("filterMembersBySearch", () => {
     const result = filterMembersBySearch(members, "member");
     expect(result).toHaveLength(1);
     expect(result[0]!.publicId).toBe("Charlie789");
+  });
+});
+
+describe("renderMemberStats", () => {
+  const stats: ClanMemberStats = {
+    ffa: { wins: 2, losses: 4 },
+    team: { wins: 5, losses: 1 },
+    ranked: { wins: 0, losses: 0 },
+  };
+
+  function renderTo(result: ReturnType<typeof renderMemberStats>): HTMLElement {
+    const host = document.createElement("div");
+    render(result, host);
+    return host;
+  }
+
+  it("renders nothing when stats is undefined", () => {
+    const host = renderTo(renderMemberStats(undefined));
+    expect(host.textContent?.trim()).toBe("");
+  });
+
+  it("renders W/L counts and win-rate per bucket", () => {
+    const host = renderTo(renderMemberStats(stats));
+    const text = host.textContent?.replace(/\s+/g, " ") ?? "";
+    // Each cell shows `wins / losses` numerically
+    expect(text).toContain("2 / 4");
+    expect(text).toContain("5 / 1");
+    expect(text).toContain("0 / 0");
+    // Win-rate badge, and em-dash placeholder for empty bucket
+    expect(text).toContain("33%");
+    expect(text).toContain("83%");
+    expect(text).toContain("—");
+  });
+
+  it("renders a proportional win-loss bar when there are games", () => {
+    const host = renderTo(renderMemberStats(stats));
+    const bars = host.querySelectorAll<HTMLDivElement>("[style*='width']");
+    // Two bars per bucket with games (ffa: 2, team: 2). Ranked has 0 games → no bars.
+    expect(bars.length).toBe(4);
+    const widths = Array.from(bars).map((b) =>
+      (b.getAttribute("style") ?? "").replace(/\s+/g, ""),
+    );
+    // ffa: 2/6 ≈ 33.3% wins, 66.7% losses
+    expect(widths[0]).toContain("width:33.33");
+    expect(widths[1]).toContain("width:66.66");
+  });
+
+  it("includes all three translated bucket labels", () => {
+    const host = renderTo(renderMemberStats(stats));
+    const text = host.textContent ?? "";
+    expect(text).toContain("clan_modal.stats_ffa");
+    expect(text).toContain("clan_modal.stats_team");
+    expect(text).toContain("clan_modal.stats_ranked");
   });
 });
 

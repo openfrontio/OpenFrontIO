@@ -44,10 +44,24 @@ export const ClanBrowseResponseSchema = z.object({
 });
 export type ClanBrowseResponse = z.infer<typeof ClanBrowseResponseSchema>;
 
+export const ClanMemberWLSchema = z.object({
+  wins: z.number(),
+  losses: z.number(),
+});
+export type ClanMemberWL = z.infer<typeof ClanMemberWLSchema>;
+
+export const ClanMemberStatsSchema = z.object({
+  ffa: ClanMemberWLSchema,
+  team: ClanMemberWLSchema,
+  ranked: ClanMemberWLSchema,
+});
+export type ClanMemberStats = z.infer<typeof ClanMemberStatsSchema>;
+
 export const ClanMemberSchema = z.object({
   role: z.enum(["leader", "officer", "member"]),
   joinedAt: z.iso.datetime(),
   publicId: z.string(),
+  stats: ClanMemberStatsSchema.optional(),
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
 
