@@ -34,7 +34,6 @@ export class ShellExecution implements Execution {
     if (
       !this.target.isActive() ||
       this.target.owner() === this.shell.owner() ||
-      this.target.isDocked() ||
       (this.destroyAtTick !== -1 && this.mg.ticks() >= this.destroyAtTick)
     ) {
       this.shell.delete(false);
