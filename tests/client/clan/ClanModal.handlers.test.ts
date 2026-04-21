@@ -598,6 +598,65 @@ describe("ClanModal — handlers", () => {
     });
   });
 
+  describe("handleJoin", () => {
+    beforeEach(async () => {
+      const { fetchClanDetail, fetchClanStats } = await import(
+        "../../../src/client/ClanApi"
+      );
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ isOpen: true, memberCount: 5 }),
+      );
+      (fetchClanStats as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "myClanRoles" as keyof ClanModal, new Map() as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+    });
+
+    it("switches detail view into member mode immediately after open-clan join", async () => {
+      const { joinClan, fetchClanMembers } = await import(
+        "../../../src/client/ClanApi"
+      );
+      (joinClan as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        status: "joined",
+      });
+      (fetchClanMembers as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        results: [
+          {
+            role: "member",
+            joinedAt: "2024-01-01T00:00:00Z",
+            publicId: "test-player",
+          },
+        ],
+        total: 6,
+        page: 1,
+        limit: 10,
+        pendingRequests: 0,
+      });
+
+      const joinButton = Array.from(modal.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === "clan_modal.join_clan",
+      );
+      joinButton!.click();
+
+      await flushAsync(modal);
+
+      expect(joinClan).toHaveBeenCalledWith("TST");
+      expect(fetchClanMembers).toHaveBeenCalledWith("TST", 1, 10);
+
+      const leaveButton = Array.from(modal.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === "clan_modal.leave_clan",
+      );
+      expect(leaveButton).toBeTruthy();
+
+      const m = modal as unknown as {
+        myClanRoles: Map<string, string>;
+      };
+      expect(m.myClanRoles.get("TST")).toBe("member");
+    });
+  });
+
   describe("handleLeave", () => {
     beforeEach(async () => {
       const { fetchClanDetail, fetchClanMembers, fetchClanStats } =

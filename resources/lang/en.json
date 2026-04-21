@@ -308,7 +308,6 @@
     "role_leader": "Leader",
     "role_officer": "Officer",
     "role_member": "Member",
-    "you": "You",
     "error_already_member": "Already a member",
     "error_request_pending": "Join request already pending",
     "error_rate_limited_generic": "Please wait before joining another clan",

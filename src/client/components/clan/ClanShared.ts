@@ -293,52 +293,55 @@ export function renderMemberStats(
 ): TemplateResult | string {
   if (!stats) return "";
   return html`
-    <div class="grid grid-cols-3 gap-x-3 gap-y-1 mt-2.5">
+    <div class="mt-1.5 space-y-1">
       ${statBuckets.map(({ key, labelKey }) => {
         const { wins, losses } = stats[key];
         const total = wins + losses;
-        const rate = total > 0 ? Math.round((wins / total) * 100) : 0;
         const hasGames = total > 0;
+        const rate = hasGames ? Math.round((wins / total) * 100) : 0;
         const winPct = hasGames ? (wins / total) * 100 : 0;
         const lossPct = hasGames ? 100 - winPct : 0;
         const rateClass = !hasGames
-          ? "text-white/30"
+          ? "text-white/25"
           : rate >= 50
             ? "text-green-400"
             : "text-red-400/90";
+        const label = translateText(labelKey);
         return html`
-          <div class="min-w-0">
-            <div
-              class="text-[10px] font-bold uppercase tracking-wider text-white/50 truncate mb-0.5"
-              title=${translateText(labelKey)}
+          <div class="flex items-center gap-2">
+            <span
+              class="text-[10px] font-bold uppercase tracking-wider text-white/50 w-14 shrink-0 truncate"
+              title=${label}
             >
-              ${translateText(labelKey)}
-            </div>
+              ${label}
+            </span>
             <div
-              class="flex items-baseline justify-between gap-1 tabular-nums mb-1"
+              class="flex-1 flex h-5 rounded-md overflow-hidden bg-white/5 text-[11px] font-bold text-white tabular-nums"
+              role="img"
+              aria-label="${wins} wins, ${losses} losses"
             >
-              <div class="flex items-baseline min-w-0">
-                <span class="text-sm font-bold text-green-400">${wins}</span>
-                <span class="text-[11px] font-bold text-white/25 mx-0.5"
-                  >/</span
-                >
-                <span class="text-sm font-bold text-red-400/80">${losses}</span>
-              </div>
-              <span class="text-[10px] font-bold shrink-0 ${rateClass}">
-                ${hasGames ? `${rate}%` : "—"}
-              </span>
-            </div>
-            <div
-              class="h-1 rounded-full overflow-hidden flex bg-white/5"
-              role="presentation"
-            >
-              ${hasGames
-                ? html`
-                    <div class="bg-green-500/70" style="width:${winPct}%"></div>
-                    <div class="bg-red-500/50" style="width:${lossPct}%"></div>
-                  `
+              ${wins > 0
+                ? html`<div
+                    class="bg-blue-500 flex items-center px-1.5 overflow-hidden whitespace-nowrap"
+                    style="width:${winPct}%"
+                  >
+                    ${wins}W
+                  </div>`
+                : ""}
+              ${losses > 0
+                ? html`<div
+                    class="bg-red-500 flex items-center justify-end px-1.5 overflow-hidden whitespace-nowrap"
+                    style="width:${lossPct}%"
+                  >
+                    ${losses}L
+                  </div>`
                 : ""}
             </div>
+            <span
+              class="text-xs font-bold shrink-0 tabular-nums w-9 text-right ${rateClass}"
+            >
+              ${hasGames ? `${rate}%` : "—"}
+            </span>
           </div>
         `;
       })}
@@ -369,26 +372,22 @@ export function renderMemberRow(
         </div>
         <div class="flex-1 min-w-0 flex flex-col">
           <div class="flex items-center justify-between gap-2">
-            <copy-button
-              compact
-              .copyText=${member.publicId}
-              .displayText=${member.publicId}
-              .showVisibilityToggle=${false}
-              .showCopyIcon=${false}
-            ></copy-button>
-            ${isMe
-              ? html`<span
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                >
-                  ${translateText("clan_modal.you")}
-                </span>`
-              : ""}
+            <div class="min-w-0">
+              <copy-button
+                compact
+                .copyText=${member.publicId}
+                .displayText=${member.publicId}
+                .showVisibilityToggle=${false}
+                .showCopyIcon=${false}
+              ></copy-button>
+            </div>
+            <span
+              class="text-white/30 text-[10px] shrink-0 text-right whitespace-nowrap"
+              >${translateText("clan_modal.joined_date", {
+                date: formatClanDate(member.joinedAt),
+              })}</span
+            >
           </div>
-          <span class="text-white/30 text-[10px]"
-            >${translateText("clan_modal.joined_date", {
-              date: formatClanDate(member.joinedAt),
-            })}</span
-          >
         </div>
       </div>
       ${renderMemberStats(member.stats)}

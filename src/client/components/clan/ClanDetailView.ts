@@ -193,6 +193,10 @@ export class ClanDetailView extends LitElement {
       }
       invalidateUserMe();
       if (result.status === "joined") {
+        // Joining an open clan should immediately switch this detail page into
+        // member mode and refresh member-only data without requiring remount.
+        this.myRole = "member";
+        await this.loadMemberPage(1);
         this.dispatchEvent(
           new CustomEvent("clan-joined", {
             detail: { tag: this.selectedClan.tag },

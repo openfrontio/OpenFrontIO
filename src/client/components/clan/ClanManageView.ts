@@ -19,11 +19,11 @@ import { modalHeader } from "../ui/ModalHeader";
 import {
   type ClanRole,
   filterMembersBySearch,
+  formatClanDate,
   modalContainerClass,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberSearchInput,
-  renderMemberStats,
   renderRoleIcon,
   showToast,
 } from "./ClanShared";
@@ -524,13 +524,12 @@ export class ClanManageView extends LitElement {
             .showVisibilityToggle=${false}
             .showCopyIcon=${false}
           ></copy-button>
+          <span class="text-white/30 text-[10px] whitespace-nowrap">
+            ${translateText("clan_modal.joined_date", {
+              date: formatClanDate(member.joinedAt),
+            })}
+          </span>
           <div class="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
-            ${isMe
-              ? html`<span
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                  >${translateText("clan_modal.you")}</span
-                >`
-              : ""}
             ${canPromote
               ? html`<button
                   @click=${() => this.handlePromote(member.publicId)}
@@ -577,7 +576,6 @@ export class ClanManageView extends LitElement {
               : ""}
           </div>
         </div>
-        ${renderMemberStats(member.stats)}
       </div>
     `;
   }
