@@ -96,26 +96,21 @@ export function renderClanWL(stats: ClanStats): TemplateResult | string {
 
   const categories = [
     {
-      label: translateText("game_mode.ffa"),
+      label: translateText("clan_modal.stats_ffa"),
       wins: ffaWins,
       losses: ffaLosses,
     },
     {
-      label: translateText("game_mode.teams"),
+      label: translateText("clan_modal.stats_team"),
       wins: teamWins,
       losses: teamLosses,
-    },
-    {
-      label: translateText("clan_modal.overall"),
-      wins: stats.wins,
-      losses: stats.losses,
     },
   ];
 
   return html`
     <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
-      <h3 class="text-[10px] font-bold text-white/40 uppercase tracking-wider">
-        ${translateText("clan_modal.win_loss")}
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+        ${translateText("clan_modal.statistics")}
       </h3>
       <div class="space-y-1.5">
         ${categories.map((cat) =>
