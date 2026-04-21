@@ -360,7 +360,7 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
-    if (unit.retreating()) {
+    if (unit.retreating() && unit.isActive()) {
       this.drawSprite(unit);
       this.drawRetreatCross(unit);
       return;
@@ -379,11 +379,11 @@ export class UnitLayer implements Layer {
     const y = this.game.y(unit.tile());
     const ctx = this.context;
     ctx.save();
-    ctx.fillStyle = "rgb(0,180,255)";
-    // Vertical bar: 1px wide, 5px tall, centered
-    ctx.fillRect(x, y - 2, 1, 5);
-    // Horizontal bar: 5px wide, 1px tall, centered
-    ctx.fillRect(x - 2, y, 5, 1);
+    ctx.fillStyle = "rgb(57,255,20)";
+    // Vertical bar: 1px wide, 3px tall, centered
+    ctx.fillRect(x, y - 1, 1, 3);
+    // Horizontal bar: 3px wide, 1px tall, centered
+    ctx.fillRect(x - 1, y, 3, 1);
     ctx.restore();
   }
 
