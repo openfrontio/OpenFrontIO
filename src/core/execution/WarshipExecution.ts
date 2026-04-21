@@ -329,7 +329,10 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
-    this.warship.setTargetUnit(undefined);
+    // Only clear the target when there's no active aggro target this tick.
+    if (!retreatAggroTarget) {
+      this.warship.setTargetUnit(undefined);
+    }
 
     const retreatPortTile = this.retreatPortTile;
     if (retreatPortTile === undefined) {
