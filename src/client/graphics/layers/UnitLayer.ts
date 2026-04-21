@@ -388,16 +388,6 @@ export class UnitLayer implements Layer {
     const cx = x + 0.5;
     const cy = y + 0.5;
     ctx.lineCap = "square";
-    // Black border: lineWidth 1.67 = 1px green + 2 × ~0.33px border on all sides
-    ctx.strokeStyle = "rgb(0,0,0)";
-    ctx.lineWidth = 1.67;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 1.5);
-    ctx.lineTo(cx, cy + 1.5);
-    ctx.moveTo(cx - 1.5, cy);
-    ctx.lineTo(cx + 1.5, cy);
-    ctx.stroke();
-    // Dark green cross on top
     ctx.strokeStyle = "rgb(0,140,0)";
     ctx.lineWidth = 1;
     ctx.beginPath();
