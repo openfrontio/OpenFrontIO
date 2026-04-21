@@ -130,6 +130,12 @@ export class UnitView {
   setDocked(_docked: boolean): void {
     throw new Error("setDocked is not supported on UnitView");
   }
+  isInCombat(): boolean {
+    return this.data.inCombat;
+  }
+  setUnderFire(): void {
+    throw new Error("setUnderFire is not supported on UnitView");
+  }
   tile(): TileRef {
     return this.data.pos;
   }

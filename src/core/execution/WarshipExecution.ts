@@ -320,6 +320,7 @@ export class WarshipExecution implements Execution {
     const retreatAggroTarget = this.findRetreatAggroTarget();
     if (retreatAggroTarget) {
       this.warship.setTargetUnit(retreatAggroTarget);
+      this.warship.setUnderFire();
       this.shootTarget();
       // Fall through — continue retreating toward port even while firing back.
     }

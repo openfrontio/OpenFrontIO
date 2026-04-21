@@ -23,6 +23,7 @@ export class UnitImpl implements Unit {
   private _lastTile: TileRef;
   private _retreating: boolean = false;
   private _docked: boolean = false;
+  private _lastCombatTick: number = -100;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -131,6 +132,7 @@ export class UnitImpl implements Unit {
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       docked: this._docked,
+      inCombat: this.mg.ticks() - this._lastCombatTick <= 3,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -234,6 +236,9 @@ export class UnitImpl implements Unit {
       return;
     }
 
+    if (attacker !== undefined && delta < 0) {
+      this._lastCombatTick = this.mg.ticks();
+    }
     this._health = nextHealth;
     this.mg.addUpdate(this.toUpdate());
     if (this._health === 0n) {
@@ -357,6 +362,15 @@ export class UnitImpl implements Unit {
       this._docked = docked;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  isInCombat(): boolean {
+    return this.mg.ticks() - this._lastCombatTick <= 3;
+  }
+
+  setUnderFire(): void {
+    this._lastCombatTick = this.mg.ticks();
+    this.mg.addUpdate(this.toUpdate());
   }
 
   orderBoatRetreat() {

@@ -613,6 +613,8 @@ export interface Unit {
   setRetreating(retreating: boolean): void;
   isDocked(): boolean;
   setDocked(docked: boolean): void;
+  isInCombat(): boolean;
+  setUnderFire(): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;
