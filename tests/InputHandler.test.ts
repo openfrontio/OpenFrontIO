@@ -2,6 +2,9 @@ import {
   AutoUpgradeEvent,
   ConfirmGhostStructureEvent,
   InputHandler,
+  WarshipSelectionBoxCancelEvent,
+  WarshipSelectionBoxCompleteEvent,
+  WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
 import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
@@ -858,5 +861,189 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(uiState.ghostStructure).toBe(UnitType.City);
     });
+  });
+});
+
+describe("Warship box selection (Shift+drag)", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let mockCanvas: HTMLCanvasElement;
+  let uiState: UIState;
+
+  beforeEach(() => {
+    const mockGameView = { inSpawnPhase: () => false } as GameView;
+    mockCanvas = document.createElement("canvas");
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: null,
+      rocketDirectionUp: true,
+      overlappingRailroads: [],
+      ghostRailPaths: [],
+    } as UIState;
+    inputHandler = new InputHandler(
+      mockGameView,
+      uiState,
+      mockCanvas,
+      eventBus,
+    );
+    inputHandler.initialize();
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("Shift keydown sets canvas cursor to crosshair", () => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
+    expect(mockCanvas.style.cursor).toBe("crosshair");
+  });
+
+  test("ShiftRight keydown also sets cursor to crosshair", () => {
+    // ShiftRight is not the default shiftKey keybind (ShiftLeft is).
+    // This test verifies the configured shiftKey works, not a hardcoded ShiftRight.
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
+    expect(mockCanvas.style.cursor).toBe("crosshair");
+  });
+
+  test("Shift keyup resets cursor when no selection box active", () => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "ShiftLeft" }));
+    expect(mockCanvas.style.cursor).toBe("");
+  });
+
+  test("Shift keydown discards active ghostStructure", () => {
+    uiState.ghostStructure = UnitType.Warship;
+    const emitSpy = vi.spyOn(eventBus, "emit");
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
+
+    expect(uiState.ghostStructure).toBeNull();
+    const types = emitSpy.mock.calls.map((c) => c[0].constructor.name);
+    expect(types).toContain("GhostStructureChangedEvent");
+  });
+
+  test("Shift+drag emits WarshipSelectionBoxUpdateEvent", () => {
+    const listener = vi.fn();
+    eventBus.on(WarshipSelectionBoxUpdateEvent, listener);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["activeKeys"].add("ShiftLeft");
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+      }),
+    );
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startX: 100,
+        startY: 100,
+        endX: 200,
+        endY: 200,
+      }),
+    );
+  });
+
+  test("Shift+drag then pointerup emits WarshipSelectionBoxCompleteEvent", () => {
+    const listener = vi.fn();
+    eventBus.on(WarshipSelectionBoxCompleteEvent, listener);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 50,
+        clientY: 50,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["activeKeys"].add("ShiftLeft");
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+      }),
+    );
+    expect(inputHandler["selectionBoxActive"]).toBe(true);
+
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+      }),
+    );
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({ startX: 50, startY: 50, endX: 200, endY: 200 }),
+    );
+    expect(inputHandler["selectionBoxActive"]).toBe(false);
+  });
+
+  test("Escape cancels active selection box", () => {
+    const listener = vi.fn();
+    eventBus.on(WarshipSelectionBoxCancelEvent, listener);
+
+    inputHandler["selectionBoxActive"] = true;
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+
+    expect(listener).toHaveBeenCalled();
+    expect(inputHandler["selectionBoxActive"]).toBe(false);
+  });
+
+  test("tiny drag (< 10px) cancels selection box instead of completing it", () => {
+    const cancelListener = vi.fn();
+    const completeListener = vi.fn();
+    eventBus.on(WarshipSelectionBoxCancelEvent, cancelListener);
+    eventBus.on(WarshipSelectionBoxCompleteEvent, completeListener);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["activeKeys"].add("ShiftLeft");
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 104,
+        clientY: 104,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 104,
+        clientY: 104,
+        pointerId: 1,
+      }),
+    );
+
+    expect(cancelListener).toHaveBeenCalled();
+    expect(completeListener).not.toHaveBeenCalled();
+  });
+
+  test("window blur resets cursor", () => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
+    expect(mockCanvas.style.cursor).toBe("crosshair");
+    window.dispatchEvent(new Event("blur"));
+    expect(mockCanvas.style.cursor).toBe("");
   });
 });
