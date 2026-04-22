@@ -20,9 +20,12 @@ export class IOSAddToHomeScreenBanner extends LitElement {
     super.connectedCallback();
     try {
       this.dismissed = localStorage.getItem(DISMISSED_KEY) === "true";
-      this.later = localStorage.getItem(LATER_KEY) === "true";
     } catch {
       this.dismissed = false;
+    }
+    try {
+      this.later = sessionStorage.getItem(LATER_KEY) === "true";
+    } catch {
       this.later = false;
     }
   }
@@ -38,9 +41,9 @@ export class IOSAddToHomeScreenBanner extends LitElement {
 
   private later_() {
     try {
-      localStorage.setItem(LATER_KEY, "true");
+      sessionStorage.setItem(LATER_KEY, "true");
     } catch {
-      // ignore
+      // ignore — this.later still set in memory
     }
     this.later = true;
   }
