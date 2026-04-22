@@ -92,6 +92,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
+    this.onFullscreenChange();
   }
 
   disconnectedCallback() {
