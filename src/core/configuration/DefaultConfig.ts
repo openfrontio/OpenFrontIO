@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod";
+import { number, z } from "zod";
 import {
   Difficulty,
   Game,
@@ -273,6 +273,9 @@ export class DefaultConfig implements Config {
     }
     return this.startingGoldFor(playerInfo);
   }
+  startingOwnedTiles(player: Player | PlayerView): Array<TileRef> | undefined {
+    return this.startingTilesFor(player)
+  }
 
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
@@ -519,6 +522,14 @@ export class DefaultConfig implements Config {
       return base + BigInt(hc.startingGold);
     }
     return base;
+  }
+
+  private startingTilesFor(player: Player | PlayerView): Array<TileRef> | undefined {
+    if (this._gameConfig.startingOwnedTiles == undefined) {
+      return;
+    }
+    const result = this._gameConfig.startingOwnedTiles[player.smallID()]
+    return result
   }
 
   private costWrapper(

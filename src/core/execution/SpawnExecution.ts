@@ -52,12 +52,16 @@ export class SpawnExecution implements Execution {
     }
 
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
-    if (this.mg.config().isRandomSpawn() && player.hasSpawned()) {
+    if (
+      (this.mg.config().isRandomSpawn() ||
+        this.mg.config().startingOwnedTiles(player) !== undefined) &&
+      player.hasSpawned()
+    ) {
       return;
     }
 
     player.tiles().forEach((t) => player.relinquish(t));
-    const spawn = this.getSpawn(this.tile);
+    const spawn = this.getSpawn(this.tile, player);
 
     if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);
@@ -86,7 +90,27 @@ export class SpawnExecution implements Execution {
     return true;
   }
 
-  private getSpawn(center?: TileRef): Spawn | undefined {
+  private getSpawn(center?: TileRef, player?: Player): Spawn | undefined {
+    if (player !== undefined) {
+      if (this.mg.config().startingOwnedTiles(player) !== undefined) {
+        let tiles = this.mg.config().startingOwnedTiles(player);
+        if (tiles == undefined || !tiles.length) {
+          return;
+        }
+        console.log(tiles[1])
+        tiles = tiles.filter(
+          (tile) =>
+            !(
+              !this.mg.isLand(tile) ||
+              this.mg.hasOwner(tile) ||
+              this.mg.isBorder(tile)
+            ),
+        );
+        console.log(tiles);
+        center = tiles[0];
+        return { center, tiles };
+      }
+    }
     if (center !== undefined) {
       const tiles = getSpawnTiles(this.mg, center, false);
 
@@ -96,7 +120,6 @@ export class SpawnExecution implements Execution {
 
       return { center, tiles };
     }
-    //if (this.mg.config().startingOwnedTiles(player));
 
     const spawnArea = this.getTeamSpawnArea();
     let tries = 0;

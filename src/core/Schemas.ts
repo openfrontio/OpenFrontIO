@@ -272,6 +272,7 @@ export const GameConfigSchema = z.object({
         .optional(),
     })
     .optional(),
+  startingOwnedTiles: z.record(z.number(), z.array(z.number())).optional()
 });
 
 export const TeamSchema = z.string();
@@ -416,7 +417,7 @@ export const CancelBoatIntentSchema = z.object({
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
-  unitIds: z.array(z.number().int()).nonempty(),
+  unitId: z.number(),
   tile: z.number(),
 });
 
