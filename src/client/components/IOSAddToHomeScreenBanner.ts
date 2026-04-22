@@ -4,6 +4,7 @@ import { Platform } from "../Platform";
 import { translateText } from "../Utils";
 
 const DISMISSED_KEY = "ios_a2hs_banner_dismissed";
+const LATER_KEY = "ios_a2hs_banner_later";
 
 @customElement("ios-add-to-home-screen-banner")
 export class IOSAddToHomeScreenBanner extends LitElement {
@@ -19,8 +20,10 @@ export class IOSAddToHomeScreenBanner extends LitElement {
     super.connectedCallback();
     try {
       this.dismissed = localStorage.getItem(DISMISSED_KEY) === "true";
+      this.later = localStorage.getItem(LATER_KEY) === "true";
     } catch {
       this.dismissed = false;
+      this.later = false;
     }
   }
 
@@ -28,12 +31,17 @@ export class IOSAddToHomeScreenBanner extends LitElement {
     try {
       localStorage.setItem(DISMISSED_KEY, "true");
     } catch {
-      // localStorage unavailable (e.g. private mode) — dismiss for session only
+      // localStorage unavailable — dismiss for session only
     }
     this.dismissed = true;
   }
 
   private later_() {
+    try {
+      localStorage.setItem(LATER_KEY, "true");
+    } catch {
+      // ignore
+    }
     this.later = true;
   }
 
@@ -58,9 +66,15 @@ export class IOSAddToHomeScreenBanner extends LitElement {
         <div class="relative w-full max-w-sm">
           <div
             class="bg-slate-800 border border-slate-600 rounded-2xl w-full p-5 pb-6 flex flex-col gap-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ios-banner-modal-title"
           >
             <div class="flex items-center justify-between">
-              <h2 class="text-white font-bold text-lg">
+              <h2
+                id="ios-banner-modal-title"
+                class="text-white font-bold text-lg"
+              >
                 ${translateText("ios_banner.modal_title")}
               </h2>
               <button
