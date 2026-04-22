@@ -153,6 +153,7 @@ export enum GameMapType {
   Caucasus = "Caucasus",
   LosAngeles = "Los Angeles",
   BeringSea = "Bering Sea",
+  Antarctica = "Antarctica",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -168,6 +169,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.Antarctica,
   ],
   regional: [
     GameMapType.BritanniaClassic,
