@@ -59,6 +59,7 @@ export async function readGameRecord(
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": config.apiKey(),
       },
     });
     const record = await response.json();

@@ -60,9 +60,13 @@ export class SettingSlider extends LitElement {
         </div>
 
         <div
-          class="flex flex-col items-start sm:items-end gap-2 shrink-0 w-full sm:w-[200px]"
+          class="flex flex-col items-start sm:items-end gap-2 shrink-0 sm:w-auto sm:w-[200px]"
         >
           <div class="flex items-center gap-2 w-full">
+            <span
+              class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
+              >${this.value}%</span
+            >
             <input
               type="range"
               class="flex-1 w-auto appearance-none h-2 bg-transparent rounded outline-none 
@@ -76,10 +80,6 @@ export class SettingSlider extends LitElement {
               .value=${String(this.value)}
               @input=${this.handleInput}
             />
-            <span
-              class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
-              >${this.value}%</span
-            >
           </div>
         </div>
       </div>

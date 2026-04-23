@@ -1,0 +1,161 @@
+{
+  "map": {
+    "height": 3500,
+    "num_land_tiles": 1646031,
+    "width": 1308
+  },
+  "map16x": {
+    "height": 875,
+    "num_land_tiles": 93510,
+    "width": 327
+  },
+  "map4x": {
+    "height": 1750,
+    "num_land_tiles": 398022,
+    "width": 654
+  },
+  "name": "Luna",
+  "nations": [
+    {
+      "coordinates": [265, 662],
+      "flag": "us",
+      "name": "Apollo 12"
+    },
+    {
+      "coordinates": [550, 600],
+      "flag": "us",
+      "name": "Apollo 14"
+    },
+    {
+      "coordinates": [780, 345],
+      "flag": "us",
+      "name": "Apollo 15"
+    },
+    {
+      "coordinates": [825, 735],
+      "flag": "us",
+      "name": "Apollo 11"
+    },
+    {
+      "coordinates": [875, 990],
+      "flag": "us",
+      "name": "Apollo 16"
+    },
+    {
+      "coordinates": [1160, 490],
+      "flag": "us",
+      "name": "Apollo 17"
+    },
+    {
+      "coordinates": [1160, 2850],
+      "flag": "us",
+      "name": "Surveyor 3"
+    },
+    {
+      "coordinates": [256, 148],
+      "flag": "us",
+      "name": "Apollo 13"
+    },
+    {
+      "coordinates": [656, 1750],
+      "flag": "us",
+      "name": "Artemis II"
+    },
+    {
+      "coordinates": [510, 170],
+      "flag": "Russian SSR",
+      "name": "Luna 17"
+    },
+    {
+      "coordinates": [1050, 385],
+      "flag": "Russian SSR",
+      "name": "Luna 21"
+    },
+    {
+      "coordinates": [1030, 790],
+      "flag": "Russian SSR",
+      "name": "Luna 16"
+    },
+    {
+      "coordinates": [1090, 2640],
+      "flag": "Russian SSR",
+      "name": "Luna 9"
+    },
+    {
+      "coordinates": [130, 2890],
+      "flag": "Russian SSR",
+      "name": "Luna 24"
+    },
+    {
+      "coordinates": [310, 1167],
+      "flag": "Russian SSR",
+      "name": "Luna 25"
+    },
+    {
+      "coordinates": [1043, 2393],
+      "flag": "Russian SSR",
+      "name": "Luna 1"
+    },
+    {
+      "coordinates": [672, 2323],
+      "flag": "cn",
+      "name": "Chang'e 3"
+    },
+    {
+      "coordinates": [650, 2750],
+      "flag": "cn",
+      "name": "Chang'e 4"
+    },
+    {
+      "coordinates": [270, 2690],
+      "flag": "cn",
+      "name": "Chang'e 5"
+    },
+    {
+      "coordinates": [910, 3190],
+      "flag": "cn",
+      "name": "Chang'e 6"
+    },
+    {
+      "coordinates": [830, 735],
+      "flag": "jp",
+      "name": "S.L.I.M."
+    },
+    {
+      "coordinates": [400, 3360],
+      "flag": "in",
+      "name": "Chandrayaan 3"
+    },
+    {
+      "coordinates": [732, 3490],
+      "flag": "in",
+      "name": "Chandrayaan 1"
+    },
+    {
+      "coordinates": [755, 3035],
+      "flag": "",
+      "name": "T▅▚░S▅cr▅▟░M▅l▅t▅r▅░B▅s▅"
+    },
+    {
+      "coordinates": [628, 921],
+      "flag": "",
+      "name": "[]"
+    }
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1750,
+        "width": 1308,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1750,
+        "width": 1308,
+        "x": 0,
+        "y": 1750
+      }
+    ]
+  }
+}

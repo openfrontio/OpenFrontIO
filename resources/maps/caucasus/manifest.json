@@ -1,0 +1,125 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 846140,
+    "width": 1248
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 51199,
+    "width": 312
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 209270,
+    "width": 624
+  },
+  "name": "Caucasus",
+  "nations": [
+    {
+      "coordinates": [624, 581],
+      "flag": "ge",
+      "name": "Georgia"
+    },
+    {
+      "coordinates": [455, 463],
+      "flag": "",
+      "name": "Abkhazia"
+    },
+    {
+      "coordinates": [663, 448],
+      "flag": "",
+      "name": "South Ossetia"
+    },
+    {
+      "coordinates": [626, 347],
+      "flag": "ru",
+      "name": "North Ossetia"
+    },
+    {
+      "coordinates": [1023, 728],
+      "flag": "az",
+      "name": "Azerbaijan"
+    },
+    {
+      "coordinates": [682, 761],
+      "flag": "am",
+      "name": "Armenia"
+    },
+    {
+      "coordinates": [924, 982],
+      "flag": "ir",
+      "name": "Iran"
+    },
+    {
+      "coordinates": [161, 728],
+      "flag": "tr",
+      "name": "Black Sea Region"
+    },
+    {
+      "coordinates": [924, 479],
+      "flag": "ru",
+      "name": "Dagestan"
+    },
+    {
+      "coordinates": [830, 309],
+      "flag": "ru",
+      "name": "Chechnya"
+    },
+    {
+      "coordinates": [724, 365],
+      "flag": "ru",
+      "name": "Ingushetia"
+    },
+    {
+      "coordinates": [551, 313],
+      "flag": "ru",
+      "name": "Kabardino-Balkaria"
+    },
+    {
+      "coordinates": [405, 300],
+      "flag": "ru",
+      "name": "Karachay-Cherkessia"
+    },
+    {
+      "coordinates": [275, 202],
+      "flag": "ru",
+      "name": "Adygea"
+    },
+    {
+      "coordinates": [275, 186],
+      "flag": "ru",
+      "name": "Krasnodar Krai"
+    },
+    {
+      "coordinates": [524, 16],
+      "flag": "ru",
+      "name": "Stavropol Krai"
+    },
+    {
+      "coordinates": [805, 24],
+      "flag": "ru",
+      "name": "Kalmykia"
+    },
+    {
+      "coordinates": [164, 16],
+      "flag": "ru",
+      "name": "Rostov Oblast"
+    },
+    {
+      "coordinates": [1230, 271],
+      "flag": "kz",
+      "name": "Kazakhstan"
+    },
+    {
+      "coordinates": [1083, 20],
+      "flag": "ru",
+      "name": "Astrakhan Oblast"
+    },
+    {
+      "coordinates": [507, 863],
+      "flag": "tr",
+      "name": "Eastern Anatolia"
+    }
+  ]
+}

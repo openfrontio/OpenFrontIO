@@ -19,7 +19,10 @@ export class WorkerLobbyService {
     private readonly gm: GameManager,
     private readonly log: typeof logger,
   ) {
-    this.lobbiesWss = new WebSocketServer({ noServer: true });
+    this.lobbiesWss = new WebSocketServer({
+      noServer: true,
+      maxPayload: 256 * 1024,
+    });
     this.setupUpgradeHandler();
     this.setupLobbiesWebSocket();
     this.setupIPCListener();
@@ -41,20 +44,24 @@ export class WorkerLobbyService {
           // Update master with my lobby info
           this.sendMyLobbiesToMaster();
           break;
-        case "createGame":
+        case "createGame": {
           if (this.gm.game(msg.gameID) !== null) {
             this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
             return;
           }
           this.log.info(`Creating public game ${msg.gameID} from master`);
-          this.gm.createGame(
+          const game = this.gm.createGame(
             msg.gameID,
             msg.gameConfig,
             undefined,
             undefined,
             msg.publicGameType,
           );
+          if (game === null) {
+            this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
+          }
           break;
+        }
         case "updateLobby": {
           const game = this.gm.game(msg.gameID);
           if (!game) {
@@ -109,6 +116,9 @@ export class WorkerLobbyService {
   private setupLobbiesWebSocket() {
     this.lobbiesWss.on("connection", (ws: WebSocket) => {
       this.lobbyClients.add(ws);
+      ws.on("message", () => {
+        ws.terminate();
+      });
       ws.on("close", () => {
         this.lobbyClients.delete(ws);
       });

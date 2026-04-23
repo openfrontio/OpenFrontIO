@@ -62,14 +62,10 @@ echo "Starting new container for ${HOST} environment..."
 # Ensure the traefik network exists
 docker network create web 2> /dev/null || true
 
-# Remove any existing volume for this container if it exists
-docker volume rm "cloudflared-${CONTAINER_NAME}" 2> /dev/null || true
-
 docker run -d \
     --restart="${RESTART}" \
     --env-file "$ENV_FILE" \
     --name "${CONTAINER_NAME}" \
-    -v "cloudflared-${CONTAINER_NAME}:/etc/cloudflared" \
     --network web \
     --label "traefik.enable=true" \
     --label "traefik.http.routers.${CONTAINER_NAME}.rule=Host(\`${SUBDOMAIN}.${DOMAIN}\`)" \

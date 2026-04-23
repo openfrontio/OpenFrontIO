@@ -136,6 +136,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
 }
 
+/** SAM launcher construction duration in ticks (non-instant-build). */
+export const SAM_CONSTRUCTION_TICKS = 30 * 10;
+
 export class DefaultConfig implements Config {
   private pastelTheme: PastelTheme = new PastelTheme();
   private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
@@ -243,6 +246,9 @@ export class DefaultConfig implements Config {
   disableAlliances(): boolean {
     return this._gameConfig.disableAlliances ?? false;
   }
+  waterNukes(): boolean {
+    return this._gameConfig.waterNukes ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
@@ -265,20 +271,21 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 0n;
     }
-    return BigInt(this._gameConfig.startingGold ?? 0);
+    return this.startingGoldFor(playerInfo);
   }
 
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 18;
+    return (numPlayerFactories + 10) * 15;
   }
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
+    player: Player | PlayerView,
   ): Gold {
-    // No penalty for the first 3 cities.
-    citiesVisited = Math.max(0, citiesVisited - 2);
+    // No penalty for the first 10 cities.
+    citiesVisited = Math.max(0, citiesVisited - 9);
     let baseGold: number;
     switch (rel) {
       case "ally":
@@ -294,7 +301,7 @@ export class DefaultConfig implements Config {
     }
     const distPenalty = citiesVisited * 5_000;
     const gold = Math.max(5000, baseGold - distPenalty);
-    return toInt(gold * this.goldMultiplier());
+    return toInt(gold * this.goldMultiplierFor(player));
   }
 
   trainStationMinRange(): number {
@@ -307,13 +314,12 @@ export class DefaultConfig implements Config {
     return 120;
   }
 
-  tradeShipGold(dist: number): Gold {
+  tradeShipGold(dist: number, player: Player | PlayerView): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      50_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
-    const multiplier = this.goldMultiplier();
-    return BigInt(Math.floor(baseGold * multiplier));
+      75_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 50 * dist;
+    return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -390,7 +396,10 @@ export class DefaultConfig implements Config {
       case UnitType.MIRV:
         info = {
           cost: (game: Game, player: Player) => {
-            if (player.type() === PlayerType.Human && this.infiniteGold()) {
+            if (
+              player.type() === PlayerType.Human &&
+              this.hasInfiniteGoldFor(player)
+            ) {
               return 0n;
             }
             return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
@@ -430,7 +439,9 @@ export class DefaultConfig implements Config {
               Math.min(3_000_000, (numUnits + 1) * 1_500_000),
             UnitType.SAMLauncher,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
+          constructionDuration: this.instantBuild()
+            ? 0
+            : SAM_CONSTRUCTION_TICKS,
           upgradable: true,
         };
         break;
@@ -470,12 +481,55 @@ export class DefaultConfig implements Config {
     return info;
   }
 
+  private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
+    if (this.infiniteGold()) return true;
+    const hc = this._gameConfig.hostCheats;
+    return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
+  }
+
+  private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
+    if (this.infiniteTroops()) return true;
+    return (
+      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+      player.isLobbyCreator()
+    );
+  }
+
+  private hasInfiniteTroopsForInfo(playerInfo: PlayerInfo): boolean {
+    if (this.infiniteTroops()) return true;
+    return (
+      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+      playerInfo.isLobbyCreator
+    );
+  }
+
+  private goldMultiplierFor(player: Player | PlayerView): number {
+    const base = this.goldMultiplier();
+    const hc = this._gameConfig.hostCheats;
+    if (hc?.goldMultiplier && player.isLobbyCreator()) {
+      return hc.goldMultiplier;
+    }
+    return base;
+  }
+
+  private startingGoldFor(playerInfo: PlayerInfo): Gold {
+    const base = BigInt(this._gameConfig.startingGold ?? 0);
+    const hc = this._gameConfig.hostCheats;
+    if (hc?.startingGold && playerInfo.isLobbyCreator) {
+      return base + BigInt(hc.startingGold);
+    }
+    return base;
+  }
+
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
   ): (g: Game, p: Player) => bigint {
     return (game: Game, player: Player) => {
-      if (player.type() === PlayerType.Human && this.infiniteGold()) {
+      if (
+        player.type() === PlayerType.Human &&
+        this.hasInfiniteGoldFor(player)
+      ) {
         return 0n;
       }
       const numUnits = types.reduce(
@@ -545,7 +599,13 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    if (this._gameConfig.gameType === GameType.Singleplayer) {
+      return 100;
+    }
+    if (this.isRandomSpawn()) {
+      return 150;
+    }
+    return 300;
   }
   numBots(): number {
     return this.bots();
@@ -658,7 +718,7 @@ export class DefaultConfig implements Config {
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
       const attackerTroopLoss =
-        0.5 * currentAttackerLoss + 0.5 * altAttackerLoss;
+        0.4 * currentAttackerLoss + 0.6 * altAttackerLoss;
 
       return {
         attackerTroopLoss,
@@ -747,16 +807,17 @@ export class DefaultConfig implements Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
-      player.type() === PlayerType.Human && this.infiniteTroops()
+      player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
-        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+        : 2 * (Math.pow(player.numTilesOwned(), 0.7) * 1000 + 50000) +
           player
             .units(UnitType.City)
+            .filter((u) => !u.isUnderConstruction())
             .map((city) => city.level())
             .reduce((a, b) => a + b, 0) *
             this.cityTroopIncrease();
@@ -786,7 +847,7 @@ export class DefaultConfig implements Config {
   troopIncreaseRate(player: Player): number {
     const max = this.maxTroops(player);
 
-    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.troops(), 0.8) / 4;
 
     const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
@@ -818,7 +879,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplierFor(player);
     let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
       baseRate = 50n;

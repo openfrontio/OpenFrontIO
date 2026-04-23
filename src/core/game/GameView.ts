@@ -4,7 +4,7 @@ import { Config } from "../configuration/Config";
 import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
-import { createRandomName } from "../Util";
+import { createRandomName, formatPlayerDisplayName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   BuildableUnit,
@@ -231,14 +231,10 @@ export class PlayerView {
       );
     }
 
-    const defaultTerritoryColor = this.game
-      .config()
-      .theme()
-      .territoryColor(this);
-    const defaultBorderColor = this.game
-      .config()
-      .theme()
-      .borderColor(defaultTerritoryColor);
+    const theme = this.game.config().theme();
+
+    const defaultTerritoryColor = theme.territoryColor(this);
+    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
 
     const pattern = userSettings.territoryPatterns()
       ? this.cosmetics.pattern
@@ -261,14 +257,11 @@ export class PlayerView {
       this._territoryColor = defaultTerritoryColor;
     }
 
-    this._structureColors = this.game
-      .config()
-      .theme()
-      .structureColors(this._territoryColor);
+    this._structureColors = theme.structureColors(this._territoryColor);
 
     const maybeFocusedBorderColor =
       this.game.myClientID() === this.data.clientID
-        ? this.game.config().theme().focusedBorderColor()
+        ? theme.focusedBorderColor()
         : defaultBorderColor;
 
     this._borderColor = new Colord(
@@ -278,7 +271,6 @@ export class PlayerView {
     );
 
     // Pre-compute all border color variants once
-    const theme = this.game.config().theme();
     const baseRgb = this._borderColor.toRgb();
 
     // Neutral is just the base color
@@ -456,11 +448,10 @@ export class PlayerView {
     return this.data.incomingAttacks;
   }
 
-  async attackAveragePosition(
-    playerID: number,
-    attackID: string,
-  ): Promise<Cell | null> {
-    return this.game.worker.attackAveragePosition(playerID, attackID);
+  async attackClusteredPositions(
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
+    return this.game.worker.attackClusteredPositions(this.smallID(), attackID);
   }
 
   units(...types: UnitType[]): UnitView[] {
@@ -485,7 +476,7 @@ export class PlayerView {
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.data.name;
+      : this.data.displayName;
   }
 
   clientID(): ClientID | null {
@@ -579,7 +570,33 @@ export class PlayerView {
   }
 
   transitiveTargets(): PlayerView[] {
-    return [...this.targets(), ...this.allies().flatMap((p) => p.targets())];
+    const result: PlayerView[] = [];
+
+    // Add own targets
+    for (const id of this.data.targets) {
+      result.push(this.game.playerBySmallID(id) as PlayerView);
+    }
+
+    // Add allies' targets
+    for (const allyID of this.data.allies) {
+      const ally = this.game.playerBySmallID(allyID) as PlayerView;
+      for (const targetId of ally.data.targets) {
+        result.push(this.game.playerBySmallID(targetId) as PlayerView);
+      }
+    }
+
+    // Add teammates' targets
+    if (this.data.team !== undefined) {
+      for (const p of this.game.playerViews()) {
+        if (p !== this && p.data.team === this.data.team) {
+          for (const targetId of p.data.targets) {
+            result.push(this.game.playerBySmallID(targetId) as PlayerView);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   isTraitor(): boolean {
@@ -634,6 +651,7 @@ export class GameView implements GameMap {
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
+  private updatedTerrainTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
 
@@ -662,26 +680,20 @@ export class GameView implements GameMap {
     private _mapData: TerrainMapData,
     private _myClientID: ClientID | undefined,
     private _myUsername: string,
+    private _myClanTag: string | null,
     private _gameID: GameID,
-    private humans: Player[],
+    humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
-    // Replace the local player's username with their own stored username.
-    // This way the user does not know they are being censored.
-    for (const h of this.humans) {
-      if (h.clientID === this._myClientID) {
-        h.username = this._myUsername;
-      }
-    }
     this._cosmetics = new Map(
-      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
+      humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
-        flag: nation.flag,
+        flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
       } satisfies PlayerCosmetics);
     }
   }
@@ -750,12 +762,16 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
+    this.updatedTerrainTiles = [];
     const packed = this.lastUpdate.packedTileUpdates;
     for (let i = 0; i + 1 < packed.length; i += 2) {
       const tile = packed[i];
       const state = packed[i + 1];
-      this.updateTile(tile, state);
+      const terrainChanged = this.updateTile(tile, state);
       this.updatedTiles.push(tile);
+      if (terrainChanged) {
+        this.updatedTerrainTiles.push(tile);
+      }
     }
 
     if (gu.packedMotionPlans) {
@@ -766,25 +782,38 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
+    const myDisplayName = formatPlayerDisplayName(
+      this._myUsername,
+      this._myClanTag,
+    );
+
     gu.updates[GameUpdateType.Player].forEach((pu) => {
+      // Replace the local player's name/displayName with their own stored values.
+      // This way the user does not know they are being censored.
+      if (pu.clientID === this._myClientID) {
+        pu.name = this._myUsername;
+        pu.displayName = myDisplayName;
+      }
+
       this.smallIDToID.set(pu.smallID, pu.id);
-      const player = this._players.get(pu.id);
+      let player = this._players.get(pu.id);
       if (player !== undefined) {
         player.data = pu;
-        player.nameData = gu.playerNameViewData[pu.id];
+        const nextNameData = gu.playerNameViewData[pu.id];
+        if (nextNameData !== undefined) {
+          player.nameData = nextNameData;
+        }
       } else {
-        this._players.set(
-          pu.id,
-          new PlayerView(
-            this,
-            pu,
-            gu.playerNameViewData[pu.id],
-            // First check human by clientID, then check nation by name.
-            this._cosmetics.get(pu.clientID ?? "") ??
-              this._cosmetics.get(pu.name) ??
-              {},
-          ),
+        player = new PlayerView(
+          this,
+          pu,
+          gu.playerNameViewData[pu.id],
+          // First check human by clientID, then check nation by name.
+          this._cosmetics.get(pu.clientID ?? "") ??
+            this._cosmetics.get(pu.name) ??
+            {},
         );
+        this._players.set(pu.id, player);
       }
     });
 
@@ -1057,6 +1086,10 @@ export class GameView implements GameMap {
     return this.updatedTiles;
   }
 
+  recentlyUpdatedTerrainTiles(): TileRef[] {
+    return this.updatedTerrainTiles;
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
@@ -1240,6 +1273,24 @@ export class GameView implements GameMap {
   magnitude(ref: TileRef): number {
     return this._map.magnitude(ref);
   }
+  terrainByte(ref: TileRef): number {
+    return this._map.terrainByte(ref);
+  }
+  setWater(ref: TileRef): void {
+    this._map.setWater(ref);
+  }
+  setShorelineBit(ref: TileRef): void {
+    this._map.setShorelineBit(ref);
+  }
+  clearShorelineBit(ref: TileRef): void {
+    this._map.clearShorelineBit(ref);
+  }
+  setOcean(ref: TileRef): void {
+    this._map.setOcean(ref);
+  }
+  setMagnitude(ref: TileRef, value: number): void {
+    this._map.setMagnitude(ref, value);
+  }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);
   }
@@ -1301,8 +1352,8 @@ export class GameView implements GameMap {
   tileState(tile: TileRef): number {
     return this._map.tileState(tile);
   }
-  updateTile(tile: TileRef, state: number): void {
-    this._map.updateTile(tile, state);
+  updateTile(tile: TileRef, state: number): boolean {
+    return this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

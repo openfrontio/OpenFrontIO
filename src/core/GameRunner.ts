@@ -1,13 +1,11 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/ConfigLoader";
+import { getGameLogicConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
-  Attack,
   BuildableUnit,
-  Cell,
   Game,
   GameUpdates,
   NameViewData,
@@ -37,7 +35,7 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameStart.config, null);
+  const config = await getGameLogicConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
@@ -52,6 +50,7 @@ export async function createGameRunner(
       p.clientID,
       random.nextID(),
       p.isLobbyCreator ?? false,
+      p.clanTag,
     );
   });
 
@@ -254,24 +253,23 @@ export class GameRunner {
     } as PlayerBorderTiles;
   }
 
-  public attackAveragePosition(
+  public attackClusteredPositions(
     playerID: number,
-    attackID: string,
-  ): Cell | null {
+    attackID?: string,
+  ): { id: string; positions: { x: number; y: number }[] }[] {
     const player = this.game.playerBySmallID(playerID);
-    if (!player.isPlayer()) {
+    if (!player.isPlayer())
       throw new Error(`player with id ${playerID} not found`);
-    }
+    const all = [...player.outgoingAttacks(), ...player.incomingAttacks()];
+    const attacks = attackID ? all.filter((a) => a.id() === attackID) : all;
 
-    const condition = (a: Attack) => a.id() === attackID;
-    const attack =
-      player.outgoingAttacks().find(condition) ??
-      player.incomingAttacks().find(condition);
-    if (attack === undefined) {
-      return null;
-    }
-
-    return attack.averagePosition();
+    return attacks.map((a) => ({
+      id: a.id(),
+      positions: a.clusteredPositions().map((tile) => ({
+        x: this.game.map().x(tile),
+        y: this.game.map().y(tile),
+      })),
+    }));
   }
 
   public bestTransportShipSpawn(

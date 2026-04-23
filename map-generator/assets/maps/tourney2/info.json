@@ -1,0 +1,17 @@
+{
+  "name": "Tourney2",
+  "nations": [
+    {
+      "coordinates": [339, 987],
+      "name": "South West"
+    },
+    {
+      "coordinates": [1162, 990],
+      "name": "South East"
+    },
+    {
+      "coordinates": [750, 278],
+      "name": "North"
+    }
+  ]
+}
