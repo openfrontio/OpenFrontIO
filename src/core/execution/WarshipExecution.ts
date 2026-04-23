@@ -253,15 +253,16 @@ export class WarshipExecution implements Execution {
   }
 
   private startRepairRetreat(): void {
+    const portTile = this.findNearestPort();
+    if (portTile === undefined) {
+      return;
+    }
     this.retreatingForRepair = true;
+    this.retreatPortTile = portTile;
     this.warship.setDocked(false);
     this.activeHealingRemainder = 0;
     this.warship.setRetreating(true);
-    this.retreatPortTile = this.findNearestPort();
     this.warship.setTargetUnit(undefined);
-    if (this.retreatPortTile === undefined) {
-      this.cancelRepairRetreat();
-    }
   }
 
   private cancelRepairRetreat(clearTargetTile = true): void {
