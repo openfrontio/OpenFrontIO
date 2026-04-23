@@ -199,9 +199,13 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private onFullscreenButtonClick() {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn("Failed to enter fullscreen:", err);
+      });
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch((err) => {
+        console.warn("Failed to exit fullscreen:", err);
+      });
     }
   }
 
