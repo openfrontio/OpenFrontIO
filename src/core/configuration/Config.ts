@@ -64,6 +64,7 @@ export interface Config {
   gameConfig(): GameConfig;
   theme(): Theme;
   percentageTilesOwnedToWin(): number;
+  armyLimitWarningThreshold(): number;
   numBots(): number;
   spawnNations(): boolean;
   isUnitDisabled(unitType: UnitType): boolean;

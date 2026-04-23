@@ -2,12 +2,12 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
+import { GameMode, Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -35,6 +35,9 @@ export class ControlPanel extends LitElement implements Layer {
 
   @state()
   private _isVisible = false;
+
+  @state()
+  private _showArmyLimitWarning: boolean = false;
 
   @state()
   private _gold: Gold;
@@ -87,14 +90,24 @@ export class ControlPanel extends LitElement implements Layer {
 
     this.updateTroopIncrease();
 
-    this._maxTroops = this.game.config().maxTroops(player);
+    const config = this.game.config();
+    this._maxTroops = config.maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();
     this._attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
-    this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+    this.troopRate = config.troopIncreaseRate(player) * 10;
+    const isTeamGame = config.gameConfig().gameMode === GameMode.Team;
+    const canDonateTroops = config.donateTroops();
+    if (isTeamGame && canDonateTroops) {
+      const ratio = this._troops / Math.max(this._maxTroops, 1);
+      this._showArmyLimitWarning = ratio >= config.armyLimitWarningThreshold();
+    } else {
+      this._showArmyLimitWarning = false;
+    }
+
     this.requestUpdate();
   }
 
@@ -258,8 +271,21 @@ export class ControlPanel extends LitElement implements Layer {
     `;
   }
 
+  private renderArmyLimitWarning() {
+    if (!this._showArmyLimitWarning) return html``;
+    return html`
+      <div
+        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border border-orange-400/60 bg-orange-400/10 text-orange-300 text-xs font-medium mb-1"
+      >
+        <span class="shrink-0">⚠</span>
+        <span>${translateText("control_panel.army_limit_warning")}</span>
+      </div>
+    `;
+  }
+
   private renderDesktop() {
     return html`
+      ${this.renderArmyLimitWarning()}
       <!-- Row 1: troop rate | troop bar | gold -->
       <div class="flex gap-1.5 items-center mb-1">
         <!-- Troop rate -->
@@ -334,6 +360,7 @@ export class ControlPanel extends LitElement implements Layer {
 
   private renderMobile() {
     return html`
+      ${this.renderArmyLimitWarning()}
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div
