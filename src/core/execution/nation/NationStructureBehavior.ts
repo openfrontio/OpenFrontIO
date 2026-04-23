@@ -561,16 +561,15 @@ export class NationStructureBehavior {
   private portValue(): (tile: TileRef) => number {
     const game = this.game;
     const otherUnits = this.player.units(UnitType.Port);
-    const { structureSpacing } = this.spacingConstants();
 
     return (tile) => {
       let w = 0;
 
-      // Prefer to be away from other structures of the same type
+      // Prefer to be as far as possible from other ports
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
       const [, closestOtherDist] = closestTile(game, otherTiles, tile);
-      w += Math.min(closestOtherDist, structureSpacing);
+      w += closestOtherDist;
 
       return w;
     };
