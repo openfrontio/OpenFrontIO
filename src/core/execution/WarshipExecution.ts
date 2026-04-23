@@ -11,6 +11,7 @@ import { TileRef } from "../game/GameMap";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { findMinimumBy } from "../Util";
 import { ShellExecution } from "./ShellExecution";
 
 export class WarshipExecution implements Execution {
@@ -176,38 +177,36 @@ export class WarshipExecution implements Execution {
 
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
-
-    let bestTile: TileRef | undefined = undefined;
-    let bestDistance = Infinity;
-    for (const port of ports) {
-      const portTile = port.tile();
-      if (
-        warshipComponent !== null &&
-        !this.mg.hasWaterComponent(portTile, warshipComponent)
-      ) {
-        continue;
-      }
-
-      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTile = portTile;
-      }
+    if (warshipComponent === null) {
+      throw new Error(`Warship at tile ${warshipTile} has no water component`);
     }
 
-    return bestTile;
+    const nearest = findMinimumBy(
+      ports,
+      (port) => this.mg.euclideanDistSquared(warshipTile, port.tile()),
+      (port) => {
+        const portComponent = this.mg.getWaterComponent(port.tile());
+        if (portComponent === null) {
+          throw new Error(`Port at tile ${port.tile()} has no water component`);
+        }
+        return portComponent === warshipComponent;
+      },
+    );
+
+    return nearest?.tile();
   }
 
   private startRepairRetreat(): void {
+    const portTile = this.findNearestPort();
+    if (portTile === undefined) {
+      return;
+    }
     this.retreatingForRepair = true;
+    this.retreatPortTile = portTile;
     this.docked = false;
     this.activeHealingRemainder = 0;
     this.warship.setRetreating(true);
-    this.retreatPortTile = this.findNearestPort();
     this.warship.setTargetUnit(undefined);
-    if (this.retreatPortTile === undefined) {
-      this.cancelRepairRetreat();
-    }
   }
 
   private cancelRepairRetreat(clearTargetTile = true): void {
