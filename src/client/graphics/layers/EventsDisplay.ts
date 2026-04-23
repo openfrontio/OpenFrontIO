@@ -113,7 +113,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private loadFilter(category: MessageCategory){
-    const state = localStorage.getItem(category) === "true" ?? false;
+    const state = localStorage.getItem(category) === "true";
     this.eventsFilters.set(category, state);
   }
 
@@ -178,7 +178,7 @@ export class EventsDisplay extends LitElement implements Layer {
     const currentState = this.eventsFilters.get(filterName) ?? false;
     const nextState = !currentState;
     this.eventsFilters.set(filterName, nextState);
-    localStorage.setItem(filterName, nextState);
+    localStorage.setItem(filterName, nextState.toString());
     this.requestUpdate();
   }
 
