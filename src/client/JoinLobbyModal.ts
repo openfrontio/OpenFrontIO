@@ -463,8 +463,7 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private handleEnableNotifications() {
-    this.showNotificationPrompt = false;
-
+    // Don't hide the prompt — NotificationPrompt manages visibility via promptState.
     if (!("Notification" in window)) return;
 
     if (Notification.permission === "granted") {
@@ -475,7 +474,6 @@ export class JoinLobbyModal extends BaseModal {
       this.notificationDeniedHint = translateText(
         "notification_prompt.denied_hint",
       );
-      this.showNotificationPrompt = true;
     } else if (Notification.permission === "default") {
       Notification.requestPermission()
         .then((permission) => {
