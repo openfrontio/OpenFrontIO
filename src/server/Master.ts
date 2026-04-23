@@ -10,7 +10,9 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
-import { renderHtml } from "./RenderHtml";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
+import { renderAppShell } from "./RenderHtml";
+import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -26,11 +28,14 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 
-// Middleware to handle HTML files with EJS templating
+// Serve the shared app shell for the root document.
 app.use(async (req, res, next) => {
   if (req.path === "/") {
     try {
-      await renderHtml(res, path.join(__dirname, "../../static/index.html"));
+      await renderAppShell(
+        res,
+        path.join(__dirname, "../../static/index.html"),
+      );
     } catch (error) {
       log.error("Error rendering index.html:", error);
       res.status(500).send("Internal Server Error");
@@ -43,16 +48,11 @@ app.use(async (req, res, next) => {
 app.use(
   express.static(path.join(__dirname, "../../static"), {
     maxAge: "1y", // Set max-age to 1 year for all static assets
-    setHeaders: (res, path) => {
-      // You can conditionally set different cache times based on file types
-      if (path.match(/\.(js|css|svg)$/)) {
-        // JS, CSS, SVG get long cache with immutable
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      } else if (path.match(/\.(bin|dat|exe|dll|so|dylib)$/)) {
-        // Binary files also get long cache with immutable
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      }
-      // Other file types use the default maxAge setting
+    setHeaders: (res) => {
+      applyStaticAssetCacheControl(
+        res.setHeader.bind(res),
+        res.req.originalUrl,
+      );
     },
   }),
 );
@@ -64,6 +64,11 @@ app.use(
     max: 20, // 20 requests per IP per second
   }),
 );
+
+app.use("/api", (_req, res, next) => {
+  setNoStoreHeaders(res);
+  next();
+});
 
 // Start the master process
 export async function startMaster() {
@@ -137,14 +142,6 @@ export async function startMaster() {
   });
 }
 
-app.get("/api/env", async (req, res) => {
-  const envConfig = {
-    game_env: process.env.GAME_ENV,
-  };
-  if (!envConfig.game_env) return res.sendStatus(500);
-  res.json(envConfig);
-});
-
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;
   if (ready) {
@@ -154,11 +151,17 @@ app.get("/api/health", (_req, res) => {
   }
 });
 
+app.get("/api/instance", (_req, res) => {
+  res.json({
+    instanceId: process.env.INSTANCE_ID ?? "undefined",
+  });
+});
+
 // SPA fallback route
-app.get("*", async function (_req, res) {
+app.get("/{*splat}", async function (_req, res) {
   try {
     const htmlPath = path.join(__dirname, "../../static/index.html");
-    await renderHtml(res, htmlPath);
+    await renderAppShell(res, htmlPath);
   } catch (error) {
     log.error("Error rendering SPA fallback:", error);
     res.status(500).send("Internal Server Error");

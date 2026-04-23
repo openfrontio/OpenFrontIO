@@ -51,7 +51,7 @@ describe("Ranking class", () => {
         players: [
           {
             clientID: "p1",
-            username: "[X] Alice",
+            username: "Alice",
             clanTag: "X",
             cosmetics: { flag: "USA" },
             stats: {
@@ -69,6 +69,7 @@ describe("Ranking class", () => {
           {
             clientID: "p2",
             username: "Bob",
+            clanTag: null,
             stats: {
               units: { city: [2n, 0n, 0n, 2n] },
               conquests: [8n],
@@ -84,6 +85,7 @@ describe("Ranking class", () => {
           {
             clientID: "p3",
             username: "Charlie",
+            clanTag: null,
             stats: {
               // no units, but has conquests/killedAt to count as played
               conquests: [8n],

@@ -2,6 +2,7 @@ import {
   Difficulty,
   Game,
   GameMode,
+  GameType,
   HumansVsNations,
   Player,
   PlayerID,
@@ -108,15 +109,15 @@ export class AiAttackBehavior {
       return;
     }
 
-    // Check if we have any ocean shore tiles to launch from
-    const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isOceanShore(t),
+    // Check if we have any shore tiles to launch from
+    const shore = Array.from(this.player.borderTiles()).filter((t) =>
+      this.game.isShore(t),
     );
-    if (oceanShore.length === 0) {
+    if (shore.length === 0) {
       return;
     }
 
-    const src = this.random.randElement(oceanShore);
+    const src = this.random.randElement(shore);
 
     // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
     let dst = this.findRandomBoatTarget(src, borderingEnemies, true);
@@ -378,8 +379,10 @@ export class AiAttackBehavior {
   }
 
   findIncomingAttackPlayer(): Player | null {
+    let incomingAttacks = this.player
+      .incomingAttacks()
+      .filter((attack) => !this.player.isFriendly(attack.attacker()));
     // Ignore bot attacks if we are not a bot.
-    let incomingAttacks = this.player.incomingAttacks();
     if (this.player.type() !== PlayerType.Bot) {
       incomingAttacks = incomingAttacks.filter(
         (attack) => attack.attacker().type() !== PlayerType.Bot,
@@ -573,11 +576,11 @@ export class AiAttackBehavior {
       return null;
     }
 
-    // Check if we have any ocean shore tiles to launch from
-    const hasOceanShore = Array.from(this.player.borderTiles()).some((t) =>
-      this.game.isOceanShore(t),
+    // Check if we have any shore tiles to launch from
+    const hasShore = Array.from(this.player.borderTiles()).some((t) =>
+      this.game.isShore(t),
     );
-    if (!hasOceanShore) return null;
+    if (!hasShore) return null;
 
     const filteredPlayers = this.game.players().filter((p) => {
       if (p === this.player) return false;
@@ -614,10 +617,10 @@ export class AiAttackBehavior {
       const closest = closestTwoTiles(
         this.game,
         Array.from(this.player.borderTiles()).filter((t) =>
-          this.game.isOceanShore(t),
+          this.game.isShore(t),
         ),
         Array.from(entry.player.borderTiles()).filter((t) =>
-          this.game.isOceanShore(t),
+          this.game.isShore(t),
         ),
       );
       if (closest === null) continue;
@@ -785,10 +788,8 @@ export class AiAttackBehavior {
   private sendBoatAttack(target: Player) {
     const closest = closestTwoTiles(
       this.game,
-      Array.from(this.player.borderTiles()).filter((t) =>
-        this.game.isOceanShore(t),
-      ),
-      Array.from(target.borderTiles()).filter((t) => this.game.isOceanShore(t)),
+      Array.from(this.player.borderTiles()).filter((t) => this.game.isShore(t)),
+      Array.from(target.borderTiles()).filter((t) => this.game.isShore(t)),
     );
     if (closest === null) {
       return;
@@ -843,6 +844,11 @@ export class AiAttackBehavior {
   private donateTroops(): boolean {
     // Only donate in team games
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return false;
+    }
+
+    // Don't donate in public games (To balance HvN)
+    if (this.game.config().gameConfig().gameType === GameType.Public) {
       return false;
     }
 

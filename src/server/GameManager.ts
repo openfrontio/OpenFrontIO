@@ -46,11 +46,11 @@ export class GameManager {
     persistentID: string,
     gameID: GameID,
     lastTurn: number = 0,
-    newUsername?: string,
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.rejoinClient(ws, persistentID, lastTurn, newUsername);
+    return game.rejoinClient(ws, persistentID, lastTurn, identityUpdate);
   }
 
   createGame(
@@ -59,7 +59,12 @@ export class GameManager {
     creatorPersistentID?: string,
     startsAt?: number,
     publicGameType?: PublicGameType,
-  ) {
+  ): GameServer | null {
+    if (this.games.has(id)) {
+      this.log.warn("cannot create game, id already exists", { gameID: id });
+      return null;
+    }
+
     const game = new GameServer(
       id,
       this.log,
@@ -71,7 +76,7 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Medium,
+        difficulty: Difficulty.Easy,
         nations: "default",
         infiniteGold: false,
         infiniteTroops: false,
@@ -104,11 +109,10 @@ export class GameManager {
   }
 
   desyncCount(): number {
-    let totalDesyncs = 0;
-    this.games.forEach((game: GameServer) => {
-      totalDesyncs += game.desyncCount;
-    });
-    return totalDesyncs;
+    return [...this.games.values()].reduce(
+      (acc, game) => acc + game.numDesyncedClients(),
+      0,
+    );
   }
 
   tick() {

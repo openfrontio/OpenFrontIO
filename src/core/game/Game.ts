@@ -2,7 +2,7 @@ import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { getClanTag } from "../Util";
+import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -120,6 +120,10 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Tourney1 = "Tourney 2 Teams",
+  Tourney2 = "Tourney 3 Teams",
+  Tourney3 = "Tourney 4 Teams",
+  Tourney4 = "Tourney 8 Teams",
   Passage = "Passage",
   Sierpinski = "Sierpinski",
   TheBox = "The Box",
@@ -139,6 +143,16 @@ export enum GameMapType {
   Arctic = "Arctic",
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
+  MilkyWay = "MilkyWay",
+  Mediterranean = "Mediterranean",
+  Dyslexdria = "Dyslexdria",
+  GreatLakes = "Great Lakes",
+  StraitOfMalacca = "Strait Of Malacca",
+  Luna = "Luna",
+  Conakry = "Conakry",
+  Caucasus = "Caucasus",
+  BeringSea = "Bering Sea",
+  Antarctica = "Antarctica",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -154,6 +168,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.Antarctica,
   ],
   regional: [
     GameMapType.BritanniaClassic,
@@ -190,6 +205,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Arctic,
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
+    GameMapType.Mediterranean,
+    GameMapType.GreatLakes,
+    GameMapType.StraitOfMalacca,
+    GameMapType.Conakry,
+    GameMapType.Caucasus,
+    GameMapType.BeringSea,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -203,12 +224,21 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
+    GameMapType.MilkyWay,
+    GameMapType.Dyslexdria,
+    GameMapType.Luna,
   ],
   arcade: [
     GameMapType.TheBox,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
+  ],
+  tournament: [
+    GameMapType.Tourney1,
+    GameMapType.Tourney2,
+    GameMapType.Tourney3,
+    GameMapType.Tourney4,
   ],
 };
 
@@ -238,13 +268,18 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
   goldMultiplier?: number;
-  isAlliancesDisabled: boolean;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
+  isWaterNukes?: boolean;
 }
 
 export interface UnitInfo {
@@ -470,7 +505,7 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
-  averagePosition(): Cell | null;
+  clusteredPositions(): TileRef[];
 }
 
 export interface AllianceRequest {
@@ -503,7 +538,7 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
-  public readonly clan: string | null;
+  public readonly displayName: string;
 
   constructor(
     public readonly name: string,
@@ -513,8 +548,9 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
+    public readonly clanTag: string | null = null,
   ) {
-    this.clan = getClanTag(name);
+    this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
 }
 
@@ -707,7 +743,6 @@ export interface Player {
   // Either allied or on same team.
   isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
-  clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
@@ -892,6 +927,17 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+  /**
+   * Returns the set of water components that `player` shares with at least one
+   * valid trade partner (cached). Used by nation AI for port-placement
+   * heuristics. `null` means no usable water body for ports.
+   */
+  sharedWaterComponents(player: Player): Set<number> | null;
+  /** Incremented each time the water navigation graph is rebuilt (e.g. after nuke terrain change). */
+  waterGraphVersion(): number;
+
+  /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
+  queueWaterConversion(tile: TileRef): void;
 }
 
 export interface PlayerActions {

@@ -160,7 +160,7 @@ export class SendHashEvent implements GameEvent {
 
 export class MoveWarshipIntentEvent implements GameEvent {
   constructor(
-    public readonly unitId: number,
+    public readonly unitIds: number[],
     public readonly tile: number,
   ) {}
 }
@@ -399,6 +399,7 @@ export class Transport {
       gameID: this.lobbyConfig.gameID,
       // Note: clientID is not sent - server assigns it based on persistentID
       username: this.lobbyConfig.playerName,
+      clanTag: this.lobbyConfig.playerClanTag ?? null,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
       token: await getPlayToken(),
@@ -617,7 +618,7 @@ export class Transport {
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
       type: "move_warship",
-      unitId: event.unitId,
+      unitIds: event.unitIds,
       tile: event.tile,
     });
   }

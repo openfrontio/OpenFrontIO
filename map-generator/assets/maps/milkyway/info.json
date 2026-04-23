@@ -1,0 +1,35 @@
+{
+  "name": "milkyway",
+  "nations": [
+    {
+      "coordinates": [775, 757],
+      "name": "Sagittarius A*",
+      "flag": ""
+    },
+    {
+      "coordinates": [967, 247],
+      "name": "Perseus Arm",
+      "flag": ""
+    },
+    {
+      "coordinates": [478, 1139],
+      "name": "Centaurus Arm",
+      "flag": ""
+    },
+    {
+      "coordinates": [840, 1048],
+      "name": "Empire of Mankind",
+      "flag": "un"
+    },
+    {
+      "coordinates": [1055, 1330],
+      "name": "Aliens",
+      "flag": ""
+    },
+    {
+      "coordinates": [531, 164],
+      "name": "The Void",
+      "flag": "Cthulhu Republic"
+    }
+  ]
+}

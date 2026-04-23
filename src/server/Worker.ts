@@ -26,8 +26,10 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -48,7 +50,10 @@ export async function startWorker() {
   const app = express();
   app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 1024 * 1024, // 1MB
+  });
 
   const gm = new GameManager(config, log);
 
@@ -103,10 +108,16 @@ export async function startWorker() {
   app.use(compression());
   app.use(express.json());
 
-  // Configure MIME types for webp files
-  express.static.mime.define({ "image/webp": ["webp"] });
-
-  app.use(express.static(path.join(__dirname, "../../out")));
+  app.use(
+    express.static(path.join(__dirname, "../../out"), {
+      setHeaders: (res) => {
+        applyStaticAssetCacheControl(
+          res.setHeader.bind(res),
+          res.req.originalUrl,
+        );
+      },
+    }),
+  );
   app.use(
     "/maps",
     express.static(path.join(__dirname, "../../static/maps"), {
@@ -124,6 +135,11 @@ export async function startWorker() {
       max: 20, // 20 requests per IP per second
     }),
   );
+
+  app.use("/api", (_req, res, next) => {
+    setNoStoreHeaders(res);
+    next();
+  });
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;
@@ -183,6 +199,10 @@ export async function startWorker() {
 
     // Pass creatorPersistentID to createGame
     const game = gm.createGame(id, gc, creatorPersistentID);
+    if (game === null) {
+      log.warn(`cannot create game, id ${id} already exists`);
+      return res.status(409).json({ error: "Game ID already exists" });
+    }
 
     log.info(
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? GameType.Public : GameType.Private}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
@@ -280,11 +300,7 @@ export async function startWorker() {
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on("message", async (message: string) => {
-      const forwarded = req.headers["x-forwarded-for"];
-      const ip = Array.isArray(forwarded)
-        ? forwarded[0]
-        : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-          forwarded || req.socket.remoteAddress || "unknown";
+      const ip = getClientIp(req);
 
       try {
         // Parse and handle client messages
@@ -335,6 +351,11 @@ export async function startWorker() {
         }
         const { persistentId, claims } = result;
 
+        if (claims?.role === "banned") {
+          ws.close(1002, "Account Banned");
+          return;
+        }
+
         if (clientMsg.type === "rejoin") {
           log.info("rejoining game", {
             gameID: clientMsg.gameID,
@@ -355,25 +376,25 @@ export async function startWorker() {
           return;
         }
 
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        const { clanTag: censoredClanTag, username: censoredUsername } =
+          privilegeRefresher
+            .get()
+            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+
         // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization (but pass updated username
-        // so players can rename in the pre-game lobby)
-        const censoredUsername = privilegeRefresher
-          .get()
-          .censorUsername(clientMsg.username);
+        // If successful, skip all authorization
         if (
-          gm.rejoinClient(
-            ws,
-            persistentId,
-            clientMsg.gameID,
-            0,
-            censoredUsername,
-          )
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: censoredClanTag,
+          })
         ) {
           return;
         }
 
-        let roles: string[] | undefined;
         let flares: string[] | undefined;
 
         const allowedFlares = config.allowedFlares();
@@ -394,7 +415,6 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          roles = result.response.player.roles;
           flares = result.response.player.flares;
 
           if (allowedFlares !== undefined) {
@@ -456,11 +476,11 @@ export async function startWorker() {
           generateID(),
           persistentId,
           claims,
-          roles,
+          claims?.role ?? null,
           flares,
           ip,
           censoredUsername,
-          clientMsg.username,
+          censoredClanTag,
           ws,
           cosmeticResult.cosmetics,
         );
@@ -573,12 +593,15 @@ async function startMatchmakingPolling(gm: GameManager) {
         log.info(`Lobby poll successful:`, data);
 
         if (data.assignment) {
-          gm.createGame(
+          const game = gm.createGame(
             gameId,
             playlist.get1v1Config(),
             undefined,
             Date.now() + 7000,
           );
+          if (game === null) {
+            log.warn(`Failed to create matchmaking game ${gameId}`);
+          }
         }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -605,4 +628,10 @@ function generateGameIdForWorker(): GameID | null {
   }
   log.warn(`Failed to generate game ID for worker ${workerId}`);
   return null;
+}
+
+function getClientIp(req: http.IncomingMessage): string {
+  const cfIp = req.headers["cf-connecting-ip"];
+  if (typeof cfIp === "string" && cfIp) return cfIp;
+  return req.socket.remoteAddress ?? "unknown";
 }

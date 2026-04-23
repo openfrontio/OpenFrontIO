@@ -1,0 +1,50 @@
+{
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 442979,
+    "width": 1500
+  },
+  "map16x": {
+    "height": 375,
+    "num_land_tiles": 24807,
+    "width": 375
+  },
+  "map4x": {
+    "height": 750,
+    "num_land_tiles": 106678,
+    "width": 750
+  },
+  "name": "milkyway",
+  "nations": [
+    {
+      "coordinates": [775, 757],
+      "flag": "",
+      "name": "Sagittarius A*"
+    },
+    {
+      "coordinates": [967, 247],
+      "flag": "",
+      "name": "Perseus Arm"
+    },
+    {
+      "coordinates": [478, 1139],
+      "flag": "",
+      "name": "Centaurus Arm"
+    },
+    {
+      "coordinates": [840, 1048],
+      "flag": "un",
+      "name": "Empire of Mankind"
+    },
+    {
+      "coordinates": [1055, 1330],
+      "flag": "",
+      "name": "Aliens"
+    },
+    {
+      "coordinates": [531, 164],
+      "flag": "Cthulhu Republic",
+      "name": "The Void"
+    }
+  ]
+}

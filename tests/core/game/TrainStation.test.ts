@@ -24,11 +24,19 @@ vi.mock("../../../src/core/PseudoRandom");
 
 describe("TrainStation", () => {
   let game: Mocked<Game>;
+  let gameStats: {
+    trainExternalTrade: ReturnType<typeof vi.fn>;
+    trainSelfTrade: ReturnType<typeof vi.fn>;
+  };
   let unit: Mocked<Unit>;
   let player: Mocked<Player>;
   let trainExecution: Mocked<TrainExecution>;
 
   beforeEach(() => {
+    gameStats = {
+      trainExternalTrade: vi.fn(),
+      trainSelfTrade: vi.fn(),
+    };
     game = {
       ticks: vi.fn().mockReturnValue(123),
       config: vi.fn().mockReturnValue({
@@ -37,16 +45,15 @@ describe("TrainStation", () => {
       }),
       addUpdate: vi.fn(),
       addExecution: vi.fn(),
-      stats: vi.fn().mockReturnValue({
-        trainExternalTrade: vi.fn(),
-        trainSelfTrade: vi.fn(),
-      }),
+      stats: vi.fn().mockReturnValue(gameStats),
     } as any;
 
     player = {
       addGold: vi.fn(),
       id: 1,
       canTrade: vi.fn().mockReturnValue(true),
+      isAlliedWith: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
       isFriendly: vi.fn().mockReturnValue(false),
     } as any;
 
@@ -89,6 +96,38 @@ describe("TrainStation", () => {
     );
   });
 
+  it("records external trade on the station owner", () => {
+    const stationOwner = {
+      addGold: vi.fn(),
+      id: 1,
+      canTrade: vi.fn().mockReturnValue(true),
+      isAlliedWith: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
+    } as any;
+    const trainOwner = {
+      addGold: vi.fn(),
+      id: 2,
+      canTrade: vi.fn().mockReturnValue(true),
+      isAlliedWith: vi.fn().mockReturnValue(false),
+      isOnSameTeam: vi.fn().mockReturnValue(false),
+    } as any;
+
+    unit.type.mockReturnValue(UnitType.City);
+    unit.owner.mockReturnValue(stationOwner);
+    trainExecution.owner.mockReturnValue(trainOwner);
+    const station = new TrainStation(game, unit);
+
+    station.onTrainStop(trainExecution);
+
+    expect(stationOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
+    expect(trainOwner.addGold).toHaveBeenCalledWith(500n, unit.tile());
+    expect(gameStats.trainExternalTrade).toHaveBeenCalledWith(
+      stationOwner,
+      500n,
+    );
+    expect(gameStats.trainSelfTrade).toHaveBeenCalledWith(trainOwner, 500n);
+  });
+
   it("passes tradeStopsVisited to trainGold", () => {
     unit.type.mockReturnValue(UnitType.City);
     const trainGoldSpy = vi.fn().mockReturnValue(500n);
@@ -100,7 +139,11 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(trainGoldSpy).toHaveBeenCalledWith(expect.any(String), 3);
+    expect(trainGoldSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      3,
+      expect.anything(),
+    );
   });
 
   it("checks trade availability (same owner)", () => {
@@ -165,6 +208,7 @@ describe("TrainStation", () => {
 
 describe("DefaultConfig.trainGold trade stop penalty", () => {
   let config: DefaultConfig;
+  let mockPlayer: Player;
 
   beforeEach(() => {
     const serverConfig = new TestServerConfig();
@@ -190,38 +234,38 @@ describe("DefaultConfig.trainGold trade stop penalty", () => {
       new UserSettings(),
       false,
     );
+    mockPlayer = { isLobbyCreator: () => false } as unknown as Player;
   });
 
-  it("returns full base gold within free window (stops 0-2)", () => {
-    // first 3 stops (0, 1, 2) are free — no penalty
-    expect(config.trainGold("self", 0)).toBe(10_000n);
-    expect(config.trainGold("self", 1)).toBe(10_000n);
-    expect(config.trainGold("self", 2)).toBe(10_000n);
+  it("returns full base gold within free window (stops 0-9)", () => {
+    // first 10 stops (0-9) are free — no penalty
+    expect(config.trainGold("self", 0, mockPlayer)).toBe(10_000n);
+    expect(config.trainGold("self", 9, mockPlayer)).toBe(10_000n);
   });
 
   it("reduces gold by 5k per stop after the free window", () => {
-    // stop 3: effective = 3-2 = 1 -> 10k - 5k = 5k
-    expect(config.trainGold("self", 3)).toBe(5_000n);
+    // stop 10: effective = 10-9 = 1 -> 10k - 5k = 5k
+    expect(config.trainGold("self", 10, mockPlayer)).toBe(5_000n);
   });
 
   it("floors at 5k when penalty exceeds base gold", () => {
-    // stop 5: effective = 3 -> 10k - 15k -> floor at 5k
-    expect(config.trainGold("self", 5)).toBe(5_000n);
+    // stop 12: effective = 3 -> 10k - 15k -> floor at 5k
+    expect(config.trainGold("self", 12, mockPlayer)).toBe(5_000n);
   });
 
   it("floors at 5k for ally base even with heavy penalty", () => {
-    // ally base 35k, stop 20: effective = 18 -> penalty 90k -> floor at 5k
-    expect(config.trainGold("ally", 20)).toBe(5_000n);
+    // ally base 35k, stop 20: effective = 11 -> penalty 55k -> floor at 5k
+    expect(config.trainGold("ally", 20, mockPlayer)).toBe(5_000n);
   });
 
   it("ally base gold reduces correctly after free window", () => {
-    // ally base 35k, stop 4: effective = 2 -> 35k - 10k = 25k
-    expect(config.trainGold("ally", 4)).toBe(25_000n);
+    // ally base 35k, stop 11: effective = 2 -> 35k - 10k = 25k
+    expect(config.trainGold("ally", 11, mockPlayer)).toBe(25_000n);
   });
 
   it("other/team base gold reduces correctly after free window", () => {
-    // other base 25k, stop 3: effective = 1 -> 25k - 5k = 20k
-    expect(config.trainGold("other", 3)).toBe(20_000n);
-    expect(config.trainGold("team", 3)).toBe(20_000n);
+    // other base 25k, stop 10: effective = 1 -> 25k - 5k = 20k
+    expect(config.trainGold("other", 10, mockPlayer)).toBe(20_000n);
+    expect(config.trainGold("team", 10, mockPlayer)).toBe(20_000n);
   });
 });

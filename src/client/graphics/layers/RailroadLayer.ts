@@ -155,12 +155,30 @@ export class RailroadLayer implements Layer {
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
 
+    // Firefox's GPU limit is 8192, only known browser issue
+    const maxTextureSize = 8192;
+    const scaleX = maxTextureSize / this.game.width();
+    const scaleY = maxTextureSize / this.game.height();
+    const targetScale = Math.min(2, scaleX, scaleY);
+
+    this.canvas.width = Math.max(
+      1,
+      Math.floor(this.game.width() * targetScale),
+    );
+    this.canvas.height = Math.max(
+      1,
+      Math.floor(this.game.height() * targetScale),
+    );
+
     // Enable smooth scaling
     this.context.imageSmoothingEnabled = true;
     this.context.imageSmoothingQuality = "high";
 
-    this.canvas.width = this.game.width() * 2;
-    this.canvas.height = this.game.height() * 2;
+    // Scale context so existing *2 rendering math continues to work automatically
+    this.context.scale(
+      this.canvas.width / (this.game.width() * 2),
+      this.canvas.height / (this.game.height() * 2),
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const [_, rail] of this.existingRailroads) {
@@ -215,10 +233,13 @@ export class RailroadLayer implements Layer {
       return;
     }
 
-    const srcX = visLeft * 2;
-    const srcY = visTop * 2;
-    const srcW = visWidth * 2;
-    const srcH = visHeight * 2;
+    const actualScaleX = this.canvas.width / this.game.width();
+    const actualScaleY = this.canvas.height / this.game.height();
+
+    const srcX = visLeft * actualScaleX;
+    const srcY = visTop * actualScaleY;
+    const srcW = visWidth * actualScaleX;
+    const srcH = visHeight * actualScaleY;
 
     const dstX = -this.game.width() / 2 + visLeft;
     const dstY = -this.game.height() / 2 + visTop;

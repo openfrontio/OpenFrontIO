@@ -1,0 +1,1171 @@
+
+> test
+> vitest run && vitest run tests/server tests/client/graphics/UILayer.test.ts
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/Alex/Desktop/OpenFrontIO[39m
+
+stderr | tests/client/LeaderboardModal.test.ts
+Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+
+stderr | tests/client/components/FluentSlider.test.ts
+Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+
+ [32m✓[39m tests/server/PublicAssetManifest.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 222[2mms[22m[39m
+ [32m✓[39m tests/client/components/FluentSlider.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 162[2mms[22m[39m
+ [31m❯[39m tests/client/graphics/UILayer.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 18[2mms[22m[39m
+     [32m✓[39m should initialize and redraw canvas[32m 5[2mms[22m[39m
+     [32m✓[39m should handle unit selection event[32m 2[2mms[22m[39m
+[31m     [31m×[31m should add and clear health bars[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m should remove health bars for inactive units[39m[32m 1[2mms[22m[39m
+     [32m✓[39m should add loading bar for unit[32m 2[2mms[22m[39m
+     [32m✓[39m should remove loading bar for inactive unit[32m 1[2mms[22m[39m
+     [32m✓[39m should remove loading bar for a finished progress bar[32m 1[2mms[22m[39m
+stderr | tests/client/LeaderboardModal.test.ts > LeaderboardModal > Modal Interaction > should switch to clans tab and request clan leaderboard data
+loadPlayerLeaderboard: request failed TypeError: Cannot read properties of undefined (reading 'ok')
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/LeaderboardModal.test.ts:60:16
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+stderr | tests/client/LeaderboardModal.test.ts > LeaderboardModal > Modal Interaction > should render an error state when clan leaderboard fails
+loadClanLeaderboard: request failed Error: Failed to load clan leaderboard
+    at LeaderboardClanTable.loadClanLeaderboard (C:/Users/Alex/Desktop/OpenFrontIO/src/client/components/leaderboard/LeaderboardClanTable.ts:43:24)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/LeaderboardModal.test.ts:377:7
+    at file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/runner/dist/index.js:915:20
+
+ [32m✓[39m tests/client/LeaderboardModal.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 238[2mms[22m[39m
+ [32m✓[39m tests/MapConsistency.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 79[2mms[22m[39m
+[90mstdout[2m | tests/server/GameLifecycle.test.ts
+[22m[39mNo OTLP endpoint and credentials provided, remote logging disabled
+
+[90mstdout[2m | tests/AllianceDonation.test.ts[2m > [22m[2mAlliance Donation[2m > [22m[2mCan donate gold after alliance formed by reply
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould call checkWinnerFFA in FFA mode
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould call checkWinnerTeam in non-FFA mode
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceDonation.test.ts[2m > [22m[2mAlliance Donation[2m > [22m[2mCan donate troops after alliance formed by reply
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould set winner in FFA if percentage is reached
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceDonation.test.ts[2m > [22m[2mAlliance Donation[2m > [22m[2mCan donate gold after alliance formed by mutual request
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould set winner in FFA if percentage is reached
+[22m[39mP1 has won the game
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould set winner in FFA if timer is 0
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceDonation.test.ts[2m > [22m[2mAlliance Donation[2m > [22m[2mCan donate troops after alliance formed by mutual request
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/AllianceDonation.test.ts[2m > [22m[2mAlliance Donation[2m > [22m[2mCan donate immediately after accepting alliance (race condition)
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/AllianceDonation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould set winner in FFA if timer is 0
+[22m[39mP1 has won the game
+
+[90mstdout[2m | tests/core/pathfinding/PathFinding.Water.test.ts[2m > [22m[2mPathFinding.Water
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould not set winner if no players
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationMIRV.test.ts[2m > [22m[2mNation MIRV Retaliation[2m > [22m[2mnation retaliates with MIRV when attacked by MIRV
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution[2m > [22m[2mshould return false for activeDuringSpawnPhase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/DeleteUnitExecution.test.ts[2m > [22m[2mDeleteUnitExecution Security Tests[2m > [22m[2mSecurity Validations[2m > [22m[2mshould prevent deleting units not owned by player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould set Nation as winner when reaching 80% territory
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/DeleteUnitExecution.test.ts > DeleteUnitExecution Security Tests > Security Validations > should prevent deleting units not owned by player
+SECURITY: unit 2 not found or not owned by player TestPlayer
+
+[90mstdout[2m | tests/DeleteUnitExecution.test.ts[2m > [22m[2mDeleteUnitExecution Security Tests[2m > [22m[2mSecurity Validations[2m > [22m[2mshould prevent deleting units on enemy territory
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/DeleteUnitExecution.test.ts > DeleteUnitExecution Security Tests > Security Validations > should prevent deleting units on enemy territory
+SECURITY: unit 1 is not on player's territory
+
+[90mstdout[2m | tests/DeleteUnitExecution.test.ts[2m > [22m[2mDeleteUnitExecution Security Tests[2m > [22m[2mSecurity Validations[2m > [22m[2mshould prevent deleting units during spawn phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship heals only if player has port
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mPlayer disconnected state[2m > [22m[2mshould initialize players as not disconnected
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack[2m > [22m[2mNuke reduce attacking troop counts
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should launch successfully
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mPlayer disconnected state[2m > [22m[2mshould mark player as disconnected and not disconnected
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/DeleteUnitExecution.test.ts > DeleteUnitExecution Security Tests > Security Validations > should prevent deleting units during spawn phase
+SECURITY: cannot delete units during spawn phase
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should break alliances on launch
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/DeleteUnitExecution.test.ts[2m > [22m[2mDeleteUnitExecution Security Tests[2m > [22m[2mSecurity Validations[2m > [22m[2mshould allow deleting units when all conditions are met
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mPlayer disconnected state[2m > [22m[2mshould include disconnected state in player update
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship captures trade if player has port
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship do not capture trade if player has no port
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mPlayer view[2m > [22m[2mshould reflect disconnected state in player view
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/DeleteUnitExecution.test.ts[2m > [22m[2mDeleteUnitExecution Security Tests[2m > [22m[2mSecurity Validations[2m > [22m[2mshould delete after deletion delay
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should separate into warheads
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mPlayer view[2m > [22m[2mshould maintain disconnected state in view across game ticks
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mMarkDisconnectedExecution[2m > [22m[2mshould mark player as disconnected when executed
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship does not target trade ships that are safe from pirates
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/DeleteUnitExecution.test.ts[2m > [22m[2mDeleteUnitExecution Security Tests[2m > [22m[2mSecurity Validations[2m > [22m[2mshould reset deletion if captured
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mMarkDisconnectedExecution[2m > [22m[2mshould handle multiple players with different disconnected states
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship moves to new patrol tile
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mMarkDisconnectedExecution[2m > [22m[2mshould not be active during spawn phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mMarkDisconnectedExecution[2m > [22m[2mshould handle multiple executions for same player in same tick
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship does not not target trade ships outside of patrol range
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship prioritizes transport ships over warships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected state persistence[2m > [22m[2mshould maintain disconnected state across game ticks
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mMoveWarshipExecution fails if player is not the owner
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/DeleteUnitExecution.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected state persistence[2m > [22m[2mshould maintain disconnected state in player updates across ticks
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mEdge cases[2m > [22m[2mshould handle marking same disconnected state multiple times
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mEdge cases[2m > [22m[2mshould handle execution with same disconnected state
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mTeam Warships should not attack disconnected team mate ships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Team Warships should not attack disconnected team mate ships
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mTeam Warships should not attack disconnected team mate ships
+[22m[39m[GameImpl] Constructor total: 3ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould set Nation as winner when reaching 80% territory
+[22m[39mTestNation has won the game
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould set Nation as winner when timer expires with most territory
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mDisconnected player Warship should not attack team members' ships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Disconnected player Warship should not attack team members' ships
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mDisconnected player Warship should not attack team members' ships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Warship.test.ts > Warship > MoveWarshipExecution fails if player is not the owner
+MoveWarshipExecution: warship not found
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mPlayer can attack disconnected team mate without troop loss
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mMoveWarshipExecution fails if warship is not active
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationMIRV.test.ts[2m > [22m[2mNation MIRV Retaliation[2m > [22m[2mnation launches MIRV to prevent victory when player approaches win condition
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Warship.test.ts > Warship > MoveWarshipExecution fails if warship is not active
+MoveWarshipExecution: warship not found
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack[2m > [22m[2mNuke reduce attacking boat troop count
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mMoveWarshipExecution fails gracefully if warship not found
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Warship.test.ts > Warship > MoveWarshipExecution fails gracefully if warship not found
+MoveWarshipExecution: warship not found
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship retreats when pre-heal health is below threshold
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV warheads should only target tiles owned by target player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship gets active healing when docked at a friendly port
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack[2m > [22m[2mBoat penalty on retreat Transport Ship arrival
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack race condition with alliance requests[2m > [22m[2mShould not mark attacker as traitor when alliance is formed after attack starts
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Attack.test.ts > Attack race condition with alliance requests > Should not mark attacker as traitor when alliance is formed after attack starts
+playerA cannot attack playerB because they are friendly (allied or same team)
+playerB cannot attack playerA because they are friendly (allied or same team)
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack race condition with alliance requests[2m > [22m[2mShould prevent player from attacking allied player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Attack.test.ts > Attack race condition with alliance requests > Should prevent player from attacking allied player
+playerA cannot attack playerB because they are friendly (allied or same team)
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack race condition with alliance requests[2m > [22m[2mShould cancel alliance requests if the recipient attacks
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack race condition with alliance requests[2m > [22m[2mShould cancel the proper alliance request among many
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mTransport ship alliance rejection[2m > [22m[2mShould cancel alliance requests if the recipient sends a transport ship
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/pathfinding/PathFinding.Water.test.ts[2m > [22m[2mPathFinding.Water
+[22m[39m[GameImpl] Constructor total: 138ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship waits at port when capacity is full
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationMIRV.test.ts[2m > [22m[2mNation MIRV Retaliation[2m > [22m[2mnation launches MIRV to stop steamrolling player with excessive cities
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship cancels docking if its retreat port is destroyed
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationCounterWarshipInfestation.test.ts[2m > [22m[2mCounter Warship Infestation[2m > [22m[2mrich nation sends counter-warship in FFA when enemy has too many warships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Player can attack disconnected team mate without troop loss
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mPlayer can attack disconnected team mate without troop loss
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mConqueror gets conquered disconnected team member's transport- and warships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Conqueror gets conquered disconnected team member's transport- and warships
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mConqueror gets conquered disconnected team member's transport- and warships
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Captured transport ship landing attack should be in name of new owner
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/NationMIRV.test.ts[2m > [22m[2mNation MIRV Retaliation[2m > [22m[2mnation does not launch MIRV for steamroll when leader has <= 10 cities
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mCaptured transport ship landing attack should be in name of new owner
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mCaptured transport ship landing attack should be in name of new owner
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould set Nation as winner when timer expires with most territory
+[22m[39mTestNation has won the game
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould set correct Nation as winner among multiple Nations
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationCounterWarshipInfestation.test.ts[2m > [22m[2mCounter Warship Infestation[2m > [22m[2mrich nation sends counter-warship in Team game when enemy team has too many warships
+[22m[39m[GameImpl] Constructor total: 1ms
+
+ [32m✓[39m tests/NationCounterWarshipInfestation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould set correct Nation as winner among multiple Nations
+[22m[39mNation1 has won the game
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mCaptured transport ship should retreat to closest owner shore tile
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Captured transport ship should retreat to closest owner shore tile
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mCaptured transport ship should retreat to closest owner shore tile
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - Nation Winners[2m > [22m[2mshould not set winner for bot team in Team mode
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mRetreating transport ship is deleted if new owner has no shore tiles
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Retreating transport ship is deleted if new owner has no shore tiles
+Player Player2 was kicked from team
+
+[90mstdout[2m | tests/Disconnected.test.ts[2m > [22m[2mDisconnected[2m > [22m[2mDisconnected team member interactions[2m > [22m[2mRetreating transport ship is deleted if new owner has no shore tiles
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship drops a stale target after patrol movement changes range
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Disconnected.test.ts > Disconnected > Disconnected team member interactions > Retreating transport ship is deleted if new owner has no shore tiles
+TransportShipExecution: retreating but no retreat destination found
+
+ [32m✓[39m tests/Disconnected.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 262[2mms[22m[39m
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould not be able to attack during immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mWarship cancels retreat if no friendly port is reachable by water
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould be able to attack after immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mEnsure a player can't attack during all the immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould not be able to send a boat during immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - 1v1 Ranked Mode[2m > [22m[2mshould set winner when only one human remains connected
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/pathfinding/PathFinding.Water.test.ts[2m > [22m[2mPathFinding.Water[2m > [22m[2mKnown bugs[2m > [22m[2mpath can cross 1-tile land barrier
+[22m[39m[GameImpl] Constructor total: 21ms
+
+[90mstdout[2m | tests/core/pathfinding/PathFinding.Water.test.ts[2m > [22m[2mPathFinding.Water[2m > [22m[2mKnown bugs[2m > [22m[2mpath can cross diagonal land barrier
+[22m[39m[GameImpl] Constructor total: 1ms
+
+ [32m✓[39m tests/MapManifestFlags.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 473[2mms[22m[39m
+     [33m[2m✓[22m[39m All nations' flags reference existing SVG files [33m 471[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/PathFinding.Water.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 300[2mms[22m[39m
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould be able to send a boat after immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould not be able to attack nations during nation immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould be able to attack nations after nation immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mShould be able to attack bots during immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - 1v1 Ranked Mode[2m > [22m[2mshould set winner when only one human remains connected
+[22m[39mPlayer1 has won the game
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - 1v1 Ranked Mode[2m > [22m[2mshould not set winner when multiple humans are still connected
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - 1v1 Ranked Mode[2m > [22m[2mshould not set winner when no humans remain connected
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - 1v1 Ranked Mode[2m > [22m[2mshould ignore bots and nations in 1v1 ranked mode
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/executions/WinCheckExecution.test.ts[2m > [22m[2mWinCheckExecution - 1v1 Ranked Mode[2m > [22m[2mshould ignore bots and nations in 1v1 ranked mode
+[22m[39mHumanPlayer has won the game
+
+ [32m✓[39m tests/core/executions/WinCheckExecution.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 366[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV warheads should be distributed with minimum spacing
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Attack.test.ts[2m > [22m[2mAttack immunity[2m > [22m[2mCan't send nuke during immunity phase
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Attack.test.ts > Attack immunity > Can't send nuke during immunity phase
+cannot build Nuke
+
+ [32m✓[39m tests/Attack.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 338[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should display warning message on launch
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should not launch if player cannot build it
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/core/executions/MIRVExecution.test.ts > MIRVExecution > MIRV should not launch if player cannot build it
+cannot build MIRV
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should not launch when targeting terra nullius
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/core/executions/MIRVExecution.test.ts > MIRVExecution > MIRV should not launch when targeting terra nullius
+cannot build MIRV
+
+[90mstdout[2m | tests/core/executions/MIRVExecution.test.ts[2m > [22m[2mMIRVExecution[2m > [22m[2mMIRV should launch when targeting own territory without breaking alliances
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/executions/MIRVExecution.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 360[2mms[22m[39m
+stderr | tests/Warship.test.ts > Warship > Warship cancels retreat if no friendly port is reachable by water
+Failed to find random tile for warship for boat dude
+Failed to find random tile for warship for boat dude
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mLow-health warship does not retreat when enemy warship is nearby
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mRetreating warship aggroes nearby enemy transport before continuing retreat
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mManual MoveWarshipExecution cancels retreat and keeps manual order
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mManual MoveWarshipExecution suppresses auto-retreat for 5 seconds before retreat starts
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mHealAtPortExecution moves warship to port
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Warship.test.ts[2m > [22m[2mWarship[2m > [22m[2mHealAtPortExecution ignores enemy port targets
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/Warship.test.ts > Warship > HealAtPortExecution ignores enemy port targets
+HealAtPortExecution: target port is not friendly
+
+ [32m✓[39m tests/Warship.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 423[2mms[22m[39m
+[90mstdout[2m | tests/NationMIRV.test.ts[2m > [22m[2mNation MIRV Retaliation[2m > [22m[2mnation launches MIRV to prevent team victory when team approaches victory denial threshold (targets biggest team member)
+[22m[39m[GameImpl] Constructor total: 1ms
+
+ [32m✓[39m tests/NationMIRV.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 649[2mms[22m[39m
+     [33m[2m✓[22m[39m nation does not launch MIRV for steamroll when leader has <= 10 cities [33m 391[2mms[22m[39m
+ [32m✓[39m tests/TranslationSystem.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2291[2mms[22m[39m
+     [33m[2m✓[22m[39m all translation strings are valid ICU messages [33m 477[2mms[22m[39m
+     [33m[2m✓[22m[39m en.json keys stay in sync with source usage [33m 1806[2mms[22m[39m
+[90mstdout[2m | tests/core/execution/SpawnExecution.test.ts[2m > [22m[2mSpawn execution[2m > [22m[2mSpawn location is found for all players in big_plains map with 49 players
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/execution/SpawnExecution.test.ts[2m > [22m[2mSpawn execution[2m > [22m[2mSpawn location is found for all players in half_land_half_ocean map with 1 players
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/execution/SpawnExecution.test.ts[2m > [22m[2mSpawn execution[2m > [22m[2mSpawn location is found for all players in ocean_and_land map with 1 players
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/execution/SpawnExecution.test.ts[2m > [22m[2mSpawn execution[2m > [22m[2mSpawn location is found for all players in plains map with 9 players
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/execution/SpawnExecution.test.ts[2m > [22m[2mSpawn execution[2m > [22m[2mHandles spawn failure when map is too crowded
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/core/execution/SpawnExecution.test.ts > Spawn execution > Handles spawn failure when map is too crowded
+SpawnExecution: cannot spawn player1
+SpawnExecution: cannot spawn player2
+SpawnExecution: cannot spawn player3
+SpawnExecution: cannot spawn player4
+
+[90mstdout[2m | tests/core/execution/SpawnExecution.test.ts[2m > [22m[2mSpawn execution[2m > [22m[2mSpawn on specific tile
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/execution/SpawnExecution.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 155[2mms[22m[39m
+[90mstdout[2m | tests/ShellRandom.test.ts[2m > [22m[2mShell Random Damage[2m > [22m[2mShell damage varies randomly between 200-300 base damage
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/ShellRandom.test.ts[2m > [22m[2mShell Random Damage[2m > [22m[2mWarship shell attacks have random damage
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/ShellRandom.test.ts[2m > [22m[2mShell Random Damage[2m > [22m[2mDefense post shell attacks have random damage
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/ShellRandom.test.ts[2m > [22m[2mShell Random Damage[2m > [22m[2mShell damage distribution follows expected pattern
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/ShellRandom.test.ts[2m > [22m[2mShell Random Damage[2m > [22m[2mShell damage is consistent with same random seed
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/ShellRandom.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/NukeExecution.test.ts[2m > [22m[2mNukeExecution[2m > [22m[2mnuke should destroy buildings and redraw out of range buildings
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/executions/NukeExecution.test.ts[2m > [22m[2mNukeExecution[2m > [22m[2mnuke should only be targetable near src and dst
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/NukeExecution.test.ts[2m > [22m[2mNukeExecution[2m > [22m[2mnuke should break alliances on launch
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/NukeExecution.test.ts[2m > [22m[2mNukeExecution[2m > [22m[2mnuke should break alliance when destroying ally's building even with few tiles
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/executions/NukeExecution.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m tests/NationNameLength.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 63[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mone sam should take down one nuke
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mone sam should take down one nuke
+[22m[39mTarget acquired
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2msam should only get one nuke at a time
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AttackStats.test.ts[2m > [22m[2mAttackStats[2m > [22m[2mshould increase war gold stat when a player is eliminated
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2msam should only get one nuke at a time
+[22m[39mTarget acquired
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2msam should cooldown as long as configured
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AttackStats.test.ts[2m > [22m[2mAttackStats[2m > [22m[2mshould NOT increase war gold stat when a inactive player is eliminated
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2msam should cooldown as long as configured
+[22m[39mTarget acquired
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mtwo sams should not target twice same nuke
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AttackStats.test.ts[2m > [22m[2mAttackStats[2m > [22m[2mshould increase war gold stat when elimination occurs via territory annexation
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mtwo sams should not target twice same nuke
+[22m[39mTarget acquired
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mSAMs should target close to launch site
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mattack
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mattackCancel
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mbetray
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatSendTrade
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatArriveTrade
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/AttackStats.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatCapturedTrade
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatDestroyTrade
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatSendTroops
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatArriveTroops
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mboatDestroyTroops
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mbombLaunch
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mbombLand
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationAllianceBehavior.test.ts[2m > [22m[2mAllianceBehavior.handleAllianceRequests[2m > [22m[2mshould reject alliance created on first post-spawn tick
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mbombIntercept
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mSAMs should target close to launch site
+[22m[39mTarget acquired
+Nuke destroyed before reaching target
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mgoldWar
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mSAMs should target only nukes aimed at nearby targets if not close to launch site
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationAllianceBehavior.test.ts[2m > [22m[2mAllianceBehavior.handleAllianceRequests[2m > [22m[2mshould accept alliance when all conditions are met
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationAllianceBehavior.test.ts[2m > [22m[2mAllianceBehavior.handleAllianceRequests[2m > [22m[2mshould reject alliance if requestor is a traitor
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mSAMs should target only nukes aimed at nearby targets if not close to launch site
+[22m[39mTarget acquired
+Nuke destroyed before reaching target
+
+[90mstdout[2m | tests/core/executions/SAMLauncherExecution.test.ts[2m > [22m[2mSAM[2m > [22m[2mSAM should have increased level after upgrade
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mgoldWork
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mtrain trade gold
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/executions/SAMLauncherExecution.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 114[2mms[22m[39m
+[90mstdout[2m | tests/NationAllianceBehavior.test.ts[2m > [22m[2mAllianceBehavior.handleAllianceRequests[2m > [22m[2mshould reject alliance if relation is hostile
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2munitBuild
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationAllianceBehavior.test.ts[2m > [22m[2mAllianceBehavior.handleAllianceRequests[2m > [22m[2mshould accept alliance if requestor is much larger (> 3 times size of recipient)
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/NationAllianceBehavior.test.ts[2m > [22m[2mAllianceBehavior.handleAllianceRequests[2m > [22m[2mshould reject alliance if player has too many alliances
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2munitCapture
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/NationAllianceBehavior.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2munitDestroy
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2munitLose
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mplayerKilled
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is enabled[2m > [22m[2mnuke converts land tiles to water instead of fallout
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Stats.test.ts[2m > [22m[2mStats[2m > [22m[2mstringify
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is enabled[2m > [22m[2mconverted tiles get shoreline bits updated
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is enabled[2m > [22m[2mqueueWaterConversion skips tiles conquered before flush
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is enabled[2m > [22m[2mwaterGraphVersion increments after water conversion
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is enabled[2m > [22m[2mwaterGraphVersion increments after water conversion
+[22m[39m[GameImpl] Constructor total: 2ms
+
+[90mstdout[2m | tests/NationNukeSamOverwhelm.test.ts[2m > [22m[2mNationNukeBehavior - maybeDestroyEnemySam[2m > [22m[2mnation overwhelms enemy SAM with atom bomb salvo on Impossible difficulty
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/Stats.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 123[2mms[22m[39m
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is disabled (default)[2m > [22m[2mnuke applies fallout instead of converting to water
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mwhen waterNukes is disabled (default)[2m > [22m[2mwaterGraphVersion does not change
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/WaterNukes.test.ts[2m > [22m[2mWater Nukes[2m > [22m[2mupdateTile terrain byte round-trip[2m > [22m[2mterrain byte is packed and unpacked correctly
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/nukes/WaterNukes.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m tests/NationNukeSamOverwhelm.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 57[2mms[22m[39m
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShore[2m > [22m[2mfinds shore tile owned by player
+[22m[39m[GameImpl] Constructor total: 2ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShore[2m > [22m[2mreturns null when no shore within maxDist
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShore[2m > [22m[2mfinds shore on player's island (two separate islands)
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShore[2m > [22m[2mfinds shore even if no land path exists (two separate islands)
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShore[2m > [22m[2mfinds shore for terra nullius when land is unclaimed
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShoreByWater[2m > [22m[2mreturns null for terra nullius
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShoreByWater[2m > [22m[2mreturns null when target is on land
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShoreByWater[2m > [22m[2mreturns null when target is in disconnected water body
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/pathfinding/SpatialQuery.test.ts[2m > [22m[2mSpatialQuery[2m > [22m[2mclosestShoreByWater[2m > [22m[2mfinds shore via long water path around island
+[22m[39m[GameImpl] Constructor total: 3ms
+
+ [32m✓[39m tests/core/pathfinding/SpatialQuery.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/NoInverseAnnexation.test.ts[2m > [22m[2mPlayerExecution Annexation Bug[2m > [22m[2mA large player is not reverse-annexed by surrounded smaller player
+[22m[39m[GameImpl] Constructor total: 1ms
+
+ [32m✓[39m tests/core/executions/NoInverseAnnexation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 45[2mms[22m[39m
+[90mstdout[2m | tests/MissileSilo.test.ts[2m > [22m[2mMissileSilo[2m > [22m[2mmissilesilo should launch nuke
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/MissileSilo.test.ts[2m > [22m[2mMissileSilo[2m > [22m[2mmissilesilo should only launch one nuke at a time
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/MissileSilo.test.ts > MissileSilo > missilesilo should only launch one nuke at a time
+cannot build Nuke
+
+[90mstdout[2m | tests/MissileSilo.test.ts[2m > [22m[2mMissileSilo[2m > [22m[2mmissilesilo should cooldown as long as configured
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/MissileSilo.test.ts[2m > [22m[2mMissileSilo[2m > [22m[2mmissilesilo should have increased level after upgrade
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/MissileSilo.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+[90mstdout[2m | tests/AiAttackBehavior.test.ts[2m > [22m[2mAi Attack Behavior[2m > [22m[2mbot cannot attack allied player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AiAttackBehavior.test.ts[2m > [22m[2mAi Attack Behavior[2m > [22m[2mnation cannot attack allied player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/client/sound/SoundManager.test.ts > SoundManager > swallows errors from Howler and does not propagate
+SoundManager: failed to play background music Error: audio backend failure
+    at MockHowl.<anonymous> (C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:206:15)
+    at MockHowl.Mock (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/spy/dist/index.js:285:34)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:97:49
+    at SoundManager.safely (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:85:7)
+    at SoundManager.playBackgroundMusic (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:92:10)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:227:31
+    at Proxy.assertThrows (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)
+    at Proxy.methodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)
+    at Proxy.<anonymous> (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/dist/index.js:1149:12)
+    at Proxy.overwritingMethodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)
+SoundManager: failed to stop background music Error: audio backend failure
+    at MockHowl.<anonymous> (C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:209:15)
+    at MockHowl.Mock (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/spy/dist/index.js:285:34)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:105:49
+    at SoundManager.safely (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:85:7)
+    at SoundManager.stopBackgroundMusic (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:103:10)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:228:31
+    at Proxy.assertThrows (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)
+    at Proxy.methodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)
+    at Proxy.<anonymous> (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/dist/index.js:1149:12)
+    at Proxy.overwritingMethodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)
+SoundManager: failed to set background music volume Error: audio backend failure
+    at MockHowl.<anonymous> (C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:212:15)
+    at MockHowl.Mock [as volume] (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/spy/dist/index.js:285:34)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:114:15
+    at Array.forEach (<anonymous>)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:113:28
+    at SoundManager.safely (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:85:7)
+    at SoundManager.setBackgroundMusicVolume (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:112:10)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:229:31
+    at Proxy.assertThrows (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)
+    at Proxy.methodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)
+SoundManager: failed to set sound effects volume Error: audio backend failure
+    at MockHowl.<anonymous> (C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:224:13)
+    at MockHowl.Mock [as volume] (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/spy/dist/index.js:285:34)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:165:15
+    at Map.forEach (<anonymous>)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:164:25
+    at SoundManager.safely (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:85:7)
+    at SoundManager.setSoundEffectsVolume (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:163:10)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:230:31
+    at Proxy.assertThrows (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)
+    at Proxy.methodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)
+SoundManager: failed to play sound click Error: audio backend failure
+    at MockHowl.<anonymous> (C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:218:13)
+    at MockHowl.Mock (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/spy/dist/index.js:285:34)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:154:23
+    at SoundManager.safely (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:85:7)
+    at SoundManager.playSoundEffect (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:144:10)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:231:31
+    at Proxy.assertThrows (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)
+    at Proxy.methodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)
+    at Proxy.<anonymous> (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/dist/index.js:1149:12)
+    at Proxy.overwritingMethodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)
+SoundManager: failed to stop sound click Error: audio backend failure
+    at MockHowl.<anonymous> (C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:221:13)
+    at MockHowl.Mock (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/spy/dist/index.js:285:34)
+    at C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:174:14
+    at SoundManager.safely (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:85:7)
+    at SoundManager.stopSoundEffect (C:/Users/Alex/Desktop/OpenFrontIO/src/client/sound/SoundManager.ts:171:10)
+    at C:/Users/Alex/Desktop/OpenFrontIO/tests/client/sound/SoundManager.test.ts:232:31
+    at Proxy.assertThrows (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)
+    at Proxy.methodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)
+    at Proxy.<anonymous> (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/dist/index.js:1149:12)
+    at Proxy.overwritingMethodWrapper (file:///C:/Users/Alex/Desktop/OpenFrontIO/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)
+
+ [32m✓[39m tests/client/sound/SoundManager.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m tests/AiAttackBehavior.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+ [32m✓[39m tests/client/graphics/RadialMenuElements.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+[90mstdout[2m | tests/PlayerImpl.test.ts[2m > [22m[2mPlayerImpl[2m > [22m[2mCity can be upgraded
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/PlayerImpl.test.ts[2m > [22m[2mPlayerImpl[2m > [22m[2mDefensePost cannot be upgraded
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/PlayerImpl.test.ts[2m > [22m[2mPlayerImpl[2m > [22m[2mCity can be upgraded from another city
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/PlayerImpl.test.ts[2m > [22m[2mPlayerImpl[2m > [22m[2mCity cannot be upgraded when too far away
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/PlayerImpl.test.ts[2m > [22m[2mPlayerImpl[2m > [22m[2mUnit cannot be upgraded when not enough gold
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/PlayerImpl.test.ts[2m > [22m[2mPlayerImpl[2m > [22m[2mCan't send alliance requests when dead
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/PlayerImpl.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mIs unit in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mIs unit in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mIs unit in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mIs unit in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mIs unit in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mon %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mWrong unit type in range
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/UnitGrid.test.ts[2m > [22m[2mUnit Grid range tests[2m > [22m[2mRetrieve all units in range[2m > [22m[2mOne inside, one outside of range
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/UnitGrid.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m tests/InputHandler.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+[90mstdout[2m | tests/AllianceAcceptNukes.test.ts[2m > [22m[2mAlliance acceptance immediately destroys in-flight nukes[2m > [22m[2maccepting alliance destroys in-flight nukes between the newly allied players
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/economy/ConstructionGold.test.ts[2m > [22m[2mConstruction economy[2m > [22m[2mCity charges gold once and no refund thereafter (allow passive income)
+[22m[39m[GameImpl] Constructor total: 1ms
+
+stderr | tests/economy/ConstructionGold.test.ts > Construction economy > City charges gold once and no refund thereafter (allow passive income)
+SpawnExecution: cannot spawn other
+
+[90mstdout[2m | tests/nukes/HydrogenAndMirv.test.ts[2m > [22m[2mHydrogen Bomb and MIRV flows[2m > [22m[2mHydrogen bomb launches when silo exists and cannot use silo under construction
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceAcceptNukes.test.ts[2m > [22m[2mAlliance acceptance immediately destroys in-flight nukes[2m > [22m[2maccepting alliance destroys only nukes between allied players
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/economy/ConstructionGold.test.ts[2m > [22m[2mConstruction economy[2m > [22m[2mMIRV gets more expensive with each launch
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/economy/ConstructionGold.test.ts > Construction economy > MIRV gets more expensive with each launch
+SpawnExecution: cannot spawn other
+
+[90mstdout[2m | tests/nukes/HydrogenAndMirv.test.ts[2m > [22m[2mHydrogen Bomb and MIRV flows[2m > [22m[2mHydrogen bomb launch fails when silo is under construction and succeeds after completion
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/economy/ConstructionGold.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+[90mstdout[2m | tests/AllianceAcceptNukes.test.ts[2m > [22m[2mAlliance acceptance immediately destroys in-flight nukes[2m > [22m[2maccepting alliance displays a nuke-cancellation display message
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/nukes/HydrogenAndMirv.test.ts[2m > [22m[2mHydrogen Bomb and MIRV flows[2m > [22m[2mHydrogen bomb launch fails when silo is under construction and succeeds after completion
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/nukes/HydrogenAndMirv.test.ts > Hydrogen Bomb and MIRV flows > Hydrogen bomb launch fails when silo is under construction and succeeds after completion
+cannot build Nuke
+
+[90mstdout[2m | tests/nukes/HydrogenAndMirv.test.ts[2m > [22m[2mHydrogen Bomb and MIRV flows[2m > [22m[2mMIRV launches when silo exists and targets player-owned tiles
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/AllianceAcceptNukes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m tests/Privilege.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m tests/nukes/HydrogenAndMirv.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+[90mstdout[2m | tests/PortExecution.test.ts[2m > [22m[2mPortExecution[2m > [22m[2mDestination ports chances scale with level
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/PortExecution.test.ts[2m > [22m[2mPortExecution[2m > [22m[2mTrade ship proximity bonus
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/PortExecution.test.ts[2m > [22m[2mPortExecution[2m > [22m[2mTrade ship short range debuff
+[22m[39m[GameImpl] Constructor total: 3ms
+
+ [32m✓[39m tests/PortExecution.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+[90mstdout[2m | tests/AllianceExtensionExecution.test.ts[2m > [22m[2mAllianceExtensionExecution[2m > [22m[2mSuccessfully extends existing alliance between Humans
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/AllianceExtensionExecution.test.ts[2m > [22m[2mAllianceExtensionExecution[2m > [22m[2mFails gracefully if no alliance exists
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceExtensionExecution.test.ts[2m > [22m[2mAllianceExtensionExecution[2m > [22m[2mFails gracefully if no alliance exists
+[22m[39m[AllianceExtensionExecution] Player player1 or player2 is not alive
+
+[90mstdout[2m | tests/AllianceExtensionExecution.test.ts[2m > [22m[2mAllianceExtensionExecution[2m > [22m[2mSuccessfully extends existing alliance between Human and non-Human
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceExtensionExecution.test.ts[2m > [22m[2mAllianceExtensionExecution[2m > [22m[2mSends message to other player when one player requests renewal
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/AllianceExtensionExecution.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m tests/core/game/RailNetwork.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/TradeShipExecution.test.ts[2m > [22m[2mTradeShipExecution[2m > [22m[2mshould initialize and tick without errors
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/TradeShipExecution.test.ts[2m > [22m[2mTradeShipExecution[2m > [22m[2mshould deactivate if tradeShip is not active
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/TradeShipExecution.test.ts[2m > [22m[2mTradeShipExecution[2m > [22m[2mshould delete ship if port owner changes to current owner
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/TradeShipExecution.test.ts[2m > [22m[2mTradeShipExecution[2m > [22m[2mshould pick another port if ship is captured
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/TradeShipExecution.test.ts[2m > [22m[2mTradeShipExecution[2m > [22m[2mshould complete trade and award gold
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/executions/TradeShipExecution.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+[90mstdout[2m | tests/Donate.test.ts[2m > [22m[2mDonate troops to an ally[2m > [22m[2mTroops should be successfully donated
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Donate.test.ts[2m > [22m[2mDonate gold to an ally[2m > [22m[2mGold should be successfully donated
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Donate.test.ts[2m > [22m[2mDonate troops to a non ally[2m > [22m[2mTroops should not be donated
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/Donate.test.ts[2m > [22m[2mDonate Gold to a non ally[2m > [22m[2mGold should not be donated
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/Donate.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+[90mstdout[2m | tests/Team.test.ts[2m > [22m[2mTeams[2m > [22m[2mbots are on the same team, but can attack each other
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/Team.test.ts[2m > [22m[2mTeams[2m > [22m[2mhumans spawn on different teams
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/Team.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+[90mstdout[2m | tests/core/executions/PlayerExecution.test.ts[2m > [22m[2mPlayerExecution[2m > [22m[2mDefensePost lv. 1 is destroyed when tile owner changes
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/core/executions/PlayerExecution.test.ts[2m > [22m[2mPlayerExecution[2m > [22m[2mDefensePost lv. 2+ is downgraded when tile owner changes
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/core/executions/PlayerExecution.test.ts[2m > [22m[2mPlayerExecution[2m > [22m[2mNon-DefensePost structures are transferred (not downgraded) when tile owner changes
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/executions/PlayerExecution.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m tests/core/game/TrainStation.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+[90mstdout[2m | tests/AllianceRequestExecution.test.ts[2m > [22m[2mAllianceRequestExecution[2m > [22m[2mCan create alliance by counter-request
+[22m[39m[GameImpl] Constructor total: 1ms
+
+[90mstdout[2m | tests/AllianceRequestExecution.test.ts[2m > [22m[2mAllianceRequestExecution[2m > [22m[2mCan reject alliance request
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceRequestExecution.test.ts[2m > [22m[2mAllianceRequestExecution[2m > [22m[2mAlliance request expires
+[22m[39m[GameImpl] Constructor total: 0ms
+
+[90mstdout[2m | tests/AllianceRequestExecution.test.ts[2m > [22m[2mAllianceRequestExecution[2m > [22m[2malliance request is revoked immediately if requester launches a nuke
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/AllianceRequestExecution.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tests/server/RenderHtml.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m tests/NationStructureBehavior.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/UniversalPathFinding.Parabola.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/client/graphics/ProgressBar.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+[90mstdout[2m | tests/core/game/GameImpl.test.ts[2m > [22m[2mGameImpl[2m > [22m[2mDon't become traitor when betraying inactive player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/core/game/GameImpl.test.ts > GameImpl > Don't become traitor when betraying inactive player
+SpawnExecution: cannot spawn defender dude
+
+[90mstdout[2m | tests/core/game/GameImpl.test.ts[2m > [22m[2mGameImpl[2m > [22m[2mDo become traitor when betraying active player
+[22m[39m[GameImpl] Constructor total: 0ms
+
+stderr | tests/core/game/GameImpl.test.ts > GameImpl > Do become traitor when betraying active player
+SpawnExecution: cannot spawn defender dude
+
+ [32m✓[39m tests/core/game/GameImpl.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/transformers/MiniMapTransformer.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+stderr | tests/client/JoinLobbyModal.test.ts
+Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+
+ [32m✓[39m tests/Colors.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/AutoUpgrade.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+[90mstdout[2m | tests/core/pathfinding/PathFinding.Air.test.ts[2m > [22m[2mPathFinding.Air
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/pathfinding/PathFinding.Air.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/transformers/ComponentCheckTransformer.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/transformers/ShoreCoercingTransformer.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/client/graphics/layers/AttackingTroopsOverlay.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+[90mstdout[2m | tests/TerritoryCapture.test.ts[2m > [22m[2mTerritory management[2m > [22m[2mplayer owns the tile it spawns on
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/TerritoryCapture.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/ResolveCosmetics.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/AssetUrls.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+stderr | tests/client/JoinLobbyModal.test.ts > JoinLobbyModal server time offset > triggers join timeout once adjusted server time reaches lobbyStartAt
+LangSelector not found in DOM
+
+ [32m✓[39m tests/client/JoinLobbyModal.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m tests/client/Platform.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/MessageTypeClasses.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+[90mstdout[2m | tests/core/pathfinding/PathFinding.Rail.test.ts[2m > [22m[2mPathFinding.Rail
+[22m[39m[GameImpl] Constructor total: 0ms
+
+ [32m✓[39m tests/core/pathfinding/PathFinding.Rail.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/TeamAssignment.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/server/PollingLoop.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/radialMenuElements.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/core/game/Cluster.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/WaterComponents.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/StatsSchema.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/Censor.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/server/MasterLobbyServiceHealth.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/client/graphics/layers/PlayerPanelKick.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+stderr | tests/client/components/NewsBox.test.ts
+Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+
+ [32m✓[39m tests/client/NewsMarkdown.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/client/components/NewsBox.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/CosmeticRelationship.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/GameInfoRanking.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/core/pathfinding/PathFinderStepper.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/NameLayer.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/core/game/FetchGameMapLoader.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/PlayerInfo.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+[90mstdout[2m | tests/core/configuration/ConfigLoader.test.ts[2m > [22m[2mConfigLoader[2m > [22m[2muses runtime bootstrap config without fetching /api/env
+[22m[39musing preprod server config
+
+[90mstdout[2m | tests/core/configuration/ConfigLoader.test.ts[2m > [22m[2mConfigLoader[2m > [22m[2mmaps staging builds to the default game logic config
+[22m[39musing default game logic config
+using default game logic config
+
+ [32m✓[39m tests/core/configuration/ConfigLoader.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/client/graphics/layers/WinModal.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/server/NoStoreHeaders.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/server/StaticAssetCache.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+stderr | tests/client/graphics/layers/EventDisplayAlliance.test.ts
+Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+
+ [32m✓[39m tests/client/graphics/layers/EventDisplayAlliance.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/client/graphics/layers/StructureIconsLayer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/server/ClientMsgRateLimiter.test.ts [ tests/server/ClientMsgRateLimiter.test.ts ]
+Error: Failed to resolve import "limiter" from "src/server/ClientMsgRateLimiter.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/Users/Alex/Desktop/OpenFrontIO/src/server/ClientMsgRateLimiter.ts:1:28
+  1  |  "use strict";
+  2  |  import { RateLimiter } from "limiter";
+     |                               ^
+  3  |  const INTENTS_PER_SECOND = 10;
+  4  |  const INTENTS_PER_MINUTE = 150;
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/config.js:28998:43
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/config.js:28995:14
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/config.js:27118:18
+ ❯ node_modules/vite/dist/node/chunks/config.js:27176:32
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/config.js:27144:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/config.js:28796:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/config.js:22669:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/server/GameLifecycle.test.ts [ tests/server/GameLifecycle.test.ts ]
+Error: Failed to resolve import "limiter" from "src/server/ClientMsgRateLimiter.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/Users/Alex/Desktop/OpenFrontIO/src/server/ClientMsgRateLimiter.ts:1:28
+  1  |  "use strict";
+  2  |  import { RateLimiter } from "limiter";
+     |                               ^
+  3  |  const INTENTS_PER_SECOND = 10;
+  4  |  const INTENTS_PER_MINUTE = 150;
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/config.js:28998:43
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/config.js:28995:14
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/config.js:27118:18
+ ❯ node_modules/vite/dist/node/chunks/config.js:27176:32
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/config.js:27144:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/config.js:28796:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/config.js:22669:26
+ ❯ fetchModule node_modules/vite/dist/node/chunks/config.js:33992:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/client/graphics/UILayer.test.ts > UILayer > should add and clear health bars
+TypeError: unit.level is not a function
+ ❯ UILayer.drawHealthBar src/client/graphics/layers/UILayer.ts:274:56
+    272|     const maxHealth =
+    273|       unit.type() === UnitType.Warship
+    274|         ? Math.round(baseMaxHealth * (1 + 0.25 * (unit.level() - 1)))
+       |                                                        ^
+    275|         : baseMaxHealth;
+    276|     if (
+ ❯ tests/client/graphics/UILayer.test.ts:67:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/client/graphics/UILayer.test.ts > UILayer > should remove health bars for inactive units
+TypeError: unit.level is not a function
+ ❯ UILayer.drawHealthBar src/client/graphics/layers/UILayer.ts:274:56
+    272|     const maxHealth =
+    273|       unit.type() === UnitType.Warship
+    274|         ? Math.round(baseMaxHealth * (1 + 0.25 * (unit.level() - 1)))
+       |                                                        ^
+    275|         : baseMaxHealth;
+    276|     if (
+ ❯ tests/client/graphics/UILayer.test.ts:95:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m90 passed[39m[22m[90m (93)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m735 passed[39m[22m[90m (737)[39m
+[2m   Start at [22m 12:47:33
+[2m   Duration [22m 15.22s[2m (transform 19.31s, setup 4.83s, import 45.10s, tests 8.17s, environment 108.97s)[22m
+

@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { assetUrl } from "../core/AssetUrls";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -69,7 +70,7 @@ export class LanguageModal extends BaseModal {
                   @click=${() => this.selectLanguage(lang.code)}
                 >
                   <img
-                    src="/flags/${lang.svg}.svg"
+                    src=${assetUrl(`flags/${lang.svg}.svg`)}
                     class="w-8 h-6 object-contain rounded-sm shrink-0"
                     alt="${lang.code}"
                   />
