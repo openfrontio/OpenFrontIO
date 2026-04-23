@@ -45,6 +45,82 @@ const portIcon = assetUrl("images/PortIcon.svg");
 const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
+type FaceData = {
+  color: string;
+  eyeCy: number;
+  mouth: string;
+  brows?: string[];
+};
+const RELATION_FACES: Partial<Record<Relation, FaceData>> = {
+  [Relation.Hostile]: {
+    color: "#ef4444",
+    eyeCy: 7.5,
+    mouth: "M5 12 Q8 9 11 12",
+    brows: ["M4 5.5 L6.5 7", "M12 5.5 L9.5 7"],
+  },
+  [Relation.Distrustful]: {
+    color: "#f97316",
+    eyeCy: 6.8,
+    mouth: "M5.5 11 Q8 9.2 10.5 11",
+  },
+  [Relation.Friendly]: {
+    color: "#22c55e",
+    eyeCy: 6.5,
+    mouth: "M5 10 Q8 13 11 10",
+  },
+};
+
+@customElement("relation-smiley")
+export class RelationSmiley extends LitElement {
+  @property({ type: Number })
+  relation: Relation = Relation.Neutral;
+
+  createRenderRoot() {
+    return this;
+  }
+
+  render() {
+    const face = RELATION_FACES[this.relation];
+    if (!face) return html``;
+    const { color, eyeCy, mouth, brows } = face;
+    return html`<svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      style="flex-shrink:0"
+      aria-hidden="true"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6.5"
+        stroke="${color}"
+        stroke-width="1.4"
+        fill="none"
+      />
+      ${brows?.map(
+        (d) =>
+          html`<path
+            d="${d}"
+            stroke="${color}"
+            stroke-width="1.4"
+            stroke-linecap="round"
+          />`,
+      )}
+      <circle cx="5.8" cy="${eyeCy}" r="0.9" fill="${color}" />
+      <circle cx="10.2" cy="${eyeCy}" r="0.9" fill="${color}" />
+      <path
+        d="${mouth}"
+        stroke="${color}"
+        stroke-width="1.4"
+        fill="none"
+        stroke-linecap="round"
+      />
+    </svg>`;
+  }
+}
+
 function euclideanDistWorld(
   coord: { x: number; y: number },
   tileRef: TileRef,
@@ -148,8 +224,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     if (owner && owner.isPlayer()) {
       this.player = owner as PlayerView;
-      this.player.profile().then((p) => {
-        this.playerProfile = p;
+      this.playerProfile = null;
+      const requested = this.player;
+      requested.profile().then((p) => {
+        if (this.player === requested) this.playerProfile = p;
       });
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
@@ -195,107 +273,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       return "";
     const relation =
       this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
-
-    if (relation === Relation.Hostile) {
-      const c = "#ef4444";
-      return html`<svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        xmlns="http://www.w3.org/2000/svg"
-        style="flex-shrink:0"
-        aria-hidden="true"
-      >
-        <circle
-          cx="8"
-          cy="8"
-          r="6.5"
-          stroke="${c}"
-          stroke-width="1.4"
-          fill="none"
-        />
-        <path
-          d="M4 5.5 L6.5 7"
-          stroke="${c}"
-          stroke-width="1.4"
-          stroke-linecap="round"
-        />
-        <path
-          d="M12 5.5 L9.5 7"
-          stroke="${c}"
-          stroke-width="1.4"
-          stroke-linecap="round"
-        />
-        <circle cx="5.8" cy="7.5" r="0.9" fill="${c}" />
-        <circle cx="10.2" cy="7.5" r="0.9" fill="${c}" />
-        <path
-          d="M5 12 Q8 9 11 12"
-          stroke="${c}"
-          stroke-width="1.4"
-          fill="none"
-          stroke-linecap="round"
-        />
-      </svg>`;
-    }
-    if (relation === Relation.Distrustful) {
-      const c = "#f97316";
-      return html`<svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        xmlns="http://www.w3.org/2000/svg"
-        style="flex-shrink:0"
-        aria-hidden="true"
-      >
-        <circle
-          cx="8"
-          cy="8"
-          r="6.5"
-          stroke="${c}"
-          stroke-width="1.4"
-          fill="none"
-        />
-        <circle cx="5.8" cy="6.8" r="0.9" fill="${c}" />
-        <circle cx="10.2" cy="6.8" r="0.9" fill="${c}" />
-        <path
-          d="M5.5 11 Q8 9.2 10.5 11"
-          stroke="${c}"
-          stroke-width="1.4"
-          fill="none"
-          stroke-linecap="round"
-        />
-      </svg>`;
-    }
-    if (relation === Relation.Friendly) {
-      const c = "#22c55e";
-      return html`<svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        xmlns="http://www.w3.org/2000/svg"
-        style="flex-shrink:0"
-        aria-hidden="true"
-      >
-        <circle
-          cx="8"
-          cy="8"
-          r="6.5"
-          stroke="${c}"
-          stroke-width="1.4"
-          fill="none"
-        />
-        <circle cx="5.8" cy="6.5" r="0.9" fill="${c}" />
-        <circle cx="10.2" cy="6.5" r="0.9" fill="${c}" />
-        <path
-          d="M5 10 Q8 13 11 10"
-          stroke="${c}"
-          stroke-width="1.4"
-          fill="none"
-          stroke-linecap="round"
-        />
-      </svg>`;
-    }
-    return "";
+    if (!(relation in RELATION_FACES)) return "";
+    return html`<relation-smiley .relation=${relation}></relation-smiley>`;
   }
 
   private getRelationName(relation: Relation): string {
