@@ -550,7 +550,14 @@
     "denied_hint": "Notifications are blocked. Please allow them in your browser settings.",
     "enable": "Enable",
     "dismiss": "Not now",
-    "dismiss_forever": "Don't show again"
+    "dismiss_forever": "Don't show again",
+    "test_title": "Notifications enabled",
+    "test_body": "Test it to make sure it works on your device.",
+    "test_button": "Test",
+    "test_notification_title": "Notifications work!",
+    "sent_title": "Notification sent",
+    "sent_body": "If you didn't receive it, make sure Do Not Disturb is off and your browser has access to notifications.",
+    "sent_ok": "OK"
   },
   "user_setting": {
     "title": "Settings",

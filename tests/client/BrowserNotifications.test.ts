@@ -70,13 +70,15 @@ describe("NotificationPrompt", () => {
     expect(prompt.visible).toBe(false);
   });
 
-  it("handleEnable() does NOT write notificationPromptDismissed", () => {
+  it("handleEnable() does NOT write notificationPromptDismissed and switches to test state", () => {
     const prompt = new NotificationPrompt();
     prompt.visible = true;
     const spy = vi.spyOn(prompt, "dispatchEvent");
     (prompt as any).handleEnable();
     expect(ls.getItem("settings.notificationPromptDismissed")).toBeNull();
-    expect(prompt.visible).toBe(false);
+    // prompt stays visible in test state
+    expect(prompt.visible).toBe(true);
+    expect((prompt as any).promptState).toBe("test");
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ type: "enable" }),
     );
