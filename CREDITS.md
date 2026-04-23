@@ -86,6 +86,14 @@ Ernie Wright (USRA) ORCID logo.
 Scientist
 Noah Petro (NASA/GSFC) ORCID logo.
 
+### Antarctica Map
+
+Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R8F7U, Harvard Dataverse, V1, [2364], [Apr-02-2026].
+[Terms of Use](https://www.pgc.umn.edu/guides/user-services/acknowledgement-policy/)
+
+[U.S. Geological Survey](https://earthexplorer.usgs.gov/metadata/4980/GT30ANTARCPS/)
+[Public Domain](https://www.doi.gov/copyright)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)

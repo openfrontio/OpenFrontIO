@@ -365,7 +365,8 @@
     "luna": "Luna",
     "conakry": "Conakry",
     "caucasus": "Caucasus",
-    "beringsea": "Bering Sea"
+    "beringsea": "Bering Sea",
+    "antarctica": "Antarctica"
   },
   "map_categories": {
     "featured": "Featured",
