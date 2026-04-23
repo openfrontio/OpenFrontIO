@@ -379,8 +379,10 @@ export class AiAttackBehavior {
   }
 
   findIncomingAttackPlayer(): Player | null {
+    let incomingAttacks = this.player
+      .incomingAttacks()
+      .filter((attack) => !this.player.isFriendly(attack.attacker()));
     // Ignore bot attacks if we are not a bot.
-    let incomingAttacks = this.player.incomingAttacks();
     if (this.player.type() !== PlayerType.Bot) {
       incomingAttacks = incomingAttacks.filter(
         (attack) => attack.attacker().type() !== PlayerType.Bot,

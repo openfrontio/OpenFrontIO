@@ -19,6 +19,8 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     attackRatioUp: "KeyY",
     boatAttack: "KeyB",
     groundAttack: "KeyG",
+    requestAlliance: "KeyK",
+    breakAlliance: "KeyL",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",

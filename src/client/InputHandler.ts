@@ -153,6 +153,10 @@ export class DoBoatAttackEvent implements GameEvent {}
 
 export class DoGroundAttackEvent implements GameEvent {}
 
+export class DoRequestAllianceEvent implements GameEvent {}
+
+export class DoBreakAllianceEvent implements GameEvent {}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
@@ -519,6 +523,16 @@ export class InputHandler {
       if (matchedBuild !== null) {
         e.preventDefault();
         this.setGhostStructure(matchedBuild);
+      }
+
+      if (this.keybindMatchesEvent(e, this.keybinds.requestAlliance)) {
+        e.preventDefault();
+        this.eventBus.emit(new DoRequestAllianceEvent());
+      }
+
+      if (this.keybindMatchesEvent(e, this.keybinds.breakAlliance)) {
+        e.preventDefault();
+        this.eventBus.emit(new DoBreakAllianceEvent());
       }
 
       if (this.keybindMatchesEvent(e, this.keybinds.swapDirection)) {
