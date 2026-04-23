@@ -150,6 +150,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.player = owner as PlayerView;
       this.player.profile().then((p) => {
         this.playerProfile = p;
+        this.requestUpdate();
       });
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
@@ -182,37 +183,120 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private getPlayerNameColor(
-    player: PlayerView,
-    myPlayer: PlayerView | null | undefined,
-    isFriendly: boolean,
-  ): string {
+  private getPlayerNameColor(isFriendly: boolean): string {
     if (isFriendly) return "text-green-500";
-    if (
-      myPlayer &&
-      myPlayer !== player &&
-      player.type() === PlayerType.Nation
-    ) {
-      const relation =
-        this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
-      return this.getRelationClass(relation);
-    }
     return "text-white";
   }
 
-  private getRelationClass(relation: Relation): string {
-    switch (relation) {
-      case Relation.Hostile:
-        return "text-red-500";
-      case Relation.Distrustful:
-        return "text-red-300";
-      case Relation.Neutral:
-        return "text-white";
-      case Relation.Friendly:
-        return "text-green-500";
-      default:
-        return "text-white";
+  private getRelationSmiley(
+    player: PlayerView,
+    myPlayer: PlayerView | null | undefined,
+  ): TemplateResult | string {
+    if (!myPlayer || myPlayer === player || player.type() !== PlayerType.Nation)
+      return "";
+    const relation =
+      this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
+
+    if (relation === Relation.Hostile) {
+      const c = "#ef4444";
+      return html`<svg
+        width="16"
+        height="16"
+        viewBox="0 0 16 16"
+        xmlns="http://www.w3.org/2000/svg"
+        style="flex-shrink:0"
+        aria-hidden="true"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="6.5"
+          stroke="${c}"
+          stroke-width="1.4"
+          fill="none"
+        />
+        <path
+          d="M4 5.5 L6.5 7"
+          stroke="${c}"
+          stroke-width="1.4"
+          stroke-linecap="round"
+        />
+        <path
+          d="M12 5.5 L9.5 7"
+          stroke="${c}"
+          stroke-width="1.4"
+          stroke-linecap="round"
+        />
+        <circle cx="5.8" cy="7.5" r="0.9" fill="${c}" />
+        <circle cx="10.2" cy="7.5" r="0.9" fill="${c}" />
+        <path
+          d="M5 12 Q8 9 11 12"
+          stroke="${c}"
+          stroke-width="1.4"
+          fill="none"
+          stroke-linecap="round"
+        />
+      </svg>`;
     }
+    if (relation === Relation.Distrustful) {
+      const c = "#f97316";
+      return html`<svg
+        width="16"
+        height="16"
+        viewBox="0 0 16 16"
+        xmlns="http://www.w3.org/2000/svg"
+        style="flex-shrink:0"
+        aria-hidden="true"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="6.5"
+          stroke="${c}"
+          stroke-width="1.4"
+          fill="none"
+        />
+        <circle cx="5.8" cy="6.8" r="0.9" fill="${c}" />
+        <circle cx="10.2" cy="6.8" r="0.9" fill="${c}" />
+        <path
+          d="M5.5 11 Q8 9.2 10.5 11"
+          stroke="${c}"
+          stroke-width="1.4"
+          fill="none"
+          stroke-linecap="round"
+        />
+      </svg>`;
+    }
+    if (relation === Relation.Friendly) {
+      const c = "#22c55e";
+      return html`<svg
+        width="16"
+        height="16"
+        viewBox="0 0 16 16"
+        xmlns="http://www.w3.org/2000/svg"
+        style="flex-shrink:0"
+        aria-hidden="true"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="6.5"
+          stroke="${c}"
+          stroke-width="1.4"
+          fill="none"
+        />
+        <circle cx="5.8" cy="6.5" r="0.9" fill="${c}" />
+        <circle cx="10.2" cy="6.5" r="0.9" fill="${c}" />
+        <path
+          d="M5 10 Q8 13 11 10"
+          stroke="${c}"
+          stroke-width="1.4"
+          fill="none"
+          stroke-linecap="round"
+        />
+      </svg>`;
+    }
+    return "";
   }
 
   private getRelationName(relation: Relation): string {
@@ -363,8 +447,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="flex flex-col justify-between self-stretch">
           <div
             class="flex items-center gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
-              player,
-              myPlayer,
               isFriendly ?? false,
             )}"
           >
@@ -375,6 +457,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 />`
               : html``}
             <span>${player.displayName()}</span>
+            ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
