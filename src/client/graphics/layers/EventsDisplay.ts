@@ -103,6 +103,20 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
+  connectedCallback(){
+    super.connectedCallback();
+    this.loadFilter(MessageCategory.ATTACK);
+    this.loadFilter(MessageCategory.NUKE);
+    this.loadFilter(MessageCategory.TRADE);
+    this.loadFilter(MessageCategory.ALLIANCE);
+    this.loadFilter(MessageCategory.CHAT);
+  }
+
+  private loadFilter(category: MessageCategory){
+    const state = localStorage.getItem(category) === "true" ?? false;
+    this.eventsFilters.set(category, state);
+  }
+
   private renderButton(options: {
     content: any; // Can be string, TemplateResult, or other renderable content
     onClick?: () => void;
@@ -162,7 +176,9 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private toggleEventFilter(filterName: MessageCategory) {
     const currentState = this.eventsFilters.get(filterName) ?? false;
-    this.eventsFilters.set(filterName, !currentState);
+    const nextState = !currentState;
+    this.eventsFilters.set(filterName, nextState);
+    localStorage.setItem(filterName, nextState);
     this.requestUpdate();
   }
 
