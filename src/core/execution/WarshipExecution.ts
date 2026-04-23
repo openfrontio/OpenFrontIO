@@ -137,9 +137,7 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      throw new Error(
-        `Warship at tile ${warshipTile} has no water component`,
-      );
+      throw new Error(`Warship at tile ${warshipTile} has no water component`);
     }
 
     const nearest = findMinimumBy(
@@ -148,9 +146,7 @@ export class WarshipExecution implements Execution {
       (port) => {
         const portComponent = this.mg.getWaterComponent(port.tile());
         if (portComponent === null) {
-          throw new Error(
-            `Port at tile ${port.tile()} has no water component`,
-          );
+          throw new Error(`Port at tile ${port.tile()} has no water component`);
         }
         return portComponent === warshipComponent;
       },
