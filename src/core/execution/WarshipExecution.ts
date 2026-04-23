@@ -156,14 +156,14 @@ export class WarshipExecution implements Execution {
   }
 
   private startRepairRetreat(): void {
-    this.retreatingForRepair = true;
-    this.warship.setRetreating(true);
-    // Find nearest port (ANY port, even if full - we'll wait near it if needed)
-    this.retreatPortTile = this.findNearestPort();
-    this.warship.setTargetUnit(undefined);
-    if (this.retreatPortTile === undefined) {
-      this.cancelRepairRetreat();
+    const portTile = this.findNearestPort();
+    if (portTile === undefined) {
+      return;
     }
+    this.retreatingForRepair = true;
+    this.retreatPortTile = portTile;
+    this.warship.setRetreating(true);
+    this.warship.setTargetUnit(undefined);
   }
 
   private cancelRepairRetreat(clearTargetTile = true): void {
