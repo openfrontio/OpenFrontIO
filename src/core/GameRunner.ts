@@ -93,7 +93,7 @@ export class GameRunner {
   ) {}
 
   init() {
-    if (this.game.config().isRandomSpawn()) {
+    if (this.game.config().isRandomSpawn() || this.game.config().startingOwnedTiles !== undefined) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
     if (this.game.config().bots() > 0) {
