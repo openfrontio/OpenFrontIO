@@ -149,10 +149,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     if (owner && owner.isPlayer()) {
       this.player = owner as PlayerView;
-      this.playerProfile = null;
-      const requested = this.player;
-      requested.profile().then((p) => {
-        if (this.player === requested) this.playerProfile = p;
+      this.player.profile().then((p) => {
+        this.playerProfile = p;
       });
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
