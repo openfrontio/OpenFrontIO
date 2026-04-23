@@ -45,6 +45,10 @@ export class DonateTroopsExecution implements Execution {
     const maxDonation =
       mg.config().maxTroops(this.recipient) - this.recipient.troops();
     this.troops = Math.min(this.troops, maxDonation);
+
+    if (this.troops <= 0) {
+      this.active = false;
+    }
   }
 
   tick(ticks: number): void {
@@ -52,10 +56,14 @@ export class DonateTroopsExecution implements Execution {
 
     const minTroops = this.getMinTroopsForRelationUpdate();
 
-    if (
-      this.sender.canDonateTroops(this.recipient) &&
-      this.sender.donateTroops(this.recipient, this.troops)
-    ) {
+    // Recipient may have died, broken alliance, or hit cooldown between
+    // scheduling and execution. Skip silently.
+    if (!this.sender.canDonateTroops(this.recipient)) {
+      this.active = false;
+      return;
+    }
+
+    if (this.sender.donateTroops(this.recipient, this.troops)) {
       // Prevent players from just buying a good relation by sending 1% troops. Instead, a minimum is needed, and it's random.
       if (this.troops >= minTroops) {
         this.recipient.updateRelation(this.sender, 50);
