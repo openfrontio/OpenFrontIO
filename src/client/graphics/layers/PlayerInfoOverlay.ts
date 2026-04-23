@@ -150,7 +150,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.player = owner as PlayerView;
       this.player.profile().then((p) => {
         this.playerProfile = p;
-        this.requestUpdate();
       });
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
