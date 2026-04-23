@@ -11,6 +11,7 @@ import { TileRef } from "../game/GameMap";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { findMinimumBy } from "../Util";
 import { ShellExecution } from "./ShellExecution";
 
 export class WarshipExecution implements Execution {
@@ -135,43 +136,27 @@ export class WarshipExecution implements Execution {
 
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
-
-    // Find nearest port (without capacity constraint)
-    let bestTile: TileRef | undefined = undefined;
-    let bestDistance = Infinity;
-    for (const port of ports) {
-      const portTile = port.tile();
-      if (
-        warshipComponent !== null &&
-        !this.mg.hasWaterComponent(portTile, warshipComponent)
-      ) {
-        continue;
-      }
-
-      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTile = portTile;
-      }
+    if (warshipComponent === null) {
+      throw new Error(
+        `Warship at tile ${warshipTile} has no water component`,
+      );
     }
 
-    // If we found a port, use it
-    if (bestTile !== undefined) {
-      return bestTile;
-    }
+    const nearest = findMinimumBy(
+      ports,
+      (port) => this.mg.euclideanDistSquared(warshipTile, port.tile()),
+      (port) => {
+        const portComponent = this.mg.getWaterComponent(port.tile());
+        if (portComponent === null) {
+          throw new Error(
+            `Port at tile ${port.tile()} has no water component`,
+          );
+        }
+        return portComponent === warshipComponent;
+      },
+    );
 
-    // Fallback if component filtering leaves no options
-    bestDistance = Infinity;
-    for (const port of ports) {
-      const portTile = port.tile();
-      const distance = this.mg.euclideanDistSquared(warshipTile, portTile);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTile = portTile;
-      }
-    }
-
-    return bestTile;
+    return nearest?.tile();
   }
 
   private startRepairRetreat(): void {
