@@ -69,6 +69,7 @@ interface GameEvent {
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Layer {
+  private static readonly FILTER_STORAGE_PREFIX = "eventsFilter:";
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
@@ -105,16 +106,21 @@ export class EventsDisplay extends LitElement implements Layer {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadFilter(MessageCategory.ATTACK);
-    this.loadFilter(MessageCategory.NUKE);
-    this.loadFilter(MessageCategory.TRADE);
-    this.loadFilter(MessageCategory.ALLIANCE);
-    this.loadFilter(MessageCategory.CHAT);
+    for (const category of Object.values(MessageCategory)) {
+      this.loadFilter(category);
+    }
   }
 
   private loadFilter(category: MessageCategory) {
-    const state = localStorage.getItem(category) === "true";
-    this.eventsFilters.set(category, state);
+    try {
+      const state = localStorage.getItem(category) === "true";
+      this.eventsFilters.set(
+        EventsDisplay.FILTER_STORAGE_PREFIX + category,
+        state,
+      );
+    } catch {
+      // LocalStorage may be unavailable; keep default.
+    }
   }
 
   private renderButton(options: {
@@ -178,7 +184,14 @@ export class EventsDisplay extends LitElement implements Layer {
     const currentState = this.eventsFilters.get(filterName) ?? false;
     const nextState = !currentState;
     this.eventsFilters.set(filterName, nextState);
-    localStorage.setItem(filterName, nextState.toString());
+    try {
+      localStorage.setItem(
+        EventsDisplay.FILTER_STORAGE_PREFIX + filterName,
+        nextState.toString(),
+      );
+    } catch {
+      // Persistence is best-effort.
+    }
     this.requestUpdate();
   }
 
