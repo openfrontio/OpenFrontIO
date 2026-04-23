@@ -18,6 +18,8 @@ const FastForwardIconSolid = assetUrl("images/FastForwardIconSolidWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
+const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
+const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
@@ -35,6 +37,9 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   @state()
   private isPaused: boolean = false;
+
+  @state()
+  private isFullscreen: boolean = false;
 
   @state()
   private timer: number = 0;
@@ -78,6 +83,21 @@ export class GameRightSidebar extends LitElement implements Layer {
     });
 
     this.requestUpdate();
+  }
+
+  private onFullscreenChange = () => {
+    this.isFullscreen = !!document.fullscreenElement;
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("fullscreenchange", this.onFullscreenChange);
+    this.onFullscreenChange();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("fullscreenchange", this.onFullscreenChange);
   }
 
   getTickIntervalMs() {
@@ -177,6 +197,18 @@ export class GameRightSidebar extends LitElement implements Layer {
     );
   }
 
+  private onFullscreenButtonClick() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn("Failed to enter fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen().catch((err) => {
+        console.warn("Failed to exit fullscreen:", err);
+      });
+    }
+  }
+
   render() {
     if (this.game === undefined) return html``;
 
@@ -203,6 +235,22 @@ export class GameRightSidebar extends LitElement implements Layer {
         <div class="cursor-pointer" @click=${this.onSettingsButtonClick}>
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
+
+        ${document.fullscreenEnabled
+          ? html`<div
+              class="cursor-pointer"
+              @click=${this.onFullscreenButtonClick}
+            >
+              <img
+                src=${this.isFullscreen ? exitFullscreenIcon : fullscreenIcon}
+                alt=${this.isFullscreen
+                  ? translateText("fullscreen.exit")
+                  : translateText("fullscreen.enter")}
+                width="20"
+                height="20"
+              />
+            </div>`
+          : ""}
 
         <div class="cursor-pointer" @click=${this.onExitButtonClick}>
           <img src=${exitIcon} alt="exit" width="20" height="20" />

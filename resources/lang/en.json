@@ -1088,5 +1088,22 @@
     "dismiss": "Dismiss",
     "go_to_item": "Go to item {num}",
     "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
+  },
+  "ios_banner": {
+    "text": "For fullscreen, add OpenFront to your Home Screen",
+    "how": "How",
+    "later": "Later",
+    "never": "Never",
+    "modal_title": "Fullscreen on iOS",
+    "modal_desc": "Your browser doesn't support fullscreen, but you can add OpenFront to your Home Screen for an immersive experience:",
+    "step_share": "Tap the Share button in your browser",
+    "step_scroll_and_tap": "Scroll down and tap",
+    "step_add_to_home_label": "Add to Home Screen",
+    "step_open": "Open from your Home Screen — launches fullscreen without the address bar",
+    "got_it": "Got it"
+  },
+  "fullscreen": {
+    "enter": "Enter fullscreen",
+    "exit": "Exit fullscreen"
   }
 }
