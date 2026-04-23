@@ -103,7 +103,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
-  connectedCallback(){
+  connectedCallback() {
     super.connectedCallback();
     this.loadFilter(MessageCategory.ATTACK);
     this.loadFilter(MessageCategory.NUKE);
@@ -112,7 +112,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.loadFilter(MessageCategory.CHAT);
   }
 
-  private loadFilter(category: MessageCategory){
+  private loadFilter(category: MessageCategory) {
     const state = localStorage.getItem(category) === "true";
     this.eventsFilters.set(category, state);
   }
