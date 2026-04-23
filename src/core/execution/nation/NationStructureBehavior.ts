@@ -84,6 +84,12 @@ const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
+/**
+ * When map-wide nation density (nations per land tile) is above this threshold,
+ * a nation's very first structure is a port (or factory if no water access)
+ */
+const HIGH_NATION_DENSITY_THRESHOLD = 1 / 5000;
+
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -110,6 +116,26 @@ export class NationStructureBehavior {
       : this.player.unitsOwned(UnitType.City);
     this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
     const hasCoastalTiles = this._sharedWaterComponents !== null;
+
+    // On crowded maps the first structure is a port (or factory if landlocked)
+    // instead of a city, so nations can get income earlier.
+    // Mainly intended for private 200+ nation HvN games.
+    if (
+      !citiesDisabled &&
+      this.player.unitsOwned(UnitType.City) === 0 &&
+      this.isHighNationDensity()
+    ) {
+      const preferredFirst =
+        hasCoastalTiles && !config.isUnitDisabled(UnitType.Port)
+          ? UnitType.Port
+          : UnitType.Factory;
+      if (
+        !config.isUnitDisabled(preferredFirst) &&
+        this.maybeSpawnStructure(preferredFirst)
+      ) {
+        return true;
+      }
+    }
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
@@ -165,6 +191,14 @@ export class NationStructureBehavior {
     }
 
     return false;
+  }
+
+  private isHighNationDensity(): boolean {
+    const landTiles = this.game.numLandTiles();
+    if (landTiles <= 0) return false;
+    return (
+      this.game.nations().length / landTiles > HIGH_NATION_DENSITY_THRESHOLD
+    );
   }
 
   /**
