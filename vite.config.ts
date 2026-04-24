@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
+import { lookup as lookupMime } from "mrmime";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
@@ -19,31 +20,30 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function serveProprietaryDir(dir: string): Plugin {
-  const resolvedDir = path.resolve(dir) + path.sep;
+function serveProprietaryDir(
+  proprietaryDir: string,
+  resourcesDir: string,
+): Plugin {
   return {
     name: "serve-proprietary-dir",
     configureServer(server) {
-      // Return a function so the middleware is registered after Vite's internal
-      // static-file handler (publicDir).  This makes proprietary/ a fallback
-      // rather than taking precedence over resources/.
-      return () => {
-        server.middlewares.use((req, res, next) => {
-          if (!req.url) return next();
-          const urlPath = new URL(req.url, "http://localhost").pathname;
-          const filePath = path.resolve(
-            dir,
-            decodeURIComponent(urlPath).replace(/^\//, ""),
-          );
-          if (!filePath.startsWith(resolvedDir)) return next();
-          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-            res.setHeader("Cache-Control", "no-cache");
-            fs.createReadStream(filePath).pipe(res);
-          } else {
-            next();
-          }
-        });
-      };
+      // Must run before Vite's htmlFallback; skip when resources/ has the file
+      // so publicDir keeps precedence.
+      server.middlewares.use((req, res, next) => {
+        if (!req.url) return next();
+        const rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\//, "");
+        if (rel.includes("..")) return next();
+        if (fs.existsSync(path.join(resourcesDir, rel))) return next();
+        const filePath = path.join(proprietaryDir, rel);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+          return next();
+        const mime = lookupMime(filePath);
+        if (mime) res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store");
+        fs.createReadStream(filePath).pipe(res);
+      });
     },
   };
 }
@@ -123,7 +123,9 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       tsconfigPaths(),
-      ...(!isProduction ? [serveProprietaryDir(proprietaryDir)] : []),
+      ...(!isProduction
+        ? [serveProprietaryDir(proprietaryDir, resourcesDir)]
+        : []),
       ...(isProduction
         ? []
         : [
