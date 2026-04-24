@@ -367,9 +367,9 @@ export class HostLobbyModal extends BaseModal {
     // Note: clientID will be assigned by server when we join the lobby
     // lobbyCreatorClientID stays empty until then
 
-    // Build URL immediately (lobbyId is known locally before server confirms)
-    const urlPromise = this.constructUrl();
-    urlPromise.then(async (url) => {
+    // Build & copy URL immediately — lobbyId is generated locally so we don't
+    // need to wait for the server round-trip before sharing the invite link.
+    void this.constructUrl().then(async (url) => {
       this.updateHistory(url);
       await this.updateComplete;
       (this.querySelector("copy-button") as CopyButton)?.handleCopy();
