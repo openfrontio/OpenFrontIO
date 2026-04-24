@@ -27,6 +27,7 @@ export class NationAllianceBehavior {
   ) {}
 
   handleAllianceRequests() {
+    if (this.game.config().disableAlliances()) return;
     for (const req of this.player.incomingAllianceRequests()) {
       // Alliance Request intents created during the spawn phase are executed on
       // the first tick post-spawn phase. With the following condition we reject
@@ -44,6 +45,7 @@ export class NationAllianceBehavior {
   }
 
   handleAllianceExtensionRequests() {
+    if (this.game.config().disableAlliances()) return;
     for (const alliance of this.player.alliances()) {
       // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
       // Skip if no expiration yet/ ally didn't request extension yet / nation already agreed to extend
