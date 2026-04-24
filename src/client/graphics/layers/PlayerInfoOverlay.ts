@@ -322,18 +322,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             <div
               class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
               0
-                ? "text-sky-400"
+                ? "text-aquarius"
                 : "text-white/40"} drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
               translate="no"
             >
               <span class="flex items-center gap-px leading-none text-xs"
-                ><img
-                  src=${soldierIcon}
-                  class="w-2.5 h-2.5"
-                  style="${attackingTroops > 0
-                    ? "filter: brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%); opacity:1"
-                    : "filter: brightness(0) invert(1); opacity:0.4"}"
-                />↑</span
+                ><span
+                  class="w-2.5 h-2.5 inline-block"
+                  style="background-color: ${attackingTroops > 0
+                    ? "var(--color-aquarius)"
+                    : "rgba(255,255,255,0.4)"}; -webkit-mask: url(${soldierIcon}) no-repeat center / contain; mask: url(${soldierIcon}) no-repeat center / contain;"
+                ></span
+                >↑</span
               >
               <span class="tabular-nums leading-none text-sm mt-0.5"
                 >${renderTroops(attackingTroops)}</span
@@ -429,7 +429,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-[#0073b7] transition-[width] duration-200"
+                class="h-full bg-malibu-blue transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}

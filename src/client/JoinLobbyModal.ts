@@ -160,7 +160,7 @@ export class JoinLobbyModal extends BaseModal {
                 class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <button
-                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-[#0073b7] hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
                   disabled
                 >
                   ${translateText("private_lobby.joined_waiting")}
@@ -240,13 +240,12 @@ export class JoinLobbyModal extends BaseModal {
                 @keyup=${this.handleChange}
                 class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm tracking-wider"
               />
-              <button
-                @click=${this.pasteFromClipboard}
-                class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all group"
-                title=${translateText("common.paste")}
-              >
-                <svg
-                  class="text-white/60 group-hover:text-white transition-colors"
+              <o-button
+                variant="ghost"
+                size="md"
+                iconPosition="only"
+                .title=${translateText("common.paste")}
+                .icon=${html`<svg
                   stroke="currentColor"
                   fill="currentColor"
                   stroke-width="0"
@@ -258,12 +257,13 @@ export class JoinLobbyModal extends BaseModal {
                   <path
                     d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
                   ></path>
-                </svg>
-              </button>
+                </svg>`}
+                @click=${this.pasteFromClipboard}
+              ></o-button>
             </div>
             <o-button
               title=${translateText("private_lobby.join_lobby")}
-              block
+              width="block"
               submit
             ></o-button>
           </div>
