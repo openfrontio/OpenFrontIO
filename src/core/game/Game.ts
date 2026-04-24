@@ -316,6 +316,9 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  Airfield = "Airfield",
+  Bomber = "Bomber",
+  Bomb = "Bomb",
 }
 
 export enum TrainType {
@@ -345,6 +348,7 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.Airfield,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([
@@ -419,6 +423,18 @@ export interface UnitParamsMap {
   };
 
   [UnitType.MIRVWarhead]: {
+    targetTile?: number;
+  };
+
+  [UnitType.Airfield]: Record<string, never>;
+
+  [UnitType.Bomber]: {
+    homeAirfield?: Unit;
+    targetTile?: number;
+    trajectory: TrajectoryTile[];
+  };
+
+  [UnitType.Bomb]: {
     targetTile?: number;
   };
 }

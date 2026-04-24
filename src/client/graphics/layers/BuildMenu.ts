@@ -98,6 +98,13 @@ export const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
+      unitType: UnitType.Airfield,
+      icon: warshipIcon,
+      description: "build_menu.desc.airfield",
+      key: "unit_type.airfield",
+      countable: true,
+    },
+    {
       unitType: UnitType.DefensePost,
       icon: shieldIcon,
       description: "build_menu.desc.defense_post",

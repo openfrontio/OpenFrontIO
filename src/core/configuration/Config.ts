@@ -167,6 +167,18 @@ export interface Config {
   defaultSamRange(): number;
   samRange(level: number): number;
   maxSamRange(): number;
+  // Airfield / Bomber
+  airfieldSpawnCooldown(): Tick;
+  airfieldBomberRange(): number;
+  bomberSpeed(): number;
+  bombMagnitude(): NukeMagnitude;
+  bomberHealth(): number;
+  // Factory passive benefits
+  factoryPassiveGoldPerTick(): Gold;
+  factoryTroopIncrease(): number;
+  // Auto-city client pacer
+  autoCityIntervalTicks(): Tick;
+  autoCityGoldBuffer(): number;
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,

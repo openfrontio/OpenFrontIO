@@ -37,6 +37,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
+    toggleAutoCity: "KeyN",
   };
 }
 
@@ -172,6 +173,18 @@ export class UserSettings {
       "settings.attackingTroopsOverlay",
       !this.attackingTroopsOverlay(),
     );
+  }
+
+  autoCityEnabled() {
+    return this.getBool("settings.autoCity", false);
+  }
+
+  setAutoCityEnabled(value: boolean) {
+    this.setBool("settings.autoCity", value);
+  }
+
+  toggleAutoCity() {
+    this.setAutoCityEnabled(!this.autoCityEnabled());
   }
 
   cursorCostLabel() {
@@ -388,5 +401,39 @@ export class UserSettings {
 
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
+  }
+
+  // Tech tree: comma-separated list of researched tech IDs
+  researchedTechs(): string[] {
+    const raw = this.getString("settings.techTree", "");
+    if (!raw) return [];
+    return raw.split(",").filter((t) => t.length > 0);
+  }
+
+  hasTech(id: string): boolean {
+    return this.researchedTechs().includes(id);
+  }
+
+  addTech(id: string): void {
+    const techs = this.researchedTechs();
+    if (techs.includes(id)) return;
+    techs.push(id);
+    this.setString("settings.techTree", techs.join(","));
+  }
+
+  resetTechs(): void {
+    this.setString("settings.techTree", "");
+  }
+
+  // Warship global patrol preference (client hint to widen patrol display)
+  warshipPatrolAnywhere(): boolean {
+    return this.getBool("settings.warshipPatrolAnywhere", false);
+  }
+
+  toggleWarshipPatrolAnywhere(): void {
+    this.setBool(
+      "settings.warshipPatrolAnywhere",
+      !this.warshipPatrolAnywhere(),
+    );
   }
 }

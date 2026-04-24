@@ -545,7 +545,9 @@
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
-    "factory": "Factory"
+    "factory": "Factory",
+    "airfield": "Airfield",
+    "bomber": "Bomber"
   },
   "user_setting": {
     "title": "Settings",
@@ -768,7 +770,8 @@
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increases defenses of nearby borders",
       "city": "Increases max population",
-      "factory": "Creates railroads and spawns trains"
+      "factory": "Generates passive gold, spawns trains, and boosts max population",
+      "airfield": "Periodically launches bombers at nearby enemy structures"
     },
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once",
     "not_enough_money": "Not enough money"

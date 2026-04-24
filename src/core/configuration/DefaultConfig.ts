@@ -473,6 +473,28 @@ export class DefaultConfig implements Config {
           cost: () => 0n,
         };
         break;
+      case UnitType.Airfield:
+        info = {
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(4_000_000, (numUnits + 1) * 1_200_000),
+            UnitType.Airfield,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 20 * 10,
+          upgradable: false,
+        };
+        break;
+      case UnitType.Bomber:
+        info = {
+          cost: () => 0n,
+          maxHealth: 100,
+        };
+        break;
+      case UnitType.Bomb:
+        info = {
+          cost: () => 0n,
+        };
+        break;
       default:
         assertNever(type);
     }
@@ -820,7 +842,13 @@ export class DefaultConfig implements Config {
             .filter((u) => !u.isUnderConstruction())
             .map((city) => city.level())
             .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+            this.cityTroopIncrease() +
+          player
+            .units(UnitType.Factory)
+            .filter((u) => !u.isUnderConstruction())
+            .map((factory) => factory.level())
+            .reduce((a, b) => a + b, 0) *
+            this.factoryTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
@@ -928,6 +956,39 @@ export class DefaultConfig implements Config {
 
   defaultSamMissileSpeed(): number {
     return 12;
+  }
+
+  // Airfield / Bomber
+  airfieldSpawnCooldown(): number {
+    return 30 * 10; // 30s between bomber sorties
+  }
+  airfieldBomberRange(): number {
+    return 180;
+  }
+  bomberSpeed(): number {
+    return 3;
+  }
+  bombMagnitude(): NukeMagnitude {
+    return { inner: 4, outer: 8 };
+  }
+  bomberHealth(): number {
+    return 100;
+  }
+
+  // Factory passive benefits
+  factoryPassiveGoldPerTick(): Gold {
+    return 5_000n;
+  }
+  factoryTroopIncrease(): number {
+    return 125_000; // half of cityTroopIncrease
+  }
+
+  // Auto-city client pacer
+  autoCityIntervalTicks(): number {
+    return 20; // 2s
+  }
+  autoCityGoldBuffer(): number {
+    return 20; // keep 20% of current gold free
   }
 
   // Humans can be soldiers, soldiers attacking, soldiers in boat etc.

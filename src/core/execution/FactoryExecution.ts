@@ -21,6 +21,13 @@ export class FactoryExecution implements Execution {
       this.active = false;
       return;
     }
+
+    if (this.factory.isUnderConstruction()) return;
+
+    const gold = this.game.config().factoryPassiveGoldPerTick();
+    if (gold > 0n) {
+      this.factory.owner().addGold(gold, this.factory.tile());
+    }
   }
 
   isActive(): boolean {

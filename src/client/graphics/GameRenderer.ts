@@ -9,6 +9,7 @@ import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
 import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
+import { AutoCityLayer } from "./layers/AutoCityLayer";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -40,8 +41,10 @@ import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
+import { TechTreeLayer } from "./layers/TechTreeLayer";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { ThreatOverlayLayer } from "./layers/ThreatOverlayLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
@@ -285,6 +288,18 @@ export function createRenderer(
     new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
+    new ThreatOverlayLayer(game),
+    new AutoCityLayer(game, eventBus, userSettings),
+    (() => {
+      let el = document.querySelector("tech-tree-panel") as TechTreeLayer;
+      if (!el) {
+        el = document.createElement("tech-tree-panel") as TechTreeLayer;
+        document.body.appendChild(el);
+      }
+      el.game = game;
+      el.userSettings = userSettings;
+      return el;
+    })(),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),

@@ -452,6 +452,9 @@ export class UnitLayer implements Layer {
       case UnitType.MIRV:
         this.handleNuke(unit);
         break;
+      case UnitType.Bomber:
+        this.drawSprite(unit);
+        break;
     }
   }
 

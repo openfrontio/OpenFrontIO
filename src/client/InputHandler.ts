@@ -545,6 +545,14 @@ export class InputHandler {
         e.preventDefault();
         this.eventBus.emit(new TogglePauseIntentEvent());
       }
+      if (
+        !e.repeat &&
+        this.keybinds.toggleAutoCity &&
+        this.keybindMatchesEvent(e, this.keybinds.toggleAutoCity)
+      ) {
+        e.preventDefault();
+        this.userSettings.toggleAutoCity();
+      }
       if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.gameSpeedUp)) {
         e.preventDefault();
         this.eventBus.emit(new GameSpeedUpIntentEvent());
