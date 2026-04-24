@@ -367,6 +367,14 @@ export class HostLobbyModal extends BaseModal {
     // Note: clientID will be assigned by server when we join the lobby
     // lobbyCreatorClientID stays empty until then
 
+    // Build URL immediately (lobbyId is known locally before server confirms)
+    const urlPromise = this.constructUrl();
+    urlPromise.then(async (url) => {
+      this.updateHistory(url);
+      await this.updateComplete;
+      (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+    });
+
     // Pass auth token for creator identification (server extracts persistentID from it)
     createLobby(this.lobbyId)
       .then(async (lobby) => {
@@ -375,10 +383,6 @@ export class HostLobbyModal extends BaseModal {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
         crazyGamesSDK.showInviteButton(this.lobbyId);
-        const url = await this.constructUrl();
-        this.updateHistory(url);
-        await this.updateComplete;
-        (this.querySelector("copy-button") as CopyButton)?.handleCopy();
       })
       .then(() => {
         this.dispatchEvent(
