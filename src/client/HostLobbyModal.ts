@@ -1,6 +1,6 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { copyToClipboard, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
@@ -22,7 +22,7 @@ import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
+import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
@@ -377,7 +377,8 @@ export class HostLobbyModal extends BaseModal {
         crazyGamesSDK.showInviteButton(this.lobbyId);
         const url = await this.constructUrl();
         this.updateHistory(url);
-        await copyToClipboard(url);
+        await this.updateComplete;
+        (this.querySelector("copy-button") as CopyButton)?.handleCopy();
       })
       .then(() => {
         this.dispatchEvent(
