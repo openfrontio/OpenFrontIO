@@ -43,14 +43,23 @@ export class NationNukeBehavior {
   ) {}
 
   maybeSendNuke() {
+    const silos = this.player.units(UnitType.MissileSilo);
+    const config = this.game.config();
+    if (
+      silos.length === 0 ||
+      config.isUnitDisabled(UnitType.MissileSilo) ||
+      (config.isUnitDisabled(UnitType.AtomBomb) &&
+        config.isUnitDisabled(UnitType.HydrogenBomb))
+    ) {
+      return;
+    }
+
     const nukeTarget = this.findBestNukeTarget();
     if (nukeTarget === null) {
       return;
     }
 
-    const silos = this.player.units(UnitType.MissileSilo);
     if (
-      silos.length === 0 ||
       nukeTarget.type() === PlayerType.Bot || // Don't nuke tribes (as opposed to nations and humans)
       this.player.isOnSameTeam(nukeTarget) ||
       this.attackBehavior.shouldAttack(nukeTarget) === false

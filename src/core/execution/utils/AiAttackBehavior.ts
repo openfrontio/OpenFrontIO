@@ -101,6 +101,10 @@ export class AiAttackBehavior {
   private attackWithRandomBoat(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
 
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return;
+    }
+
     // Check if we've already sent out the maximum number of transport ships
     if (
       this.player.unitCount(UnitType.TransportShip) >=
@@ -576,6 +580,10 @@ export class AiAttackBehavior {
   }
 
   private findNearestIslandEnemy(): Player | null {
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return null;
+    }
+
     // Check if we've already sent out the maximum number of transport ships
     if (
       this.player.unitCount(UnitType.TransportShip) >=
@@ -801,6 +809,10 @@ export class AiAttackBehavior {
   }
 
   private sendBoatAttack(target: Player) {
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return;
+    }
+
     const closest = closestTwoTiles(
       this.game,
       Array.from(this.player.borderTiles()).filter((t) => this.game.isShore(t)),
