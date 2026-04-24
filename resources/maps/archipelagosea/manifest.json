@@ -1,0 +1,120 @@
+{
+  "map": {
+    "height": 1508,
+    "num_land_tiles": 287155,
+    "width": 3100
+  },
+  "map16x": {
+    "height": 377,
+    "num_land_tiles": 9913,
+    "width": 775
+  },
+  "map4x": {
+    "height": 754,
+    "num_land_tiles": 59480,
+    "width": 1550
+  },
+  "name": "Archipelago Sea",
+  "nations": [
+    {
+      "coordinates": [145, 767],
+      "flag": "ax",
+      "name": "Kökar"
+    },
+    {
+      "coordinates": [1529, 1120],
+      "flag": "fi",
+      "name": "Jurmo"
+    },
+    {
+      "coordinates": [1097, 1268],
+      "flag": "fi",
+      "name": "Utö"
+    },
+    {
+      "coordinates": [1870, 888],
+      "flag": "fi",
+      "name": "Trunsö"
+    },
+    {
+      "coordinates": [2274, 962],
+      "flag": "fi",
+      "name": "Borstö"
+    },
+    {
+      "coordinates": [1551, 610],
+      "flag": "fi",
+      "name": "Aspö"
+    },
+    {
+      "coordinates": [1704, 783],
+      "flag": "fi",
+      "name": "Långholm"
+    },
+    {
+      "coordinates": [1865, 578],
+      "flag": "fi",
+      "name": "Nötö"
+    },
+    {
+      "coordinates": [2732, 932],
+      "flag": "fi",
+      "name": "Vanö"
+    },
+    {
+      "coordinates": [2992, 1179],
+      "flag": "fi",
+      "name": "Örö"
+    },
+    {
+      "coordinates": [3053, 614],
+      "flag": "fi",
+      "name": "Högsåra"
+    },
+    {
+      "coordinates": [1324, 252],
+      "flag": "fi",
+      "name": "Brunskär"
+    },
+    {
+      "coordinates": [1074, 111],
+      "flag": "fi",
+      "name": "Kälö"
+    },
+    {
+      "coordinates": [914, 514],
+      "flag": "fi",
+      "name": "Uddas"
+    },
+    {
+      "coordinates": [222, 625],
+      "flag": "ax",
+      "name": "Hellsö"
+    },
+    {
+      "coordinates": [1661, 23],
+      "flag": "fi",
+      "name": "Korpoström"
+    },
+    {
+      "coordinates": [44, 343],
+      "flag": "ax",
+      "name": "Kyrkogardsö"
+    },
+    {
+      "coordinates": [2453, 142],
+      "flag": "fi",
+      "name": "Stenskär"
+    },
+    {
+      "coordinates": [2152, 530],
+      "flag": "fi",
+      "name": "Kopparholm"
+    },
+    {
+      "coordinates": [3093, 98],
+      "flag": "fi",
+      "name": "Hammarsboda"
+    }
+  ]
+}
