@@ -90,6 +90,25 @@ const TILES_PER_CITY_EQUIVALENT = 2000;
  */
 const HIGH_NATION_DENSITY_THRESHOLD = 1 / 7500;
 
+/**
+ * Starting-gold threshold above which nations enter the
+ * "high-gold" early game: they build a SAM first and wait between structure
+ * placements. Without this, high-starting-gold games let a nation
+ * drop many structures within a short timespan, which ballooned its maxTroops
+ * before troop count caught up (delaying its attacks) and clustered the
+ * new structures inside a single nuke blast radius.
+ */
+const HIGH_STARTING_GOLD_THRESHOLD = 3_000_000n;
+
+/** Tick gap a high-starting-gold nation must wait before placing its Nth structure */
+const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
+  0, // before #1 (SAM) — no pause
+  0, // before #2 — no pause
+  250, // before #3 — 25s
+  150, // before #4 — 15s
+  100, // before #5 — 10s
+];
+
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -97,6 +116,9 @@ export class NationStructureBehavior {
     weight: number;
   }> | null = null;
   private _sharedWaterComponents: Set<number> | null = null;
+  private lastStructureTick: number | null = null;
+  private placementsCount = 0;
+  private _hasHighStartingGold: boolean | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -105,6 +127,31 @@ export class NationStructureBehavior {
   ) {}
 
   handleStructures(): boolean {
+    if (this.isOnStructureCooldown()) {
+      return false;
+    }
+    const built = this.doHandleStructures();
+    if (built) {
+      this.lastStructureTick = this.game.ticks();
+      this.placementsCount++;
+    }
+    return built;
+  }
+
+  private isOnStructureCooldown(): boolean {
+    // Only high-starting-gold nations pause
+    if (this.lastStructureTick === null || !this.hasHighStartingGold()) {
+      return false;
+    }
+    const requiredGap =
+      HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS[this.placementsCount] ?? 0;
+    if (requiredGap === 0) {
+      return false;
+    }
+    return this.game.ticks() - this.lastStructureTick < requiredGap;
+  }
+
+  private doHandleStructures(): boolean {
     this.reachableStationsCache = null;
     const config = this.game.config();
     const citiesDisabled = config.isUnitDisabled(UnitType.City);
@@ -116,6 +163,21 @@ export class NationStructureBehavior {
       : this.player.unitsOwned(UnitType.City);
     this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
     const hasCoastalTiles = this._sharedWaterComponents !== null;
+
+    const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
+
+    // High-starting-gold nations build a SAM first so their next structures
+    // get SAM coverage and aren't clustered under the same nuke target.
+    if (
+      this.placementsCount === 0 &&
+      !config.isUnitDisabled(UnitType.AtomBomb) &&
+      missileSilosEnabled &&
+      !config.isUnitDisabled(UnitType.SAMLauncher) &&
+      this.hasHighStartingGold() &&
+      this.maybeSpawnStructure(UnitType.SAMLauncher)
+    ) {
+      return true;
+    }
 
     // On crowded maps the first structure is a port (or factory if landlocked)
     // instead of a city, so nations can get income earlier.
@@ -150,7 +212,6 @@ export class NationStructureBehavior {
       !config.isUnitDisabled(UnitType.AtomBomb) ||
       !config.isUnitDisabled(UnitType.HydrogenBomb) ||
       !config.isUnitDisabled(UnitType.MIRV);
-    const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
 
     for (const structureType of buildOrder) {
       // Skip disabled structure types
@@ -191,6 +252,13 @@ export class NationStructureBehavior {
     }
 
     return false;
+  }
+
+  private hasHighStartingGold(): boolean {
+    this._hasHighStartingGold ??=
+      this.game.config().startingGold(this.player.info()) >=
+      HIGH_STARTING_GOLD_THRESHOLD;
+    return this._hasHighStartingGold;
   }
 
   private isHighNationDensity(): boolean {
