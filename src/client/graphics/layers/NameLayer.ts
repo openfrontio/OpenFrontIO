@@ -374,13 +374,6 @@ export class NameLayer implements Layer {
     }
     render.troopsDiv.textContent = renderTroops(render.player.troops());
 
-    const fontColor = this.theme.textColor(render.player);
-    if (render.fontColor !== fontColor) {
-      render.fontColor = fontColor;
-      render.nameDiv.style.color = fontColor;
-      render.troopsDiv.style.color = fontColor;
-    }
-
     // Handle icons
     const iconSize = Math.min(render.fontSize * 1.5, 48);
     const darkMode = this.userSettings.darkMode();
