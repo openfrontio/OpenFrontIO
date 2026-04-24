@@ -21,6 +21,9 @@ import { AiAttackBehavior } from "../utils/AiAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { randTerritoryTileArray } from "./NationUtils";
 
+/** Cap on silo levels reachable via maybeDestroyEnemySam's upgrade fallback. */
+const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
+
 export class NationNukeBehavior {
   private readonly recentlySentNukes: [
     Tick,
@@ -744,6 +747,13 @@ export class NationNukeBehavior {
     // Try each enemy SAM as a target, easiest (lowest level) first
     const sortedSams = enemySams.slice().sort((a, b) => a.level() - b.level());
     let needsMoreSilos = false;
+    // Track the first failed attempt so we can upgrade a silo that would
+    // actually have helped that plan (rather than an unrelated silo).
+    let failedTarget: {
+      targetTile: TileRef;
+      coveringSamIds: Set<number>;
+      totalBombs: number;
+    } | null = null;
 
     for (const targetSam of sortedSams) {
       const targetTile = targetSam.tile();
@@ -841,6 +851,7 @@ export class NationNukeBehavior {
       }
 
       if (unblockedBombs.length < totalBombs) {
+        failedTarget ??= { targetTile, coveringSamIds, totalBombs };
         needsMoreSilos = true;
         continue;
       }
@@ -869,6 +880,7 @@ export class NationNukeBehavior {
       }
 
       if (bestWindowCount < totalBombs) {
+        failedTarget ??= { targetTile, coveringSamIds, totalBombs };
         needsMoreSilos = true;
         continue;
       }
@@ -930,8 +942,8 @@ export class NationNukeBehavior {
 
     // Couldn't destroy any SAM — upgrade silos only if capacity was the bottleneck.
     // If we only lack gold, don't waste it upgrading silos — just wait and save.
-    if (needsMoreSilos) {
-      this.maybeUpgradeBestProtectedSilo();
+    if (needsMoreSilos && failedTarget !== null) {
+      this.maybeUpgradeHelpfulSilo(failedTarget);
     }
   }
 
@@ -960,18 +972,47 @@ export class NationNukeBehavior {
   }
 
   /**
-   * Upgrade the missile silo that is best protected by our own SAMs.
-   * Called when we need more silo capacity to overwhelm enemy SAMs.
+   * Upgrade a missile silo that would actually have helped the failed
+   * overwhelm attempt: trajectory to the failed target is not blocked by
+   * non-covering enemy SAMs, and the silo is below the upgrade cap. Among
+   * those, picks the one best protected by our own SAMs.
    */
-  private maybeUpgradeBestProtectedSilo(): void {
+  private maybeUpgradeHelpfulSilo(failedTarget: {
+    targetTile: TileRef;
+    coveringSamIds: Set<number>;
+    totalBombs: number;
+  }): void {
     const silos = this.player.units(UnitType.MissileSilo);
     if (silos.length === 0) return;
+
+    // First pass: find silos with an unblocked trajectory to the failed
+    // target. Only these contribute slots to the overwhelm plan.
+    const unblockedSilos: Unit[] = [];
+    for (const silo of silos) {
+      if (
+        !this.isTrajectoryInterceptableBySam(
+          silo.tile(),
+          failedTarget.targetTile,
+          failedTarget.coveringSamIds,
+        )
+      ) {
+        unblockedSilos.push(silo);
+      }
+    }
+    if (unblockedSilos.length === 0) return;
+
+    // Bail out if the target is unreachable even at max silo level —
+    // crazy amounts of covering SAMs, upgrading is wasted gold.
+    const maxAchievableSlots =
+      unblockedSilos.length * MAX_NATION_SILO_UPGRADE_LEVEL;
+    if (maxAchievableSlots < failedTarget.totalBombs) return;
 
     const ourSams = this.player.units(UnitType.SAMLauncher);
     let bestSilo: Unit | null = null;
     let bestProtection = -1;
 
-    for (const silo of silos) {
+    for (const silo of unblockedSilos) {
+      if (silo.level() >= MAX_NATION_SILO_UPGRADE_LEVEL) continue;
       if (!this.player.canUpgradeUnit(silo)) continue;
 
       let protection = 0;
