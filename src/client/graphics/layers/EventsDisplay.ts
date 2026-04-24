@@ -113,11 +113,10 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private loadFilter(category: MessageCategory) {
     try {
-      const state = localStorage.getItem(category) === "true";
-      this.eventsFilters.set(
-        EventsDisplay.FILTER_STORAGE_PREFIX + category,
-        state,
-      );
+      const state =
+        localStorage.getItem(EventsDisplay.FILTER_STORAGE_PREFIX + category) ===
+        "true";
+      this.eventsFilters.set(category, state);
     } catch {
       // LocalStorage may be unavailable; keep default.
     }
