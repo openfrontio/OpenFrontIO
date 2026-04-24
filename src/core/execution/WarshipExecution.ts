@@ -165,6 +165,7 @@ export class WarshipExecution implements Execution {
     ) {
       return false;
     }
+    // Only retreat if there's a friendly port
     const ports = this.warship.owner().units(UnitType.Port);
     return ports.length > 0;
   }

@@ -1,0 +1,105 @@
+{
+  "name": "Archipelago Sea",
+  "nations": [
+    {
+      "coordinates": [145, 767],
+      "name": "Kökar",
+      "flag": "ax"
+    },
+    {
+      "coordinates": [1529, 1120],
+      "name": "Jurmo",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1097, 1268],
+      "name": "Utö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1870, 888],
+      "name": "Trunsö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [2274, 962],
+      "name": "Borstö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1551, 610],
+      "name": "Aspö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1704, 783],
+      "name": "Långholm",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1865, 578],
+      "name": "Nötö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [2732, 932],
+      "name": "Vanö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [2992, 1179],
+      "name": "Örö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [3053, 614],
+      "name": "Högsåra",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1324, 252],
+      "name": "Brunskär",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [1074, 111],
+      "name": "Kälö",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [914, 514],
+      "name": "Uddas",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [222, 625],
+      "name": "Hellsö",
+      "flag": "ax"
+    },
+    {
+      "coordinates": [1661, 23],
+      "name": "Korpoström",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [44, 343],
+      "name": "Kyrkogardsö",
+      "flag": "ax"
+    },
+    {
+      "coordinates": [2453, 142],
+      "name": "Stenskär",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [2152, 530],
+      "name": "Kopparholm",
+      "flag": "fi"
+    },
+    {
+      "coordinates": [3093, 98],
+      "name": "Hammarsboda",
+      "flag": "fi"
+    }
+  ]
+}

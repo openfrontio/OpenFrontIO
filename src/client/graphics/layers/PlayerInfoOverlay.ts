@@ -34,6 +34,7 @@ import { TransformHandler } from "../TransformHandler";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
@@ -182,37 +183,21 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private getPlayerNameColor(
-    player: PlayerView,
-    myPlayer: PlayerView | null | undefined,
-    isFriendly: boolean,
-  ): string {
+  private getPlayerNameColor(isFriendly: boolean): string {
     if (isFriendly) return "text-green-500";
-    if (
-      myPlayer &&
-      myPlayer !== player &&
-      player.type() === PlayerType.Nation
-    ) {
-      const relation =
-        this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
-      return this.getRelationClass(relation);
-    }
     return "text-white";
   }
 
-  private getRelationClass(relation: Relation): string {
-    switch (relation) {
-      case Relation.Hostile:
-        return "text-red-500";
-      case Relation.Distrustful:
-        return "text-red-300";
-      case Relation.Neutral:
-        return "text-white";
-      case Relation.Friendly:
-        return "text-green-500";
-      default:
-        return "text-white";
-    }
+  private getRelationSmiley(
+    player: PlayerView,
+    myPlayer: PlayerView | null | undefined,
+  ): TemplateResult | string {
+    if (!myPlayer || myPlayer === player || player.type() !== PlayerType.Nation)
+      return "";
+    const relation =
+      this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
+    if (relation === Relation.Neutral) return "";
+    return html`<relation-smiley .relation=${relation}></relation-smiley>`;
   }
 
   private getRelationName(relation: Relation): string {
@@ -363,8 +348,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="flex flex-col justify-between self-stretch">
           <div
             class="flex items-center gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
-              player,
-              myPlayer,
               isFriendly ?? false,
             )}"
           >
@@ -375,6 +358,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 />`
               : html``}
             <span>${player.displayName()}</span>
+            ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
               ? html`<div class="flex flex-col leading-tight">
                   <span class="text-gray-400 text-xs font-normal"
