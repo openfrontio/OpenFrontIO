@@ -97,16 +97,13 @@ export class SpawnExecution implements Execution {
         if (tiles == undefined || !tiles.length) {
           return;
         }
-        console.log(tiles[1])
         tiles = tiles.filter(
           (tile) =>
             !(
               !this.mg.isLand(tile) ||
-              this.mg.hasOwner(tile) ||
-              this.mg.isBorder(tile)
+              this.mg.hasOwner(tile)
             ),
         );
-        console.log(tiles);
         center = tiles[0];
         return { center, tiles };
       }
