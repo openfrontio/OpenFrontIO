@@ -304,9 +304,6 @@ export class SAMLauncherExecution implements Execution {
     let target: Target | null = null;
     if (mirvWarheadTargets.length === 0) {
       target = this.targetingSystem.getSingleTarget(ticks);
-      if (target !== null) {
-        console.log("Target acquired");
-      }
     }
 
     // target is already filtered to exclude nukes targeted by other SAMs

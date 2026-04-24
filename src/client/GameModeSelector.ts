@@ -10,6 +10,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import "./components/IOSAddToHomeScreenBanner";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -142,6 +143,9 @@ export class GameModeSelector extends LitElement {
             "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
           )}
         </div>
+        <!-- iOS Add to Home Screen banner -->
+        <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
+
         <!-- Game cards grid -->
         <div
           class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"

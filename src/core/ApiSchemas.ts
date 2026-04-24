@@ -51,6 +51,11 @@ export const TokenPayloadSchema = z.object({
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 
+export const ADMIN_ROLES = ["admin", "root"] as const;
+export function isAdminRole(role: string | null | undefined): boolean {
+  return role === "admin" || role === "root";
+}
+
 export const DiscordUserSchema = z.object({
   id: z.string(),
   avatar: z.string().nullable(),
@@ -72,7 +77,6 @@ export const UserMeResponseSchema = z.object({
   }),
   player: z.object({
     publicId: z.string(),
-    roles: z.string().array().optional(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
