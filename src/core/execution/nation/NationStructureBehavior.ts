@@ -88,7 +88,7 @@ const TILES_PER_CITY_EQUIVALENT = 2000;
  * When map-wide nation density (nations per land tile) is above this threshold,
  * a nation's very first structure is a port (or factory if no water access)
  */
-const HIGH_NATION_DENSITY_THRESHOLD = 1 / 5000;
+const HIGH_NATION_DENSITY_THRESHOLD = 1 / 7500;
 
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
