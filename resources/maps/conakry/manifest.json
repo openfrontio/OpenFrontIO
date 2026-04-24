@@ -1,0 +1,120 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 1108371,
+    "width": 2456
+  },
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 65998,
+    "width": 614
+  },
+  "map4x": {
+    "height": 500,
+    "num_land_tiles": 272631,
+    "width": 1228
+  },
+  "name": "Conakry",
+  "nations": [
+    {
+      "coordinates": [510, 420],
+      "flag": "gn",
+      "name": "Koba-Tatema"
+    },
+    {
+      "coordinates": [680, 150],
+      "flag": "gn",
+      "name": "Kenende"
+    },
+    {
+      "coordinates": [1170, 30],
+      "flag": "gn",
+      "name": "Dubreka"
+    },
+    {
+      "coordinates": [1280, 280],
+      "flag": "gn",
+      "name": "Tamouta"
+    },
+    {
+      "coordinates": [1320, 550],
+      "flag": "gn",
+      "name": "Ratoma"
+    },
+    {
+      "coordinates": [1350, 40],
+      "flag": "gn",
+      "name": "Coyah"
+    },
+    {
+      "coordinates": [1630, 160],
+      "flag": "gn",
+      "name": "Maferenya"
+    },
+    {
+      "coordinates": [1730, 460],
+      "flag": "gn",
+      "name": "Kaback"
+    },
+    {
+      "coordinates": [2130, 80],
+      "flag": "gn",
+      "name": "Forecariah"
+    },
+    {
+      "coordinates": [2280, 440],
+      "flag": "gn",
+      "name": "Laya"
+    },
+    {
+      "coordinates": [1200, 910],
+      "flag": "gn",
+      "name": "Fotoba"
+    },
+    {
+      "coordinates": [1333, 835],
+      "flag": "gn",
+      "name": "Ilot Cabri"
+    },
+    {
+      "coordinates": [716, 260],
+      "flag": "gn",
+      "name": "Bolonta"
+    },
+    {
+      "coordinates": [870, 370],
+      "flag": "gn",
+      "name": "Kanka"
+    },
+    {
+      "coordinates": [940, 115],
+      "flag": "gn",
+      "name": "Mangueya"
+    },
+    {
+      "coordinates": [1975, 475],
+      "flag": "gn",
+      "name": "Yelibane"
+    },
+    {
+      "coordinates": [1900, 115],
+      "flag": "gn",
+      "name": "Dandaya"
+    },
+    {
+      "coordinates": [80, 480],
+      "flag": "gn",
+      "name": "Marara"
+    },
+    {
+      "coordinates": [390, 210],
+      "flag": "gn",
+      "name": "Boufou"
+    },
+    {
+      "coordinates": [180, 130],
+      "flag": "gn",
+      "name": "Dioumaya"
+    }
+  ]
+}

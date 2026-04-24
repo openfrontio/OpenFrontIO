@@ -143,6 +143,16 @@ export enum GameMapType {
   Arctic = "Arctic",
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
+  MilkyWay = "MilkyWay",
+  Mediterranean = "Mediterranean",
+  Dyslexdria = "Dyslexdria",
+  GreatLakes = "Great Lakes",
+  StraitOfMalacca = "Strait Of Malacca",
+  Luna = "Luna",
+  Conakry = "Conakry",
+  Caucasus = "Caucasus",
+  BeringSea = "Bering Sea",
+  Antarctica = "Antarctica",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -158,6 +168,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.Antarctica,
   ],
   regional: [
     GameMapType.BritanniaClassic,
@@ -194,6 +205,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Arctic,
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
+    GameMapType.Mediterranean,
+    GameMapType.GreatLakes,
+    GameMapType.StraitOfMalacca,
+    GameMapType.Conakry,
+    GameMapType.Caucasus,
+    GameMapType.BeringSea,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -207,6 +224,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
+    GameMapType.MilkyWay,
+    GameMapType.Dyslexdria,
+    GameMapType.Luna,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -248,13 +268,18 @@ export enum GameMapSize {
 }
 
 export interface PublicGameModifiers {
-  isCompact: boolean;
-  isRandomSpawn: boolean;
-  isCrowded: boolean;
-  isHardNations: boolean;
+  isCompact?: boolean;
+  isRandomSpawn?: boolean;
+  isCrowded?: boolean;
+  isHardNations?: boolean;
   startingGold?: number;
   goldMultiplier?: number;
-  isAlliancesDisabled: boolean;
+  isAlliancesDisabled?: boolean;
+  isPortsDisabled?: boolean;
+  isNukesDisabled?: boolean;
+  isSAMsDisabled?: boolean;
+  isPeaceTime?: boolean;
+  isWaterNukes?: boolean;
 }
 
 export interface UnitInfo {
@@ -901,6 +926,17 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+  /**
+   * Returns the set of water components that `player` shares with at least one
+   * valid trade partner (cached). Used by nation AI for port-placement
+   * heuristics. `null` means no usable water body for ports.
+   */
+  sharedWaterComponents(player: Player): Set<number> | null;
+  /** Incremented each time the water navigation graph is rebuilt (e.g. after nuke terrain change). */
+  waterGraphVersion(): number;
+
+  /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
+  queueWaterConversion(tile: TileRef): void;
 }
 
 export interface PlayerActions {

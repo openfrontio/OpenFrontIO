@@ -1,4 +1,5 @@
 import { decodeJwt } from "jose";
+import { UserSettings } from "src/core/game/UserSettings";
 import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
@@ -63,6 +64,8 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
   } finally {
     __jwt = null;
     localStorage.removeItem(PERSISTENT_ID_KEY);
+    new UserSettings().clearFlag();
+    new UserSettings().setSelectedPatternName(undefined);
   }
 }
 

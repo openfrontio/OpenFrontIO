@@ -7,6 +7,7 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
+import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -163,7 +164,11 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
 
     game.addExecution(
-      new MoveWarshipExecution(player1, warship.id(), game.ref(coastX + 5, 15)),
+      new MoveWarshipExecution(
+        player1,
+        [warship.id()],
+        game.ref(coastX + 5, 15),
+      ),
     );
 
     executeTicks(game, 10);
@@ -200,6 +205,38 @@ describe("Warship", () => {
     expect(tradeShip.owner().id()).toBe(player2.id());
   });
 
+  test("Warship does not target trade ships in different water components", async () => {
+    // build port so warship can target trade ships
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+
+    const warshipTile = game.ref(coastX + 1, 2);
+    const tradeShipTile = game.ref(coastX + 1, 12);
+
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+    game.addExecution(new WarshipExecution(warship));
+
+    const tradeShip = player2.buildUnit(UnitType.TradeShip, tradeShipTile, {
+      targetUnit: player2.buildUnit(UnitType.Port, game.ref(coastX, 10), {}),
+    });
+
+    // Mock different water components
+    game.getWaterComponent = (tile: TileRef) => {
+      if (tile === warshipTile) return 1;
+      return 2;
+    };
+
+    game.hasWaterComponent = (tile: TileRef, component: number) => {
+      return game.getWaterComponent(tile) === component;
+    };
+
+    executeTicks(game, 10);
+
+    // Trade ship should not be captured because it's in a different component
+    expect(tradeShip.owner().id()).toBe(player2.id());
+  });
+
   test("MoveWarshipExecution fails if player is not the owner", async () => {
     const originalPatrolTile = game.ref(coastX + 1, 10);
     const warship = player1.buildUnit(
@@ -211,7 +248,7 @@ describe("Warship", () => {
     );
     new MoveWarshipExecution(
       player2,
-      warship.id(),
+      [warship.id()],
       game.ref(coastX + 5, 15),
     ).init(game, 0);
     expect(warship.patrolTile()).toBe(originalPatrolTile);
@@ -229,7 +266,7 @@ describe("Warship", () => {
     warship.delete();
     new MoveWarshipExecution(
       player1,
-      warship.id(),
+      [warship.id()],
       game.ref(coastX + 5, 15),
     ).init(game, 0);
     expect(warship.patrolTile()).toBe(originalPatrolTile);
@@ -238,7 +275,7 @@ describe("Warship", () => {
   test("MoveWarshipExecution fails gracefully if warship not found", async () => {
     const exec = new MoveWarshipExecution(
       player1,
-      123,
+      [123],
       game.ref(coastX + 5, 15),
     );
 

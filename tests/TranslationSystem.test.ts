@@ -26,6 +26,7 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
   /^territory_patterns\.color_palette\.[^.]+$/,
   /^build_menu\.desc\.[^.]+$/,
   /^unit_type\.[^.]+$/,
+  /^news_box\.(tournament|tutorial|news|warning|firefox_warning)$/,
 ];
 
 /**

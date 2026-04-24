@@ -1,12 +1,11 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
@@ -87,7 +86,7 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private async connect() {
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const instanceId = await MatchmakingModal.getInstanceId();
 
     this.socket = new WebSocket(
@@ -210,7 +209,7 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const url = `/${config.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {

@@ -26,6 +26,11 @@
         padding-left: env(safe-area-inset-left);
       }
 
+      /* Prevent Playwire bottom rail from affecting flex layout */
+      [id^="pw-oop-bottom_rail"] {
+        position: fixed !important;
+      }
+
       /* Ensure full viewport height on iOS */
       html,
       body {
@@ -64,10 +69,10 @@
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
       );
-      document.documentElement.style.setProperty(
-        "--desktop-logo-image-url",
-        `url("<%- desktopLogoImageUrl %>")`,
-      );
+      // document.documentElement.style.setProperty(
+      //   "--desktop-logo-image-url",
+      //   `url("<%- desktopLogoImageUrl %>")`,
+      // );
       document.documentElement.style.setProperty(
         "--mobile-logo-image-url",
         `url("<%- mobileLogoImageUrl %>")`,
@@ -178,7 +183,7 @@
         class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
       ></div>
 
-      <gutter-ads></gutter-ads>
+      <homepage-promos></homepage-promos>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -208,11 +213,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></join-lobby-modal>
-        <territory-patterns-modal
+        <store-modal
           id="page-item-store"
           inline
           class="hidden w-full h-full page-content relative z-50"
-        ></territory-patterns-modal>
+        ></store-modal>
         <user-setting
           id="page-settings"
           inline
@@ -249,6 +254,11 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></flag-input-modal>
+        <territory-patterns-modal
+          id="territory-patterns-modal"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></territory-patterns-modal>
         <ranked-modal
           id="page-ranked"
           inline
@@ -256,16 +266,11 @@
         ></ranked-modal>
       </main-layout>
 
-      <!-- Ad above footer -->
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
-        <home-footer-ad></home-footer-ad>
         <page-footer></page-footer>
       </div>
 
       <!-- Global Modals -->
-      <territory-patterns-modal
-        id="territory-patterns-modal"
-      ></territory-patterns-modal>
     </div>
 
     <!-- Game components -->

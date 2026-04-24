@@ -2,6 +2,7 @@ import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
+import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -13,57 +14,8 @@ export class HelpModal extends BaseModal {
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
-  private isKeybindObject(v: unknown): v is { value: string } {
-    return (
-      typeof v === "object" &&
-      v !== null &&
-      "value" in v &&
-      typeof (v as any).value === "string"
-    );
-  }
-
   private getKeybinds(): Record<string, string> {
-    let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            if (this.isKeybindObject(v)) return [k, v.value];
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
-          })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
-
-    const isMac = Platform.isMac;
-    return {
-      toggleView: "Space",
-      coordinateGrid: "KeyM",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      swapDirection: "KeyU",
-      shiftKey: "ShiftLeft",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      resetGfx: "KeyR",
-      pauseGame: "KeyP",
-      gameSpeedUp: "Period",
-      gameSpeedDown: "Comma",
-      ...saved,
-    };
+    return new UserSettings().keybinds(Platform.isMac);
   }
 
   private getKeyLabel(code: string): string {
@@ -480,6 +432,28 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_auto_upgrade")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      <div class="inline-flex items-center gap-2">
+                        ${this.renderKey(keybinds.shiftKey)}
+                        <span class="text-white/40 font-bold">+</span>
+                        <span class="text-white/50 text-xs"
+                          >${translateText("help_modal.drag")}</span
+                        >
+                      </div>
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_warship_multiselect")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.selectAllWarships)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_warship_selectall")}
                     </td>
                   </tr>
                 </tbody>

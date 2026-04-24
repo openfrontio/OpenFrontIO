@@ -59,7 +59,7 @@ describe("PlayerPanel - kick player moderation", () => {
     } as unknown as PlayerView;
 
     (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
-    (panel as any).renderModeration(my, other);
+    (panel as any).renderModeration(my, other, false);
     expect(actionButton).toHaveBeenCalledTimes(1);
     expect(
       (actionButton as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0],
@@ -71,14 +71,29 @@ describe("PlayerPanel - kick player moderation", () => {
 
     (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
     (panel as any).kickedPlayerIDs.add("2");
-    (panel as any).renderModeration(my, other);
+    (panel as any).renderModeration(my, other, false);
     expect(actionButton).toHaveBeenCalledTimes(1);
 
     const notCreator = { isLobbyCreator: () => false } as unknown as PlayerView;
     (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
     (panel as any).kickedPlayerIDs.clear();
-    (panel as any).renderModeration(notCreator, other);
+    (panel as any).renderModeration(notCreator, other, false);
     expect(actionButton).not.toHaveBeenCalled();
+  });
+
+  test("renders moderation action when isAdmin=true even if not lobby creator", () => {
+    const notCreator = { isLobbyCreator: () => false } as unknown as PlayerView;
+    const other = {
+      id: () => 2,
+      name: () => "Other",
+      displayName: () => "[TAG] Other",
+      type: () => PlayerType.Human,
+      clientID: () => "client-2",
+    } as unknown as PlayerView;
+
+    (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
+    (panel as any).renderModeration(notCreator, other, true);
+    expect(actionButton).toHaveBeenCalledTimes(1);
   });
 
   test("opens moderation modal and hides after a kick", () => {
@@ -170,5 +185,41 @@ describe("PlayerModerationModal - kick confirmation", () => {
 
     expect(eventBus.emit).not.toHaveBeenCalled();
     expect(kickedListener).not.toHaveBeenCalled();
+  });
+
+  describe("canKick", () => {
+    function makeModal(isAdmin: boolean) {
+      const modal = new PlayerModerationModal();
+      modal.isAdmin = isAdmin;
+      return modal;
+    }
+
+    const nonCreator = { isLobbyCreator: () => false } as unknown as PlayerView;
+    const creator = { isLobbyCreator: () => true } as unknown as PlayerView;
+    const humanOther = {
+      type: () => PlayerType.Human,
+      clientID: () => "client-other",
+    } as unknown as PlayerView;
+
+    test("admin non-creator can kick a valid other player", () => {
+      const modal = makeModal(true);
+      expect((modal as any).canKick(nonCreator, humanOther)).toBe(true);
+    });
+
+    test("non-admin non-creator cannot kick", () => {
+      const modal = makeModal(false);
+      expect((modal as any).canKick(nonCreator, humanOther)).toBe(false);
+    });
+
+    test("admin cannot kick themselves", () => {
+      const modal = makeModal(true);
+      // same object reference → other === my
+      expect((modal as any).canKick(nonCreator, nonCreator)).toBe(false);
+    });
+
+    test("lobby creator can kick a valid other player", () => {
+      const modal = makeModal(false);
+      expect((modal as any).canKick(creator, humanOther)).toBe(true);
+    });
   });
 });

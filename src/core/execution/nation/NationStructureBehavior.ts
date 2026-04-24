@@ -90,6 +90,7 @@ export class NationStructureBehavior {
     cluster: Cluster | null;
     weight: number;
   }> | null = null;
+  private _sharedWaterComponents: Set<number> | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -107,7 +108,8 @@ export class NationStructureBehavior {
           Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
         )
       : this.player.unitsOwned(UnitType.City);
-    const hasCoastalTiles = this.hasCoastalTiles();
+    this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
+    const hasCoastalTiles = this._sharedWaterComponents !== null;
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
@@ -162,13 +164,6 @@ export class NationStructureBehavior {
       return true;
     }
 
-    return false;
-  }
-
-  private hasCoastalTiles(): boolean {
-    for (const tile of this.player.borderTiles()) {
-      if (this.game.isOceanShore(tile)) return true;
-    }
     return false;
   }
 
@@ -471,10 +466,22 @@ export class NationStructureBehavior {
     return bestTile;
   }
 
+  /** Samples shore tiles adjacent to water reachable by another player (=> trading possible) */
   private randCoastalTileArray(numTiles: number): TileRef[] {
-    const tiles = Array.from(this.player.borderTiles()).filter((t) =>
-      this.game.isOceanShore(t),
-    );
+    const shared = this._sharedWaterComponents;
+    const tiles = Array.from(this.player.borderTiles()).filter((t) => {
+      if (!this.game.isShore(t)) return false;
+      if (shared === null) return false;
+      for (const neighbor of this.game.neighbors(t)) {
+        if (!this.game.isWater(neighbor)) continue;
+        // Ocean is always considered shared, so any ocean neighbor makes the
+        // tile a valid port site — skip the component lookup.
+        if (this.game.isOcean(neighbor)) return true;
+        const comp = this.game.getWaterComponent(neighbor);
+        if (comp !== null && shared.has(comp)) return true;
+      }
+      return false;
+    });
     return Array.from(this.arraySampler(tiles, numTiles));
   }
 
@@ -698,7 +705,7 @@ export class NationStructureBehavior {
     }
 
     const maxTradeGold = Math.max(
-      Number(game.config().trainGold("ally", 0)),
+      Number(game.config().trainGold("ally", 0, player)),
       1,
     );
     const result: Array<{
@@ -709,7 +716,7 @@ export class NationStructureBehavior {
 
     // Own structures — weighted by "self" trade gold.
     const selfWeight =
-      Number(game.config().trainGold("self", 0)) / maxTradeGold;
+      Number(game.config().trainGold("self", 0, player)) / maxTradeGold;
     for (const unit of player.units(
       UnitType.City,
       UnitType.Port,
@@ -734,7 +741,8 @@ export class NationStructureBehavior {
         : player.isAlliedWith(neighbor)
           ? "ally"
           : "other";
-      const weight = Number(game.config().trainGold(relType, 0)) / maxTradeGold;
+      const weight =
+        Number(game.config().trainGold(relType, 0, player)) / maxTradeGold;
       for (const unit of neighbor.units(
         UnitType.City,
         UnitType.Port,

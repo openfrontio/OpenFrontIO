@@ -6,7 +6,7 @@ import {
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -15,8 +15,8 @@ import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
@@ -192,12 +192,24 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  private renderCurrency(): TemplateResult {
+    const currency = this.userMeResponse?.player?.currency;
+    if (!currency) return html``;
+
+    return html`
+      <currency-display
+        .hard=${currency.hard}
+        .soft=${currency.soft}
+      ></currency-display>
+    `;
+  }
+
   private renderLoggedInAs(): TemplateResult {
     const me = this.userMeResponse?.user;
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
-          ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     } else if (me?.email) {
@@ -208,7 +220,7 @@ export class AccountModal extends BaseModal {
               account_name: me.email,
             })}
           </div>
-          ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     }
@@ -217,7 +229,7 @@ export class AccountModal extends BaseModal {
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const config = await getServerConfigFromClient();
+    const config = await getRuntimeClientServerConfig();
     const encodedGameId = encodeURIComponent(gameId);
     const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
 
@@ -266,6 +278,7 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
+            ${this.renderCurrency()}
           </div>
 
           <div class="space-y-6">

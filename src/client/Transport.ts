@@ -160,7 +160,7 @@ export class SendHashEvent implements GameEvent {
 
 export class MoveWarshipIntentEvent implements GameEvent {
   constructor(
-    public readonly unitId: number,
+    public readonly unitIds: number[],
     public readonly tile: number,
   ) {}
 }
@@ -618,7 +618,7 @@ export class Transport {
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
       type: "move_warship",
-      unitId: event.unitId,
+      unitIds: event.unitIds,
       tile: event.tile,
     });
   }

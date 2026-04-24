@@ -51,6 +51,7 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  playerRole: string | null,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
@@ -204,6 +205,8 @@ export function createRenderer(
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
 
+  playerPanel.setRole(playerRole);
+
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {
     console.error("chat modal not found");
@@ -273,7 +276,7 @@ export function createRenderer(
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+    new TerritoryLayer(game, eventBus, transformHandler),
     new RailroadLayer(game, eventBus, transformHandler, uiState),
     new CoordinateGridLayer(game, eventBus, transformHandler),
     structureLayer,

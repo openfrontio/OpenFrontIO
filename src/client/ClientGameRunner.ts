@@ -12,7 +12,7 @@ import {
 } from "../core/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
+import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
@@ -31,7 +31,9 @@ import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
+  DoBreakAllianceEvent,
   DoGroundAttackEvent,
+  DoRequestAllianceEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -40,8 +42,10 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
+  SendBreakAllianceIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -50,13 +54,14 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager from "./sound/SoundManager";
+import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
+  playerRole: string | null;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -172,6 +177,15 @@ export function joinLobby(
             composed: true,
           }),
         );
+      } else if (message.error === "kick_reason.host_left") {
+        alert(translateText("kick_reason.host_left"));
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+            bubbles: true,
+            composed: true,
+          }),
+        );
       } else {
         showErrorModal(
           message.error,
@@ -193,8 +207,12 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
-      currentGameRunner = null;
-      transport.leaveGame();
+      if (currentGameRunner) {
+        currentGameRunner.stop();
+        currentGameRunner = null;
+      } else {
+        transport.leaveGame();
+      }
       return true;
     },
     prestart: prestartPromise,
@@ -214,7 +232,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getConfig(
+  const config = await getGameLogicConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
@@ -244,22 +262,34 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const soundManager = new SoundManager(eventBus, userSettings);
+  try {
+    const gameRenderer = createRenderer(
+      canvas,
+      gameView,
+      eventBus,
+      lobbyConfig.playerRole,
+    );
 
-  console.log(
-    `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
-  );
+    console.log(
+      `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
+    );
 
-  return new ClientGameRunner(
-    lobbyConfig,
-    clientID,
-    eventBus,
-    gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
-    transport,
-    worker,
-    gameView,
-  );
+    return new ClientGameRunner(
+      lobbyConfig,
+      clientID,
+      eventBus,
+      gameRenderer,
+      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
+      transport,
+      worker,
+      gameView,
+      soundManager,
+    );
+  } catch (err) {
+    soundManager.dispose();
+    throw err;
+  }
 }
 
 export class ClientGameRunner {
@@ -285,6 +315,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private soundManager: SoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -331,12 +362,13 @@ export class ClientGameRunner {
       Date.now(),
       update.winner,
       this.lobby.gameStartInfo.lobbyCreatedAt,
+      this.lobby.gameStartInfo.visibleAt,
     );
     endGame(record);
   }
 
   public start() {
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -358,6 +390,14 @@ export class ClientGameRunner {
     this.eventBus.on(
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoRequestAllianceEvent,
+      this.doRequestAllianceUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoBreakAllianceEvent,
+      this.doBreakAllianceUnderCursor.bind(this),
     );
 
     this.renderer.initialize();
@@ -514,7 +554,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.dispose();
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -632,17 +672,52 @@ export class ClientGameRunner {
         }
       }
 
-      if (upgradeUnits.length > 0) {
-        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-        if (bestUpgrade) {
-          this.eventBus.emit(
-            new SendUpgradeStructureIntentEvent(
-              bestUpgrade.unitId,
-              bestUpgrade.unitType,
-            ),
-          );
+      if (upgradeUnits.length === 0) {
+        return;
+      }
+
+      // Upgrade the closest affordable building. But if there's an unaffordable
+      // building (any type) that's closer to clickedTile than the best candidate,
+      // do nothing — the player clicked on that unaffordable building intending
+      // to upgrade it, and we must not spend their gold on a different building.
+      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+      if (!bestUpgrade) {
+        return;
+      }
+
+      // Check if any unaffordable building is closer than bestUpgrade
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+          const myPlayerID = this.myPlayer!.id();
+          const closestOfType = this.gameView
+            .nearbyUnits(
+              clickedTile,
+              this.gameView.config().structureMinDist(),
+              bu.type,
+            )
+            .filter(({ unit }) => unit.owner().id() === myPlayerID)
+            .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+          if (closestOfType) {
+            const dist = this.gameView.manhattanDist(
+              clickedTile,
+              closestOfType.unit.tile(),
+            );
+            if (dist <= bestUpgrade.distance) {
+              // An unaffordable building of type bu.type is at least as close
+              // as bestUpgrade — player clicked on it, not on bestUpgrade.
+              return;
+            }
+          }
         }
       }
+
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          bestUpgrade.unitId,
+          bestUpgrade.unitType,
+        ),
+      );
     });
   }
 
@@ -692,6 +767,58 @@ export class ClientGameRunner {
             this.gameView.owner(tile).id(),
             this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
+        );
+      }
+    });
+  }
+
+  private doRequestAllianceUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const myPlayer = this.myPlayer;
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    const recipient = tileOwner as PlayerView;
+
+    myPlayer.actions(tile).then((actions) => {
+      if (actions.interaction?.canSendAllianceRequest) {
+        this.eventBus.emit(
+          new SendAllianceRequestIntentEvent(myPlayer, recipient),
+        );
+      }
+    });
+  }
+
+  private doBreakAllianceUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const myPlayer = this.myPlayer;
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    const recipient = tileOwner as PlayerView;
+
+    myPlayer.actions(tile).then((actions) => {
+      if (actions.interaction?.canBreakAlliance) {
+        this.eventBus.emit(
+          new SendBreakAllianceIntentEvent(myPlayer, recipient),
         );
       }
     });

@@ -144,7 +144,7 @@ export class PlayerImpl implements Player {
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map((a) => {
+      outgoingAttacks: this.outgoingAttacks().map((a) => {
         return {
           attackerID: a.attacker().smallID(),
           targetID: a.target().smallID(),
@@ -153,7 +153,7 @@ export class PlayerImpl implements Player {
           retreating: a.retreating(),
         } satisfies AttackUpdate;
       }),
-      incomingAttacks: this._incomingAttacks.map((a) => {
+      incomingAttacks: this.incomingAttacks().map((a) => {
         return {
           attackerID: a.attacker().smallID(),
           targetID: a.target().smallID(),
@@ -1222,7 +1222,7 @@ export class PlayerImpl implements Player {
         manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
       ),
     )
-      .filter((t) => this.mg.owner(t) === this && this.mg.isOceanShore(t))
+      .filter((t) => this.mg.owner(t) === this && this.mg.isShore(t))
       .sort(
         (a, b) =>
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
@@ -1239,14 +1239,19 @@ export class PlayerImpl implements Player {
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {
-    if (!this.mg.isOcean(tile)) {
+    if (!this.mg.isWater(tile)) {
       return false;
     }
 
+    const tileComponent = this.mg.getWaterComponent(tile);
     const bestPort = findClosestBy(
       this.units(UnitType.Port),
       (port) => this.mg.manhattanDist(port.tile(), tile),
-      (port) => port.isActive() && !port.isUnderConstruction(),
+      (port) =>
+        port.isActive() &&
+        !port.isUnderConstruction() &&
+        tileComponent !== null &&
+        this.mg.hasWaterComponent(port.tile(), tileComponent),
     );
 
     return bestPort?.tile() ?? false;
@@ -1376,7 +1381,7 @@ export class PlayerImpl implements Player {
     return this._outgoingAttacks;
   }
   incomingAttacks(): Attack[] {
-    return this._incomingAttacks;
+    return this._incomingAttacks.filter((a) => a.attacker().isAlive());
   }
 
   public isImmune(): boolean {

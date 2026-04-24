@@ -72,6 +72,7 @@ export class LangSelector extends LitElement {
     if (supported.has(lang)) return lang;
 
     const base = lang.slice(0, 2);
+    if (supported.has(base)) return base;
     const candidates = Array.from(supported).filter((key) =>
       key.startsWith(base),
     );
@@ -226,6 +227,7 @@ export class LangSelector extends LitElement {
       "o-modal",
       "o-button",
       "territory-patterns-modal",
+      "store-modal",
       "pattern-input",
       "fluent-slider",
       "news-modal",

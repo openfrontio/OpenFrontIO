@@ -1,0 +1,110 @@
+{
+  "name": "Caucasus",
+  "nations": [
+    {
+      "coordinates": [624, 581],
+      "name": "Georgia",
+      "flag": "ge"
+    },
+    {
+      "coordinates": [455, 463],
+      "name": "Abkhazia",
+      "flag": ""
+    },
+    {
+      "coordinates": [663, 448],
+      "name": "South Ossetia",
+      "flag": ""
+    },
+    {
+      "coordinates": [626, 347],
+      "name": "North Ossetia",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1023, 728],
+      "name": "Azerbaijan",
+      "flag": "az"
+    },
+    {
+      "coordinates": [682, 761],
+      "name": "Armenia",
+      "flag": "am"
+    },
+    {
+      "coordinates": [924, 982],
+      "name": "Iran",
+      "flag": "ir"
+    },
+    {
+      "coordinates": [161, 728],
+      "name": "Black Sea Region",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [924, 479],
+      "name": "Dagestan",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [830, 309],
+      "name": "Chechnya",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [724, 365],
+      "name": "Ingushetia",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [551, 313],
+      "name": "Kabardino-Balkaria",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [405, 300],
+      "name": "Karachay-Cherkessia",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [275, 202],
+      "name": "Adygea",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [275, 186],
+      "name": "Krasnodar Krai",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [524, 16],
+      "name": "Stavropol Krai",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [805, 24],
+      "name": "Kalmykia",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [164, 16],
+      "name": "Rostov Oblast",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1230, 271],
+      "name": "Kazakhstan",
+      "flag": "kz"
+    },
+    {
+      "coordinates": [1083, 20],
+      "name": "Astrakhan Oblast",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [507, 863],
+      "name": "Eastern Anatolia",
+      "flag": "tr"
+    }
+  ]
+}

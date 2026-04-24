@@ -7,7 +7,10 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { translateText } from "../../Utils";
-import SoundManager from "../../sound/SoundManager";
+import {
+  SetBackgroundMusicVolumeEvent,
+  SetSoundEffectsVolumeEvent,
+} from "../../sound/Sounds";
 import { Layer } from "./Layer";
 const structureIcon = assetUrl("images/CityIconWhite.svg");
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
@@ -52,10 +55,6 @@ export class SettingsModal extends LitElement implements Layer {
   wasPausedWhenOpened = false;
 
   init() {
-    SoundManager.setBackgroundMusicVolume(
-      this.userSettings.backgroundMusicVolume(),
-    );
-    SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
@@ -183,14 +182,14 @@ export class SettingsModal extends LitElement implements Layer {
   private onVolumeChange(event: Event) {
     const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
     this.userSettings.setBackgroundMusicVolume(volume);
-    SoundManager.setBackgroundMusicVolume(volume);
+    this.eventBus.emit(new SetBackgroundMusicVolumeEvent(volume));
     this.requestUpdate();
   }
 
   private onSoundEffectsVolumeChange(event: Event) {
     const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
     this.userSettings.setSoundEffectsVolume(volume);
-    SoundManager.setSoundEffectsVolume(volume);
+    this.eventBus.emit(new SetSoundEffectsVolumeEvent(volume));
     this.requestUpdate();
   }
 

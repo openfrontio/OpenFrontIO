@@ -8,8 +8,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { WaterPathFinder } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
@@ -17,7 +17,7 @@ export class WarshipExecution implements Execution {
   private random: PseudoRandom;
   private warship: Unit;
   private mg: Game;
-  private pathfinder: SteppingPathFinder<TileRef>;
+  private pathfinder: WaterPathFinder;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
 
@@ -27,7 +27,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinding.Water(mg);
+    this.pathfinder = new WaterPathFinder(mg);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -83,6 +83,10 @@ export class WarshipExecution implements Execution {
     const patrolTile = this.warship.patrolTile()!;
     const patrolRangeSquared = config.warshipPatrolRange() ** 2;
 
+    // Lazy: only computed if a TradeShip candidate forces the component check.
+    // `undefined` = not yet computed; `null` = computed, no component found.
+    let warshipComponent: number | null | undefined = undefined;
+
     const ships = mg.nearbyUnits(
       this.warship.tile()!,
       config.warshipTargettingRange(),
@@ -113,6 +117,17 @@ export class WarshipExecution implements Execution {
         ) {
           continue;
         }
+
+        if (warshipComponent === undefined) {
+          warshipComponent = mg.getWaterComponent(this.warship.tile());
+        }
+        if (
+          warshipComponent !== null &&
+          !mg.hasWaterComponent(unit.tile(), warshipComponent)
+        ) {
+          continue;
+        }
+
         if (
           mg.euclideanDistSquared(patrolTile, unit.tile()) > patrolRangeSquared
         ) {
@@ -220,6 +235,7 @@ export class WarshipExecution implements Execution {
         break;
       case PathStatus.NOT_FOUND: {
         console.log(`path not found to target`);
+        this.warship.setTargetTile(undefined);
         break;
       }
     }
@@ -242,19 +258,24 @@ export class WarshipExecution implements Execution {
     // Get warship's water component for connectivity check
     const warshipComponent = this.mg.getWaterComponent(this.warship.tile());
 
+    const patrolTile = this.warship.patrolTile();
+    if (patrolTile === undefined) {
+      return undefined;
+    }
+
     while (expandCount < 3) {
       const x =
-        this.mg.x(this.warship.patrolTile()!) +
+        this.mg.x(patrolTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       const y =
-        this.mg.y(this.warship.patrolTile()!) +
+        this.mg.y(patrolTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
       const tile = this.mg.ref(x, y);
       if (
-        !this.mg.isOcean(tile) ||
+        !this.mg.isWater(tile) ||
         (!allowShoreline && this.mg.isShoreline(tile))
       ) {
         attempts++;
