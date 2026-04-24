@@ -1,6 +1,6 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { copyToClipboard, translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
@@ -377,6 +377,7 @@ export class HostLobbyModal extends BaseModal {
         crazyGamesSDK.showInviteButton(this.lobbyId);
         const url = await this.constructUrl();
         this.updateHistory(url);
+        await copyToClipboard(url);
       })
       .then(() => {
         this.dispatchEvent(
