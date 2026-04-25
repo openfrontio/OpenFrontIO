@@ -233,7 +233,7 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
-    const dockingRadius = this.mg.config().warshipPortHealingRadius();
+    const dockingRadius = this.mg.config().warshipDockingRange();
     const dockingRadiusSq = dockingRadius * dockingRadius;
     const distToPort = this.mg.euclideanDistSquared(
       this.warship.tile(),
@@ -323,7 +323,7 @@ export class WarshipExecution implements Execution {
   }
 
   private dockedShipsAtPort(port: Unit, excludeShip?: Unit): Unit[] {
-    const dockingRadius = this.mg.config().warshipPortHealingRadius();
+    const dockingRadius = this.mg.config().warshipDockingRange();
     const owner = this.warship.owner();
 
     return this.mg
@@ -347,7 +347,7 @@ export class WarshipExecution implements Execution {
     const dockedShips = this.dockedShipsAtPort(dockedPort);
 
     const healingPool =
-      dockedPort.level() * this.mg.config().warshipPortHealingBonus();
+      dockedPort.level() * this.mg.config().warshipPortHealingBonusPerLevel();
     if (healingPool <= 0 || dockedShips.length === 0) {
       return;
     }

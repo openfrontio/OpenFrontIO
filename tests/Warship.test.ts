@@ -328,7 +328,7 @@ describe("Warship", () => {
       throw new Error("unreachable");
     }
 
-    game.config().warshipPortHealingBonus = () => 0;
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
     game.config().warshipRetreatHealthThreshold = () => 600;
 
     const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
@@ -364,8 +364,8 @@ describe("Warship", () => {
     }
 
     game.config().warshipPassiveHealing = () => 0;
-    game.config().warshipPortHealingBonus = () => 6;
-    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipPortHealingBonusPerLevel = () => 6;
+    game.config().warshipDockingRange = () => 5;
     game.config().warshipRetreatHealthThreshold = () => 900;
 
     const portTile = game.ref(coastX, 10);
@@ -398,7 +398,7 @@ describe("Warship", () => {
 
   test("Warship waits at port when capacity is full", async () => {
     game.config().warshipPassiveHealing = () => 0;
-    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipDockingRange = () => 5;
     game.config().warshipRetreatHealthThreshold = () => 900;
 
     const portTile = game.ref(coastX, 10);
@@ -450,8 +450,8 @@ describe("Warship", () => {
 
   test("Warship cancels docking if its retreat port is destroyed", async () => {
     game.config().warshipPassiveHealing = () => 0;
-    game.config().warshipPortHealingBonus = () => 0;
-    game.config().warshipPortHealingRadius = () => 5;
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipDockingRange = () => 5;
     game.config().warshipRetreatHealthThreshold = () => 900;
 
     const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});

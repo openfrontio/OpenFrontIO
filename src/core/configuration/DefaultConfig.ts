@@ -969,11 +969,11 @@ export class DefaultConfig implements Config {
     return 20;
   }
 
-  warshipPortHealingRadius(): number {
+  warshipDockingRange(): number {
     return 5;
   }
 
-  warshipPortHealingBonus(): number {
+  warshipPortHealingBonusPerLevel(): number {
     return 5;
   }
 
