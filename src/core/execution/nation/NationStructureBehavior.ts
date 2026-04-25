@@ -76,6 +76,9 @@ const FACTORY_COASTAL_RATIO_MULTIPLIER = 0.33;
 /** Maximum number of missile silos a nation will build */
 const MAX_MISSILE_SILOS = 3;
 
+/** Ratio per city used for the first missile silo so nations start nuking earlier */
+const FIRST_MISSILE_SILO_RATIO = 0.4;
+
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
@@ -336,6 +339,11 @@ export class NationStructureBehavior {
     // Hard cap on missile silos
     if (type === UnitType.MissileSilo && owned >= MAX_MISSILE_SILOS) {
       return false;
+    }
+
+    // First missile silo uses a higher ratio so nations can start nuking earlier
+    if (type === UnitType.MissileSilo && owned === 0) {
+      ratio = FIRST_MISSILE_SILO_RATIO;
     }
 
     // Density cap on defense posts (can't be upgraded so a new one would be built - problematic if it's a game with high starting gold)
