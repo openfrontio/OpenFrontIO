@@ -121,7 +121,7 @@ export class MirvExecution implements Execution {
   private computeFixedTimeSpeed(): number {
     // Measure the actual parabolic path length, then divide by the desired
     // tick count. A temporary fine-grained pathfinder gives a precise
-    // length estimate (cached points are spaced ~1 px apart).
+    // length estimate.
     const measure = UniversalPathFinding.Parabola(this.mg, { increment: 1 });
     const path = measure.findPath(this.spawnTile, this.separateDst) ?? [];
     let length = 0;
