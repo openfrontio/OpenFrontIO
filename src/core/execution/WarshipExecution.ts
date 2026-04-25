@@ -121,21 +121,11 @@ export class WarshipExecution implements Execution {
     const owner = this.warship.owner();
     const passiveHealing = this.mg.config().warshipPassiveHealing();
     const passiveHealingRange = this.mg.config().warshipPassiveHealingRange();
-    const passiveHealingRangeSquared =
-      passiveHealingRange * passiveHealingRange;
     const warshipTile = this.warship.tile();
 
-    let isNearPort = false;
-    for (const port of owner.units(UnitType.Port)) {
-      const distSquared = this.mg.euclideanDistSquared(
-        warshipTile,
-        port.tile(),
-      );
-      if (distSquared <= passiveHealingRangeSquared) {
-        isNearPort = true;
-        break;
-      }
-    }
+    const isNearPort = this.mg
+      .nearbyUnits(warshipTile, passiveHealingRange, [UnitType.Port])
+      .some(({ unit }) => unit.owner() === owner);
 
     if (isNearPort) {
       this.warship.modifyHealth(passiveHealing);
@@ -149,6 +139,7 @@ export class WarshipExecution implements Execution {
   private isFullyHealed(): boolean {
     const maxHealth = this.mg.config().unitInfo(UnitType.Warship).maxHealth;
     if (typeof maxHealth !== "number") {
+      console.warn("Warship maxHealth is not a number, disabling retreat");
       return true;
     }
     return this.warship.health() >= maxHealth;
@@ -332,28 +323,19 @@ export class WarshipExecution implements Execution {
   }
 
   private dockedShipsAtPort(port: Unit, excludeShip?: Unit): Unit[] {
-    const portTile = port.tile();
     const dockingRadius = this.mg.config().warshipPortHealingRadius();
-    const dockingRadiusSq = dockingRadius * dockingRadius;
+    const owner = this.warship.owner();
 
-    return this.warship
-      .owner()
-      .units(UnitType.Warship)
-      .filter((ship) => {
-        if (excludeShip && ship === excludeShip) {
-          return false;
-        }
-        if (!ship.retreating()) {
-          return false;
-        }
-        // Docked ships are retreating ships that are stationary at the port.
-        if (ship.targetTile() !== undefined) {
-          return false;
-        }
-        return (
-          this.mg.euclideanDistSquared(ship.tile(), portTile) <= dockingRadiusSq
-        );
-      });
+    return this.mg
+      .nearbyUnits(port.tile(), dockingRadius, [UnitType.Warship])
+      .filter(({ unit: ship }) => {
+        if (excludeShip && ship === excludeShip) return false;
+        if (ship.owner() !== owner) return false;
+        if (!ship.retreating()) return false;
+        if (ship.targetTile() !== undefined) return false;
+        return true;
+      })
+      .map(({ unit }) => unit);
   }
 
   private applyActiveDockedHealing(): void {
@@ -363,9 +345,6 @@ export class WarshipExecution implements Execution {
     }
 
     const dockedShips = this.dockedShipsAtPort(dockedPort);
-    if (!dockedShips.some((ship) => ship === this.warship)) {
-      return;
-    }
 
     const healingPool =
       dockedPort.level() * this.mg.config().warshipPortHealingBonus();
@@ -401,7 +380,7 @@ export class WarshipExecution implements Execution {
     const currentDistance = this.retreatPortTile
       ? this.mg.euclideanDistSquared(warshipTile, this.retreatPortTile)
       : Infinity;
-    const bestTile = this.findNearestAvailablePortTile();
+    const bestTile = this.findNearestAvailablePortTile(this.warship);
     if (!bestTile) {
       return undefined;
     }
@@ -425,6 +404,9 @@ export class WarshipExecution implements Execution {
 
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
+    if (warshipComponent === null) {
+      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+    }
 
     let bestTile: TileRef | undefined = undefined;
     let bestDistance = Infinity;
@@ -434,10 +416,7 @@ export class WarshipExecution implements Execution {
       }
 
       const portTile = port.tile();
-      if (
-        warshipComponent !== null &&
-        !this.mg.hasWaterComponent(portTile, warshipComponent)
-      ) {
+      if (!this.mg.hasWaterComponent(portTile, warshipComponent)) {
         continue;
       }
 
