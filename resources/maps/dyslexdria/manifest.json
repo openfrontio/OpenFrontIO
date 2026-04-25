@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 336,
-    "num_land_tiles": 108613,
+    "num_land_tiles": 108584,
     "width": 770
   },
   "map4x": {
     "height": 672,
-    "num_land_tiles": 459895,
+    "num_land_tiles": 458859,
     "width": 1540
   },
   "name": "Dyslexdria",
