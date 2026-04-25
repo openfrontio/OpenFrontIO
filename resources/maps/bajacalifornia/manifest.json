@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 530,
-    "num_land_tiles": 80851,
+    "num_land_tiles": 80847,
     "width": 450
   },
   "map4x": {
     "height": 1060,
-    "num_land_tiles": 331773,
+    "num_land_tiles": 331582,
     "width": 900
   },
   "name": "bajacalifornia",
