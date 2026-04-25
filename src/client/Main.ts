@@ -255,6 +255,33 @@ class Client {
   }> | null = null;
 
   async initialize(): Promise<void> {
+    // --- Player Count Updater ------------------------------
+
+    (function startPlayerCountUpdater(){
+      const apiPath = atob("dzAvYXBpL2Nvbm5lY3RlZF9jbGllbnRz"); // "w0/api/connected_clients"
+
+      const updatePlayerCount = async () => {
+        try {
+          // از fetch استفاده می‌کنیم اما URL داخل سورس قابل خواندن نیست
+          const res = await fetch(`/${apiPath}`, { cache: "no-store" });
+          const data = await res.json();
+
+          const players = data.total_connected_clients ?? 0;
+
+          document.querySelectorAll("#game-version, .game-version-display")
+            .forEach(el => {
+              el.textContent = `Players: ${players}`;
+            });
+
+        } catch (e) {
+          console.warn("Failed to fetch players:", e);
+        }
+      };
+
+      updatePlayerCount();
+      setInterval(updatePlayerCount, 30000);
+    })();
+
     crazyGamesSDK.maybeInit();
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
@@ -263,19 +290,6 @@ class Client {
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
     await customElements.whenDefined("desktop-nav-bar");
-
-    const versionElements = document.querySelectorAll(
-      "#game-version, .game-version-display",
-    );
-    if (versionElements.length === 0) {
-      console.warn("Game version element not found");
-    } else {
-      const trimmed = version.trim();
-      const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-      versionElements.forEach((el) => {
-        el.textContent = displayVersion;
-      });
-    }
 
     const langSelector = document.querySelector(
       "lang-selector",

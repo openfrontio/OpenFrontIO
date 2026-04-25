@@ -55,7 +55,7 @@ export class DesktopNavBar extends LitElement {
         <div class="flex flex-col items-center justify-center">
           <div class="h-8 text-[#0073b7]">
             <img
-              src=${assetUrl("images/OpenFrontLogo.svg")}
+              src=${assetUrl("images/OpenFrontLogo.png")}
               alt="OpenFront"
               class="h-full w-auto"
             />

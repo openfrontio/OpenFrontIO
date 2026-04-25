@@ -1,30 +1,37 @@
 [
   {
     "id": "firefox-performance-issues-2026",
-    "title": "Firefox Performance Issues",
-    "descriptionTranslationKey": "news_box.firefox_warning",
+    "title": "اپتایم سرور چقدره؟",
+    "description": "اپتایم سرور 99.9% و در صورتی که خاموش بشه در مدت کوتاهی روشن و در دسترس شما عزیزان قرار میگیره",
     "url": null,
-    "type": "warning"
+    "type": "دانستنی"
   },
   {
     "id": "clan-tournament-spring-2026",
-    "title": "Upcoming: Spring Clan Tournament",
-    "description": "2v2 clan battles — Sign up on Discord before April 12",
-    "url": "https://discord.gg/openfront",
-    "type": "tournament"
+    "title": "چطوری با دوستام بازی کنم؟",
+    "description": "فقط کافیه روی گزینه‌ی ساخت لابی بزنی و یک لابی بسازیو با دوستات بازی کنی",
+    "url": null,
+    "type": "آموزشی"
   },
   {
     "id": "clan-tournaments-2026",
-    "title": "Clan Tournaments",
-    "description": "Join a clan and compete in weekly tournaments on Discord!",
-    "url": "https://discord.gg/openfront",
-    "type": "tournament"
+    "title": "از کجا بفهمم رویدادها و تورنمنت‌های جدید کی شروع می‌شن؟",
+    "description": "زمان شروع رویدادها، ثبت‌نام‌ها و تغییرات مهم بازی همیشه اول توی کانال بله ما اعلام می‌شه. اگر می‌خوای هیچ رویدادی رو از دست ندی، همین الان کانال رو دنبال کن:",
+    "url": "https://ble.ir/openft",
+    "type": "تورنمنت"
   },
   {
     "id": "tutorial-2026",
-    "title": "New Player Tutorial",
-    "description": "Learn the basics of OpenFront in this video guide",
+    "title": " تازه‌وارد هستم، از کجا شروع کنم؟",
+    "description": "آموزش ویدیویی مخصوص بازیکنان جدید آماده است",
     "url": "https://www.youtube.com/watch?v=EN2oOog3pSs",
-    "type": "tutorial"
+    "type": "آموزشی"
+  },
+    {
+    "id": "tutorial-2026",
+    "title": "آیا این بازی رایگانه؟",
+    "description": "بله کاملا! در اینجا میتوانید به صورت کاملا رایگان بازی کنید. ولی سرور و زیرساخت ها نیاز به سرمایه دارند پس ممنون میشیم که حمایتمون کنید.",
+    "url": "https://reymit.ir/openft",
+    "type": "آموزشی"
   }
 ]

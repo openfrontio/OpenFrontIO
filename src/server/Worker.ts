@@ -244,6 +244,26 @@ export async function startWorker() {
     }
     res.json(game.gameInfo());
   });
+  app.get("/api/connected_clients", async (req, res) => {
+    try {
+      const totalWebSocketClients = wss.clients.size;
+      const totalGameClients = gm.activeClients();
+      res.json({
+        total_connected_clients: totalWebSocketClients,
+        websocket_clients: totalWebSocketClients,
+        in_game_clients: totalGameClients,
+        in_lobby_clients: totalWebSocketClients - totalGameClients,
+        worker_id: workerId,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      log.error("Error in /api/connected_clients:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   registerGamePreviewRoute({
     app,
