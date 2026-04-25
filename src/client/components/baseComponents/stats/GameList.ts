@@ -46,7 +46,7 @@ export class GameList extends LitElement {
               >
                 <div class="flex items-center gap-4">
                   <button
-                    class="p-2 bg-blue-500/20 rounded-lg text-blue-400"
+                    class="p-2 bg-malibu-blue/20 rounded-lg text-aquarius"
                     @click=${() => this.onViewGame?.(game.gameId)}
                   >
                     <svg

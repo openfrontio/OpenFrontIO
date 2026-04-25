@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 508,
-    "num_land_tiles": 130748,
+    "num_land_tiles": 130741,
     "width": 487
   },
   "map4x": {
     "height": 1016,
-    "num_land_tiles": 537916,
+    "num_land_tiles": 537561,
     "width": 974
   },
   "name": "Africa",
