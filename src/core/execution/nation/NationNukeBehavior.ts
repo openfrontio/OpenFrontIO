@@ -24,6 +24,15 @@ import { randTerritoryTileArray } from "./NationUtils";
 /** Cap on silo levels reachable via maybeDestroyEnemySam's upgrade fallback. */
 const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
 
+/**
+ * Level-weighted structure density (sum of structure levels per tile owned)
+ * above which the richest impossible nation will pre-emptively nuke a player.
+ */
+const HIGH_DENSITY_NUKE_THRESHOLD = 1 / 75;
+
+/** Minimum sum of structure levels a player needs to qualify as a high-density nuke target. */
+const MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE = 5;
+
 export class NationNukeBehavior {
   private readonly recentlySentNukes: [
     Tick,
@@ -179,6 +188,20 @@ export class NationNukeBehavior {
       return incomingAttackPlayer;
     }
 
+    // On Impossible, the richest nation hunts very high structure density targets
+    // Restricting to the richest nation prevents every impossible nation
+    // from piling onto the same compact player.
+    if (
+      diff === Difficulty.Impossible &&
+      this.isRichestNation() &&
+      this.random.chance(2)
+    ) {
+      const denseTarget = this.findHighDensityTarget();
+      if (denseTarget !== null) {
+        return denseTarget;
+      }
+    }
+
     // On impossible difficulty, prioritize nuking the crown if they have more than 50% of the map
     const { difficulty, gameMode } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Impossible && gameMode === GameMode.FFA) {
@@ -240,6 +263,46 @@ export class NationNukeBehavior {
     }
 
     return null;
+  }
+
+  private isRichestNation(): boolean {
+    const myGold = this.player.gold();
+    for (const other of this.game.players()) {
+      if (other === this.player) continue;
+      if (other.type() !== PlayerType.Nation) continue;
+      if (other.gold() > myGold) return false;
+    }
+    return true;
+  }
+
+  private findHighDensityTarget(): Player | null {
+    let bestTarget: Player | null = null;
+    let bestDensity = HIGH_DENSITY_NUKE_THRESHOLD;
+    for (const other of this.game.players()) {
+      if (other === this.player) continue;
+      if (other.type() === PlayerType.Bot) continue;
+      if (this.player.isFriendly(other)) continue;
+      const tilesOwned = other.numTilesOwned();
+      if (tilesOwned === 0) continue;
+      const structures = other.units(
+        UnitType.City,
+        UnitType.DefensePost,
+        UnitType.MissileSilo,
+        UnitType.Port,
+        UnitType.SAMLauncher,
+        UnitType.Factory,
+      );
+      let levelSum = 0;
+      for (const s of structures) levelSum += s.level();
+      // Skip players with too few structures regardless of density
+      if (levelSum < MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE) continue;
+      const density = levelSum / tilesOwned;
+      if (density > bestDensity) {
+        bestDensity = density;
+        bestTarget = other;
+      }
+    }
+    return bestTarget;
   }
 
   private findFFACrownTarget(): Player | null {

@@ -58,7 +58,7 @@ function getStructureRatios(
     },
     [UnitType.SAMLauncher]: {
       ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
-      perceivedCostIncreasePerOwned: 0.5,
+      perceivedCostIncreasePerOwned: 0.3,
     },
     [UnitType.MissileSilo]: {
       ratioPerCity: 0.2,
@@ -138,7 +138,7 @@ export class NationStructureBehavior {
     if (this.isOnStructureCooldown()) {
       return false;
     }
-    if (this.isInTeamPostSaveUpBlockedPhase()) {
+    if (this.isInPostSaveUpBlockedPhase()) {
       return false;
     }
     const built = this.doHandleStructures();
@@ -162,16 +162,13 @@ export class NationStructureBehavior {
     return this.game.ticks() - this.lastStructureTick < requiredGap;
   }
 
-  // Team mode spreads placements after the save-up target is first reached:
+  // Spreads placements after the save-up target is first reached:
   // 15s ON / 15s OFF, alternating, to allow NationNukeBehavior to spend the gold.
-  private isInTeamPostSaveUpBlockedPhase(): boolean {
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+  private isInPostSaveUpBlockedPhase(): boolean {
+    if (this.game.config().isUnitDisabled(UnitType.MissileSilo)) {
       return false;
     }
     const saveUpTarget = this.getSaveUpTarget();
-    if (saveUpTarget === 0n) {
-      return false;
-    }
     if (this._postSaveUpStartTick === null) {
       if (this.player.gold() < saveUpTarget) {
         return false;
