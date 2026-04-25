@@ -197,10 +197,13 @@ export class NationStructureBehavior {
 
     const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
 
-    // High-starting-gold nations build a SAM first so their next structures
-    // get SAM coverage and aren't clustered under the same nuke target.
+    // High-starting-gold Hard/Impossible nations build a SAM first so their
+    // next structures get SAM coverage and aren't clustered under the same nuke target.
+    const { difficulty } = config.gameConfig();
     if (
       this.placementsCount === 0 &&
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
       !config.isUnitDisabled(UnitType.AtomBomb) &&
       missileSilosEnabled &&
       !config.isUnitDisabled(UnitType.SAMLauncher) &&
