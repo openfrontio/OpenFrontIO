@@ -96,14 +96,14 @@ export class IOSAddToHomeScreenBanner extends LitElement {
             <ol class="flex flex-col gap-3 text-sm text-slate-200">
               <li class="flex items-start gap-3">
                 <span
-                  class="shrink-0 w-6 h-6 rounded-full bg-[#0073b7] flex items-center justify-center text-white font-bold text-xs"
+                  class="shrink-0 w-6 h-6 rounded-full bg-malibu-blue flex items-center justify-center text-white font-bold text-xs"
                   >1</span
                 >
                 <span>${translateText("ios_banner.step_share")}</span>
               </li>
               <li class="flex items-start gap-3">
                 <span
-                  class="shrink-0 w-6 h-6 rounded-full bg-[#0073b7] flex items-center justify-center text-white font-bold text-xs"
+                  class="shrink-0 w-6 h-6 rounded-full bg-malibu-blue flex items-center justify-center text-white font-bold text-xs"
                   >2</span
                 >
                 <span
@@ -117,7 +117,7 @@ export class IOSAddToHomeScreenBanner extends LitElement {
               </li>
               <li class="flex items-start gap-3">
                 <span
-                  class="shrink-0 w-6 h-6 rounded-full bg-[#0073b7] flex items-center justify-center text-white font-bold text-xs"
+                  class="shrink-0 w-6 h-6 rounded-full bg-malibu-blue flex items-center justify-center text-white font-bold text-xs"
                   >3</span
                 >
                 <span>${translateText("ios_banner.step_open")}</span>
@@ -125,7 +125,7 @@ export class IOSAddToHomeScreenBanner extends LitElement {
             </ol>
 
             <button
-              class="w-full py-2.5 rounded-lg bg-[#0073b7] hover:bg-sky-500 active:bg-sky-700 text-white font-semibold transition-colors"
+              class="w-full py-2.5 rounded-lg bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 text-white font-semibold transition-colors"
               @click=${this.closeGuide}
             >
               ${translateText("ios_banner.got_it")}
@@ -154,7 +154,7 @@ export class IOSAddToHomeScreenBanner extends LitElement {
         <div class="flex gap-3 items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="shrink-0 w-8 h-8 text-[#0073b7]"
+            class="shrink-0 w-8 h-8 text-malibu-blue"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -171,7 +171,7 @@ export class IOSAddToHomeScreenBanner extends LitElement {
 
         <div class="flex flex-col gap-1.5">
           <button
-            class="w-full py-1.5 rounded-lg bg-[#0073b7] hover:bg-sky-500 active:bg-sky-700 text-white font-semibold text-sm transition-colors"
+            class="w-full py-1.5 rounded-lg bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 text-white font-semibold text-sm transition-colors"
             @click=${this.openGuide}
           >
             ${translateText("ios_banner.how")}

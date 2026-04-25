@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 411,
-    "num_land_tiles": 51062,
+    "num_land_tiles": 51057,
     "width": 458
   },
   "map4x": {
     "height": 822,
-    "num_land_tiles": 212395,
+    "num_land_tiles": 212196,
     "width": 916
   },
   "name": "straitofmalacca",
