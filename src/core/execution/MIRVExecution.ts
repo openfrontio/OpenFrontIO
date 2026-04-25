@@ -26,6 +26,7 @@ export class MirvExecution implements Execution {
   private rangeSquared = this.range * this.range;
   private minimumSpread = 55;
   private warheadCount = 350;
+  private fixedFireTicks = 75;
 
   private baseX: number;
   private baseY: number;
@@ -50,10 +51,9 @@ export class MirvExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.targetPlayer = this.mg.owner(this.dst);
+    // Speed is recomputed in tick() once spawnTile/separateDst are known,
+    // so flight time stays constant regardless of launch location.
     this.speed = this.mg.config().defaultNukeSpeed();
-    this.pathFinder = UniversalPathFinding.Parabola(mg, {
-      increment: this.speed,
-    });
 
     // Betrayal on launch
     if (this.targetPlayer.isPlayer()) {
@@ -87,6 +87,12 @@ export class MirvExecution implements Execution {
       const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
 
+      // Scale speed so flight time is fixed regardless of launch location.
+      this.speed = this.computeFixedTimeSpeed();
+      this.pathFinder = UniversalPathFinding.Parabola(this.mg, {
+        increment: this.speed,
+      });
+
       this.mg.displayIncomingUnit(
         this.nuke.id(),
         // TODO TranslateText
@@ -110,6 +116,24 @@ export class MirvExecution implements Execution {
     } else if (result.status === PathStatus.NEXT) {
       this.nuke.move(result.node);
     }
+  }
+
+  private computeFixedTimeSpeed(): number {
+    // Measure the actual parabolic path length, then divide by the desired
+    // tick count. A temporary fine-grained pathfinder gives a precise
+    // length estimate (cached points are spaced ~1 px apart).
+    const measure = UniversalPathFinding.Parabola(this.mg, { increment: 1 });
+    const path = measure.findPath(this.spawnTile, this.separateDst) ?? [];
+    let length = 0;
+    for (let i = 1; i < path.length; i++) {
+      const dx = this.mg.x(path[i]) - this.mg.x(path[i - 1]);
+      const dy = this.mg.y(path[i]) - this.mg.y(path[i - 1]);
+      length += Math.sqrt(dx * dx + dy * dy);
+    }
+    if (length <= 0) {
+      return this.mg.config().defaultNukeSpeed();
+    }
+    return length / this.fixedFireTicks;
   }
 
   private separate() {
