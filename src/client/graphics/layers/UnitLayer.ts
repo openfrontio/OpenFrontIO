@@ -456,11 +456,17 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
+    if (unit.retreating()) {
+      this.drawSprite(unit, colord("rgb(0,180,255)"));
+      return;
+    }
+
     if (unit.targetUnitId()) {
       this.drawSprite(unit, colord("rgb(200,0,0)"));
-    } else {
-      this.drawSprite(unit);
+      return;
     }
+
+    this.drawSprite(unit);
   }
 
   private handleShellEvent(unit: UnitView) {

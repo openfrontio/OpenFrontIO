@@ -367,7 +367,8 @@
     "caucasus": "Caucasus",
     "beringsea": "Bering Sea",
     "caribbean": "Caribbean",
-    "antarctica": "Antarctica"
+    "antarctica": "Antarctica",
+    "archipelagosea": "Archipelago Sea"
   },
   "map_categories": {
     "featured": "Featured",

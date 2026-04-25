@@ -154,6 +154,7 @@ export enum GameMapType {
   BeringSea = "Bering Sea",
   Caribbean = "Caribbean",
   Antarctica = "Antarctica",
+  ArchipelagoSea = "ArchipelagoSea",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -213,6 +214,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Caucasus,
     GameMapType.BeringSea,
     GameMapType.Caribbean,
+    GameMapType.ArchipelagoSea,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -614,6 +616,7 @@ export interface Unit {
   // Health
   hasHealth(): boolean;
   retreating(): boolean;
+  setRetreating(retreating: boolean): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;
