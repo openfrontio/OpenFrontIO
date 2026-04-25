@@ -22,7 +22,7 @@ import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
+import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
@@ -439,6 +439,14 @@ export class HostLobbyModal extends BaseModal {
     // Note: clientID will be assigned by server when we join the lobby
     // lobbyCreatorClientID stays empty until then
 
+    // Copy immediately so the host can share the link without waiting for the
+    // server. If lobby creation fails, clear the clipboard to avoid a dead link.
+    void this.constructUrl().then(async (url) => {
+      this.updateHistory(url);
+      await this.updateComplete;
+      void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+    });
+
     // Pass auth token for creator identification (server extracts persistentID from it)
     createLobby(this.lobbyId)
       .then(async (lobby) => {
@@ -447,8 +455,6 @@ export class HostLobbyModal extends BaseModal {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
         crazyGamesSDK.showInviteButton(this.lobbyId);
-        const url = await this.constructUrl();
-        this.updateHistory(url);
       })
       .then(() => {
         this.dispatchEvent(
@@ -461,6 +467,10 @@ export class HostLobbyModal extends BaseModal {
             composed: true,
           }),
         );
+      })
+      .catch(() => {
+        // Clear clipboard so the host doesn't accidentally share a dead link
+        void navigator.clipboard.writeText("").catch(() => {});
       });
     if (this.modalEl) {
       this.modalEl.onClose = () => {

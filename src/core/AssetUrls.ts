@@ -63,14 +63,6 @@ export function buildAssetUrl(
     return directUrl;
   }
 
-  const directoryPrefix = `${normalizedPath}/`;
-  const hasNestedAssets = Object.keys(assetManifest).some((manifestPath) =>
-    manifestPath.startsWith(directoryPrefix),
-  );
-  if (hasNestedAssets) {
-    return `/_assets/${encodeAssetPath(normalizedPath)}`;
-  }
-
   return `/${encodeAssetPath(normalizedPath)}`;
 }
 

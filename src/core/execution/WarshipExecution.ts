@@ -11,6 +11,7 @@ import { TileRef } from "../game/GameMap";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { findMinimumBy } from "../Util";
 import { ShellExecution } from "./ShellExecution";
 
 export class WarshipExecution implements Execution {
@@ -20,6 +21,8 @@ export class WarshipExecution implements Execution {
   private pathfinder: WaterPathFinder;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
+  private retreatPortTile: TileRef | undefined;
+  private retreatingForRepair = false;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -55,24 +58,166 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
+    const healthBeforeHealing = this.warship.health();
 
-    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
-    if (hasPort) {
-      this.warship.modifyHealth(1);
+    this.healWarship();
+
+    if (this.handleRepairRetreat()) {
+      return;
+    }
+
+    // Priority 1: Check if need to heal before doing anything else
+    if (this.shouldStartRepairRetreat(healthBeforeHealing)) {
+      this.startRepairRetreat();
+      if (this.handleRepairRetreat()) {
+        return;
+      }
     }
 
     this.warship.setTargetUnit(this.findTargetUnit());
+
+    // Always patrol for movement
+    this.patrol();
+
+    // Priority 1: Shoot transport ship if in range
+    if (this.warship.targetUnit()?.type() === UnitType.TransportShip) {
+      this.shootTarget();
+      return;
+    }
+
+    // Priority 2: Fight enemy warship if in range
+    if (this.warship.targetUnit()?.type() === UnitType.Warship) {
+      this.shootTarget();
+      return;
+    }
+
+    // Priority 3: Hunt trade ship only if not healing and no enemy warship
     if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
       this.huntDownTradeShip();
       return;
     }
+  }
 
-    this.patrol();
+  private healWarship(): void {
+    if (this.warship.owner().unitCount(UnitType.Port) > 0) {
+      this.warship.modifyHealth(1);
+    }
+  }
 
-    if (this.warship.targetUnit() !== undefined) {
-      this.shootTarget();
+  private isFullyHealed(): boolean {
+    const maxHealth = this.mg.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      return true;
+    }
+    return this.warship.health() >= maxHealth;
+  }
+
+  private shouldStartRepairRetreat(
+    healthBeforeHealing = this.warship.health(),
+  ): boolean {
+    if (this.retreatingForRepair) {
+      return false;
+    }
+    if (
+      healthBeforeHealing >= this.mg.config().warshipRetreatHealthThreshold()
+    ) {
+      return false;
+    }
+    // Only retreat if there's a friendly port
+    const ports = this.warship.owner().units(UnitType.Port);
+    return ports.length > 0;
+  }
+
+  private findNearestPort(): TileRef | undefined {
+    const ports = this.warship.owner().units(UnitType.Port);
+    if (ports.length === 0) {
+      return undefined;
+    }
+
+    const warshipTile = this.warship.tile();
+    const warshipComponent = this.mg.getWaterComponent(warshipTile);
+    if (warshipComponent === null) {
+      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+    }
+
+    const nearest = findMinimumBy(
+      ports,
+      (port) => this.mg.euclideanDistSquared(warshipTile, port.tile()),
+      (port) => {
+        const portComponent = this.mg.getWaterComponent(port.tile());
+        if (portComponent === null) {
+          throw new Error(`Port at tile ${port.tile()} has no water component`);
+        }
+        return portComponent === warshipComponent;
+      },
+    );
+
+    return nearest?.tile();
+  }
+
+  private startRepairRetreat(): void {
+    const portTile = this.findNearestPort();
+    if (portTile === undefined) {
       return;
     }
+    this.retreatingForRepair = true;
+    this.retreatPortTile = portTile;
+    this.warship.setRetreating(true);
+    this.warship.setTargetUnit(undefined);
+  }
+
+  private cancelRepairRetreat(clearTargetTile = true): void {
+    this.retreatingForRepair = false;
+    this.warship.setRetreating(false);
+    this.retreatPortTile = undefined;
+    if (clearTargetTile) {
+      this.warship.setTargetTile(undefined);
+    }
+  }
+
+  private handleRepairRetreat(): boolean {
+    if (!this.retreatingForRepair) {
+      return false;
+    }
+
+    if (this.isFullyHealed()) {
+      this.cancelRepairRetreat();
+      return false;
+    }
+
+    this.warship.setTargetUnit(undefined);
+
+    const retreatPortTile = this.retreatPortTile;
+    if (retreatPortTile === undefined) {
+      return false;
+    }
+
+    if (this.warship.tile() === retreatPortTile) {
+      this.warship.setTargetTile(undefined);
+      return true;
+    }
+
+    this.warship.setTargetTile(retreatPortTile);
+    const result = this.pathfinder.next(this.warship.tile(), retreatPortTile);
+    switch (result.status) {
+      case PathStatus.COMPLETE:
+        this.warship.move(result.node);
+        if (result.node === retreatPortTile) {
+          this.warship.setTargetTile(undefined);
+        }
+        break;
+      case PathStatus.NEXT:
+        this.warship.move(result.node);
+        break;
+      case PathStatus.NOT_FOUND:
+        this.retreatPortTile = this.findNearestPort();
+        if (this.retreatPortTile === undefined) {
+          this.cancelRepairRetreat();
+        }
+        break;
+    }
+
+    return true;
   }
 
   private findTargetUnit(): Unit | undefined {

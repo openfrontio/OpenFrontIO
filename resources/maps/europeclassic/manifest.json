@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 250,
-    "num_land_tiles": 60634,
+    "num_land_tiles": 60624,
     "width": 500
   },
   "map4x": {
     "height": 500,
-    "num_land_tiles": 248793,
+    "num_land_tiles": 248492,
     "width": 1000
   },
   "name": "Europe",

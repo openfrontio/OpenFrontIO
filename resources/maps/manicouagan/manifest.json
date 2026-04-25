@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 400,
-    "num_land_tiles": 118925,
+    "num_land_tiles": 118914,
     "width": 400
   },
   "map4x": {
     "height": 800,
-    "num_land_tiles": 490256,
+    "num_land_tiles": 489928,
     "width": 800
   },
   "name": "Manicouagan",

@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 118558,
+    "num_land_tiles": 118554,
     "width": 382
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 483700,
+    "num_land_tiles": 483571,
     "width": 764
   },
   "name": "Montreal",
