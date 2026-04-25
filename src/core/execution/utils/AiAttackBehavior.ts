@@ -472,6 +472,8 @@ export class AiAttackBehavior {
   private assistAllies(): boolean {
     if (this.emojiBehavior === undefined) throw new Error("not initialized");
 
+    if (this.game.config().disableAlliances()) return false;
+
     for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
       if (this.player.relation(ally) < Relation.Friendly) {
@@ -499,6 +501,8 @@ export class AiAttackBehavior {
 
   // Find a traitor who isn't significantly stronger than us
   private findTraitor(borderingEnemies: Player[]): Player | null {
+    if (this.game.config().disableAlliances()) return null;
+
     // borderingEnemies is already sorted by troops (ascending), so first match is weakest traitor
     return (
       borderingEnemies.find(
@@ -514,6 +518,8 @@ export class AiAttackBehavior {
     borderingEnemies: Player[],
   ): boolean {
     if (this.allianceBehavior === undefined) throw new Error("not initialized");
+
+    if (this.game.config().disableAlliances()) return false;
 
     if (borderingFriends.length > 0) {
       for (const friend of borderingFriends) {
@@ -532,6 +538,10 @@ export class AiAttackBehavior {
   }
 
   private isBorderingNukedTerritory(): boolean {
+    if (this.game.config().isUnitDisabled(UnitType.MissileSilo)) {
+      return false;
+    }
+
     for (const tile of this.player.borderTiles()) {
       for (const neighbor of this.game.neighbors(tile)) {
         if (
@@ -711,6 +721,8 @@ export class AiAttackBehavior {
   }
 
   getNeighborTraitorToAttack(): Player | null {
+    if (this.game.config().disableAlliances()) return null;
+
     const traitors = this.player
       .neighbors()
       .filter(
