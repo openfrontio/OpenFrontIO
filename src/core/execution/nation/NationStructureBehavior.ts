@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Game,
+  GameMode,
   Gold,
   Player,
   PlayerType,
@@ -109,6 +110,9 @@ const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
   100, // before #5 — 10s
 ];
 
+/** Length in ticks of each on/off phase after the team-mode save-up target is first reached */
+const TEAM_POST_SAVE_UP_PHASE_TICKS = 150; // 15s
+
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
     tile: TileRef;
@@ -119,6 +123,7 @@ export class NationStructureBehavior {
   private lastStructureTick: number | null = null;
   private placementsCount = 0;
   private _hasHighStartingGold: boolean | null = null;
+  private _postSaveUpStartTick: number | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -128,6 +133,9 @@ export class NationStructureBehavior {
 
   handleStructures(): boolean {
     if (this.isOnStructureCooldown()) {
+      return false;
+    }
+    if (this.isInTeamPostSaveUpBlockedPhase()) {
       return false;
     }
     const built = this.doHandleStructures();
@@ -149,6 +157,29 @@ export class NationStructureBehavior {
       return false;
     }
     return this.game.ticks() - this.lastStructureTick < requiredGap;
+  }
+
+  // Team mode spreads placements after the save-up target is first reached:
+  // 15s ON / 15s OFF, alternating, to allow NationNukeBehavior to spend the gold.
+  private isInTeamPostSaveUpBlockedPhase(): boolean {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return false;
+    }
+    const saveUpTarget = this.getSaveUpTarget();
+    if (saveUpTarget === 0n) {
+      return false;
+    }
+    if (this._postSaveUpStartTick === null) {
+      if (this.player.gold() < saveUpTarget) {
+        return false;
+      }
+      this._postSaveUpStartTick = this.game.ticks();
+    }
+    const elapsed = this.game.ticks() - this._postSaveUpStartTick;
+    return (
+      elapsed % (TEAM_POST_SAVE_UP_PHASE_TICKS * 2) >=
+      TEAM_POST_SAVE_UP_PHASE_TICKS
+    );
   }
 
   private doHandleStructures(): boolean {
@@ -399,9 +430,15 @@ export class NationStructureBehavior {
   private getSaveUpTarget(): Gold {
     const config = this.game.config();
 
-    // No need to save up if missile silos are disabled
+    // Just save up for SAMs if missile silos are disabled
     if (config.isUnitDisabled(UnitType.MissileSilo)) {
-      return 0n;
+      return this.cost(UnitType.SAMLauncher);
+    }
+
+    // Save up a limited amount in team games, synced with NationNukeBehavior
+    // Saving up for a MIRV is not relevant
+    if (this.game.config().gameConfig().gameMode === GameMode.Team) {
+      return this.cost(UnitType.HydrogenBomb);
     }
 
     const mirvEnabled = !config.isUnitDisabled(UnitType.MIRV);
@@ -420,8 +457,8 @@ export class NationStructureBehavior {
       // Save up for 20 atom bombs
       return this.cost(UnitType.AtomBomb) * 20n;
     }
-    // No nukes enabled, no need to save up
-    return 0n;
+    // No nukes enabled, just save up for SAMs
+    return this.cost(UnitType.SAMLauncher);
   }
 
   /**

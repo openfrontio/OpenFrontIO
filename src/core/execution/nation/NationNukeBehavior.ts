@@ -389,12 +389,19 @@ export class NationNukeBehavior {
       return this.cost(type);
     }
 
-    // Return the actual cost in team games (saving up for a MIRV is not relevant, the game will be finished before that)
-    // or if we already have enough gold to buy both a MIRV and a hydro
+    // Save up a limited amount in team games, synced with NationStructureBehavior
+    // Saving up for a MIRV is not relevant
     if (
-      this.game.config().gameConfig().gameMode === GameMode.Team ||
+      this.game.config().gameConfig().gameMode === GameMode.Team &&
+      this.player.gold() > this.cost(UnitType.HydrogenBomb)
+    ) {
+      return this.cost(type);
+    }
+
+    // Return the actual cost if we already have enough gold to buy both a MIRV and a hydro
+    if (
       this.player.gold() >
-        this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
+      this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
     ) {
       return this.cost(type);
     }
