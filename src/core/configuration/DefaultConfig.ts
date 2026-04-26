@@ -718,7 +718,7 @@ export class DefaultConfig implements Config {
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
       const attackerTroopLoss =
-        0.4 * currentAttackerLoss + 0.6 * altAttackerLoss;
+        0.7 * currentAttackerLoss + 0.3 * altAttackerLoss;
 
       return {
         attackerTroopLoss,
@@ -814,7 +814,7 @@ export class DefaultConfig implements Config {
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
-        : 2 * (Math.pow(player.numTilesOwned(), 0.7) * 1000 + 50000) +
+        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
             .units(UnitType.City)
             .filter((u) => !u.isUnderConstruction())
@@ -847,7 +847,7 @@ export class DefaultConfig implements Config {
   troopIncreaseRate(player: Player): number {
     const max = this.maxTroops(player);
 
-    let toAdd = 10 + Math.pow(player.troops(), 0.8) / 4;
+    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
 
     const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
