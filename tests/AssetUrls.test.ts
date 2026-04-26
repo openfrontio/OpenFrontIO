@@ -10,7 +10,11 @@ describe("AssetUrls", () => {
     ).toBe("/_assets/images/Favicon.hash.svg");
   });
 
-  test("maps directory prefixes into the hashed asset namespace", () => {
+  test("falls back to the unversioned path when manifest has no match", () => {
+    expect(buildAssetUrl("images/unknown.svg", {})).toBe("/images/unknown.svg");
+  });
+
+  test("falls back to the unversioned path for directory-like paths", () => {
     const manifest = {
       "maps/britanniaclassic/manifest.json":
         "/_assets/maps/britanniaclassic/manifest.hash.json",
@@ -18,14 +22,10 @@ describe("AssetUrls", () => {
         "/_assets/maps/britanniaclassic/map.hash.bin",
     };
 
-    expect(buildAssetUrl("maps", manifest)).toBe("/_assets/maps");
+    expect(buildAssetUrl("maps", manifest)).toBe("/maps");
     expect(buildAssetUrl("maps/britanniaclassic", manifest)).toBe(
-      "/_assets/maps/britanniaclassic",
+      "/maps/britanniaclassic",
     );
-  });
-
-  test("falls back to the unversioned path when manifest has no match", () => {
-    expect(buildAssetUrl("images/unknown.svg", {})).toBe("/images/unknown.svg");
   });
 
   test("rejects dot segments in asset paths", () => {

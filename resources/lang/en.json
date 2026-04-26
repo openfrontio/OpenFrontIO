@@ -366,7 +366,9 @@
     "conakry": "Conakry",
     "caucasus": "Caucasus",
     "beringsea": "Bering Sea",
-    "antarctica": "Antarctica"
+    "antarctica": "Antarctica",
+    "archipelagosea": "Archipelago Sea",
+    "bajacalifornia": "Baja California"
   },
   "map_categories": {
     "featured": "Featured",

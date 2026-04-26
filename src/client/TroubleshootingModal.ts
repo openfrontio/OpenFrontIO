@@ -46,12 +46,12 @@ export class TroubleshootingModal extends BaseModal {
               >
               / ${translateText("troubleshooting.title")}
             </span>
-            <button
-              class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            <o-button
+              variant="primary"
+              size="sm"
+              translationKey="common.copy"
               @click=${this.copyDiagnostics}
-            >
-              ${translateText("common.copy")}
-            </button>
+            ></o-button>
           </div>`,
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),

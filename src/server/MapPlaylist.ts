@@ -92,6 +92,8 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Caucasus: 5,
   BeringSea: 5,
   Antarctica: 1,
+  ArchipelagoSea: 3,
+  BajaCalifornia: 4,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -148,6 +150,8 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Baikal,
   GameMapType.Alps,
   GameMapType.TheBox,
+  GameMapType.Luna,
+  GameMapType.ArchipelagoSea,
 ]);
 
 // Modifiers that cannot be active at the same time.
@@ -242,10 +246,9 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // No extreme modifiers on FourIslands - Causes 3h long stalemates
-    if (map === GameMapType.FourIslands) {
+    // No gold multi on FourIslands team games - Too high chance of 3h long stalemates
+    if (map === GameMapType.FourIslands && mode === GameMode.Team) {
       excludedModifiers.push("goldMultiplier");
-      excludedModifiers.push("startingGold25M");
     }
 
     // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
@@ -528,6 +531,9 @@ export class MapPlaylist {
     if (map === GameMapType.FourIslands && Math.random() < 0.75) {
       return 4;
     }
+    if (map === GameMapType.Luna && Math.random() < 0.75) {
+      return 2;
+    }
 
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
     const roll = Math.random() * totalWeight;
@@ -662,7 +668,8 @@ export class MapPlaylist {
     if (playerTeams === HumansVsNations) return 5 * 10;
     if (startingGold !== undefined && startingGold >= 25_000_000)
       return 150 * 10;
-    if (startingGold) return SAM_CONSTRUCTION_TICKS + 15 * 10;
+    if (startingGold !== undefined && startingGold >= 5_000_000)
+      return SAM_CONSTRUCTION_TICKS + 15 * 10;
     return 5 * 10;
   }
 

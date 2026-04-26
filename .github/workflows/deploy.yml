@@ -47,8 +47,8 @@ concurrency:
 
 jobs:
   deploy:
-    # Don't deploy on push if this is a fork; always deploy on schedule and workflow_dispatch
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.repository == 'openfrontio/OpenFrontIO' }}
+    # Deploy on push/schedule/workflow_dispatch (see "on:") unless this is a fork
+    if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
     name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}
     runs-on: ubuntu-latest
