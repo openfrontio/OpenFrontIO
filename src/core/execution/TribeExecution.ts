@@ -60,7 +60,7 @@ export class TribeExecution implements Execution {
     }
 
     this.acceptAllAllianceRequests();
-    this.deleteAllStructures();
+    this.deleteNextStructure();
     this.maybeAttack();
   }
 
@@ -83,7 +83,7 @@ export class TribeExecution implements Execution {
     }
   }
 
-  private deleteAllStructures() {
+  private deleteNextStructure() {
     if (!this.tribe.canDeleteUnit()) return;
     for (const unit of this.tribe.units()) {
       if (!Structures.has(unit.type())) continue;
