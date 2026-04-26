@@ -368,7 +368,8 @@
     "beringsea": "Bering Sea",
     "antarctica": "Antarctica",
     "archipelagosea": "Archipelago Sea",
-    "bajacalifornia": "Baja California"
+    "bajacalifornia": "Baja California",
+    "thestraits": "The Straits"
   },
   "map_categories": {
     "featured": "Featured",
