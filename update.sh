@@ -53,18 +53,19 @@ EXTRACT_DIR="$(mktemp -d -t openfront-assets-XXXXXX)"
 trap 'rm -rf "$EXTRACT_DIR"' EXIT
 
 TMP_CONTAINER="$(docker create "${GHCR_IMAGE}")"
-if ! docker cp "${TMP_CONTAINER}:/usr/src/app/static/_assets" "$EXTRACT_DIR/"; then
+if ! docker cp "${TMP_CONTAINER}:/usr/src/app/static" "$EXTRACT_DIR/"; then
     echo "❌ docker cp failed"
     docker rm "${TMP_CONTAINER}" > /dev/null 2>&1 || true
     exit 1
 fi
 docker rm "${TMP_CONTAINER}" > /dev/null
 
-echo "Extracted to $EXTRACT_DIR; top-level contents:"
-ls -la "$EXTRACT_DIR/" || true
+STATIC_DIR="$EXTRACT_DIR/static"
+echo "Extracted to $STATIC_DIR; top-level contents:"
+ls -la "$STATIC_DIR/" || true
 
 R2_ENDPOINT="https://api.${DOMAIN}"
-MANIFEST="$EXTRACT_DIR/_assets/asset-manifest.json"
+MANIFEST="$STATIC_DIR/asset-manifest.json"
 if [ ! -f "$MANIFEST" ]; then
     echo "❌ Manifest not found at $MANIFEST"
     exit 1
@@ -101,7 +102,7 @@ if [ -z "$MISSING" ]; then
 else
     MISSING_COUNT="$(echo "$MISSING" | wc -l | tr -d ' ')"
     echo "Uploading $MISSING_COUNT missing asset(s)..."
-    export R2_ENDPOINT API_KEY EXTRACT_DIR
+    export R2_ENDPOINT API_KEY STATIC_DIR
     # KEY from the manifest is URL-encoded per segment (e.g. flags/C%C3%B4te.png).
     # Files on disk live at the *decoded* path, so decode KEY before reading the
     # file, then encode the whole decoded path as one URL segment for the POST.
@@ -132,7 +133,7 @@ else
             "$R2_ENDPOINT/game_assets/upload/$ENC" \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/octet-stream" \
-            --data-binary "@$EXTRACT_DIR/$DECODED" > /dev/null; then
+            --data-binary "@$STATIC_DIR/$DECODED" > /dev/null; then
             echo "❌ Failed to upload: $DECODED" >&2
             exit 1
         fi

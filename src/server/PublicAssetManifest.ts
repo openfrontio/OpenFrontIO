@@ -375,7 +375,7 @@ export function writePublicAssetManifest(
   outDir: string,
   assetManifest: AssetManifest,
 ): void {
-  const manifestPath = path.join(outDir, "_assets", "asset-manifest.json");
+  const manifestPath = path.join(outDir, "asset-manifest.json");
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
   fs.writeFileSync(manifestPath, `${JSON.stringify(assetManifest, null, 2)}\n`);
 }

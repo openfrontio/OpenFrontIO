@@ -71,13 +71,29 @@ export default defineConfig(({ mode }) => {
     mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
   };
 
-  const syncHashedPublicAssets = () => ({
+  let viteBundleFiles: string[] = [];
+  const syncHashedPublicAssets = (): Plugin => ({
     name: "sync-hashed-public-assets",
     apply: "build" as const,
+    writeBundle(_options, bundle) {
+      viteBundleFiles = Object.keys(bundle);
+    },
     closeBundle() {
       const outDir = path.join(__dirname, "static");
       copyRootPublicFiles(resourcesDir, outDir);
+      // Run the source→hashed copy first; createHashedPublicAssetFiles iterates
+      // assetManifest and expects every key to resolve to a file in resources/
+      // or proprietary/. Vite's bundle output (assets/...) doesn't, so it's
+      // merged in after.
       createHashedPublicAssetFiles(sourceDirs, outDir, assetManifest);
+      // Track Vite's own bundle output (vendor chunks, JS, CSS, workers under
+      // static/assets/) in the manifest so the deploy-time R2 upload covers
+      // them alongside the hashed source assets. Skip non-assets/ emits like
+      // index.html — those are served by the app, not from R2.
+      for (const fileName of viteBundleFiles) {
+        if (!fileName.startsWith("assets/")) continue;
+        assetManifest[fileName] = `/${fileName}`;
+      }
       writePublicAssetManifest(outDir, assetManifest);
     },
   });
