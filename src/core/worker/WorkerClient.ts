@@ -22,8 +22,16 @@ import { WorkerMessage } from "./WorkerMessages";
 import workerUrl from "./Worker.worker.ts?worker&url";
 
 function createGameWorker(): Worker {
-  const origin = getCdnBase().replace(/\/+$/, "") || location.origin;
-  const fullUrl = `${origin}${workerUrl}`;
+  const cdnBase = getCdnBase().replace(/\/+$/, "");
+  // Same-origin path (dev, or any deploy without CDN_BASE set): construct the
+  // worker directly. The Blob trampoline below is only needed for cross-origin
+  // loads — browsers refuse `new Worker(url)` cross-origin even with valid
+  // CORS+CORP, and Vite's dev server doesn't serve `?worker&url` URLs as
+  // regular ES modules so the trampoline's dynamic `import()` would hang.
+  if (!cdnBase) {
+    return new Worker(workerUrl, { type: "module" });
+  }
+  const fullUrl = `${cdnBase}${workerUrl}`;
   // Buffer-and-replay: the worker's port enables when the trampoline script
   // starts, so any messages posted before the imported module attaches its
   // `message` handler would dispatch to no listener and be dropped. Capture
