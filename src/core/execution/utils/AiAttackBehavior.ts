@@ -59,13 +59,18 @@ export class AiAttackBehavior {
           this.game.isLand(t) &&
           this.game.ownerID(t) !== this.player?.smallID(),
       );
-    const borderingPlayers = [
-      ...new Set(
-        border
-          .map((t) => this.game.playerBySmallID(this.game.ownerID(t)))
-          .filter((o): o is Player => o.isPlayer()),
-      ),
-    ].sort((a, b) => a.troops() - b.troops());
+    const playerNeighbors = this.player.neighbors();
+    const borderingPlayerSet = new Set<Player>(
+      border
+        .map((t) => this.game.playerBySmallID(this.game.ownerID(t)))
+        .filter((o): o is Player => o.isPlayer()),
+    );
+    for (const n of playerNeighbors) {
+      if (n.isPlayer()) borderingPlayerSet.add(n);
+    }
+    const borderingPlayers = [...borderingPlayerSet].sort(
+      (a, b) => a.troops() - b.troops(),
+    );
     const borderingFriends = borderingPlayers.filter(
       (o) => this.player?.isFriendly(o) === true,
     );
@@ -73,10 +78,10 @@ export class AiAttackBehavior {
       (o) => this.player?.isFriendly(o) === false,
     );
 
-    // Attack TerraNullius but not nuked territory
-    const hasNonNukedTerraNullius = border.some(
-      (t) => !this.game.hasOwner(t) && !this.game.hasFallout(t),
-    );
+    // Attack TerraNullius but not nuked territory (direct border or across a river)
+    const hasNonNukedTerraNullius =
+      border.some((t) => !this.game.hasOwner(t) && !this.game.hasFallout(t)) ||
+      playerNeighbors.some((n) => !n.isPlayer());
     if (hasNonNukedTerraNullius) {
       this.sendAttack(this.game.terraNullius());
       return;
@@ -749,6 +754,59 @@ export class AiAttackBehavior {
       this.sendLandAttack(target);
     } else if (target.isPlayer()) {
       this.sendBoatAttack(target);
+    } else {
+      // TerraNullius only reachable by water (e.g. across a river)
+      this.sendBoatAttackToNearbyTerraNullius();
+    }
+  }
+
+  // Scans shore border tiles (every 10th) for unowned land within 5 water tiles
+  // in each cardinal direction, then sends a transport ship to the first match.
+  private sendBoatAttackToNearbyTerraNullius() {
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) return;
+    if (
+      this.player.unitCount(UnitType.TransportShip) >=
+      this.game.config().boatMaxNumber()
+    )
+      return;
+
+    const directions: [number, number][] = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+    const borders = Array.from(this.player.borderTiles());
+
+    for (let i = 0; i < borders.length; i += 10) {
+      const border = borders[i];
+      if (!this.game.isShore(border)) continue;
+
+      const bx = this.game.x(border);
+      const by = this.game.y(border);
+
+      for (const [dx, dy] of directions) {
+        const x1 = bx + dx;
+        const y1 = by + dy;
+        if (!this.game.isValidCoord(x1, y1)) continue;
+        if (!this.game.isWater(this.game.ref(x1, y1))) continue;
+
+        const nx = bx + dx * 5;
+        const ny = by + dy * 5;
+        if (!this.game.isValidCoord(nx, ny)) continue;
+        const tile = this.game.ref(nx, ny);
+        if (!this.game.isLand(tile)) continue;
+        if (this.game.hasOwner(tile)) continue;
+        if (!canBuildTransportShip(this.game, this.player, tile)) continue;
+
+        const troops = this.player.troops() / 5;
+        if (troops < 1) return;
+
+        this.game.addExecution(
+          new TransportShipExecution(this.player, tile, troops),
+        );
+        return;
+      }
     }
   }
 

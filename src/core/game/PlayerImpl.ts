@@ -319,6 +319,7 @@ export class PlayerImpl implements Player {
     }
     return false;
   }
+
   numTilesOwned(): number {
     return this._tiles.size;
   }
@@ -345,7 +346,56 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    for (const n of this.shoreReachableNeighbors()) {
+      ns.add(n);
+    }
     return Array.from(ns);
+  }
+
+  // Samples every 10th border tile for shore tiles, checks the tile 5 steps
+  // away in each cardinal direction that immediately enters water, to detect
+  // players separated by a small river (up to 4 water tiles wide)
+  private shoreReachableNeighbors(): Set<Player | TerraNullius> {
+    const ns: Set<Player | TerraNullius> = new Set();
+    const map = this.mg.map();
+    const borders = Array.from(this.borderTiles());
+    const directions: [number, number][] = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+
+    for (let i = 0; i < borders.length; i += 10) {
+      const border = borders[i];
+      if (!map.isShore(border)) continue;
+
+      const bx = map.x(border);
+      const by = map.y(border);
+
+      for (const [dx, dy] of directions) {
+        // Only follow directions that immediately enter water; land-adjacent
+        // directions are already covered by the direct neighbors() loop.
+        const x1 = bx + dx;
+        const y1 = by + dy;
+        if (!map.isValidCoord(x1, y1) || !map.isWater(map.ref(x1, y1)))
+          continue;
+
+        const nx = bx + dx * 5;
+        const ny = by + dy * 5;
+        if (!map.isValidCoord(nx, ny)) continue;
+        const tile = map.ref(nx, ny);
+        if (!map.isLand(tile)) continue;
+        const owner = map.ownerID(tile);
+        if (owner !== this.smallID()) {
+          ns.add(
+            this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+          );
+        }
+      }
+    }
+
+    return ns;
   }
 
   isPlayer(): this is Player {
