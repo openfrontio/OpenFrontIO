@@ -386,6 +386,7 @@ export class PlayerImpl implements Player {
         if (!map.isValidCoord(nx, ny)) continue;
         const tile = map.ref(nx, ny);
         if (!map.isLand(tile)) continue;
+        if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
         const owner = map.ownerID(tile);
         if (owner !== this.smallID()) {
           ns.add(

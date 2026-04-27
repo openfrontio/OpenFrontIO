@@ -815,6 +815,7 @@ export class AiAttackBehavior {
         const tile = this.game.ref(nx, ny);
         if (!this.game.isLand(tile)) continue;
         if (this.game.hasOwner(tile)) continue;
+        if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
         const troops = this.player.troops() / 5;
