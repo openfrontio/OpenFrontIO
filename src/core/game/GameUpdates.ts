@@ -11,6 +11,7 @@ import {
   Tick,
   TrainType,
   UnitType,
+  WarshipMovementState,
 } from "./Game";
 import { TileRef } from "./GameMap";
 
@@ -137,6 +138,7 @@ export interface UnitUpdate {
   lastPos: TileRef;
   isActive: boolean;
   reachedTarget: boolean;
+  warshipState: WarshipMovementState;
   retreating: boolean;
   docked: boolean;
   inCombat: boolean;

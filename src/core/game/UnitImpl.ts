@@ -9,6 +9,7 @@ import {
   Unit,
   UnitInfo,
   UnitType,
+  WarshipMovementState,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
@@ -21,8 +22,7 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _retreating: boolean = false;
-  private _docked: boolean = false;
+  private _warshipState: WarshipMovementState = "patrolling";
   private _lastCombatTick: number = -100;
   private _targetedBySAM = false;
   private _reachedTarget = false;
@@ -130,8 +130,10 @@ export class UnitImpl implements Unit {
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
       reachedTarget: this._reachedTarget,
-      retreating: this._retreating,
-      docked: this._docked,
+      warshipState: this._warshipState,
+      retreating:
+        this._warshipState === "retreating" || this._warshipState === "docked",
+      docked: this._warshipState === "docked",
       inCombat: this.isInCombat(),
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
@@ -343,23 +345,31 @@ export class UnitImpl implements Unit {
   }
 
   retreating(): boolean {
-    return this._retreating;
+    return (
+      this._warshipState === "retreating" || this._warshipState === "docked"
+    );
   }
 
   setRetreating(retreating: boolean): void {
-    if (this._retreating !== retreating) {
-      this._retreating = retreating;
-      this.mg.addUpdate(this.toUpdate());
-    }
+    const newState = retreating ? "retreating" : "patrolling";
+    this.setWarshipState(newState);
   }
 
   isDocked(): boolean {
-    return this._docked;
+    return this._warshipState === "docked";
   }
 
   setDocked(docked: boolean): void {
-    if (this._docked !== docked) {
-      this._docked = docked;
+    this.setWarshipState(docked ? "docked" : "patrolling");
+  }
+
+  warshipState(): WarshipMovementState {
+    return this._warshipState;
+  }
+
+  setWarshipState(state: WarshipMovementState): void {
+    if (this._warshipState !== state) {
+      this._warshipState = state;
       this.mg.addUpdate(this.toUpdate());
     }
   }

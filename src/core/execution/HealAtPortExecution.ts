@@ -18,12 +18,10 @@ export class HealAtPortExecution implements Execution {
       return;
     }
 
-    const warship = this.owner
-      .units(UnitType.Warship)
-      .find((u) => u.id() === this.warshipId);
+    const warship = mg.unit(this.warshipId);
 
-    if (!warship) {
-      console.warn("HealAtPortExecution: warship not found");
+    if (!warship || warship.owner() !== this.owner) {
+      console.warn("HealAtPortExecution: warship not found or not owned");
       return;
     }
 

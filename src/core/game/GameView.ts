@@ -26,6 +26,7 @@ import {
   TrainType,
   UnitInfo,
   UnitType,
+  WarshipMovementState,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -129,6 +130,12 @@ export class UnitView {
   }
   setDocked(_docked: boolean): void {
     throw new Error("setDocked is not supported on UnitView");
+  }
+  warshipState(): WarshipMovementState {
+    return this.data.warshipState;
+  }
+  setWarshipState(_state: WarshipMovementState): void {
+    throw new Error("setWarshipState is not supported on UnitView");
   }
   isInCombat(): boolean {
     return this.data.inCombat;

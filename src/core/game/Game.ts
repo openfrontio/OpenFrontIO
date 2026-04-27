@@ -26,6 +26,8 @@ export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
 
+export type WarshipMovementState = "patrolling" | "retreating" | "docked";
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -615,10 +617,14 @@ export interface Unit {
 
   // Health
   hasHealth(): boolean;
-  retreating(): boolean;
+  warshipState(): WarshipMovementState;
+  setWarshipState(state: WarshipMovementState): void;
   setRetreating(retreating: boolean): void;
-  isDocked(): boolean;
+  /** Derived from warshipState — true when state is "retreating" or "docked". */
+  retreating(): boolean;
   setDocked(docked: boolean): void;
+  /** Derived from warshipState — true when state is "docked". */
+  isDocked(): boolean;
   isInCombat(): boolean;
   setInCombat(): void;
   orderBoatRetreat(): void;
@@ -872,6 +878,7 @@ export interface Game extends GameMap {
   setPaused(paused: boolean): void;
 
   // Units
+  unit(id: number): Unit | undefined;
   units(...types: UnitType[]): Unit[];
   unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
