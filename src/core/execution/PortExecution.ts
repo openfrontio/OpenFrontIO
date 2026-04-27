@@ -103,10 +103,18 @@ export class PortExecution implements Execution {
       const comp = this.mg.getWaterComponent(neighbor);
       if (comp !== null) sourceComponents.add(comp);
     }
-    const ports = this.mg
+    const owner = this.port!.owner();
+
+    // Other players' ports (existing logic)
+    const otherPorts = this.mg
       .players()
-      .filter((p) => p !== this.port!.owner() && p.canTrade(this.port!.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
+      .filter((p) => p !== owner && p.canTrade(owner))
+      .flatMap((p) => p.units(UnitType.Port));
+
+    // Own ports (excluding the source port itself)
+    const ownPorts = owner.units(UnitType.Port).filter((p) => p !== this.port!);
+
+    const ports = [...otherPorts, ...ownPorts]
       .filter((p) => {
         for (const comp of sourceComponents) {
           if (this.mg.hasWaterComponent(p.tile(), comp)) return true;
@@ -123,8 +131,11 @@ export class PortExecution implements Execution {
     const weightedPorts: Unit[] = [];
 
     for (const [i, otherPort] of ports.entries()) {
+      const isSelfTrade = otherPort.owner() === owner;
       const expanded = new Array(otherPort.level()).fill(otherPort);
+      // Self-trade ports get base weight only (no proximity/friendly bonuses)
       weightedPorts.push(...expanded);
+      if (isSelfTrade) continue;
       const tooClose =
         this.mg.manhattanDist(this.port!.tile(), otherPort.tile()) <
         this.mg.config().tradeShipShortRangeDebuff();
@@ -135,7 +146,7 @@ export class PortExecution implements Execution {
         // to increase the chances of trading with it.
         weightedPorts.push(...expanded);
       }
-      if (!tooClose && this.port!.owner().isFriendly(otherPort.owner())) {
+      if (!tooClose && owner.isFriendly(otherPort.owner())) {
         weightedPorts.push(...expanded);
       }
     }

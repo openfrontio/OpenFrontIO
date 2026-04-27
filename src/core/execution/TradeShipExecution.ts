@@ -21,6 +21,7 @@ export class TradeShipExecution implements Execution {
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
+  private readonly isSelfTrade: boolean;
 
   private static _staggerCounter = 0;
 
@@ -28,7 +29,9 @@ export class TradeShipExecution implements Execution {
     private origOwner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
-  ) {}
+  ) {
+    this.isSelfTrade = srcPort.owner() === _dstPort.owner();
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -72,8 +75,8 @@ export class TradeShipExecution implements Execution {
     }
 
     // If a player captures another player's port while trading we should delete
-    // the ship.
-    if (dstPortOwner.id() === this.srcPort.owner().id()) {
+    // the ship — but not if it was intentionally a self-trade.
+    if (!this.isSelfTrade && dstPortOwner.id() === this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
       this.active = false;
       return;
@@ -81,8 +84,16 @@ export class TradeShipExecution implements Execution {
 
     if (
       !this.wasCaptured &&
+      !this.isSelfTrade &&
       (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
     ) {
+      this.tradeShip.delete(false);
+      this.active = false;
+      return;
+    }
+
+    // For self-trade, still check if the destination port is active
+    if (this.isSelfTrade && !this._dstPort.isActive()) {
       this.tradeShip.delete(false);
       this.active = false;
       return;
@@ -168,7 +179,7 @@ export class TradeShipExecution implements Execution {
   private complete() {
     this.active = false;
     this.tradeShip!.delete(false);
-    const gold = this.mg
+    let gold = this.mg
       .config()
       .tradeShipGold(this.tilesTraveled, this.tradeShip!.owner());
 
@@ -188,6 +199,25 @@ export class TradeShipExecution implements Execution {
       this.mg
         .stats()
         .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
+    } else if (this.isSelfTrade) {
+      // Self-trade: reduced gold, credited once
+      const multiplier = this.mg.config().tradeShipSelfGoldMultiplier();
+      gold = BigInt(Math.floor(Number(gold) * multiplier));
+      this.srcPort.owner().addGold(gold, this._dstPort.tile());
+      this.mg.displayMessage(
+        "events_display.received_gold_from_trade",
+        MessageType.RECEIVED_GOLD_FROM_TRADE,
+        this.srcPort.owner().id(),
+        gold,
+        {
+          gold: renderNumber(gold),
+          name: this.srcPort.owner().displayName(),
+        },
+      );
+      // Record stats
+      this.mg
+        .stats()
+        .boatArriveTrade(this.srcPort.owner(), this._dstPort.owner(), gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold, this._dstPort.tile());

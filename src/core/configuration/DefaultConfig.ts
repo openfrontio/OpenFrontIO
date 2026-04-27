@@ -322,6 +322,10 @@ export class DefaultConfig implements Config {
     return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
+  tradeShipSelfGoldMultiplier(): number {
+    return 0.4;
+  }
+
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,

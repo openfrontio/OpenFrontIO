@@ -104,4 +104,76 @@ describe("PortExecution", () => {
 
     expect(ports.length).toBe(1);
   });
+
+  test("Self-trade: own ports appear as destinations", () => {
+    game.config().proximityBonusPortsNb = () => 0;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+    game.config().structureMinDist = () => 0;
+
+    player.conquer(game.ref(7, 5));
+    player.conquer(game.ref(7, 15));
+    const spawn1 = player.canBuild(UnitType.Port, game.ref(7, 5));
+    const spawn2 = player.canBuild(UnitType.Port, game.ref(7, 15));
+    if (spawn1 === false || spawn2 === false) {
+      throw new Error("Unable to build ports for test");
+    }
+    const port1 = player.buildUnit(UnitType.Port, spawn1, {});
+    player.buildUnit(UnitType.Port, spawn2, {});
+
+    const execution = new PortExecution(port1);
+    execution.init(game, 0);
+    execution.tick(0);
+
+    const ports = execution.tradingPorts();
+
+    // Should include the player's other port
+    expect(ports.length).toBeGreaterThanOrEqual(1);
+    expect(ports.some((p) => p.owner() === player)).toBe(true);
+  });
+
+  test("Self-trade: port does not trade with itself", () => {
+    game.config().proximityBonusPortsNb = () => 0;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+
+    player.conquer(game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+    execution.tick(0);
+
+    const ports = execution.tradingPorts();
+
+    // With only one own port and no other player ports, no destinations available
+    expect(ports.length).toBe(0);
+  });
+
+  test("Self-trade: own ports do not get proximity or friendly bonuses", () => {
+    game.config().proximityBonusPortsNb = () => 10;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+    game.config().structureMinDist = () => 0;
+
+    player.conquer(game.ref(7, 5));
+    player.conquer(game.ref(7, 15));
+    const spawn1 = player.canBuild(UnitType.Port, game.ref(7, 5));
+    const spawn2 = player.canBuild(UnitType.Port, game.ref(7, 15));
+    if (spawn1 === false || spawn2 === false) {
+      throw new Error("Unable to build ports for test");
+    }
+    const port1 = player.buildUnit(UnitType.Port, spawn1, {});
+    player.buildUnit(UnitType.Port, spawn2, {});
+
+    const execution = new PortExecution(port1);
+    execution.init(game, 0);
+    execution.tick(0);
+
+    const ports = execution.tradingPorts();
+
+    // Own port at level 1 should appear once (base weight only, no bonuses)
+    expect(ports.length).toBe(1);
+  });
 });
