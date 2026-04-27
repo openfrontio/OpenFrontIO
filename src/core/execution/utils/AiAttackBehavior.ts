@@ -750,14 +750,32 @@ export class AiAttackBehavior {
   sendAttack(target: Player | TerraNullius, force = false) {
     if (!force && !this.shouldAttack(target)) return;
 
-    if (this.player.sharesBorderWith(target)) {
-      this.sendLandAttack(target);
-    } else if (target.isPlayer()) {
-      this.sendBoatAttack(target);
+    if (target.isPlayer()) {
+      if (this.player.sharesBorderWith(target)) {
+        this.sendLandAttack(target);
+      } else {
+        this.sendBoatAttack(target);
+      }
     } else {
-      // TerraNullius only reachable by water (e.g. across a river)
-      this.sendBoatAttackToNearbyTerraNullius();
+      // sharesBorderWith(TerraNullius) counts water tiles as RS (ownerID 0 = TN smallID),
+      // so use a land-only adjacency check to decide land vs boat attack.
+      if (this.hasLandBorderWithTerraNullius()) {
+        this.sendLandAttack(target);
+      } else {
+        this.sendBoatAttackToNearbyTerraNullius();
+      }
     }
+  }
+
+  private hasLandBorderWithTerraNullius(): boolean {
+    for (const border of this.player.borderTiles()) {
+      for (const neighbor of this.game.neighbors(border)) {
+        if (this.game.isLand(neighbor) && !this.game.hasOwner(neighbor)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // Scans shore border tiles (every 10th) for unowned land within 5 water tiles
