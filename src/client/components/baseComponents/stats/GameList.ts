@@ -116,7 +116,7 @@ export class GameList extends LitElement {
                     >
                       ${translateText("game_list.game_id")}
                     </div>
-                    <copy-button copy-text="$game.gameId" compact></copy-button>
+                    <copy-button .copyText="${game.gameId}" compact></copy-button>
                   </div>
                   <div>
                     <div
