@@ -7,22 +7,20 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
-const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
-export function troopAttackColor(
-  attackerTroops: number,
-  defenderTroops: number,
-): string {
-  return attackerTroops > defenderTroops ? "#66ff66" : "#ffbe3c";
-}
+// Match AttacksDisplay: aquarius for outgoing, red-400 for incoming.
+const OUTGOING_COLOR = "var(--color-aquarius)";
+const INCOMING_COLOR = "var(--color-red-400)";
 
-export function troopDefenceColor(
-  attackerTroops: number,
-  myTroops: number,
-): string {
-  return attackerTroops > myTroops ? "#ff4444" : "#ff9944";
-}
+// At/above this zoom, the label stays at its full screen size. Below it the
+// label shrinks linearly with zoom-out, floored so it never disappears.
+const LABEL_FULL_SIZE_ZOOM = 1.5;
+const LABEL_MIN_SCREEN_SCALE = 0.5;
+const OUTGOING_ICON_FILTER =
+  "brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%)";
+const INCOMING_ICON_FILTER =
+  "brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)";
 
 // An attack can have multiple disconnected front-line segments, so elements
 // and positions are parallel arrays with one entry per segment.
@@ -31,7 +29,6 @@ interface AttackLabel {
   positions: (Cell | null)[];
   isIncoming: boolean;
   attackerTroops: number;
-  defenderTroops: number;
 }
 
 export class AttackingTroopsOverlay implements Layer {
@@ -84,6 +81,19 @@ export class AttackingTroopsOverlay implements Layer {
     return 200;
   }
 
+  // Element scale factor that, combined with the container's `scale(zoom)`,
+  // yields the desired on-screen label size. The result keeps the label at
+  // constant screen size while zoomed in, then lets it shrink (linearly,
+  // floored at LABEL_MIN_SCREEN_SCALE) as zoom drops below the threshold.
+  private labelScale(): number {
+    const zoom = this.transformHandler.scale;
+    const netScale = Math.max(
+      LABEL_MIN_SCREEN_SCALE,
+      Math.min(1, zoom / LABEL_FULL_SIZE_ZOOM),
+    );
+    return netScale / zoom;
+  }
+
   tick() {
     if (!this.userSettings.attackingTroopsOverlay() || !this.isVisible) {
       if (this.labels.size > 0) this.clearAllLabels();
@@ -110,7 +120,7 @@ export class AttackingTroopsOverlay implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, defender.troops(), false);
+      this.ensureLabel(attack.id, attack.troops, false);
     }
 
     // Incoming attacks — red if the attacker outnumbers the player, orange otherwise.
@@ -121,7 +131,7 @@ export class AttackingTroopsOverlay implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, myPlayer.troops(), true);
+      this.ensureLabel(attack.id, attack.troops, true);
     }
 
     for (const [id] of this.labels) {
@@ -153,7 +163,6 @@ export class AttackingTroopsOverlay implements Layer {
   private ensureLabel(
     attackID: string,
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
   ) {
     let label = this.labels.get(attackID);
@@ -163,15 +172,13 @@ export class AttackingTroopsOverlay implements Layer {
         positions: [],
         isIncoming,
         attackerTroops,
-        defenderTroops,
       };
       this.labels.set(attackID, label);
     } else {
       label.attackerTroops = attackerTroops;
-      label.defenderTroops = defenderTroops;
     }
     for (const el of label.elements) {
-      this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+      this.updateLabelContent(el, attackerTroops, isIncoming);
     }
   }
 
@@ -196,9 +203,10 @@ export class AttackingTroopsOverlay implements Layer {
         }
 
         el.style.display = "inline-flex";
-        // Centre the label on its world position and counter-scale so text
-        // stays the same screen size regardless of zoom level.
-        el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        // Centre the label on its world position; counter-scale keeps the
+        // label at constant screen size while zoomed in, then it shrinks
+        // (floored) as zoom drops below LABEL_FULL_SIZE_ZOOM.
+        el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${this.labelScale()})`;
       }
     }
   }
@@ -207,11 +215,7 @@ export class AttackingTroopsOverlay implements Layer {
     // Add elements for new clusters.
     while (lbl.elements.length < positions.length) {
       lbl.elements.push(
-        this.createLabelElement(
-          lbl.attackerTroops,
-          lbl.defenderTroops,
-          lbl.isIncoming,
-        ),
+        this.createLabelElement(lbl.attackerTroops, lbl.isIncoming),
       );
       lbl.positions.push(null);
     }
@@ -222,16 +226,16 @@ export class AttackingTroopsOverlay implements Layer {
       lbl.positions.pop();
     }
 
-    // Snap large jumps instantly; let the CSS transition handle small advances.
+    // Snap teleport-sized jumps instantly; let the CSS transition handle the rest.
     for (let i = 0; i < positions.length; i++) {
       const old = lbl.positions[i];
       const next = positions[i];
-      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 50) {
+      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 200) {
         const el = lbl.elements[i];
         el.style.transition = "none";
-        el.style.transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        el.style.transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${this.labelScale()})`;
         requestAnimationFrame(() => {
-          el.style.transition = "transform 0.2s ease-out";
+          el.style.transition = "transform 0.25s linear";
         });
       }
       lbl.positions[i] = next;
@@ -245,18 +249,18 @@ export class AttackingTroopsOverlay implements Layer {
     el.style.alignItems = "center";
     el.style.gap = "3px";
     el.style.whiteSpace = "nowrap";
-    el.style.fontSize = "11px";
+    el.style.fontSize = "14px";
     el.style.fontWeight = "bold";
-    el.style.padding = "1px 4px";
+    el.style.padding = "2px 5px";
     el.style.borderRadius = "3px";
-    el.style.backgroundColor = "rgba(0,0,0,0.55)";
+    el.style.backgroundColor = "rgba(0,0,0,0.85)";
     el.style.pointerEvents = "none";
     el.style.lineHeight = "1.3";
-    el.style.transition = "transform 0.2s ease-out";
+    el.style.transition = "transform 0.25s linear";
     el.style.width = "max-content";
     const icon = document.createElement("img");
-    icon.style.width = "10px";
-    icon.style.height = "10px";
+    icon.style.width = "13px";
+    icon.style.height = "13px";
     el.appendChild(icon);
     const span = document.createElement("span");
     span.style.minWidth = "25px";
@@ -266,12 +270,11 @@ export class AttackingTroopsOverlay implements Layer {
 
   private createLabelElement(
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
   ): HTMLDivElement {
     const el = this.labelTemplate.cloneNode(true) as HTMLDivElement;
     el.style.fontFamily = this.game.config().theme().font();
-    this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+    this.updateLabelContent(el, attackerTroops, isIncoming);
     this.container.appendChild(el);
     return el;
   }
@@ -279,20 +282,16 @@ export class AttackingTroopsOverlay implements Layer {
   private updateLabelContent(
     el: HTMLDivElement,
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
   ) {
     const icon = el.children[0] as HTMLImageElement;
     const span = el.children[1] as HTMLSpanElement;
-    if (isIncoming) {
-      icon.src = shieldIcon;
-      span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
-      span.textContent = renderTroops(attackerTroops);
-    } else {
-      icon.src = swordIcon;
-      span.style.color = troopAttackColor(attackerTroops, defenderTroops);
-      span.textContent = renderTroops(attackerTroops);
-    }
+    icon.src = soldierIcon;
+    icon.style.filter = isIncoming
+      ? INCOMING_ICON_FILTER
+      : OUTGOING_ICON_FILTER;
+    span.style.color = isIncoming ? INCOMING_COLOR : OUTGOING_COLOR;
+    span.textContent = renderTroops(attackerTroops);
   }
 
   private removeLabel(attackID: string) {
