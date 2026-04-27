@@ -757,7 +757,7 @@ export class AiAttackBehavior {
         this.sendBoatAttack(target);
       }
     } else {
-      // sharesBorderWith(TerraNullius) counts water tiles as RS (ownerID 0 = TN smallID),
+      // sharesBorderWith(TerraNullius) counts water tiles as TN (ownerID 0 = TN smallID),
       // so use a land-only adjacency check to decide land vs boat attack.
       if (this.hasLandBorderWithTerraNullius()) {
         this.sendLandAttack(target);
