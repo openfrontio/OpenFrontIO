@@ -36,6 +36,7 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
+  private _retreatPort: TileRef | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
@@ -100,6 +101,14 @@ export class UnitImpl implements Unit {
 
   patrolTile(): TileRef | undefined {
     return this._patrolTile;
+  }
+
+  retreatPort(): TileRef | undefined {
+    return this._retreatPort;
+  }
+
+  setRetreatPort(tile: TileRef | undefined): void {
+    this._retreatPort = tile;
   }
 
   isUnit(): this is Unit {

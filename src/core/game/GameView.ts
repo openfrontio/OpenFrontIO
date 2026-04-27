@@ -122,6 +122,12 @@ export class UnitView {
   setWarshipState(_state: WarshipMovementState): void {
     throw new Error("setWarshipState is not supported on UnitView");
   }
+  retreatPort(): TileRef | undefined {
+    return undefined;
+  }
+  setRetreatPort(_tile: TileRef | undefined): void {
+    throw new Error("setRetreatPort is not supported on UnitView");
+  }
   isInCombat(): boolean {
     return this.data.inCombat;
   }

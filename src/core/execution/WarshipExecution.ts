@@ -21,8 +21,6 @@ export class WarshipExecution implements Execution {
   private pathfinder: WaterPathFinder;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
-  private retreatPortTile: TileRef | undefined;
-  private retreatingForRepair = false;
   private lastManualMoveTickRetreatDisabled = 0;
   private lastObservedPatrolTile: TileRef | undefined;
   private activeHealingRemainder = 0;
@@ -66,7 +64,6 @@ export class WarshipExecution implements Execution {
 
     this.healWarship();
     this.handleManualPatrolOverride();
-    this.syncExternalRetreatOrder();
 
     if (this.warship.warshipState() === "docked") {
       if (this.currentRetreatPort() === undefined) {
@@ -161,7 +158,7 @@ export class WarshipExecution implements Execution {
   private shouldStartRepairRetreat(
     healthBeforeHealing = this.warship.health(),
   ): boolean {
-    if (this.retreatingForRepair) {
+    if (this.warship.warshipState() !== "patrolling") {
       return false;
     }
     const manualMoveRetreatDisabledDuration = 50;
@@ -316,19 +313,16 @@ export class WarshipExecution implements Execution {
     if (portTile === undefined) {
       return;
     }
-    this.retreatingForRepair = true;
-    this.retreatPortTile = portTile;
-    this.warship.setWarshipState("patrolling");
+    this.warship.setRetreatPort(portTile);
     this.activeHealingRemainder = 0;
     this.warship.setWarshipState("retreating");
     this.warship.setTargetUnit(undefined);
   }
 
   private cancelRepairRetreat(clearTargetTile = true): void {
-    this.retreatingForRepair = false;
     this.activeHealingRemainder = 0;
     this.warship.setWarshipState("patrolling");
-    this.retreatPortTile = undefined;
+    this.warship.setRetreatPort(undefined);
     if (clearTargetTile) {
       this.warship.setTargetTile(undefined);
     }
@@ -341,42 +335,15 @@ export class WarshipExecution implements Execution {
       patrolTile !== this.lastObservedPatrolTile
     ) {
       this.lastManualMoveTickRetreatDisabled = this.mg.ticks();
-      if (this.retreatingForRepair) {
+      if (this.warship.warshipState() !== "patrolling") {
         this.cancelRepairRetreat(false);
       }
     }
     this.lastObservedPatrolTile = patrolTile;
   }
 
-  private syncExternalRetreatOrder(): void {
-    if (
-      this.retreatingForRepair ||
-      this.warship.warshipState() === "patrolling"
-    ) {
-      return;
-    }
-
-    const orderedPortTile =
-      this.warship.targetTile() ?? this.warship.patrolTile();
-    if (orderedPortTile === undefined) {
-      return;
-    }
-
-    const friendlyPort = this.warship
-      .owner()
-      .units(UnitType.Port)
-      .find((port) => port.tile() === orderedPortTile);
-    if (!friendlyPort) {
-      return;
-    }
-
-    this.retreatingForRepair = true;
-    this.retreatPortTile = friendlyPort.tile();
-    this.warship.setTargetUnit(undefined);
-  }
-
   private handleRepairRetreat(): boolean {
-    if (!this.retreatingForRepair) {
+    if (this.warship.warshipState() === "patrolling") {
       return false;
     }
 
@@ -397,7 +364,7 @@ export class WarshipExecution implements Execution {
       this.warship.setTargetUnit(undefined);
     }
 
-    const retreatPortTile = this.retreatPortTile;
+    const retreatPortTile = this.warship.retreatPort();
     if (retreatPortTile === undefined) {
       return false;
     }
@@ -442,12 +409,14 @@ export class WarshipExecution implements Execution {
       case PathStatus.NEXT:
         this.warship.move(result.node);
         break;
-      case PathStatus.NOT_FOUND:
-        this.retreatPortTile = this.findNearestAvailablePortTile();
-        if (this.retreatPortTile === undefined) {
+      case PathStatus.NOT_FOUND: {
+        const newPort = this.findNearestAvailablePortTile();
+        this.warship.setRetreatPort(newPort);
+        if (newPort === undefined) {
           this.cancelRepairRetreat();
         }
         break;
+      }
     }
 
     return true;
@@ -459,31 +428,34 @@ export class WarshipExecution implements Execution {
       return false;
     }
 
+    const currentRetreatPort = this.warship.retreatPort();
+
     // Check if current retreat port still exists
     const currentPortExists =
-      this.retreatPortTile !== undefined &&
-      ports.some((port) => port.tile() === this.retreatPortTile);
+      currentRetreatPort !== undefined &&
+      ports.some((port) => port.tile() === currentRetreatPort);
 
     if (!currentPortExists) {
-      this.retreatPortTile = this.findNearestAvailablePortTile();
-      return this.retreatPortTile !== undefined;
+      const newPort = this.findNearestAvailablePortTile();
+      this.warship.setRetreatPort(newPort);
+      return newPort !== undefined;
     }
 
     // Check if current port is now full of healing (not counting arrived warships)
-    const currentPort = ports.find((p) => p.tile() === this.retreatPortTile);
+    const currentPort = ports.find((p) => p.tile() === currentRetreatPort);
     if (currentPort && this.isPortFullOfHealing(currentPort)) {
       // Current port is at healing capacity, look for alternatives
       const alternativePort = this.findNearestAvailablePort();
       if (alternativePort) {
-        this.retreatPortTile = alternativePort;
+        this.warship.setRetreatPort(alternativePort);
       }
-      return this.retreatPortTile !== undefined;
+      return this.warship.retreatPort() !== undefined;
     }
 
     // Check if a significantly closer port is available
     const closerPort = this.findBetterPortTile();
-    if (closerPort && closerPort !== this.retreatPortTile) {
-      this.retreatPortTile = closerPort;
+    if (closerPort && closerPort !== currentRetreatPort) {
+      this.warship.setRetreatPort(closerPort);
       return true;
     }
 
@@ -550,14 +522,15 @@ export class WarshipExecution implements Execution {
   }
 
   private currentRetreatPort(): Unit | undefined {
-    if (this.retreatPortTile === undefined) {
+    const retreatPort = this.warship.retreatPort();
+    if (retreatPort === undefined) {
       return undefined;
     }
 
     return this.warship
       .owner()
       .units(UnitType.Port)
-      .find((port) => port.tile() === this.retreatPortTile);
+      .find((port) => port.tile() === retreatPort);
   }
 
   private nearestAvailablePortTile(
@@ -604,10 +577,11 @@ export class WarshipExecution implements Execution {
     if (!result) return undefined;
 
     let currentDistance = Infinity;
-    if (this.retreatPortTile) {
+    const currentRetreatPort = this.warship.retreatPort();
+    if (currentRetreatPort !== undefined) {
       currentDistance = this.mg.euclideanDistSquared(
         this.warship.tile(),
-        this.retreatPortTile,
+        currentRetreatPort,
       );
     }
 

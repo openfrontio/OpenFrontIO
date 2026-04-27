@@ -653,6 +653,8 @@ export interface Unit {
   // Warships
   setPatrolTile(tile: TileRef): void;
   patrolTile(): TileRef | undefined;
+  retreatPort(): TileRef | undefined;
+  setRetreatPort(tile: TileRef | undefined): void;
 }
 
 export interface TerraNullius {
