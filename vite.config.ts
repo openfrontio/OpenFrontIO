@@ -6,7 +6,11 @@ import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { type AssetManifest, buildAssetUrl } from "./src/core/AssetUrls";
+import {
+  type AssetManifest,
+  buildAssetUrl,
+  rewriteAssetsForCdn,
+} from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,
@@ -84,24 +88,14 @@ export default defineConfig(({ mode }) => {
 
   // Vite's HTML transform replaces the source <script src="/src/client/Main.ts">
   // with the hashed bundle URL and injects <link rel="modulepreload"> /
-  // <link rel="stylesheet"> tags. Rewrite those /assets/... refs (only inside
-  // src= / href= attributes, so inline scripts containing "/assets/..." can't
-  // be mangled by accident) to use the cdnBaseRaw EJS placeholder so
-  // RenderHtml.ts can prefix them with CDN_BASE at request time. Falls back to
-  // "" when the var is missing so a future renderer that forgets to provide it
-  // still produces working same-origin URLs. Source-asset manifest URLs use
-  // /_assets/ (underscore) and are prefixed via buildAssetUrl, so they are not
-  // matched here.
+  // <link rel="stylesheet"> tags. rewriteAssetsForCdn rewrites those refs to
+  // an EJS placeholder so RenderHtml.ts can prefix them with CDN_BASE at
+  // request time.
   const injectCdnBaseTemplate = (): Plugin => ({
     name: "inject-cdn-base-template",
     apply: "build" as const,
     enforce: "post",
-    transformIndexHtml(html) {
-      return html.replace(
-        /(\s(?:src|href)=)(["'])\/assets\//g,
-        `$1$2<%- locals.cdnBaseRaw || "" %>/assets/`,
-      );
-    },
+    transformIndexHtml: rewriteAssetsForCdn,
   });
 
   let viteBundleFiles: string[] = [];

@@ -1,3 +1,4 @@
+import { getCdnBase } from "../AssetUrls";
 import {
   BuildableUnit,
   Cell,
@@ -91,7 +92,7 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
-        cdnBase: window.CDN_BASE ?? "",
+        cdnBase: getCdnBase(),
       });
 
       // Add timeout for initialization
