@@ -64,7 +64,7 @@ export class RankingControls extends LitElement {
     return html`
       <button
         class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest hover:text-white hover:bg-white/5 border ${active
-          ? "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+          ? "bg-malibu-blue/20 text-aquarius border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
           : "text-white/40 border-transparent"}"
         @click=${() => this.onSort(type)}
       >

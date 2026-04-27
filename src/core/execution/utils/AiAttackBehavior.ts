@@ -101,6 +101,10 @@ export class AiAttackBehavior {
   private attackWithRandomBoat(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
 
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return;
+    }
+
     // Check if we've already sent out the maximum number of transport ships
     if (
       this.player.unitCount(UnitType.TransportShip) >=
@@ -166,8 +170,12 @@ export class AiAttackBehavior {
       if (owner.isPlayer() && borderingEnemies.includes(owner)) {
         continue;
       }
-      // Don't spam boats into players which are stronger than us
-      if (owner.isPlayer() && owner.troops() > this.player.troops()) {
+      // Don't spam boats into players which are stronger than us (FFA only)
+      if (
+        this.isFFA() &&
+        owner.isPlayer() &&
+        owner.troops() > this.player.troops()
+      ) {
         continue;
       }
 
@@ -258,7 +266,8 @@ export class AiAttackBehavior {
       // borderingEnemies is already sorted by troops (ascending), so first match is weakest afk enemy
       const afk = borderingEnemies.find(
         (enemy) =>
-          enemy.isDisconnected() && enemy.troops() < this.player.troops() * 3,
+          enemy.isDisconnected() &&
+          (!this.isFFA() || enemy.troops() < this.player.troops() * 3),
       );
       if (afk) {
         this.sendAttack(afk);
@@ -292,7 +301,7 @@ export class AiAttackBehavior {
         if (relation.relation !== Relation.Hostile) continue;
         const other = relation.player;
         if (this.player.isFriendly(other)) continue;
-        if (other.troops() > this.player.troops() * 3) continue;
+        if (this.isFFA() && other.troops() > this.player.troops() * 3) continue;
         this.sendAttack(other);
         return true;
       }
@@ -312,8 +321,8 @@ export class AiAttackBehavior {
       if (borderingEnemies.length > 0) {
         // borderingEnemies is already sorted by troops (ascending), so first match is weakest
         const weakest = borderingEnemies[0];
-        // Don't attack if they have more troops than us
-        if (weakest.troops() < this.player.troops()) {
+        // In FFA, don't attack if they have more troops than us
+        if (!this.isFFA() || weakest.troops() < this.player.troops()) {
           this.sendAttack(weakest);
           return true;
         }
@@ -463,6 +472,8 @@ export class AiAttackBehavior {
   private assistAllies(): boolean {
     if (this.emojiBehavior === undefined) throw new Error("not initialized");
 
+    if (this.game.config().disableAlliances()) return false;
+
     for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
       if (this.player.relation(ally) < Relation.Friendly) {
@@ -490,11 +501,14 @@ export class AiAttackBehavior {
 
   // Find a traitor who isn't significantly stronger than us
   private findTraitor(borderingEnemies: Player[]): Player | null {
+    if (this.game.config().disableAlliances()) return null;
+
     // borderingEnemies is already sorted by troops (ascending), so first match is weakest traitor
     return (
       borderingEnemies.find(
         (enemy) =>
-          enemy.isTraitor() && enemy.troops() < this.player.troops() * 1.2,
+          enemy.isTraitor() &&
+          (!this.isFFA() || enemy.troops() < this.player.troops() * 1.2),
       ) ?? null
     );
   }
@@ -504,6 +518,8 @@ export class AiAttackBehavior {
     borderingEnemies: Player[],
   ): boolean {
     if (this.allianceBehavior === undefined) throw new Error("not initialized");
+
+    if (this.game.config().disableAlliances()) return false;
 
     if (borderingFriends.length > 0) {
       for (const friend of borderingFriends) {
@@ -522,6 +538,10 @@ export class AiAttackBehavior {
   }
 
   private isBorderingNukedTerritory(): boolean {
+    if (this.game.config().isUnitDisabled(UnitType.MissileSilo)) {
+      return false;
+    }
+
     for (const tile of this.player.borderTiles()) {
       for (const neighbor of this.game.neighbors(tile)) {
         if (
@@ -541,7 +561,9 @@ export class AiAttackBehavior {
     // borderingEnemies is already sorted by troops (ascending), so first match is weakest victim
     return (
       borderingEnemies.find((enemy) => {
-        if (enemy.troops() > this.player.troops() * 1.2) return false;
+        if (this.isFFA() && enemy.troops() > this.player.troops() * 1.2) {
+          return false;
+        }
 
         const totalIncomingTroops = enemy
           .incomingAttacks()
@@ -559,7 +581,7 @@ export class AiAttackBehavior {
       const enemyMaxTroops = this.game.config().maxTroops(enemy);
       return (
         enemy.troops() < enemyMaxTroops * 0.15 &&
-        enemy.troops() < this.player.troops() * 1.2
+        (!this.isFFA() || enemy.troops() < this.player.troops() * 1.2)
       );
     });
 
@@ -568,6 +590,10 @@ export class AiAttackBehavior {
   }
 
   private findNearestIslandEnemy(): Player | null {
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return null;
+    }
+
     // Check if we've already sent out the maximum number of transport ships
     if (
       this.player.unitCount(UnitType.TransportShip) >=
@@ -585,8 +611,8 @@ export class AiAttackBehavior {
     const filteredPlayers = this.game.players().filter((p) => {
       if (p === this.player) return false;
       if (this.player.isFriendly(p)) return false;
-      // Don't spam boats into players with more troops
-      return p.troops() < this.player.troops();
+      // In FFA, don't spam boats into players with more troops
+      return !this.isFFA() || p.troops() < this.player.troops();
     });
 
     if (filteredPlayers.length === 0) return null;
@@ -642,6 +668,13 @@ export class AiAttackBehavior {
     return reachablePlayers[0];
   }
 
+  // In team games, nations should be willing to attack/boat into stronger
+  // enemies - they can rely on teammates to donate. In FFA, going after
+  // someone significantly stronger is usually a losing proposition.
+  private isFFA(): boolean {
+    return this.game.config().gameConfig().gameMode === GameMode.FFA;
+  }
+
   private getPlayerCenter(player: Player) {
     if (player.largestClusterBoundingBox) {
       return boundingBoxCenter(player.largestClusterBoundingBox);
@@ -688,6 +721,8 @@ export class AiAttackBehavior {
   }
 
   getNeighborTraitorToAttack(): Player | null {
+    if (this.game.config().disableAlliances()) return null;
+
     const traitors = this.player
       .neighbors()
       .filter(
@@ -786,6 +821,10 @@ export class AiAttackBehavior {
   }
 
   private sendBoatAttack(target: Player) {
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return;
+    }
+
     const closest = closestTwoTiles(
       this.game,
       Array.from(this.player.borderTiles()).filter((t) => this.game.isShore(t)),

@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
+import { lookup as lookupMime } from "mrmime";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
@@ -12,38 +13,37 @@ import {
   createHashedPublicAssetFiles,
   getProprietaryDir,
   getResourcesDir,
-  writePublicAssetManifestModule,
+  writePublicAssetManifest,
 } from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function serveProprietaryDir(dir: string): Plugin {
-  const resolvedDir = path.resolve(dir) + path.sep;
+function serveProprietaryDir(
+  proprietaryDir: string,
+  resourcesDir: string,
+): Plugin {
   return {
     name: "serve-proprietary-dir",
     configureServer(server) {
-      // Return a function so the middleware is registered after Vite's internal
-      // static-file handler (publicDir).  This makes proprietary/ a fallback
-      // rather than taking precedence over resources/.
-      return () => {
-        server.middlewares.use((req, res, next) => {
-          if (!req.url) return next();
-          const urlPath = new URL(req.url, "http://localhost").pathname;
-          const filePath = path.resolve(
-            dir,
-            decodeURIComponent(urlPath).replace(/^\//, ""),
-          );
-          if (!filePath.startsWith(resolvedDir)) return next();
-          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-            res.setHeader("Cache-Control", "no-cache");
-            fs.createReadStream(filePath).pipe(res);
-          } else {
-            next();
-          }
-        });
-      };
+      // Must run before Vite's htmlFallback; skip when resources/ has the file
+      // so publicDir keeps precedence.
+      server.middlewares.use((req, res, next) => {
+        if (!req.url) return next();
+        const rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\//, "");
+        if (rel.includes("..")) return next();
+        if (fs.existsSync(path.join(resourcesDir, rel))) return next();
+        const filePath = path.join(proprietaryDir, rel);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+          return next();
+        const mime = lookupMime(filePath);
+        if (mime) res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store");
+        fs.createReadStream(filePath).pipe(res);
+      });
     },
   };
 }
@@ -71,14 +71,30 @@ export default defineConfig(({ mode }) => {
     mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
   };
 
-  const syncHashedPublicAssets = () => ({
+  let viteBundleFiles: string[] = [];
+  const syncHashedPublicAssets = (): Plugin => ({
     name: "sync-hashed-public-assets",
     apply: "build" as const,
+    writeBundle(_options, bundle) {
+      viteBundleFiles = Object.keys(bundle);
+    },
     closeBundle() {
       const outDir = path.join(__dirname, "static");
       copyRootPublicFiles(resourcesDir, outDir);
+      // Run the source→hashed copy first; createHashedPublicAssetFiles iterates
+      // assetManifest and expects every key to resolve to a file in resources/
+      // or proprietary/. Vite's bundle output (assets/...) doesn't, so it's
+      // merged in after.
       createHashedPublicAssetFiles(sourceDirs, outDir, assetManifest);
-      writePublicAssetManifestModule(outDir, assetManifest);
+      // Track Vite's own bundle output (vendor chunks, JS, CSS, workers under
+      // static/assets/) in the manifest so the deploy-time R2 upload covers
+      // them alongside the hashed source assets. Skip non-assets/ emits like
+      // index.html — those are served by the app, not from R2.
+      for (const fileName of viteBundleFiles) {
+        if (!fileName.startsWith("assets/")) continue;
+        assetManifest[fileName] = `/${fileName}`;
+      }
+      writePublicAssetManifest(outDir, assetManifest);
     },
   });
 
@@ -123,7 +139,9 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       tsconfigPaths(),
-      ...(!isProduction ? [serveProprietaryDir(proprietaryDir)] : []),
+      ...(!isProduction
+        ? [serveProprietaryDir(proprietaryDir, resourcesDir)]
+        : []),
       ...(isProduction
         ? []
         : [

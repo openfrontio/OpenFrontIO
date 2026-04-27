@@ -31,6 +31,9 @@ export class NationWarshipBehavior {
 
   maybeSpawnWarship(): boolean {
     if (this.player === null) throw new Error("not initialized");
+    if (this.game.config().isUnitDisabled(UnitType.Warship)) {
+      return false;
+    }
     if (!this.random.chance(50)) {
       return false;
     }
@@ -89,6 +92,9 @@ export class NationWarshipBehavior {
 
   // Send out a warship if our transport ship got captured
   private trackTransportShipsAndRetaliate(): void {
+    if (this.game.config().isUnitDisabled(UnitType.TransportShip)) {
+      return;
+    }
     // Add any currently owned transport ships to our tracking set
     this.player
       .units(UnitType.TransportShip)
@@ -185,6 +191,10 @@ export class NationWarshipBehavior {
   }
 
   private shouldCounterWarshipInfestation(): boolean {
+    if (this.game.config().isUnitDisabled(UnitType.Warship)) {
+      return false;
+    }
+
     // Only the smart nations can do this
     const { difficulty } = this.game.config().gameConfig();
     if (

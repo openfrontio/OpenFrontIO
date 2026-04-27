@@ -73,30 +73,33 @@ export class WinModal extends LitElement implements Layer {
             ? "flex justify-between gap-2.5"
             : "hidden"}"
         >
-          <button
+          <o-button
+            variant="primary"
+            width="block"
+            class="flex-1"
+            translationKey="win_modal.exit"
             @click=${this._handleExit}
-            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
-          >
-            ${translateText("win_modal.exit")}
-          </button>
+          ></o-button>
           ${this.isRankedGame
             ? html`
-                <button
+                <o-button
+                  variant="primary"
+                  width="block"
+                  class="flex-1"
+                  translationKey="win_modal.requeue"
                   @click=${this._handleRequeue}
-                  class="flex-1 px-3 py-3 text-base cursor-pointer bg-purple-600 text-white border-0 rounded-sm transition-all duration-200 hover:bg-purple-500 hover:-translate-y-px active:translate-y-px"
-                >
-                  ${translateText("win_modal.requeue")}
-                </button>
+                ></o-button>
               `
             : null}
-          <button
-            @click=${this.hide}
-            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
-          >
-            ${this.game?.myPlayer()?.isAlive()
+          <o-button
+            variant="primary"
+            width="block"
+            class="flex-1"
+            .title=${this.game?.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
-          </button>
+            @click=${this.hide}
+          ></o-button>
         </div>
       </div>
     `;

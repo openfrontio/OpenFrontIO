@@ -240,7 +240,7 @@ export class PlayerRow extends LitElement {
   private renderTag(tag: string) {
     return html`
       <div
-        class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold text-xs tracking-wide group-hover:bg-blue-500/20 transition-colors"
+        class="px-2.5 py-1 rounded bg-malibu-blue/10 border border-malibu-blue/20 text-aquarius font-bold text-xs tracking-wide group-hover:bg-malibu-blue/20 transition-colors"
       >
         ${tag}
       </div>

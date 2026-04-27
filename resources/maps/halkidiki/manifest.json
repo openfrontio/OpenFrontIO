@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 440,
-    "num_land_tiles": 105052,
+    "num_land_tiles": 105046,
     "width": 550
   },
   "map4x": {
     "height": 880,
-    "num_land_tiles": 428074,
+    "num_land_tiles": 428007,
     "width": 1100
   },
   "name": "Halkidiki",

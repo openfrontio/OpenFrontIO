@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 70747,
+    "num_land_tiles": 70740,
     "width": 300
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 295140,
+    "num_land_tiles": 294828,
     "width": 600
   },
   "name": "Yenisei",

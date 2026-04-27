@@ -287,7 +287,10 @@ export async function startWorker() {
         gameID: gameRecord.info.gameID,
       });
 
-      archive(finalizeGameRecord(gameRecord));
+      archive(
+        finalizeGameRecord(gameRecord),
+        privilegeRefresher.getCosmeticFlagUrls(),
+      );
       res.json({
         success: true,
       });

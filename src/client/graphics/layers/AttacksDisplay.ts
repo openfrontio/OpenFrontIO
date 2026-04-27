@@ -283,7 +283,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               > `,
             onClick: async () => this.attackWarningOnClick(attack),
             className:
-              "text-left text-sky-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${!attack.retreating
@@ -293,7 +293,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: attack.retreating,
               })
-            : html`<span class="ml-auto truncate text-blue-400"
+            : html`<span class="ml-auto truncate text-aquarius"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -319,7 +319,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               ><span class="ml-1">${renderTroops(landAttack.troops)}</span>
               ${translateText("help_modal.ui_wilderness")}`,
             className:
-              "text-left text-sky-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${!landAttack.retreating
@@ -329,7 +329,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: landAttack.retreating,
               })
-            : html`<span class="ml-auto truncate text-blue-400"
+            : html`<span class="ml-auto truncate text-aquarius"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -374,7 +374,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
-              "text-left text-blue-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${!boat.retreating()
@@ -384,7 +384,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: boat.retreating(),
               })
-            : html`<span class="ml-auto truncate text-blue-400"
+            : html`<span class="ml-auto truncate text-aquarius"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
