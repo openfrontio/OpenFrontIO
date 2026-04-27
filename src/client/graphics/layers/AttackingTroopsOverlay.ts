@@ -22,6 +22,18 @@ const OUTGOING_ICON_FILTER =
 const INCOMING_ICON_FILTER =
   "brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)";
 
+// Element scale factor that, combined with the container's `scale(zoom)`,
+// yields the desired on-screen label size: constant screen size when zoomed
+// in past LABEL_FULL_SIZE_ZOOM, then shrinking linearly as zoom drops, with a
+// floor at LABEL_MIN_SCREEN_SCALE so the label never disappears.
+export function computeLabelScale(zoom: number): number {
+  const netScale = Math.max(
+    LABEL_MIN_SCREEN_SCALE,
+    Math.min(1, zoom / LABEL_FULL_SIZE_ZOOM),
+  );
+  return netScale / zoom;
+}
+
 // An attack can have multiple disconnected front-line segments, so elements
 // and positions are parallel arrays with one entry per segment.
 interface AttackLabel {
@@ -81,17 +93,8 @@ export class AttackingTroopsOverlay implements Layer {
     return 200;
   }
 
-  // Element scale factor that, combined with the container's `scale(zoom)`,
-  // yields the desired on-screen label size. The result keeps the label at
-  // constant screen size while zoomed in, then lets it shrink (linearly,
-  // floored at LABEL_MIN_SCREEN_SCALE) as zoom drops below the threshold.
   private labelScale(): number {
-    const zoom = this.transformHandler.scale;
-    const netScale = Math.max(
-      LABEL_MIN_SCREEN_SCALE,
-      Math.min(1, zoom / LABEL_FULL_SIZE_ZOOM),
-    );
-    return netScale / zoom;
+    return computeLabelScale(this.transformHandler.scale);
   }
 
   tick() {
@@ -178,7 +181,7 @@ export class AttackingTroopsOverlay implements Layer {
       label.attackerTroops = attackerTroops;
     }
     for (const el of label.elements) {
-      this.updateLabelContent(el, attackerTroops, isIncoming);
+      this.updateLabelContent(el, attackerTroops);
     }
   }
 
@@ -274,16 +277,6 @@ export class AttackingTroopsOverlay implements Layer {
   ): HTMLDivElement {
     const el = this.labelTemplate.cloneNode(true) as HTMLDivElement;
     el.style.fontFamily = this.game.config().theme().font();
-    this.updateLabelContent(el, attackerTroops, isIncoming);
-    this.container.appendChild(el);
-    return el;
-  }
-
-  private updateLabelContent(
-    el: HTMLDivElement,
-    attackerTroops: number,
-    isIncoming: boolean,
-  ) {
     const icon = el.children[0] as HTMLImageElement;
     const span = el.children[1] as HTMLSpanElement;
     icon.src = soldierIcon;
@@ -291,6 +284,13 @@ export class AttackingTroopsOverlay implements Layer {
       ? INCOMING_ICON_FILTER
       : OUTGOING_ICON_FILTER;
     span.style.color = isIncoming ? INCOMING_COLOR : OUTGOING_COLOR;
+    span.textContent = renderTroops(attackerTroops);
+    this.container.appendChild(el);
+    return el;
+  }
+
+  private updateLabelContent(el: HTMLDivElement, attackerTroops: number) {
+    const span = el.children[1] as HTMLSpanElement;
     span.textContent = renderTroops(attackerTroops);
   }
 
