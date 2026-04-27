@@ -12,6 +12,13 @@ import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
+// ?worker&inline embeds the compiled worker JS as a base64 string inside the
+// main bundle and constructs the Worker from a same-origin Blob URL at
+// runtime. Avoids the cross-origin Worker constructor problem (browsers
+// refuse cross-origin Worker construction even with valid CORS+CORP) and
+// removes the separate worker fetch entirely — the worker code rides along
+// with the main bundle on the same HTTP/2 stream.
+import GameWorker from "./Worker.worker.ts?worker&inline";
 
 export class WorkerClient {
   private worker: Worker;
@@ -25,9 +32,7 @@ export class WorkerClient {
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID | undefined,
   ) {
-    this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    this.worker = new GameWorker();
     this.messageHandlers = new Map();
 
     // Set up global message handler
@@ -86,6 +91,7 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
+        cdnBase: window.CDN_BASE ?? "",
       });
 
       // Add timeout for initialization

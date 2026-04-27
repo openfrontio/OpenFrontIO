@@ -43,4 +43,45 @@ describe("AssetUrls", () => {
       "Asset path must not be empty",
     );
   });
+
+  test("prefixes baseUrl onto hashed URLs when provided", () => {
+    expect(
+      buildAssetUrl(
+        "images/Favicon.svg",
+        { "images/Favicon.svg": "/_assets/images/Favicon.hash.svg" },
+        "https://cdn.example.com",
+      ),
+    ).toBe("https://cdn.example.com/_assets/images/Favicon.hash.svg");
+  });
+
+  test("preserves direct URL when baseUrl is empty string", () => {
+    expect(
+      buildAssetUrl(
+        "images/Favicon.svg",
+        { "images/Favicon.svg": "/_assets/images/Favicon.hash.svg" },
+        "",
+      ),
+    ).toBe("/_assets/images/Favicon.hash.svg");
+  });
+
+  test("returns absolute http(s) URLs unchanged and ignores baseUrl", () => {
+    expect(
+      buildAssetUrl(
+        "https://example.com/foo.png",
+        {},
+        "https://cdn.example.com",
+      ),
+    ).toBe("https://example.com/foo.png");
+    expect(buildAssetUrl("HTTP://example.com/foo.png", {})).toBe(
+      "HTTP://example.com/foo.png",
+    );
+  });
+
+  // Manifest miss → keep same-origin; the CDN only serves what was explicitly
+  // hashed and uploaded, so unknown paths must not be prefixed.
+  test("does not prefix baseUrl on manifest misses", () => {
+    expect(
+      buildAssetUrl("images/unknown.svg", {}, "https://cdn.example.com"),
+    ).toBe("/images/unknown.svg");
+  });
 });

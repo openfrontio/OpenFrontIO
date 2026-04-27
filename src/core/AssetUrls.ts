@@ -51,6 +51,7 @@ function isAbsoluteUrl(path: string): boolean {
 export function buildAssetUrl(
   path: string,
   assetManifest: AssetManifest = {},
+  baseUrl: string = "",
 ): string {
   if (isAbsoluteUrl(path)) {
     return path;
@@ -60,7 +61,7 @@ export function buildAssetUrl(
 
   const directUrl = assetManifest[normalizedPath];
   if (directUrl) {
-    return directUrl;
+    return baseUrl ? `${baseUrl}${directUrl}` : directUrl;
   }
 
   return `/${encodeAssetPath(normalizedPath)}`;
@@ -68,9 +69,11 @@ export function buildAssetUrl(
 
 declare global {
   var __ASSET_MANIFEST__: AssetManifest | undefined;
+  var __CDN_BASE__: string | undefined;
 
   interface Window {
     ASSET_MANIFEST?: AssetManifest;
+    CDN_BASE?: string;
   }
 }
 
@@ -81,6 +84,16 @@ export function getAssetManifest(): AssetManifest {
   return globalThis.__ASSET_MANIFEST__ ?? {};
 }
 
+// Web workers have no `window`, so they read from the build-time
+// `__CDN_BASE__` define instead. Without this fallback, asset fetches inside
+// workers (e.g. map binaries) would silently bypass the CDN.
+function getCdnBase(): string {
+  if (typeof window !== "undefined" && window.CDN_BASE !== undefined) {
+    return window.CDN_BASE;
+  }
+  return globalThis.__CDN_BASE__ ?? "";
+}
+
 export function assetUrl(path: string): string {
-  return buildAssetUrl(path, getAssetManifest());
+  return buildAssetUrl(path, getAssetManifest(), getCdnBase());
 }
