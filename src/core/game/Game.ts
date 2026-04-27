@@ -619,12 +619,6 @@ export interface Unit {
   hasHealth(): boolean;
   warshipState(): WarshipMovementState;
   setWarshipState(state: WarshipMovementState): void;
-  setRetreating(retreating: boolean): void;
-  /** Derived from warshipState — true when state is "retreating" or "docked". */
-  retreating(): boolean;
-  setDocked(docked: boolean): void;
-  /** Derived from warshipState — true when state is "docked". */
-  isDocked(): boolean;
   isInCombat(): boolean;
   setInCombat(): void;
   orderBoatRetreat(): void;

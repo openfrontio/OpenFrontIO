@@ -139,8 +139,6 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   warshipState: WarshipMovementState;
-  retreating: boolean;
-  docked: boolean;
   inCombat: boolean;
   targetable: boolean;
   markedForDeletion: number | false;

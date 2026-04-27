@@ -116,21 +116,6 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
-  retreating(): boolean {
-    if (
-      this.type() !== UnitType.TransportShip &&
-      this.type() !== UnitType.Warship
-    ) {
-      throw Error("Must be a transport ship or warship");
-    }
-    return this.data.retreating;
-  }
-  isDocked(): boolean {
-    return this.data.docked;
-  }
-  setDocked(_docked: boolean): void {
-    throw new Error("setDocked is not supported on UnitView");
-  }
   warshipState(): WarshipMovementState {
     return this.data.warshipState;
   }

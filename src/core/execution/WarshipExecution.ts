@@ -68,16 +68,16 @@ export class WarshipExecution implements Execution {
     this.handleManualPatrolOverride();
     this.syncExternalRetreatOrder();
 
-    if (this.warship.isDocked()) {
+    if (this.warship.warshipState() === "docked") {
       if (this.currentRetreatPort() === undefined) {
-        this.warship.setDocked(false);
+        this.warship.setWarshipState("patrolling");
         this.cancelRepairRetreat();
       }
       if (this.isFullyHealed()) {
-        this.warship.setDocked(false);
+        this.warship.setWarshipState("patrolling");
         this.cancelRepairRetreat();
       }
-      if (this.warship.isDocked()) {
+      if (this.warship.warshipState() === "docked") {
         return;
       }
     }
@@ -145,7 +145,7 @@ export class WarshipExecution implements Execution {
       this.warship.modifyHealth(passiveHealing);
     }
 
-    if (this.warship.isDocked()) {
+    if (this.warship.warshipState() === "docked") {
       this.applyActiveDockedHealing();
     }
   }
@@ -256,7 +256,7 @@ export class WarshipExecution implements Execution {
         unit.owner() === owner ||
         !owner.canAttackPlayer(unit.owner(), true) ||
         this.alreadySentShell.has(unit) ||
-        unit.isDocked()
+        unit.warshipState() === "docked"
       ) {
         continue;
       }
@@ -318,16 +318,16 @@ export class WarshipExecution implements Execution {
     }
     this.retreatingForRepair = true;
     this.retreatPortTile = portTile;
-    this.warship.setDocked(false);
+    this.warship.setWarshipState("patrolling");
     this.activeHealingRemainder = 0;
-    this.warship.setRetreating(true);
+    this.warship.setWarshipState("retreating");
     this.warship.setTargetUnit(undefined);
   }
 
   private cancelRepairRetreat(clearTargetTile = true): void {
     this.retreatingForRepair = false;
     this.activeHealingRemainder = 0;
-    this.warship.setRetreating(false);
+    this.warship.setWarshipState("patrolling");
     this.retreatPortTile = undefined;
     if (clearTargetTile) {
       this.warship.setTargetTile(undefined);
@@ -349,7 +349,10 @@ export class WarshipExecution implements Execution {
   }
 
   private syncExternalRetreatOrder(): void {
-    if (this.retreatingForRepair || !this.warship.retreating()) {
+    if (
+      this.retreatingForRepair ||
+      this.warship.warshipState() === "patrolling"
+    ) {
       return;
     }
 
@@ -415,7 +418,7 @@ export class WarshipExecution implements Execution {
       if (port && !this.isPortFullOfHealing(port, this.warship)) {
         // Port has capacity - dock here
         this.warship.setTargetTile(undefined);
-        this.warship.setDocked(true);
+        this.warship.setWarshipState("docked");
         return true;
       } else {
         // Port is full - wait near port, but leave if already fully healed
@@ -504,7 +507,7 @@ export class WarshipExecution implements Execution {
         if (excludeShip && ship === excludeShip) {
           return false;
         }
-        if (!ship.retreating()) {
+        if (ship.warshipState() === "patrolling") {
           return false;
         }
         // Docked ships are retreating ships that are stationary at the port.
@@ -705,7 +708,7 @@ export class WarshipExecution implements Execution {
   }
 
   isDocked(): boolean {
-    return this.warship?.isDocked() ?? false;
+    return (this.warship?.warshipState() ?? "patrolling") === "docked";
   }
 
   activeDuringSpawnPhase(): boolean {

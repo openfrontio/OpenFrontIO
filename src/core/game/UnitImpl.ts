@@ -131,9 +131,6 @@ export class UnitImpl implements Unit {
       isActive: this._active,
       reachedTarget: this._reachedTarget,
       warshipState: this._warshipState,
-      retreating:
-        this._warshipState === "retreating" || this._warshipState === "docked",
-      docked: this._warshipState === "docked",
       inCombat: this.isInCombat(),
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
@@ -344,25 +341,6 @@ export class UnitImpl implements Unit {
     return this._destroyer;
   }
 
-  retreating(): boolean {
-    return (
-      this._warshipState === "retreating" || this._warshipState === "docked"
-    );
-  }
-
-  setRetreating(retreating: boolean): void {
-    const newState = retreating ? "retreating" : "patrolling";
-    this.setWarshipState(newState);
-  }
-
-  isDocked(): boolean {
-    return this._warshipState === "docked";
-  }
-
-  setDocked(docked: boolean): void {
-    this.setWarshipState(docked ? "docked" : "patrolling");
-  }
-
   warshipState(): WarshipMovementState {
     return this._warshipState;
   }
@@ -387,7 +365,7 @@ export class UnitImpl implements Unit {
     if (this.type() !== UnitType.TransportShip) {
       throw new Error("Cannot retreat " + this.type());
     }
-    this.setRetreating(true);
+    this.setWarshipState("retreating");
   }
 
   isUnderConstruction(): boolean {

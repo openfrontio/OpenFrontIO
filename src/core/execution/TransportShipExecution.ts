@@ -198,14 +198,14 @@ export class TransportShipExecution implements Execution {
     // Checked every tick (not just on graph rebuild) because graph rebuilds
     // are throttled and the tile may already be water before the version bumps.
     if (this.dst !== null && this.mg.isWater(this.dst)) {
-      if (!this.boat.retreating()) {
+      if (this.boat.warshipState() === "patrolling") {
         this.boat.orderBoatRetreat();
       }
       // Reset cached retreat destination so it's recomputed from current position
       this.retreatDst = null;
     }
 
-    if (this.boat.retreating()) {
+    if (this.boat.warshipState() !== "patrolling") {
       // Resolve retreat destination once, based on current boat location when retreat begins.
       this.retreatDst ??= this.attacker.bestTransportShipSpawn(
         this.boat.tile(),

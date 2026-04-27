@@ -41,7 +41,7 @@ export class HealAtPortExecution implements Execution {
     // Set warship to go to the port
     warship.setPatrolTile(this.portTile);
     warship.setTargetTile(this.portTile);
-    warship.setRetreating(true); // Enable healing behavior
+    warship.setWarshipState("retreating"); // Enable healing behavior
   }
 
   tick(ticks: number): void {}
