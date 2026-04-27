@@ -1,5 +1,12 @@
 [
   {
+    "id": "steam-wishlist-2026",
+    "title": "OpenFront is on Steam!",
+    "description": "Enjoying the game? Wishlist OpenFront on Steam and help us grow! 🎮",
+    "url": "https://store.steampowered.com/app/3560670/OpenFront",
+    "type": "announcement"
+  },
+  {
     "id": "firefox-performance-issues-2026",
     "title": "Firefox Performance Issues",
     "descriptionTranslationKey": "news_box.firefox_warning",
