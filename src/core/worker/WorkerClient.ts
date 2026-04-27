@@ -35,7 +35,7 @@ self.addEventListener("message", buffer);
 import(${JSON.stringify(fullUrl)}).then(() => {
   self.removeEventListener("message", buffer);
   for (const e of buffered) self.dispatchEvent(new MessageEvent("message", { data: e.data }));
-}).catch((e) => console.error("Worker trampoline import failed:", e));
+}).catch((e) => self.postMessage({ type: "trampoline_error", message: String((e && e.message) || e) }));
 `;
   const blobUrl = URL.createObjectURL(
     new Blob([trampoline], { type: "application/javascript" }),
@@ -104,8 +104,21 @@ export class WorkerClient {
     return new Promise((resolve, reject) => {
       const messageId = generateID();
 
+      const onTrampolineError = (event: MessageEvent) => {
+        if (event.data?.type !== "trampoline_error") return;
+        this.worker.removeEventListener("message", onTrampolineError);
+        this.messageHandlers.delete(messageId);
+        reject(
+          new Error(
+            `Worker trampoline import failed: ${event.data.message ?? "unknown error"}`,
+          ),
+        );
+      };
+      this.worker.addEventListener("message", onTrampolineError);
+
       this.messageHandlers.set(messageId, (message) => {
         if (message.type === "initialized") {
+          this.worker.removeEventListener("message", onTrampolineError);
           this.isInitialized = true;
           resolve();
         }
@@ -119,13 +132,15 @@ export class WorkerClient {
         cdnBase: getCdnBase(),
       });
 
-      // Add timeout for initialization
+      // Backstop for the worker hanging after a successful import (the
+      // trampoline_error path handles the cross-origin / CORS load failure).
       setTimeout(() => {
         if (!this.isInitialized) {
+          this.worker.removeEventListener("message", onTrampolineError);
           this.messageHandlers.delete(messageId);
           reject(new Error("Worker initialization timeout"));
         }
-      }, 20000); // 20 second timeout
+      }, 20000);
     });
   }
 
