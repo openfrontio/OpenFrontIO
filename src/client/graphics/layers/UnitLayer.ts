@@ -484,7 +484,7 @@ export class UnitLayer implements Layer {
     const cx = x + 0.5;
     const cy = y + 0.5;
     ctx.lineCap = "square";
-    ctx.strokeStyle = "rgb(0,140,0)";
+    ctx.strokeStyle = "rgb(0,0,0)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(cx, cy - 1.5);
