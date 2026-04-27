@@ -82,8 +82,9 @@ export class TradeShipExecution implements Execution {
         (dstPortOwner.id() === this.srcPort.owner().id() ||
           (!this.wasCaptured &&
             (!dstActive || !tradeShipOwner.canTrade(dstPortOwner))))) ||
-      // Self-trade: cancel if destination port is no longer active
-      (this.isSelfTrade && !dstActive);
+      // Self-trade: cancel if destination port is no longer active or was captured
+      (this.isSelfTrade &&
+        (!dstActive || dstPortOwner !== this.srcPort.owner()));
     if (shouldCancel) {
       this.cancelTrade();
       return;

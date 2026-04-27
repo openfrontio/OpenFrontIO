@@ -141,4 +141,29 @@ describe("TradeShipExecution", () => {
     expect(tradeShipExecution.isActive()).toBe(false);
     expect(game.displayMessage).toHaveBeenCalled();
   });
+
+  it("self-trade: cancels if destination port is captured by another player mid-journey", () => {
+    // srcPort and dstPort both owned by origOwner — self-trade
+    dstPort.owner = vi.fn(() => origOwner);
+    const selfTradeExec = new TradeShipExecution(origOwner, srcPort, dstPort);
+    selfTradeExec.init(game, 0);
+    selfTradeExec["pathFinder"] = {
+      next: vi.fn(() => ({ status: PathStatus.NEXT, node: 32 })),
+      findPath: vi.fn((from: number) => [from]),
+    } as any;
+    selfTradeExec["tradeShip"] = tradeShip;
+
+    // First tick: self-trade is active, dstPort still owned by origOwner
+    selfTradeExec.tick(1);
+    expect(selfTradeExec.isActive()).toBe(true);
+
+    // Mid-journey: Player B (dstOwner) captures dstPort — port stays active
+    dstPort.owner = vi.fn(() => dstOwner);
+
+    selfTradeExec.tick(2);
+    expect(tradeShip.delete).toHaveBeenCalledWith(false);
+    expect(selfTradeExec.isActive()).toBe(false);
+    // No gold should have been awarded to origOwner
+    expect(origOwner.addGold).not.toHaveBeenCalled();
+  });
 });
