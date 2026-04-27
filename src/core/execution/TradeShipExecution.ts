@@ -74,28 +74,18 @@ export class TradeShipExecution implements Execution {
       this.wasCaptured = true;
     }
 
-    // If a player captures another player's port while trading we should delete
-    // the ship — but not if it was intentionally a self-trade.
-    if (!this.isSelfTrade && dstPortOwner.id() === this.srcPort.owner().id()) {
-      this.tradeShip.delete(false);
-      this.active = false;
-      return;
-    }
-
-    if (
-      !this.wasCaptured &&
-      !this.isSelfTrade &&
-      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
-    ) {
-      this.tradeShip.delete(false);
-      this.active = false;
-      return;
-    }
-
-    // For self-trade, still check if the destination port is active
-    if (this.isSelfTrade && !this._dstPort.isActive()) {
-      this.tradeShip.delete(false);
-      this.active = false;
+    const dstActive = this._dstPort.isActive();
+    const shouldCancel =
+      // Non-self-trade: cancel if destination port was captured back, or
+      // (not yet captured) if trade is no longer viable
+      (!this.isSelfTrade &&
+        (dstPortOwner.id() === this.srcPort.owner().id() ||
+          (!this.wasCaptured &&
+            (!dstActive || !tradeShipOwner.canTrade(dstPortOwner))))) ||
+      // Self-trade: cancel if destination port is no longer active
+      (this.isSelfTrade && !dstActive);
+    if (shouldCancel) {
+      this.cancelTrade();
       return;
     }
 
@@ -117,8 +107,7 @@ export class TradeShipExecution implements Execution {
           this.mg.hasWaterComponent(port.tile(), myComponent),
       );
       if (nearestPort === null) {
-        this.tradeShip.delete(false);
-        this.active = false;
+        this.cancelTrade();
         return;
       } else {
         this._dstPort = nearestPort;
@@ -174,6 +163,11 @@ export class TradeShipExecution implements Execution {
         this.active = false;
         return;
     }
+  }
+
+  private cancelTrade() {
+    this.tradeShip!.delete(false);
+    this.active = false;
   }
 
   private complete() {
