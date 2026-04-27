@@ -1,3 +1,4 @@
+import { HealAtPortExecution } from "../src/core/execution/HealAtPortExecution";
 import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
@@ -550,5 +551,342 @@ describe("Warship", () => {
     game.executeNextTick();
 
     expect(warship.retreating()).toBe(false);
+  });
+
+  test("Low-health warship retreats AND fires at nearby enemy warship", async () => {
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipTargettingRange = () => 5;
+    game.config().warshipShellAttackRate = () => 10_000;
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 5), {});
+
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 15),
+      {
+        patrolTile: game.ref(coastX + 1, 15),
+      },
+    );
+    const enemyWarship = player2.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 2, 15),
+      {
+        patrolTile: game.ref(coastX + 2, 15),
+      },
+    );
+
+    game.addExecution(new WarshipExecution(warship));
+    game.addExecution(new WarshipExecution(enemyWarship));
+
+    game.executeNextTick();
+    warship.modifyHealth(-700);
+    game.executeNextTick();
+
+    // New behavior: retreat starts immediately even with enemy nearby
+    expect(warship.retreating()).toBe(true);
+    // AND the warship still targets the enemy to fire back while retreating
+    expect(warship.targetUnit()).toBe(enemyWarship);
+  });
+
+  test("Retreating warship aggroes nearby enemy transport before continuing retreat", async () => {
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipTargettingRange = () => 5;
+    game.config().warshipShellAttackRate = () => 10_000;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 6, 12),
+      {
+        patrolTile: game.ref(coastX + 6, 12),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    game.executeNextTick();
+    warship.modifyHealth(-700);
+    for (let i = 0; i < 10; i++) {
+      game.executeNextTick();
+      if (
+        warship.retreating() &&
+        warship.targetTile() === homePort.tile() &&
+        warship.tile() !== homePort.tile()
+      ) {
+        break;
+      }
+    }
+
+    expect(warship.retreating()).toBe(true);
+    expect(warship.targetTile()).toBe(homePort.tile());
+
+    const enemyTransport = player2.buildUnit(
+      UnitType.TransportShip,
+      game.ref(coastX + 5, 12),
+      {
+        targetTile: game.ref(coastX + 5, 12),
+      },
+    );
+
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(true);
+    expect(warship.targetTile()).toBe(homePort.tile());
+    expect(warship.targetUnit()).toBe(enemyTransport);
+  });
+
+  test("Manual MoveWarshipExecution cancels retreat and keeps manual order", async () => {
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+
+    const homePortTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, homePortTile, {});
+
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    game.executeNextTick();
+    warship.modifyHealth(-700);
+    executeTicks(game, 20);
+
+    expect(warship.retreating()).toBe(true);
+
+    const manualPatrolTile = game.ref(coastX + 5, 15);
+    game.addExecution(
+      new MoveWarshipExecution(player1, [warship.id()], manualPatrolTile),
+    );
+
+    executeTicks(game, 2);
+
+    expect(warship.retreating()).toBe(false);
+    expect(warship.patrolTile()).toBe(manualPatrolTile);
+    expect(warship.targetTile()).not.toBe(homePortTile);
+  });
+
+  test("Manual MoveWarshipExecution suppresses auto-retreat for 5 seconds before retreat starts", async () => {
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    const manualPatrolTile = game.ref(coastX + 6, 15);
+    game.addExecution(
+      new MoveWarshipExecution(player1, [warship.id()], manualPatrolTile),
+    );
+    game.executeNextTick();
+
+    warship.modifyHealth(-700);
+
+    game.executeNextTick();
+    expect(warship.retreating()).toBe(false);
+    expect(warship.patrolTile()).toBe(manualPatrolTile);
+
+    executeTicks(game, 48);
+    expect(warship.retreating()).toBe(false);
+
+    let resumedRetreat = false;
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+      if (warship.retreating()) {
+        resumedRetreat = true;
+        break;
+      }
+    }
+
+    expect(resumedRetreat).toBe(true);
+  });
+
+  test("HealAtPortExecution moves warship to port", async () => {
+    const portTile = game.ref(coastX, 10);
+    const warshipTile = game.ref(coastX + 1, 10);
+
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+
+    game.addExecution(new WarshipExecution(warship));
+    game.addExecution(new HealAtPortExecution(player1, warship.id(), portTile));
+
+    game.executeNextTick();
+
+    expect(warship.patrolTile()).toBe(portTile);
+    expect(warship.targetTile()).toBe(portTile);
+    expect(warship.retreating()).toBe(true);
+  });
+
+  test("HealAtPortExecution ignores enemy port targets", async () => {
+    const portTile = game.ref(coastX, 10);
+    const warshipTile = game.ref(coastX + 1, 10);
+
+    player2.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+    const initialPatrolTile = warship.patrolTile();
+    const initialTargetTile = warship.targetTile();
+
+    game.addExecution(new WarshipExecution(warship));
+    game.addExecution(new HealAtPortExecution(player1, warship.id(), portTile));
+
+    game.executeNextTick();
+
+    expect(warship.patrolTile()).toBe(initialPatrolTile);
+    expect(warship.targetTile()).toBe(initialTargetTile);
+    expect(warship.retreating()).toBe(false);
+  });
+
+  test("Warship isInCombat becomes true when hit by a shell from an enemy", async () => {
+    game.config().warshipPassiveHealing = () => 0;
+
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      { patrolTile: game.ref(coastX + 1, 10) },
+    );
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    expect(warship.isInCombat()).toBe(false);
+
+    // Simulate incoming shell damage from an enemy player
+    warship.modifyHealth(-50, player2);
+
+    expect(warship.isInCombat()).toBe(true);
+  });
+
+  test("Warship isInCombat becomes true when firing at an enemy", async () => {
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipShellAttackRate = () => 0;
+    game.config().warshipTargettingRange = () => 5;
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      { patrolTile: game.ref(coastX + 1, 10) },
+    );
+    const enemyWarship = player2.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 2, 10),
+      { patrolTile: game.ref(coastX + 2, 10) },
+    );
+
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    expect(warship.isInCombat()).toBe(false);
+
+    // Give warship a target and tick — shootTarget sets inCombat
+    warship.setTargetUnit(enemyWarship);
+    game.executeNextTick();
+
+    expect(warship.isInCombat()).toBe(true);
+  });
+
+  test("Docked warship is not targeted by enemy warship", async () => {
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipDockingRange = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
+    game.config().warshipTargettingRange = () => 20;
+
+    const portTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const friendlyWarship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 10),
+      { patrolTile: game.ref(coastX + 1, 10) },
+    );
+    const exec = new WarshipExecution(friendlyWarship);
+    game.addExecution(exec);
+
+    const enemyWarship = player2.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 2, 10),
+      { patrolTile: game.ref(coastX + 2, 10) },
+    );
+    const enemyExec = new WarshipExecution(enemyWarship);
+    game.addExecution(enemyExec);
+
+    game.executeNextTick();
+    friendlyWarship.modifyHealth(-300);
+
+    // Wait until friendly warship docks
+    for (let i = 0; i < 80; i++) {
+      game.executeNextTick();
+      if (exec.isDocked()) break;
+    }
+
+    expect(exec.isDocked()).toBe(true);
+    expect(friendlyWarship.isDocked()).toBe(true);
+
+    // Enemy warship should not be targeting the docked warship
+    game.executeNextTick();
+    expect(enemyWarship.targetUnit()).not.toBe(friendlyWarship);
+  });
+
+  test("Retreating warship continues moving to port after firing back", async () => {
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipRetreatHealthThreshold = () => 600;
+    game.config().warshipTargettingRange = () => 5;
+    game.config().warshipShellAttackRate = () => 10_000;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 6, 12),
+      { patrolTile: game.ref(coastX + 6, 12) },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    game.executeNextTick();
+    warship.modifyHealth(-700);
+
+    // Wait until retreating and heading to port
+    for (let i = 0; i < 15; i++) {
+      game.executeNextTick();
+      if (warship.retreating() && warship.targetTile() === homePort.tile()) {
+        break;
+      }
+    }
+    expect(warship.retreating()).toBe(true);
+    expect(warship.targetTile()).toBe(homePort.tile());
+
+    const tileBeforeCombat = warship.tile();
+
+    const enemyTransport = player2.buildUnit(
+      UnitType.TransportShip,
+      game.ref(coastX + 5, 12),
+      { targetTile: game.ref(coastX + 5, 12) },
+    );
+
+    // After encountering enemy: still retreating, still targeting port,
+    // AND targeting the enemy transport simultaneously
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(true);
+    expect(warship.targetTile()).toBe(homePort.tile());
+    expect(warship.targetUnit()).toBe(enemyTransport);
+
+    // Warship should still be moving (not frozen at tileBeforeCombat)
+    game.executeNextTick();
+    expect(warship.tile()).not.toBe(tileBeforeCombat);
   });
 });

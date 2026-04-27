@@ -124,6 +124,18 @@ export class UnitView {
     }
     return this.data.retreating;
   }
+  isDocked(): boolean {
+    return this.data.docked;
+  }
+  setDocked(_docked: boolean): void {
+    throw new Error("setDocked is not supported on UnitView");
+  }
+  isInCombat(): boolean {
+    return this.data.inCombat;
+  }
+  setInCombat(): void {
+    throw new Error("setInCombat is not supported on UnitView");
+  }
   tile(): TileRef {
     return this.data.pos;
   }

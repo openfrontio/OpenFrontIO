@@ -138,6 +138,8 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   retreating: boolean;
+  docked: boolean;
+  inCombat: boolean;
   targetable: boolean;
   markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships
