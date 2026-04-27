@@ -7,7 +7,6 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TRADE_ROUTE_BLOCK_DURATION_TICKS } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
@@ -75,11 +74,6 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured !== true && this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
-      this.mg.blockTradeRouteUntil(
-        this.srcPortId,
-        this.dstPortId,
-        this.mg.ticks() + TRADE_ROUTE_BLOCK_DURATION_TICKS,
-      );
     }
 
     // If a player captures another player's port while trading we should delete

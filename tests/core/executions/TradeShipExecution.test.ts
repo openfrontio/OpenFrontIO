@@ -135,43 +135,6 @@ describe("TradeShipExecution", () => {
     expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
   });
 
-  it("blacklists the original route immediately on first capture", () => {
-    tradeShip.owner = vi.fn(() => pirate);
-
-    tradeShipExecution.tick(1);
-
-    expect(
-      game.isTradeRouteBlocked(srcPort.id(), dstPort.id(), game.ticks()),
-    ).toBe(true);
-  });
-
-  it("keeps the blacklist on the original route after retargeting", () => {
-    tradeShip.owner = vi.fn(() => pirate);
-
-    tradeShipExecution.tick(1);
-
-    expect(
-      game.isTradeRouteBlocked(srcPort.id(), dstPort.id(), game.ticks()),
-    ).toBe(true);
-    expect(
-      game.isTradeRouteBlocked(srcPort.id(), piratePort.id(), game.ticks()),
-    ).toBe(false);
-  });
-
-  it("does not add a second blacklist event when the ship is recaptured", () => {
-    const routeKey = `${srcPort.id()}:${dstPort.id()}`;
-    tradeShip.owner = vi.fn(() => pirate);
-    tradeShipExecution.tick(1);
-    const blockedUntil = (game as any).tradeRouteBlockedUntil.get(routeKey);
-
-    tradeShip.owner = vi.fn(() => origOwner);
-    tradeShipExecution.tick(2);
-
-    expect((game as any).tradeRouteBlockedUntil.get(routeKey)).toBe(
-      blockedUntil,
-    );
-  });
-
   it("should complete trade and award gold", () => {
     tradeShipExecution["pathFinder"] = {
       next: vi.fn(() => ({ status: PathStatus.COMPLETE, node: 32 })),
@@ -181,28 +144,5 @@ describe("TradeShipExecution", () => {
     expect(tradeShip.delete).toHaveBeenCalledWith(false);
     expect(tradeShipExecution.isActive()).toBe(false);
     expect(game.displayMessage).toHaveBeenCalled();
-  });
-
-  it("does not blacklist on NOT_FOUND", () => {
-    tradeShipExecution["pathFinder"] = {
-      next: vi.fn(() => ({ status: PathStatus.NOT_FOUND, node: 32 })),
-      findPath: vi.fn((from: number) => [from]),
-    } as any;
-
-    tradeShipExecution.tick(1);
-
-    expect(
-      game.isTradeRouteBlocked(srcPort.id(), dstPort.id(), game.ticks()),
-    ).toBe(false);
-  });
-
-  it("does not blacklist when destination becomes invalid", () => {
-    dstPort.isActive = vi.fn(() => false);
-
-    tradeShipExecution.tick(1);
-
-    expect(
-      game.isTradeRouteBlocked(srcPort.id(), dstPort.id(), game.ticks()),
-    ).toBe(false);
   });
 });

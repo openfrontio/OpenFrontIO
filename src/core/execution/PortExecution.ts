@@ -123,16 +123,6 @@ export class PortExecution implements Execution {
     const weightedPorts: Unit[] = [];
 
     for (const [i, otherPort] of ports.entries()) {
-      if (
-        this.mg.isTradeRouteBlocked(
-          this.port.id(),
-          otherPort.id(),
-          this.mg.ticks(),
-        )
-      ) {
-        continue;
-      }
-
       const expanded = new Array(otherPort.level()).fill(otherPort);
       weightedPorts.push(...expanded);
       const tooClose =

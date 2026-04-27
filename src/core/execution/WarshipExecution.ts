@@ -208,16 +208,48 @@ export class WarshipExecution implements Execution {
   }
 
   private findRetreatAggroTarget(): Unit | undefined {
-    const owner = this.warship.owner();
-    const ships = this.mg.nearbyUnits(
-      this.warship.tile(),
-      this.mg.config().warshipTargettingRange(),
-      [UnitType.TransportShip, UnitType.Warship],
+    return this.findBestTarget([UnitType.TransportShip, UnitType.Warship]);
+  }
+
+  private findTargetUnit(): Unit | undefined {
+    return this.findBestTarget(
+      [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      true,
     );
+  }
+
+  /**
+   * Shared target selection: searches nearby units of given types,
+   * filters common exclusions (self, friendly, docked, already-shelled),
+   * picks best by type priority (lower index = higher priority) then distance.
+   *
+   * When `includeTradeShips` is true, applies trade-ship-specific filters
+   * (safe from pirates, patrol range, water component, allied destination).
+   */
+  private findBestTarget(
+    types: UnitType[],
+    includeTradeShips = false,
+  ): Unit | undefined {
+    const mg = this.mg;
+    const config = mg.config();
+    const owner = this.warship.owner();
+
+    const ships = mg.nearbyUnits(
+      this.warship.tile(),
+      config.warshipTargettingRange(),
+      types,
+    );
+
+    // Trade-ship-specific state, lazily computed.
+    let hasPort: boolean | undefined;
+    let patrolTile: number | undefined;
+    let patrolRangeSquared: number | undefined;
+    let warshipComponent: number | null | undefined = undefined;
 
     let bestUnit: Unit | undefined = undefined;
     let bestTypePriority = 0;
     let bestDistSquared = 0;
+
     for (const { unit, distSquared } of ships) {
       if (
         unit === this.warship ||
@@ -229,15 +261,44 @@ export class WarshipExecution implements Execution {
         continue;
       }
 
-      const typePriority = unit.type() === UnitType.TransportShip ? 0 : 1;
-      if (bestUnit === undefined) {
-        bestUnit = unit;
-        bestTypePriority = typePriority;
-        bestDistSquared = distSquared;
-        continue;
+      const type = unit.type();
+
+      if (includeTradeShips && type === UnitType.TradeShip) {
+        if (hasPort === undefined) {
+          hasPort = owner.unitCount(UnitType.Port) > 0;
+          patrolTile = this.warship.patrolTile()!;
+          patrolRangeSquared = config.warshipPatrolRange() ** 2;
+        }
+        if (
+          !hasPort ||
+          unit.isSafeFromPirates() ||
+          unit.targetUnit()?.owner() === owner ||
+          unit.targetUnit()?.owner().isFriendly(owner)
+        ) {
+          continue;
+        }
+        if (warshipComponent === undefined) {
+          warshipComponent = mg.getWaterComponent(this.warship.tile());
+        }
+        if (
+          warshipComponent !== null &&
+          !mg.hasWaterComponent(unit.tile(), warshipComponent)
+        ) {
+          continue;
+        }
+        if (
+          mg.euclideanDistSquared(patrolTile!, unit.tile()) >
+          patrolRangeSquared!
+        ) {
+          continue;
+        }
       }
 
+      const typePriority =
+        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
+
       if (
+        bestUnit === undefined ||
         typePriority < bestTypePriority ||
         (typePriority === bestTypePriority && distSquared < bestDistSquared)
       ) {
@@ -558,96 +619,6 @@ export class WarshipExecution implements Execution {
 
   private findNearestAvailablePortTile(): TileRef | undefined {
     return this.nearestAvailablePortTile(this.warship)?.tile;
-  }
-
-  private findTargetUnit(): Unit | undefined {
-    const mg = this.mg;
-    const config = mg.config();
-    const owner = this.warship.owner();
-    const hasPort = owner.unitCount(UnitType.Port) > 0;
-    const patrolTile = this.warship.patrolTile()!;
-    const patrolRangeSquared = config.warshipPatrolRange() ** 2;
-
-    // Lazy: only computed if a TradeShip candidate forces the component check.
-    // `undefined` = not yet computed; `null` = computed, no component found.
-    let warshipComponent: number | null | undefined = undefined;
-
-    const ships = mg.nearbyUnits(
-      this.warship.tile()!,
-      config.warshipTargettingRange(),
-      [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
-    );
-
-    let bestUnit: Unit | undefined = undefined;
-    let bestTypePriority = 0;
-    let bestDistSquared = 0;
-
-    for (const { unit, distSquared } of ships) {
-      if (
-        unit.owner() === owner ||
-        unit === this.warship ||
-        !owner.canAttackPlayer(unit.owner(), true) ||
-        this.alreadySentShell.has(unit) ||
-        unit.isDocked()
-      ) {
-        continue;
-      }
-
-      const type = unit.type();
-      if (type === UnitType.TradeShip) {
-        if (
-          !hasPort ||
-          unit.isSafeFromPirates() ||
-          unit.targetUnit()?.owner() === owner || // trade ship is coming to my port
-          unit.targetUnit()?.owner().isFriendly(owner) // trade ship is coming to my ally
-        ) {
-          continue;
-        }
-
-        if (warshipComponent === undefined) {
-          warshipComponent = mg.getWaterComponent(this.warship.tile());
-        }
-        if (
-          warshipComponent !== null &&
-          !mg.hasWaterComponent(unit.tile(), warshipComponent)
-        ) {
-          continue;
-        }
-
-        if (
-          mg.euclideanDistSquared(patrolTile, unit.tile()) > patrolRangeSquared
-        ) {
-          // Prevent warship from chasing trade ship that is too far away from
-          // the patrol tile to prevent warships from wandering around the map.
-          continue;
-        }
-      }
-
-      const typePriority =
-        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
-
-      if (bestUnit === undefined) {
-        bestUnit = unit;
-        bestTypePriority = typePriority;
-        bestDistSquared = distSquared;
-        continue;
-      }
-
-      // Match existing `sort()` semantics:
-      // - Lower priority is better (TransportShip < Warship < TradeShip).
-      // - For same type, smaller distance is better.
-      // - For exact ties, keep the first encountered (stable sort behavior).
-      if (
-        typePriority < bestTypePriority ||
-        (typePriority === bestTypePriority && distSquared < bestDistSquared)
-      ) {
-        bestUnit = unit;
-        bestTypePriority = typePriority;
-        bestDistSquared = distSquared;
-      }
-    }
-
-    return bestUnit;
   }
 
   private shootTarget() {
