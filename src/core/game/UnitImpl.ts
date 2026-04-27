@@ -132,7 +132,7 @@ export class UnitImpl implements Unit {
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       docked: this._docked,
-      inCombat: this.mg.ticks() - this._lastCombatTick <= 3,
+      inCombat: this.isInCombat(),
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,

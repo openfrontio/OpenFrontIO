@@ -74,7 +74,7 @@ export function createGame(
 
 export type CellString = string;
 
-const TRADE_ROUTE_BLOCK_DURATION_TICKS = 100;
+export const TRADE_ROUTE_BLOCK_DURATION_TICKS = 100;
 
 export class GameImpl implements Game {
   private _ticks = 0;
@@ -1281,8 +1281,6 @@ export class GameImpl implements Game {
     });
   }
 }
-
-export { TRADE_ROUTE_BLOCK_DURATION_TICKS };
 
 // Or a more dynamic approach that will catch new enum values:
 const createGameUpdatesMap = (): GameUpdates => {
