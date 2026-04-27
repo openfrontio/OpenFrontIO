@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { computeLabelScale } from "../../../../src/client/graphics/layers/AttackingTroopsOverlay";
+import {
+  computeBarStrength,
+  computeLabelScale,
+} from "../../../../src/client/graphics/layers/AttackingTroopsOverlay";
 
 describe("computeLabelScale", () => {
   test("counter-scales the zoom when above the full-size threshold", () => {
@@ -27,5 +30,34 @@ describe("computeLabelScale", () => {
     expect(computeLabelScale(0.5)).toBeCloseTo(1);
     // zoom = 0.25 → factor = 0.5 / 0.25 = 2.
     expect(computeLabelScale(0.25)).toBeCloseTo(2);
+  });
+});
+
+describe("computeBarStrength", () => {
+  test("equal troops sit at the midpoint", () => {
+    // 1000 vs 1000 → ratio 1, divided by full-width ratio of 2 → 0.5.
+    expect(computeBarStrength(1000, 1000)).toBeCloseTo(0.5);
+  });
+
+  test("attacker with no troops yields a zero-width bar", () => {
+    expect(computeBarStrength(0, 1000)).toBe(0);
+  });
+
+  test("scales linearly between zero and the full-width threshold", () => {
+    // 500 vs 1000 → ratio 0.5 → 0.25.
+    expect(computeBarStrength(500, 1000)).toBeCloseTo(0.25);
+    // 1500 vs 1000 → ratio 1.5 → 0.75.
+    expect(computeBarStrength(1500, 1000)).toBeCloseTo(0.75);
+  });
+
+  test("clamps at full width when attacker has 2× the opposition", () => {
+    expect(computeBarStrength(2000, 1000)).toBeCloseTo(1);
+    expect(computeBarStrength(10_000, 1000)).toBeCloseTo(1);
+  });
+
+  test("returns full width when the opposing side has no troops", () => {
+    // Avoids division-by-zero: an undefended target is maximum strength.
+    expect(computeBarStrength(500, 0)).toBe(1);
+    expect(computeBarStrength(0, 0)).toBe(1);
   });
 });
