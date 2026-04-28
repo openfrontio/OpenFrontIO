@@ -358,7 +358,7 @@ export class PlayerImpl implements Player {
   private shoreReachableNeighbors(): Set<Player | TerraNullius> {
     const ns: Set<Player | TerraNullius> = new Set();
     const map = this.mg.map();
-    const borders = Array.from(this.borderTiles());
+    const shores = Array.from(this.borderTiles()).filter((t) => map.isShore(t));
     const directions: [number, number][] = [
       [0, -1],
       [0, 1],
@@ -366,9 +366,8 @@ export class PlayerImpl implements Player {
       [1, 0],
     ];
 
-    for (let i = 0; i < borders.length; i += 10) {
-      const border = borders[i];
-      if (!map.isShore(border)) continue;
+    for (let i = 0; i < shores.length; i += 10) {
+      const border = shores[i];
 
       const bx = map.x(border);
       const by = map.y(border);

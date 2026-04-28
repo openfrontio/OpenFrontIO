@@ -484,9 +484,8 @@ export class AiAttackBehavior {
           this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_TARGET_ALLY);
           continue;
         }
-        // All checks passed, assist them
+        if (!this.sendAttack(target)) continue;
         this.player.updateRelation(ally, -20);
-        this.sendAttack(target);
         this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_ACCEPT);
         return true;
       }
@@ -683,15 +682,14 @@ export class AiAttackBehavior {
     // Retaliate against incoming attacks
     const incomingAttackPlayer = this.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
-      this.sendAttack(incomingAttackPlayer, true);
-      return;
+      if (this.sendAttack(incomingAttackPlayer, true)) return;
     }
 
     // Select a traitor as an enemy
     const toAttack = this.getNeighborTraitorToAttack();
     if (toAttack !== null) {
       if (this.random.chance(3)) {
-        return this.sendAttack(toAttack);
+        if (this.sendAttack(toAttack)) return;
       }
     }
 
@@ -708,7 +706,7 @@ export class AiAttackBehavior {
           continue;
         }
       }
-      return this.sendAttack(neighbor);
+      if (this.sendAttack(neighbor)) return;
     }
   }
 
@@ -785,11 +783,12 @@ export class AiAttackBehavior {
       [-1, 0],
       [1, 0],
     ];
-    const borders = Array.from(this.player.borderTiles());
+    const shores = Array.from(this.player.borderTiles()).filter((t) =>
+      this.game.isShore(t),
+    );
 
-    for (let i = 0; i < borders.length; i += 10) {
-      const border = borders[i];
-      if (!this.game.isShore(border)) continue;
+    for (let i = 0; i < shores.length; i += 10) {
+      const border = shores[i];
 
       const bx = this.game.x(border);
       const by = this.game.y(border);
