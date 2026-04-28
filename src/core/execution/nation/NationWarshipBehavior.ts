@@ -21,7 +21,7 @@ export class NationWarshipBehavior {
   private trackedTransportShips: Set<Unit> = new Set();
   // Track our trade ships we currently own
   private trackedTradeShips: Set<Unit> = new Set();
-  // Track incoming transports ships
+  // Track incoming transport ships
   private trackedIncomingTransportShips: Set<Unit> = new Set();
   // Track incoming transport ships we have dealt with
   private dealtWithTransportShip: Set<Unit> = new Set();
@@ -144,6 +144,7 @@ export class NationWarshipBehavior {
         return (
           target &&
           p.isActive() &&
+          !p.retreating() &&
           this.game.ownerID(target) === this.player?.smallID() &&
           p.owner().smallID() !== this.player?.smallID()
         );
@@ -177,18 +178,7 @@ export class NationWarshipBehavior {
       }
 
       // Possible dock snipe counter? Too niche?
-      if (transport.owner().isAlliedWith(this.player)) {
-        if (
-          this.game.anyUnitNearby(
-            target,
-            5,
-            [UnitType.Port],
-            (unit) => unit.owner() === this.player,
-          )
-        ) {
-          // TODO Try to nuke snipe?
-        }
-      } else {
+      if (!transport.owner().isAlliedWith(this.player)) {
         if (
           this.game.hasUnitNearby(
             target,
@@ -208,10 +198,10 @@ export class NationWarshipBehavior {
           this.dealtWithTransportShip.add(transport);
           continue;
         }
-        const OceanTiles = this.warshipSpawnTile(target, 30);
-        if (OceanTiles === null) continue;
+        const oceanTiles = this.warshipSpawnTile(target, 30);
+        if (oceanTiles === null) continue;
         this.maybeRetaliateWithWarship(
-          OceanTiles,
+          oceanTiles,
           transport.owner(),
           "transport",
         );
