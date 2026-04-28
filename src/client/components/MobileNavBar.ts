@@ -73,7 +73,7 @@ export class MobileNavBar extends LitElement {
       >
         <!-- Logo + Menu -->
         <div
-          class="flex flex-col text-[#0073b7] mb-[clamp(1rem,2vh,2rem)] ml-[clamp(0.2rem,0.4vw,0.4vh)]"
+          class="flex flex-col text-malibu-blue mb-[clamp(1rem,2vh,2rem)] ml-[clamp(0.2rem,0.4vw,0.4vh)]"
         >
           <div class="flex flex-col items-center gap-2">
             <img

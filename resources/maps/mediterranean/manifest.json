@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 362,
-    "num_land_tiles": 159261,
+    "num_land_tiles": 159247,
     "width": 712
   },
   "map4x": {
     "height": 724,
-    "num_land_tiles": 652563,
+    "num_land_tiles": 652112,
     "width": 1424
   },
   "name": "mediterranean",

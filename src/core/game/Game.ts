@@ -151,7 +151,11 @@ export enum GameMapType {
   Luna = "Luna",
   Conakry = "Conakry",
   Caucasus = "Caucasus",
+  LosAngeles = "Los Angeles",
   BeringSea = "Bering Sea",
+  Antarctica = "Antarctica",
+  ArchipelagoSea = "ArchipelagoSea",
+  BajaCalifornia = "Baja California",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -167,6 +171,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.Antarctica,
   ],
   regional: [
     GameMapType.BritanniaClassic,
@@ -208,7 +213,10 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfMalacca,
     GameMapType.Conakry,
     GameMapType.Caucasus,
+    GameMapType.LosAngeles,
     GameMapType.BeringSea,
+    GameMapType.ArchipelagoSea,
+    GameMapType.BajaCalifornia,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -610,6 +618,7 @@ export interface Unit {
   // Health
   hasHealth(): boolean;
   retreating(): boolean;
+  setRetreating(retreating: boolean): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;

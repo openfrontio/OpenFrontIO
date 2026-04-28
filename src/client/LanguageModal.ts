@@ -58,7 +58,7 @@ export class LanguageModal extends BaseModal {
                 buttonClasses +=
                   " animate-pulse font-bold text-white border-2 border-dashed border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)] bg-gradient-to-r from-red-600 via-yellow-600 via-green-600 via-blue-600 to-purple-600";
               } else if (isActive) {
-                buttonClasses += " bg-blue-500/20 border-blue-500/50";
+                buttonClasses += " bg-malibu-blue/20 border-malibu-blue/50";
               } else {
                 buttonClasses +=
                   " bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";

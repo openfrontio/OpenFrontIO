@@ -3,11 +3,11 @@ import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../Utils";
 
 const ACTIVE_CARD =
-  "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]";
+  "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue)]";
 const INACTIVE_CARD =
   "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
 const INPUT_CLASS =
-  "w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1";
+  "w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-malibu-blue p-1 my-1";
 const CARD_LABEL_CLASS =
   "text-xs uppercase font-bold tracking-wider leading-tight break-words hyphens-auto";
 

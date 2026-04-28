@@ -128,7 +128,7 @@ export class RankedModal extends BaseModal {
     return html`
       <button
         @click=${onClick}
-        class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)] border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3"
+        class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-surface border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3"
       >
         <div class="flex flex-col items-center gap-1 text-center">
           <h3

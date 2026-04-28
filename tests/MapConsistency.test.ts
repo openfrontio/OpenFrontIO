@@ -28,6 +28,7 @@ const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
   "Tourney3",
   "Tourney4",
   "EuropeClassic",
+  "BritanniaClassic",
 ]);
 
 /** Parse the main.go maps registry and return the set of non-test map folder names. */
