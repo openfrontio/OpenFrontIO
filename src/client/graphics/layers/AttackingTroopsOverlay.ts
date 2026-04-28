@@ -24,8 +24,8 @@ const INCOMING_ICON_FILTER =
 
 // Vertical strength bar to the left of the icon: grows in height as the
 // attacker outnumbers the opposition. Maxes out at BAR_MAX_HEIGHT_PX when the
-// attacker has BAR_FULL_WIDTH_RATIO× the opposing troops.
-const BAR_FULL_WIDTH_RATIO = 2;
+// attacker has BAR_FULL_HEIGHT_RATIO× the opposing troops.
+const BAR_FULL_HEIGHT_RATIO = 2;
 const BAR_MAX_HEIGHT_PX = 13;
 
 // Element scale factor that, combined with the container's `scale(zoom)`,
@@ -40,15 +40,27 @@ export function computeLabelScale(zoom: number): number {
   return netScale / zoom;
 }
 
-// Fraction (0–1) of the label width the strength bar should occupy. 0 means
-// the attacker is harmless; 1 means they have BAR_FULL_WIDTH_RATIO× or more
+// Fraction (0–1) of BAR_MAX_HEIGHT_PX the strength bar should occupy. 0 means
+// the attacker is harmless; 1 means they have BAR_FULL_HEIGHT_RATIO× or more
 // of the opposing troops.
 export function computeBarStrength(
   attackerTroops: number,
   opposingTroops: number,
 ): number {
   if (opposingTroops <= 0) return 1;
-  return Math.min(1, attackerTroops / opposingTroops / BAR_FULL_WIDTH_RATIO);
+  return Math.min(1, attackerTroops / opposingTroops / BAR_FULL_HEIGHT_RATIO);
+}
+
+// Worker returns clusters sorted by size; two near-equal-size fronts can flip
+// ordering tick-to-tick. If swapping brings each new position closer to where
+// its label already is, swap `next` in place. (clusteredPositions caps at 2.)
+export function alignClusterOrder(next: Cell[], prev: (Cell | null)[]): void {
+  const [a, b] = prev;
+  if (next.length !== 2 || !a || !b) return;
+  const dist = (p: Cell, q: Cell) => Math.abs(p.x - q.x) + Math.abs(p.y - q.y);
+  const direct = dist(next[0], a) + dist(next[1], b);
+  const swapped = dist(next[1], a) + dist(next[0], b);
+  if (swapped < direct) [next[0], next[1]] = [next[1], next[0]];
 }
 
 // An attack can have multiple disconnected front-line segments, so elements
@@ -69,6 +81,9 @@ export class AttackingTroopsOverlay implements Layer {
   private inFlightRequest = false;
   private isVisible = true;
   private onAlternateView: (e: AlternateViewEvent) => void;
+  // Last transform string written per element; lets renderLayer skip identical
+  // re-assignments every frame (~60fps × N labels).
+  private lastTransform = new WeakMap<HTMLDivElement, string>();
 
   constructor(
     private readonly game: GameView,
@@ -218,6 +233,8 @@ export class AttackingTroopsOverlay implements Layer {
     );
     this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
 
+    // Hoist the per-frame label scale once; zoom is constant within a frame.
+    const scale = this.labelScale();
     for (const label of this.labels.values()) {
       for (let i = 0; i < label.elements.length; i++) {
         const el = label.elements[i];
@@ -232,7 +249,11 @@ export class AttackingTroopsOverlay implements Layer {
         // Centre the label on its world position; counter-scale keeps the
         // label at constant screen size while zoomed in, then it shrinks
         // (floored) as zoom drops below LABEL_FULL_SIZE_ZOOM.
-        el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${this.labelScale()})`;
+        const transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${scale})`;
+        if (this.lastTransform.get(el) !== transform) {
+          el.style.transform = transform;
+          this.lastTransform.set(el, transform);
+        }
       }
     }
   }
@@ -256,6 +277,8 @@ export class AttackingTroopsOverlay implements Layer {
       lbl.positions.pop();
     }
 
+    alignClusterOrder(positions, lbl.positions);
+
     // Snap teleport-sized jumps instantly; let the CSS transition handle the rest.
     for (let i = 0; i < positions.length; i++) {
       const old = lbl.positions[i];
@@ -263,7 +286,9 @@ export class AttackingTroopsOverlay implements Layer {
       if (old && Math.hypot(next.x - old.x, next.y - old.y) > 200) {
         const el = lbl.elements[i];
         el.style.transition = "none";
-        el.style.transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${this.labelScale()})`;
+        const transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${this.labelScale()})`;
+        el.style.transform = transform;
+        this.lastTransform.set(el, transform);
         requestAnimationFrame(() => {
           el.style.transition = "transform 0.25s linear";
         });
