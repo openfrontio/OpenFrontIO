@@ -248,7 +248,7 @@ export class NationWarshipBehavior {
   }
 
   private maybeMoveWarship(tile: TileRef): void {
-    // Make sure we are targetting water
+    // Make sure we are targeting water
     if (this.game.isWater(tile)) {
       const warship = this.player
         .units(UnitType.Warship)
