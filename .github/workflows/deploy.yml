@@ -135,6 +135,7 @@ jobs:
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
+          CDN_BASE: ${{ vars.CDN_BASE }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}

@@ -60,7 +60,7 @@ export class TribeExecution implements Execution {
     }
 
     this.acceptAllAllianceRequests();
-    this.deleteAllStructures();
+    this.deleteNextStructure();
     this.maybeAttack();
   }
 
@@ -83,11 +83,13 @@ export class TribeExecution implements Execution {
     }
   }
 
-  private deleteAllStructures() {
+  private deleteNextStructure() {
+    if (!this.tribe.canDeleteUnit()) return;
     for (const unit of this.tribe.units()) {
-      if (Structures.has(unit.type()) && this.tribe.canDeleteUnit()) {
-        this.mg.addExecution(new DeleteUnitExecution(this.tribe, unit.id()));
-      }
+      if (!Structures.has(unit.type())) continue;
+      if (unit.isMarkedForDeletion()) continue;
+      this.mg.addExecution(new DeleteUnitExecution(this.tribe, unit.id()));
+      return;
     }
   }
 
