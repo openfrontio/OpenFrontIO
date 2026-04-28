@@ -2,6 +2,8 @@ import { html, type TemplateResult } from "lit";
 import type {
   ClanJoinRequest,
   ClanMember,
+  ClanMemberOrder,
+  ClanMemberSort,
   ClanMemberStats,
   ClanStats,
 } from "../../ClanApi";
@@ -10,6 +12,10 @@ export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
 
 export type ClanRole = "leader" | "officer" | "member";
+
+export function defaultOrderForSort(sort: ClanMemberSort): ClanMemberOrder {
+  return sort === "default" ? "asc" : "desc";
+}
 
 export const modalContainerClass =
   "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10";
@@ -80,41 +86,18 @@ export function renderStat(label: string, value: string): TemplateResult {
 
 export function renderClanWL(stats: ClanStats): TemplateResult | string {
   if (stats.games === 0) return "";
-
-  const ffaKeys = new Set(["FFA", "ffa", "1"]);
-  let ffaWins = 0;
-  let ffaLosses = 0;
-  for (const [key, entry] of Object.entries(stats.teamTypeWL)) {
-    if (ffaKeys.has(key)) {
-      ffaWins += entry.wl[0];
-      ffaLosses += entry.wl[1];
-    }
-  }
-
-  const teamWins = stats.wins - ffaWins;
-  const teamLosses = stats.losses - ffaLosses;
-
-  const categories = [
-    {
-      label: translateText("clan_modal.stats_ffa"),
-      wins: ffaWins,
-      losses: ffaLosses,
-    },
-    {
-      label: translateText("clan_modal.stats_team"),
-      wins: teamWins,
-      losses: teamLosses,
-    },
-  ];
-
   return html`
     <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
       <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
         ${translateText("clan_modal.statistics")}
       </h3>
       <div class="space-y-1.5">
-        ${categories.map((cat) =>
-          renderWLBarRow(cat.label, cat.wins, cat.losses),
+        ${statBuckets.map(({ key, labelKey }) =>
+          renderWLBarRow(
+            translateText(labelKey),
+            stats.stats[key].wins,
+            stats.stats[key].losses,
+          ),
         )}
       </div>
     </div>
@@ -192,13 +175,14 @@ export function renderServerPagination(
 export function renderMemberSearchInput(
   onInput: (e: Event) => void,
   placeholderKey = "clan_modal.search_members_placeholder",
+  trailing?: TemplateResult,
 ): TemplateResult {
-  return html`
-    <div class="relative mb-3">
+  const input = html`
+    <div class="relative w-full sm:flex-1 sm:min-w-0">
       <input
         type="text"
         @input=${onInput}
-        class="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm"
+        class="w-full h-10 pl-10 pr-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm"
         placeholder="${translateText(placeholderKey)}"
       />
       <svg
@@ -212,6 +196,94 @@ export function renderMemberSearchInput(
         <circle cx="11" cy="11" r="8" />
         <path d="m21 21-4.35-4.35" />
       </svg>
+    </div>
+  `;
+  if (!trailing) {
+    return html`<div class="mb-3">${input}</div>`;
+  }
+  return html`
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+      ${input}${trailing}
+    </div>
+  `;
+}
+
+const sortOptions: { value: ClanMemberSort; labelKey: string }[] = [
+  { value: "default", labelKey: "clan_modal.sort_default" },
+  { value: "winsTotal", labelKey: "clan_modal.sort_total_wins" },
+  { value: "lossesTotal", labelKey: "clan_modal.sort_total_losses" },
+  { value: "winsFfa", labelKey: "clan_modal.sort_ffa_wins" },
+  { value: "lossesFfa", labelKey: "clan_modal.sort_ffa_losses" },
+  { value: "winsTeam", labelKey: "clan_modal.sort_team_wins" },
+  { value: "lossesTeam", labelKey: "clan_modal.sort_team_losses" },
+  { value: "winsHvn", labelKey: "clan_modal.sort_hvn_wins" },
+  { value: "lossesHvn", labelKey: "clan_modal.sort_hvn_losses" },
+  { value: "winsRanked", labelKey: "clan_modal.sort_ranked_wins" },
+  { value: "lossesRanked", labelKey: "clan_modal.sort_ranked_losses" },
+  { value: "wins1v1", labelKey: "clan_modal.sort_1v1_wins" },
+  { value: "losses1v1", labelKey: "clan_modal.sort_1v1_losses" },
+];
+
+function renderOrderIcon(order: ClanMemberOrder): TemplateResult {
+  // asc: bars grow downward (-, --, ---).  desc: bars shrink downward (---, --, -).
+  const widths =
+    order === "asc" ? ["w-1.5", "w-2.5", "w-3.5"] : ["w-3.5", "w-2.5", "w-1.5"];
+  return html`
+    <span
+      class="flex flex-col items-start justify-center gap-[3px] w-4 h-4"
+      aria-hidden="true"
+    >
+      ${widths.map(
+        (w) => html`<span class="${w} h-[2px] bg-current rounded-sm"></span>`,
+      )}
+    </span>
+  `;
+}
+
+export function renderMemberSortControl(
+  sort: ClanMemberSort,
+  order: ClanMemberOrder,
+  onSortChange: (sort: ClanMemberSort) => void,
+  onOrderToggle: () => void,
+): TemplateResult {
+  const orderLabel = translateText(
+    order === "asc"
+      ? "clan_modal.sort_order_asc"
+      : "clan_modal.sort_order_desc",
+  );
+  return html`
+    <div class="flex items-center gap-2 shrink-0">
+      <label
+        class="text-[10px] font-bold text-white/40 uppercase tracking-wider hidden sm:inline"
+      >
+        ${translateText("clan_modal.sort_by")}
+      </label>
+      <select
+        @change=${(e: Event) =>
+          onSortChange((e.target as HTMLSelectElement).value as ClanMemberSort)}
+        class="flex-1 sm:flex-none h-10 pl-3 pr-8 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.5)%22 stroke-width=%222%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22m6 9 6 6 6-6%22/></svg>')]"
+      >
+        ${sortOptions.map(
+          (opt) => html`
+            <option
+              value=${opt.value}
+              ?selected=${opt.value === sort}
+              class="bg-neutral-900"
+            >
+              ${translateText(opt.labelKey)}
+            </option>
+          `,
+        )}
+      </select>
+      <button
+        type="button"
+        @click=${onOrderToggle}
+        title=${orderLabel}
+        aria-label=${orderLabel}
+        class="h-10 w-10 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-white/70 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+      >
+        ${renderOrderIcon(order)}
+      </button>
     </div>
   `;
 }
@@ -258,9 +330,12 @@ export function renderMemberPagination(
 }
 
 const statBuckets = [
+  { key: "total" as const, labelKey: "clan_modal.stats_total" },
   { key: "ffa" as const, labelKey: "clan_modal.stats_ffa" },
   { key: "team" as const, labelKey: "clan_modal.stats_team" },
+  { key: "hvn" as const, labelKey: "clan_modal.stats_hvn" },
   { key: "ranked" as const, labelKey: "clan_modal.stats_ranked" },
+  { key: "1v1" as const, labelKey: "clan_modal.stats_1v1" },
 ];
 
 function renderWLBarRow(

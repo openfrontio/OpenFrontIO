@@ -83,15 +83,18 @@ describe("ClanMemberSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts stats with ffa/team/ranked win-loss breakdown", () => {
+  it("accepts stats with total/ffa/team/ranked/1v1 win-loss breakdown", () => {
     const result = ClanMemberSchema.safeParse({
       role: "member",
       joinedAt: "2024-03-01T09:30:00.000Z",
       publicId: "abc123",
       stats: {
+        total: { wins: 8, losses: 8 },
         ffa: { wins: 2, losses: 4 },
         team: { wins: 5, losses: 1 },
+        hvn: { wins: 0, losses: 0 },
         ranked: { wins: 1, losses: 3 },
+        "1v1": { wins: 1, losses: 3 },
       },
     });
     expect(result.success).toBe(true);
@@ -147,6 +150,14 @@ describe("ClanStatsSchema", () => {
     games: 10,
     wins: 7,
     losses: 3,
+    stats: {
+      total: { wins: 7, losses: 3 },
+      ffa: { wins: 3, losses: 2 },
+      team: { wins: 2, losses: 1 },
+      hvn: { wins: 1, losses: 0 },
+      ranked: { wins: 1, losses: 0 },
+      "1v1": { wins: 1, losses: 0 },
+    },
     teamTypeWL: { ffa: { wl: [7, 3] } },
     teamCountWL: { "2": { wl: [4, 1] } },
   };

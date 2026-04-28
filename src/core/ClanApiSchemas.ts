@@ -51,9 +51,12 @@ export const ClanMemberWLSchema = z.object({
 export type ClanMemberWL = z.infer<typeof ClanMemberWLSchema>;
 
 export const ClanMemberStatsSchema = z.object({
+  total: ClanMemberWLSchema,
   ffa: ClanMemberWLSchema,
   team: ClanMemberWLSchema,
+  hvn: ClanMemberWLSchema,
   ranked: ClanMemberWLSchema,
+  "1v1": ClanMemberWLSchema,
 });
 export type ClanMemberStats = z.infer<typeof ClanMemberStatsSchema>;
 
@@ -114,6 +117,7 @@ export const ClanStatsSchema = z.object({
   games: z.number(),
   wins: z.number(),
   losses: z.number(),
+  stats: ClanMemberStatsSchema,
   teamTypeWL: z.record(
     z.string(),
     z.object({ wl: z.tuple([z.number(), z.number()]) }),

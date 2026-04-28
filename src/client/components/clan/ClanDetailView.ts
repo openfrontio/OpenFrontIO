@@ -4,6 +4,8 @@ import { invalidateUserMe } from "../../Api";
 import {
   type ClanInfo,
   type ClanMember,
+  type ClanMemberOrder,
+  type ClanMemberSort,
   type ClanStats,
   fetchClanDetail,
   fetchClanMembers,
@@ -17,6 +19,7 @@ import "../CopyButton";
 import { modalHeader } from "../ui/ModalHeader";
 import {
   type ClanRole,
+  defaultOrderForSort,
   filterMembersBySearch,
   modalContainerClass,
   renderClanWL,
@@ -24,6 +27,7 @@ import {
   renderMemberPagination,
   renderMemberRow,
   renderMemberSearchInput,
+  renderMemberSortControl,
   renderStat,
   showToast,
 } from "./ClanShared";
@@ -57,6 +61,8 @@ export class ClanDetailView extends LitElement {
   @state() private membersTotal = 0;
   @state() private memberPage = 1;
   @state() private membersPerPage = 10;
+  @state() private memberSort: ClanMemberSort = "default";
+  @state() private memberOrder: ClanMemberOrder = "asc";
   @state() private pendingRequestCount = 0;
   @state() private clanStats: ClanStats | null = null;
   @state() private loading = false;
@@ -101,7 +107,13 @@ export class ClanDetailView extends LitElement {
     const [detail, membersRes, stats] = await Promise.all([
       fetchClanDetail(this.clanTag),
       isMember
-        ? fetchClanMembers(this.clanTag, 1, this.membersPerPage)
+        ? fetchClanMembers(
+            this.clanTag,
+            1,
+            this.membersPerPage,
+            this.memberSort,
+            this.memberOrder,
+          )
         : Promise.resolve(false as const),
       fetchClanStats(this.clanTag),
     ]);
@@ -162,6 +174,8 @@ export class ClanDetailView extends LitElement {
       this.selectedClan.tag,
       page,
       this.membersPerPage,
+      this.memberSort,
+      this.memberOrder,
     );
     if (!res) return;
     if (res.results.length === 0 && page > 1) {
@@ -175,6 +189,18 @@ export class ClanDetailView extends LitElement {
     if (this.selectedClan.memberCount !== res.total) {
       this.selectedClan = { ...this.selectedClan, memberCount: res.total };
     }
+  }
+
+  private onSortChange(sort: ClanMemberSort) {
+    if (sort === this.memberSort) return;
+    this.memberSort = sort;
+    this.memberOrder = defaultOrderForSort(sort);
+    this.loadMemberPage(1);
+  }
+
+  private onOrderToggle() {
+    this.memberOrder = this.memberOrder === "asc" ? "desc" : "asc";
+    this.loadMemberPage(1);
   }
 
   private async handleJoin() {
@@ -411,7 +437,16 @@ export class ClanDetailView extends LitElement {
         <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
           ${translateText("clan_modal.members")}
         </h3>
-        ${renderMemberSearchInput((e: Event) => this.onSearchInput(e))}
+        ${renderMemberSearchInput(
+          (e: Event) => this.onSearchInput(e),
+          undefined,
+          renderMemberSortControl(
+            this.memberSort,
+            this.memberOrder,
+            (s) => this.onSortChange(s),
+            () => this.onOrderToggle(),
+          ),
+        )}
         <div class="space-y-2">
           ${filtered.map((m) => renderMemberRow(m, this.myPublicId))}
         </div>

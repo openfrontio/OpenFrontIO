@@ -58,9 +58,12 @@ describe("filterMembersBySearch", () => {
 
 describe("renderMemberStats", () => {
   const stats: ClanMemberStats = {
+    total: { wins: 7, losses: 5 },
     ffa: { wins: 2, losses: 4 },
     team: { wins: 5, losses: 1 },
+    hvn: { wins: 0, losses: 0 },
     ranked: { wins: 0, losses: 0 },
+    "1v1": { wins: 0, losses: 0 },
   };
 
   function renderTo(result: ReturnType<typeof renderMemberStats>): HTMLElement {
@@ -91,22 +94,29 @@ describe("renderMemberStats", () => {
   it("renders a proportional win-loss bar when there are games", () => {
     const host = renderTo(renderMemberStats(stats));
     const bars = host.querySelectorAll<HTMLDivElement>("[style*='width']");
-    // Two segments per bucket with games (ffa: 2, team: 2). Ranked has 0 games → no segments.
-    expect(bars.length).toBe(4);
+    // Two segments per bucket with games (total: 2, ffa: 2, team: 2). Ranked
+    // and 1v1 have 0 games → no segments.
+    expect(bars.length).toBe(6);
     const widths = Array.from(bars).map((b) =>
       (b.getAttribute("style") ?? "").replace(/\s+/g, ""),
     );
+    // total: 7/12 ≈ 58.3% wins, 41.7% losses
+    expect(widths[0]).toContain("width:58.33");
+    expect(widths[1]).toContain("width:41.66");
     // ffa: 2/6 ≈ 33.3% wins, 66.7% losses
-    expect(widths[0]).toContain("width:33.33");
-    expect(widths[1]).toContain("width:66.66");
+    expect(widths[2]).toContain("width:33.33");
+    expect(widths[3]).toContain("width:66.66");
   });
 
-  it("includes all three translated bucket labels", () => {
+  it("includes all six translated bucket labels", () => {
     const host = renderTo(renderMemberStats(stats));
     const text = host.textContent ?? "";
+    expect(text).toContain("clan_modal.stats_total");
     expect(text).toContain("clan_modal.stats_ffa");
     expect(text).toContain("clan_modal.stats_team");
+    expect(text).toContain("clan_modal.stats_hvn");
     expect(text).toContain("clan_modal.stats_ranked");
+    expect(text).toContain("clan_modal.stats_1v1");
   });
 });
 

@@ -78,6 +78,14 @@ describe("fetchClanStats", () => {
     games: 20,
     wins: 15,
     losses: 5,
+    stats: {
+      total: { wins: 15, losses: 5 },
+      ffa: { wins: 7, losses: 3 },
+      team: { wins: 4, losses: 1 },
+      hvn: { wins: 1, losses: 0 },
+      ranked: { wins: 3, losses: 1 },
+      "1v1": { wins: 3, losses: 1 },
+    },
     teamTypeWL: { ffa: { wl: [15, 5] } },
     teamCountWL: { "2": { wl: [10, 3] } },
   };

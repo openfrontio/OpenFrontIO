@@ -5,6 +5,8 @@ import {
   banClanMember,
   type ClanInfo,
   type ClanMember,
+  type ClanMemberOrder,
+  type ClanMemberSort,
   demoteMember,
   disbandClan,
   fetchClanMembers,
@@ -18,12 +20,14 @@ import "../CopyButton";
 import { modalHeader } from "../ui/ModalHeader";
 import {
   type ClanRole,
+  defaultOrderForSort,
   filterMembersBySearch,
   formatClanDate,
   modalContainerClass,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberSearchInput,
+  renderMemberSortControl,
   renderRoleIcon,
   showToast,
 } from "./ClanShared";
@@ -47,6 +51,8 @@ export class ClanManageView extends LitElement {
   @state() private membersTotal = 0;
   @state() private memberPage = 1;
   @state() private membersPerPage = 10;
+  @state() private memberSort: ClanMemberSort = "default";
+  @state() private memberOrder: ClanMemberOrder = "asc";
   @state() private memberActionPending = false;
   @state() private loading = false;
   @state() private confirmAction: "disband" | "kick" | "ban" | null = null;
@@ -73,7 +79,13 @@ export class ClanManageView extends LitElement {
 
   private async loadMembers(page: number) {
     if (this.members.length === 0) this.loading = true;
-    const res = await fetchClanMembers(this.clanTag, page, this.membersPerPage);
+    const res = await fetchClanMembers(
+      this.clanTag,
+      page,
+      this.membersPerPage,
+      this.memberSort,
+      this.memberOrder,
+    );
     if (!res) {
       this.loading = false;
       return;
@@ -236,6 +248,18 @@ export class ClanManageView extends LitElement {
       this.memberSearch = (e.target as HTMLInputElement).value;
       this.requestUpdate();
     }, 200);
+  }
+
+  private onSortChange(sort: ClanMemberSort) {
+    if (sort === this.memberSort) return;
+    this.memberSort = sort;
+    this.memberOrder = defaultOrderForSort(sort);
+    this.loadMembers(1);
+  }
+
+  private onOrderToggle() {
+    this.memberOrder = this.memberOrder === "asc" ? "desc" : "asc";
+    this.loadMembers(1);
   }
 
   private navigateDetail = () =>
@@ -410,7 +434,16 @@ export class ClanManageView extends LitElement {
                 ${translateText("clan_modal.members")}
                 (${clan.memberCount ?? 0})
               </h3>
-              ${renderMemberSearchInput((e) => this.onSearchInput(e))}
+              ${renderMemberSearchInput(
+                (e) => this.onSearchInput(e),
+                undefined,
+                renderMemberSortControl(
+                  this.memberSort,
+                  this.memberOrder,
+                  (s) => this.onSortChange(s),
+                  () => this.onOrderToggle(),
+                ),
+              )}
               ${(() => {
                 const filtered = filterMembersBySearch(
                   this.members,

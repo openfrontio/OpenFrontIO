@@ -135,15 +135,35 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   }
 }
 
+export type ClanMemberSort =
+  | "default"
+  | "winsTotal"
+  | "lossesTotal"
+  | "winsFfa"
+  | "lossesFfa"
+  | "winsTeam"
+  | "lossesTeam"
+  | "winsHvn"
+  | "lossesHvn"
+  | "winsRanked"
+  | "lossesRanked"
+  | "wins1v1"
+  | "losses1v1";
+export type ClanMemberOrder = "asc" | "desc";
+
 export async function fetchClanMembers(
   tag: string,
   page = 1,
   limit = 20,
+  sort: ClanMemberSort = "default",
+  order?: ClanMemberOrder,
 ): Promise<ClanMembersResponse | false> {
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
+    if (sort !== "default") params.set("sort", sort);
+    if (order) params.set("order", order);
     const res = await clanFetch(
       `/clans/${encodeURIComponent(tag)}/members?${params}`,
     );

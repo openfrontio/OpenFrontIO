@@ -54,9 +54,6 @@ export async function fetchPlayerById(
 }
 
 let __userMe: Promise<UserMeResponse | false> | null = null;
-export function invalidateUserMe(): void {
-  __userMe = null;
-}
 export async function getUserMe(): Promise<UserMeResponse | false> {
   if (__userMe !== null) {
     return __userMe;
@@ -91,6 +88,10 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     }
   })();
   return __userMe;
+}
+
+export function invalidateUserMe() {
+  __userMe = null;
 }
 
 export async function purchaseWithCurrency(

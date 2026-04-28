@@ -643,7 +643,13 @@ describe("ClanModal — handlers", () => {
       await flushAsync(modal);
 
       expect(joinClan).toHaveBeenCalledWith("TST");
-      expect(fetchClanMembers).toHaveBeenCalledWith("TST", 1, 10);
+      expect(fetchClanMembers).toHaveBeenCalledWith(
+        "TST",
+        1,
+        10,
+        "default",
+        "asc",
+      );
 
       const leaveButton = Array.from(modal.querySelectorAll("button")).find(
         (b) => b.textContent?.trim() === "clan_modal.leave_clan",
