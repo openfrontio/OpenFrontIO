@@ -74,7 +74,7 @@ export class NationExecution implements Execution {
     const { difficulty } = this.mg.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return this.random.nextInt(65, 80); // Slower reactions
+        return this.random.nextInt(65, 100); // Slower reactions
       case Difficulty.Medium:
         return this.random.nextInt(55, 70);
       case Difficulty.Hard:

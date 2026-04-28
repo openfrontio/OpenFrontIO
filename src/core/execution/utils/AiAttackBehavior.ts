@@ -767,7 +767,7 @@ export class AiAttackBehavior {
 
     // Prevent attacking of humans on lower difficulties
     const { difficulty } = this.game.config().gameConfig();
-    if (difficulty === Difficulty.Easy && this.random.chance(2)) {
+    if (difficulty === Difficulty.Easy && this.random.nextInt(0, 4) !== 0) {
       return false;
     }
     if (difficulty === Difficulty.Medium && this.random.chance(4)) {
