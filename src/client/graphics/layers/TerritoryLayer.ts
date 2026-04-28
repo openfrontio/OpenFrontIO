@@ -167,10 +167,6 @@ export class TerritoryLayer implements Layer {
   }
 
   private spawnHighlight() {
-    if (this.game.ticks() % 5 !== 0) {
-      return;
-    }
-
     this.highlightContext.clearRect(
       0,
       0,

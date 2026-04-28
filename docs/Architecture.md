@@ -28,3 +28,13 @@ When a user performs an action, it creates an "Intent" which is sent to the serv
 6. All executions run
 7. At the end of the tick core sends updates to client
 8. Client renders the updates
+
+## Static Assets / CDN
+
+The game server only renders `index.html` and serves the websocket. Every other asset (the Vite JS/CSS bundle, images, map binaries, the worker module) is served from a CDN bucket. Setting `CDN_BASE` to an empty string falls back to same-origin and is the dev default.
+
+### `CDN_BASE` format
+
+- Full origin, no path, no trailing slash: `https://cdn.example.com`
+- Set as a build-time variable in `vite.config.ts` (so the manifest is built with absolute URLs) and as a runtime env var on the server (so `RenderHtml.ts` can prefix Vite's emitted `/assets/...` refs at request time).
+- Configured in CI via `vars.CDN_BASE` in `.github/workflows/{deploy,release}.yml`.

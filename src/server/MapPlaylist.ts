@@ -90,6 +90,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Luna: 6,
   Conakry: 3,
   Caucasus: 5,
+  LosAngeles: 8,
   BeringSea: 5,
   Antarctica: 1,
   ArchipelagoSea: 3,

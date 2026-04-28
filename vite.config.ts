@@ -6,7 +6,11 @@ import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { type AssetManifest, buildAssetUrl } from "./src/core/AssetUrls";
+import {
+  type AssetManifest,
+  buildAssetUrl,
+  rewriteAssetsForCdn,
+} from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,
@@ -57,19 +61,42 @@ export default defineConfig(({ mode }) => {
   const assetManifest: AssetManifest = isProduction
     ? buildPublicAssetManifest(sourceDirs)
     : {};
+  const cdnBase = env.CDN_BASE ?? "";
   const htmlAssetData = {
     assetManifest: JSON.stringify(assetManifest),
+    cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
-    manifestHref: buildAssetUrl("manifest.json", assetManifest),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(
       "images/GameplayScreenshot.png",
       assetManifest,
+      cdnBase,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.png", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
+    backgroundImageUrl: buildAssetUrl(
+      "images/background.webp",
+      assetManifest,
+      cdnBase,
+    ),
+    desktopLogoImageUrl: buildAssetUrl(
+      "images/OpenFront.png",
+      assetManifest,
+      cdnBase,
+    ),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest, cdnBase),
   };
+
+  // Vite's HTML transform replaces the source <script src="/src/client/Main.ts">
+  // with the hashed bundle URL and injects <link rel="modulepreload"> /
+  // <link rel="stylesheet"> tags. rewriteAssetsForCdn rewrites those refs to
+  // an EJS placeholder so RenderHtml.ts can prefix them with CDN_BASE at
+  // request time.
+  const injectCdnBaseTemplate = (): Plugin => ({
+    name: "inject-cdn-base-template",
+    apply: "build" as const,
+    enforce: "post",
+    transformIndexHtml: rewriteAssetsForCdn,
+  });
 
   let viteBundleFiles: string[] = [];
   const syncHashedPublicAssets = (): Plugin => ({
@@ -157,7 +184,9 @@ export default defineConfig(({ mode }) => {
               },
             }),
           ]),
-      ...(isProduction ? [syncHashedPublicAssets()] : []),
+      ...(isProduction
+        ? [injectCdnBaseTemplate(), syncHashedPublicAssets()]
+        : []),
       tailwindcss(),
     ],
 
