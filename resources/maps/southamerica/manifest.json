@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 594,
-    "num_land_tiles": 81182,
+    "num_land_tiles": 81160,
     "width": 436
   },
   "map4x": {
     "height": 1188,
-    "num_land_tiles": 342861,
+    "num_land_tiles": 342275,
     "width": 872
   },
   "name": "Americas",

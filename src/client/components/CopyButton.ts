@@ -80,7 +80,7 @@ export class CopyButton extends LitElement {
     return await this.buildCopyUrl();
   }
 
-  private async handleCopy() {
+  async handleCopy() {
     const text = await this.resolveCopyText();
     if (!text) {
       alert("Error copying game id");

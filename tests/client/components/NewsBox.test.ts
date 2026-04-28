@@ -67,10 +67,14 @@ describe("NewsBox", () => {
         expect(typeof item.id).toBe("string");
         expect(item.title).toBeDefined();
         expect(typeof item.title).toBe("string");
-        expect(item.description).toBeDefined();
-        expect(typeof item.description).toBe("string");
+        const hasDescription =
+          item.description !== undefined ||
+          item.descriptionTranslationKey !== undefined;
+        expect(hasDescription).toBe(true);
         expect(item.type).toBeDefined();
-        expect(["tournament", "tutorial", "announcement"]).toContain(item.type);
+        expect(["tournament", "tutorial", "announcement", "warning"]).toContain(
+          item.type,
+        );
       }
     });
 

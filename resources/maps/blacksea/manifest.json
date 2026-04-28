@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 275,
-    "num_land_tiles": 69023,
+    "num_land_tiles": 69017,
     "width": 375
   },
   "map4x": {
     "height": 550,
-    "num_land_tiles": 284219,
+    "num_land_tiles": 284065,
     "width": 750
   },
   "name": "BlackSea",

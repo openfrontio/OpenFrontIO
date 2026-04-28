@@ -98,10 +98,27 @@ export class WaterPathFinder implements SteppingPathFinder<TileRef> {
   private _waterGraphVersion: number;
   private _rebuilt = false;
 
-  constructor(private game: Game) {
+  // Stagger support: spread pathfinder rebuilds over multiple ticks so all
+  // ships don't re-run A* simultaneously after a water-nuke.
+  private _staggerCountdown: number;
+  private _pendingVersion: number = -1;
+
+  /**
+   * @param stagger - How many ticks to wait before rebuilding when the water
+   *   graph changes.  0 = immediate (default).  Pass a value spread across
+   *   [0, STAGGER_SPREAD) to distribute rebuilds over time.
+   */
+  constructor(
+    private game: Game,
+    private _stagger: number = 0,
+  ) {
     this.inner = PathFinding.Water(game);
     this._waterGraphVersion = game.waterGraphVersion();
+    this._staggerCountdown = 0;
   }
+
+  /** Spread to use when auto-staggering ship pathfinders */
+  static readonly STAGGER_SPREAD = 50;
 
   /** True if the pathfinder was rebuilt since the last call to `rebuilt`. Resets on read. */
   get rebuilt(): boolean {
@@ -113,11 +130,23 @@ export class WaterPathFinder implements SteppingPathFinder<TileRef> {
 
   private ensureFresh(): void {
     const v = this.game.waterGraphVersion();
-    if (v !== this._waterGraphVersion) {
-      this._waterGraphVersion = v;
-      this.inner = PathFinding.Water(this.game);
-      this._rebuilt = true;
+    if (v === this._waterGraphVersion) return;
+
+    // New graph version detected — start or continue the stagger countdown.
+    if (this._pendingVersion !== v) {
+      this._pendingVersion = v;
+      this._staggerCountdown = this._stagger;
     }
+
+    if (this._staggerCountdown > 0) {
+      this._staggerCountdown--;
+      return; // Keep using old pathfinder for now
+    }
+
+    // Countdown complete — rebuild.
+    this._waterGraphVersion = v;
+    this.inner = PathFinding.Water(this.game);
+    this._rebuilt = true;
   }
 
   next(from: TileRef, to: TileRef, dist?: number): PathResult<TileRef> {

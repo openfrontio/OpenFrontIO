@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 250,
-    "num_land_tiles": 82777,
+    "num_land_tiles": 82762,
     "width": 500
   },
   "map4x": {
     "height": 500,
-    "num_land_tiles": 335950,
+    "num_land_tiles": 335749,
     "width": 1000
   },
   "name": "Mars",

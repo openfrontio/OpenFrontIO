@@ -94,6 +94,7 @@ export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by 
 export const OTHER_INDEX_UPGRADE = 4; // Structures upgraded
 
 export const BigIntStringSchema = z.preprocess((val) => {
+  if (val === null) return 0n;
   if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
   return val;

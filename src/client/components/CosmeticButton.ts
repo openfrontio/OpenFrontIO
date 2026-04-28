@@ -2,7 +2,11 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Flag, Pack, Pattern } from "../../core/CosmeticSchemas";
 import { PlayerPattern } from "../../core/Schemas";
-import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
+import {
+  PaymentMethod,
+  ResolvedCosmetic,
+  translateCosmetic,
+} from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import "./CosmeticContainer";
@@ -22,7 +26,7 @@ export class CosmeticButton extends LitElement {
   onSelect?: (resolved: ResolvedCosmetic) => void;
 
   @property({ type: Function })
-  onPurchase?: (resolved: ResolvedCosmetic) => void;
+  onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
 
   createRenderRoot() {
     return this;
@@ -118,7 +122,17 @@ export class CosmeticButton extends LitElement {
         .rarity=${c?.rarity ?? "common"}
         .selected=${this.selected}
         .product=${isPurchasable && c?.product ? c.product : null}
-        .onPurchase=${() => this.onPurchase?.(this.resolved)}
+        .priceHard=${isPurchasable ? (c?.priceHard ?? null) : null}
+        .priceSoft=${isPurchasable ? (c?.priceSoft ?? null) : null}
+        .onPurchaseDollar=${isPurchasable && c?.product
+          ? () => this.onPurchase?.(this.resolved, "dollar")
+          : undefined}
+        .onPurchaseHard=${isPurchasable && c?.priceHard !== undefined
+          ? () => this.onPurchase?.(this.resolved, "hard")
+          : undefined}
+        .onPurchaseSoft=${isPurchasable && c?.priceSoft !== undefined
+          ? () => this.onPurchase?.(this.resolved, "soft")
+          : undefined}
         .name=${this.displayName}
       >
         <button
@@ -127,7 +141,7 @@ export class CosmeticButton extends LitElement {
             : "gap-1"} rounded-lg cursor-pointer transition-all duration-200 flex-1"
           @click=${() => this.handleClick()}
         >
-          ${c?.product
+          ${(c?.product ?? c?.priceHard ?? c?.priceSoft)
             ? html`<cosmetic-info
                 .artist=${c.artist}
                 .rarity=${c.rarity}

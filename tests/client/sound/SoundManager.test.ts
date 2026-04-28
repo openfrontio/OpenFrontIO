@@ -39,17 +39,6 @@ vi.mock("howler", () => {
   return { Howl: MockHowl };
 });
 
-// Mock music imports
-vi.mock("../../../../proprietary/sounds/music/of4.mp3", () => ({
-  default: "of4.mp3",
-}));
-vi.mock("../../../../proprietary/sounds/music/openfront.mp3", () => ({
-  default: "openfront.mp3",
-}));
-vi.mock("../../../../proprietary/sounds/music/war.mp3", () => ({
-  default: "war.mp3",
-}));
-
 // Mock the Sounds module so tests don't depend on actual asset paths
 vi.mock("../../../src/client/sound/Sounds", async (importOriginal) => {
   const actual =

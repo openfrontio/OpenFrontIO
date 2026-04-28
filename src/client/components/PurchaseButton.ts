@@ -1,7 +1,9 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
 import { translateText } from "../Utils";
+import "./CapIcon";
+import "./PlutoniumIcon";
 
 const PURCHASE_STYLE_ID = "purchase-button-styles";
 if (!document.getElementById(PURCHASE_STYLE_ID)) {
@@ -34,6 +36,18 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       color: white;
       box-shadow: 0 0 20px rgba(74,222,128,0.6);
     }
+    cosmetic-container:hover .purchase-sparkle-btn-hard {
+      background: rgb(22,163,74);
+      border-color: rgb(74,222,128);
+      color: white;
+      box-shadow: 0 0 20px rgba(74,222,128,0.6);
+    }
+    cosmetic-container:hover .purchase-sparkle-btn-soft {
+      background: rgb(180,83,9);
+      border-color: rgb(217,119,6);
+      color: white;
+      box-shadow: 0 0 20px rgba(217,119,6,0.6);
+    }
     @keyframes purchase-pulse {
       0%   { box-shadow: 0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(34,197,94,0.3); }
       50%  { box-shadow: 0 0 25px rgba(74,222,128,0.9), 0 0 50px rgba(34,197,94,0.5); }
@@ -44,6 +58,23 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
       border-color: rgb(74,222,128) !important;
       color: white !important;
       animation: purchase-pulse 1.2s ease-in-out infinite !important;
+    }
+    .purchase-sparkle-btn-hard:hover {
+      background: rgb(22,163,74) !important;
+      border-color: rgb(74,222,128) !important;
+      color: white !important;
+      animation: purchase-pulse 1.2s ease-in-out infinite !important;
+    }
+    @keyframes purchase-pulse-soft {
+      0%   { box-shadow: 0 0 15px rgba(217,119,6,0.6), 0 0 30px rgba(180,83,9,0.3); }
+      50%  { box-shadow: 0 0 25px rgba(217,119,6,0.9), 0 0 50px rgba(180,83,9,0.5); }
+      100% { box-shadow: 0 0 15px rgba(217,119,6,0.6), 0 0 30px rgba(180,83,9,0.3); }
+    }
+    .purchase-sparkle-btn-soft:hover {
+      background: rgb(180,83,9) !important;
+      border-color: rgb(217,119,6) !important;
+      color: white !important;
+      animation: purchase-pulse-soft 1.2s ease-in-out infinite !important;
     }
     @keyframes purchase-ember-0 {
       0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0.9; }
@@ -148,20 +179,33 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
 @customElement("purchase-button")
 export class PurchaseButton extends LitElement {
   @property({ type: Object })
-  product!: Product;
+  product: Product | null = null;
+
+  @property({ type: Number })
+  priceHard: number | null = null;
+
+  @property({ type: Number })
+  priceSoft: number | null = null;
 
   @property({ type: String })
   rarity: string = "common";
 
   @property({ type: Function })
-  onPurchase?: () => void;
+  onPurchaseDollar?: () => void;
+
+  @property({ type: Function })
+  onPurchaseHard?: () => void;
+
+  @property({ type: Function })
+  onPurchaseSoft?: () => void;
 
   createRenderRoot() {
     return this;
   }
 
-  private handleClick(e: Event) {
+  private handleClick(e: Event, handler?: () => void) {
     e.stopPropagation();
+    if (!handler) return;
     const container = this.closest("cosmetic-container") as HTMLElement | null;
     if (container && !container.querySelector(".cosmetic-loading-overlay")) {
       const overlay = document.createElement("div");
@@ -169,12 +213,58 @@ export class PurchaseButton extends LitElement {
       overlay.innerHTML = `<div class="cosmetic-loading-spinner"></div>`;
       container.appendChild(overlay);
     }
-    Promise.resolve(this.onPurchase?.()).catch(() => {
+    Promise.resolve(handler()).finally(() => {
       container?.querySelector(".cosmetic-loading-overlay")?.remove();
     });
   }
 
+  private renderDollarButton() {
+    return html`
+      <button
+        class="purchase-sparkle-btn relative overflow-hidden w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
+         hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
+        @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
+      >
+        <span class="purchase-sparkle-streak"></span>
+        ${translateText("territory_patterns.purchase")}
+        <span class="ml-1 text-white/50">(${this.product!.price})</span>
+      </button>
+    `;
+  }
+
+  private renderHardButton() {
+    return html`
+      <button
+        class="purchase-sparkle-btn-hard relative overflow-hidden w-full px-2 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+         hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
+        @click=${(e: Event) => this.handleClick(e, this.onPurchaseHard)}
+      >
+        <plutonium-icon .size=${20} style="margin-top:3px"></plutonium-icon>
+        ${this.priceHard!.toLocaleString()}
+      </button>
+    `;
+  }
+
+  private renderSoftButton() {
+    return html`
+      <button
+        class="purchase-sparkle-btn-soft relative overflow-hidden w-full px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+         hover:bg-amber-700 hover:border-amber-600 hover:text-white hover:shadow-[0_0_20px_rgba(217,119,6,0.6)]"
+        @click=${(e: Event) => this.handleClick(e, this.onPurchaseSoft)}
+      >
+        <cap-icon .size=${22} style="margin-top:3px"></cap-icon>
+        ${this.priceSoft!.toLocaleString()}
+      </button>
+    `;
+  }
+
   render() {
+    const hasDollar = this.product && this.onPurchaseDollar;
+    const hasHard = this.priceHard !== null && this.onPurchaseHard;
+    const hasSoft = this.priceSoft !== null && this.onPurchaseSoft;
+
+    if (!hasDollar && !hasHard && !hasSoft) return nothing;
+
     return html`
       <div class="no-crazygames w-full mt-2 relative purchase-btn-wrap">
         ${this.rarity !== "common"
@@ -190,15 +280,11 @@ export class PurchaseButton extends LitElement {
                   ></span>`,
               )}`
           : null}
-        <button
-          class="purchase-sparkle-btn relative overflow-hidden w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
-           hover:bg-green-500 hover:border-green-400 hover:text-white hover:shadow-[0_0_20px_rgba(74,222,128,0.6)]"
-          @click=${this.handleClick}
-        >
-          <span class="purchase-sparkle-streak"></span>
-          ${translateText("territory_patterns.purchase")}
-          <span class="ml-1 text-white/50">(${this.product.price})</span>
-        </button>
+        <div class="flex flex-col gap-1 w-full">
+          ${hasDollar ? this.renderDollarButton() : null}
+          ${hasHard ? this.renderHardButton() : null}
+          ${hasSoft ? this.renderSoftButton() : null}
+        </div>
       </div>
     `;
   }

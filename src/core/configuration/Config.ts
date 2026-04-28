@@ -128,7 +128,7 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipShortRangeDebuff(): number;
-  tradeShipGold(dist: number): Gold;
+  tradeShipGold(dist: number, player: Player | PlayerView): Gold;
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
     numTradeShips: number,
@@ -136,6 +136,7 @@ export interface Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
+    player: Player | PlayerView,
   ): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
@@ -152,6 +153,12 @@ export interface Config {
   warshipPatrolRange(): number;
   warshipShellAttackRate(): number;
   warshipTargettingRange(): number;
+  warshipDockingRange(): number;
+  warshipPortHealingBonusPerLevel(): number;
+  warshipRetreatHealthThreshold(): number;
+  warshipPassiveHealing(): number;
+  warshipPassiveHealingRange(): number;
+  warshipPortSwitchThreshold(): number;
   defensePostShellAttackRate(): number;
   defensePostTargettingRange(): number;
   // 0-1

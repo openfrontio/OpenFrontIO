@@ -42,7 +42,7 @@
       "name": "Apollo 13"
     },
     {
-      "coordinates": [650, 1750],
+      "coordinates": [656, 1750],
       "flag": "us",
       "name": "Artemis II"
     },
@@ -132,5 +132,11 @@
       "flag": "",
       "name": "[]"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      { "x": 0, "y": 0, "width": 1308, "height": 1750 },
+      { "x": 0, "y": 1750, "width": 1308, "height": 1750 }
+    ]
+  }
 }

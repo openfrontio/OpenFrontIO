@@ -10,9 +10,8 @@ import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
-  handlePurchase,
+  purchaseCosmetic,
   resolveCosmetics,
-  ResolvedCosmetic,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -53,7 +52,7 @@ export class StoreModal extends BaseModal {
         <button
           class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
             .activeTab === "packs"
-            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
             : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
           @click=${() => (this.activeTab = "packs")}
         >
@@ -62,7 +61,7 @@ export class StoreModal extends BaseModal {
         <button
           class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
             .activeTab === "patterns"
-            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
             : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
           @click=${() => (this.activeTab = "patterns")}
         >
@@ -71,7 +70,7 @@ export class StoreModal extends BaseModal {
         <button
           class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
             .activeTab === "flags"
-            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
             : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
           @click=${() => (this.activeTab = "flags")}
         >
@@ -109,8 +108,7 @@ export class StoreModal extends BaseModal {
           (r) => html`
             <cosmetic-button
               .resolved=${r}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!, rc.colorPalette?.name)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}
@@ -148,8 +146,7 @@ export class StoreModal extends BaseModal {
             <cosmetic-button
               .resolved=${r}
               .selected=${selectedFlag === r.key}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}
@@ -180,8 +177,7 @@ export class StoreModal extends BaseModal {
           (r) => html`
             <cosmetic-button
               .resolved=${r}
-              .onPurchase=${(rc: ResolvedCosmetic) =>
-                handlePurchase(rc.cosmetic!.product!)}
+              .onPurchase=${purchaseCosmetic}
             ></cosmetic-button>
           `,
         )}

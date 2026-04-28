@@ -7,21 +7,60 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
-const swordIcon = assetUrl("images/SwordIconWhite.svg");
+const soldierIcon = assetUrl("images/SoldierIcon.svg");
 
-export function troopAttackColor(
-  attackerTroops: number,
-  defenderTroops: number,
-): string {
-  return attackerTroops > defenderTroops ? "#66ff66" : "#ffbe3c";
+// Match AttacksDisplay: aquarius for outgoing, red-400 for incoming.
+const OUTGOING_COLOR = "var(--color-aquarius)";
+const INCOMING_COLOR = "var(--color-red-400)";
+
+// At/above this zoom, the label stays at its full screen size. Below it the
+// label shrinks linearly with zoom-out, floored so it never disappears.
+const LABEL_FULL_SIZE_ZOOM = 1.5;
+const LABEL_MIN_SCREEN_SCALE = 0.5;
+const OUTGOING_ICON_FILTER =
+  "brightness(0) saturate(100%) invert(62%) sepia(80%) saturate(500%) hue-rotate(175deg) brightness(100%)";
+const INCOMING_ICON_FILTER =
+  "brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)";
+
+// Vertical strength bar to the left of the icon: grows in height as the
+// attacker outnumbers the opposition. Maxes out at BAR_MAX_HEIGHT_PX when the
+// attacker has BAR_FULL_HEIGHT_RATIO× the opposing troops.
+const BAR_FULL_HEIGHT_RATIO = 2;
+const BAR_MAX_HEIGHT_PX = 13;
+
+// Element scale factor that, combined with the container's `scale(zoom)`,
+// yields the desired on-screen label size: constant screen size when zoomed
+// in past LABEL_FULL_SIZE_ZOOM, then shrinking linearly as zoom drops, with a
+// floor at LABEL_MIN_SCREEN_SCALE so the label never disappears.
+export function computeLabelScale(zoom: number): number {
+  const netScale = Math.max(
+    LABEL_MIN_SCREEN_SCALE,
+    Math.min(1, zoom / LABEL_FULL_SIZE_ZOOM),
+  );
+  return netScale / zoom;
 }
 
-export function troopDefenceColor(
+// Fraction (0–1) of BAR_MAX_HEIGHT_PX the strength bar should occupy. 0 means
+// the attacker is harmless; 1 means they have BAR_FULL_HEIGHT_RATIO× or more
+// of the opposing troops.
+export function computeBarStrength(
   attackerTroops: number,
-  myTroops: number,
-): string {
-  return attackerTroops > myTroops ? "#ff4444" : "#ff9944";
+  opposingTroops: number,
+): number {
+  if (opposingTroops <= 0) return 1;
+  return Math.min(1, attackerTroops / opposingTroops / BAR_FULL_HEIGHT_RATIO);
+}
+
+// Worker returns clusters sorted by size; two near-equal-size fronts can flip
+// ordering tick-to-tick. If swapping brings each new position closer to where
+// its label already is, swap `next` in place. (clusteredPositions caps at 2.)
+export function alignClusterOrder(next: Cell[], prev: (Cell | null)[]): void {
+  const [a, b] = prev;
+  if (next.length !== 2 || !a || !b) return;
+  const dist = (p: Cell, q: Cell) => Math.abs(p.x - q.x) + Math.abs(p.y - q.y);
+  const direct = dist(next[0], a) + dist(next[1], b);
+  const swapped = dist(next[1], a) + dist(next[0], b);
+  if (swapped < direct) [next[0], next[1]] = [next[1], next[0]];
 }
 
 // An attack can have multiple disconnected front-line segments, so elements
@@ -31,7 +70,7 @@ interface AttackLabel {
   positions: (Cell | null)[];
   isIncoming: boolean;
   attackerTroops: number;
-  defenderTroops: number;
+  barStrength: number;
 }
 
 export class AttackingTroopsOverlay implements Layer {
@@ -42,6 +81,9 @@ export class AttackingTroopsOverlay implements Layer {
   private inFlightRequest = false;
   private isVisible = true;
   private onAlternateView: (e: AlternateViewEvent) => void;
+  // Last transform string written per element; lets renderLayer skip identical
+  // re-assignments every frame (~60fps × N labels).
+  private lastTransform = new WeakMap<HTMLDivElement, string>();
 
   constructor(
     private readonly game: GameView,
@@ -84,6 +126,10 @@ export class AttackingTroopsOverlay implements Layer {
     return 200;
   }
 
+  private labelScale(): number {
+    return computeLabelScale(this.transformHandler.scale);
+  }
+
   tick() {
     if (!this.userSettings.attackingTroopsOverlay() || !this.isVisible) {
       if (this.labels.size > 0) this.clearAllLabels();
@@ -98,7 +144,7 @@ export class AttackingTroopsOverlay implements Layer {
 
     const activeIDs = new Set<string>();
 
-    // Outgoing attacks — green if winning, amber if losing.
+    // Outgoing: cyan bar widens as our attack outnumbers the defender.
     for (const attack of myPlayer.outgoingAttacks()) {
       activeIDs.add(attack.id);
       if (!attack.targetID) {
@@ -110,10 +156,11 @@ export class AttackingTroopsOverlay implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, defender.troops(), false);
+      const barStrength = computeBarStrength(attack.troops, defender.troops());
+      this.ensureLabel(attack.id, attack.troops, false, barStrength);
     }
 
-    // Incoming attacks — red if the attacker outnumbers the player, orange otherwise.
+    // Incoming: red bar widens as the attacker outnumbers the player.
     for (const attack of myPlayer.incomingAttacks()) {
       activeIDs.add(attack.id);
       const attacker = this.game.playerBySmallID(attack.attackerID);
@@ -121,7 +168,8 @@ export class AttackingTroopsOverlay implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, myPlayer.troops(), true);
+      const barStrength = computeBarStrength(attack.troops, myPlayer.troops());
+      this.ensureLabel(attack.id, attack.troops, true, barStrength);
     }
 
     for (const [id] of this.labels) {
@@ -153,8 +201,8 @@ export class AttackingTroopsOverlay implements Layer {
   private ensureLabel(
     attackID: string,
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
+    barStrength: number,
   ) {
     let label = this.labels.get(attackID);
     if (!label) {
@@ -163,15 +211,15 @@ export class AttackingTroopsOverlay implements Layer {
         positions: [],
         isIncoming,
         attackerTroops,
-        defenderTroops,
+        barStrength,
       };
       this.labels.set(attackID, label);
     } else {
       label.attackerTroops = attackerTroops;
-      label.defenderTroops = defenderTroops;
+      label.barStrength = barStrength;
     }
     for (const el of label.elements) {
-      this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+      this.updateLabelContent(el, attackerTroops, barStrength);
     }
   }
 
@@ -185,6 +233,8 @@ export class AttackingTroopsOverlay implements Layer {
     );
     this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
 
+    // Hoist the per-frame label scale once; zoom is constant within a frame.
+    const scale = this.labelScale();
     for (const label of this.labels.values()) {
       for (let i = 0; i < label.elements.length; i++) {
         const el = label.elements[i];
@@ -196,9 +246,14 @@ export class AttackingTroopsOverlay implements Layer {
         }
 
         el.style.display = "inline-flex";
-        // Centre the label on its world position and counter-scale so text
-        // stays the same screen size regardless of zoom level.
-        el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        // Centre the label on its world position; counter-scale keeps the
+        // label at constant screen size while zoomed in, then it shrinks
+        // (floored) as zoom drops below LABEL_FULL_SIZE_ZOOM.
+        const transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${scale})`;
+        if (this.lastTransform.get(el) !== transform) {
+          el.style.transform = transform;
+          this.lastTransform.set(el, transform);
+        }
       }
     }
   }
@@ -209,8 +264,8 @@ export class AttackingTroopsOverlay implements Layer {
       lbl.elements.push(
         this.createLabelElement(
           lbl.attackerTroops,
-          lbl.defenderTroops,
           lbl.isIncoming,
+          lbl.barStrength,
         ),
       );
       lbl.positions.push(null);
@@ -222,16 +277,20 @@ export class AttackingTroopsOverlay implements Layer {
       lbl.positions.pop();
     }
 
-    // Snap large jumps instantly; let the CSS transition handle small advances.
+    alignClusterOrder(positions, lbl.positions);
+
+    // Snap teleport-sized jumps instantly; let the CSS transition handle the rest.
     for (let i = 0; i < positions.length; i++) {
       const old = lbl.positions[i];
       const next = positions[i];
-      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 50) {
+      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 200) {
         const el = lbl.elements[i];
         el.style.transition = "none";
-        el.style.transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        const transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${this.labelScale()})`;
+        el.style.transform = transform;
+        this.lastTransform.set(el, transform);
         requestAnimationFrame(() => {
-          el.style.transition = "transform 0.2s ease-out";
+          el.style.transition = "transform 0.25s linear";
         });
       }
       lbl.positions[i] = next;
@@ -245,33 +304,53 @@ export class AttackingTroopsOverlay implements Layer {
     el.style.alignItems = "center";
     el.style.gap = "3px";
     el.style.whiteSpace = "nowrap";
-    el.style.fontSize = "11px";
+    el.style.fontSize = "14px";
     el.style.fontWeight = "bold";
-    el.style.padding = "1px 4px";
+    el.style.padding = "2px 5px";
     el.style.borderRadius = "3px";
-    el.style.backgroundColor = "rgba(0,0,0,0.55)";
+    el.style.backgroundColor = "rgba(0,0,0,0.85)";
     el.style.pointerEvents = "none";
     el.style.lineHeight = "1.3";
-    el.style.transition = "transform 0.2s ease-out";
+    el.style.transition = "transform 0.25s linear";
     el.style.width = "max-content";
+
+    const bar = document.createElement("div");
+    bar.style.width = "2px";
+    bar.style.borderRadius = "1px";
+    bar.style.alignSelf = "flex-end";
+    bar.style.transition = "height 0.25s linear";
+    el.appendChild(bar);
+
     const icon = document.createElement("img");
-    icon.style.width = "10px";
-    icon.style.height = "10px";
+    icon.style.width = "13px";
+    icon.style.height = "13px";
     el.appendChild(icon);
+
     const span = document.createElement("span");
     span.style.minWidth = "25px";
     el.appendChild(span);
+
     return el;
   }
 
   private createLabelElement(
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
+    barStrength: number,
   ): HTMLDivElement {
     const el = this.labelTemplate.cloneNode(true) as HTMLDivElement;
     el.style.fontFamily = this.game.config().theme().font();
-    this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+    const bar = el.children[0] as HTMLDivElement;
+    const icon = el.children[1] as HTMLImageElement;
+    const span = el.children[2] as HTMLSpanElement;
+    icon.src = soldierIcon;
+    icon.style.filter = isIncoming
+      ? INCOMING_ICON_FILTER
+      : OUTGOING_ICON_FILTER;
+    span.style.color = isIncoming ? INCOMING_COLOR : OUTGOING_COLOR;
+    span.textContent = renderTroops(attackerTroops);
+    bar.style.backgroundColor = isIncoming ? INCOMING_COLOR : OUTGOING_COLOR;
+    bar.style.height = `${barStrength * BAR_MAX_HEIGHT_PX}px`;
     this.container.appendChild(el);
     return el;
   }
@@ -279,20 +358,12 @@ export class AttackingTroopsOverlay implements Layer {
   private updateLabelContent(
     el: HTMLDivElement,
     attackerTroops: number,
-    defenderTroops: number,
-    isIncoming: boolean,
+    barStrength: number,
   ) {
-    const icon = el.children[0] as HTMLImageElement;
-    const span = el.children[1] as HTMLSpanElement;
-    if (isIncoming) {
-      icon.src = shieldIcon;
-      span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
-      span.textContent = renderTroops(attackerTroops);
-    } else {
-      icon.src = swordIcon;
-      span.style.color = troopAttackColor(attackerTroops, defenderTroops);
-      span.textContent = renderTroops(attackerTroops);
-    }
+    const bar = el.children[0] as HTMLDivElement;
+    const span = el.children[2] as HTMLSpanElement;
+    span.textContent = renderTroops(attackerTroops);
+    bar.style.height = `${barStrength * BAR_MAX_HEIGHT_PX}px`;
   }
 
   private removeLabel(attackID: string) {

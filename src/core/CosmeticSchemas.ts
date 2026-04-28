@@ -56,6 +56,8 @@ const CosmeticSchema = z.object({
   name: CosmeticNameSchema,
   affiliateCode: z.string().nullable(),
   product: ProductSchema.nullable(),
+  priceSoft: z.number().optional(),
+  priceHard: z.number().optional(),
   artist: z.string().optional(),
   rarity: z
     .enum(["common", "uncommon", "rare", "epic", "legendary"])
