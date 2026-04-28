@@ -332,7 +332,7 @@ export class PlayerImpl implements Player {
     return this._borderTiles;
   }
 
-  neighbors(): (Player | TerraNullius)[] {
+  nearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {

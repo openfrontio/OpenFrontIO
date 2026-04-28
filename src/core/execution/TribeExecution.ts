@@ -113,7 +113,7 @@ export class TribeExecution implements Execution {
     }
 
     if (this.neighborsTerraNullius) {
-      if (this.tribe.neighbors().some((n) => !n.isPlayer())) {
+      if (this.tribe.nearby().some((n) => !n.isPlayer())) {
         if (this.attackBehavior.sendAttack(this.mg.terraNullius())) return;
       } else {
         this.neighborsTerraNullius = false;

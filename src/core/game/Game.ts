@@ -737,7 +737,7 @@ export interface Player {
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
-  neighbors(): (Player | TerraNullius)[];
+  nearby(): (Player | TerraNullius)[];
   sharesBorderWith(other: Player | TerraNullius): boolean;
   relation(other: Player): Relation;
   allRelationsSorted(): { player: Player; relation: Relation }[];

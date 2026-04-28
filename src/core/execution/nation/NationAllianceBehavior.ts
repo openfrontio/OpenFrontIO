@@ -282,7 +282,7 @@ export class NationAllianceBehavior {
       case Difficulty.Impossible: {
         // On hard and impossible we try to not ally with all our neighbors (If we have 2+ neighbors)
         const borderingPlayers = this.player
-          .neighbors()
+          .nearby()
           .filter(
             (n): n is Player => n.isPlayer() && n.type() !== PlayerType.Bot,
           );

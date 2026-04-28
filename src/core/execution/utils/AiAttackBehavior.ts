@@ -59,7 +59,7 @@ export class AiAttackBehavior {
           this.game.isLand(t) &&
           this.game.ownerID(t) !== this.player?.smallID(),
       );
-    const playerNeighbors = this.player.neighbors();
+    const playerNeighbors = this.player.nearby();
     const borderingPlayerSet = new Set<Player>(
       border
         .map((t) => this.game.playerBySmallID(this.game.ownerID(t)))
@@ -360,7 +360,7 @@ export class AiAttackBehavior {
 
   private hasNeighboringBotWithStructures(): boolean {
     return this.player
-      .neighbors()
+      .nearby()
       .some(
         (n) =>
           n.isPlayer() &&
@@ -410,7 +410,7 @@ export class AiAttackBehavior {
   // Bots that own structures are prioritized as targets (they might have stolen our structures and they will delete them!)
   private attackBots(): boolean {
     const bots = this.player
-      .neighbors()
+      .nearby()
       .filter(
         (n): n is Player =>
           n.isPlayer() &&
@@ -696,7 +696,7 @@ export class AiAttackBehavior {
     }
 
     // Choose a new enemy randomly
-    const neighbors = this.player.neighbors();
+    const neighbors = this.player.nearby();
     for (const neighbor of this.random.shuffleArray(neighbors)) {
       if (!neighbor.isPlayer()) continue;
       if (this.player.isFriendly(neighbor)) continue;
@@ -716,7 +716,7 @@ export class AiAttackBehavior {
     if (this.game.config().disableAlliances()) return null;
 
     const traitors = this.player
-      .neighbors()
+      .nearby()
       .filter(
         (n): n is Player =>
           n.isPlayer() && this.player.isFriendly(n) === false && n.isTraitor(),
