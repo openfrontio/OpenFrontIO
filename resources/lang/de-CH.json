@@ -1,4 +1,10 @@
 {
+  "lang": {
+    "en": "Swiss-German",
+    "native": "Schweizerdeutsch",
+    "svg": "gsw",
+    "lang_code": "de-CH"
+  },
   "common": {
     "close": "Schliesse",
     "copy": "Kopiere",
@@ -134,7 +140,7 @@
     "info_trade": "Benutz \"Hanu stoppe\" um ufzhöre em Spieler Gold über euchi Handusschiff z gäh und Gold vo Handusschiffe vom Spieler z erhaute. Wenn dir beidi wieder uf \"Handu beginne\" drücket, geit es wieder los.",
     "info_ally_panel": "Bündnis Infoberich",
     "info_ally_desc": "Wenn me sech mit emne Spieler verbündet, wärde fougendi Icons sichtbar:",
-    "ally_betray": "Verrat di Verbündete, beänd d Alliant, stopp der Handu und schwäch dini Verteidigung. Der Handu zwüsche Ihne wird für 5 Minute ungerbroche (oder bis du di wieder verbündisch) und angeri chöi ou der Handu isteue. Und wenn der anger Spieler nid säuber Verräter isch gsi, wirsch du 30 Sekunge lang aus Verräter markiert. Während dere Zit wird es Symbou oberhaub vo dim Name azeigt und dini Verteidigung wird um 50% reduziert. Dass Bots sech verbünde isch eher unwahrschinlech aber Spieler werde es sech sicher vorher zwöimou überlege.",
+    "ally_betray": "Verrat di Verbündete, beänded d Alliaz, stoppt der Handu und schwächt dini Verteidigung. Der Handu zwüsche Ihne wird für 5 Minute ungerbroche (oder bis du di wieder verbündisch) und angeri chöi ou der Handu isteue. Und wenn der anger Spieler nid säuber Verräter isch gsi, wirsch du 30 Sekunge lang aus Verräter markiert. Während dere Zit wird es Symbou oberhaub vo dim Name azeigt und dini Verteidigung wird um 50% reduziert. Dass Bots sech verbünde isch eher unwahrschinlech aber Spieler werde es sech sicher vorher zwöimou überlege.",
     "ally_donate": "Spend einigi vo dine truppe a emne verbündete. Cha brucht wärde, wenn si weni truppe hei, oder um se bi emne vernichtende Schlag z ungerschtütze.",
     "ally_donate_gold": "Spend e Teil vo dim Gold a dini verbündete. Wird brucht, wenn si kei Gold für gebäude hei, oder wenn di Teampartner isch am Spare für e MIRV.",
     "build_menu_title": "Baumenü",
@@ -396,7 +402,6 @@
     "title": "Privati Lobby erstellen",
     "mode": "Modus",
     "team_count": "Teamazau",
-    "team_type": "Team Typ",
     "options_title": "Optione",
     "bots": "Stämm: ",
     "bots_disabled": "Usgschaute",
@@ -435,7 +440,8 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Start-Gold (Millionen)",
     "starting_gold_placeholder": "5",
-    "leave_confirmation": "Bisch du dir würklech sicher, dass du s Spieu wosch verlasse?"
+    "leave_confirmation": "Bisch du dir würklech sicher, dass du s Spieu wosch verlasse?",
+    "team_type": "Team Typ"
   },
   "team_colors": {
     "red": "Rot",
@@ -894,16 +900,16 @@
   },
   "territory_patterns": {
     "title": "Gebietsmuschter",
-    "colors": "Farbene",
     "purchase": "Choufe",
-    "show_only_owned": "Mini Designs",
-    "all_owned": "Du besitztisch aui Skins! Lueg später wieder ine für neui Artikle.",
-    "not_logged_in": "Nid agmäudet",
     "pattern": {
       "default": "Normau"
     },
     "select_skin": "Skin uswähle",
-    "selected": "usgwäut"
+    "selected": "usgwäut",
+    "colors": "Farbene",
+    "show_only_owned": "Mini Designs",
+    "all_owned": "Du besitztisch aui Skins! Lueg später wieder ine für neui Artikle.",
+    "not_logged_in": "Nid agmäudet"
   },
   "flag_input": {
     "title": "Flagge uswähle",

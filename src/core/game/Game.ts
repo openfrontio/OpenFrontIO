@@ -150,6 +150,12 @@ export enum GameMapType {
   StraitOfMalacca = "Strait Of Malacca",
   Luna = "Luna",
   Conakry = "Conakry",
+  Caucasus = "Caucasus",
+  LosAngeles = "Los Angeles",
+  BeringSea = "Bering Sea",
+  Antarctica = "Antarctica",
+  ArchipelagoSea = "ArchipelagoSea",
+  BajaCalifornia = "Baja California",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -165,6 +171,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.Antarctica,
   ],
   regional: [
     GameMapType.BritanniaClassic,
@@ -205,6 +212,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.GreatLakes,
     GameMapType.StraitOfMalacca,
     GameMapType.Conakry,
+    GameMapType.Caucasus,
+    GameMapType.LosAngeles,
+    GameMapType.BeringSea,
+    GameMapType.ArchipelagoSea,
+    GameMapType.BajaCalifornia,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -606,6 +618,7 @@ export interface Unit {
   // Health
   hasHealth(): boolean;
   retreating(): boolean;
+  setRetreating(retreating: boolean): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;
@@ -920,6 +933,12 @@ export interface Game extends GameMap {
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
   hasWaterComponent(tile: TileRef, component: number): boolean;
+  /**
+   * Returns the set of water components that `player` shares with at least one
+   * valid trade partner (cached). Used by nation AI for port-placement
+   * heuristics. `null` means no usable water body for ports.
+   */
+  sharedWaterComponents(player: Player): Set<number> | null;
   /** Incremented each time the water navigation graph is rebuilt (e.g. after nuke terrain change). */
   waterGraphVersion(): number;
 

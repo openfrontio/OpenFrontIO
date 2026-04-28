@@ -37,7 +37,6 @@ const frequency: Partial<Record<GameMapName, number>> = {
   BetweenTwoSeas: 5,
   BlackSea: 6,
   Britannia: 5,
-  BritanniaClassic: 4,
   DeglaciatedAntarctica: 4,
   EastAsia: 5,
   Europe: 7,
@@ -72,7 +71,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Didier: 1,
   AmazonRiver: 3,
   BosphorusStraits: 3,
-  BeringStrait: 4,
+  BeringStrait: 2,
   Sierpinski: 10,
   TheBox: 3,
   Yenisei: 6,
@@ -90,6 +89,12 @@ const frequency: Partial<Record<GameMapName, number>> = {
   StraitOfMalacca: 4,
   Luna: 6,
   Conakry: 3,
+  Caucasus: 5,
+  LosAngeles: 8,
+  BeringSea: 5,
+  Antarctica: 1,
+  ArchipelagoSea: 3,
+  BajaCalifornia: 4,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -146,6 +151,8 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Baikal,
   GameMapType.Alps,
   GameMapType.TheBox,
+  GameMapType.Luna,
+  GameMapType.ArchipelagoSea,
 ]);
 
 // Modifiers that cannot be active at the same time.
@@ -240,10 +247,9 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // No extreme modifiers on FourIslands - Causes 3h long stalemates
-    if (map === GameMapType.FourIslands) {
+    // No gold multi on FourIslands team games - Too high chance of 3h long stalemates
+    if (map === GameMapType.FourIslands && mode === GameMode.Team) {
       excludedModifiers.push("goldMultiplier");
-      excludedModifiers.push("startingGold25M");
     }
 
     // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
@@ -526,6 +532,9 @@ export class MapPlaylist {
     if (map === GameMapType.FourIslands && Math.random() < 0.75) {
       return 4;
     }
+    if (map === GameMapType.Luna && Math.random() < 0.75) {
+      return 2;
+    }
 
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
     const roll = Math.random() * totalWeight;
@@ -660,7 +669,8 @@ export class MapPlaylist {
     if (playerTeams === HumansVsNations) return 5 * 10;
     if (startingGold !== undefined && startingGold >= 25_000_000)
       return 150 * 10;
-    if (startingGold) return SAM_CONSTRUCTION_TICKS + 15 * 10;
+    if (startingGold !== undefined && startingGold >= 5_000_000)
+      return SAM_CONSTRUCTION_TICKS + 15 * 10;
     return 5 * 10;
   }
 

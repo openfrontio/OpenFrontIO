@@ -17,6 +17,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },
@@ -32,6 +34,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },
@@ -47,6 +51,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product: null,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },
@@ -62,6 +68,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: "storeA",
           itemAffiliateCode: "storeB",
         },
@@ -77,6 +85,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },
@@ -92,6 +102,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "pattern:*",
           requiredFlare: "pattern:stripes:red",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: "storeA",
           itemAffiliateCode: "storeA",
         },
@@ -107,6 +119,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product: null,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },
@@ -122,12 +136,47 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "flag:*",
           requiredFlare: "flag:cool",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },
         false,
       ),
     ).toBe("purchasable");
+  });
+
+  it("returns purchasable when item has currency price and no product", () => {
+    expect(
+      cosmeticRelationship(
+        {
+          wildcardFlare: "flag:*",
+          requiredFlare: "flag:cool",
+          product: null,
+          priceSoft: 100,
+          affiliateCode: null,
+          itemAffiliateCode: null,
+        },
+        makeUserMe([]),
+      ),
+    ).toBe("purchasable");
+  });
+
+  it("returns blocked when item has currency price but affiliate codes do not match", () => {
+    expect(
+      cosmeticRelationship(
+        {
+          wildcardFlare: "flag:*",
+          requiredFlare: "flag:cool",
+          product: null,
+          priceSoft: 100,
+          priceHard: 50,
+          affiliateCode: "storeA",
+          itemAffiliateCode: "storeB",
+        },
+        makeUserMe([]),
+      ),
+    ).toBe("blocked");
   });
 
   it("returns owned when user has wildcard flare for patterns", () => {
@@ -137,6 +186,8 @@ describe("cosmeticRelationship", () => {
           wildcardFlare: "pattern:*",
           requiredFlare: "pattern:stripes:red",
           product,
+          priceSoft: undefined,
+          priceHard: undefined,
           affiliateCode: null,
           itemAffiliateCode: null,
         },

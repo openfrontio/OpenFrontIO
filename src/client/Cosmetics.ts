@@ -15,7 +15,13 @@ import {
   PlayerPattern,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
-import { createCheckoutSession, getApiBase, getUserMe } from "./Api";
+import {
+  createCheckoutSession,
+  getApiBase,
+  getUserMe,
+  invalidateUserMe,
+  purchaseWithCurrency,
+} from "./Api";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -23,17 +29,63 @@ export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 
-export async function handlePurchase(
-  product: Product,
-  colorPaletteName?: string,
-) {
-  const url = await createCheckoutSession(product.priceId, colorPaletteName);
-  if (url === false) {
-    alert("Failed to create checkout session.");
+export type PaymentMethod = "dollar" | "hard" | "soft";
+
+export async function purchaseCosmetic(
+  resolved: ResolvedCosmetic,
+  method: PaymentMethod,
+): Promise<void> {
+  if (!resolved.cosmetic) return;
+  const c = resolved.cosmetic;
+  const colorPaletteName = resolved.colorPalette?.name;
+
+  if (method === "dollar") {
+    if (!c.product) {
+      alert(translateText("store.checkout_failed"));
+      return;
+    }
+    const url = await createCheckoutSession(
+      c.product.priceId,
+      colorPaletteName,
+    );
+    if (url === false) {
+      alert(translateText("store.checkout_failed"));
+      return;
+    }
+    window.location.href = url;
     return;
   }
 
-  window.location.href = url;
+  // Currency purchase (hard or soft)
+  const price = method === "hard" ? (c.priceHard ?? 0) : (c.priceSoft ?? 0);
+  const userMe = await getUserMe();
+  if (userMe === false) {
+    alert(translateText("store.login_required"));
+    return;
+  }
+  const balance =
+    method === "hard"
+      ? (userMe.player.currency?.hard ?? 0)
+      : (userMe.player.currency?.soft ?? 0);
+  if (balance < price) {
+    alert(translateText("store.not_enough_currency"));
+    return;
+  }
+
+  const cosmeticType = resolved.type as "pattern" | "skin" | "flag";
+  const success = await purchaseWithCurrency(
+    cosmeticType,
+    c.name,
+    method,
+    colorPaletteName,
+  );
+  if (!success) {
+    alert(translateText("store.purchase_failed"));
+    return;
+  }
+  alert(translateText("store.purchase_success", { name: c.name }));
+  invalidateUserMe();
+  window.location.reload();
 }
 
 function simpleHash(str: string): string {
@@ -102,6 +154,8 @@ export function cosmeticRelationship(
     wildcardFlare: string;
     requiredFlare: string;
     product: Product | null;
+    priceSoft?: number;
+    priceHard?: number;
     affiliateCode: string | null;
     itemAffiliateCode: string | null;
   },
@@ -118,11 +172,16 @@ export function cosmeticRelationship(
     return "owned";
   }
 
-  if (opts.product === null) {
+  if (opts.affiliateCode !== opts.itemAffiliateCode) {
     return "blocked";
   }
 
-  if (opts.affiliateCode !== opts.itemAffiliateCode) {
+  // Purchasable if any purchase method is available
+  if (opts.priceSoft !== undefined || opts.priceHard !== undefined) {
+    return "purchasable";
+  }
+
+  if (opts.product === null) {
     return "blocked";
   }
 
@@ -166,6 +225,8 @@ export function patternRelationship(
       wildcardFlare: "pattern:*",
       requiredFlare: `pattern:${pattern.name}:${colorPalette.name}`,
       product: pattern.product,
+      priceSoft: pattern.priceSoft,
+      priceHard: pattern.priceHard,
       affiliateCode,
       itemAffiliateCode: pattern.affiliateCode,
     },
@@ -183,6 +244,8 @@ export function flagRelationship(
       wildcardFlare: "flag:*",
       requiredFlare: `flag:${flag.name}`,
       product: flag.product,
+      priceSoft: flag.priceSoft,
+      priceHard: flag.priceHard,
       affiliateCode,
       itemAffiliateCode: flag.affiliateCode,
     },

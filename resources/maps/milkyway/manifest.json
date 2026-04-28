@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 24807,
+    "num_land_tiles": 24777,
     "width": 375
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 106678,
+    "num_land_tiles": 105978,
     "width": 750
   },
   "name": "milkyway",

@@ -60,6 +60,9 @@ async function drain(): Promise<void> {
     const batch: GameUpdateViewData[] = [];
     const onTickUpdate = (gu: GameUpdateViewData | ErrorUpdate) => {
       if (!("updates" in gu)) {
+        if ("errMsg" in gu) {
+          sendMessage({ type: "game_error", error: gu } as WorkerMessage);
+        }
         return;
       }
       batch.push(gu);
@@ -131,6 +134,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   switch (message.type) {
     case "init":
       try {
+        // Set before createGameRunner so map fetches via mapLoader pick up the
+        // CDN base. Workers have no `window`, so AssetUrls falls back to this.
+        globalThis.__CDN_BASE__ = message.cdnBase;
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,

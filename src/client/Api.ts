@@ -92,6 +92,49 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   return __userMe;
 }
 
+export function invalidateUserMe() {
+  __userMe = null;
+}
+
+export async function purchaseWithCurrency(
+  cosmeticType: "pattern" | "skin" | "flag",
+  cosmeticName: string,
+  currencyType: "hard" | "soft",
+  colorPaletteName?: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/shop/purchase`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({
+        cosmeticType,
+        cosmeticName,
+        currencyType,
+        colorPaletteName,
+      }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "purchaseWithCurrency: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("purchaseWithCurrency: request failed", e);
+    return false;
+  }
+}
+
 export async function createCheckoutSession(
   priceId: string,
   colorPaletteName?: string,

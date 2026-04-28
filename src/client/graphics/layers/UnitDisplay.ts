@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import {
   GhostStructureChangedEvent,
   ToggleStructureEvent,
@@ -52,15 +53,9 @@ export class UnitDisplay extends LitElement implements Layer {
 
   init() {
     const config = this.game.config();
+    const userSettings = new UserSettings();
 
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
-    if (savedKeybinds) {
-      try {
-        this.keybinds = JSON.parse(savedKeybinds);
-      } catch (e) {
-        console.warn("Invalid keybinds JSON:", e);
-      }
-    }
+    this.keybinds = userSettings.parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
@@ -238,7 +233,7 @@ export class UnitDisplay extends LitElement implements Layer {
         ${hovered
           ? html`
               <div
-                class="absolute -top-[250%] left-1/2 -translate-x-1/2 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
                   ${translateText(
@@ -248,6 +243,13 @@ export class UnitDisplay extends LitElement implements Layer {
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
                 </div>
+                ${unitType === UnitType.Warship
+                  ? html`<div
+                      class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
+                    >
+                      ⇧ ${translateText("build_menu.warship_shift_hint")}
+                    </div>`
+                  : null}
                 <div class="flex items-center justify-center gap-1">
                   <img src=${goldCoinIcon} width="13" height="13" />
                   <span class="text-yellow-300"

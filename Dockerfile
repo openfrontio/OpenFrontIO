@@ -77,7 +77,7 @@ ENV GIT_COMMIT="$GIT_COMMIT"
 RUN <<'EOF' tee /usr/local/bin/start.sh
 #!/bin/sh
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
-    exec timeout 18h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+    exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
     exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 fi

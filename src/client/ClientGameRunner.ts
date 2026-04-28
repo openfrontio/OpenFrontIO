@@ -31,7 +31,9 @@ import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
+  DoBreakAllianceEvent,
   DoGroundAttackEvent,
+  DoRequestAllianceEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -40,8 +42,10 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
+  SendBreakAllianceIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -57,6 +61,7 @@ export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
+  playerRole: string | null;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -259,7 +264,12 @@ async function createClientGame(
   const canvas = createCanvas();
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
-    const gameRenderer = createRenderer(canvas, gameView, eventBus);
+    const gameRenderer = createRenderer(
+      canvas,
+      gameView,
+      eventBus,
+      lobbyConfig.playerRole,
+    );
 
     console.log(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -380,6 +390,14 @@ export class ClientGameRunner {
     this.eventBus.on(
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoRequestAllianceEvent,
+      this.doRequestAllianceUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoBreakAllianceEvent,
+      this.doBreakAllianceUnderCursor.bind(this),
     );
 
     this.renderer.initialize();
@@ -654,17 +672,52 @@ export class ClientGameRunner {
         }
       }
 
-      if (upgradeUnits.length > 0) {
-        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-        if (bestUpgrade) {
-          this.eventBus.emit(
-            new SendUpgradeStructureIntentEvent(
-              bestUpgrade.unitId,
-              bestUpgrade.unitType,
-            ),
-          );
+      if (upgradeUnits.length === 0) {
+        return;
+      }
+
+      // Upgrade the closest affordable building. But if there's an unaffordable
+      // building (any type) that's closer to clickedTile than the best candidate,
+      // do nothing — the player clicked on that unaffordable building intending
+      // to upgrade it, and we must not spend their gold on a different building.
+      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+      if (!bestUpgrade) {
+        return;
+      }
+
+      // Check if any unaffordable building is closer than bestUpgrade
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+          const myPlayerID = this.myPlayer!.id();
+          const closestOfType = this.gameView
+            .nearbyUnits(
+              clickedTile,
+              this.gameView.config().structureMinDist(),
+              bu.type,
+            )
+            .filter(({ unit }) => unit.owner().id() === myPlayerID)
+            .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+          if (closestOfType) {
+            const dist = this.gameView.manhattanDist(
+              clickedTile,
+              closestOfType.unit.tile(),
+            );
+            if (dist <= bestUpgrade.distance) {
+              // An unaffordable building of type bu.type is at least as close
+              // as bestUpgrade — player clicked on it, not on bestUpgrade.
+              return;
+            }
+          }
         }
       }
+
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          bestUpgrade.unitId,
+          bestUpgrade.unitType,
+        ),
+      );
     });
   }
 
@@ -714,6 +767,58 @@ export class ClientGameRunner {
             this.gameView.owner(tile).id(),
             this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
+        );
+      }
+    });
+  }
+
+  private doRequestAllianceUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const myPlayer = this.myPlayer;
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    const recipient = tileOwner as PlayerView;
+
+    myPlayer.actions(tile).then((actions) => {
+      if (actions.interaction?.canSendAllianceRequest) {
+        this.eventBus.emit(
+          new SendAllianceRequestIntentEvent(myPlayer, recipient),
+        );
+      }
+    });
+  }
+
+  private doBreakAllianceUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const myPlayer = this.myPlayer;
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    const recipient = tileOwner as PlayerView;
+
+    myPlayer.actions(tile).then((actions) => {
+      if (actions.interaction?.canBreakAlliance) {
+        this.eventBus.emit(
+          new SendBreakAllianceIntentEvent(myPlayer, recipient),
         );
       }
     });
