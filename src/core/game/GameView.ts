@@ -135,7 +135,9 @@ export class UnitView {
   transportShipState(): TransportShipState {
     return this.data.transportShipState ?? { isRetreating: false, troops: 0 };
   }
-  updateTransportShipState(_update: Partial<TransportShipState>): void {
+  updateTransportShipState(
+    _update: Pick<TransportShipState, "isRetreating">,
+  ): void {
     throw new Error("updateTransportShipState is not supported on UnitView");
   }
   tile(): TileRef {

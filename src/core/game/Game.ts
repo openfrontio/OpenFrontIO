@@ -632,9 +632,10 @@ export interface Unit {
   updateWarshipState(update: Partial<WarshipState>): void;
   isInCombat(): boolean;
   markInCombat(): void;
-  touch(): void;
   transportShipState(): TransportShipState;
-  updateTransportShipState(update: Partial<TransportShipState>): void;
+  updateTransportShipState(
+    update: Pick<TransportShipState, "isRetreating">,
+  ): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;

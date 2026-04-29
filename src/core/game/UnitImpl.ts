@@ -386,7 +386,9 @@ export class UnitImpl implements Unit {
     };
   }
 
-  updateTransportShipState(update: Partial<TransportShipState>): void {
+  updateTransportShipState(
+    update: Pick<TransportShipState, "isRetreating">,
+  ): void {
     let changed = false;
     if (
       update.isRetreating !== undefined &&
