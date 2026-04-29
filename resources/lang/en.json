@@ -239,7 +239,7 @@
     "clear_session": "Clear Session",
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "enter_email_address": "Please enter an email address",
-    "personal_player_id": "Personal Player ID:"
+    "public_player_id": "Public Player ID:"
   },
   "leaderboard_modal": {
     "title": "Leaderboard",
