@@ -54,16 +54,11 @@ export class DesktopNavBar extends LitElement {
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8">
-            <span
-              class="block h-full aspect-[1364/259] bg-malibu-blue"
-              style="-webkit-mask: url(${assetUrl(
-                "images/OpenFrontLogo.svg",
-              )}) no-repeat center / contain; mask: url(${assetUrl(
-                "images/OpenFrontLogo.svg",
-              )}) no-repeat center / contain;"
-              role="img"
-              aria-label="OpenFront"
-            ></span>
+            <img
+              class="block h-full aspect-[1364/259]"
+              src=${assetUrl("images/OpenFrontLogo.svg")}
+              alt="OpenFront"
+            />
           </div>
           <div
             id="game-version"

@@ -878,7 +878,7 @@ export class NationStructureBehavior {
     }
 
     // Neighbor structures — all non-embargoed non-bot neighbors.
-    for (const neighbor of player.neighbors()) {
+    for (const neighbor of player.nearby()) {
       if (!neighbor.isPlayer()) continue;
       if (neighbor.type() === PlayerType.Bot) continue;
       if (!player.canTrade(neighbor)) continue;
@@ -1023,7 +1023,7 @@ export class NationStructureBehavior {
     // Check if we have any non-friendly non-bot neighbors with more troops
     const hasHostileNeighbor =
       player
-        .neighbors()
+        .nearby()
         .filter(
           (n): n is Player =>
             n.isPlayer() &&

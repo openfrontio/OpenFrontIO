@@ -282,7 +282,7 @@ export class NationAllianceBehavior {
       case Difficulty.Impossible: {
         // On hard and impossible we try to not ally with all our neighbors (If we have 2+ neighbors)
         const borderingPlayers = this.player
-          .neighbors()
+          .nearby()
           .filter(
             (n): n is Player => n.isPlayer() && n.type() !== PlayerType.Bot,
           );
@@ -390,9 +390,14 @@ export class NationAllianceBehavior {
     }
 
     // Betray very weak players (similar check as above but for the easier difficulties)
-    // This doesn't check for maxTroops and isn't really smart. It opens the nations up for attacks, but that's intended.
+    // This doesn't check for maxTroops and isn't really smart. It makes nations vulnerable, but that's intended.
+    // On easy, don't betray humans
     if (
       (difficulty === Difficulty.Easy || difficulty === Difficulty.Medium) &&
+      !(
+        difficulty === Difficulty.Easy &&
+        otherPlayer.type() === PlayerType.Human
+      ) &&
       this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);
