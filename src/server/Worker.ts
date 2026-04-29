@@ -106,7 +106,7 @@ export async function startWorker() {
 
   app.set("trust proxy", 3);
   app.use(compression());
-  app.use(express.json());
+  // Note: express.json({ limit: "5mb" }) is already applied above (line 51)
 
   app.use(
     express.static(path.join(__dirname, "../../out"), {
@@ -209,6 +209,57 @@ export async function startWorker() {
     );
     res.json(game.gameInfo());
   });
+
+
+  // Add other endpoints from your original server
+  app.post("/api/start_game/:id", async (req, res) => {
+    log.info(`starting private lobby with id ${req.params.id}`);
+    const game = gm.game(req.params.id);
+    if (!game) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    if (game.isPublic()) {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      const clientIP = req.ip || req.socket.remoteAddress || "unknown";
+      log.info(
+        `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
+      );
+      return res.status(400).json({ error: "Cannot start public game" });
+    }
+
+    // SEC-02: Verify that the caller is the lobby creator
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ error: "Authorization header required to start a game" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const result = await verifyClientToken(token, config);
+    if (result.type === "error") {
+      log.warn(`Invalid token for start_game: ${result.message}`);
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const callerPersistentId = result.persistentId;
+    const existingClientId =
+      game.getClientIdForPersistentId(callerPersistentId);
+    if (
+      existingClientId === null ||
+      existingClientId !== game.gameInfo().lobbyCreatorClientID
+    ) {
+      log.warn(
+        `Unauthorized start_game attempt by ${callerPersistentId?.substring(0, 8)}`,
+      );
+      return res
+        .status(403)
+        .json({ error: "Only the lobby creator can start the game" });
+    }
+
+    game.start();
+    res.status(200).json({ success: true });
+  });
+
 
   app.get("/api/game/:id/exists", async (req, res) => {
     const lobbyId = req.params.id;

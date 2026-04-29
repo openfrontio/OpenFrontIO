@@ -373,6 +373,12 @@ export class GameMapImpl implements GameMap {
     }
     return tiles;
   }
+  /**
+   * Flood-fill search starting from `tile`, collecting all connected tiles
+   * accepted by `filter`. Uses stack-based (DFS) traversal for performance
+   * — Array.pop() is O(1) vs Array.shift() O(n). The returned Set is
+   * identical regardless of traversal order.
+   */
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
@@ -385,8 +391,7 @@ export class GameMapImpl implements GameMap {
     }
 
     while (q.length > 0) {
-      const curr = q.pop();
-      if (curr === undefined) continue;
+      const curr = q.pop()!;
       for (const n of this.neighbors(curr)) {
         if (!seen.has(n) && filter(this, n)) {
           seen.add(n);

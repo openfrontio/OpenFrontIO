@@ -48,7 +48,7 @@ export class GameServer {
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
-  private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
+  private disconnectedTimeout = 30_000; // 30 seconds
 
   private turns: Turn[] = [];
   private intents: StampedIntent[] = [];
@@ -177,7 +177,9 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
-    this.gameConfig.hostCheats = gameConfig.hostCheats;
+    if (gameConfig.hostCheats !== undefined) {
+      this.gameConfig.hostCheats = gameConfig.hostCheats;
+    }
   }
 
   private isKicked(clientID: ClientID): boolean {
@@ -577,7 +579,7 @@ export class GameServer {
         }
       } catch (error) {
         this.log.info(
-          `error handline websocket request in game server: ${error}`,
+          `error handling websocket request in game server: ${error}`,
           {
             clientID: client.clientID,
           },
@@ -826,7 +828,9 @@ export class GameServer {
       turn: pastTurn,
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
-      c.ws.send(msg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 

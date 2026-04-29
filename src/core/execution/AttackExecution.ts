@@ -205,11 +205,14 @@ export class AttackExecution implements Execution {
 
     const survivors = this.attack.troops() - deaths;
     this._owner.addTroops(survivors);
+
+    // BUG-01: Check retreated() before delete() to preserve attack state for stat recording
+    const wasRetreated = this.attack.retreated();
     this.attack.delete();
     this.active = false;
 
     // Not all retreats are canceled attacks
-    if (this.attack.retreated()) {
+    if (wasRetreated) {
       // Record stats
       this.mg.stats().attackCancel(this._owner, this.target, survivors);
     }
