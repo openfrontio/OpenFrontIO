@@ -347,6 +347,7 @@ export class NameLayer implements Layer {
     render.nameDiv.style.fontSize = `${render.fontSize}px`;
     render.nameDiv.style.lineHeight = `${render.fontSize}px`;
     render.flagImg.style.height = `${render.fontSize}px`;
+    render.flagImg.style.marginRight = `${Math.round(render.fontSize * 0.15)}px`;
     render.troopsDiv.style.fontSize = `${render.fontSize}px`;
 
     render.nameSpan.textContent = render.player.displayName();
