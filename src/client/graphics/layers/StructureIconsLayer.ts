@@ -241,6 +241,7 @@ export class StructureIconsLayer implements Layer {
       // "contextrestored" event while we're a WebGL context. It also triggers
       // on Alt-R, but we can listen to that event ourselves here
       if (this.rendererInitialized) {
+        this.resizeCanvas();
         this.rebuildAllIcons();
       }
     });

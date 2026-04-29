@@ -89,10 +89,7 @@ export class SpriteFactory {
         try {
           texture.destroy(true);
         } catch (e) {
-          console.error(
-            "Error clearing texture cache during context restoration:",
-            e,
-          );
+          console.error("Error clearing texture cache:", e);
         }
       }
     }
