@@ -144,13 +144,14 @@ export enum GameMapType {
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
   MilkyWay = "MilkyWay",
-  Mediterranean = "Mediterranean",
+  MareNostrum = "Mare Nostrum",
   Dyslexdria = "Dyslexdria",
   GreatLakes = "Great Lakes",
   StraitOfMalacca = "Strait Of Malacca",
   Luna = "Luna",
   Conakry = "Conakry",
   Caucasus = "Caucasus",
+  LosAngeles = "Los Angeles",
   BeringSea = "Bering Sea",
   Antarctica = "Antarctica",
   ArchipelagoSea = "ArchipelagoSea",
@@ -207,11 +208,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Arctic,
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
-    GameMapType.Mediterranean,
+    GameMapType.MareNostrum,
     GameMapType.GreatLakes,
     GameMapType.StraitOfMalacca,
     GameMapType.Conakry,
     GameMapType.Caucasus,
+    GameMapType.LosAngeles,
     GameMapType.BeringSea,
     GameMapType.ArchipelagoSea,
     GameMapType.BajaCalifornia,
@@ -737,7 +739,7 @@ export interface Player {
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
-  neighbors(): (Player | TerraNullius)[];
+  nearby(): (Player | TerraNullius)[];
   sharesBorderWith(other: Player | TerraNullius): boolean;
   relation(other: Player): Relation;
   allRelationsSorted(): { player: Player; relation: Relation }[];

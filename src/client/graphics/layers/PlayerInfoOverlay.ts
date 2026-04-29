@@ -36,6 +36,7 @@ import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
+const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
@@ -327,13 +328,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               translate="no"
             >
               <span class="flex items-center gap-px leading-none text-xs"
-                ><span
-                  class="w-2.5 h-2.5 inline-block"
-                  style="background-color: ${attackingTroops > 0
-                    ? "var(--color-aquarius)"
-                    : "rgba(255,255,255,0.4)"}; -webkit-mask: url(${soldierIcon}) no-repeat center / contain; mask: url(${soldierIcon}) no-repeat center / contain;"
-                ></span
-                >↑</span
+                ><img
+                  class="w-2.5 h-2.5 inline-block ${attackingTroops > 0
+                    ? ""
+                    : "brightness-0 invert opacity-40"}"
+                  src=${attackingTroops > 0 ? soldierIconAquarius : soldierIcon}
+                  alt=""
+                  aria-hidden="true"
+                />↑</span
               >
               <span class="tabular-nums leading-none text-sm mt-0.5"
                 >${renderTroops(attackingTroops)}</span

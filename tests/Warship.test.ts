@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { PathStatus } from "../src/core/pathfinding/types";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -327,6 +328,7 @@ describe("Warship", () => {
       throw new Error("unreachable");
     }
 
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
     game.config().warshipRetreatHealthThreshold = () => 600;
 
     const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
@@ -352,5 +354,201 @@ describe("Warship", () => {
     expect(
       distanceToPort <= 25 || warship.targetTile() === homePort.tile(),
     ).toBe(true);
+  });
+
+  test("Warship gets active healing when docked at a friendly port", async () => {
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      expect(typeof maxHealth).toBe("number");
+      throw new Error("unreachable");
+    }
+
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipPortHealingBonusPerLevel = () => 6;
+    game.config().warshipDockingRange = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    const portTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    const warshipExecution = new WarshipExecution(warship);
+    game.addExecution(warshipExecution);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+
+    for (let i = 0; i < 60; i++) {
+      game.executeNextTick();
+      if (warshipExecution.isDocked()) {
+        break;
+      }
+    }
+
+    expect(warshipExecution.isDocked()).toBe(true);
+    const before = warship.health();
+    game.executeNextTick();
+    expect(warship.health()).toBe(before + 6);
+  });
+
+  test("Warship waits at port when capacity is full", async () => {
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipDockingRange = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    const portTile = game.ref(coastX, 10);
+    const warship1Tile = game.ref(coastX + 1, 11);
+    const warship2Tile = game.ref(coastX + 1, 12);
+
+    player1.buildUnit(UnitType.Port, portTile, {});
+    const warship1 = player1.buildUnit(UnitType.Warship, warship1Tile, {
+      patrolTile: warship1Tile,
+    });
+    const warship2 = player1.buildUnit(UnitType.Warship, warship2Tile, {
+      patrolTile: warship2Tile,
+    });
+
+    const exec1 = new WarshipExecution(warship1);
+    const exec2 = new WarshipExecution(warship2);
+    game.addExecution(exec1);
+    game.addExecution(exec2);
+
+    game.executeNextTick();
+    warship1.modifyHealth(-300);
+    warship2.modifyHealth(-300);
+
+    for (let i = 0; i < 80; i++) {
+      game.executeNextTick();
+      const warship2DistanceToPort = game.euclideanDistSquared(
+        warship2.tile(),
+        portTile,
+      );
+      if (
+        exec1.isDocked() &&
+        !exec2.isDocked() &&
+        warship2DistanceToPort <= 25 &&
+        warship2.retreating()
+      ) {
+        break;
+      }
+    }
+
+    const warship2DistanceToPort = game.euclideanDistSquared(
+      warship2.tile(),
+      portTile,
+    );
+    expect(exec1.isDocked()).toBe(true);
+    expect(exec2.isDocked()).toBe(false);
+    expect(warship2DistanceToPort).toBeLessThanOrEqual(25);
+    expect(warship2.retreating()).toBe(true);
+  });
+
+  test("Warship cancels docking if its retreat port is destroyed", async () => {
+    game.config().warshipPassiveHealing = () => 0;
+    game.config().warshipPortHealingBonusPerLevel = () => 0;
+    game.config().warshipDockingRange = () => 5;
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    const homePort = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    const warshipExecution = new WarshipExecution(warship);
+    game.addExecution(warshipExecution);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+
+    for (let i = 0; i < 60; i++) {
+      game.executeNextTick();
+      if (warshipExecution.isDocked()) {
+        break;
+      }
+    }
+
+    expect(warshipExecution.isDocked()).toBe(true);
+
+    homePort.delete();
+    game.executeNextTick();
+
+    expect(warshipExecution.isDocked()).toBe(false);
+    expect(warship.retreating()).toBe(false);
+  });
+
+  test("Warship drops a stale target after patrol movement changes range", async () => {
+    game.config().warshipTargettingRange = () => 1;
+    game.config().warshipShellAttackRate = () => Number.MAX_SAFE_INTEGER;
+    const startTile = game.ref(coastX + 1, 10);
+    const movedTile = game
+      .map()
+      .neighbors(startTile)
+      .find((tile) => game.isOcean(tile));
+
+    expect(movedTile).toBeDefined();
+
+    const warship = player1.buildUnit(UnitType.Warship, startTile, {
+      patrolTile: startTile,
+    });
+    warship.setTargetTile(movedTile!);
+    const transport = player2.buildUnit(UnitType.TransportShip, movedTile!, {
+      targetTile: movedTile!,
+    });
+
+    const execution = new WarshipExecution(warship);
+    const executionInternals = execution as unknown as {
+      findTargetUnit: () => typeof transport | undefined;
+      pathfinder: {
+        next: () => { status: PathStatus; node: number };
+      };
+    };
+    execution.init(game, game.ticks());
+
+    vi.spyOn(executionInternals, "findTargetUnit")
+      .mockReturnValueOnce(transport)
+      .mockReturnValueOnce(undefined);
+    vi.spyOn(executionInternals.pathfinder, "next").mockReturnValue({
+      status: PathStatus.NEXT,
+      node: movedTile!,
+    });
+
+    execution.tick(game.ticks());
+
+    expect(warship.tile()).toBe(movedTile);
+    expect(warship.targetUnit()).toBeUndefined();
+  });
+
+  test("Warship cancels retreat if no friendly port is reachable by water", async () => {
+    game.config().warshipRetreatHealthThreshold = () => 900;
+
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 11),
+      {
+        patrolTile: game.ref(coastX + 1, 11),
+      },
+    );
+    game.addExecution(new WarshipExecution(warship));
+
+    const warshipTile = warship.tile();
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile) =>
+      tile === warshipTile ? 1 : 2,
+    );
+    vi.spyOn(game, "hasWaterComponent").mockReturnValue(false);
+
+    game.executeNextTick();
+    warship.modifyHealth(-300);
+    game.executeNextTick();
+
+    expect(warship.retreating()).toBe(false);
   });
 });
