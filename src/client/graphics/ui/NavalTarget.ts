@@ -123,7 +123,7 @@ export class NavalTarget extends Target {
       !this.ended &&
       (!this.unit.isActive() ||
         (this.unit.type() === UnitType.TransportShip &&
-          this.unit.warshipState() !== "patrolling"))
+          this.unit.warshipState().state !== "patrolling"))
     ) {
       this.ended = true;
     }

@@ -57,9 +57,9 @@ describe("Warship multi-selection (MoveWarshipExecution)", () => {
 
     executeTicks(game, 5);
 
-    expect(w1.patrolTile()).toBe(sharedTarget);
-    expect(w2.patrolTile()).toBe(sharedTarget);
-    expect(w3.patrolTile()).toBe(sharedTarget);
+    expect(w1.warshipState().patrolTile).toBe(sharedTarget);
+    expect(w2.warshipState().patrolTile).toBe(sharedTarget);
+    expect(w3.warshipState().patrolTile).toBe(sharedTarget);
   });
 
   test("moving multiple warships to different targets works independently", () => {
@@ -81,8 +81,8 @@ describe("Warship multi-selection (MoveWarshipExecution)", () => {
 
     executeTicks(game, 5);
 
-    expect(w1.patrolTile()).toBe(target1);
-    expect(w2.patrolTile()).toBe(target2);
+    expect(w1.warshipState().patrolTile).toBe(target1);
+    expect(w2.warshipState().patrolTile).toBe(target2);
   });
 
   test("enemy cannot move player's warships via MoveWarshipExecution", () => {
@@ -97,7 +97,7 @@ describe("Warship multi-selection (MoveWarshipExecution)", () => {
       0,
     );
 
-    expect(w1.patrolTile()).toBe(originalTile);
+    expect(w1.warshipState().patrolTile).toBe(originalTile);
   });
 
   test("MoveWarshipExecution on destroyed warship does not throw", () => {
@@ -138,7 +138,7 @@ describe("Warship multi-selection (MoveWarshipExecution)", () => {
 
     executeTicks(game, 5);
 
-    expect(w1.patrolTile()).toBe(target);
-    expect(w2.patrolTile()).toBe(p2tile); // unchanged — wrong owner
+    expect(w1.warshipState().patrolTile).toBe(target);
+    expect(w2.warshipState().patrolTile).toBe(p2tile); // unchanged — wrong owner
   });
 });

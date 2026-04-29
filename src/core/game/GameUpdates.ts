@@ -11,7 +11,7 @@ import {
   Tick,
   TrainType,
   UnitType,
-  WarshipMovementState,
+  WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
 
@@ -138,8 +138,7 @@ export interface UnitUpdate {
   lastPos: TileRef;
   isActive: boolean;
   reachedTarget: boolean;
-  warshipState: WarshipMovementState;
-  inCombat: boolean;
+  warshipState: WarshipState;
   targetable: boolean;
   markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships

@@ -26,7 +26,7 @@ import {
   TrainType,
   UnitInfo,
   UnitType,
-  WarshipMovementState,
+  WarshipState,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -116,23 +116,11 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
-  warshipState(): WarshipMovementState {
+  warshipState(): WarshipState {
     return this.data.warshipState;
   }
-  setWarshipState(_state: WarshipMovementState): void {
+  setWarshipState(_state: WarshipState): void {
     throw new Error("setWarshipState is not supported on UnitView");
-  }
-  retreatPort(): TileRef | undefined {
-    return undefined;
-  }
-  setRetreatPort(_tile: TileRef | undefined): void {
-    throw new Error("setRetreatPort is not supported on UnitView");
-  }
-  isInCombat(): boolean {
-    return this.data.inCombat;
-  }
-  setInCombat(): void {
-    throw new Error("setInCombat is not supported on UnitView");
   }
   tile(): TileRef {
     return this.data.pos;

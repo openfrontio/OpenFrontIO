@@ -377,7 +377,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
-          ${boat.warshipState() !== "patrolling"
+          ${boat.warshipState().state !== "patrolling"
             ? html`<span class="ml-auto truncate text-aquarius"
                 >(${translateText("events_display.retreating")}...)</span
               >`
@@ -385,7 +385,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 content: "\u274C",
                 onClick: () => this.emitBoatCancelIntent(boat.id()),
                 className: "ml-auto text-left shrink-0",
-                disabled: boat.warshipState() !== "patrolling",
+                disabled: boat.warshipState().state !== "patrolling",
               })}
         </div>
       `,

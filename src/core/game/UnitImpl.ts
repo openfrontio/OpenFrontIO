@@ -9,7 +9,7 @@ import {
   Unit,
   UnitInfo,
   UnitType,
-  WarshipMovementState,
+  WarshipState,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
@@ -22,8 +22,10 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _warshipState: WarshipMovementState = "patrolling";
+  private _warshipMovementState: WarshipState["state"] = "patrolling";
   private _lastCombatTick: number = -100;
+  private _patrolTile: TileRef | undefined;
+  private _retreatPort: TileRef | undefined;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -35,8 +37,6 @@ export class UnitImpl implements Unit {
   // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
-  private _patrolTile: TileRef | undefined;
-  private _retreatPort: TileRef | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
@@ -95,22 +95,6 @@ export class UnitImpl implements Unit {
     return this._targetable;
   }
 
-  setPatrolTile(tile: TileRef): void {
-    this._patrolTile = tile;
-  }
-
-  patrolTile(): TileRef | undefined {
-    return this._patrolTile;
-  }
-
-  retreatPort(): TileRef | undefined {
-    return this._retreatPort;
-  }
-
-  setRetreatPort(tile: TileRef | undefined): void {
-    this._retreatPort = tile;
-  }
-
   isUnit(): this is Unit {
     return true;
   }
@@ -139,8 +123,7 @@ export class UnitImpl implements Unit {
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
       reachedTarget: this._reachedTarget,
-      warshipState: this._warshipState,
-      inCombat: this.isInCombat(),
+      warshipState: this.warshipState(),
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -350,31 +333,40 @@ export class UnitImpl implements Unit {
     return this._destroyer;
   }
 
-  warshipState(): WarshipMovementState {
-    return this._warshipState;
+  warshipState(): WarshipState {
+    return {
+      state: this._warshipMovementState,
+      patrolTile: this._patrolTile,
+      retreatPort: this._retreatPort,
+      isInCombat: this.mg.ticks() - this._lastCombatTick <= 3,
+    };
   }
 
-  setWarshipState(state: WarshipMovementState): void {
-    if (this._warshipState !== state) {
-      this._warshipState = state;
+  setWarshipState(newState: WarshipState): void {
+    const prevIsInCombat = this.mg.ticks() - this._lastCombatTick <= 3;
+    const changed =
+      this._warshipMovementState !== newState.state ||
+      this._patrolTile !== newState.patrolTile ||
+      this._retreatPort !== newState.retreatPort ||
+      prevIsInCombat !== newState.isInCombat;
+    this._warshipMovementState = newState.state;
+    this._patrolTile = newState.patrolTile;
+    this._retreatPort = newState.retreatPort;
+    if (newState.isInCombat) {
+      this._lastCombatTick = this.mg.ticks();
+    } else if (prevIsInCombat && !newState.isInCombat) {
+      this._lastCombatTick = -100;
+    }
+    if (changed) {
       this.mg.addUpdate(this.toUpdate());
     }
-  }
-
-  isInCombat(): boolean {
-    return this.mg.ticks() - this._lastCombatTick <= 3;
-  }
-
-  setInCombat(): void {
-    this._lastCombatTick = this.mg.ticks();
-    this.mg.addUpdate(this.toUpdate());
   }
 
   orderBoatRetreat() {
     if (this.type() !== UnitType.TransportShip) {
       throw new Error("Cannot retreat " + this.type());
     }
-    this.setWarshipState("retreating");
+    this.setWarshipState({ ...this.warshipState(), state: "retreating" });
   }
 
   isUnderConstruction(): boolean {

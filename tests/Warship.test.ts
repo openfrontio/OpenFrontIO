@@ -174,7 +174,7 @@ describe("Warship", () => {
 
     executeTicks(game, 10);
 
-    expect(warship.patrolTile()).toBe(game.ref(coastX + 5, 15));
+    expect(warship.warshipState().patrolTile).toBe(game.ref(coastX + 5, 15));
   });
 
   test("Warship does not not target trade ships outside of patrol range", async () => {
@@ -283,7 +283,7 @@ describe("Warship", () => {
       [warship.id()],
       game.ref(coastX + 5, 15),
     ).init(game, 0);
-    expect(warship.patrolTile()).toBe(originalPatrolTile);
+    expect(warship.warshipState().patrolTile).toBe(originalPatrolTile);
   });
 
   test("MoveWarshipExecution fails if warship is not active", async () => {
@@ -301,7 +301,7 @@ describe("Warship", () => {
       [warship.id()],
       game.ref(coastX + 5, 15),
     ).init(game, 0);
-    expect(warship.patrolTile()).toBe(originalPatrolTile);
+    expect(warship.warshipState().patrolTile).toBe(originalPatrolTile);
   });
 
   test("MoveWarshipExecution fails gracefully if warship not found", async () => {
@@ -346,7 +346,7 @@ describe("Warship", () => {
 
     game.executeNextTick();
 
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
     const distanceToPort = game.euclideanDistSquared(
       warship.tile(),
       homePort.tile(),
@@ -432,7 +432,7 @@ describe("Warship", () => {
         exec1.isDocked() &&
         !exec2.isDocked() &&
         warship2DistanceToPort <= 25 &&
-        warship2.warshipState() !== "patrolling"
+        warship2.warshipState().state !== "patrolling"
       ) {
         break;
       }
@@ -445,7 +445,7 @@ describe("Warship", () => {
     expect(exec1.isDocked()).toBe(true);
     expect(exec2.isDocked()).toBe(false);
     expect(warship2DistanceToPort).toBeLessThanOrEqual(25);
-    expect(warship2.warshipState()).not.toBe("patrolling");
+    expect(warship2.warshipState().state).not.toBe("patrolling");
   });
 
   test("Warship cancels docking if its retreat port is destroyed", async () => {
@@ -481,7 +481,7 @@ describe("Warship", () => {
     game.executeNextTick();
 
     expect(warshipExecution.isDocked()).toBe(false);
-    expect(warship.warshipState()).toBe("patrolling");
+    expect(warship.warshipState().state).toBe("patrolling");
   });
 
   test("Warship drops a stale target after patrol movement changes range", async () => {
@@ -549,7 +549,7 @@ describe("Warship", () => {
     warship.modifyHealth(-300);
     game.executeNextTick();
 
-    expect(warship.warshipState()).toBe("patrolling");
+    expect(warship.warshipState().state).toBe("patrolling");
   });
 
   test("Low-health warship retreats AND fires at nearby enemy warship", async () => {
@@ -583,7 +583,7 @@ describe("Warship", () => {
     game.executeNextTick();
 
     // New behavior: retreat starts immediately even with enemy nearby
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
     // AND the warship still targets the enemy to fire back while retreating
     expect(warship.targetUnit()).toBe(enemyWarship);
   });
@@ -609,7 +609,7 @@ describe("Warship", () => {
     for (let i = 0; i < 10; i++) {
       game.executeNextTick();
       if (
-        warship.warshipState() !== "patrolling" &&
+        warship.warshipState().state !== "patrolling" &&
         warship.targetTile() === homePort.tile() &&
         warship.tile() !== homePort.tile()
       ) {
@@ -617,7 +617,7 @@ describe("Warship", () => {
       }
     }
 
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
     expect(warship.targetTile()).toBe(homePort.tile());
 
     const enemyTransport = player2.buildUnit(
@@ -630,7 +630,7 @@ describe("Warship", () => {
 
     game.executeNextTick();
 
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
     expect(warship.targetTile()).toBe(homePort.tile());
     expect(warship.targetUnit()).toBe(enemyTransport);
   });
@@ -655,7 +655,7 @@ describe("Warship", () => {
     warship.modifyHealth(-700);
     executeTicks(game, 20);
 
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
 
     const manualPatrolTile = game.ref(coastX + 5, 15);
     game.addExecution(
@@ -664,8 +664,8 @@ describe("Warship", () => {
 
     executeTicks(game, 2);
 
-    expect(warship.warshipState()).toBe("patrolling");
-    expect(warship.patrolTile()).toBe(manualPatrolTile);
+    expect(warship.warshipState().state).toBe("patrolling");
+    expect(warship.warshipState().patrolTile).toBe(manualPatrolTile);
     expect(warship.targetTile()).not.toBe(homePortTile);
   });
 
@@ -694,16 +694,16 @@ describe("Warship", () => {
     warship.modifyHealth(-700);
 
     game.executeNextTick();
-    expect(warship.warshipState()).toBe("patrolling");
-    expect(warship.patrolTile()).toBe(manualPatrolTile);
+    expect(warship.warshipState().state).toBe("patrolling");
+    expect(warship.warshipState().patrolTile).toBe(manualPatrolTile);
 
     executeTicks(game, 48);
-    expect(warship.warshipState()).toBe("patrolling");
+    expect(warship.warshipState().state).toBe("patrolling");
 
     let resumedRetreat = false;
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
-      if (warship.warshipState() !== "patrolling") {
+      if (warship.warshipState().state !== "patrolling") {
         resumedRetreat = true;
         break;
       }
@@ -723,12 +723,12 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
     game.executeNextTick();
 
-    expect(warship.isInCombat()).toBe(false);
+    expect(warship.warshipState().isInCombat).toBe(false);
 
     // Simulate incoming shell damage from an enemy player
     warship.modifyHealth(-50, player2);
 
-    expect(warship.isInCombat()).toBe(true);
+    expect(warship.warshipState().isInCombat).toBe(true);
   });
 
   test("Warship isInCombat becomes true when firing at an enemy", async () => {
@@ -751,13 +751,13 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
     game.executeNextTick();
 
-    expect(warship.isInCombat()).toBe(false);
+    expect(warship.warshipState().isInCombat).toBe(false);
 
     // Give warship a target and tick — shootTarget sets inCombat
     warship.setTargetUnit(enemyWarship);
     game.executeNextTick();
 
-    expect(warship.isInCombat()).toBe(true);
+    expect(warship.warshipState().isInCombat).toBe(true);
   });
 
   test("Docked warship is not targeted by enemy warship", async () => {
@@ -794,7 +794,7 @@ describe("Warship", () => {
     }
 
     expect(exec.isDocked()).toBe(true);
-    expect(friendlyWarship.warshipState()).toBe("docked");
+    expect(friendlyWarship.warshipState().state).toBe("docked");
 
     // Enemy warship should not be targeting the docked warship
     game.executeNextTick();
@@ -822,13 +822,13 @@ describe("Warship", () => {
     for (let i = 0; i < 15; i++) {
       game.executeNextTick();
       if (
-        warship.warshipState() !== "patrolling" &&
+        warship.warshipState().state !== "patrolling" &&
         warship.targetTile() === homePort.tile()
       ) {
         break;
       }
     }
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
     expect(warship.targetTile()).toBe(homePort.tile());
 
     const tileBeforeCombat = warship.tile();
@@ -843,7 +843,7 @@ describe("Warship", () => {
     // AND targeting the enemy transport simultaneously
     game.executeNextTick();
 
-    expect(warship.warshipState()).not.toBe("patrolling");
+    expect(warship.warshipState().state).not.toBe("patrolling");
     expect(warship.targetTile()).toBe(homePort.tile());
     expect(warship.targetUnit()).toBe(enemyTransport);
 

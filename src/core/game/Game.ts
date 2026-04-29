@@ -26,7 +26,12 @@ export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
 
-export type WarshipMovementState = "patrolling" | "retreating" | "docked";
+export type WarshipState = {
+  state: "patrolling" | "retreating" | "docked";
+  patrolTile?: TileRef;
+  retreatPort?: TileRef;
+  isInCombat: boolean;
+};
 
 export const AllPlayers = "AllPlayers" as const;
 
@@ -617,10 +622,8 @@ export interface Unit {
 
   // Health
   hasHealth(): boolean;
-  warshipState(): WarshipMovementState;
-  setWarshipState(state: WarshipMovementState): void;
-  isInCombat(): boolean;
-  setInCombat(): void;
+  warshipState(): WarshipState;
+  setWarshipState(state: WarshipState): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;
@@ -649,12 +652,6 @@ export interface Unit {
   level(): number;
   increaseLevel(): void;
   decreaseLevel(destroyer?: Player): void;
-
-  // Warships
-  setPatrolTile(tile: TileRef): void;
-  patrolTile(): TileRef | undefined;
-  retreatPort(): TileRef | undefined;
-  setRetreatPort(tile: TileRef | undefined): void;
 }
 
 export interface TerraNullius {
