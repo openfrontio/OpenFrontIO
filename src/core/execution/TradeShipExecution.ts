@@ -21,8 +21,6 @@ export class TradeShipExecution implements Execution {
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
-  private readonly srcPortId: number;
-  private readonly dstPortId: number;
 
   private static _staggerCounter = 0;
 
@@ -30,10 +28,7 @@ export class TradeShipExecution implements Execution {
     private origOwner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
-  ) {
-    this.srcPortId = srcPort.id();
-    this.dstPortId = _dstPort.id();
-  }
+  ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
