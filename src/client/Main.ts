@@ -1,5 +1,6 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   GAME_ID_REGEX,
@@ -266,6 +267,13 @@ class Client {
     await customElements.whenDefined("mobile-nav-bar");
     await customElements.whenDefined("desktop-nav-bar");
 
+    const openFrontFont = new FontFace(
+      "OpenFront",
+      `url(${assetUrl("fonts/OpenFront.ttf")})`,
+    );
+    document.fonts.add(openFrontFont);
+    openFrontFont.load().catch(() => {});
+
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
     );
@@ -275,6 +283,7 @@ class Client {
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
       versionElements.forEach((el) => {
+        (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
         el.textContent = displayVersion;
       });
     }
