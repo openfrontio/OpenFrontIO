@@ -25,6 +25,7 @@ const sirenIcon = assetUrl("images/SirenIconWhite.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
 const musicIcon = assetUrl("images/music.svg");
+const opacityIcon = assetUrl("images/OpacityIconWhite.svg");
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -491,7 +492,7 @@ export class SettingsModal extends LitElement implements Layer {
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
             >
               <img
-                src=${settingsIcon}
+                src=${opacityIcon}
                 alt="nameOpacity"
                 width="20"
                 height="20"

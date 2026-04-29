@@ -101,6 +101,7 @@ Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R
 Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
 Pay Per Click icon by [Fauzan Adiima](https://thenounproject.com/creator/fauzan94/) – https://thenounproject.com/icon/pay-per-click-2586454/
 Medal icon by [Snow](https://thenounproject.com/snowdoll/) – https://thenounproject.com/icon/medal-4567887/
+Opacity icon by [Suharsono](https://thenounproject.com/creator/harsono1701/) – https://thenounproject.com/icon/opacity-8308538/
 
 ### Flags
 
