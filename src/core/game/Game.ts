@@ -33,6 +33,10 @@ export type WarshipState = {
   isInCombat: boolean;
 };
 
+export type TransportShipState = {
+  isRetreating: boolean;
+};
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -624,6 +628,8 @@ export interface Unit {
   hasHealth(): boolean;
   warshipState(): WarshipState;
   setWarshipState(state: WarshipState): void;
+  transportShipState(): TransportShipState;
+  setTransportShipState(state: TransportShipState): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;

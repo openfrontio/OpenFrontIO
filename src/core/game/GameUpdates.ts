@@ -10,6 +10,7 @@ import {
   Team,
   Tick,
   TrainType,
+  TransportShipState,
   UnitType,
   WarshipState,
 } from "./Game";
@@ -139,6 +140,7 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   warshipState: WarshipState;
+  transportShipState?: TransportShipState;
   targetable: boolean;
   markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships

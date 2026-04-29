@@ -24,6 +24,7 @@ import {
   TerraNullius,
   Tick,
   TrainType,
+  TransportShipState,
   UnitInfo,
   UnitType,
   WarshipState,
@@ -121,6 +122,12 @@ export class UnitView {
   }
   setWarshipState(_state: WarshipState): void {
     throw new Error("setWarshipState is not supported on UnitView");
+  }
+  transportShipState(): TransportShipState {
+    return this.data.transportShipState ?? { isRetreating: false };
+  }
+  setTransportShipState(_state: TransportShipState): void {
+    throw new Error("setTransportShipState is not supported on UnitView");
   }
   tile(): TileRef {
     return this.data.pos;

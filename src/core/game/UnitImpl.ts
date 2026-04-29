@@ -6,6 +6,7 @@ import {
   Tick,
   TrainType,
   TrajectoryTile,
+  TransportShipState,
   Unit,
   UnitInfo,
   UnitType,
@@ -26,6 +27,7 @@ export class UnitImpl implements Unit {
   private _lastCombatTick: number = -100;
   private _patrolTile: TileRef | undefined;
   private _retreatPort: TileRef | undefined;
+  private _transportShipState: TransportShipState = { isRetreating: false };
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -124,6 +126,10 @@ export class UnitImpl implements Unit {
       isActive: this._active,
       reachedTarget: this._reachedTarget,
       warshipState: this.warshipState(),
+      transportShipState:
+        this._type === UnitType.TransportShip
+          ? this._transportShipState
+          : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -362,11 +368,22 @@ export class UnitImpl implements Unit {
     }
   }
 
+  transportShipState(): TransportShipState {
+    return this._transportShipState;
+  }
+
+  setTransportShipState(state: TransportShipState): void {
+    if (this._transportShipState.isRetreating !== state.isRetreating) {
+      this._transportShipState = state;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
   orderBoatRetreat() {
     if (this.type() !== UnitType.TransportShip) {
       throw new Error("Cannot retreat " + this.type());
     }
-    this.setWarshipState({ ...this.warshipState(), state: "retreating" });
+    this.setTransportShipState({ isRetreating: true });
   }
 
   isUnderConstruction(): boolean {
