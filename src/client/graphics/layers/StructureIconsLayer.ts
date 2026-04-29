@@ -237,8 +237,8 @@ export class StructureIconsLayer implements Layer {
       ),
     );
     this.eventBus.on(RefreshGraphicsEvent, () => {
-      // No redraw() here to be called from GameRenderer, because it triggers on
-      // on "contextrestored" event while we're a WebGL context. It also triggers
+      // No redraw() here to be called from GameRenderer, because it triggers the
+      // "contextrestored" event while we're a WebGL context. It also triggers
       // on Alt-R, but we can listen to that event ourselves here
       if (this.rendererInitialized) {
         this.rebuildAllIcons();
