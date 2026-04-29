@@ -183,7 +183,7 @@ export class StructureIconsLayer implements Layer {
     this.renderer = renderer;
     this.renderer.runners.contextChange.add({
       // PixiJS handles webgl context loss and restore itself,
-      // contextChange tells us its done
+      // contextChange tells us it's done
       contextChange: () => {
         if (this.rendererInitialized && !this.rebuildPending) {
           this.rebuildPending = true;
