@@ -355,10 +355,8 @@ export class UnitImpl implements Unit {
     const changed =
       (update.state !== undefined &&
         this._warshipMovementState !== update.state) ||
-      (update.patrolTile !== undefined &&
-        this._patrolTile !== update.patrolTile) ||
-      (update.retreatPort !== undefined &&
-        this._retreatPort !== update.retreatPort);
+      ("patrolTile" in update && this._patrolTile !== update.patrolTile) ||
+      ("retreatPort" in update && this._retreatPort !== update.retreatPort);
     if (update.state !== undefined) this._warshipMovementState = update.state;
     if ("patrolTile" in update) this._patrolTile = update.patrolTile;
     if ("retreatPort" in update) this._retreatPort = update.retreatPort;
