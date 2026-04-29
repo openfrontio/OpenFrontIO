@@ -457,7 +457,7 @@ export class UnitLayer implements Layer {
 
   private handleWarShipEvent(unit: UnitView) {
     if (unit.warshipState().state !== "patrolling" && unit.isActive()) {
-      if (unit.warshipState().isInCombat) {
+      if (unit.isInCombat()) {
         this.drawSprite(unit, colord("rgb(200,0,0)"));
       } else {
         this.drawSprite(unit);
@@ -466,7 +466,7 @@ export class UnitLayer implements Layer {
       return;
     }
 
-    if (unit.warshipState().isInCombat) {
+    if (unit.isInCombat()) {
       this.drawSprite(unit, colord("rgb(200,0,0)"));
       return;
     }

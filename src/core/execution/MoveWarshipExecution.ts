@@ -28,8 +28,7 @@ export class MoveWarshipExecution implements Execution {
         console.warn(`MoveWarshipExecution: warship ${unitId} is not active`);
         continue;
       }
-      warship.setWarshipState({
-        ...warship.warshipState(),
+      warship.updateWarshipState({
         patrolTile: this.position,
       });
       warship.setTargetTile(undefined);

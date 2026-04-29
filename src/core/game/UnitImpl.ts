@@ -27,7 +27,10 @@ export class UnitImpl implements Unit {
   private _lastCombatTick: number = -100;
   private _patrolTile: TileRef | undefined;
   private _retreatPort: TileRef | undefined;
-  private _transportShipState: TransportShipState = { isRetreating: false };
+  private _transportShipState: TransportShipState = {
+    isRetreating: false,
+    troops: 0,
+  };
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -126,9 +129,10 @@ export class UnitImpl implements Unit {
       isActive: this._active,
       reachedTarget: this._reachedTarget,
       warshipState: this.warshipState(),
+      isInCombat: this.isInCombat(),
       transportShipState:
         this._type === UnitType.TransportShip
-          ? this._transportShipState
+          ? this.transportShipState()
           : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
@@ -344,37 +348,57 @@ export class UnitImpl implements Unit {
       state: this._warshipMovementState,
       patrolTile: this._patrolTile,
       retreatPort: this._retreatPort,
-      isInCombat: this.mg.ticks() - this._lastCombatTick <= 3,
     };
   }
 
-  setWarshipState(newState: WarshipState): void {
-    const prevIsInCombat = this.mg.ticks() - this._lastCombatTick <= 3;
+  updateWarshipState(update: Partial<WarshipState>): void {
     const changed =
-      this._warshipMovementState !== newState.state ||
-      this._patrolTile !== newState.patrolTile ||
-      this._retreatPort !== newState.retreatPort ||
-      prevIsInCombat !== newState.isInCombat;
-    this._warshipMovementState = newState.state;
-    this._patrolTile = newState.patrolTile;
-    this._retreatPort = newState.retreatPort;
-    if (newState.isInCombat) {
-      this._lastCombatTick = this.mg.ticks();
-    } else if (prevIsInCombat && !newState.isInCombat) {
-      this._lastCombatTick = -100;
-    }
+      (update.state !== undefined &&
+        this._warshipMovementState !== update.state) ||
+      (update.patrolTile !== undefined &&
+        this._patrolTile !== update.patrolTile) ||
+      (update.retreatPort !== undefined &&
+        this._retreatPort !== update.retreatPort);
+    if (update.state !== undefined) this._warshipMovementState = update.state;
+    if ("patrolTile" in update) this._patrolTile = update.patrolTile;
+    if ("retreatPort" in update) this._retreatPort = update.retreatPort;
     if (changed) {
       this.mg.addUpdate(this.toUpdate());
     }
   }
 
-  transportShipState(): TransportShipState {
-    return this._transportShipState;
+  isInCombat(): boolean {
+    return this.mg.ticks() - this._lastCombatTick <= 3;
   }
 
-  setTransportShipState(state: TransportShipState): void {
-    if (this._transportShipState.isRetreating !== state.isRetreating) {
-      this._transportShipState = state;
+  markInCombat(): void {
+    const wasInCombat = this.isInCombat();
+    this._lastCombatTick = this.mg.ticks();
+    if (!wasInCombat) {
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  transportShipState(): TransportShipState {
+    return {
+      isRetreating: this._transportShipState.isRetreating,
+      troops: this._troops,
+    };
+  }
+
+  updateTransportShipState(update: Partial<TransportShipState>): void {
+    let changed = false;
+    if (
+      update.isRetreating !== undefined &&
+      this._transportShipState.isRetreating !== update.isRetreating
+    ) {
+      this._transportShipState = {
+        ...this._transportShipState,
+        isRetreating: update.isRetreating,
+      };
+      changed = true;
+    }
+    if (changed) {
       this.mg.addUpdate(this.toUpdate());
     }
   }
@@ -383,7 +407,7 @@ export class UnitImpl implements Unit {
     if (this.type() !== UnitType.TransportShip) {
       throw new Error("Cannot retreat " + this.type());
     }
-    this.setTransportShipState({ isRetreating: true });
+    this.updateTransportShipState({ isRetreating: true });
   }
 
   isUnderConstruction(): boolean {

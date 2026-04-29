@@ -120,14 +120,23 @@ export class UnitView {
   warshipState(): WarshipState {
     return this.data.warshipState;
   }
-  setWarshipState(_state: WarshipState): void {
-    throw new Error("setWarshipState is not supported on UnitView");
+  updateWarshipState(_update: Partial<WarshipState>): void {
+    throw new Error("updateWarshipState is not supported on UnitView");
+  }
+  isInCombat(): boolean {
+    return this.data.isInCombat;
+  }
+  markInCombat(): void {
+    throw new Error("markInCombat is not supported on UnitView");
+  }
+  touch(): void {
+    throw new Error("touch is not supported on UnitView");
   }
   transportShipState(): TransportShipState {
-    return this.data.transportShipState ?? { isRetreating: false };
+    return this.data.transportShipState ?? { isRetreating: false, troops: 0 };
   }
-  setTransportShipState(_state: TransportShipState): void {
-    throw new Error("setTransportShipState is not supported on UnitView");
+  updateTransportShipState(_update: Partial<TransportShipState>): void {
+    throw new Error("updateTransportShipState is not supported on UnitView");
   }
   tile(): TileRef {
     return this.data.pos;

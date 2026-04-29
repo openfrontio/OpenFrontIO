@@ -30,11 +30,11 @@ export type WarshipState = {
   state: "patrolling" | "retreating" | "docked";
   patrolTile?: TileRef;
   retreatPort?: TileRef;
-  isInCombat: boolean;
 };
 
 export type TransportShipState = {
   isRetreating: boolean;
+  troops: number;
 };
 
 export const AllPlayers = "AllPlayers" as const;
@@ -627,9 +627,12 @@ export interface Unit {
   // Health
   hasHealth(): boolean;
   warshipState(): WarshipState;
-  setWarshipState(state: WarshipState): void;
+  updateWarshipState(update: Partial<WarshipState>): void;
+  isInCombat(): boolean;
+  markInCombat(): void;
+  touch(): void;
   transportShipState(): TransportShipState;
-  setTransportShipState(state: TransportShipState): void;
+  updateTransportShipState(update: Partial<TransportShipState>): void;
   orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;

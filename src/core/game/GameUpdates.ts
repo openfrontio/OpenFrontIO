@@ -140,6 +140,7 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   warshipState: WarshipState;
+  isInCombat: boolean;
   transportShipState?: TransportShipState;
   targetable: boolean;
   markedForDeletion: number | false;

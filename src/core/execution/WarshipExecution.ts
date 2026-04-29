@@ -24,6 +24,7 @@ export class WarshipExecution implements Execution {
   private lastManualMoveTickRetreatDisabled = 0;
   private lastObservedPatrolTile: TileRef | undefined;
   private activeHealingRemainder = 0;
+  private lastEmittedCombat = false;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -60,6 +61,11 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
+    const isInCombat = this.warship.isInCombat();
+    if (this.lastEmittedCombat && !isInCombat) {
+      this.warship.touch();
+    }
+    this.lastEmittedCombat = isInCombat;
     const healthBeforeHealing = this.warship.health();
 
     this.healWarship();
@@ -67,19 +73,9 @@ export class WarshipExecution implements Execution {
 
     if (this.warship.warshipState().state === "docked") {
       if (this.currentRetreatPort() === undefined) {
-        this.warship.setWarshipState({
-          ...this.warship.warshipState(),
-          state: "patrolling",
-          retreatPort: undefined,
-        });
         this.cancelRepairRetreat();
       }
       if (this.isFullyHealed()) {
-        this.warship.setWarshipState({
-          ...this.warship.warshipState(),
-          state: "patrolling",
-          retreatPort: undefined,
-        });
         this.cancelRepairRetreat();
       }
       if (this.warship.warshipState().state === "docked") {
@@ -321,8 +317,7 @@ export class WarshipExecution implements Execution {
     if (portTile === undefined) {
       return;
     }
-    this.warship.setWarshipState({
-      ...this.warship.warshipState(),
+    this.warship.updateWarshipState({
       retreatPort: portTile,
       state: "retreating",
     });
@@ -332,8 +327,7 @@ export class WarshipExecution implements Execution {
 
   private cancelRepairRetreat(clearTargetTile = true): void {
     this.activeHealingRemainder = 0;
-    this.warship.setWarshipState({
-      ...this.warship.warshipState(),
+    this.warship.updateWarshipState({
       state: "patrolling",
       retreatPort: undefined,
     });
@@ -399,8 +393,7 @@ export class WarshipExecution implements Execution {
       if (port && !this.isPortFullOfHealing(port, this.warship)) {
         // Port has capacity - dock here
         this.warship.setTargetTile(undefined);
-        this.warship.setWarshipState({
-          ...this.warship.warshipState(),
+        this.warship.updateWarshipState({
           state: "docked",
         });
         return true;
@@ -428,8 +421,7 @@ export class WarshipExecution implements Execution {
         break;
       case PathStatus.NOT_FOUND: {
         const newPort = this.findNearestAvailablePortTile();
-        this.warship.setWarshipState({
-          ...this.warship.warshipState(),
+        this.warship.updateWarshipState({
           retreatPort: newPort,
         });
         if (newPort === undefined) {
@@ -457,8 +449,7 @@ export class WarshipExecution implements Execution {
 
     if (!currentPortExists) {
       const newPort = this.findNearestAvailablePortTile();
-      this.warship.setWarshipState({
-        ...this.warship.warshipState(),
+      this.warship.updateWarshipState({
         retreatPort: newPort,
       });
       return newPort !== undefined;
@@ -470,8 +461,7 @@ export class WarshipExecution implements Execution {
       // Current port is at healing capacity, look for alternatives
       const alternativePort = this.findNearestAvailablePort();
       if (alternativePort) {
-        this.warship.setWarshipState({
-          ...this.warship.warshipState(),
+        this.warship.updateWarshipState({
           retreatPort: alternativePort,
         });
       }
@@ -481,8 +471,7 @@ export class WarshipExecution implements Execution {
     // Check if a significantly closer port is available
     const closerPort = this.findBetterPortTile();
     if (closerPort && closerPort !== currentRetreatPort) {
-      this.warship.setWarshipState({
-        ...this.warship.warshipState(),
+      this.warship.updateWarshipState({
         retreatPort: closerPort,
       });
       return true;
@@ -634,10 +623,7 @@ export class WarshipExecution implements Execution {
         // Warships don't need to reload when attacking transport ships.
         this.lastShellAttack = this.mg.ticks();
       }
-      this.warship.setWarshipState({
-        ...this.warship.warshipState(),
-        isInCombat: true,
-      });
+      this.warship.markInCombat();
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),
@@ -656,10 +642,7 @@ export class WarshipExecution implements Execution {
   }
 
   private huntDownTradeShip() {
-    this.warship.setWarshipState({
-      ...this.warship.warshipState(),
-      isInCombat: true,
-    });
+    this.warship.markInCombat();
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
       const result = this.pathfinder.next(
