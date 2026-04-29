@@ -35,6 +35,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
+  SpawnPhaseEndUpdate,
   UnitUpdate,
 } from "./GameUpdates";
 import { MotionPlanRecord, unpackMotionPlans } from "./MotionPlans";
@@ -648,6 +649,7 @@ type TrainPlanState = {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
+  private singleplayerInSpawnPhase: boolean;
   private singleplayerStartTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
@@ -688,6 +690,8 @@ export class GameView implements GameMap {
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
+    this.singleplayerInSpawnPhase =
+      this._config.gameConfig().gameType === GameType.Singleplayer;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
@@ -784,6 +788,15 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
+
+    const spawnPhaseEndUpdate = gu.updates[GameUpdateType.SpawnPhaseEnd][0] as
+      | SpawnPhaseEndUpdate
+      | undefined;
+    if (spawnPhaseEndUpdate) {
+      this.singleplayerInSpawnPhase = false;
+      this.singleplayerStartTick = spawnPhaseEndUpdate.startTick;
+    }
+
     const myDisplayName = formatPlayerDisplayName(
       this._myUsername,
       this._myClanTag,
@@ -1201,62 +1214,38 @@ export class GameView implements GameMap {
   }
   inSpawnPhase(): boolean {
     if (this._config.gameConfig().gameType === GameType.Singleplayer) {
-      // Singleplayer has no fixed spawn countdown; game starts once the human spawns.
-      return !this.myPlayer()?.hasSpawned();
+      return this.singleplayerInSpawnPhase;
     }
     return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
 
-  private updateSingleplayerStartTick(): void {
-    if (this._config.gameConfig().gameType !== GameType.Singleplayer) {
-      return;
-    }
-
-    const humanPlayers = this.players().filter(
-      (player) => player.type() === PlayerType.Human,
-    );
-    const hasSpawnedHuman = humanPlayers.some((player) => player.hasSpawned());
-
-    if (this.inSpawnPhase() || !hasSpawnedHuman) {
-      this.singleplayerStartTick = null;
-      return;
-    }
-
-    this.singleplayerStartTick ??= this.ticks();
-  }
-
   isSpawnImmunityActive(): boolean {
-    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
-      this.updateSingleplayerStartTick();
-      if (this.inSpawnPhase()) {
-        return true;
-      }
-      const startTick = this.singleplayerStartTick ?? this.ticks();
-      return startTick + this._config.spawnImmunityDuration() > this.ticks();
-    }
-
     return (
-      this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this._config.spawnImmunityDuration()
     );
   }
   isNationSpawnImmunityActive(): boolean {
-    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
-      this.updateSingleplayerStartTick();
-      if (this.inSpawnPhase()) {
-        return true;
-      }
-      const startTick = this.singleplayerStartTick ?? this.ticks();
-      return (
-        startTick + this._config.nationSpawnImmunityDuration() > this.ticks()
-      );
+    return (
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this._config.nationSpawnImmunityDuration()
+    );
+  }
+
+  elapsedGameSeconds(): number {
+    return this.ticksSinceStart() / 10;
+  }
+
+  ticksSinceStart(): Tick {
+    if (this.inSpawnPhase()) {
+      return 0;
     }
 
-    return (
-      this._config.numSpawnPhaseTurns() +
-        this._config.nationSpawnImmunityDuration() >
-      this.ticks()
-    );
+    const startTick =
+      this._config.gameConfig().gameType === GameType.Singleplayer
+        ? (this.singleplayerStartTick ?? this.ticks())
+        : this._config.numSpawnPhaseTurns();
+    return Math.max(0, this.ticks() - startTick);
   }
   config(): Config {
     return this._config;

@@ -11,6 +11,7 @@ import {
   PlayerType,
 } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
 
 const gameID: GameID = "game_id";
@@ -159,9 +160,10 @@ describe("GameImpl", () => {
 
     // First tick initializes the execution, second tick applies the spawn.
     singleplayerGame.executeNextTick();
-    singleplayerGame.executeNextTick();
+    const spawnUpdates = singleplayerGame.executeNextTick();
 
     expect(singleplayerGame.player(lateHumanInfo.id).hasSpawned()).toBe(true);
+    expect(spawnUpdates[GameUpdateType.SpawnPhaseEnd]).toHaveLength(1);
     expect(singleplayerGame.isSpawnImmunityActive()).toBe(true);
   });
 });

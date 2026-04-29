@@ -46,7 +46,6 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private hasWinner = false;
   private isLobbyCreator = false;
-  private singleplayerStartTick: number | null = null;
   private spawnBarVisible = false;
   private immunityBarVisible = false;
 
@@ -59,7 +58,6 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this._isVisible = true;
-    this.game.inSpawnPhase();
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -114,13 +112,8 @@ export class GameRightSidebar extends LitElement implements Layer {
     }
 
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
-    const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
-    const ticks = this.game.ticks();
-    const isSingleplayer =
-      this.game.config().gameConfig().gameType === GameType.Singleplayer;
 
     if (this.game.inSpawnPhase()) {
-      this.singleplayerStartTick = null;
       this.timer =
         maxTimerValue !== null && maxTimerValue !== undefined
           ? maxTimerValue * 60
@@ -128,14 +121,7 @@ export class GameRightSidebar extends LitElement implements Layer {
       return;
     }
 
-    if (isSingleplayer && this.singleplayerStartTick === null) {
-      this.singleplayerStartTick = ticks;
-    }
-
-    const gameStartTick = isSingleplayer
-      ? (this.singleplayerStartTick ?? ticks)
-      : spawnPhaseTurns;
-    const elapsedSeconds = Math.floor(Math.max(0, ticks - gameStartTick) / 10); // 10 ticks per second
+    const elapsedSeconds = Math.floor(this.game.elapsedGameSeconds());
 
     if (this.hasWinner) {
       return;
