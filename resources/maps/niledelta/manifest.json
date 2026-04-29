@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 320,
-    "num_land_tiles": 82743,
+    "num_land_tiles": 82733,
     "width": 389
   },
   "map4x": {
     "height": 640,
-    "num_land_tiles": 337280,
+    "num_land_tiles": 336925,
     "width": 778
   },
   "name": "Nile Delta",

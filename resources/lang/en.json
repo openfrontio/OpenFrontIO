@@ -358,15 +358,18 @@
     "sanfrancisco": "San Francisco",
     "aegean": "Aegean",
     "milkyway": "Milky Way",
-    "mediterranean": "Mediterranean",
+    "marenostrum": "Mare Nostrum",
     "dyslexdria": "Dyslexdria",
     "greatlakes": "Great Lakes",
     "straitofmalacca": "Strait Of Malacca",
     "luna": "Luna",
     "conakry": "Conakry",
     "caucasus": "Caucasus",
+    "losangeles": "Los Angeles",
     "beringsea": "Bering Sea",
-    "antarctica": "Antarctica"
+    "antarctica": "Antarctica",
+    "archipelagosea": "Archipelago Sea",
+    "bajacalifornia": "Baja California"
   },
   "map_categories": {
     "featured": "Featured",
@@ -1090,5 +1093,22 @@
   },
   "control_panel": {
     "army_limit_warning": "You're near your army limit! Consider sending troops to teammates."
+  },
+  "ios_banner": {
+    "text": "For fullscreen, add OpenFront to your Home Screen",
+    "how": "How",
+    "later": "Later",
+    "never": "Never",
+    "modal_title": "Fullscreen on iOS",
+    "modal_desc": "Your browser doesn't support fullscreen, but you can add OpenFront to your Home Screen for an immersive experience:",
+    "step_share": "Tap the Share button in your browser",
+    "step_scroll_and_tap": "Scroll down and tap",
+    "step_add_to_home_label": "Add to Home Screen",
+    "step_open": "Open from your Home Screen — launches fullscreen without the address bar",
+    "got_it": "Got it"
+  },
+  "fullscreen": {
+    "enter": "Enter fullscreen",
+    "exit": "Exit fullscreen"
   }
 }

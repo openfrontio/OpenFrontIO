@@ -38,7 +38,7 @@ export class BreakAllianceExecution implements Execution {
       this.recipient.updateRelation(this.requestor, -100);
 
       const neighbors = this.requestor
-        .neighbors()
+        .nearby()
         .filter(
           (n): n is Player => n.isPlayer() && !n.isOnSameTeam(this.recipient!),
         );

@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 250,
-    "num_land_tiles": 10867,
+    "num_land_tiles": 10846,
     "width": 500
   },
   "map4x": {
     "height": 500,
-    "num_land_tiles": 46767,
+    "num_land_tiles": 46259,
     "width": 1000
   },
   "name": "Oceania",

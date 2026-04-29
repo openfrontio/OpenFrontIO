@@ -171,13 +171,13 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-sky-700 transition-[width] duration-200"
+                class="h-full bg-malibu-blue transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-[#0073b7] transition-[width] duration-200"
+                class="h-full bg-aquarius transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -226,13 +226,13 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-sky-700 transition-[width] duration-200"
+                class="h-full bg-malibu-blue transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-[#0073b7] transition-[width] duration-200"
+                class="h-full bg-aquarius transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -352,7 +352,7 @@ export class ControlPanel extends LitElement implements Layer {
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          class="flex-1 h-1.5 accent-blue-500 cursor-pointer"
+          class="flex-1 h-1.5 accent-aquarius cursor-pointer"
         />
       </div>
     `;
@@ -400,7 +400,7 @@ export class ControlPanel extends LitElement implements Layer {
             .value=${String(Math.round(this.attackRatio * 100))}
             @input=${(e: Event) => this.handleRatioSliderInput(e)}
             @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-            class="w-full h-1.5 accent-blue-500 cursor-pointer"
+            class="w-full h-1.5 accent-aquarius cursor-pointer"
           />
         </div>
       </div>
