@@ -1,4 +1,5 @@
 import ipAnonymize from "ip-anonymize";
+import { createHash } from "node:crypto";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
@@ -24,7 +25,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord } from "../core/Util";
+import { createPartialGameRecord, replacer } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
@@ -1200,7 +1201,18 @@ export class GameServer {
     client.reportedWinner = clientMsg.winner;
 
     // Add client vote
-    const winnerKey = JSON.stringify(clientMsg.winner);
+    const winnerKey = createHash("sha256")
+      .update(
+        JSON.stringify(
+          {
+            winner: clientMsg.winner,
+            allPlayersStats: clientMsg.allPlayersStats,
+          },
+          replacer,
+        ),
+      )
+      .digest("hex");
+
     if (!this.winnerVotes.has(winnerKey)) {
       this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
     }
