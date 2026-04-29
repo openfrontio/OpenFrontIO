@@ -24,7 +24,7 @@ import "./FluentSlider";
 import "./map/MapPicker";
 
 const ACTIVE_CARD =
-  "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]";
+  "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue)]";
 const INACTIVE_CARD =
   "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
 
@@ -317,8 +317,8 @@ export class GameConfigSettings extends LitElement {
       <div class=${this.sectionGapClass}>
         ${renderSection(
           MAP_ICON,
-          "text-blue-400",
-          "bg-blue-500/20",
+          "text-aquarius",
+          "bg-malibu-blue/20",
           "map.map",
           html`<map-picker
             .selectedMap=${settings.map.selected}

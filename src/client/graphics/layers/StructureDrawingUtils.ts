@@ -89,6 +89,10 @@ export class SpriteFactory {
     unitType: UnitType,
   ) {
     const image = new Image();
+    // crossOrigin must be set before src so the fetch is CORS-checked.
+    // Without this, an icon served from CDN_BASE taints structureCanvas
+    // and PIXI.Texture.from rejects the upload to WebGL.
+    image.crossOrigin = "anonymous";
     image.src = unitInfo.iconPath;
     image.onload = () => {
       unitInfo.image = image;

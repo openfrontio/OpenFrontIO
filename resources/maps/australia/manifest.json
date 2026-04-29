@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 81256,
+    "num_land_tiles": 81252,
     "width": 500
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 328215,
+    "num_land_tiles": 328153,
     "width": 1000
   },
   "name": "Australia",

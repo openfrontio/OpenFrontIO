@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 425,
-    "num_land_tiles": 112964,
+    "num_land_tiles": 112962,
     "width": 500
   },
   "map4x": {
     "height": 850,
-    "num_land_tiles": 465078,
+    "num_land_tiles": 464870,
     "width": 1000
   },
   "name": "SanFrancisco",

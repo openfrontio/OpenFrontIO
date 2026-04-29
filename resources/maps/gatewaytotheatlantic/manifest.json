@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 492,
-    "num_land_tiles": 136295,
+    "num_land_tiles": 136293,
     "width": 554
   },
   "map4x": {
     "height": 984,
-    "num_land_tiles": 555003,
+    "num_land_tiles": 554983,
     "width": 1108
   },
   "name": "GatewayToTheAtlantic",

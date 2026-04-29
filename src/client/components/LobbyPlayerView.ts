@@ -126,7 +126,7 @@ export class LobbyTeamView extends LitElement {
             return html`<div
               class="px-2 py-1 rounded-sm mb-1 text-xs text-white border
                 ${this.isCurrentPlayer(client)
-                ? "bg-[#0073b7]/20 border-sky-500/40"
+                ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
             >
               ${displayName}
@@ -242,7 +242,7 @@ export class LobbyTeamView extends LitElement {
                   return html` <div
                     class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border
                       ${this.isCurrentPlayer(p)
-                      ? "bg-[#0073b7]/20 border-sky-500/40"
+                      ? "bg-malibu-blue/20 border-sky-500/40"
                       : "bg-gray-700/70 border-transparent"}"
                   >
                     <span class="truncate text-white">${displayName}</span>
