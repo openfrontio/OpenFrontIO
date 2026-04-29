@@ -22,7 +22,6 @@ import {
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
-  RefreshGraphicsEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
 } from "../../InputHandler";
 import {
@@ -85,7 +84,7 @@ export class StructureIconsLayer implements Layer {
   private rootStage: PIXI.Container = new PIXI.Container();
   private dotsStage: PIXI.Container;
   private readonly theme: Theme;
-  private renderer: PIXI.WebGLRenderer | null = null;
+  private renderer: PIXI.Renderer | null = null;
   private rendererInitialized: boolean = false;
   private readonly rendersByUnitId: Map<number, StructureRenderInfo> =
     new Map();
@@ -124,15 +123,36 @@ export class StructureIconsLayer implements Layer {
   }
 
   async setupRenderer() {
+    if (this.renderer) {
+      this.renderer.destroy(true);
+      this.rootStage.removeChildren();
+    }
+
     try {
       await PIXI.Assets.load(bitmapFont);
     } catch (error) {
       console.error("Failed to load bitmap font:", error);
     }
-    const renderer = new PIXI.WebGLRenderer();
+
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
     this.pixicanvas.height = window.innerHeight;
+
+    // This will prefer WebGL, eventually WebGPU, and fallback to Canvas
+    // Restrict using 'preferences: ["WebGPU", "WebGL"]' or
+    // 'preferences: "WebGPU"' later if needed
+    const renderer = await PIXI.autoDetectRenderer({
+      canvas: this.pixicanvas,
+      resolution: 1,
+      width: this.pixicanvas.width,
+      height: this.pixicanvas.height,
+      antialias: false,
+      clearBeforeRender: true,
+      backgroundAlpha: 0,
+      backgroundColor: 0x00000000,
+    });
+
+    console.info(`Using ${renderer.name} for structure icons layer`);
 
     this.iconsStage = new PIXI.Container();
     this.iconsStage.position.set(0, 0);
@@ -159,17 +179,6 @@ export class StructureIconsLayer implements Layer {
     this.rootStage.position.set(0, 0);
     this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    await renderer.init({
-      canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
-      antialias: false,
-      clearBeforeRender: true,
-      backgroundAlpha: 0,
-      backgroundColor: 0x00000000,
-    });
-
     this.filterRedArray = [
       new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
     ];
@@ -181,20 +190,26 @@ export class StructureIconsLayer implements Layer {
     ];
 
     this.renderer = renderer;
-    this.renderer.runners.contextChange.add({
-      // PixiJS handles webgl context loss and restore itself,
-      // contextChange tells us it's done
-      contextChange: () => {
-        if (this.rendererInitialized && !this.rebuildPending) {
-          this.rebuildPending = true;
+
+    if (this.renderer.name === "webgpu") {
+      // Listen to device loss as PixiJS doesn't handle WebGPU context loss itself
+      const gpuRenderer = this.renderer as PIXI.WebGPURenderer;
+      gpuRenderer.gpu.device.lost.then(() => {
+        this.redraw();
+      });
+    }
+
+    if (this.renderer.name === "webgl") {
+      this.renderer.runners.contextChange.add({
+        // Listen to contextChange as PixiJS handles WebGL context loss and restores itself.
+        // Don't listen to "webglcontextrestored" event directly as it can fire before PixiJS is ready.
+        contextChange: () => {
           requestAnimationFrame(() => {
-            this.rebuildPending = false;
-            this.resizeCanvas();
-            this.rebuildAllIcons();
+            this.redraw();
           });
-        }
-      },
-    });
+        },
+      });
+    }
 
     this.rendererInitialized = true;
   }
@@ -224,6 +239,27 @@ export class StructureIconsLayer implements Layer {
     return false;
   }
 
+  async redraw() {
+    if (this.rebuildPending) {
+      return;
+    }
+    if (this.rendererOrGLContextLost()) {
+      return;
+    }
+    this.rebuildPending = true;
+
+    try {
+      if (this.renderer?.name === "webgpu") {
+        this.rendererInitialized = false;
+        await this.setupRenderer();
+      }
+      this.resizeCanvas();
+      this.rebuildAllIcons();
+    } finally {
+      this.rebuildPending = false;
+    }
+  }
+
   async init() {
     this.eventBus.on(ToggleStructuresEvent, (e) =>
       this.toggleStructures(e.structureTypes),
@@ -236,30 +272,30 @@ export class StructureIconsLayer implements Layer {
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
       ),
     );
-    this.eventBus.on(RefreshGraphicsEvent, () => {
-      // No redraw() here to be called from GameRenderer, because it triggers the
-      // "contextrestored" event while we're a WebGL context. It also triggers
-      // on Alt-R, but we can listen to that event ourselves here
-      if (this.rendererInitialized) {
-        this.resizeCanvas();
-        this.rebuildAllIcons();
-      }
-    });
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
     this.resizeCanvas();
   }
 
-  resizeCanvas() {
-    if (this.renderer) {
-      if (this.renderer.context?.isLost) {
-        return;
-      }
-      this.pixicanvas.width = window.innerWidth;
-      this.pixicanvas.height = window.innerHeight;
-      this.renderer.resize(innerWidth, innerHeight, 1);
+  private rendererOrGLContextLost(): boolean {
+    if (!this.renderer || !this.rendererInitialized) return true;
+    if (this.renderer.name === "webgl") {
+      // For WebGL, check isLost to prevent ungraceful handling by PixiJS:
+      // its GL > logPrettyShaderError throws, when getShaderSource returns null
+      // Needs to be fixed in PixiJS, in meantime prevent it from here
+      return (this.renderer as PIXI.WebGLRenderer).context?.isLost === true;
     }
+    return false;
+  }
+
+  resizeCanvas() {
+    if (this.rendererOrGLContextLost()) {
+      return;
+    }
+    this.pixicanvas.width = window.innerWidth;
+    this.pixicanvas.height = window.innerHeight;
+    this.renderer?.resize(innerWidth, innerHeight, 1);
   }
 
   tick() {
@@ -284,11 +320,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (
-      !this.renderer ||
-      !this.rendererInitialized ||
-      this.renderer.context?.isLost
-    ) {
+    if (this.rendererOrGLContextLost()) {
       return;
     }
 
@@ -317,8 +349,10 @@ export class StructureIconsLayer implements Layer {
       scale > DOTS_ZOOM_THRESHOLD &&
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
-    this.renderer.render(this.rootStage);
-    mainContext.drawImage(this.renderer.canvas, 0, 0);
+    if (this.renderer) {
+      this.renderer?.render(this.rootStage);
+      mainContext.drawImage(this.renderer.canvas, 0, 0);
+    }
   }
 
   renderGhost() {
