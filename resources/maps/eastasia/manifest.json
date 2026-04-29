@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 411,
-    "num_land_tiles": 51660,
+    "num_land_tiles": 51649,
     "width": 390
   },
   "map4x": {
     "height": 822,
-    "num_land_tiles": 215238,
+    "num_land_tiles": 214937,
     "width": 780
   },
   "name": "East Asia",

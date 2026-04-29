@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 395,
-    "num_land_tiles": 59685,
+    "num_land_tiles": 59683,
     "width": 425
   },
   "map4x": {
     "height": 790,
-    "num_land_tiles": 248068,
+    "num_land_tiles": 248032,
     "width": 850
   },
   "name": "Svalmel",

@@ -47,7 +47,7 @@ function makePlayer(
 ): any {
   return {
     units: vi.fn(() => ownUnits),
-    neighbors: vi.fn(() => neighborList),
+    nearby: vi.fn(() => neighborList),
     canTrade: vi.fn((n: any) => opts.canTrade?.(n) ?? true),
     isOnSameTeam: vi.fn((n: any) => opts.isOnSameTeam?.(n) ?? false),
     isAlliedWith: vi.fn((n: any) => opts.isAlliedWith?.(n) ?? false),
