@@ -8,8 +8,7 @@
     "moduleResolution": "bundler",
     "paths": {
       "resources/*": ["./resources/*"],
-      "src/*": ["./src/*"],
-      "*": ["./*"]
+      "src/*": ["./src/*"]
     },
     // Emit
     "sourceMap": true,
