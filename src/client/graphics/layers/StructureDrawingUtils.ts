@@ -56,6 +56,8 @@ export class SpriteFactory {
   private transformHandler: TransformHandler;
   private renderSprites: boolean;
   private readonly textureCache: Map<string, PIXI.Texture> = new Map();
+  private colorCanvas: HTMLCanvasElement | null = null;
+  private colorCtx: CanvasRenderingContext2D | null = null;
 
   private readonly structuresInfos: Map<
     UnitType,
@@ -79,6 +81,21 @@ export class SpriteFactory {
     this.transformHandler = transformHandler;
     this.renderSprites = renderSprites;
     this.structuresInfos.forEach((u, unitType) => this.loadIcon(u, unitType));
+  }
+
+  public clearCache() {
+    for (const texture of this.textureCache.values()) {
+      if (texture && texture !== PIXI.Texture.EMPTY) {
+        try {
+          texture.destroy(true);
+        } catch (e) {
+          console.error("Error clearing texture cache:", e);
+        }
+      }
+    }
+    this.textureCache.clear();
+    this.colorCanvas = null;
+    this.colorCtx = null;
   }
 
   private loadIcon(
@@ -108,6 +125,10 @@ export class SpriteFactory {
   private invalidateTextureCache(unitType: UnitType) {
     for (const key of Array.from(this.textureCache.keys())) {
       if (key.includes(`-${unitType}`)) {
+        const tex = this.textureCache.get(key);
+        if (tex && tex !== PIXI.Texture.EMPTY) {
+          tex.destroy(true);
+        }
         this.textureCache.delete(key);
       }
     }
@@ -455,7 +476,7 @@ export class SpriteFactory {
       context.restore();
     }
 
-    return PIXI.Texture.from(structureCanvas);
+    return PIXI.Texture.from(structureCanvas, true);
   }
 
   public createRange(
@@ -511,14 +532,18 @@ export class SpriteFactory {
     image: HTMLImageElement,
     color: string,
   ): HTMLCanvasElement {
-    const imageCanvas = document.createElement("canvas");
-    imageCanvas.width = image.width;
-    imageCanvas.height = image.height;
-    const ctx = imageCanvas.getContext("2d")!;
+    if (!this.colorCanvas || !this.colorCtx) {
+      this.colorCanvas = document.createElement("canvas");
+      this.colorCtx = this.colorCanvas.getContext("2d")!;
+    }
+    const { colorCanvas, colorCtx: ctx } = this;
+    if (colorCanvas.width !== image.width) colorCanvas.width = image.width;
+    if (colorCanvas.height !== image.height) colorCanvas.height = image.height;
+    ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = color;
-    ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
+    ctx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(image, 0, 0);
-    return imageCanvas;
+    return colorCanvas;
   }
 }
