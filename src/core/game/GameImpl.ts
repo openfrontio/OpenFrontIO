@@ -406,17 +406,13 @@ export class GameImpl implements Game {
     this.addUpdate({ type: GameUpdateType.GamePaused, paused });
   }
 
-  private computeInSpawnPhase(): boolean {
-    return this.config().gameConfig().gameType === GameType.Singleplayer
-      ? !this.singleplayerSpawnPhaseCompleted
-      : this._ticks <= this.config().numSpawnPhaseTurns();
-  }
-
   inSpawnPhase(): boolean {
     if (this.spawnPhaseLockedValue !== null) {
       return this.spawnPhaseLockedValue;
     }
-    return this.computeInSpawnPhase();
+    return this.config().gameConfig().gameType === GameType.Singleplayer
+      ? !this.singleplayerSpawnPhaseCompleted
+      : this._ticks <= this.config().numSpawnPhaseTurns();
   }
 
   endSpawnPhase(): void {
@@ -439,7 +435,10 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
-    this.spawnPhaseLockedValue = this.computeInSpawnPhase();
+    this.spawnPhaseLockedValue =
+      this.config().gameConfig().gameType === GameType.Singleplayer
+        ? !this.singleplayerSpawnPhaseCompleted
+        : this._ticks <= this.config().numSpawnPhaseTurns();
 
     this.updates = createGameUpdatesMap();
     this.tileUpdatePairs.length = 0;
