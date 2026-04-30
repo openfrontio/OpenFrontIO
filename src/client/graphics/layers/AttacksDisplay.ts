@@ -377,16 +377,16 @@ export class AttacksDisplay extends LitElement implements Layer {
               "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
-          ${!boat.retreating()
-            ? this.renderButton({
-                content: "❌",
+          ${boat.transportShipState().isRetreating
+            ? html`<span class="ml-auto truncate text-aquarius"
+                >(${translateText("events_display.retreating")}...)</span
+              >`
+            : this.renderButton({
+                content: "\u274C",
                 onClick: () => this.emitBoatCancelIntent(boat.id()),
                 className: "ml-auto text-left shrink-0",
-                disabled: boat.retreating(),
-              })
-            : html`<span class="ml-auto truncate text-aquarius"
-                >(${translateText("events_display.retreating")}...)</span
-              >`}
+                disabled: boat.transportShipState().isRetreating,
+              })}
         </div>
       `,
     );
