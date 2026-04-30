@@ -783,6 +783,10 @@ export class ClientGameRunner {
   }
 
   private doRetaliateAttackMostRecent(): void {
+    if (!this.isActive || this.gameView.inSpawnPhase()) {
+      return;
+    }
+
     if (this.myPlayer === null) {
       if (!this.clientID) return;
       const myPlayer = this.gameView.playerByClientID(this.clientID);
