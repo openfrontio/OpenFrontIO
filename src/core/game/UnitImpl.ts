@@ -131,7 +131,9 @@ export class UnitImpl implements Unit {
       isActive: this._active,
       reachedTarget: this._reachedTarget,
       warshipState:
-        this._warshipState !== undefined ? this.warshipState() : undefined,
+        this._warshipState !== undefined
+          ? { ...this.warshipState() }
+          : undefined,
       transportShipState:
         this._type === UnitType.TransportShip
           ? this.transportShipState()
@@ -353,7 +355,8 @@ export class UnitImpl implements Unit {
     if (this._warshipState === undefined) {
       throw new Error("warshipState called on non-warship unit");
     }
-    return { ...this._warshipState, isInCombat: this.isInCombat() };
+    this._warshipState.isInCombat = this.isInCombat();
+    return this._warshipState;
   }
 
   updateWarshipState(update: Partial<WarshipState>): void {

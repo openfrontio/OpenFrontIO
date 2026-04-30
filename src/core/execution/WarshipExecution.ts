@@ -266,11 +266,12 @@ export class WarshipExecution implements Execution {
       if (includeTradeShips && type === UnitType.TradeShip) {
         if (hasPort === undefined) {
           hasPort = owner.unitCount(UnitType.Port) > 0;
-          patrolTile = this.warship.warshipState().patrolTile!;
+          patrolTile = this.warship.warshipState().patrolTile;
           patrolRangeSquared = config.warshipPatrolRange() ** 2;
         }
         if (
           !hasPort ||
+          patrolTile === undefined ||
           unit.isSafeFromPirates() ||
           unit.targetUnit()?.owner() === owner ||
           unit.targetUnit()?.owner().isFriendly(owner)
@@ -287,8 +288,7 @@ export class WarshipExecution implements Execution {
           continue;
         }
         if (
-          mg.euclideanDistSquared(patrolTile!, unit.tile()) >
-          patrolRangeSquared!
+          mg.euclideanDistSquared(patrolTile, unit.tile()) > patrolRangeSquared!
         ) {
           continue;
         }
@@ -485,28 +485,19 @@ export class WarshipExecution implements Execution {
   }
 
   private dockedShipsAtPort(port: Unit, excludeShip?: Unit): Unit[] {
-    const portTile = port.tile();
     const dockingRadius = this.mg.config().warshipDockingRange();
-    const dockingRadiusSq = dockingRadius * dockingRadius;
+    const owner = this.warship.owner();
 
-    return this.warship
-      .owner()
-      .units(UnitType.Warship)
-      .filter((ship) => {
-        if (excludeShip && ship === excludeShip) {
-          return false;
-        }
-        if (ship.warshipState().state === "patrolling") {
-          return false;
-        }
-        // Docked ships are retreating ships that are stationary at the port.
-        if (ship.targetTile() !== undefined) {
-          return false;
-        }
-        return (
-          this.mg.euclideanDistSquared(ship.tile(), portTile) <= dockingRadiusSq
-        );
-      });
+    return this.mg
+      .nearbyUnits(port.tile(), dockingRadius, [UnitType.Warship])
+      .filter(({ unit: ship }) => {
+        if (excludeShip && ship === excludeShip) return false;
+        if (ship.owner() !== owner) return false;
+        if (ship.warshipState().state === "patrolling") return false;
+        if (ship.targetTile() !== undefined) return false;
+        return true;
+      })
+      .map(({ unit }) => unit);
   }
 
   private applyActiveDockedHealing(): void {
@@ -556,6 +547,9 @@ export class WarshipExecution implements Execution {
     const ports = this.warship.owner().units(UnitType.Port);
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
+    if (warshipComponent === null) {
+      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+    }
 
     let bestTile: TileRef | undefined = undefined;
     let bestDistance = Infinity;
@@ -566,10 +560,7 @@ export class WarshipExecution implements Execution {
       }
 
       const portTile = port.tile();
-      if (
-        warshipComponent !== null &&
-        !this.mg.hasWaterComponent(portTile, warshipComponent)
-      ) {
+      if (!this.mg.hasWaterComponent(portTile, warshipComponent)) {
         continue;
       }
 
@@ -623,7 +614,6 @@ export class WarshipExecution implements Execution {
         // Warships don't need to reload when attacking transport ships.
         this.lastShellAttack = this.mg.ticks();
       }
-      this.warship.updateWarshipState({ isInCombat: true });
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),
