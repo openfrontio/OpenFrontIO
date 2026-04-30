@@ -16,13 +16,13 @@ import {
 } from "../../Transport";
 import { renderTroops, translateText } from "../../Utils";
 import { getColoredSprite } from "../SpriteLoader";
-import { UIState } from "../UIState";
-import { Layer } from "./Layer";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
-} from "./Leaderboard";
+} from "../TransformHandler";
+import { UIState } from "../UIState";
+import { Layer } from "./Layer";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
