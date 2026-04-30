@@ -306,7 +306,7 @@ export class SpriteFactory {
     structureType: UnitType,
     isConstruction: boolean,
     isMarkedForDeletion: boolean,
-    shape: string,
+    shape: keyof typeof ICON_SIZE,
     renderIcon: boolean,
   ): PIXI.Texture {
     const structureCanvas = document.createElement("canvas");

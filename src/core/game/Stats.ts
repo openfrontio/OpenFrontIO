@@ -106,5 +106,5 @@ export interface Stats {
   trainSelfTrade(player: Player, gold: number | bigint): void;
 
   // Another player's train arrives at own station
-  trainExternalTrade(player: Player, goldPlayer: number | bigint);
+  trainExternalTrade(player: Player, goldPlayer: number | bigint): void;
 }

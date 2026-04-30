@@ -220,6 +220,14 @@ declare global {
     "start-game": CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
+    userMeResponse: CustomEvent<UserMeResponse | false>;
+    "leave-lobby": CustomEvent;
+    "update-game-config": CustomEvent;
+  }
+
+  // Fixes the globalThis.addEventListener errors
+  interface WindowEventMap {
+    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 

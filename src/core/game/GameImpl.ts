@@ -40,6 +40,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitView } from "./GameView";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -995,7 +996,7 @@ export class GameImpl implements Game {
       tile,
       searchRange,
       types,
-      predicate,
+      predicate as (unit: Unit | UnitView) => boolean,
       playerId,
       includeUnderConstruction,
     );
