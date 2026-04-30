@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 487,
-    "num_land_tiles": 132885,
+    "num_land_tiles": 132854,
     "width": 1027
   },
   "map4x": {
     "height": 974,
-    "num_land_tiles": 564737,
+    "num_land_tiles": 563340,
     "width": 2054
   },
   "name": "Giant_World_Map",

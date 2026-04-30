@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 425,
-    "num_land_tiles": 69861,
+    "num_land_tiles": 69860,
     "width": 500
   },
   "map4x": {
     "height": 850,
-    "num_land_tiles": 284530,
+    "num_land_tiles": 284422,
     "width": 1000
   },
   "name": "Achiran",

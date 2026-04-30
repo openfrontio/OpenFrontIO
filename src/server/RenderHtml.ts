@@ -13,19 +13,35 @@ const appShellContentCache = new Map<string, Promise<string>>();
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
   const assetManifest = await getRuntimeAssetManifest();
+  const cdnBase = process.env.CDN_BASE ?? "";
   return ejs.render(htmlContent, {
     gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
     assetManifest: JSON.stringify(assetManifest),
+    cdnBase: JSON.stringify(cdnBase),
+    // Raw (unquoted) value for use as a URL prefix in the index.html template,
+    // e.g. <script src="<%- cdnBaseRaw %>/assets/index-XXX.js">. The Vite
+    // build plugin inject-cdn-base-template rewrites Vite's emitted /assets/
+    // refs to use this placeholder.
+    cdnBaseRaw: cdnBase,
     gameEnv: JSON.stringify(process.env.GAME_ENV ?? "dev"),
-    manifestHref: buildAssetUrl("manifest.json", assetManifest),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(
       "images/GameplayScreenshot.png",
       assetManifest,
+      cdnBase,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.png", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest),
+    backgroundImageUrl: buildAssetUrl(
+      "images/background.webp",
+      assetManifest,
+      cdnBase,
+    ),
+    desktopLogoImageUrl: buildAssetUrl(
+      "images/OpenFront.png",
+      assetManifest,
+      cdnBase,
+    ),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest, cdnBase),
   });
 }
 

@@ -98,7 +98,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
   private renderSpeedButton(value: ReplaySpeedMultiplier, label: string) {
     const backgroundColor =
-      this._replaySpeedMultiplier === value ? "bg-blue-400" : "";
+      this._replaySpeedMultiplier === value ? "bg-malibu-blue" : "";
 
     return html`
       <button

@@ -115,7 +115,7 @@ export class NewsBox extends LitElement {
 
     return html`
       <div
-        class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 lg:border-y-0 lg:rounded-xl lg:p-3"
+        class="px-2 py-2 bg-surface border-y border-white/10 lg:border-y-0 lg:rounded-xl lg:p-3"
       >
         <div class="flex items-center gap-3">
           <span

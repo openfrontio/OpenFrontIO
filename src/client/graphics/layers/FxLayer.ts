@@ -26,7 +26,6 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private hasBufferedFrame = false;
-  private constructionState: Map<number, boolean> = new Map();
 
   constructor(
     private game: GameView,
@@ -112,6 +111,26 @@ export class FxLayer implements Layer {
       case UnitType.Warship:
         if (unit.owner() === this.game.myPlayer()) {
           this.eventBus.emit(new PlaySoundEffectEvent("build-warship"));
+        }
+        break;
+      case UnitType.City:
+        if (unit.owner() === this.game.myPlayer()) {
+          this.eventBus.emit(new PlaySoundEffectEvent("build-city"));
+        }
+        break;
+      case UnitType.Port:
+        if (unit.owner() === this.game.myPlayer()) {
+          this.eventBus.emit(new PlaySoundEffectEvent("build-port"));
+        }
+        break;
+      case UnitType.DefensePost:
+        if (unit.owner() === this.game.myPlayer()) {
+          this.eventBus.emit(new PlaySoundEffectEvent("build-defense-post"));
+        }
+        break;
+      case UnitType.SAMLauncher:
+        if (unit.owner() === this.game.myPlayer()) {
+          this.eventBus.emit(new PlaySoundEffectEvent("sam-built"));
         }
         break;
     }
@@ -207,44 +226,16 @@ export class FxLayer implements Layer {
   }
 
   onStructureEvent(unit: UnitView) {
-    if (!unit.isActive()) {
-      if (this.fxEnabled()) {
-        const x = this.game.x(unit.lastTile());
-        const y = this.game.y(unit.lastTile());
-        const explosion = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.BuildingExplosion,
-        );
-        this.allFx.push(explosion);
-      }
-      this.constructionState.delete(unit.id());
-    } else {
-      const wasUnderConstruction = this.constructionState.get(unit.id());
-      this.constructionState.set(unit.id(), unit.isUnderConstruction());
-      if (wasUnderConstruction && !unit.isUnderConstruction()) {
-        if (unit.owner() === this.game.myPlayer()) {
-          this.onStructureBuilt(unit);
-        }
-      }
-    }
-  }
-
-  onStructureBuilt(unit: UnitView) {
-    switch (unit.type()) {
-      case UnitType.City:
-        this.eventBus.emit(new PlaySoundEffectEvent("build-city"));
-        break;
-      case UnitType.Port:
-        this.eventBus.emit(new PlaySoundEffectEvent("build-port"));
-        break;
-      case UnitType.DefensePost:
-        this.eventBus.emit(new PlaySoundEffectEvent("build-defense-post"));
-        break;
-      case UnitType.SAMLauncher:
-        this.eventBus.emit(new PlaySoundEffectEvent("sam-built"));
-        break;
+    if (!unit.isActive() && this.fxEnabled()) {
+      const x = this.game.x(unit.lastTile());
+      const y = this.game.y(unit.lastTile());
+      const explosion = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.BuildingExplosion,
+      );
+      this.allFx.push(explosion);
     }
   }
 

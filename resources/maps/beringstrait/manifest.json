@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 229,
-    "num_land_tiles": 35567,
+    "num_land_tiles": 35566,
     "width": 375
   },
   "map4x": {
     "height": 458,
-    "num_land_tiles": 146741,
+    "num_land_tiles": 146676,
     "width": 750
   },
   "name": "BeringStrait",
