@@ -31,6 +31,7 @@ export type WarshipState = {
   patrolTile?: TileRef;
   retreatPort?: TileRef;
   isInCombat?: boolean;
+  lastCombatTick: number;
 };
 
 export type TransportShipState = {

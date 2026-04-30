@@ -623,7 +623,7 @@ export class WarshipExecution implements Execution {
         // Warships don't need to reload when attacking transport ships.
         this.lastShellAttack = this.mg.ticks();
       }
-      this.warship.markInCombat();
+      this.warship.updateWarshipState({ isInCombat: true });
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),

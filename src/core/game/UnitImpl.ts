@@ -23,7 +23,6 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _lastCombatTick: number = -100;
   private _transportShipState: TransportShipState = {
     isRetreating: false,
     troops: 0,
@@ -71,6 +70,7 @@ export class UnitImpl implements Unit {
       this._warshipState = {
         state: "patrolling",
         patrolTile: params.patrolTile,
+        lastCombatTick: -100,
       };
     }
     this._targetUnit =
@@ -239,8 +239,12 @@ export class UnitImpl implements Unit {
       return;
     }
 
-    if (attacker !== undefined && delta < 0) {
-      this._lastCombatTick = this.mg.ticks();
+    if (
+      attacker !== undefined &&
+      delta < 0 &&
+      this._warshipState !== undefined
+    ) {
+      this._warshipState.lastCombatTick = this.mg.ticks();
     }
     this._health = nextHealth;
     this.mg.addUpdate(this.toUpdate());
@@ -370,17 +374,18 @@ export class UnitImpl implements Unit {
       state: merged.state,
       patrolTile: merged.patrolTile,
       retreatPort: merged.retreatPort,
+      lastCombatTick: this._warshipState.lastCombatTick,
     };
     this.mg.addUpdate(this.toUpdate());
   }
 
   isInCombat(): boolean {
-    return this.mg.ticks() - this._lastCombatTick <= 3;
+    return this.mg.ticks() - this._warshipState!.lastCombatTick <= 3;
   }
 
-  markInCombat(): void {
+  private markInCombat(): void {
     const wasInCombat = this.isInCombat();
-    this._lastCombatTick = this.mg.ticks();
+    this._warshipState!.lastCombatTick = this.mg.ticks();
     if (!wasInCombat) {
       this.mg.addUpdate(this.toUpdate());
     }

@@ -129,9 +129,6 @@ export class UnitView {
   isInCombat(): boolean {
     return this.data.warshipState?.isInCombat ?? false;
   }
-  markInCombat(): void {
-    throw new Error("markInCombat is not supported on UnitView");
-  }
   touch(): void {
     throw new Error("touch is not supported on UnitView");
   }
