@@ -61,7 +61,7 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
-    const isInCombat = this.warship.isInCombat();
+    const isInCombat = this.warship.warshipState().isInCombat ?? false;
     if (this.lastEmittedCombat && !isInCombat) {
       this.warship.touch();
     }
@@ -97,21 +97,17 @@ export class WarshipExecution implements Execution {
 
     this.warship.setTargetUnit(this.findTargetUnit());
 
-    // Always patrol for movement
-    this.patrol();
-
-    // Movement can change what is actually in range, so recompute before acting.
-    this.warship.setTargetUnit(this.findTargetUnit());
-
     // Priority 1: Shoot transport ship if in range
     if (this.warship.targetUnit()?.type() === UnitType.TransportShip) {
       this.shootTarget();
+      this.patrol();
       return;
     }
 
     // Priority 2: Fight enemy warship if in range
     if (this.warship.targetUnit()?.type() === UnitType.Warship) {
       this.shootTarget();
+      this.patrol();
       return;
     }
 
@@ -120,6 +116,8 @@ export class WarshipExecution implements Execution {
       this.huntDownTradeShip();
       return;
     }
+
+    this.patrol();
   }
 
   private healWarship(): void {
@@ -257,7 +255,8 @@ export class WarshipExecution implements Execution {
         unit.owner() === owner ||
         !owner.canAttackPlayer(unit.owner(), true) ||
         this.alreadySentShell.has(unit) ||
-        unit.warshipState().state === "docked"
+        (unit.type() === UnitType.Warship &&
+          unit.warshipState().state === "docked")
       ) {
         continue;
       }
@@ -617,6 +616,7 @@ export class WarshipExecution implements Execution {
   }
 
   private shootTarget() {
+    this.warship.updateWarshipState({ isInCombat: true });
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
       if (this.warship.targetUnit()?.type() !== UnitType.TransportShip) {
@@ -642,7 +642,7 @@ export class WarshipExecution implements Execution {
   }
 
   private huntDownTradeShip() {
-    this.warship.markInCombat();
+    this.warship.updateWarshipState({ isInCombat: true });
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
       const result = this.pathfinder.next(

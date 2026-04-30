@@ -118,13 +118,16 @@ export class UnitView {
     return this.data.troops;
   }
   warshipState(): WarshipState {
+    if (this.data.warshipState === undefined) {
+      throw new Error("warshipState called on non-warship unit");
+    }
     return this.data.warshipState;
   }
   updateWarshipState(_update: Partial<WarshipState>): void {
     throw new Error("updateWarshipState is not supported on UnitView");
   }
   isInCombat(): boolean {
-    return this.data.isInCombat;
+    return this.data.warshipState?.isInCombat ?? false;
   }
   markInCombat(): void {
     throw new Error("markInCombat is not supported on UnitView");

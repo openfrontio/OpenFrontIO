@@ -199,7 +199,7 @@ export class TransportShipExecution implements Execution {
     // are throttled and the tile may already be water before the version bumps.
     if (this.dst !== null && this.mg.isWater(this.dst)) {
       if (!this.boat.transportShipState().isRetreating) {
-        this.boat.orderBoatRetreat();
+        this.boat.updateTransportShipState({ isRetreating: true });
       }
       // Reset cached retreat destination so it's recomputed from current position
       this.retreatDst = null;

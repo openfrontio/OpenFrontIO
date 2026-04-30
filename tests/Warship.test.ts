@@ -521,8 +521,9 @@ describe("Warship", () => {
     });
 
     execution.tick(game.ticks());
-
     expect(warship.tile()).toBe(movedTile);
+
+    execution.tick(game.ticks());
     expect(warship.targetUnit()).toBeUndefined();
   });
 
@@ -723,12 +724,12 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
     game.executeNextTick();
 
-    expect(warship.isInCombat()).toBe(false);
+    expect(warship.warshipState().isInCombat).toBe(false);
 
     // Simulate incoming shell damage from an enemy player
     warship.modifyHealth(-50, player2);
 
-    expect(warship.isInCombat()).toBe(true);
+    expect(warship.warshipState().isInCombat).toBe(true);
   });
 
   test("Warship isInCombat becomes true when firing at an enemy", async () => {
@@ -751,13 +752,13 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
     game.executeNextTick();
 
-    expect(warship.isInCombat()).toBe(false);
+    expect(warship.warshipState().isInCombat).toBe(false);
 
     // Give warship a target and tick — shootTarget sets inCombat
     warship.setTargetUnit(enemyWarship);
     game.executeNextTick();
 
-    expect(warship.isInCombat()).toBe(true);
+    expect(warship.warshipState().isInCombat).toBe(true);
   });
 
   test("Docked warship is not targeted by enemy warship", async () => {

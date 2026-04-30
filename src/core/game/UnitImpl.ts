@@ -23,14 +23,12 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _warshipMovementState: WarshipState["state"] = "patrolling";
   private _lastCombatTick: number = -100;
-  private _patrolTile: TileRef | undefined;
-  private _retreatPort: TileRef | undefined;
   private _transportShipState: TransportShipState = {
     isRetreating: false,
     troops: 0,
   };
+  private _warshipState: WarshipState | undefined = undefined;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -69,8 +67,12 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
-    this._patrolTile =
-      "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
+    if ("patrolTile" in params) {
+      this._warshipState = {
+        state: "patrolling",
+        patrolTile: params.patrolTile,
+      };
+    }
     this._targetUnit =
       "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
     this._loaded =
@@ -128,8 +130,8 @@ export class UnitImpl implements Unit {
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
       reachedTarget: this._reachedTarget,
-      warshipState: this.warshipState(),
-      isInCombat: this.isInCombat(),
+      warshipState:
+        this._warshipState !== undefined ? this.warshipState() : undefined,
       transportShipState:
         this._type === UnitType.TransportShip
           ? this.transportShipState()
@@ -344,25 +346,32 @@ export class UnitImpl implements Unit {
   }
 
   warshipState(): WarshipState {
-    return {
-      state: this._warshipMovementState,
-      patrolTile: this._patrolTile,
-      retreatPort: this._retreatPort,
-    };
+    if (this._warshipState === undefined) {
+      throw new Error("warshipState called on non-warship unit");
+    }
+    return { ...this._warshipState, isInCombat: this.isInCombat() };
   }
 
   updateWarshipState(update: Partial<WarshipState>): void {
-    const changed =
-      (update.state !== undefined &&
-        this._warshipMovementState !== update.state) ||
-      ("patrolTile" in update && this._patrolTile !== update.patrolTile) ||
-      ("retreatPort" in update && this._retreatPort !== update.retreatPort);
-    if (update.state !== undefined) this._warshipMovementState = update.state;
-    if ("patrolTile" in update) this._patrolTile = update.patrolTile;
-    if ("retreatPort" in update) this._retreatPort = update.retreatPort;
-    if (changed) {
-      this.mg.addUpdate(this.toUpdate());
+    if (this._warshipState === undefined) {
+      throw new Error("updateWarshipState called on non-warship unit");
     }
+    if (update.isInCombat) {
+      this.markInCombat();
+    }
+    const merged = { ...this._warshipState, ...update };
+    if (
+      merged.state === this._warshipState.state &&
+      merged.patrolTile === this._warshipState.patrolTile &&
+      merged.retreatPort === this._warshipState.retreatPort
+    )
+      return;
+    this._warshipState = {
+      state: merged.state,
+      patrolTile: merged.patrolTile,
+      retreatPort: merged.retreatPort,
+    };
+    this.mg.addUpdate(this.toUpdate());
   }
 
   isInCombat(): boolean {
@@ -384,9 +393,7 @@ export class UnitImpl implements Unit {
     };
   }
 
-  updateTransportShipState(
-    update: Pick<TransportShipState, "isRetreating">,
-  ): void {
+  updateTransportShipState(update: Partial<TransportShipState>): void {
     let changed = false;
     if (
       update.isRetreating !== undefined &&
@@ -401,13 +408,6 @@ export class UnitImpl implements Unit {
     if (changed) {
       this.mg.addUpdate(this.toUpdate());
     }
-  }
-
-  orderBoatRetreat() {
-    if (this.type() !== UnitType.TransportShip) {
-      throw new Error("Cannot retreat " + this.type());
-    }
-    this.updateTransportShipState({ isRetreating: true });
   }
 
   isUnderConstruction(): boolean {

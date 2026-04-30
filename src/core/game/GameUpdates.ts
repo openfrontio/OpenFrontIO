@@ -139,8 +139,7 @@ export interface UnitUpdate {
   lastPos: TileRef;
   isActive: boolean;
   reachedTarget: boolean;
-  warshipState: WarshipState;
-  isInCombat: boolean;
+  warshipState?: WarshipState;
   transportShipState?: TransportShipState;
   targetable: boolean;
   markedForDeletion: number | false;
