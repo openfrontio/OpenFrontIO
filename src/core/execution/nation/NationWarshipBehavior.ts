@@ -150,7 +150,7 @@ export class NationWarshipBehavior {
         return (
           target &&
           p.isActive() &&
-          !p.retreating() &&
+          !p.transportShipState().isRetreating &&
           this.game.ownerID(target) === this.player?.smallID() &&
           p.owner().smallID() !== this.player?.smallID()
         );
@@ -162,7 +162,7 @@ export class NationWarshipBehavior {
       if (
         !transport.isActive() ||
         target === undefined ||
-        transport.retreating()
+        transport.transportShipState().isRetreating
       ) {
         this.trackedIncomingTransportShips.delete(transport);
         this.dealtWithTransportShip.delete(transport);
@@ -194,7 +194,7 @@ export class NationWarshipBehavior {
             true,
           ) ||
           this.player.units(UnitType.Warship).filter((p) => {
-            const patrolTile = p.patrolTile();
+            const patrolTile = p.warshipState().patrolTile;
             return (
               patrolTile !== undefined &&
               this.game.manhattanDist(target, patrolTile) < 90
@@ -259,7 +259,7 @@ export class NationWarshipBehavior {
       const warship = this.player
         .units(UnitType.Warship)
         .filter((p) => {
-          const patrolTile = p.patrolTile();
+          const patrolTile = p.warshipState().patrolTile;
           return (
             patrolTile !== undefined &&
             // Dont send ships which are already traveling
@@ -274,7 +274,7 @@ export class NationWarshipBehavior {
         })[0];
 
       if (warship) {
-        warship.setPatrolTile(tile);
+        warship.updateWarshipState({ patrolTile: tile });
       }
     }
   }
