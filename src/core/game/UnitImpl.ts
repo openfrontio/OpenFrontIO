@@ -23,10 +23,7 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _transportShipState: TransportShipState = {
-    isRetreating: false,
-    troops: 0,
-  };
+  private _transportShipState: TransportShipState | undefined = undefined;
   private _warshipState: WarshipState | undefined = undefined;
   private _targetedBySAM = false;
   private _reachedTarget = false;
@@ -66,6 +63,9 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
+    if (this._type === UnitType.TransportShip) {
+      this._transportShipState = { isRetreating: false, troops: 0 };
+    }
     if ("patrolTile" in params) {
       this._warshipState = {
         state: "patrolling",
@@ -135,7 +135,7 @@ export class UnitImpl implements Unit {
           ? { ...this.warshipState() }
           : undefined,
       transportShipState:
-        this._type === UnitType.TransportShip
+        this._transportShipState !== undefined
           ? this.transportShipState()
           : undefined,
       pos: this._tile,
@@ -395,6 +395,9 @@ export class UnitImpl implements Unit {
   }
 
   transportShipState(): TransportShipState {
+    if (this._transportShipState === undefined) {
+      throw new Error("transportShipState called on non-transport-ship unit");
+    }
     return {
       isRetreating: this._transportShipState.isRetreating,
       troops: this._troops,
@@ -402,6 +405,11 @@ export class UnitImpl implements Unit {
   }
 
   updateTransportShipState(update: Partial<TransportShipState>): void {
+    if (this._transportShipState === undefined) {
+      throw new Error(
+        "updateTransportShipState called on non-transport-ship unit",
+      );
+    }
     let changed = false;
     if (
       update.isRetreating !== undefined &&
