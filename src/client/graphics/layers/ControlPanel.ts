@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Gold } from "../../../core/game/Game";
+import { GameMode, GameType, Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
@@ -99,9 +99,11 @@ export class ControlPanel extends LitElement implements Layer {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
     this.troopRate = config.troopIncreaseRate(player) * 10;
-    const isTeamGame = config.gameConfig().gameMode === GameMode.Team;
+    const { gameMode, gameType } = config.gameConfig();
+    const isPublicTeamGame =
+      gameMode === GameMode.Team && gameType === GameType.Public;
     const canDonateTroops = config.donateTroops();
-    if (isTeamGame && canDonateTroops) {
+    if (isPublicTeamGame && canDonateTroops) {
       const ratio = this._troops / Math.max(this._maxTroops, 1);
       this._showArmyLimitWarning = ratio >= config.armyLimitWarningThreshold();
     } else {
