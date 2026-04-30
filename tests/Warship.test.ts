@@ -852,4 +852,71 @@ describe("Warship", () => {
     game.executeNextTick();
     expect(warship.tile()).not.toBe(tileBeforeCombat);
   });
+
+  test("Warship captures trade ship immediately when already within capture range", async () => {
+    // Trade ship is within Manhattan distance 5 — should be captured on the first tick
+    // via the dist <= 5 fast path in huntDownTradeShip, without needing pathfinding.
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 8), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 8),
+      {
+        patrolTile: game.ref(coastX + 1, 8),
+      },
+    );
+    const tradeShip = player2.buildUnit(
+      UnitType.TradeShip,
+      game.ref(coastX + 1, 11), // Manhattan distance 3 from warship
+      {
+        targetUnit: player2.buildUnit(UnitType.Port, game.ref(coastX, 11), {}),
+      },
+    );
+
+    const execution = new WarshipExecution(warship);
+    const executionInternals = execution as unknown as {
+      findTargetUnit: () => typeof tradeShip | undefined;
+    };
+    execution.init(game, game.ticks());
+    vi.spyOn(executionInternals, "findTargetUnit").mockReturnValue(tradeShip);
+
+    expect(tradeShip.owner().id()).toBe(player2.id());
+    execution.tick(game.ticks());
+    expect(tradeShip.owner()).toBe(player1);
+  });
+
+  test("Warship uses greedy pursuit to capture trade ship within 20 tiles", async () => {
+    // Trade ship is within the 20-tile greedy range but outside the 5-tile instant-capture
+    // range. The warship should use direct neighbor movement (not minimap pathfinding)
+    // and close the gap cleanly.
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 3), {});
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 3),
+      {
+        patrolTile: game.ref(coastX + 1, 3),
+      },
+    );
+    const tradeShip = player2.buildUnit(
+      UnitType.TradeShip,
+      game.ref(coastX + 1, 13), // Manhattan distance 10 — within greedy range
+      {
+        targetUnit: player2.buildUnit(UnitType.Port, game.ref(coastX, 13), {}),
+      },
+    );
+
+    const execution = new WarshipExecution(warship);
+    const executionInternals = execution as unknown as {
+      findTargetUnit: () => typeof tradeShip | undefined;
+    };
+    execution.init(game, game.ticks());
+    vi.spyOn(executionInternals, "findTargetUnit").mockReturnValue(tradeShip);
+
+    expect(tradeShip.owner().id()).toBe(player2.id());
+    // 10 tiles at 2 steps/tick = 5 ticks minimum
+    for (let i = 0; i < 10; i++) {
+      execution.tick(game.ticks());
+      if (tradeShip.owner() === player1) break;
+    }
+    expect(tradeShip.owner()).toBe(player1);
+  });
 });

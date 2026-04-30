@@ -634,27 +634,57 @@ export class WarshipExecution implements Execution {
   private huntDownTradeShip() {
     this.warship.updateWarshipState({ isInCombat: true });
     for (let i = 0; i < 2; i++) {
-      // target is trade ship so capture it.
-      const result = this.pathfinder.next(
-        this.warship.tile(),
-        this.warship.targetUnit()!.tile(),
-        5,
-      );
+      const target = this.warship.targetUnit()!;
+      const targetTile = target.tile();
+      const dist = this.mg.manhattanDist(this.warship.tile(), targetTile);
+
+      if (dist <= 5) {
+        this.warship.owner().captureUnit(target);
+        this.warship.setTargetUnit(undefined);
+        this.warship.touch();
+        return;
+      }
+
+      // When close, the minimap (2x scale) produces diagonal upscaled paths that
+      // make it hard to converge. Use direct greedy movement instead.
+      if (dist <= 20) {
+        const nextTile = this.bestNeighborToward(targetTile);
+        if (nextTile !== undefined) {
+          this.warship.move(nextTile);
+          continue;
+        }
+      }
+
+      const result = this.pathfinder.next(this.warship.tile(), targetTile, 5);
       switch (result.status) {
         case PathStatus.COMPLETE:
-          this.warship.owner().captureUnit(this.warship.targetUnit()!);
+          this.warship.owner().captureUnit(target);
           this.warship.setTargetUnit(undefined);
-          this.warship.move(this.warship.tile());
+          this.warship.touch();
           return;
         case PathStatus.NEXT:
           this.warship.move(result.node);
           break;
-        case PathStatus.NOT_FOUND: {
+        case PathStatus.NOT_FOUND:
           console.log(`path not found to target`);
           break;
-        }
       }
     }
+  }
+
+  private bestNeighborToward(targetTile: TileRef): TileRef | undefined {
+    const warshipTile = this.warship.tile();
+    let best: TileRef | undefined;
+    let bestDist = this.mg.manhattanDist(warshipTile, targetTile);
+    this.mg.forEachNeighbor(warshipTile, (neighbor) => {
+      if (!this.mg.isWater(neighbor)) return;
+      const d = this.mg.manhattanDist(neighbor, targetTile);
+      if (d < bestDist) {
+        bestDist = d;
+        best = neighbor;
+      }
+    });
+    return best;
   }
 
   private patrol() {
