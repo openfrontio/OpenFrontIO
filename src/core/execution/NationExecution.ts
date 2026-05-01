@@ -2,15 +2,12 @@ import {
   Difficulty,
   Execution,
   Game,
-  GameMode,
   GameType,
   Nation,
   Player,
   PlayerID,
-  PlayerType,
   Relation,
   TerrainType,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -89,75 +86,40 @@ export class NationExecution implements Execution {
   }
 
   tick(ticks: number) {
-    if (this.player !== null && this.player.hasSpawned()) {
-      this.spawnQueuedAtTick = null;
-    } else if (
-      this.spawnQueuedAtTick !== null &&
-      ticks > this.spawnQueuedAtTick + 1
-    ) {
-      // Give queued SpawnExecution one full tick to run, then allow retries.
-      this.spawnQueuedAtTick = null;
-    }
-
-    if (this.player === null) {
-      return;
-    }
-
-    if (this.shouldSpawnNationNow()) {
-      if (this.spawnQueuedAtTick !== null) {
-        return;
-      }
-      if (this.queueSpawnExecution()) {
-        this.spawnQueuedAtTick = ticks;
-      }
-      return;
-    }
+    this.refreshPendingSpawnState(ticks);
 
     // Ship tracking
     if (
       this.behaviorsInitialized &&
       this.player !== null &&
       this.player.isAlive() &&
-      this.mg.config().gameConfig().difficulty !== Difficulty.Easy &&
-      !this.mg.config().isUnitDisabled(UnitType.Warship)
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
     ) {
       this.warshipBehavior.trackShipsAndRetaliate();
     }
 
-    if (ticks % this.attackRate !== this.attackTick) {
-      // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
-      // Otherwise it is possible that we earn more gold than we can spend
-      // The alternative is placing multiple structures in handleStructures, but that causes problems
-      if (
-        this.behaviorsInitialized &&
-        this.player !== null &&
-        this.player.isAlive()
-      ) {
-        const offset = ticks % this.attackRate;
-        const oneThird =
-          (this.attackTick + Math.floor(this.attackRate / 3)) % this.attackRate;
-        const twoThirds =
-          (this.attackTick + Math.floor((this.attackRate * 2) / 3)) %
-          this.attackRate;
-        if (offset === oneThird || offset === twoThirds) {
-          this.structureBehavior.handleStructures();
-        }
-      }
+    if (this.player === null) {
       return;
     }
 
     if (this.mg.inSpawnPhase()) {
-      // In singleplayer nations should spawn only after the human spawns.
       if (this.mg.config().gameConfig().gameType === GameType.Singleplayer) {
         return;
       }
 
-      if (this.spawnQueuedAtTick !== null) {
+      if (ticks % this.attackRate !== this.attackTick) {
         return;
       }
-      if (this.queueSpawnExecution()) {
-        this.spawnQueuedAtTick = ticks;
-      }
+      this.queueSpawnExecutionIfNeeded(ticks);
+      return;
+    }
+
+    if (
+      this.player !== null &&
+      !this.player.hasSpawned() &&
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer
+    ) {
+      this.queueSpawnExecutionIfNeeded(ticks);
       return;
     }
 
@@ -255,29 +217,28 @@ export class NationExecution implements Execution {
     this.behaviorsInitialized = true;
   }
 
-  private shouldSpawnNationNow(): boolean {
-    if (this.player === null || this.player.hasSpawned()) {
-      return false;
+  private refreshPendingSpawnState(ticks: number): void {
+    if (this.player !== null && this.player.hasSpawned()) {
+      this.spawnQueuedAtTick = null;
+      return;
     }
-
-    const isSingleplayer =
-      this.mg.config().gameConfig().gameType === GameType.Singleplayer;
-    if (!isSingleplayer) {
-      return false;
+    if (this.spawnQueuedAtTick !== null && ticks > this.spawnQueuedAtTick + 1) {
+      // Give queued SpawnExecution one full tick to run, then allow retries.
+      this.spawnQueuedAtTick = null;
     }
-
-    return this.allHumansSpawned();
   }
 
-  private allHumansSpawned(): boolean {
-    return this.mg
-      .allPlayers()
-      .filter((p) => p.type() === PlayerType.Human)
-      .every((p) => p.hasSpawned());
+  private queueSpawnExecutionIfNeeded(ticks: number): void {
+    if (this.spawnQueuedAtTick !== null) {
+      return;
+    }
+    if (this.queueSpawnExecution()) {
+      this.spawnQueuedAtTick = ticks;
+    }
   }
 
   private queueSpawnExecution(): boolean {
-    // Place nations without a spawn cell (dynamically created for HumansVsNations) randomly by SpawnExecution.
+    // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
     if (this.nation.spawnCell === undefined) {
       this.mg.addExecution(
         new SpawnExecution(this.gameID, this.nation.playerInfo),
@@ -285,6 +246,8 @@ export class NationExecution implements Execution {
       return true;
     }
 
+    // If team spawn areas are configured and the nation's spawn cell
+    // is outside its team's area, spawn randomly within the area instead.
     const team = this.player?.team();
     if (team !== null && team !== undefined) {
       const area = this.mg.teamSpawnArea(team);
@@ -304,8 +267,9 @@ export class NationExecution implements Execution {
       }
     }
 
-    // Select a tile near the position defined in the map manifest.
+    // Select a tile near the position defined in the map manifest
     const rl = this.randomSpawnLand();
+
     if (rl === null) {
       console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
       return false;
@@ -371,26 +335,8 @@ export class NationExecution implements Execution {
     const player = this.player;
     if (player === null) return;
     const others = this.mg.players().filter((p) => p.id() !== player.id());
-    const difficulty = this.mg.config().gameConfig().difficulty;
-    const isHigherDifficulty =
-      difficulty === Difficulty.Hard || difficulty === Difficulty.Impossible;
-    const teamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
 
     others.forEach((other: Player) => {
-      // In team games on higher difficulties, refuse to trade with anyone
-      // not on this nation's team (mirrors the "stop trading with all" button).
-      if (
-        teamGame &&
-        isHigherDifficulty &&
-        other.type() !== PlayerType.Bot &&
-        !player.isOnSameTeam(other)
-      ) {
-        if (!player.hasEmbargoAgainst(other)) {
-          player.addEmbargo(other, false);
-        }
-        return;
-      }
-
       /* When player is hostile starts embargo. Do not stop until neutral again */
       if (
         player.relation(other) <= Relation.Hostile &&
@@ -401,14 +347,14 @@ export class NationExecution implements Execution {
       } else if (
         player.relation(other) >= Relation.Neutral &&
         player.hasEmbargoAgainst(other) &&
-        difficulty !== Difficulty.Hard &&
-        difficulty !== Difficulty.Impossible
+        this.mg.config().gameConfig().difficulty !== Difficulty.Hard &&
+        this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
       ) {
         player.stopEmbargo(other);
       } else if (
         player.relation(other) >= Relation.Friendly &&
         player.hasEmbargoAgainst(other) &&
-        difficulty !== Difficulty.Impossible
+        this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
       ) {
         player.stopEmbargo(other);
       }
