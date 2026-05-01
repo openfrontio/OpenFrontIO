@@ -27,7 +27,14 @@ describe("Spawn execution", () => {
         spawnExecutions.push(new SpawnExecution("game_id", playerInfo));
       }
 
-      const game = await setup(mapName, undefined, players);
+      const game = await setup(
+        mapName,
+        {},
+        players,
+        undefined,
+        undefined,
+        false,
+      );
 
       game.addExecution(...spawnExecutions);
 
@@ -73,7 +80,14 @@ describe("Spawn execution", () => {
       spawnExecutions.push(new SpawnExecution("game_id", playerInfo));
     }
 
-    const game = await setup("half_land_half_ocean", undefined, players);
+    const game = await setup(
+      "half_land_half_ocean",
+      {},
+      players,
+      undefined,
+      undefined,
+      false,
+    );
 
     game.addExecution(...spawnExecutions);
 
@@ -96,7 +110,14 @@ describe("Spawn execution", () => {
       `player_id`,
     );
 
-    const game = await setup("half_land_half_ocean", undefined, [playerInfo]);
+    const game = await setup(
+      "half_land_half_ocean",
+      {},
+      [playerInfo],
+      undefined,
+      undefined,
+      false,
+    );
 
     game.addExecution(new SpawnExecution("game_id", playerInfo, 10));
     game.addExecution(new SpawnExecution("game_id", playerInfo, 20));

@@ -28,9 +28,7 @@ describe("MIRVExecution", () => {
       ],
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.endSpawnPhase();
 
     player = game.player("player_id");
     otherPlayer = game.player("other_id");

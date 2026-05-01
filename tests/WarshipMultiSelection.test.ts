@@ -25,7 +25,6 @@ describe("Warship multi-selection (MoveWarshipExecution)", () => {
         new PlayerInfo("p2", PlayerType.Human, null, "p2"),
       ],
     );
-    while (game.inSpawnPhase()) game.executeNextTick();
     player1 = game.player("p1");
     player2 = game.player("p2");
   });

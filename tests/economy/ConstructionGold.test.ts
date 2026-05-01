@@ -37,9 +37,8 @@ describe("Construction economy", () => {
     const spawn = game.ref(0, 10);
     game.addExecution(new SpawnExecution(gameID, builderInfo, spawn));
     game.addExecution(new SpawnExecution(gameID, otherInfo, spawn));
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick(); // init spawns
+    game.executeNextTick(); // tick spawns → player gets territory
     player = game.player(builderInfo.id);
     other = game.player(otherInfo.id);
   });

@@ -34,10 +34,6 @@ describe("NukeExecution", () => {
     }));
     (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(() => 5);
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player = game.player("player_id");
     otherPlayer = game.player("other_id");
 

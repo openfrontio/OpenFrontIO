@@ -27,10 +27,6 @@ describe("AllianceExtensionExecution", () => {
     player1 = game.player("player1");
     player2 = game.player("player2");
     player3 = game.player("player3");
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Successfully extends existing alliance between Humans", () => {

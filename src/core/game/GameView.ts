@@ -37,6 +37,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
+  SpawnPhaseEndUpdate,
   UnitUpdate,
 } from "./GameUpdates";
 import { MotionPlanRecord, unpackMotionPlans } from "./MotionPlans";
@@ -664,6 +665,7 @@ type TrainPlanState = {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
+  private startTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -799,6 +801,14 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
+
+    const spawnPhaseEndUpdate = gu.updates[GameUpdateType.SpawnPhaseEnd][0] as
+      | SpawnPhaseEndUpdate
+      | undefined;
+    if (spawnPhaseEndUpdate) {
+      this.startTick = spawnPhaseEndUpdate.startTick;
+    }
+
     const myDisplayName = formatPlayerDisplayName(
       this._myUsername,
       this._myClanTag,
@@ -1215,20 +1225,32 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    return this.ticks() <= this._config.numSpawnPhaseTurns();
+    return this.startTick === null;
   }
+
   isSpawnImmunityActive(): boolean {
     return (
-      this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this._config.spawnImmunityDuration()
     );
   }
   isNationSpawnImmunityActive(): boolean {
     return (
-      this._config.numSpawnPhaseTurns() +
-        this._config.nationSpawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this._config.nationSpawnImmunityDuration()
     );
+  }
+
+  elapsedGameSeconds(): number {
+    return this.ticksSinceStart() / 10;
+  }
+
+  ticksSinceStart(): Tick {
+    if (this.inSpawnPhase()) {
+      return 0;
+    }
+
+    return Math.max(0, this.ticks() - this.startTick!);
   }
   config(): Config {
     return this._config;

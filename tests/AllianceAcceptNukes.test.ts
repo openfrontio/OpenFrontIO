@@ -34,10 +34,6 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
 
     (game.config() as TestConfig).nukeAllianceBreakThreshold = () => 0;
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player1 = game.player("p1");
     player2 = game.player("p2");
     player3 = game.player("p3");

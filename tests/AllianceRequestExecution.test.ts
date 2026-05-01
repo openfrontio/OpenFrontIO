@@ -30,10 +30,6 @@ describe("AllianceRequestExecution", () => {
 
     player2 = game.player("player2");
     player2.conquer(game.ref(0, 1));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Can create alliance by counter-request", () => {

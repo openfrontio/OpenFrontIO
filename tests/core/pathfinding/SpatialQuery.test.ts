@@ -16,7 +16,8 @@ function addPlayer(game: Game, tile: TileRef): Player {
   const info = new PlayerInfo("test", PlayerType.Human, null, "test_id");
   game.addPlayer(info);
   game.addExecution(new SpawnExecution("game_id", info, tile));
-  while (game.inSpawnPhase()) game.executeNextTick();
+  game.executeNextTick(); // init SpawnExecution
+  game.executeNextTick(); // tick SpawnExecution → player gets territory
   return game.player(info.id);
 }
 

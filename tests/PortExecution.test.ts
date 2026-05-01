@@ -25,10 +25,6 @@ describe("PortExecution", () => {
       ],
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player = game.player("player_id");
     player.addGold(BigInt(1000000));
     other = game.player("other_id");

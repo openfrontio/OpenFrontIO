@@ -31,12 +31,11 @@ describe("Warship", () => {
       ],
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player1 = game.player("player_1_id");
     player2 = game.player("player_2_id");
+
+    // Advance past the 50-tick manualMoveRetreatDisabledDuration window.
+    executeTicks(game, 50);
   });
 
   test("Warship heals only if player has port", async () => {

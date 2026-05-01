@@ -27,10 +27,6 @@ describe("PlayerExecution Annexation Bug", () => {
       ],
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     largePlayer = game.player("large_id");
     smallPlayer = game.player("small_id");
 

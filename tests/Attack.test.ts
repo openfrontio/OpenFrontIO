@@ -69,10 +69,8 @@ describe("Attack", () => {
         defenderSpawn,
       ),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick(); // init spawns
+    game.executeNextTick(); // tick spawns → players get territory
 
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
@@ -184,10 +182,8 @@ describe("Attack race condition with alliance requests", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick(); // init spawns
+    game.executeNextTick(); // tick spawns → players get territory
   });
 
   it("Should not mark attacker as traitor when alliance is formed after attack starts", async () => {
@@ -357,10 +353,8 @@ describe("Transport ship alliance rejection", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick(); // init spawns
+    game.executeNextTick(); // tick spawns → players get territory
   });
 
   test("Should cancel alliance requests if the recipient sends a transport ship", async () => {
@@ -407,10 +401,8 @@ describe("Attack immunity", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick(); // init spawns
+    game.executeNextTick(); // tick spawns → players get territory
   });
 
   test("Should not be able to attack during immunity phase", async () => {
