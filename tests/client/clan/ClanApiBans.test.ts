@@ -71,12 +71,6 @@ describe("banClanMember", () => {
   it("returns error object on failure", async () => {
     mockFetch(() => failRes(403, { message: "insufficient permissions" }));
     const result = await banClanMember("TEST", "player-1");
-    expect(result).toEqual({ error: "insufficient permissions" });
-  });
-
-  it("returns generic error when failure body has no message", async () => {
-    mockFetch(() => failRes(400, {}));
-    const result = await banClanMember("TEST", "player-1");
     expect(result).toEqual({ error: "clan_modal.error_failed" });
   });
 
@@ -100,7 +94,7 @@ describe("unbanClanMember", () => {
   it("returns error object on failure", async () => {
     mockFetch(() => failRes(409, { message: "Player not currently banned" }));
     const result = await unbanClanMember("TEST", "player-1");
-    expect(result).toEqual({ error: "Player not currently banned" });
+    expect(result).toEqual({ error: "clan_modal.error_failed" });
   });
 
   it("returns network error on fetch failure", async () => {

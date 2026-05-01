@@ -50,7 +50,9 @@ export async function fetchClanLeaderboard(): Promise<
   ClanLeaderboardResponse | false
 > {
   try {
-    const res = await clanFetch("/public/clans/leaderboard");
+    const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
+      headers: { Accept: "application/json" },
+    });
 
     if (!res.ok) {
       console.warn(
@@ -80,7 +82,10 @@ export async function fetchClanLeaderboard(): Promise<
 
 export async function fetchClanStats(tag: string): Promise<ClanStats | false> {
   try {
-    const res = await clanFetch(`/public/clan/${encodeURIComponent(tag)}`);
+    const res = await fetch(
+      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}`,
+      { headers: { Accept: "application/json" } },
+    );
     if (!res.ok) return false;
     const json = await res.json();
     const parsed = ClanStatsSchema.safeParse(json?.clan);
@@ -436,11 +441,7 @@ export async function banClanMember(
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      return {
-        error:
-          (data as { message?: string }).message ?? "clan_modal.error_failed",
-      };
+      return { error: "clan_modal.error_failed" };
     }
     return true;
   } catch {
@@ -459,11 +460,7 @@ export async function unbanClanMember(
       body: JSON.stringify({ targetPublicId }),
     });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      return {
-        error:
-          (data as { message?: string }).message ?? "clan_modal.error_failed",
-      };
+      return { error: "clan_modal.error_failed" };
     }
     return true;
   } catch {

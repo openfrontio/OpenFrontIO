@@ -36,7 +36,7 @@ export class ClanCard extends LitElement {
       const colors =
         this.clanRole === "leader"
           ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-          : "bg-blue-500/20 text-blue-400 border border-blue-500/30";
+          : "bg-malibu-blue/15 text-aquarius border border-malibu-blue/30";
       return html`<span class="${base} ${colors}"
         >${translateClanRole(this.clanRole)}</span
       >`;
@@ -69,7 +69,7 @@ export class ClanCard extends LitElement {
         <div class="flex items-center gap-4">
           <div
             class="w-12 h-12 rounded-xl bg-gradient-to-br ${clan.isOpen
-              ? "from-blue-500/20 to-cyan-500/20"
+              ? "from-malibu-blue/20 to-aquarius/20"
               : "from-amber-500/20 to-orange-500/20"} flex items-center justify-center border border-white/10 shrink-0"
           >
             <span class="text-white font-bold text-sm">${clan.tag}</span>

@@ -343,13 +343,13 @@ export class ClanModal extends BaseModal {
               }}
               class="px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all relative
                 ${this.activeTab === tab.key
-                ? "text-blue-400"
+                ? "text-aquarius"
                 : "text-white/40 hover:text-white/70"}"
             >
               ${tab.label}
               ${this.activeTab === tab.key
                 ? html`<div
-                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"
+                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
                   ></div>`
                 : ""}
             </button>
@@ -371,7 +371,7 @@ export class ClanModal extends BaseModal {
           </p>
           <button
             @click=${() => (this.activeTab = "browse")}
-            class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-blue-600/80 hover:bg-blue-600 border border-blue-500/50 rounded-lg transition-all"
+            class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
           >
             ${translateText("clan_modal.browse")}
           </button>

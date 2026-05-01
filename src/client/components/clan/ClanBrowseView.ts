@@ -108,7 +108,7 @@ export class ClanBrowseView extends LitElement {
             type="text"
             .value=${this.searchQuery}
             @input=${(e: Event) => this.onSearchInput(e)}
-            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10 text-sm"
+            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
             placeholder="${translateText("clan_modal.search_placeholder")}"
           />
           <svg

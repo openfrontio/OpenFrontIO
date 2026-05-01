@@ -66,7 +66,7 @@ export class ConfirmDialog extends LitElement {
   private renderOverlay() {
     const isDanger = this.variant === "danger";
     const borderColor = isDanger ? "border-red-500/50" : "border-amber-500/50";
-    const cardBg = isDanger ? "bg-[#1c0a0a]" : "bg-[#1c1508]";
+    const cardBg = "bg-surface";
     const textColor = isDanger ? "text-red-300" : "text-amber-300";
     const btnClass = isDanger
       ? "bg-red-600 text-white hover:bg-red-700"
