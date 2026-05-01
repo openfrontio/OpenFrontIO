@@ -123,6 +123,28 @@ export class NationExecution implements Execution {
       return;
     }
 
+    if (ticks % this.attackRate !== this.attackTick) {
+      // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
+      // Otherwise it is possible that we earn more gold than we can spend
+      // The alternative is placing multiple structures in handleStructures, but that causes problems
+      if (
+        this.behaviorsInitialized &&
+        this.player !== null &&
+        this.player.isAlive()
+      ) {
+        const offset = ticks % this.attackRate;
+        const oneThird =
+          (this.attackTick + Math.floor(this.attackRate / 3)) % this.attackRate;
+        const twoThirds =
+          (this.attackTick + Math.floor((this.attackRate * 2) / 3)) %
+          this.attackRate;
+        if (offset === oneThird || offset === twoThirds) {
+          this.structureBehavior.handleStructures();
+        }
+      }
+      return;
+    }
+
     if (!this.player.isAlive()) {
       //removeOnDeath is called from nation's PlayerExecution
       this.active = false;
