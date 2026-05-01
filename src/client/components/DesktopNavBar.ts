@@ -54,16 +54,11 @@ export class DesktopNavBar extends LitElement {
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8">
-            <span
-              class="block h-full aspect-[1364/259] bg-malibu-blue"
-              style="-webkit-mask: url(${assetUrl(
-                "images/OpenFrontLogo.svg",
-              )}) no-repeat center / contain; mask: url(${assetUrl(
-                "images/OpenFrontLogo.svg",
-              )}) no-repeat center / contain;"
-              role="img"
-              aria-label="OpenFront"
-            ></span>
+            <img
+              class="block h-full aspect-[1364/259]"
+              src=${assetUrl("images/OpenFrontLogo.svg")}
+              alt="OpenFront"
+            />
           </div>
           <div
             id="game-version"
@@ -127,6 +122,11 @@ export class DesktopNavBar extends LitElement {
           class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
           data-page="page-leaderboard"
           data-i18n="main.leaderboard"
+        ></button>
+        <button
+          class="nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          data-page="page-clan"
+          data-i18n="main.clans"
         ></button>
         <div class="relative">
           <button

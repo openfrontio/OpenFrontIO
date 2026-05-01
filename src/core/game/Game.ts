@@ -26,6 +26,19 @@ export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
 
+export type WarshipState = {
+  state: "patrolling" | "retreating" | "docked";
+  patrolTile?: TileRef;
+  retreatPort?: TileRef;
+  isInCombat?: boolean;
+  lastCombatTick: number;
+};
+
+export type TransportShipState = {
+  isRetreating: boolean;
+  troops: number;
+};
+
 export const AllPlayers = "AllPlayers" as const;
 
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
@@ -144,7 +157,7 @@ export enum GameMapType {
   SanFrancisco = "San Francisco",
   Aegean = "Aegean",
   MilkyWay = "MilkyWay",
-  Mediterranean = "Mediterranean",
+  MareNostrum = "Mare Nostrum",
   Dyslexdria = "Dyslexdria",
   GreatLakes = "Great Lakes",
   StraitOfMalacca = "Strait Of Malacca",
@@ -208,7 +221,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Arctic,
     GameMapType.SanFrancisco,
     GameMapType.Aegean,
-    GameMapType.Mediterranean,
+    GameMapType.MareNostrum,
     GameMapType.GreatLakes,
     GameMapType.StraitOfMalacca,
     GameMapType.Conakry,
@@ -617,9 +630,10 @@ export interface Unit {
 
   // Health
   hasHealth(): boolean;
-  retreating(): boolean;
-  setRetreating(retreating: boolean): void;
-  orderBoatRetreat(): void;
+  warshipState(): WarshipState;
+  updateWarshipState(update: Partial<WarshipState>): void;
+  transportShipState(): TransportShipState;
+  updateTransportShipState(update: Partial<TransportShipState>): void;
   health(): number;
   modifyHealth(delta: number, attacker?: Player): void;
 
@@ -647,10 +661,6 @@ export interface Unit {
   level(): number;
   increaseLevel(): void;
   decreaseLevel(destroyer?: Player): void;
-
-  // Warships
-  setPatrolTile(tile: TileRef): void;
-  patrolTile(): TileRef | undefined;
 }
 
 export interface TerraNullius {
@@ -739,7 +749,7 @@ export interface Player {
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
-  neighbors(): (Player | TerraNullius)[];
+  nearby(): (Player | TerraNullius)[];
   sharesBorderWith(other: Player | TerraNullius): boolean;
   relation(other: Player): Relation;
   allRelationsSorted(): { player: Player; relation: Relation }[];
@@ -870,6 +880,7 @@ export interface Game extends GameMap {
   setPaused(paused: boolean): void;
 
   // Units
+  unit(id: number): Unit | undefined;
   units(...types: UnitType[]): Unit[];
   unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;

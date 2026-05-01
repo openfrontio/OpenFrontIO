@@ -383,7 +383,7 @@ export class UserSettings {
   }
 
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 1);
+    return this.getFloat("settings.soundEffectsVolume", 0);
   }
 
   setSoundEffectsVolume(volume: number): void {

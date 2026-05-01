@@ -678,6 +678,18 @@ export function getServerNow(
   return localNowMs + serverTimeOffsetMs;
 }
 
+export function showToast(
+  message: string,
+  color: "red" | "green",
+  duration = 3500,
+): void {
+  window.dispatchEvent(
+    new CustomEvent("show-message", {
+      detail: { message, color, duration },
+    }),
+  );
+}
+
 export function getSecondsUntilServerTimestamp(
   targetServerTimestampMs: number,
   serverTimeOffsetMs: number,

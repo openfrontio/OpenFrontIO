@@ -487,6 +487,35 @@ export class GameServer {
                 this.updateGameConfig(stampedIntent.config);
                 return;
               }
+              case "start_game": {
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can start game`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot start public game via WebSocket`, {
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.hasStarted()) {
+                  this.log.warn(`Cannot start game that has already started`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+                this.log.info(`Lobby creator starting game via WebSocket`, {
+                  creatorID: client.clientID,
+                  gameID: this.id,
+                });
+                this.start();
+                return;
+              }
               case "toggle_pause": {
                 // Only lobby creator can pause/resume
                 if (client.clientID !== this.lobbyCreatorID) {

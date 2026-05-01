@@ -1011,21 +1011,12 @@ export class HostLobbyModal extends BaseModal {
     // If the modal closes as part of starting the game, do not leave the lobby
     this.leaveLobbyOnClose = false;
 
-    const config = await getRuntimeClientServerConfig();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
+    this.dispatchEvent(
+      new CustomEvent("start-game", {
+        bubbles: true,
+        composed: true,
+      }),
     );
-
-    if (!response.ok) {
-      this.leaveLobbyOnClose = true;
-    }
-    return response;
   }
 
   private kickPlayer(clientID: string) {

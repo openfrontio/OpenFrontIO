@@ -406,7 +406,7 @@ describe("Disconnected", () => {
       );
       expect(expectedRetreatTile).not.toBe(false);
 
-      transportShip.orderBoatRetreat();
+      transportShip.updateTransportShipState({ isRetreating: true });
       executeTicks(game, 2);
 
       expect(transportShip.targetTile()).toBe(expectedRetreatTile);
@@ -465,7 +465,7 @@ describe("Disconnected", () => {
         toInt(player1.troops()) + expectedTroopGrowth,
       );
 
-      transportShip.orderBoatRetreat();
+      transportShip.updateTransportShipState({ isRetreating: true });
       executeTicks(game, 1);
 
       expect(transportShip.isActive()).toBe(false);
