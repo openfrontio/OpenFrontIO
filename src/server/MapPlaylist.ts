@@ -22,6 +22,7 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 const ARCADE_MAPS = new Set(mapCategories.arcade);
+const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
@@ -509,7 +510,10 @@ export class MapPlaylist {
     const maps: GameMapType[] = [];
     (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
       const map = GameMapType[key];
-      if (type !== "special" && ARCADE_MAPS.has(map)) {
+      if (
+        type !== "special" &&
+        (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
+      ) {
         return;
       }
       let freq = frequency[key] ?? 0;

@@ -1,5 +1,6 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   GAME_ID_REGEX,
@@ -19,6 +20,7 @@ import {
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -51,6 +53,7 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
+  SendStartGameEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
@@ -215,8 +218,17 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "start-game": CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
+    userMeResponse: CustomEvent<UserMeResponse | false>;
+    "leave-lobby": CustomEvent;
+    "update-game-config": CustomEvent;
+  }
+
+  // Fixes the globalThis.addEventListener errors
+  interface WindowEventMap {
+    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 
@@ -264,6 +276,13 @@ class Client {
     await customElements.whenDefined("mobile-nav-bar");
     await customElements.whenDefined("desktop-nav-bar");
 
+    const openFrontFont = new FontFace(
+      "OpenFront",
+      `url(${assetUrl("fonts/OpenFront.ttf")})`,
+    );
+    document.fonts.add(openFrontFont);
+    openFrontFont.load().catch(() => {});
+
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
     );
@@ -273,6 +292,7 @@ class Client {
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
       versionElements.forEach((el) => {
+        (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
         el.textContent = displayVersion;
       });
     }
@@ -311,6 +331,7 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener("start-game", this.handleStartGame.bind(this));
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -806,6 +827,7 @@ class Client {
         "leaderboard-button",
         "token-login",
         "matchmaking-modal",
+        "clan-modal",
         "lang-selector",
         "homepage-promos",
       ].forEach((tag) => {
@@ -929,6 +951,12 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
+
+  private handleStartGame() {
+    if (this.eventBus) {
+      this.eventBus.emit(new SendStartGameEvent());
     }
   }
 

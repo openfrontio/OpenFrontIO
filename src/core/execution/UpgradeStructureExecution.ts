@@ -10,9 +10,11 @@ export class UpgradeStructureExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.structure = this.player
-      .units()
-      .find((unit) => unit.id() === this.unitId);
+    this.structure = mg.unit(this.unitId);
+    if (this.structure && this.structure.owner() !== this.player) {
+      console.warn(`structure not owned by player`);
+      this.structure = undefined;
+    }
 
     if (this.structure === undefined) {
       console.warn(`structure is undefined`);

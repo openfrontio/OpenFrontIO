@@ -40,6 +40,7 @@ export class UnitLayer implements Layer {
   private unitTrailContext: CanvasRenderingContext2D;
 
   private unitToTrail = new Map<UnitView, TileRef[]>();
+  private pendingTrailClears: UnitView[] = [];
 
   private theme: Theme;
 
@@ -381,6 +382,7 @@ export class UnitLayer implements Layer {
       // otherwise the sprite of a unit can be drawn on top of another unit
       this.clearUnitsCells(unitsToUpdate);
       this.drawUnitsCells(unitsToUpdate);
+      this.flushTrailClears();
     }
   }
 
@@ -456,17 +458,43 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
-    if (unit.retreating()) {
-      this.drawSprite(unit, colord("rgb(0,180,255)"));
+    if (unit.warshipState().state !== "patrolling" && unit.isActive()) {
+      if (unit.warshipState().isInCombat) {
+        this.drawSprite(unit, colord("rgb(200,0,0)"));
+      } else {
+        this.drawSprite(unit);
+      }
+      this.drawRetreatCross(unit);
       return;
     }
 
-    if (unit.targetUnitId()) {
+    if (unit.warshipState().isInCombat) {
       this.drawSprite(unit, colord("rgb(200,0,0)"));
       return;
     }
 
     this.drawSprite(unit);
+  }
+
+  private drawRetreatCross(unit: UnitView) {
+    // Blink: 500ms on, 500ms off
+    if (Math.floor(Date.now() / 500) % 2 === 0) return;
+    const x = this.game.x(unit.tile());
+    const y = this.game.y(unit.tile());
+    const ctx = this.context;
+    ctx.save();
+    const cx = x + 0.5;
+    const cy = y + 0.5;
+    ctx.lineCap = "square";
+    ctx.strokeStyle = "rgb(36,36,36)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 1.5);
+    ctx.lineTo(cx, cy + 1.5);
+    ctx.moveTo(cx - 1.5, cy);
+    ctx.lineTo(cx + 1.5, cy);
+    ctx.stroke();
+    ctx.restore();
   }
 
   private handleShellEvent(unit: UnitView) {
@@ -520,19 +548,33 @@ export class UnitLayer implements Layer {
     }
   }
 
-  private clearTrail(unit: UnitView) {
-    const trail = this.unitToTrail.get(unit) ?? [];
-    const rel = this.relationship(unit);
-    for (const t of trail) {
-      this.clearCell(this.game.x(t), this.game.y(t), this.unitTrailContext);
-    }
-    this.unitToTrail.delete(unit);
+  private flushTrailClears() {
+    if (this.pendingTrailClears.length === 0) return;
 
-    // Repaint overlapping trails
-    const trailSet = new Set(trail);
+    const clearedTiles = new Set<TileRef>();
+    for (const unit of this.pendingTrailClears) {
+      const trail = this.unitToTrail.get(unit);
+      if (trail) {
+        for (const t of trail) {
+          if (!clearedTiles.has(t)) {
+            this.clearCell(
+              this.game.x(t),
+              this.game.y(t),
+              this.unitTrailContext,
+            );
+            clearedTiles.add(t);
+          }
+        }
+        this.unitToTrail.delete(unit);
+      }
+    }
+    this.pendingTrailClears = [];
+
+    // Single repaint pass for all remaining units
     for (const [other, trail] of this.unitToTrail) {
+      const rel = this.relationship(other);
       for (const t of trail) {
-        if (trailSet.has(t)) {
+        if (clearedTiles.has(t)) {
           this.paintCell(
             this.game.x(t),
             this.game.y(t),
@@ -583,7 +625,7 @@ export class UnitLayer implements Layer {
     );
     this.drawSprite(unit);
     if (!unit.isActive()) {
-      this.clearTrail(unit);
+      this.pendingTrailClears.push(unit);
     }
   }
 
@@ -626,7 +668,7 @@ export class UnitLayer implements Layer {
     this.drawSprite(unit);
 
     if (!unit.isActive()) {
-      this.clearTrail(unit);
+      this.pendingTrailClears.push(unit);
     }
   }
 

@@ -6,6 +6,7 @@
 @theme {
   --default-ring-width: 3px;
   --default-ring-color: var(--color-malibu-blue);
+  --font-display: "OpenFront", Inter, Arial, sans-serif;
 
   /* Openfront.io brand palette — see Openfront_Brand_Guidelines.pdf §4 */
   --color-malibu-blue: #0084d1;
@@ -31,6 +32,7 @@
   --shadow-malibu-blue-pill: 0 0 6px rgba(0, 132, 209, 0.35);
   --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(0, 132, 209, 0.2);
   --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(0, 132, 209, 0.3);
+  --shadow-lobby-card-hover: 0 0 0 2px #0084d1, 0 0 20px rgba(0, 132, 209, 0.5);
 }
 
 @layer base {

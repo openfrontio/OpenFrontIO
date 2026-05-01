@@ -93,6 +93,7 @@ export class NationExecution implements Execution {
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy &&
+      this.player.unitsConstructed(UnitType.Port) &&
       !this.mg.config().isUnitDisabled(UnitType.Warship)
     ) {
       this.warshipBehavior.trackShipsAndRetaliate();
