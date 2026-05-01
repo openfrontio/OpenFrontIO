@@ -2,6 +2,7 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -35,6 +36,7 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_ADMIN = "kick_reason.admin";
 const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
@@ -175,6 +177,7 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
+    this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 
   private isKicked(clientID: ClientID): boolean {
@@ -346,10 +349,13 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         const bytes = Buffer.byteLength(message, "utf8");
+        const intentType =
+          clientMsg.type === "intent" ? clientMsg.intent.type : undefined;
         const rateResult = this.intentRateLimiter.check(
           client.clientID,
           clientMsg.type,
           bytes,
+          intentType,
         );
         if (rateResult === "kick") {
           this.log.warn(`Client rate limit exceeded, kicking`, {
@@ -390,18 +396,24 @@ export class GameServer {
 
               // Handle kick_player intent via WebSocket
               case "kick_player": {
-                // Check if the authenticated client is the lobby creator
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can kick players`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    target: stampedIntent.target,
-                    gameID: this.id,
-                  });
+                const isLobbyCreator = client.clientID === this.lobbyCreatorID;
+                const isAdmin = isAdminRole(client.role);
+
+                // Check if the authenticated client is the lobby creator or admin
+                if (!isLobbyCreator && !isAdmin) {
+                  this.log.warn(
+                    `Only lobby creator or admin can kick players`,
+                    {
+                      clientID: client.clientID,
+                      creatorID: this.lobbyCreatorID,
+                      target: stampedIntent.target,
+                      gameID: this.id,
+                    },
+                  );
                   return;
                 }
 
-                // Don't allow lobby creator to kick themselves
+                // Don't allow kicking yourself
                 if (client.clientID === stampedIntent.target) {
                   this.log.warn(`Cannot kick yourself`, {
                     clientID: client.clientID,
@@ -410,8 +422,9 @@ export class GameServer {
                 }
 
                 // Log and execute the kick
-                this.log.info(`Lobby creator initiated kick of player`, {
-                  creatorID: client.clientID,
+                this.log.info(`Player initiated kick`, {
+                  kickerID: client.clientID,
+                  isAdmin,
                   target: stampedIntent.target,
                   gameID: this.id,
                   kickMethod: "websocket",
@@ -419,7 +432,9 @@ export class GameServer {
 
                 this.kickClient(
                   stampedIntent.target,
-                  KICK_REASON_LOBBY_CREATOR,
+                  isAdmin && !isLobbyCreator
+                    ? KICK_REASON_ADMIN
+                    : KICK_REASON_LOBBY_CREATOR,
                 );
                 return;
               }
@@ -470,6 +485,35 @@ export class GameServer {
                 );
 
                 this.updateGameConfig(stampedIntent.config);
+                return;
+              }
+              case "start_game": {
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can start game`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot start public game via WebSocket`, {
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.hasStarted()) {
+                  this.log.warn(`Cannot start game that has already started`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+                this.log.info(`Lobby creator starting game via WebSocket`, {
+                  creatorID: client.clientID,
+                  gameID: this.id,
+                });
+                this.start();
                 return;
               }
               case "toggle_pause": {
@@ -548,19 +592,23 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
-      // Close lobby when host leaves before game starts
-      if (
-        !this._hasStarted &&
-        !this.isPublic() &&
-        client.persistentID === this.creatorPersistentID
-      ) {
-        this.log.info("Host left, closing lobby", {
-          gameID: this.id,
-        });
-        for (const c of [...this.activeClients]) {
-          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+
+      if (!this._hasStarted) {
+        // Remove persistentId if the game has not started to prevent going over max players
+        this.persistentIdToClientId.delete(client.persistentID);
+        // Close lobby when host leaves before game starts
+        if (
+          !this.isPublic() &&
+          client.persistentID === this.creatorPersistentID
+        ) {
+          this.log.info("Host left, closing lobby", {
+            gameID: this.id,
+          });
+          for (const c of [...this.activeClients]) {
+            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+          }
+          this._hasEnded = true;
         }
-        this._hasEnded = true;
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -578,6 +626,10 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Remove persistentId if the game has not started to prevent going over max players
+      if (!this._hasStarted) {
+        this.persistentIdToClientId.delete(client.persistentID);
+      }
     }
   }
 

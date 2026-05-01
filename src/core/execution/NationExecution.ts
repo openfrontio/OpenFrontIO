@@ -2,11 +2,14 @@ import {
   Difficulty,
   Execution,
   Game,
+  GameMode,
   Nation,
   Player,
   PlayerID,
+  PlayerType,
   Relation,
   TerrainType,
+  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -71,7 +74,7 @@ export class NationExecution implements Execution {
     const { difficulty } = this.mg.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return this.random.nextInt(65, 80); // Slower reactions
+        return this.random.nextInt(65, 100); // Slower reactions
       case Difficulty.Medium:
         return this.random.nextInt(55, 70);
       case Difficulty.Hard:
@@ -89,7 +92,9 @@ export class NationExecution implements Execution {
       this.behaviorsInitialized &&
       this.player !== null &&
       this.player.isAlive() &&
-      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy &&
+      this.player.unitsConstructed(UnitType.Port) &&
+      !this.mg.config().isUnitDisabled(UnitType.Warship)
     ) {
       this.warshipBehavior.trackShipsAndRetaliate();
     }
@@ -293,8 +298,26 @@ export class NationExecution implements Execution {
     const player = this.player;
     if (player === null) return;
     const others = this.mg.players().filter((p) => p.id() !== player.id());
+    const difficulty = this.mg.config().gameConfig().difficulty;
+    const isHigherDifficulty =
+      difficulty === Difficulty.Hard || difficulty === Difficulty.Impossible;
+    const teamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
 
     others.forEach((other: Player) => {
+      // In team games on higher difficulties, refuse to trade with anyone
+      // not on this nation's team (mirrors the "stop trading with all" button).
+      if (
+        teamGame &&
+        isHigherDifficulty &&
+        other.type() !== PlayerType.Bot &&
+        !player.isOnSameTeam(other)
+      ) {
+        if (!player.hasEmbargoAgainst(other)) {
+          player.addEmbargo(other, false);
+        }
+        return;
+      }
+
       /* When player is hostile starts embargo. Do not stop until neutral again */
       if (
         player.relation(other) <= Relation.Hostile &&
@@ -305,14 +328,14 @@ export class NationExecution implements Execution {
       } else if (
         player.relation(other) >= Relation.Neutral &&
         player.hasEmbargoAgainst(other) &&
-        this.mg.config().gameConfig().difficulty !== Difficulty.Hard &&
-        this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
+        difficulty !== Difficulty.Hard &&
+        difficulty !== Difficulty.Impossible
       ) {
         player.stopEmbargo(other);
       } else if (
         player.relation(other) >= Relation.Friendly &&
         player.hasEmbargoAgainst(other) &&
-        this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
+        difficulty !== Difficulty.Impossible
       ) {
         player.stopEmbargo(other);
       }

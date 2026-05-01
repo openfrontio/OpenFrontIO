@@ -1,0 +1,60 @@
+{
+  "map": {
+    "height": 2120,
+    "num_land_tiles": 1345295,
+    "width": 1800
+  },
+  "map16x": {
+    "height": 530,
+    "num_land_tiles": 80847,
+    "width": 450
+  },
+  "map4x": {
+    "height": 1060,
+    "num_land_tiles": 331582,
+    "width": 900
+  },
+  "name": "bajacalifornia",
+  "nations": [
+    {
+      "coordinates": [513, 44],
+      "flag": "California",
+      "name": "California"
+    },
+    {
+      "coordinates": [791, 699],
+      "flag": "mx",
+      "name": "Baja California"
+    },
+    {
+      "coordinates": [1312, 1426],
+      "flag": "mx",
+      "name": "Baja California Sur"
+    },
+    {
+      "coordinates": [1364, 679],
+      "flag": "mx",
+      "name": "Sonora"
+    },
+    {
+      "coordinates": [1767, 1243],
+      "flag": "mx",
+      "name": "Sinaloa"
+    },
+    {
+      "coordinates": [1733, 578],
+      "flag": "mx",
+      "name": "Chihuahua"
+    },
+    {
+      "coordinates": [969, 62],
+      "flag": "Arizona",
+      "name": "Arizona"
+    },
+    {
+      "coordinates": [1534, 60],
+      "flag": "New_Mexico",
+      "name": "New Mexico"
+    }
+  ]
+}

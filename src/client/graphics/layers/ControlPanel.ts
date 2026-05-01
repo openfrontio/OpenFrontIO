@@ -4,6 +4,7 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -50,9 +51,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   init() {
-    this.attackRatio = Number(
-      localStorage.getItem("settings.attackRatio") ?? "0.2",
-    );
+    this.attackRatio = new UserSettings().attackRatio();
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
@@ -159,13 +158,13 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-sky-700 transition-[width] duration-200"
+                class="h-full bg-malibu-blue transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-sky-600 transition-[width] duration-200"
+                class="h-full bg-aquarius transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -214,13 +213,13 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="h-full flex">
           ${greenPercent > 0
             ? html`<div
-                class="h-full bg-sky-700 transition-[width] duration-200"
+                class="h-full bg-malibu-blue transition-[width] duration-200"
                 style="width: ${greenPercent}%;"
               ></div>`
             : ""}
           ${orangePercent > 0
             ? html`<div
-                class="h-full bg-sky-600 transition-[width] duration-200"
+                class="h-full bg-aquarius transition-[width] duration-200"
                 style="width: ${orangePercent}%;"
               ></div>`
             : ""}
@@ -327,7 +326,7 @@ export class ControlPanel extends LitElement implements Layer {
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          class="flex-1 h-1.5 accent-blue-500 cursor-pointer"
+          class="flex-1 h-1.5 accent-aquarius cursor-pointer"
         />
       </div>
     `;
@@ -374,7 +373,7 @@ export class ControlPanel extends LitElement implements Layer {
             .value=${String(Math.round(this.attackRatio * 100))}
             @input=${(e: Event) => this.handleRatioSliderInput(e)}
             @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-            class="w-full h-1.5 accent-blue-500 cursor-pointer"
+            class="w-full h-1.5 accent-aquarius cursor-pointer"
           />
         </div>
       </div>

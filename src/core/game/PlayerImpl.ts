@@ -144,7 +144,7 @@ export class PlayerImpl implements Player {
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map((a) => {
+      outgoingAttacks: this.outgoingAttacks().map((a) => {
         return {
           attackerID: a.attacker().smallID(),
           targetID: a.target().smallID(),
@@ -153,7 +153,7 @@ export class PlayerImpl implements Player {
           retreating: a.retreating(),
         } satisfies AttackUpdate;
       }),
-      incomingAttacks: this._incomingAttacks.map((a) => {
+      incomingAttacks: this.incomingAttacks().map((a) => {
         return {
           attackerID: a.attacker().smallID(),
           targetID: a.target().smallID(),
@@ -319,6 +319,7 @@ export class PlayerImpl implements Player {
     }
     return false;
   }
+
   numTilesOwned(): number {
     return this._tiles.size;
   }
@@ -331,7 +332,7 @@ export class PlayerImpl implements Player {
     return this._borderTiles;
   }
 
-  neighbors(): (Player | TerraNullius)[] {
+  nearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {
@@ -345,7 +346,56 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    for (const n of this.shoreReachableNeighbors()) {
+      ns.add(n);
+    }
     return Array.from(ns);
+  }
+
+  // Samples every 10th border tile for shore tiles, checks the tile 5 steps
+  // away in each cardinal direction that immediately enters water, to detect
+  // players separated by a small river (up to 4 water tiles wide)
+  private shoreReachableNeighbors(): Set<Player | TerraNullius> {
+    const ns: Set<Player | TerraNullius> = new Set();
+    const map = this.mg.map();
+    const shores = Array.from(this.borderTiles()).filter((t) => map.isShore(t));
+    const directions: [number, number][] = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+
+    for (let i = 0; i < shores.length; i += 10) {
+      const border = shores[i];
+
+      const bx = map.x(border);
+      const by = map.y(border);
+
+      for (const [dx, dy] of directions) {
+        // Only follow directions that immediately enter water; land-adjacent
+        // directions are already covered by the direct neighbors() loop.
+        const x1 = bx + dx;
+        const y1 = by + dy;
+        if (!map.isValidCoord(x1, y1) || !map.isWater(map.ref(x1, y1)))
+          continue;
+
+        const nx = bx + dx * 5;
+        const ny = by + dy * 5;
+        if (!map.isValidCoord(nx, ny)) continue;
+        const tile = map.ref(nx, ny);
+        if (!map.isLand(tile)) continue;
+        if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
+        const owner = map.ownerID(tile);
+        if (owner !== this.smallID()) {
+          ns.add(
+            this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+          );
+        }
+      }
+    }
+
+    return ns;
   }
 
   isPlayer(): this is Player {
@@ -1222,7 +1272,7 @@ export class PlayerImpl implements Player {
         manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
       ),
     )
-      .filter((t) => this.mg.owner(t) === this && this.mg.isOceanShore(t))
+      .filter((t) => this.mg.owner(t) === this && this.mg.isShore(t))
       .sort(
         (a, b) =>
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
@@ -1239,14 +1289,19 @@ export class PlayerImpl implements Player {
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {
-    if (!this.mg.isOcean(tile)) {
+    if (!this.mg.isWater(tile)) {
       return false;
     }
 
+    const tileComponent = this.mg.getWaterComponent(tile);
     const bestPort = findClosestBy(
       this.units(UnitType.Port),
       (port) => this.mg.manhattanDist(port.tile(), tile),
-      (port) => port.isActive() && !port.isUnderConstruction(),
+      (port) =>
+        port.isActive() &&
+        !port.isUnderConstruction() &&
+        tileComponent !== null &&
+        this.mg.hasWaterComponent(port.tile(), tileComponent),
     );
 
     return bestPort?.tile() ?? false;
@@ -1376,7 +1431,7 @@ export class PlayerImpl implements Player {
     return this._outgoingAttacks;
   }
   incomingAttacks(): Attack[] {
-    return this._incomingAttacks;
+    return this._incomingAttacks.filter((a) => a.attacker().isAlive());
   }
 
   public isImmune(): boolean {

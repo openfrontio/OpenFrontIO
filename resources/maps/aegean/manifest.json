@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 500,
-    "num_land_tiles": 68060,
+    "num_land_tiles": 68047,
     "width": 425
   },
   "map4x": {
     "height": 1000,
-    "num_land_tiles": 285421,
+    "num_land_tiles": 284992,
     "width": 850
   },
   "name": "aegean",
@@ -58,8 +58,8 @@
     },
     {
       "coordinates": [1599, 431],
-      "name": "Achaemenid Empire",
-      "flag": "Achaemenid Empire"
+      "flag": "Achaemenid Empire",
+      "name": "Achaemenid Empire"
     },
     {
       "coordinates": [762, 35],
@@ -67,18 +67,18 @@
     },
     {
       "coordinates": [491, 894],
-      "name": "Athens",
-      "flag": "Athens"
+      "flag": "Athens",
+      "name": "Athens"
     },
     {
       "coordinates": [222, 1183],
-      "name": "Sparta",
-      "flag": "Sparta"
+      "flag": "Sparta",
+      "name": "Sparta"
     },
     {
       "coordinates": [446, 104],
-      "name": "Macedonia",
-      "flag": "Macedonia"
+      "flag": "Macedonia",
+      "name": "Macedonia"
     },
     {
       "coordinates": [175, 456],

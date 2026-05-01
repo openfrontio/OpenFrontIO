@@ -21,12 +21,13 @@ export class FlagInput extends LitElement {
   }
 
   private updateFlag = (e: CustomEvent) => {
-    const parsed = FlagName.safeParse(e.detail);
+    const val = e.detail ?? "";
+    const parsed = FlagName.safeParse(val);
     if (!parsed.success) {
-      console.warn(`error parsing flag ${e.detail.value}, ${parsed.error}`);
+      console.warn(`error parsing flag ${val}, ${parsed.error}`);
     }
-    if (this.flag !== e.detail) {
-      this.flag = e.detail;
+    if (this.flag !== val) {
+      this.flag = val;
     }
   };
 
@@ -72,7 +73,7 @@ export class FlagInput extends LitElement {
     return html`
       <button
         id="flag-input"
-        class="flag-btn p-0 m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] hover:brightness-[1.08] active:brightness-[0.95] rounded-lg overflow-hidden"
+        class="flag-btn p-0 m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-surface hover:brightness-[1.08] active:brightness-[0.95] rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
       >

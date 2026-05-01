@@ -160,7 +160,7 @@ export class SendHashEvent implements GameEvent {
 
 export class MoveWarshipIntentEvent implements GameEvent {
   constructor(
-    public readonly unitId: number,
+    public readonly unitIds: number[],
     public readonly tile: number,
   ) {}
 }
@@ -172,6 +172,8 @@ export class SendKickPlayerIntentEvent implements GameEvent {
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
+
+export class SendStartGameEvent implements GameEvent {}
 
 export class Transport {
   private socket: WebSocket | null = null;
@@ -262,6 +264,8 @@ export class Transport {
     this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
       this.onSendUpdateGameConfigIntent(e),
     );
+
+    this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
   }
 
   private startPing() {
@@ -618,7 +622,7 @@ export class Transport {
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
       type: "move_warship",
-      unitId: event.unitId,
+      unitIds: event.unitIds,
       tile: event.tile,
     });
   }
@@ -642,6 +646,10 @@ export class Transport {
       type: "update_game_config",
       config: event.config,
     });
+  }
+
+  private onSendStartGame() {
+    this.sendIntent({ type: "start_game" });
   }
 
   private sendIntent(intent: Intent) {

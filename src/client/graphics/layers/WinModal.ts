@@ -6,17 +6,16 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
-import "../../components/PatternButton";
+import "../../components/CosmeticButton";
 import {
   fetchCosmetics,
-  handlePurchase,
-  patternRelationship,
+  purchaseCosmetic,
+  resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
@@ -74,30 +73,33 @@ export class WinModal extends LitElement implements Layer {
             ? "flex justify-between gap-2.5"
             : "hidden"}"
         >
-          <button
+          <o-button
+            variant="primary"
+            width="block"
+            class="flex-1"
+            translationKey="win_modal.exit"
             @click=${this._handleExit}
-            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
-          >
-            ${translateText("win_modal.exit")}
-          </button>
+          ></o-button>
           ${this.isRankedGame
             ? html`
-                <button
+                <o-button
+                  variant="primary"
+                  width="block"
+                  class="flex-1"
+                  translationKey="win_modal.requeue"
                   @click=${this._handleRequeue}
-                  class="flex-1 px-3 py-3 text-base cursor-pointer bg-purple-600 text-white border-0 rounded-sm transition-all duration-200 hover:bg-purple-500 hover:-translate-y-px active:translate-y-px"
-                >
-                  ${translateText("win_modal.requeue")}
-                </button>
+                ></o-button>
               `
             : null}
-          <button
-            @click=${this.hide}
-            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
-          >
-            ${this.game?.myPlayer()?.isAlive()
+          <o-button
+            variant="primary"
+            width="block"
+            class="flex-1"
+            .title=${this.game?.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
-          </button>
+            @click=${this.hide}
+          ></o-button>
         </div>
       </div>
     `;
@@ -157,54 +159,30 @@ export class WinModal extends LitElement implements Layer {
 
   async loadPatternContent() {
     const me = await getUserMe();
-    const patterns = await fetchCosmetics();
+    const cosmetics = await fetchCosmetics();
 
-    const purchasablePatterns: {
-      pattern: Pattern;
-      colorPalette: ColorPalette;
-    }[] = [];
+    const purchasable = resolveCosmetics(cosmetics, me, null).filter(
+      (r) => r.type === "pattern" && r.relationship === "purchasable",
+    );
 
-    for (const pattern of Object.values(patterns?.patterns ?? {})) {
-      for (const colorPalette of pattern.colorPalettes ?? []) {
-        if (
-          patternRelationship(pattern, colorPalette, me, null) === "purchasable"
-        ) {
-          const palette = patterns?.colorPalettes?.[colorPalette.name];
-          if (palette) {
-            purchasablePatterns.push({
-              pattern,
-              colorPalette: palette,
-            });
-          }
-        }
-      }
-    }
-
-    if (purchasablePatterns.length === 0) {
+    if (purchasable.length === 0) {
       this.patternContent = html``;
       return;
     }
 
     // Shuffle the array and take patterns based on screen size
-    const shuffled = [...purchasablePatterns].sort(() => Math.random() - 0.5);
+    const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
     const maxPatterns = Platform.isMobileWidth ? 1 : 3;
-    const selectedPatterns = shuffled.slice(
-      0,
-      Math.min(maxPatterns, shuffled.length),
-    );
+    const selected = shuffled.slice(0, Math.min(maxPatterns, shuffled.length));
 
     this.patternContent = html`
       <div class="flex gap-4 flex-wrap justify-start">
-        ${selectedPatterns.map(
-          ({ pattern, colorPalette }) => html`
-            <pattern-button
-              .pattern=${pattern}
-              .colorPalette=${colorPalette}
-              .requiresPurchase=${true}
-              .onSelect=${(p: Pattern | null) => {}}
-              .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
-                handlePurchase(p.product!, colorPalette?.name)}
-            ></pattern-button>
+        ${selected.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${purchaseCosmetic}
+            ></cosmetic-button>
           `,
         )}
       </div>

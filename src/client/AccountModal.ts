@@ -15,8 +15,8 @@ import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
@@ -110,7 +110,7 @@ export class AccountModal extends BaseModal {
                 <div class="flex items-center gap-2">
                   <span
                     class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                    >${translateText("account_modal.personal_player_id")}</span
+                    >${translateText("account_modal.public_player_id")}</span
                   >
                   <copy-button
                     .lobbyId=${publicId}
@@ -192,12 +192,24 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  private renderCurrency(): TemplateResult {
+    const currency = this.userMeResponse?.player?.currency;
+    if (!currency) return html``;
+
+    return html`
+      <currency-display
+        .hard=${currency.hard}
+        .soft=${currency.soft}
+      ></currency-display>
+    `;
+  }
+
   private renderLoggedInAs(): TemplateResult {
     const me = this.userMeResponse?.user;
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
-          ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     } else if (me?.email) {
@@ -208,7 +220,7 @@ export class AccountModal extends BaseModal {
               account_name: me.email,
             })}
           </div>
-          ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
     }
@@ -229,12 +241,12 @@ export class AccountModal extends BaseModal {
 
   private renderLogoutButton(): TemplateResult {
     return html`
-      <button
-        @click="${this.handleLogout}"
-        class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-red-600/80 hover:bg-red-600 border border-red-500/50 rounded-lg transition-all shadow-lg hover:shadow-red-900/40"
-      >
-        ${translateText("account_modal.log_out")}
-      </button>
+      <o-button
+        variant="danger"
+        size="md"
+        translationKey="account_modal.log_out"
+        @click=${this.handleLogout}
+      ></o-button>
     `;
   }
 
@@ -266,6 +278,7 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
+            ${this.renderCurrency()}
           </div>
 
           <div class="space-y-6">
@@ -305,19 +318,20 @@ export class AccountModal extends BaseModal {
                   name="email"
                   .value="${this.email}"
                   @input="${this.handleEmailInput}"
-                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10"
+                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
                   placeholder="${translateText(
                     "account_modal.email_placeholder",
                   )}"
                   required
                 />
               </div>
-              <button
-                @click="${this.handleSubmit}"
-                class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5"
-              >
-                ${translateText("account_modal.get_magic_link")}
-              </button>
+              <o-button
+                variant="primary"
+                width="block"
+                size="md"
+                translationKey="account_modal.get_magic_link"
+                @click=${this.handleSubmit}
+              ></o-button>
             </div>
           </div>
 

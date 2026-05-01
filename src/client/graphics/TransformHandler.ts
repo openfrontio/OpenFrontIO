@@ -1,12 +1,25 @@
-import { EventBus } from "../../core/EventBus";
+import { EventBus, GameEvent } from "../../core/EventBus";
 import { Cell } from "../../core/game/Game";
-import { GameView } from "../../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
-import {
-  GoToPlayerEvent,
-  GoToPositionEvent,
-  GoToUnitEvent,
-} from "./layers/Leaderboard";
+
+export class GoToPlayerEvent implements GameEvent {
+  constructor(
+    public player: PlayerView,
+    public zoom?: number,
+  ) {}
+}
+
+export class GoToPositionEvent implements GameEvent {
+  constructor(
+    public x: number,
+    public y: number,
+  ) {}
+}
+
+export class GoToUnitEvent implements GameEvent {
+  constructor(public unit: UnitView) {}
+}
 
 export const GOTO_INTERVAL_MS = 16;
 export const CAMERA_MAX_SPEED = 15;
@@ -20,6 +33,7 @@ export class TransformHandler {
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
+  private targetScale: number | null = null;
   private intervalID: NodeJS.Timeout | null = null;
   private changed = false;
 
@@ -183,6 +197,7 @@ export class TransformHandler {
       return;
     }
     this.target = new Cell(nameLocation.x, nameLocation.y);
+    this.targetScale = event.zoom ?? null;
     this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
@@ -214,10 +229,12 @@ export class TransformHandler {
 
     if (this.target === null) throw new Error("null target");
 
-    if (
-      Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) <
-      2
-    ) {
+    const positionClose =
+      Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) < 2;
+    const scaleClose =
+      this.targetScale === null ||
+      Math.abs(this.scale - this.targetScale) < 0.01;
+    if (positionClose && scaleClose) {
       this.clearTarget();
       return;
     }
@@ -241,6 +258,27 @@ export class TransformHandler {
       Math.min((this.target.y - screenY) * r, CAMERA_MAX_SPEED),
       -CAMERA_MAX_SPEED,
     );
+
+    if (this.targetScale !== null) {
+      const oldScale = this.scale;
+      const zoomSmoothing = 0.7;
+      const zoomR = 1 - Math.pow(zoomSmoothing, dt / 1000);
+      const diff = this.targetScale - this.scale;
+      const smoothStep = diff * zoomR;
+      const minStep =
+        Math.sign(diff) * Math.min(Math.abs(diff), (6.0 * dt) / 1000);
+      this.scale +=
+        Math.abs(smoothStep) >= Math.abs(minStep) ? smoothStep : minStep;
+      // Keep screen center pinned as scale changes: (canvasSize - mapSize) / (2 * scale)
+      // shifts the apparent center when canvas != map dimensions (always on mobile).
+      const { width: canvasWidth, height: canvasHeight } = this.boundingRect();
+      this.offsetX +=
+        (canvasWidth - this.game.width()) *
+        (1 / (2 * oldScale) - 1 / (2 * this.scale));
+      this.offsetY +=
+        (canvasHeight - this.game.height()) *
+        (1 / (2 * oldScale) - 1 / (2 * this.scale));
+    }
 
     this.changed = true;
   }
@@ -321,6 +359,7 @@ export class TransformHandler {
       this.intervalID = null;
     }
     this.target = null;
+    this.targetScale = null;
   }
 
   override(x: number = 0, y: number = 0, s: number = 1) {

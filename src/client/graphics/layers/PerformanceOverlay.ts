@@ -510,7 +510,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     if (!this.isUserSettingsListenerAttached) {
       globalThis.addEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
-        this.onUserSettingsChanged,
+        this.onUserSettingsChanged as EventListener,
       );
       this.isUserSettingsListenerAttached = true;
     }
@@ -522,7 +522,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     if (this.isUserSettingsListenerAttached) {
       globalThis.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
-        this.onUserSettingsChanged,
+        this.onUserSettingsChanged as EventListener,
       );
       this.isUserSettingsListenerAttached = false;
     }

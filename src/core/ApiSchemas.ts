@@ -14,7 +14,7 @@ const LeaderboardUsernameSchema = z
   .string()
   .transform(stripClanTagFromUsername)
   .pipe(z.string().min(1).max(64));
-const LeaderboardClanTagSchema = ClanTagSchema.unwrap();
+const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -43,8 +43,18 @@ export const TokenPayloadSchema = z.object({
   iss: z.string(),
   aud: z.string(),
   exp: z.number(),
+  role: z
+    .enum(["root", "admin", "mod", "flagged", "banned"])
+    // In case new roles are added in the future.
+    .or(z.string())
+    .optional(),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
+
+export const ADMIN_ROLES = ["admin", "root"] as const;
+export function isAdminRole(role: string | null | undefined): boolean {
+  return role === "admin" || role === "root";
+}
 
 export const DiscordUserSchema = z.object({
   id: z.string(),
@@ -67,7 +77,6 @@ export const UserMeResponseSchema = z.object({
   }),
   player: z.object({
     publicId: z.string(),
-    roles: z.string().array().optional(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),
@@ -80,6 +89,32 @@ export const UserMeResponseSchema = z.object({
           })
           .optional(),
       })
+      .optional(),
+    currency: z
+      .object({
+        soft: z.coerce.number(),
+        hard: z.coerce.number(),
+      })
+      .optional(),
+    clans: z
+      .array(
+        z.object({
+          tag: RequiredClanTagSchema,
+          name: z.string(),
+          role: z.enum(["leader", "officer", "member"]),
+          joinedAt: z.iso.datetime(),
+          memberCount: z.number().int().min(1),
+        }),
+      )
+      .optional(),
+    clanRequests: z
+      .array(
+        z.object({
+          tag: RequiredClanTagSchema,
+          name: z.string(),
+          createdAt: z.iso.datetime(),
+        }),
+      )
       .optional(),
   }),
 });
@@ -125,32 +160,11 @@ export const PlayerProfileSchema = z.object({
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
-export const ClanLeaderboardEntrySchema = z.object({
-  clanTag: LeaderboardClanTagSchema,
-  games: z.number(),
-  wins: z.number(),
-  losses: z.number(),
-  playerSessions: z.number(),
-  weightedWins: z.number(),
-  weightedLosses: z.number(),
-  weightedWLRatio: z.number(),
-});
-export type ClanLeaderboardEntry = z.infer<typeof ClanLeaderboardEntrySchema>;
-
-export const ClanLeaderboardResponseSchema = z.object({
-  start: z.iso.datetime(),
-  end: z.iso.datetime(),
-  clans: ClanLeaderboardEntrySchema.array(),
-});
-export type ClanLeaderboardResponse = z.infer<
-  typeof ClanLeaderboardResponseSchema
->;
-
 export const PlayerLeaderboardEntrySchema = z.object({
   rank: z.number(),
   playerId: z.string(),
   username: LeaderboardUsernameSchema,
-  clanTag: LeaderboardClanTagSchema.nullable().optional(),
+  clanTag: RequiredClanTagSchema.nullable().optional(),
   flag: z.string().optional(),
   elo: z.number(),
   games: z.number(),
@@ -179,7 +193,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   public_id: z.string(),
   user: DiscordUserSchema.nullable().optional(),
   username: LeaderboardUsernameSchema,
-  clanTag: LeaderboardClanTagSchema.nullable().optional(),
+  clanTag: RequiredClanTagSchema.nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
@@ -195,7 +209,8 @@ export type RankedLeaderboardResponse = z.infer<
 export const NewsItemSchema = z.object({
   id: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
+  descriptionTranslationKey: z.string().optional(),
   url: z.string().nullable().optional(),
   type: z.enum(["tournament", "tutorial", "announcement"]).or(z.string()),
 });

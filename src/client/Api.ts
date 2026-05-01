@@ -2,8 +2,6 @@ import newsItemsFallback from "resources/news.json";
 import { z } from "zod";
 import type { NewsItem } from "../core/ApiSchemas";
 import {
-  ClanLeaderboardResponse,
-  ClanLeaderboardResponseSchema,
   NewsItemSchema,
   PlayerProfile,
   PlayerProfileSchema,
@@ -90,6 +88,49 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     }
   })();
   return __userMe;
+}
+
+export function invalidateUserMe() {
+  __userMe = null;
+}
+
+export async function purchaseWithCurrency(
+  cosmeticType: "pattern" | "skin" | "flag",
+  cosmeticName: string,
+  currencyType: "hard" | "soft",
+  colorPaletteName?: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/shop/purchase`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({
+        cosmeticType,
+        cosmeticName,
+        currencyType,
+        colorPaletteName,
+      }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "purchaseWithCurrency: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("purchaseWithCurrency: request failed", e);
+    return false;
+  }
 }
 
 export async function createCheckoutSession(
@@ -189,40 +230,6 @@ export async function fetchGameById(
     return parsed.data;
   } catch (err) {
     console.warn("fetchGameById: request failed", err);
-    return false;
-  }
-}
-
-export async function fetchClanLeaderboard(): Promise<
-  ClanLeaderboardResponse | false
-> {
-  try {
-    const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
-      headers: { Accept: "application/json" },
-    });
-
-    if (!res.ok) {
-      console.warn(
-        "fetchClanLeaderboard: unexpected status",
-        res.status,
-        res.statusText,
-      );
-      return false;
-    }
-
-    const json = await res.json();
-    const parsed = ClanLeaderboardResponseSchema.safeParse(json);
-    if (!parsed.success) {
-      console.warn(
-        "fetchClanLeaderboard: Zod validation failed",
-        parsed.error.toString(),
-      );
-      return false;
-    }
-
-    return parsed.data;
-  } catch (err) {
-    console.warn("fetchClanLeaderboard: request failed", err);
     return false;
   }
 }
