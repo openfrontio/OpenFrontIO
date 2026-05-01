@@ -10,7 +10,6 @@ import {
   BuildableUnit,
   Cell,
   EmojiMessage,
-  GameType,
   GameUpdates,
   Gold,
   NameViewData,
@@ -666,8 +665,8 @@ type TrainPlanState = {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
-  private singleplayerInSpawnPhase: boolean;
-  private singleplayerStartTick: Tick | null = null;
+  private inSpawnPhaseValue = true;
+  private startTick: Tick;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -707,8 +706,7 @@ export class GameView implements GameMap {
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.singleplayerInSpawnPhase =
-      this._config.gameConfig().gameType === GameType.Singleplayer;
+    this.startTick = this._config.numSpawnPhaseTurns();
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
@@ -810,8 +808,8 @@ export class GameView implements GameMap {
       | SpawnPhaseEndUpdate
       | undefined;
     if (spawnPhaseEndUpdate) {
-      this.singleplayerInSpawnPhase = false;
-      this.singleplayerStartTick = spawnPhaseEndUpdate.startTick;
+      this.inSpawnPhaseValue = false;
+      this.startTick = spawnPhaseEndUpdate.startTick;
     }
 
     const myDisplayName = formatPlayerDisplayName(
@@ -1230,10 +1228,7 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
-      return this.singleplayerInSpawnPhase;
-    }
-    return this.ticks() <= this._config.numSpawnPhaseTurns();
+    return this.inSpawnPhaseValue;
   }
 
   isSpawnImmunityActive(): boolean {
@@ -1258,11 +1253,7 @@ export class GameView implements GameMap {
       return 0;
     }
 
-    const startTick =
-      this._config.gameConfig().gameType === GameType.Singleplayer
-        ? (this.singleplayerStartTick ?? this.ticks())
-        : this._config.numSpawnPhaseTurns();
-    return Math.max(0, this.ticks() - startTick);
+    return Math.max(0, this.ticks() - this.startTick);
   }
   config(): Config {
     return this._config;

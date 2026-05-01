@@ -77,7 +77,7 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
-  private singleplayerStartTick: number | null = null;
+  private startTick: number;
   private singleplayerSpawnPhaseCompleted = false;
   private spawnPhaseLockedValue: boolean | null = null;
 
@@ -128,6 +128,7 @@ export class GameImpl implements Game {
   ) {
     const constructorStart = performance.now();
 
+    this.startTick = _config.numSpawnPhaseTurns();
     this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -429,10 +430,10 @@ export class GameImpl implements Game {
       return;
     }
     this.singleplayerSpawnPhaseCompleted = true;
-    this.singleplayerStartTick = this.ticks();
+    this.startTick = this.ticks();
     this.addUpdate({
       type: GameUpdateType.SpawnPhaseEnd,
-      startTick: this.singleplayerStartTick,
+      startTick: this.startTick,
     });
   }
 
@@ -486,6 +487,16 @@ export class GameImpl implements Game {
     const waterChangedTiles = this._waterManager.tick(this._ticks);
     for (const tile of waterChangedTiles) {
       this.recordTileUpdate(tile);
+    }
+
+    if (
+      this.config().gameConfig().gameType !== GameType.Singleplayer &&
+      this._ticks === this.startTick
+    ) {
+      this.addUpdate({
+        type: GameUpdateType.SpawnPhaseEnd,
+        startTick: this.startTick,
+      });
     }
 
     this.spawnPhaseLockedValue = null;
@@ -871,11 +882,7 @@ export class GameImpl implements Game {
       return 0;
     }
 
-    const startTick =
-      this.config().gameConfig().gameType === GameType.Singleplayer
-        ? (this.singleplayerStartTick ?? this.ticks())
-        : this.config().numSpawnPhaseTurns();
-    return Math.max(0, this.ticks() - startTick);
+    return Math.max(0, this.ticks() - this.startTick);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
