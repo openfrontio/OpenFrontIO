@@ -210,7 +210,7 @@ export class NationEmojiBehavior {
     if (!this.random.chance(250)) return;
 
     const nearbyHumans = this.player
-      .neighbors()
+      .nearby()
       .filter(
         (p): p is Player => p.isPlayer() && p.type() === PlayerType.Human,
       );

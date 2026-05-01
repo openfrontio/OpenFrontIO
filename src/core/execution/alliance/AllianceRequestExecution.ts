@@ -7,6 +7,7 @@ import {
   PlayerID,
   UnitType,
 } from "../../game/Game";
+import { wouldNukeBreakAlliance } from "../Util";
 
 export class AllianceRequestExecution implements Execution {
   private req: AllianceRequest | null = null;
@@ -100,12 +101,19 @@ export class AllianceRequestExecution implements Execution {
         const targetTile = unit.targetTile();
         if (!targetTile) continue;
 
-        const targetOwner = this.mg.owner(targetTile);
-        if (!targetOwner.isPlayer()) continue;
-
         const other = launcher === this.requestor ? recipient : this.requestor;
-        if (targetOwner !== other) continue;
-
+        const magnitude = this.mg.config().nukeMagnitudes(unit.type());
+        if (
+          !wouldNukeBreakAlliance({
+            game: this.mg,
+            targetTile,
+            magnitude,
+            allySmallIds: new Set([other.smallID()]),
+            threshold: this.mg.config().nukeAllianceBreakThreshold(),
+          })
+        ) {
+          continue;
+        }
         unit.delete(false);
         neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
       }

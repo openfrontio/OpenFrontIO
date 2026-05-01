@@ -4,6 +4,7 @@ import { PlayerGame } from "../../../../core/ApiSchemas";
 import { GameMode } from "../../../../core/game/Game";
 import { GameInfoModal } from "../../../GameInfoModal";
 import { translateText } from "../../../Utils";
+import "../../CopyButton";
 
 @customElement("game-list")
 export class GameList extends LitElement {
@@ -115,7 +116,10 @@ export class GameList extends LitElement {
                     >
                       ${translateText("game_list.game_id")}
                     </div>
-                    <div class="text-white font-mono">${game.gameId}</div>
+                    <copy-button
+                      .copyText="${game.gameId}"
+                      compact
+                    ></copy-button>
                   </div>
                   <div>
                     <div

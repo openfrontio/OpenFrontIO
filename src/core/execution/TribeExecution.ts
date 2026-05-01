@@ -108,17 +108,16 @@ export class TribeExecution implements Execution {
           this.tribe.breakAlliance(alliance);
         }
 
-        this.attackBehavior.sendAttack(toAttack);
-        return;
+        if (this.attackBehavior.sendAttack(toAttack)) return;
       }
     }
 
     if (this.neighborsTerraNullius) {
-      if (this.tribe.neighbors().some((n) => !n.isPlayer())) {
-        this.attackBehavior.sendAttack(this.mg.terraNullius());
-        return;
+      if (this.tribe.nearby().some((n) => !n.isPlayer())) {
+        if (this.attackBehavior.sendAttack(this.mg.terraNullius())) return;
+      } else {
+        this.neighborsTerraNullius = false;
       }
-      this.neighborsTerraNullius = false;
     }
 
     this.attackBehavior.attackRandomTarget();

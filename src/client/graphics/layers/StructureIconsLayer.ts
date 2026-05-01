@@ -101,7 +101,11 @@ export class StructureIconsLayer implements Layer {
   private visibilityStateDirty = true;
   private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
+  private rebuildPending = false;
   potentialUpgrade: StructureRenderInfo | undefined;
+  private filterRedArray: OutlineFilter[] = [];
+  private filterGreenArray: OutlineFilter[] = [];
+  private filterWhiteArray: OutlineFilter[] = [];
 
   constructor(
     private game: GameView,
@@ -119,15 +123,36 @@ export class StructureIconsLayer implements Layer {
   }
 
   async setupRenderer() {
+    if (this.renderer) {
+      this.renderer.destroy(true);
+      this.rootStage.removeChildren();
+    }
+
     try {
       await PIXI.Assets.load(bitmapFont);
     } catch (error) {
       console.error("Failed to load bitmap font:", error);
     }
-    const renderer = new PIXI.WebGLRenderer();
+
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
     this.pixicanvas.height = window.innerHeight;
+
+    // This will prefer WebGL, eventually WebGPU, and fallback to Canvas
+    // Restrict using 'preferences: ["WebGPU", "WebGL"]' or
+    // 'preferences: "WebGPU"' later if needed
+    const renderer = await PIXI.autoDetectRenderer({
+      canvas: this.pixicanvas,
+      resolution: 1,
+      width: this.pixicanvas.width,
+      height: this.pixicanvas.height,
+      antialias: false,
+      clearBeforeRender: true,
+      backgroundAlpha: 0,
+      backgroundColor: 0x00000000,
+    });
+
+    console.info(`Using ${renderer.name} for structure icons layer`);
 
     this.iconsStage = new PIXI.Container();
     this.iconsStage.position.set(0, 0);
@@ -154,23 +179,85 @@ export class StructureIconsLayer implements Layer {
     this.rootStage.position.set(0, 0);
     this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    await renderer.init({
-      canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
-      antialias: false,
-      clearBeforeRender: true,
-      backgroundAlpha: 0,
-      backgroundColor: 0x00000000,
-    });
+    this.filterRedArray = [
+      new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
+    ];
+    this.filterGreenArray = [
+      new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+    ];
+    this.filterWhiteArray = [
+      new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+    ];
 
     this.renderer = renderer;
+
+    if (this.renderer.name === "webgpu") {
+      // Listen to device loss as PixiJS doesn't handle WebGPU context loss itself
+      const gpuRenderer = this.renderer as PIXI.WebGPURenderer;
+      gpuRenderer.gpu.device.lost.then(() => {
+        this.redraw();
+      });
+    }
+
+    if (this.renderer.name === "webgl") {
+      this.renderer.runners.contextChange.add({
+        // Listen to contextChange as PixiJS handles WebGL context loss and restores itself.
+        // Don't listen to "webglcontextrestored" event directly as it can fire before PixiJS is ready.
+        contextChange: () => {
+          requestAnimationFrame(() => {
+            this.redraw();
+          });
+        },
+      });
+    }
+
     this.rendererInitialized = true;
+  }
+
+  private rebuildAllIcons() {
+    this.clearGhostStructure();
+    this.factory.clearCache();
+    const allUnitIds = Array.from(this.seenUnitIds);
+    this.seenUnitIds.clear();
+    for (const unitId of allUnitIds) {
+      const render = this.rendersByUnitId.get(unitId);
+      if (render) {
+        render.iconContainer?.destroy({ children: true });
+        render.dotContainer?.destroy({ children: true });
+        render.levelContainer?.destroy({ children: true });
+      }
+      const unitView = this.game.unit(unitId);
+      if (unitView && unitView.isActive()) {
+        this.handleActiveUnit(unitView);
+      } else {
+        this.rendersByUnitId.delete(unitId);
+      }
+    }
   }
 
   shouldTransform(): boolean {
     return false;
+  }
+
+  async redraw() {
+    if (this.rebuildPending) {
+      return;
+    }
+    if (this.rendererOrGLContextLost()) {
+      return;
+    }
+    this.rebuildPending = true;
+
+    try {
+      if (this.renderer?.name === "webgpu") {
+        this.rendererInitialized = false;
+        await this.setupRenderer();
+      }
+      this.resizeCanvas();
+      this.rebuildAllIcons();
+    } finally {
+      this.rebuildPending = false;
+    }
   }
 
   async init() {
@@ -188,15 +275,27 @@ export class StructureIconsLayer implements Layer {
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
-    this.redraw();
+    this.resizeCanvas();
+  }
+
+  private rendererOrGLContextLost(): boolean {
+    if (!this.renderer || !this.rendererInitialized) return true;
+    if (this.renderer.name === "webgl") {
+      // For WebGL, check isLost to prevent ungraceful handling by PixiJS:
+      // its GL > logPrettyShaderError throws, when getShaderSource returns null
+      // Needs to be fixed in PixiJS, in meantime prevent it from here
+      return (this.renderer as PIXI.WebGLRenderer).context?.isLost === true;
+    }
+    return false;
   }
 
   resizeCanvas() {
-    if (this.renderer) {
-      this.pixicanvas.width = window.innerWidth;
-      this.pixicanvas.height = window.innerHeight;
-      this.renderer.resize(innerWidth, innerHeight, 1);
+    if (this.rendererOrGLContextLost()) {
+      return;
     }
+    this.pixicanvas.width = window.innerWidth;
+    this.pixicanvas.height = window.innerHeight;
+    this.renderer?.resize(innerWidth, innerHeight, 1);
   }
 
   tick() {
@@ -220,12 +319,8 @@ export class StructureIconsLayer implements Layer {
       this.game.config().userSettings()?.structureSprites() ?? true;
   }
 
-  redraw() {
-    this.resizeCanvas();
-  }
-
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer || !this.rendererInitialized) {
+    if (this.rendererOrGLContextLost()) {
       return;
     }
 
@@ -254,8 +349,10 @@ export class StructureIconsLayer implements Layer {
       scale > DOTS_ZOOM_THRESHOLD &&
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
-    this.renderer.render(this.rootStage);
-    mainContext.drawImage(this.renderer.canvas, 0, 0);
+    if (this.renderer) {
+      this.renderer?.render(this.rootStage);
+      mainContext.drawImage(this.renderer.canvas, 0, 0);
+    }
   }
 
   renderGhost() {
@@ -333,9 +430,7 @@ export class StructureIconsLayer implements Layer {
             canUpgrade: false,
           });
           this.updateGhostPrice(0, showPrice);
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
+          this.ghostUnit.container.filters = this.filterRedArray;
           this.pendingConfirm = null;
           return;
         }
@@ -356,20 +451,14 @@ export class StructureIconsLayer implements Layer {
             this.potentialUpgrade = undefined;
           }
           if (this.potentialUpgrade) {
-            this.potentialUpgrade.iconContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
-            ];
-            this.potentialUpgrade.dotContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
-            ];
+            this.potentialUpgrade.iconContainer.filters = this.filterGreenArray;
+            this.potentialUpgrade.dotContainer.filters = this.filterGreenArray;
           }
           // No overlapping when a structure is upgradable
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else if (unit.canBuild === false) {
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
+          this.ghostUnit.container.filters = this.filterRedArray;
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else {
@@ -536,8 +625,8 @@ export class StructureIconsLayer implements Layer {
   private clearGhostStructure() {
     this.pendingConfirm = null;
     if (this.ghostUnit) {
-      this.ghostUnit.container.destroy();
-      this.ghostUnit.range?.destroy();
+      this.ghostUnit.container.destroy({ children: true });
+      this.ghostUnit.range?.destroy({ children: true });
       this.ghostUnit = null;
     }
     if (this.potentialUpgrade) {
@@ -585,7 +674,7 @@ export class StructureIconsLayer implements Layer {
       return;
     }
 
-    this.ghostUnit.range?.destroy();
+    this.ghostUnit.range?.destroy({ children: true });
     this.ghostUnit.range = null;
     this.ghostUnit.rangeLevel = level;
     this.ghostUnit.targetingAlly = targetingAlly;
@@ -676,12 +765,8 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && this.hasHiddenStructure) {
-        render.iconContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
-        render.dotContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
+        render.iconContainer.filters = this.filterWhiteArray;
+        render.dotContainer.filters = this.filterWhiteArray;
       } else {
         render.iconContainer.filters = [];
         render.dotContainer.filters = [];
@@ -691,8 +776,8 @@ export class StructureIconsLayer implements Layer {
 
   private checkForDeletionState(render: StructureRenderInfo, unit: UnitView) {
     if (unit.markedForDeletion() !== false) {
-      render.iconContainer?.destroy();
-      render.dotContainer?.destroy();
+      render.iconContainer?.destroy({ children: true });
+      render.dotContainer?.destroy({ children: true });
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
@@ -705,8 +790,8 @@ export class StructureIconsLayer implements Layer {
   ) {
     if (render.underConstruction && !unit.isUnderConstruction()) {
       render.underConstruction = false;
-      render.iconContainer?.destroy();
-      render.dotContainer?.destroy();
+      render.iconContainer?.destroy({ children: true });
+      render.dotContainer?.destroy({ children: true });
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
@@ -716,8 +801,8 @@ export class StructureIconsLayer implements Layer {
   private checkForOwnershipChange(render: StructureRenderInfo, unit: UnitView) {
     if (render.owner !== unit.owner().id()) {
       render.owner = unit.owner().id();
-      render.iconContainer?.destroy();
-      render.dotContainer?.destroy();
+      render.iconContainer?.destroy({ children: true });
+      render.dotContainer?.destroy({ children: true });
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
@@ -727,9 +812,9 @@ export class StructureIconsLayer implements Layer {
   private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
     if (render.level !== unit.level()) {
       render.level = unit.level();
-      render.iconContainer?.destroy();
-      render.levelContainer?.destroy();
-      render.dotContainer?.destroy();
+      render.iconContainer?.destroy({ children: true });
+      render.levelContainer?.destroy({ children: true });
+      render.dotContainer?.destroy({ children: true });
       render.iconContainer = this.createIconSprite(unit);
       render.levelContainer = this.createLevelSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
@@ -834,9 +919,9 @@ export class StructureIconsLayer implements Layer {
   }
 
   private deleteStructure(render: StructureRenderInfo) {
-    render.iconContainer?.destroy();
-    render.levelContainer?.destroy();
-    render.dotContainer?.destroy();
+    render.iconContainer?.destroy({ children: true });
+    render.levelContainer?.destroy({ children: true });
+    render.dotContainer?.destroy({ children: true });
     const unitId = render.unit.id();
     this.rendersByUnitId.delete(unitId);
     this.seenUnitIds.delete(unitId);

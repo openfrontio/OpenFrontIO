@@ -128,19 +128,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
@@ -200,19 +200,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
         </div>
       </div>
@@ -299,7 +299,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface"
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)]"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div
