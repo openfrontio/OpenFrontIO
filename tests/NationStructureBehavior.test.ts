@@ -390,6 +390,303 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
   it("returns false when own troops are zero", () => {
     expect(callTryBuild(Difficulty.Hard, 0, [makeLandAttack(500)])).toBe(false);
   });
+
+  // ── Medium 50% gate ──────────────────────────────────────────────────────
+
+  it("Medium: returns false when random.chance(2) fails (50% gate closed)", () => {
+    const game = makeMinimalGame(Difficulty.Medium);
+    const player = makeMinimalPlayer(1000, [makeLandAttack(1000)]);
+    const random = new PseudoRandom(0);
+    vi.spyOn(random, "chance").mockReturnValue(false);
+    const behavior = makeBehavior(game, player, random);
+    (behavior as any).placementsCount = 1;
+    expect((behavior as any).tryBuildDefensePost()).toBe(false);
+  });
+
+  it("Medium: 50% gate consumes only the chance(2) call", () => {
+    const game = makeMinimalGame(Difficulty.Medium);
+    const player = makeMinimalPlayer(1000, [makeLandAttack(1000)]);
+    const random = new PseudoRandom(0);
+    const chanceSpy = vi.spyOn(random, "chance").mockReturnValue(false);
+    const behavior = makeBehavior(game, player, random);
+    (behavior as any).placementsCount = 1;
+    (behavior as any).tryBuildDefensePost();
+    expect(chanceSpy).toHaveBeenCalledWith(2);
+  });
+
+  it("Hard: skips chance gate (no chance(2) consumed)", () => {
+    const game = makeMinimalGame(Difficulty.Hard);
+    const player = {
+      ...makeMinimalPlayer(1000, [makeLandAttack(1000)]),
+      borderTiles: () => [],
+      canBuild: () => false,
+    };
+    const random = new PseudoRandom(0);
+    const chanceSpy = vi.spyOn(random, "chance");
+    const behavior = makeBehavior(game, player, random);
+    (behavior as any).placementsCount = 1;
+    (behavior as any).tryBuildDefensePost();
+    expect(chanceSpy).not.toHaveBeenCalledWith(2);
+  });
+
+  // ── Cap enforcement ──────────────────────────────────────────────────────
+
+  it("Hard: returns false once countDefensePostsNearFront reaches the allowed cap", () => {
+    const game = makeMinimalGame(Difficulty.Hard);
+    // ratio = 1.0 → ceil(1.0 / 0.4) = 3 allowed
+    const player = makeMinimalPlayer(1000, [makeLandAttack(1000)]);
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(3);
+    expect((behavior as any).tryBuildDefensePost()).toBe(false);
+  });
+
+  it("Hard: returns false once countDefensePostsNearFront exceeds the allowed cap", () => {
+    const game = makeMinimalGame(Difficulty.Hard);
+    // ratio = 0.4 → ceil(0.4 / 0.4) = 1 allowed
+    const player = makeMinimalPlayer(1000, [makeLandAttack(400)]);
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(1);
+    expect((behavior as any).tryBuildDefensePost()).toBe(false);
+  });
+
+  // ── Successful build path ────────────────────────────────────────────────
+
+  it("Hard: dispatches a ConstructionExecution for DefensePost on successful build", () => {
+    const addExecution = vi.fn();
+    const game = {
+      ...makeMinimalGame(Difficulty.Hard),
+      addExecution,
+    };
+    const canBuild = vi.fn(() => true);
+    const player = {
+      ...makeMinimalPlayer(1000, [makeLandAttack(1000)]),
+      gold: () => 1_000_000n,
+      canBuild,
+    };
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(0);
+    vi.spyOn(behavior as any, "sampleTilesNearFront").mockReturnValue([42]);
+
+    expect((behavior as any).tryBuildDefensePost()).toBe(true);
+    expect(addExecution).toHaveBeenCalledTimes(1);
+    const exec = addExecution.mock.calls[0][0];
+    expect(exec.constructor.name).toBe("ConstructionExecution");
+  });
+
+  it("returns false when player.gold() is below cost", () => {
+    const game = {
+      ...makeMinimalGame(Difficulty.Hard),
+      // cost > 0 so gold check fails
+      unitInfo: () => ({ cost: () => 1_000_000n }),
+    };
+    const player = {
+      ...makeMinimalPlayer(1000, [makeLandAttack(1000)]),
+      gold: () => 0n,
+    };
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(0);
+    expect((behavior as any).tryBuildDefensePost()).toBe(false);
+  });
+
+  it("returns false when no sampled tile passes canBuild", () => {
+    const addExecution = vi.fn();
+    const game = {
+      ...makeMinimalGame(Difficulty.Hard),
+      addExecution,
+    };
+    const player = {
+      ...makeMinimalPlayer(1000, [makeLandAttack(1000)]),
+      gold: () => 1_000_000n,
+      canBuild: () => false,
+    };
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(0);
+    vi.spyOn(behavior as any, "sampleTilesNearFront").mockReturnValue([42, 43]);
+
+    expect((behavior as any).tryBuildDefensePost()).toBe(false);
+    expect(addExecution).not.toHaveBeenCalled();
+  });
+});
+
+// ── defensePostNeeded ────────────────────────────────────────────────────────
+
+describe("NationStructureBehavior.defensePostNeeded", () => {
+  function makeAttack(troops: number, sourceTile: number | null = null): any {
+    return {
+      troops: () => troops,
+      sourceTile: () => sourceTile,
+      attacker: () => ({ id: () => "a" }),
+    };
+  }
+
+  function makeGame(difficulty: Difficulty): any {
+    return {
+      config: () => ({ gameConfig: () => ({ difficulty }) }),
+    };
+  }
+
+  function makePlayer(troops: number, attacks: any[]): any {
+    return {
+      troops: () => troops,
+      incomingAttacks: () => attacks,
+    };
+  }
+
+  function call(
+    difficulty: Difficulty,
+    troops: number,
+    attacks: any[],
+  ): boolean {
+    const behavior = makeBehavior(
+      makeGame(difficulty),
+      makePlayer(troops, attacks),
+    );
+    return (behavior as any).defensePostNeeded();
+  }
+
+  it("returns false on Easy", () => {
+    expect(call(Difficulty.Easy, 1000, [makeAttack(1000)])).toBe(false);
+  });
+
+  it("returns false when there are no incoming attacks", () => {
+    expect(call(Difficulty.Hard, 1000, [])).toBe(false);
+  });
+
+  it("returns false when own troops are zero", () => {
+    expect(call(Difficulty.Hard, 0, [makeAttack(1000)])).toBe(false);
+  });
+
+  it("returns false when ratio is below threshold (0.35)", () => {
+    expect(call(Difficulty.Hard, 1000, [makeAttack(349)])).toBe(false);
+  });
+
+  it("returns true when ratio is exactly at threshold (0.35)", () => {
+    expect(call(Difficulty.Hard, 1000, [makeAttack(350)])).toBe(true);
+  });
+
+  it("returns true when ratio is above threshold", () => {
+    expect(call(Difficulty.Medium, 1000, [makeAttack(700)])).toBe(true);
+  });
+
+  it("ignores boat attacks (sourceTile != null)", () => {
+    expect(call(Difficulty.Hard, 1000, [makeAttack(5000, 999)])).toBe(false);
+  });
+
+  it("sums troops across multiple land attacks for the ratio", () => {
+    expect(
+      call(Difficulty.Hard, 1000, [makeAttack(200), makeAttack(200)]),
+    ).toBe(true);
+  });
+});
+
+// ── sampleTilesNearFront ─────────────────────────────────────────────────────
+
+describe("NationStructureBehavior.sampleTilesNearFront", () => {
+  // The non-empty path uses random.randElement / random.nextInt, closestTile
+  // (manhattanDist), and several game/player accessors. We test the empty
+  // short-circuit and the canBuild filter via a controlled mock environment.
+
+  it("returns [] when no front tiles are supplied", () => {
+    const behavior = makeBehavior({} as any, { units: () => [] } as any);
+    expect(
+      (behavior as any).sampleTilesNearFront([], 25, 0 /* DefensePost */),
+    ).toEqual([]);
+  });
+
+  it("respects the requested sample size cap", () => {
+    // Build an environment that always produces a valid candidate so the loop
+    // collects exactly `count` tiles before stopping.
+    const player: any = {
+      borderTiles: () => [0],
+      units: () => [],
+      canBuild: () => true,
+    };
+    const game: any = {
+      config: () => ({
+        nukeMagnitudes: () => ({ outer: 50 }),
+      }),
+      x: (t: number) => t,
+      y: () => 0,
+      isValidCoord: () => true,
+      ref: (x: number) => x,
+      owner: () => player,
+      manhattanDist: () => 50, // within [0.75×50, 1.5×50] = [38, 75]
+    };
+    const random = new PseudoRandom(0);
+    vi.spyOn(random, "randElement").mockImplementation((arr: any[]) => arr[0]);
+    vi.spyOn(random, "nextInt").mockReturnValue(0);
+    const behavior = makeBehavior(game, player, random);
+    const tiles = (behavior as any).sampleTilesNearFront(
+      [0],
+      3,
+      0 /* DefensePost */,
+    );
+    expect(tiles.length).toBe(3);
+  });
+
+  it("filters out tiles where canBuild returns false (phase 1 rejects all → falls through to fallback)", () => {
+    const canBuild = vi.fn((_unitType: any, _tile: any) => false);
+    const player: any = {
+      borderTiles: () => [0],
+      units: () => [],
+      canBuild,
+    };
+    const game: any = {
+      config: () => ({ nukeMagnitudes: () => ({ outer: 50 }) }),
+      x: (t: number) => t,
+      y: () => 0,
+      isValidCoord: () => true,
+      ref: (x: number) => x,
+      owner: () => player,
+      manhattanDist: () => 50,
+    };
+    const random = new PseudoRandom(0);
+    vi.spyOn(random, "randElement").mockImplementation((arr: any[]) => arr[0]);
+    vi.spyOn(random, "nextInt").mockReturnValue(0);
+    const behavior = makeBehavior(game, player, random);
+    (behavior as any).sampleTilesNearFront([0], 3, 0 /* DefensePost */);
+    // canBuild should have been queried for every tile sampled in phase 1
+    expect(canBuild).toHaveBeenCalled();
+    expect(canBuild.mock.calls[0][0]).toBe(0); // unitType arg passed through
+  });
+
+  it("calls canBuild with the supplied unitType", () => {
+    const canBuild = vi.fn((_unitType: any, _tile: any) => true);
+    const player: any = {
+      borderTiles: () => [0],
+      units: () => [],
+      canBuild,
+    };
+    const game: any = {
+      config: () => ({ nukeMagnitudes: () => ({ outer: 50 }) }),
+      x: (t: number) => t,
+      y: () => 0,
+      isValidCoord: () => true,
+      ref: (x: number) => x,
+      owner: () => player,
+      manhattanDist: () => 50,
+    };
+    const random = new PseudoRandom(0);
+    vi.spyOn(random, "randElement").mockImplementation((arr: any[]) => arr[0]);
+    vi.spyOn(random, "nextInt").mockReturnValue(0);
+    const behavior = makeBehavior(game, player, random);
+    const SENTINEL_UNIT_TYPE = 7 as any;
+    (behavior as any).sampleTilesNearFront([0], 1, SENTINEL_UNIT_TYPE);
+    expect(canBuild).toHaveBeenCalledWith(
+      SENTINEL_UNIT_TYPE,
+      expect.anything(),
+    );
+  });
 });
 
 // ── getAttackFrontTiles ──────────────────────────────────────────────────────
