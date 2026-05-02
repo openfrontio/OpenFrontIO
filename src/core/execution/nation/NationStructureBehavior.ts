@@ -52,10 +52,6 @@ function getStructureRatios(
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
     },
-    [UnitType.DefensePost]: {
-      ratioPerCity: 0.25,
-      perceivedCostIncreasePerOwned: 1,
-    },
     [UnitType.SAMLauncher]: {
       ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
       perceivedCostIncreasePerOwned: 0.3,
@@ -81,9 +77,6 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
-
-/** Maximum density of defense posts (per tile owned) before no more can be built */
-const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 
 /** Estimated number of tiles per city equivalent, used when cities are disabled */
 const TILES_PER_CITY_EQUIVALENT = 2000;
@@ -232,18 +225,16 @@ export class NationStructureBehavior {
   private getAttackFrontTiles(landAttacks: Attack[]): TileRef[] {
     const game = this.game;
     const player = this.player;
-    const attackers = landAttacks.map((a) => a.attacker());
-    if (attackers.length === 0) return [];
+    const attackerSet = new Set(landAttacks.map((a) => a.attacker()));
+    if (attackerSet.size === 0) return [];
 
     const frontTiles: TileRef[] = [];
     outer: for (const borderTile of player.borderTiles()) {
       for (const neighbor of game.neighbors(borderTile)) {
         const owner = game.owner(neighbor);
-        for (const attacker of attackers) {
-          if (owner === attacker) {
-            frontTiles.push(borderTile);
-            continue outer;
-          }
+        if (owner.isPlayer() && attackerSet.has(owner)) {
+          frontTiles.push(borderTile);
+          continue outer;
         }
       }
     }
@@ -552,17 +543,6 @@ export class NationStructureBehavior {
     // First missile silo uses a higher ratio so nations can start nuking earlier
     if (type === UnitType.MissileSilo && owned === 0) {
       ratio = FIRST_MISSILE_SILO_RATIO;
-    }
-
-    // Density cap on defense posts (can't be upgraded so a new one would be built - problematic if it's a game with high starting gold)
-    if (type === UnitType.DefensePost) {
-      const tilesOwned = this.player.numTilesOwned();
-      if (
-        tilesOwned > 0 &&
-        owned / tilesOwned >= DEFENSE_POST_DENSITY_THRESHOLD
-      ) {
-        return false;
-      }
     }
 
     const targetCount = Math.floor(cityCount * ratio);

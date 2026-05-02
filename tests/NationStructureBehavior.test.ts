@@ -311,8 +311,6 @@ describe("NationStructureBehavior.buildReachableStations", () => {
   });
 });
 
-// ── getOrBuildReachableStations cache behaviour ──────────────────────────────
-
 // ── tryBuildDefensePost — early-exit guards ──────────────────────────────────
 
 describe("NationStructureBehavior.tryBuildDefensePost", () => {
