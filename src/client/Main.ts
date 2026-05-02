@@ -438,11 +438,9 @@ class Client {
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       updateAccountNavButton(userMeResponse);
-      const hasLinkedAccount =
-        !crazyGamesSDK.isOnCrazyGames() &&
-        ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
-      console.log("ads enabled: ", hasLinkedAccount);
-      window.adsEnabled = !hasLinkedAccount && !crazyGamesSDK.isOnCrazyGames();
+      const isAdFree =
+        userMeResponse !== false && userMeResponse.player?.adfree === true;
+      window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
