@@ -33,6 +33,9 @@ const ROOT_PUBLIC_FILES = new Set([
 
 const manifestCache = new Map<string, AssetManifest>();
 
+// Bump this to force-invalidate all CDN-cached assets (e.g. after a bad deploy with wrong cache headers).
+const CACHE_BUST_VERSION = "2";
+
 type DerivedPublicAssetRenderContext = {
   resourcesDir: string;
   relativePath: string;
@@ -50,11 +53,19 @@ function toPosixPath(filePath: string): string {
 
 function createContentHash(filePath: string): string {
   const content = fs.readFileSync(filePath);
-  return createHash("sha256").update(content).digest("hex").slice(0, 12);
+  return createHash("sha256")
+    .update(CACHE_BUST_VERSION)
+    .update(content)
+    .digest("hex")
+    .slice(0, 12);
 }
 
 function createStringHash(content: string): string {
-  return createHash("sha256").update(content).digest("hex").slice(0, 12);
+  return createHash("sha256")
+    .update(CACHE_BUST_VERSION)
+    .update(content)
+    .digest("hex")
+    .slice(0, 12);
 }
 
 function createHashedAssetUrl(relativePath: string, hash: string): string {

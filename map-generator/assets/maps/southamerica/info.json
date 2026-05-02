@@ -17,12 +17,12 @@
       "flag": "ht"
     },
     {
-      "coordinates": [112, 209],
+      "coordinates": [122, 143],
       "name": "Belize",
       "flag": "bz"
     },
     {
-      "coordinates": [71, 282],
+      "coordinates": [68, 257],
       "name": "Guatemala",
       "flag": "gt"
     },
@@ -42,84 +42,89 @@
       "flag": "pa"
     },
     {
-      "coordinates": [740, 1180],
+      "coordinates": [847, 1209],
       "name": "Bolivia",
       "flag": "bo"
     },
     {
-      "coordinates": [849, 1770],
+      "coordinates": [861, 1851],
       "name": "Argentina",
       "flag": "ar"
     },
     {
-      "coordinates": [1394, 1309],
+      "coordinates": [1153, 1095],
       "name": "Brazil",
       "flag": "br"
     },
     {
-      "coordinates": [691, 1371],
+      "coordinates": [687, 1605],
       "name": "Chile",
       "flag": "cl"
     },
     {
-      "coordinates": [527, 503],
+      "coordinates": [582, 543],
       "name": "Colombia",
       "flag": "co"
     },
     {
-      "coordinates": [384, 746],
+      "coordinates": [444, 750],
       "name": "Ecuador",
       "flag": "ec"
     },
     {
-      "coordinates": [933, 423],
-      "name": "French Guyana",
+      "coordinates": [1204, 615],
+      "name": "French Guiana",
       "flag": "gf"
     },
     {
-      "coordinates": [800, 410],
+      "coordinates": [981, 546],
       "name": "Guyana",
       "flag": "gy"
     },
     {
-      "coordinates": [541, 1092],
+      "coordinates": [537, 1017],
       "name": "Peru",
       "flag": "pe"
     },
     {
-      "coordinates": [960, 1496],
+      "coordinates": [1028, 1404],
       "name": "Paraguay",
       "flag": "py"
     },
     {
-      "coordinates": [890, 610],
+      "coordinates": [1097, 586],
       "name": "Suriname",
       "flag": "sr"
     },
     {
-      "coordinates": [1091, 1635],
+      "coordinates": [1118, 1695],
       "name": "Uruguay",
       "flag": "uy"
     },
     {
-      "coordinates": [678, 904],
+      "coordinates": [770, 465],
       "name": "Venezuela",
       "flag": "ve"
     },
     {
-      "coordinates": [1270, 1035],
-      "name": "The Biggest Snakes",
-      "flag": "Aztec Empire"
+      "coordinates": [795, 808],
+      "name": "Amazonas",
+      "flag": "amazonas"
     },
     {
-      "coordinates": [894, 693],
-      "name": "Normal Capybaras",
-      "flag": ""
+      "coordinates": [1267, 794],
+      "name": "Pará",
+      "flag": "Para"
     },
     {
-      "coordinates": [884, 832],
-      "name": "Just Otters",
-      "flag": ""
+      "coordinates": [1550, 1066],
+      "name": "Bahia",
+      "flag": "bahia"
+    },
+    {
+      "coordinates": [1374, 1404],
+      "name": "São Paulo",
+      "flag": "Sao Paulo"
     }
   ]
 }

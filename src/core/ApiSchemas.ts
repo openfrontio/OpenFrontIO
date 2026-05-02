@@ -77,6 +77,7 @@ export const UserMeResponseSchema = z.object({
   }),
   player: z.object({
     publicId: z.string(),
+    adfree: z.boolean(),
     flares: z.string().array().optional(),
     achievements: z.object({
       singleplayerMap: z.array(SingleplayerMapAchievementSchema),

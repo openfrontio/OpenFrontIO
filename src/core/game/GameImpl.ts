@@ -1204,6 +1204,9 @@ export class GameImpl implements Game {
     const skipGoldTransfer =
       attacksSent === 0n && conquered.type() === PlayerType.Human;
     const gold = skipGoldTransfer ? 0n : conquered.gold();
+    const goldCaptured = skipGoldTransfer
+      ? 0n
+      : this._config.conquerGoldAmount(conquered);
 
     if (skipGoldTransfer) {
       this.displayMessage(
@@ -1222,22 +1225,22 @@ export class GameImpl implements Game {
         conqueror.id(),
         gold,
         {
-          gold: renderNumber(gold),
+          gold: renderNumber(goldCaptured),
           name: conquered.displayName(),
         },
       );
-      conqueror.addGold(gold);
+      conqueror.addGold(goldCaptured);
       conquered.removeGold(gold);
 
       // Record stats
-      this.stats().goldWar(conqueror, conquered, gold);
+      this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
       conqueredId: conquered.id(),
-      gold,
+      gold: goldCaptured,
     });
   }
 }
