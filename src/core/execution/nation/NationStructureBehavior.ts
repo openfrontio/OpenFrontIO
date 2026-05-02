@@ -232,7 +232,7 @@ export class NationStructureBehavior {
     outer: for (const borderTile of player.borderTiles()) {
       for (const neighbor of game.neighbors(borderTile)) {
         const owner = game.owner(neighbor);
-        if (owner.isPlayer() && attackerSet.has(owner)) {
+        if (attackerSet.has(owner as Player)) {
           frontTiles.push(borderTile);
           continue outer;
         }
