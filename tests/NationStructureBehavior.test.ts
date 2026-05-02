@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
 import { Difficulty, PlayerType } from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
@@ -476,7 +477,7 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
     expect((behavior as any).tryBuildDefensePost()).toBe(true);
     expect(addExecution).toHaveBeenCalledTimes(1);
     const exec = addExecution.mock.calls[0][0];
-    expect(exec.constructor.name).toBe("ConstructionExecution");
+    expect(exec).toBeInstanceOf(ConstructionExecution);
   });
 
   it("returns false when player.gold() is below cost", () => {
@@ -605,12 +606,14 @@ describe("NationStructureBehavior.sampleTilesNearFront", () => {
 
   it("respects the requested sample size cap", () => {
     // Build an environment that always produces a valid candidate so the loop
-    // collects exactly `count` tiles before stopping.
+    // collects exactly `count` tiles before stopping. Each iteration produces
+    // a distinct ref so we verify the cap, not deduplication.
     const player: any = {
       borderTiles: () => [0],
       units: () => [],
       canBuild: () => true,
     };
+    let nextRef = 1;
     const game: any = {
       config: () => ({
         nukeMagnitudes: () => ({ outer: 50 }),
@@ -618,7 +621,7 @@ describe("NationStructureBehavior.sampleTilesNearFront", () => {
       x: (t: number) => t,
       y: () => 0,
       isValidCoord: () => true,
-      ref: (x: number) => x,
+      ref: () => nextRef++, // unique ref per call
       owner: () => player,
       manhattanDist: () => 50, // within [0.75×50, 1.5×50] = [38, 75]
     };
@@ -632,6 +635,7 @@ describe("NationStructureBehavior.sampleTilesNearFront", () => {
       0 /* DefensePost */,
     );
     expect(tiles.length).toBe(3);
+    expect(new Set(tiles).size).toBe(3); // all distinct
   });
 
   it("filters out tiles where canBuild returns false (phase 1 rejects all → falls through to fallback)", () => {
@@ -841,19 +845,6 @@ describe("NationStructureBehavior.countDefensePostsNearFront", () => {
   it("sums posts near different sections of the front", () => {
     const threshold = (OUTER_RANGE * 1.5) ** 2;
     expect(count([10, 20], [1, 2], () => threshold - 1)).toBe(2);
-  });
-
-  // Hard/Impossible allowed-count formula
-  it("Hard: allowed = ceil(ratio / 0.4) — 0.6 ratio → 2 allowed", () => {
-    expect(Math.ceil(0.6 / 0.4)).toBe(2);
-  });
-
-  it("Hard: allowed = ceil(ratio / 0.4) — 0.4 ratio → 1 allowed", () => {
-    expect(Math.ceil(0.4 / 0.4)).toBe(1);
-  });
-
-  it("Hard: allowed = ceil(ratio / 0.4) — 1.0 ratio → 3 allowed", () => {
-    expect(Math.ceil(1.0 / 0.4)).toBe(3);
   });
 });
 
