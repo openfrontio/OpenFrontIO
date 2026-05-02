@@ -20,6 +20,7 @@ import {
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -220,6 +221,14 @@ declare global {
     "start-game": CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
+    userMeResponse: CustomEvent<UserMeResponse | false>;
+    "leave-lobby": CustomEvent;
+    "update-game-config": CustomEvent;
+  }
+
+  // Fixes the globalThis.addEventListener errors
+  interface WindowEventMap {
+    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 
@@ -429,11 +438,9 @@ class Client {
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       updateAccountNavButton(userMeResponse);
-      const hasLinkedAccount =
-        !crazyGamesSDK.isOnCrazyGames() &&
-        ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
-      console.log("ads enabled: ", hasLinkedAccount);
-      window.adsEnabled = !hasLinkedAccount && !crazyGamesSDK.isOnCrazyGames();
+      const isAdFree =
+        userMeResponse !== false && userMeResponse.player?.adfree === true;
+      window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -818,6 +825,7 @@ class Client {
         "leaderboard-button",
         "token-login",
         "matchmaking-modal",
+        "clan-modal",
         "lang-selector",
         "homepage-promos",
       ].forEach((tag) => {

@@ -40,6 +40,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitView } from "./GameView";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -97,6 +98,7 @@ export class GameImpl implements Game {
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
+  private _unitMap = new Map<number, Unit>();
 
   private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
@@ -285,6 +287,10 @@ export class GameImpl implements Game {
       return;
     }
     this._waterManager.queueTile(tile);
+  }
+
+  unit(id: number): Unit | undefined {
+    return this._unitMap.get(id);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -955,9 +961,11 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
+    this._unitMap.set(u.id(), u);
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this._unitMap.delete(u.id());
     this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
@@ -995,7 +1003,7 @@ export class GameImpl implements Game {
       tile,
       searchRange,
       types,
-      predicate,
+      predicate as (unit: Unit | UnitView) => boolean,
       playerId,
       includeUnderConstruction,
     );

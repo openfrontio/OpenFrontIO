@@ -6,19 +6,19 @@
   },
   "map16x": {
     "height": 336,
-    "num_land_tiles": 108584,
+    "num_land_tiles": 108613,
     "width": 770
   },
   "map4x": {
     "height": 672,
-    "num_land_tiles": 458859,
+    "num_land_tiles": 459895,
     "width": 1540
   },
   "name": "Dyslexdria",
   "nations": [
     {
       "coordinates": [2260, 400],
-      "flag": "west_germany",
+      "flag": "de",
       "name": "Jermaine"
     },
     {
@@ -28,7 +28,7 @@
     },
     {
       "coordinates": [2050, 460],
-      "flag": "Fascist Spain",
+      "flag": "es",
       "name": "Splain"
     },
     {
@@ -48,12 +48,12 @@
     },
     {
       "coordinates": [2342, 436],
-      "flag": "Communist Romania",
+      "flag": "ro",
       "name": "Rollandia"
     },
     {
       "coordinates": [1222, 310],
-      "flag": "Ukrainian SSR",
+      "flag": "ua",
       "name": "Ucryin"
     },
     {
@@ -78,7 +78,7 @@
     },
     {
       "coordinates": [2555, 475],
-      "flag": "Georgian SSR",
+      "flag": "ge",
       "name": "Georgia"
     },
     {
@@ -108,7 +108,7 @@
     },
     {
       "coordinates": [1260, 400],
-      "flag": "Kazakh SSR",
+      "flag": "kz",
       "name": "Azakah"
     },
     {

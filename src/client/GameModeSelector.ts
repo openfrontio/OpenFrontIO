@@ -128,19 +128,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
@@ -200,19 +200,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
           )}
         </div>
       </div>

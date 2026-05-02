@@ -139,7 +139,7 @@ describe("Attack", () => {
     expect(ship.troops()).toBe(boat_troops);
     expect(ship.isActive()).toBe(true);
 
-    ship.orderBoatRetreat();
+    ship.updateTransportShipState({ isRetreating: true });
     game.executeNextTick();
 
     expect(ship.isActive()).toBe(false);

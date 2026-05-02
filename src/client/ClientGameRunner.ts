@@ -53,7 +53,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
+import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -441,6 +441,8 @@ export class ClientGameRunner {
       console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);
     };
+
+    let hasGoneToPlayer = false;
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
@@ -472,7 +474,7 @@ export class ClientGameRunner {
               return;
             }
 
-            this.eventBus.emit(new GoToPlayerEvent(myPlayer));
+            this.eventBus.emit(new GoToPlayerEvent(myPlayer, 10));
           };
 
           goToPlayer();
@@ -519,6 +521,15 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "turn") {
+        if (
+          !this.gameView.inSpawnPhase() &&
+          !hasGoneToPlayer &&
+          this.gameView.myPlayer()
+        ) {
+          hasGoneToPlayer = true;
+          this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));
+        }
+
         // Track when we receive the turn to calculate delay
         const now = Date.now();
         if (this.lastTickReceiveTime > 0) {
