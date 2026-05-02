@@ -340,14 +340,14 @@ export class AttackExecution implements Execution {
 
       let mag: number;
       switch (this.mg.terrainType(neighbor)) {
+        case TerrainType.Plains:
+          mag = 1;
+          break;
         case TerrainType.Highland:
           mag = 1.5;
           break;
         case TerrainType.Mountain:
           mag = 2;
-          break;
-        case TerrainType.Plains:
-          mag = 1;
           break;
         default:
           mag = 0;
