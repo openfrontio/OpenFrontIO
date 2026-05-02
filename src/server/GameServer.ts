@@ -794,6 +794,8 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
+      // eslint-disable-next-line preserve-caught-error
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
           0,

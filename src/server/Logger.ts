@@ -39,6 +39,7 @@ if (config.otelEnabled()) {
     "No OTLP endpoint and credentials provided, remote logging disabled",
   );
 }
+
 // Custom format to add severity tag based on log level
 const addSeverityFormat = winston.format((info) => {
   return {
