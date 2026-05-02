@@ -3,7 +3,6 @@ import {
   Execution,
   Game,
   GameMode,
-  GameType,
   Nation,
   Player,
   PlayerID,
@@ -46,7 +45,6 @@ export class NationExecution implements Execution {
   private expandRatio: number;
 
   private readonly embargoMalusApplied = new Set<PlayerID>();
-  private spawnQueuedAtTick: number | null = null;
 
   constructor(
     private gameID: GameID,
@@ -89,8 +87,6 @@ export class NationExecution implements Execution {
   }
 
   tick(ticks: number) {
-    this.refreshPendingSpawnState(ticks);
-
     // Ship tracking
     if (
       this.behaviorsInitialized &&
@@ -108,45 +104,49 @@ export class NationExecution implements Execution {
     }
 
     if (this.mg.inSpawnPhase()) {
-      if (this.mg.config().gameConfig().gameType === GameType.Singleplayer) {
-        return;
-      }
-
       if (ticks % this.attackRate !== this.attackTick) {
         return;
       }
-      this.queueSpawnExecutionIfNeeded(ticks);
-      return;
-    }
+      // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
+      if (this.nation.spawnCell === undefined) {
+        this.mg.addExecution(
+          new SpawnExecution(this.gameID, this.nation.playerInfo),
+        );
+        return;
+      }
 
-    if (
-      this.player !== null &&
-      !this.player.hasSpawned() &&
-      this.mg.config().gameConfig().gameType === GameType.Singleplayer
-    ) {
-      this.queueSpawnExecutionIfNeeded(ticks);
-      return;
-    }
-
-    if (ticks % this.attackRate !== this.attackTick) {
-      // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
-      // Otherwise it is possible that we earn more gold than we can spend
-      // The alternative is placing multiple structures in handleStructures, but that causes problems
-      if (
-        this.behaviorsInitialized &&
-        this.player !== null &&
-        this.player.isAlive()
-      ) {
-        const offset = ticks % this.attackRate;
-        const oneThird =
-          (this.attackTick + Math.floor(this.attackRate / 3)) % this.attackRate;
-        const twoThirds =
-          (this.attackTick + Math.floor((this.attackRate * 2) / 3)) %
-          this.attackRate;
-        if (offset === oneThird || offset === twoThirds) {
-          this.structureBehavior.handleStructures();
+      // If team spawn areas are configured and the nation's spawn cell
+      // is outside its team's area, spawn randomly within the area instead.
+      const team = this.player.team();
+      if (team !== null) {
+        const area = this.mg.teamSpawnArea(team);
+        if (area !== undefined) {
+          const cell = this.nation.spawnCell;
+          const inArea =
+            cell.x >= area.x &&
+            cell.x < area.x + area.width &&
+            cell.y >= area.y &&
+            cell.y < area.y + area.height;
+          if (!inArea) {
+            this.mg.addExecution(
+              new SpawnExecution(this.gameID, this.nation.playerInfo),
+            );
+            return;
+          }
         }
       }
+
+      // Select a tile near the position defined in the map manifest
+      const rl = this.randomSpawnLand();
+
+      if (rl === null) {
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        return;
+      }
+
+      this.mg.addExecution(
+        new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
+      );
       return;
     }
 
@@ -242,70 +242,6 @@ export class NationExecution implements Execution {
       this.player,
     );
     this.behaviorsInitialized = true;
-  }
-
-  private refreshPendingSpawnState(ticks: number): void {
-    if (this.player !== null && this.player.hasSpawned()) {
-      this.spawnQueuedAtTick = null;
-      return;
-    }
-    if (this.spawnQueuedAtTick !== null && ticks > this.spawnQueuedAtTick + 1) {
-      // Give queued SpawnExecution one full tick to run, then allow retries.
-      this.spawnQueuedAtTick = null;
-    }
-  }
-
-  private queueSpawnExecutionIfNeeded(ticks: number): void {
-    if (this.spawnQueuedAtTick !== null) {
-      return;
-    }
-    if (this.queueSpawnExecution()) {
-      this.spawnQueuedAtTick = ticks;
-    }
-  }
-
-  private queueSpawnExecution(): boolean {
-    // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
-    if (this.nation.spawnCell === undefined) {
-      this.mg.addExecution(
-        new SpawnExecution(this.gameID, this.nation.playerInfo),
-      );
-      return true;
-    }
-
-    // If team spawn areas are configured and the nation's spawn cell
-    // is outside its team's area, spawn randomly within the area instead.
-    const team = this.player?.team();
-    if (team !== null && team !== undefined) {
-      const area = this.mg.teamSpawnArea(team);
-      if (area !== undefined) {
-        const cell = this.nation.spawnCell;
-        const inArea =
-          cell.x >= area.x &&
-          cell.x < area.x + area.width &&
-          cell.y >= area.y &&
-          cell.y < area.y + area.height;
-        if (!inArea) {
-          this.mg.addExecution(
-            new SpawnExecution(this.gameID, this.nation.playerInfo),
-          );
-          return true;
-        }
-      }
-    }
-
-    // Select a tile near the position defined in the map manifest
-    const rl = this.randomSpawnLand();
-
-    if (rl === null) {
-      console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
-      return false;
-    }
-
-    this.mg.addExecution(
-      new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
-    );
-    return true;
   }
 
   private randomSpawnLand(): TileRef | null {
