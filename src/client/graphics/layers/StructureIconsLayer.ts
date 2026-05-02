@@ -350,7 +350,7 @@ export class StructureIconsLayer implements Layer {
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
     if (this.renderer) {
-      this.renderer?.render(this.rootStage);
+      this.renderer.render(this.rootStage);
       mainContext.drawImage(this.renderer.canvas, 0, 0);
     }
   }
