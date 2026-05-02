@@ -159,6 +159,25 @@ export class UserSettings {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
+  holdMiddleClickUpgrade() {
+    return this.getBool("settings.holdMiddleClickUpgrade", true);
+  }
+
+  holdMiddleClickUpgradeSpeed(): number {
+    return this.getFloat("settings.holdMiddleClickUpgradeSpeed", 150);
+  }
+
+  toggleHoldMiddleClickUpgrade() {
+    this.setBool(
+      "settings.holdMiddleClickUpgrade",
+      !this.holdMiddleClickUpgrade(),
+    );
+  }
+
+  setHoldMiddleClickUpgradeSpeed(value: number): void {
+    this.setFloat("settings.holdMiddleClickUpgradeSpeed", value);
+  }
+
   territoryPatterns() {
     return this.getBool("settings.territoryPatterns", true);
   }

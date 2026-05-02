@@ -823,6 +823,34 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleCursorCostLabel}
       ></setting-toggle>
 
+      <!-- 🖱️ Hold Middle-Click Upgrade -->
+      <setting-toggle
+        label="${translateText("user_setting.hold_middle_click_label")}"
+        description="${translateText("user_setting.hold_middle_click_desc")}"
+        id="hold-middle-click-upgrade-toggle"
+        .checked=${this.userSettings.holdMiddleClickUpgrade()}
+        @change=${() => {
+          this.userSettings.toggleHoldMiddleClickUpgrade();
+          this.requestUpdate();
+        }}
+      ></setting-toggle>
+
+      <!-- ⏱️ Upgrade Hold Speed -->
+      <setting-slider
+        label="${translateText("user_setting.hold_middle_click_speed_label")}"
+        description="${translateText(
+          "user_setting.hold_middle_click_speed_desc",
+        )}"
+        min="50"
+        max="500"
+        step="25"
+        unit="ms"
+        .value=${this.userSettings.holdMiddleClickUpgradeSpeed()}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          this.userSettings.setHoldMiddleClickUpgradeSpeed(e.detail.value);
+        }}
+      ></setting-slider>
+
       <!-- 🖱️ Left Click Menu -->
       <setting-toggle
         label="${translateText("user_setting.left_click_label")}"

@@ -230,6 +230,11 @@ export class InputHandler {
 
   private readonly userSettings: UserSettings = new UserSettings();
 
+  private holdUpgradeInterval: ReturnType<typeof setInterval> | undefined =
+    undefined;
+  private holdUpgradeTimeout: ReturnType<typeof setTimeout> | undefined =
+    undefined;
+
   constructor(
     private gameView: GameView,
     public uiState: UIState,
@@ -581,6 +586,16 @@ export class InputHandler {
     if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
+
+      if (this.userSettings.holdMiddleClickUpgrade()) {
+        this.holdUpgradeTimeout = setTimeout(() => {
+          this.holdUpgradeInterval = setInterval(() => {
+            this.eventBus.emit(
+              new AutoUpgradeEvent(event.clientX, event.clientY),
+            );
+          }, this.userSettings.holdMiddleClickUpgradeSpeed());
+        }, 400);
+      }
       return;
     }
 
@@ -637,6 +652,10 @@ export class InputHandler {
   onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
+      clearTimeout(this.holdUpgradeTimeout);
+      clearInterval(this.holdUpgradeInterval);
+      this.holdUpgradeTimeout = undefined;
+      this.holdUpgradeInterval = undefined;
       return;
     }
 

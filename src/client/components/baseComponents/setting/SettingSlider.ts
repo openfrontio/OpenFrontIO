@@ -5,6 +5,7 @@ import { customElement, property } from "lit/decorators.js";
 export class SettingSlider extends LitElement {
   @property() label = "Setting";
   @property() description = "";
+  @property() unit = "%";
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
@@ -65,7 +66,7 @@ export class SettingSlider extends LitElement {
           <div class="flex items-center gap-2 w-full">
             <span
               class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
-              >${this.value}%</span
+              >${this.value}${this.unit}</span
             >
             <input
               type="range"
