@@ -205,7 +205,8 @@ export class NationStructureBehavior {
     }
 
     const frontTiles = this.getAttackFrontTiles(landAttacks);
-    if (this.countDefensePostsNearFront(frontTiles) >= allowed) return false;
+    if (this.countDefensePostsNearFront(frontTiles, allowed) >= allowed)
+      return false;
 
     const cost = this.cost(UnitType.DefensePost);
     if (player.gold() < cost) return false;
@@ -261,8 +262,14 @@ export class NationStructureBehavior {
     return frontTiles;
   }
 
-  /** Counts existing defense posts within 1.5 × borderSpacing of any attack-front tile. */
-  private countDefensePostsNearFront(frontTiles: TileRef[]): number {
+  /**
+   * Counts defense posts within 1.5 × borderSpacing of any front tile.
+   * `cap` short-circuits the scan once that many are found.
+   */
+  private countDefensePostsNearFront(
+    frontTiles: TileRef[],
+    cap?: number,
+  ): number {
     if (frontTiles.length === 0) return 0;
 
     const game = this.game;
@@ -274,6 +281,7 @@ export class NationStructureBehavior {
       for (const frontTile of frontTiles) {
         if (game.euclideanDistSquared(dp.tile(), frontTile) <= rangeSquared) {
           count++;
+          if (cap !== undefined && count >= cap) return count;
           break;
         }
       }
