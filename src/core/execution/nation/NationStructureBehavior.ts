@@ -169,7 +169,7 @@ export class NationStructureBehavior {
 
   /**
    * Tries to place one defense post near an active land-attack front.
-   * Not called on Easy. Medium: 1 post per distinct attacker. Hard/Impossible:
+   * Not called on Easy. Medium: 1 post total. Hard/Impossible:
    * ceil(ratio / 0.4) posts total. Boat attacks (sourceTile != null) are ignored.
    * Does not touch placementsCount or lastStructureTick.
    */
