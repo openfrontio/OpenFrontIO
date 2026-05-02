@@ -755,11 +755,7 @@ export class AiAttackBehavior {
   private hasLandBorderWithTerraNullius(): boolean {
     for (const border of this.player.borderTiles()) {
       for (const neighbor of this.game.neighbors(border)) {
-        if (
-          this.game.isLand(neighbor) &&
-          !this.game.hasOwner(neighbor) &&
-          !this.game.hasFallout(neighbor)
-        ) {
+        if (this.game.isLand(neighbor) && !this.game.hasOwner(neighbor)) {
           return true;
         }
       }

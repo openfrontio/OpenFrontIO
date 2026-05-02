@@ -313,6 +313,257 @@ describe("NationStructureBehavior.buildReachableStations", () => {
 
 // ── getOrBuildReachableStations cache behaviour ──────────────────────────────
 
+// ── tryBuildDefensePost — early-exit guards ──────────────────────────────────
+
+describe("NationStructureBehavior.tryBuildDefensePost", () => {
+  function makeLandAttack(troops: number, attackerId: string = "a"): any {
+    return {
+      troops: () => troops,
+      sourceTile: () => null,
+      clusteredPositions: () => [],
+      attacker: () => ({ id: () => attackerId }),
+    };
+  }
+
+  function makeBoatAttack(troops: number): any {
+    return {
+      troops: () => troops,
+      sourceTile: () => 999, // non-null → boat
+      clusteredPositions: () => [],
+      attacker: () => ({ id: () => "boat" }),
+    };
+  }
+
+  function makeMinimalGame(difficulty: Difficulty): any {
+    return {
+      config: () => ({
+        gameConfig: () => ({ difficulty }),
+        isUnitDisabled: () => false,
+        nukeMagnitudes: () => ({ outer: 50 }),
+      }),
+      unitInfo: () => ({ cost: () => 0n }),
+      euclideanDistSquared: () => Number.MAX_VALUE,
+    };
+  }
+
+  function makeMinimalPlayer(troops: number, attacks: any[]): any {
+    return {
+      troops: () => troops,
+      incomingAttacks: () => attacks,
+      gold: () => 1_000_000n,
+      units: () => [],
+    };
+  }
+
+  function callTryBuild(
+    difficulty: Difficulty,
+    troops: number,
+    attacks: any[],
+  ): boolean {
+    const game = makeMinimalGame(difficulty);
+    const player = makeMinimalPlayer(troops, attacks);
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    return (behavior as any).tryBuildDefensePost();
+  }
+
+  it("returns false on Easy regardless of ratio", () => {
+    expect(callTryBuild(Difficulty.Easy, 100, [makeLandAttack(5000)])).toBe(
+      false,
+    );
+  });
+
+  it("returns false when there are no incoming attacks", () => {
+    expect(callTryBuild(Difficulty.Hard, 1000, [])).toBe(false);
+  });
+
+  it("returns false when only boat attacks are incoming", () => {
+    expect(callTryBuild(Difficulty.Hard, 100, [makeBoatAttack(5000)])).toBe(
+      false,
+    );
+  });
+
+  it("returns false when land-attack ratio is below 0.35", () => {
+    expect(callTryBuild(Difficulty.Hard, 1000, [makeLandAttack(349)])).toBe(
+      false,
+    );
+  });
+
+  it("returns false when own troops are zero", () => {
+    expect(callTryBuild(Difficulty.Hard, 0, [makeLandAttack(500)])).toBe(false);
+  });
+});
+
+// ── getAttackFrontTiles ──────────────────────────────────────────────────────
+
+describe("NationStructureBehavior.getAttackFrontTiles", () => {
+  function makeGame(
+    neighborsFn: (tile: number) => number[],
+    ownerFn: (tile: number) => any,
+  ): any {
+    return {
+      config: () => ({ nukeMagnitudes: () => ({ outer: 50 }) }),
+      neighbors: neighborsFn,
+      owner: ownerFn,
+    };
+  }
+
+  function makePlayer(borderTilesList: number[]): any {
+    return {
+      units: () => [],
+      borderTiles: () => borderTilesList,
+    };
+  }
+
+  function makeAttack(attacker: any): any {
+    return { attacker: () => attacker };
+  }
+
+  it("returns empty array for empty attack list", () => {
+    const game = makeGame(
+      () => [],
+      () => null,
+    );
+    const player = makePlayer([1, 2]);
+    const behavior = makeBehavior(game, player);
+    expect((behavior as any).getAttackFrontTiles([])).toEqual([]);
+  });
+
+  it("includes border tile whose neighbor is owned by an attacker", () => {
+    const attacker = { id: () => "atk" };
+    const game = makeGame(
+      (tile) => (tile === 10 ? [100] : []),
+      (tile) => (tile === 100 ? attacker : null),
+    );
+    const player = makePlayer([10, 20]);
+    const behavior = makeBehavior(game, player);
+    expect(
+      (behavior as any).getAttackFrontTiles([makeAttack(attacker)]),
+    ).toEqual([10]);
+  });
+
+  it("excludes border tiles not adjacent to any attacker", () => {
+    const attacker = { id: () => "atk" };
+    const game = makeGame(
+      (tile) => (tile === 10 ? [100] : [200]),
+      (tile) => (tile === 100 ? attacker : null),
+    );
+    const player = makePlayer([10, 20]);
+    const behavior = makeBehavior(game, player);
+    const result = (behavior as any).getAttackFrontTiles([
+      makeAttack(attacker),
+    ]);
+    expect(result).toContain(10);
+    expect(result).not.toContain(20);
+  });
+
+  it("handles multiple attackers from separate attacks", () => {
+    const atk1 = { id: () => "a1" };
+    const atk2 = { id: () => "a2" };
+    const game = makeGame(
+      (tile) => (tile === 10 ? [100] : tile === 20 ? [200] : []),
+      (tile) => (tile === 100 ? atk1 : tile === 200 ? atk2 : null),
+    );
+    const player = makePlayer([10, 20, 30]);
+    const behavior = makeBehavior(game, player);
+    const result = (behavior as any).getAttackFrontTiles([
+      makeAttack(atk1),
+      makeAttack(atk2),
+    ]);
+    expect(result).toContain(10);
+    expect(result).toContain(20);
+    expect(result).not.toContain(30);
+  });
+
+  it("does not duplicate a border tile that has multiple attacker-owned neighbors", () => {
+    const attacker = { id: () => "atk" };
+    const game = makeGame(
+      (tile) => (tile === 10 ? [100, 101] : []),
+      (tile) => (tile === 100 || tile === 101 ? attacker : null),
+    );
+    const player = makePlayer([10]);
+    const behavior = makeBehavior(game, player);
+    const result = (behavior as any).getAttackFrontTiles([
+      makeAttack(attacker),
+    ]);
+    expect(result).toEqual([10]);
+  });
+});
+
+// ── countDefensePostsNearFront ───────────────────────────────────────────────
+
+describe("NationStructureBehavior.countDefensePostsNearFront", () => {
+  const OUTER_RANGE = 50;
+
+  function makeCountGame(distFn: (a: number, b: number) => number): any {
+    return {
+      config: () => ({ nukeMagnitudes: () => ({ outer: OUTER_RANGE }) }),
+      euclideanDistSquared: distFn,
+    };
+  }
+
+  function makeCountPlayer(postTiles: number[]): any {
+    return {
+      units: () => postTiles.map((t) => ({ tile: () => t })),
+    };
+  }
+
+  function count(
+    postTiles: number[],
+    frontTiles: number[],
+    distFn: (a: number, b: number) => number,
+  ): number {
+    const game = makeCountGame(distFn);
+    const player = makeCountPlayer(postTiles);
+    const behavior = makeBehavior(game, player);
+    return (behavior as any).countDefensePostsNearFront(frontTiles);
+  }
+
+  it("returns 0 when there are no defense posts", () => {
+    const threshold = (OUTER_RANGE * 1.5) ** 2;
+    expect(count([], [1], () => threshold - 1)).toBe(0);
+  });
+
+  it("returns 0 when front tiles list is empty", () => {
+    expect(count([1, 2], [], () => 0)).toBe(0);
+  });
+
+  it("counts posts within 1.5 × borderSpacing of any front tile", () => {
+    const threshold = (OUTER_RANGE * 1.5) ** 2;
+    expect(count([10, 20], [1], () => threshold - 1)).toBe(2);
+  });
+
+  it("does not count posts outside 1.5 × borderSpacing", () => {
+    const threshold = (OUTER_RANGE * 1.5) ** 2;
+    expect(count([10, 20], [1], () => threshold + 1)).toBe(0);
+  });
+
+  it("counts a post only once even if near multiple front tiles", () => {
+    const threshold = (OUTER_RANGE * 1.5) ** 2;
+    expect(count([10], [1, 2], () => threshold - 1)).toBe(1);
+  });
+
+  it("sums posts near different sections of the front", () => {
+    const threshold = (OUTER_RANGE * 1.5) ** 2;
+    expect(count([10, 20], [1, 2], () => threshold - 1)).toBe(2);
+  });
+
+  // Hard/Impossible allowed-count formula
+  it("Hard: allowed = ceil(ratio / 0.4) — 0.6 ratio → 2 allowed", () => {
+    expect(Math.ceil(0.6 / 0.4)).toBe(2);
+  });
+
+  it("Hard: allowed = ceil(ratio / 0.4) — 0.4 ratio → 1 allowed", () => {
+    expect(Math.ceil(0.4 / 0.4)).toBe(1);
+  });
+
+  it("Hard: allowed = ceil(ratio / 0.4) — 1.0 ratio → 3 allowed", () => {
+    expect(Math.ceil(1.0 / 0.4)).toBe(3);
+  });
+});
+
+// ── getOrBuildReachableStations cache behaviour ──────────────────────────────
+
 describe("NationStructureBehavior.getOrBuildReachableStations", () => {
   let behavior: NationStructureBehavior;
   let buildSpy: ReturnType<typeof vi.spyOn>;
