@@ -151,6 +151,11 @@ export class NationStructureBehavior {
       if (this.tryBuildDefensePost()) {
         return true;
       }
+      // If the attack threshold is met, block other structures even when
+      // placement failed (no tile found / can't afford).
+      if (this.defensePostNeeded()) {
+        return false;
+      }
     }
 
     if (this.isOnStructureCooldown()) {
@@ -169,13 +174,15 @@ export class NationStructureBehavior {
 
   /**
    * Tries to place one defense post near an active land-attack front.
-   * Not called on Easy. Medium: 1 post total. Hard/Impossible:
+   * Not called on Easy. Medium: 50% chance per call, 1 post total. Hard/Impossible:
    * ceil(ratio / 0.4) posts total. Boat attacks (sourceTile != null) are ignored.
    * Does not touch placementsCount or lastStructureTick.
    */
   private tryBuildDefensePost(): boolean {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) return false;
+    if (difficulty === Difficulty.Medium && !this.random.chance(2))
+      return false;
 
     const player = this.player;
     const landAttacks = player
@@ -216,6 +223,19 @@ export class NationStructureBehavior {
       return true;
     }
     return false;
+  }
+
+  private defensePostNeeded(): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    if (difficulty === Difficulty.Easy) return false;
+    const landAttacks = this.player
+      .incomingAttacks()
+      .filter((a) => a.sourceTile() === null);
+    if (landAttacks.length === 0) return false;
+    const ourTroops = this.player.troops();
+    if (ourTroops <= 0) return false;
+    const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
+    return incomingTroops / ourTroops >= UNDER_ATTACK_THREAT_RATIO;
   }
 
   /**
