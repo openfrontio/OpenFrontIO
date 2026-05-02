@@ -512,6 +512,17 @@ export class DefaultConfig implements Config {
     return base;
   }
 
+  public conquerGoldAmount(captured: Player): Gold {
+    if (
+      captured.type() === PlayerType.Bot ||
+      captured.type() === PlayerType.Nation
+    ) {
+      return captured.gold();
+    } else {
+      return captured.gold() / 2n;
+    }
+  }
+
   private startingGoldFor(playerInfo: PlayerInfo): Gold {
     const base = BigInt(this._gameConfig.startingGold ?? 0);
     const hc = this._gameConfig.hostCheats;
