@@ -130,6 +130,7 @@ export class GameRunner {
     );
     this.currTurn++;
 
+    const wasInSpawnPhase = this.game.inSpawnPhase();
     let updates: GameUpdates;
     let tickExecutionDuration: number = 0;
 
@@ -164,7 +165,12 @@ export class GameRunner {
         );
     }
 
-    if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
+    const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
+    if (
+      spawnJustEnded ||
+      this.game.ticks() < 3 ||
+      this.game.ticks() % 30 === 0
+    ) {
       this.game.players().forEach((p) => {
         this.playerViewData[p.id()] = placeName(this.game, p);
       });

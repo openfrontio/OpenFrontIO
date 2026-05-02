@@ -1,6 +1,7 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
+import { SpawnTimerExecution } from "../execution/SpawnTimerExecution";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
@@ -62,7 +63,7 @@ export function createGame(
   teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(
+  const game = new GameImpl(
     humans,
     nations,
     gameMap,
@@ -71,15 +72,17 @@ export function createGame(
     stats,
     teamGameSpawnAreas,
   );
+  if (config.gameConfig().gameType !== GameType.Singleplayer) {
+    game.addExecution(new SpawnTimerExecution());
+  }
+  return game;
 }
 
 export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
-  private startTick: number;
-  private singleplayerSpawnPhaseCompleted = false;
-  private spawnPhaseLockedValue: boolean | null = null;
+  private startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -127,8 +130,6 @@ export class GameImpl implements Game {
     teamGameSpawnAreas?: TeamGameSpawnAreas,
   ) {
     const constructorStart = performance.now();
-
-    this.startTick = _config.numSpawnPhaseTurns();
     this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -414,23 +415,14 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
-    if (this.spawnPhaseLockedValue !== null) {
-      return this.spawnPhaseLockedValue;
-    }
-    return this.config().gameConfig().gameType === GameType.Singleplayer
-      ? !this.singleplayerSpawnPhaseCompleted
-      : this._ticks <= this.config().numSpawnPhaseTurns();
+    return this.startTick === null;
   }
 
   endSpawnPhase(): void {
-    if (
-      this.config().gameConfig().gameType !== GameType.Singleplayer ||
-      this.singleplayerSpawnPhaseCompleted
-    ) {
+    if (this.startTick !== null) {
       return;
     }
-    this.singleplayerSpawnPhaseCompleted = true;
-    this.startTick = this.ticks();
+    this.startTick = this._ticks;
     this.addUpdate({
       type: GameUpdateType.SpawnPhaseEnd,
       startTick: this.startTick,
@@ -442,11 +434,6 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
-    this.spawnPhaseLockedValue =
-      this.config().gameConfig().gameType === GameType.Singleplayer
-        ? !this.singleplayerSpawnPhaseCompleted
-        : this._ticks <= this.config().numSpawnPhaseTurns();
-
     this.updates = createGameUpdatesMap();
     this.tileUpdatePairs.length = 0;
     this.execs.forEach((e) => {
@@ -488,18 +475,6 @@ export class GameImpl implements Game {
     for (const tile of waterChangedTiles) {
       this.recordTileUpdate(tile);
     }
-
-    if (
-      this.config().gameConfig().gameType !== GameType.Singleplayer &&
-      this._ticks === this.startTick
-    ) {
-      this.addUpdate({
-        type: GameUpdateType.SpawnPhaseEnd,
-        startTick: this.startTick,
-      });
-    }
-
-    this.spawnPhaseLockedValue = null;
     this._ticks++;
     return this.updates;
   }
@@ -882,7 +857,7 @@ export class GameImpl implements Game {
       return 0;
     }
 
-    return Math.max(0, this.ticks() - this.startTick);
+    return Math.max(0, this.ticks() - this.startTick!);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {

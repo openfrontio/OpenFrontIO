@@ -665,8 +665,7 @@ type TrainPlanState = {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
-  private inSpawnPhaseValue = true;
-  private startTick: Tick;
+  private startTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -706,7 +705,6 @@ export class GameView implements GameMap {
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.startTick = this._config.numSpawnPhaseTurns();
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
@@ -808,7 +806,6 @@ export class GameView implements GameMap {
       | SpawnPhaseEndUpdate
       | undefined;
     if (spawnPhaseEndUpdate) {
-      this.inSpawnPhaseValue = false;
       this.startTick = spawnPhaseEndUpdate.startTick;
     }
 
@@ -1228,7 +1225,7 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    return this.inSpawnPhaseValue;
+    return this.startTick === null;
   }
 
   isSpawnImmunityActive(): boolean {
@@ -1253,7 +1250,7 @@ export class GameView implements GameMap {
       return 0;
     }
 
-    return Math.max(0, this.ticks() - this.startTick);
+    return Math.max(0, this.ticks() - this.startTick!);
   }
   config(): Config {
     return this._config;

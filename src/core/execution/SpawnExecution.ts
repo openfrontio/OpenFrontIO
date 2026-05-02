@@ -47,23 +47,6 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
-    const isSingleplayer =
-      this.mg.config().gameConfig().gameType === GameType.Singleplayer;
-    const isSingleplayerNationSpawn =
-      this.playerInfo.playerType === PlayerType.Nation && isSingleplayer;
-    const isSingleplayerInitialHumanSpawn =
-      isSingleplayer &&
-      this.playerInfo.playerType === PlayerType.Human &&
-      !player.hasSpawned();
-
-    if (
-      !this.mg.inSpawnPhase() &&
-      !isSingleplayerNationSpawn &&
-      !isSingleplayerInitialHumanSpawn
-    ) {
-      return;
-    }
-
     // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
     if (this.mg.config().isRandomSpawn() && player.hasSpawned()) {
       return;
@@ -90,7 +73,12 @@ export class SpawnExecution implements Execution {
 
     player.setSpawnTile(spawn.center);
 
-    if (isSingleplayerInitialHumanSpawn) {
+    if (
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer &&
+      this.playerInfo.playerType === PlayerType.Human
+    ) {
+      // In singleplayer, spawn ends when player selects
+      // a spawn location.
       this.mg.endSpawnPhase();
     }
   }
