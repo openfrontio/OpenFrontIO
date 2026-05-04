@@ -259,7 +259,6 @@ class Client {
   private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
-  private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
     token: string;
@@ -756,7 +755,6 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
-    this.mostRecentJoinEvent = event.timeStamp;
     if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
     }
@@ -777,7 +775,7 @@ class Client {
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
-    const newLobbyHandle = joinLobby(this.eventBus, {
+    this.lobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
@@ -788,14 +786,6 @@ class Client {
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
     });
-
-    if (this.mostRecentJoinEvent !== event.timeStamp) {
-      newLobbyHandle.stop(true);
-      console.warn("Join requested, but was superseded");
-      return;
-    }
-
-    this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
       console.log("Closing modals");
