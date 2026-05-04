@@ -63,7 +63,7 @@ export interface LobbyConfig {
   playerClanTag: string | null;
   playerRole: string | null;
   gameID: GameID;
-  turnstileToken: string | null;
+  turnstileTokenSupplier: () => Promise<string | null>;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -96,10 +96,11 @@ export function joinLobby(
 
   let currentGameRunner: ClientGameRunner | null = null;
 
-  const onconnect = () => {
+  const onconnect = async () => {
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame(lobbyConfig.turnstileToken);
+    const turnstileToken = await lobbyConfig.turnstileTokenSupplier();
+    transport.joinGame(turnstileToken);
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 

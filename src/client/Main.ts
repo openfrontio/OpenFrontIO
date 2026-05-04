@@ -774,25 +774,21 @@ class Client {
     // Start all async work in parallel to reduce join time
     const configPromise = getRuntimeClientServerConfig();
     const cosmeticsPromise = getPlayerCosmeticsRefs();
-    const turnstilePromise = this.getTurnstileToken(lobby, configPromise);
     const config = await configPromise;
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
 
-    const [cosmetics, turnstileToken, auth] = await Promise.all([
-      cosmeticsPromise,
-      turnstilePromise,
-      userAuth(),
-    ]);
+    const [cosmetics, auth] = await Promise.all([cosmeticsPromise, userAuth()]);
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
 
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       serverConfig: config,
       cosmetics,
-      turnstileToken,
+      turnstileTokenSupplier: () =>
+        this.getTurnstileToken(lobby, configPromise),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       playerRole,
