@@ -99,7 +99,12 @@ export function joinLobby(
   const onconnect = async () => {
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-    const turnstileToken = await lobbyConfig.turnstileTokenSupplier();
+    let turnstileToken: string | null;
+    try {
+      turnstileToken = await lobbyConfig.turnstileTokenSupplier();
+    } catch {
+      turnstileToken = null;
+    }
     transport.joinGame(turnstileToken);
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
