@@ -1033,7 +1033,25 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
+// Concurrent renders into the same container tangle Cloudflare's widget
+// bookkeeping and produce "already executing" + postMessage origin-mismatch
+// errors plus malformed tokens that fail siteverify with invalid-input-response.
+// Serialize callers and give each their own container element.
+let inFlightTurnstileChain: Promise<unknown> = Promise.resolve();
+const TURNSTILE_TIMEOUT_MS = 20_000;
+
 async function getTurnstileToken(): Promise<{
+  token: string;
+  createdAt: number;
+}> {
+  const myCall = inFlightTurnstileChain
+    .catch(() => {})
+    .then(() => fetchOneTurnstileToken());
+  inFlightTurnstileChain = myCall;
+  return myCall;
+}
+
+async function fetchOneTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
 }> {
@@ -1049,7 +1067,28 @@ async function getTurnstileToken(): Promise<{
   }
 
   const config = await getRuntimeClientServerConfig();
-  const widgetId = window.turnstile.render("#turnstile-container", {
+
+  const parent = document.getElementById("turnstile-container");
+  if (!parent) {
+    throw new Error("Missing #turnstile-container element");
+  }
+  const target = document.createElement("div");
+  parent.appendChild(target);
+
+  let widgetId: string | undefined;
+  const cleanup = () => {
+    if (widgetId !== undefined) {
+      try {
+        window.turnstile.remove(widgetId);
+      } catch (e) {
+        console.warn("turnstile.remove failed", e);
+      }
+      widgetId = undefined;
+    }
+    target.remove();
+  };
+
+  widgetId = window.turnstile.render(target, {
     sitekey: config.turnstileSiteKey(),
     size: "normal",
     appearance: "interaction-only",
@@ -1057,14 +1096,21 @@ async function getTurnstileToken(): Promise<{
   });
 
   return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Turnstile timed out after ${TURNSTILE_TIMEOUT_MS}ms`));
+    }, TURNSTILE_TIMEOUT_MS);
+
     window.turnstile.execute(widgetId, {
       callback: (token: string) => {
-        window.turnstile.remove(widgetId);
+        clearTimeout(timeoutId);
+        cleanup();
         console.log(`Turnstile token received: ${token}`);
         resolve({ token, createdAt: Date.now() });
       },
       "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
+        clearTimeout(timeoutId);
+        cleanup();
         console.error(`Turnstile error: ${errorCode}`);
         alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
         reject(new Error(`Turnstile failed: ${errorCode}`));

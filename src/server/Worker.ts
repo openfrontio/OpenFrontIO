@@ -40,9 +40,7 @@ const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist();
 
-// TEMPORARY: Turnstile validation disabled while we diagnose intermittent
-// invalid-input-response rejections in v31. Flip back to true to re-enable.
-const TURNSTILE_ENABLED = false;
+const TURNSTILE_ENABLED = true;
 
 // Worker setup
 export async function startWorker() {
