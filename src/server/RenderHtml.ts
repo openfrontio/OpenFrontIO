@@ -77,6 +77,10 @@ export async function renderAppShell(
   htmlPath: string,
 ): Promise<void> {
   const rendered = await getAppShellContent(htmlPath);
-  setAppShellCacheHeaders(res);
+  // Cannot edge-cache the app shell: Cloudflare's auto-CSP rotates the
+  // nonce in the response header on every request, but a cached body
+  // freezes the nonces in inline <script> tags. The mismatch blocks all
+  // inline scripts (incl. Turnstile's srcdoc iframes) on cache hits.
+  setHtmlNoCacheHeaders(res);
   res.send(rendered);
 }
