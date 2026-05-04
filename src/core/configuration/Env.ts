@@ -62,9 +62,6 @@ export const Env = {
     return getEnv("GAME_ENV") ?? "dev";
   },
 
-  get TURNSTILE_SECRET_KEY() {
-    return getEnv("TURNSTILE_SECRET_KEY");
-  },
   get STRIPE_PUBLISHABLE_KEY() {
     return getEnv("STRIPE_PUBLISHABLE_KEY");
   },

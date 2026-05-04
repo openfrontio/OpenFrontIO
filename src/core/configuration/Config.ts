@@ -25,7 +25,6 @@ export enum GameEnv {
 
 export interface ServerConfig {
   turnstileSiteKey(): string;
-  turnstileSecretKey(): string;
   turnIntervalMs(): number;
   gameCreationRate(): number;
   numWorkers(): number;

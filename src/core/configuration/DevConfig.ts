@@ -8,10 +8,6 @@ export class DevServerConfig extends DefaultServerConfig {
     return "1x00000000000000000000AA";
   }
 
-  turnstileSecretKey(): string {
-    return "1x0000000000000000000000000000000AA";
-  }
-
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }

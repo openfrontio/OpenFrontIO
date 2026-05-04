@@ -43,9 +43,6 @@ const JwksSchema = z.object({
 });
 
 export abstract class DefaultServerConfig implements ServerConfig {
-  turnstileSecretKey(): string {
-    return Env.TURNSTILE_SECRET_KEY ?? "";
-  }
   abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
