@@ -261,17 +261,10 @@ class Client {
   private matchmakingModal: MatchmakingModal;
   private mostRecentJoinEvent: number;
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
-
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    // Prefetch auth and turnstile token so they are available when
-    // the user joins a lobby.
+    // Prefetch auth so it is available when the user joins a lobby.
     prefetchAuth();
-    this.turnstileTokenPromise = getTurnstileToken();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -988,41 +981,6 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      try {
-        const result = await getTurnstileToken();
-        return result?.token ?? null;
-      } catch {
-        return null;
-      }
-    }
-
-    let token;
-    try {
-      token = await this.turnstileTokenPromise;
-    } catch {
-      this.turnstileTokenPromise = null;
-      try {
-        const result = await getTurnstileToken();
-        return result?.token ?? null;
-      } catch {
-        return null;
-      }
-    }
-
-    if (!token) {
-      this.turnstileTokenPromise = null;
-      return null;
-    }
-
-    const tokenTTL = 5 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      this.turnstileTokenPromise = null;
-      return token.token;
-    }
-
-    this.turnstileTokenPromise = null;
     try {
       const result = await getTurnstileToken();
       return result?.token ?? null;
