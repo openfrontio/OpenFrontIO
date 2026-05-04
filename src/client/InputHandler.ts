@@ -519,10 +519,12 @@ export class InputHandler {
       }
 
       // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
-      const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
-      if (matchedBuild !== null) {
-        e.preventDefault();
-        this.setGhostStructure(matchedBuild);
+      if (this.canUseBuildKeybinds()) {
+        const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
+        if (matchedBuild !== null) {
+          e.preventDefault();
+          this.setGhostStructure(matchedBuild);
+        }
       }
 
       if (this.keybindMatchesEvent(e, this.keybinds.requestAlliance)) {
@@ -941,6 +943,11 @@ export class InputHandler {
         return type;
     }
     return null;
+  }
+
+  private canUseBuildKeybinds(): boolean {
+    const myPlayer = this.gameView.myPlayer?.();
+    return !this.gameView.inSpawnPhase() && myPlayer?.isAlive() === true;
   }
 
   private getPinchDistance(): number {
