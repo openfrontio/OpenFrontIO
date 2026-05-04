@@ -92,7 +92,6 @@ export function joinLobby(
 
   const userSettings: UserSettings = new UserSettings();
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
-
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
@@ -100,7 +99,7 @@ export function joinLobby(
   const onconnect = () => {
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame();
+    transport.joinGame(lobbyConfig.turnstileToken);
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 

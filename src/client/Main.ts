@@ -19,7 +19,7 @@ import {
 } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { prefetchAuth, userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
@@ -268,8 +268,9 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    // Prefetch turnstile token so it is available when
+    // Prefetch auth and turnstile token so they are available when
     // the user joins a lobby.
+    prefetchAuth();
     this.turnstileTokenPromise = getTurnstileToken();
 
     // Wait for components to render before setting version
@@ -770,18 +771,28 @@ class Client {
     if (lobby.source === "public") {
       this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const config = await getRuntimeClientServerConfig();
+    // Start all async work in parallel to reduce join time
+    const configPromise = getRuntimeClientServerConfig();
+    const cosmeticsPromise = getPlayerCosmeticsRefs();
+    const turnstilePromise = this.getTurnstileToken(lobby, configPromise);
+    const config = await configPromise;
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
-    const auth = await userAuth();
+
+    const [cosmetics, turnstileToken, auth] = await Promise.all([
+      cosmeticsPromise,
+      turnstilePromise,
+      userAuth(),
+    ]);
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
+
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       serverConfig: config,
-      cosmetics: await getPlayerCosmeticsRefs(),
-      turnstileToken: await this.getTurnstileToken(lobby),
+      cosmetics,
+      turnstileToken,
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       playerRole,
@@ -969,8 +980,11 @@ class Client {
 
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
+    configPromise: Promise<
+      Awaited<ReturnType<typeof getRuntimeClientServerConfig>>
+    >,
   ): Promise<string | null> {
-    const config = await getRuntimeClientServerConfig();
+    const config = await configPromise;
     if (
       config.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
@@ -980,26 +994,44 @@ class Client {
 
     // Always request a new token on crazygames.
     if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
+      try {
+        const result = await getTurnstileToken();
+        return result?.token ?? null;
+      } catch {
+        return null;
+      }
     }
 
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
+    let token;
+    try {
+      token = await this.turnstileTokenPromise;
+    } catch {
+      this.turnstileTokenPromise = null;
+      try {
+        const result = await getTurnstileToken();
+        return result?.token ?? null;
+      } catch {
+        return null;
+      }
+    }
+
     if (!token) {
-      console.log("No turnstile token");
+      this.turnstileTokenPromise = null;
       return null;
     }
 
-    const tokenTTL = 3 * 60 * 1000;
+    const tokenTTL = 5 * 60 * 1000;
     if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
+      this.turnstileTokenPromise = null;
       return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
+    }
+
+    this.turnstileTokenPromise = null;
+    try {
+      const result = await getTurnstileToken();
+      return result?.token ?? null;
+    } catch {
+      return null;
     }
   }
 }
@@ -1037,9 +1069,9 @@ async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
 }> {
-  // Wait for Turnstile script to load (handles slow connections)
+  // Wait for Turnstile script to load (5s max)
   let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
+  while (typeof window.turnstile === "undefined" && attempts < 50) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     attempts++;
   }
@@ -1060,13 +1092,10 @@ async function getTurnstileToken(): Promise<{
     window.turnstile.execute(widgetId, {
       callback: (token: string) => {
         window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
         resolve({ token, createdAt: Date.now() });
       },
       "error-callback": (errorCode: string) => {
         window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
         reject(new Error(`Turnstile failed: ${errorCode}`));
       },
     });

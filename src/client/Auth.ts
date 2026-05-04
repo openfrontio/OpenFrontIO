@@ -13,6 +13,8 @@ const PERSISTENT_ID_KEY = "player_persistent_id";
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
+let __lastFailedRefresh: number = 0;
+const FAILED_REFRESH_CACHE_MS = 60 * 1000; // 1 minute
 
 export function discordLogin() {
   const redirectUri = encodeURIComponent(window.location.href);
@@ -63,6 +65,7 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     return false;
   } finally {
     __jwt = null;
+    __lastFailedRefresh = 0;
     localStorage.removeItem(PERSISTENT_ID_KEY);
     new UserSettings().clearFlag();
     new UserSettings().setSelectedPatternName(undefined);
@@ -74,6 +77,15 @@ export async function isLoggedIn(): Promise<boolean> {
   return userAuthResult !== false;
 }
 
+// Prefetch auth so it's ready when joining a game
+export function prefetchAuth(): void {
+  if (!__jwt) {
+    userAuth().catch(() => {
+      __lastFailedRefresh = 0;
+    });
+  }
+}
+
 export async function userAuth(
   shouldRefresh: boolean = true,
 ): Promise<UserAuth> {
@@ -82,6 +94,10 @@ export async function userAuth(
     if (!jwt) {
       if (!shouldRefresh) {
         console.warn("No JWT found and shouldRefresh is false");
+        return false;
+      }
+      // If we recently tried to refresh and failed, don't retry immediately
+      if (Date.now() - __lastFailedRefresh < FAILED_REFRESH_CACHE_MS) {
         return false;
       }
       console.log("No JWT found");
@@ -162,6 +178,7 @@ async function doRefreshJwt(): Promise<void> {
     });
     if (response.status !== 200) {
       console.error("Refresh failed", response);
+      __lastFailedRefresh = Date.now();
       logOut();
       return;
     }
@@ -169,9 +186,11 @@ async function doRefreshJwt(): Promise<void> {
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
+    __lastFailedRefresh = 0;
     __jwt = jwt;
   } catch (e) {
     console.error("Refresh failed", e);
+    __lastFailedRefresh = Date.now();
     // if server unreachable, just clear jwt
     __jwt = null;
     return;

@@ -181,6 +181,7 @@ export class Transport {
   private localServer: LocalServer;
 
   private buffer: string[] = [];
+  private bufferHead = 0;
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
@@ -342,15 +343,17 @@ export class Transport {
         console.error("socket is null");
         return;
       }
-      while (this.buffer.length > 0) {
+      while (this.bufferHead < this.buffer.length) {
         console.log("sending dropped message");
-        const msg = this.buffer.pop();
+        const msg = this.buffer[this.bufferHead++];
         if (msg === undefined) {
           console.warn("msg is undefined");
           continue;
         }
         this.socket.send(msg);
       }
+      this.buffer = [];
+      this.bufferHead = 0;
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
@@ -397,15 +400,18 @@ export class Transport {
     }
   }
 
-  async joinGame() {
+  async joinGame(turnstileToken: string | null) {
+    console.log(
+      "Joining game with turnstile token:",
+      turnstileToken ? "present" : "null",
+    );
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
-      // Note: clientID is not sent - server assigns it based on persistentID
       username: this.lobbyConfig.playerName,
       clanTag: this.lobbyConfig.playerClanTag ?? null,
       cosmetics: this.lobbyConfig.cosmetics,
-      turnstileToken: this.lobbyConfig.turnstileToken,
+      turnstileToken: turnstileToken, // token fetched at join time
       token: await getPlayToken(),
     } satisfies ClientJoinMessage);
   }
