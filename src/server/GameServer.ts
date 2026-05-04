@@ -200,9 +200,18 @@ export class GameServer {
       return "kicked";
     }
 
+    // Check max players against the count of unique persistentIDs ever
+    // admitted, not just currently active. This prevents a leave/rejoin
+    // exploit (a player leaves, a new player fills the slot, the original
+    // player rejoins via the fast path → game has maxPlayers + 1 in it),
+    // while still letting a known persistentID rejoin without re-checking
+    // — that's required because the rejoin fast path at Worker.ts skips
+    // Turnstile, and forcing reconnects through full join would force
+    // single-use Turnstile tokens to be re-validated and rejected.
     if (
       this.gameConfig.maxPlayers &&
-      this.activeClients.length >= this.gameConfig.maxPlayers
+      !this.persistentIdToClientId.has(client.persistentID) &&
+      this.persistentIdToClientId.size >= this.gameConfig.maxPlayers
     ) {
       this.log.warn(`cannot add client, game full`, {
         clientID: client.clientID,
@@ -593,22 +602,19 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
 
-      if (!this._hasStarted) {
-        // Remove persistentId if the game has not started to prevent going over max players
-        this.persistentIdToClientId.delete(client.persistentID);
-        // Close lobby when host leaves before game starts
-        if (
-          !this.isPublic() &&
-          client.persistentID === this.creatorPersistentID
-        ) {
-          this.log.info("Host left, closing lobby", {
-            gameID: this.id,
-          });
-          for (const c of [...this.activeClients]) {
-            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
-          }
-          this._hasEnded = true;
+      // Close lobby when host leaves before game starts
+      if (
+        !this._hasStarted &&
+        !this.isPublic() &&
+        client.persistentID === this.creatorPersistentID
+      ) {
+        this.log.info("Host left, closing lobby", {
+          gameID: this.id,
+        });
+        for (const c of [...this.activeClients]) {
+          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
         }
+        this._hasEnded = true;
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -626,10 +632,6 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
-      // Remove persistentId if the game has not started to prevent going over max players
-      if (!this._hasStarted) {
-        this.persistentIdToClientId.delete(client.persistentID);
-      }
     }
   }
 
