@@ -9,8 +9,8 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { GoToPlayerEvent } from "../TransformHandler";
 import { Layer } from "./Layer";
-import { GoToPlayerEvent } from "./Leaderboard";
 
 interface TeamEntry {
   teamName: string;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GoToPlayerEvent } from "../../../../src/client/graphics/layers/Leaderboard";
+import { GoToPlayerEvent } from "../../../../src/client/graphics/TransformHandler";
 import { TeamStats } from "../../../../src/client/graphics/layers/TeamStats";
 import { GameMode } from "../../../../src/core/game/Game";
 
