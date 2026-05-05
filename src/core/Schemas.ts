@@ -50,7 +50,8 @@ export type Intent =
   | DeleteUnitIntent
   | KickPlayerIntent
   | TogglePauseIntent
-  | UpdateGameConfigIntent;
+  | UpdateGameConfigIntent
+  | StartGameIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -84,6 +85,7 @@ export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
 export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
+export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -258,6 +260,20 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
   startingGold: z.number().int().min(0).max(1000000000).nullable().optional(),
+  hostCheats: z
+    .object({
+      infiniteGold: z.boolean().optional(),
+      infiniteTroops: z.boolean().optional(),
+      goldMultiplier: z.number().min(0.1).max(1000).nullable().optional(),
+      startingGold: z
+        .number()
+        .int()
+        .min(0)
+        .max(1000000000)
+        .nullable()
+        .optional(),
+    })
+    .optional(),
 });
 
 export const TeamSchema = z.string();
@@ -402,7 +418,7 @@ export const CancelBoatIntentSchema = z.object({
 
 export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
-  unitId: z.number(),
+  unitIds: z.array(z.number().int()).nonempty(),
   tile: z.number(),
 });
 
@@ -439,6 +455,10 @@ export const UpdateGameConfigIntentSchema = z.object({
   config: GameConfigSchema.partial(),
 });
 
+export const StartGameIntentSchema = z.object({
+  type: z.literal("start_game"),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -464,6 +484,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
+  StartGameIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

@@ -1,5 +1,6 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
 import {
   GAME_ID_REGEX,
@@ -19,6 +20,7 @@ import {
 import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
+import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -32,7 +34,7 @@ import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
-import { HomepagePromos } from "./HomepagePromos";
+import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
@@ -51,6 +53,7 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
+  SendStartGameEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
@@ -62,6 +65,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
@@ -214,8 +218,17 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "start-game": CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<undefined>;
+    userMeResponse: CustomEvent<UserMeResponse | false>;
+    "leave-lobby": CustomEvent;
+    "update-game-config": CustomEvent;
+  }
+
+  // Fixes the globalThis.addEventListener errors
+  interface WindowEventMap {
+    "event:user-settings-changed:settings.darkMode": CustomEvent<string>;
   }
 }
 
@@ -246,6 +259,7 @@ class Client {
   private storeModal: StoreModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private mostRecentJoinEvent: number;
 
   private turnstileTokenPromise: Promise<{
     token: string;
@@ -262,6 +276,13 @@ class Client {
     await customElements.whenDefined("mobile-nav-bar");
     await customElements.whenDefined("desktop-nav-bar");
 
+    const openFrontFont = new FontFace(
+      "OpenFront",
+      `url(${assetUrl("fonts/OpenFront.ttf")})`,
+    );
+    document.fonts.add(openFrontFont);
+    openFrontFont.load().catch(() => {});
+
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
     );
@@ -271,6 +292,7 @@ class Client {
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
       versionElements.forEach((el) => {
+        (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
         el.textContent = displayVersion;
       });
     }
@@ -306,13 +328,10 @@ class Client {
       }
     });
 
-    const gutterAds = document.querySelector("homepage-promos");
-    if (!(gutterAds instanceof HomepagePromos))
-      throw new Error("Missing homepage-promos");
-
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener("start-game", this.handleStartGame.bind(this));
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -419,11 +438,9 @@ class Client {
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       updateAccountNavButton(userMeResponse);
-      const hasLinkedAccount =
-        !crazyGamesSDK.isOnCrazyGames() &&
-        ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
-      console.log("ads enabled: ", hasLinkedAccount);
-      window.adsEnabled = !hasLinkedAccount && !crazyGamesSDK.isOnCrazyGames();
+      const isAdFree =
+        userMeResponse !== false && userMeResponse.player?.adfree === true;
+      window.adsEnabled = !isAdFree && !crazyGamesSDK.isOnCrazyGames();
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -739,6 +756,7 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
+    this.mostRecentJoinEvent = event.timeStamp;
     if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
     }
@@ -757,16 +775,27 @@ class Client {
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
-    this.lobbyHandle = joinLobby(this.eventBus, {
+    const auth = await userAuth();
+    const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
+    const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      playerRole,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
     });
+
+    if (this.mostRecentJoinEvent !== event.timeStamp) {
+      newLobbyHandle.stop(true);
+      console.warn("Join requested, but was superseded");
+      return;
+    }
+
+    this.lobbyHandle = newLobbyHandle;
 
     this.lobbyHandle.prestart.then(() => {
       console.log("Closing modals");
@@ -796,6 +825,7 @@ class Client {
         "leaderboard-button",
         "token-login",
         "matchmaking-modal",
+        "clan-modal",
         "lang-selector",
         "homepage-promos",
       ].forEach((tag) => {
@@ -919,6 +949,12 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
+
+  private handleStartGame() {
+    if (this.eventBus) {
+      this.eventBus.emit(new SendStartGameEvent());
     }
   }
 

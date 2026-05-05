@@ -41,7 +41,7 @@ function randTerritoryTile(
     }
   }
 
-  if (p.numTilesOwned() <= 100) {
+  if (p.numTilesOwned() > 0 && p.numTilesOwned() <= 100) {
     return random.randElement(Array.from(p.tiles()));
   }
 

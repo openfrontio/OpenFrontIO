@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
@@ -39,6 +40,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitView } from "./GameView";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -96,6 +98,7 @@ export class GameImpl implements Game {
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
+  private _unitMap = new Map<number, Unit>();
 
   private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
@@ -107,6 +110,7 @@ export class GameImpl implements Game {
   private _isPaused: boolean = false;
   private _winner: Player | Team | null = null;
   private _waterManager: WaterManager;
+  private _sharedWaterCache: SharedWaterCache;
   private _teamGameSpawnAreas: TeamGameSpawnAreas | undefined;
 
   constructor(
@@ -130,6 +134,7 @@ export class GameImpl implements Game {
       this.miniGameMap,
       _config.disableNavMesh(),
     );
+    this._sharedWaterCache = new SharedWaterCache(this);
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -282,6 +287,10 @@ export class GameImpl implements Game {
       return;
     }
     this._waterManager.queueTile(tile);
+  }
+
+  unit(id: number): Unit | undefined {
+    return this._unitMap.get(id);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -952,9 +961,11 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
+    this._unitMap.set(u.id(), u);
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this._unitMap.delete(u.id());
     this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
@@ -992,7 +1003,7 @@ export class GameImpl implements Game {
       tile,
       searchRange,
       types,
-      predicate,
+      predicate as (unit: Unit | UnitView) => boolean,
       playerId,
       includeUnderConstruction,
     );
@@ -1168,6 +1179,9 @@ export class GameImpl implements Game {
   hasWaterComponent(tile: TileRef, component: number): boolean {
     return this._waterManager.hasWaterComponent(tile, component);
   }
+  sharedWaterComponents(player: Player): Set<number> | null {
+    return this._sharedWaterCache.get(player);
+  }
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
       const ships = conquered
@@ -1190,6 +1204,9 @@ export class GameImpl implements Game {
     const skipGoldTransfer =
       attacksSent === 0n && conquered.type() === PlayerType.Human;
     const gold = skipGoldTransfer ? 0n : conquered.gold();
+    const goldCaptured = skipGoldTransfer
+      ? 0n
+      : this._config.conquerGoldAmount(conquered);
 
     if (skipGoldTransfer) {
       this.displayMessage(
@@ -1208,22 +1225,22 @@ export class GameImpl implements Game {
         conqueror.id(),
         gold,
         {
-          gold: renderNumber(gold),
+          gold: renderNumber(goldCaptured),
           name: conquered.displayName(),
         },
       );
-      conqueror.addGold(gold);
+      conqueror.addGold(goldCaptured);
       conquered.removeGold(gold);
 
       // Record stats
-      this.stats().goldWar(conqueror, conquered, gold);
+      this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
       conqueredId: conquered.id(),
-      gold,
+      gold: goldCaptured,
     });
   }
 }

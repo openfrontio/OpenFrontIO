@@ -44,6 +44,11 @@ Licensed under [Open Data Commons Open Database License (ODbL)](https://opendata
 Copernicus Global Digital Elevation Models distributed by OpenTopography.
 Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://opentopography.org/usageterms)
 
+### NASA
+
+[NASA Earth Observatory](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/)
+[Public Domain](https://www.nasa.gov/nasa-brand-center/images-and-media/)
+
 ### Hawaii Relief Map
 
 [USA Hawaii relief location map](https://commons.wikimedia.org/wiki/File:USA_Hawaii_relief_location_map.svg) by NordNordWest
@@ -80,6 +85,19 @@ Visualizer
 Ernie Wright (USRA) ORCID logo.
 Scientist
 Noah Petro (NASA/GSFC) ORCID logo.
+
+### Antarctica Map
+
+Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R8F7U, Harvard Dataverse, V1, [2364], [Apr-02-2026].
+[Terms of Use](https://www.pgc.umn.edu/guides/user-services/acknowledgement-policy/)
+
+[U.S. Geological Survey](https://earthexplorer.usgs.gov/metadata/4980/GT30ANTARCPS/)
+[Public Domain](https://www.doi.gov/copyright)
+
+### Los Angeles Map
+
+© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
+Licensed under ODbL
 
 ## Icons
 

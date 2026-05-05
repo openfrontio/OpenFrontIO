@@ -1,40 +1,34 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import { fileURLToPath } from "url";
 import type { AssetManifest } from "../core/AssetUrls";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const staticDir = path.join(__dirname, "../../static");
-const manifestPath = path.join(staticDir, "_assets", "asset-manifest.mjs");
+const manifestPath = path.join(staticDir, "asset-manifest.json");
 
-let manifestPromise: Promise<AssetManifest> | null = null;
-let manifestVersion = 0;
-
-async function importRuntimeAssetManifest(
-  version: number,
-): Promise<AssetManifest> {
-  const manifestModule = (await import(
-    `${pathToFileURL(manifestPath).href}?v=${version}`
-  )) as {
-    assetManifest?: AssetManifest;
-    default?: AssetManifest;
-  };
-  return manifestModule.assetManifest ?? manifestModule.default ?? {};
-}
+let cachedManifest: AssetManifest | null = null;
 
 export async function getRuntimeAssetManifest(): Promise<AssetManifest> {
-  if (!fs.existsSync(manifestPath)) {
-    return {};
+  if (cachedManifest !== null) {
+    return cachedManifest;
   }
-
-  manifestPromise ??= importRuntimeAssetManifest(manifestVersion).catch(
-    () => ({}),
-  );
-  return manifestPromise;
+  if (!fs.existsSync(manifestPath)) {
+    cachedManifest = {};
+    return cachedManifest;
+  }
+  try {
+    cachedManifest = JSON.parse(
+      fs.readFileSync(manifestPath, "utf8"),
+    ) as AssetManifest;
+  } catch (err) {
+    console.error(`Failed to parse asset manifest at ${manifestPath}:`, err);
+    cachedManifest = {};
+  }
+  return cachedManifest;
 }
 
 export function clearRuntimeAssetManifestCache(): void {
-  manifestVersion++;
-  manifestPromise = null;
+  cachedManifest = null;
 }

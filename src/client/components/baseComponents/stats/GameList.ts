@@ -4,6 +4,7 @@ import { PlayerGame } from "../../../../core/ApiSchemas";
 import { GameMode } from "../../../../core/game/Game";
 import { GameInfoModal } from "../../../GameInfoModal";
 import { translateText } from "../../../Utils";
+import "../../CopyButton";
 
 @customElement("game-list")
 export class GameList extends LitElement {
@@ -46,7 +47,7 @@ export class GameList extends LitElement {
               >
                 <div class="flex items-center gap-4">
                   <button
-                    class="p-2 bg-blue-500/20 rounded-lg text-blue-400"
+                    class="p-2 bg-malibu-blue/20 rounded-lg text-aquarius"
                     @click=${() => this.onViewGame?.(game.gameId)}
                   >
                     <svg
@@ -115,7 +116,10 @@ export class GameList extends LitElement {
                     >
                       ${translateText("game_list.game_id")}
                     </div>
-                    <div class="text-white font-mono">${game.gameId}</div>
+                    <copy-button
+                      .copyText="${game.gameId}"
+                      compact
+                    ></copy-button>
                   </div>
                   <div>
                     <div

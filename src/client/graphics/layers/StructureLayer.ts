@@ -87,6 +87,10 @@ export class StructureLayer implements Layer {
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
     const image = new Image();
+    // crossOrigin must be set before src so the fetch is CORS-checked.
+    // Without this, an icon served from CDN_BASE taints any canvas/texture
+    // it's drawn into, and WebGL refuses to upload it via texImage2D.
+    image.crossOrigin = "anonymous";
     image.src = config.icon;
     image.onload = () => {
       this.unitIcons.set(unitType, image);

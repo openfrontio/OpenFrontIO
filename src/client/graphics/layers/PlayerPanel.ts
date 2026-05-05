@@ -72,6 +72,15 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private otherProfile: PlayerProfile | null = null;
   @state() private suppressNextHide: boolean = false;
   @state() private moderationTarget: PlayerView | null = null;
+  @state() private playerRole: string | null = null;
+
+  setRole(role: string | null): void {
+    this.playerRole = role;
+  }
+
+  private get isAdminRole(): boolean {
+    return this.playerRole === "admin" || this.playerRole === "root";
+  }
 
   private ctModal: ChatModal;
 
@@ -441,8 +450,12 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderModeration(my: PlayerView, other: PlayerView) {
-    if (!my.isLobbyCreator()) return html``;
+  private renderModeration(
+    my: PlayerView,
+    other: PlayerView,
+    isAdmin: boolean,
+  ) {
+    if (!my.isLobbyCreator() && !isAdmin) return html``;
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`
@@ -845,7 +858,7 @@ export class PlayerPanel extends LitElement implements Layer {
               })}
             </div>`
           : ""}
-        ${this.renderModeration(my, other)}
+        ${this.renderModeration(my, other, this.isAdminRole)}
       </div>
     `;
   }
@@ -963,6 +976,7 @@ export class PlayerPanel extends LitElement implements Layer {
                             .myPlayer=${my}
                             .target=${this.moderationTarget}
                             .eventBus=${this.eventBus}
+                            .isAdmin=${this.isAdminRole}
                             .alreadyKicked=${this.kickedPlayerIDs.has(
                               String(this.moderationTarget.id()),
                             )}

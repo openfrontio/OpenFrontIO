@@ -27,12 +27,16 @@ export class TouchEvent implements GameEvent {
 }
 
 /**
- * Event emitted when a unit is selected or deselected
+ * Event emitted when one or more warships are selected or deselected.
+ * For single selection: unit is set, units is empty.
+ * For multi selection: units contains all selected warships, unit is null.
+ * For deselection: isSelected is false.
  */
 export class UnitSelectionEvent implements GameEvent {
   constructor(
     public readonly unit: UnitView | null,
     public readonly isSelected: boolean,
+    public readonly units: UnitView[] = [],
   ) {}
 }
 
@@ -98,6 +102,40 @@ export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
 }
 
+/** Emitted while the user is drawing a shift+drag selection rectangle */
+export class WarshipSelectionBoxUpdateEvent implements GameEvent {
+  constructor(
+    public readonly startX: number,
+    public readonly startY: number,
+    public readonly endX: number,
+    public readonly endY: number,
+  ) {}
+}
+
+/** Emitted when the user releases the mouse after drawing a selection rectangle */
+export class WarshipSelectionBoxCompleteEvent implements GameEvent {
+  constructor(
+    public readonly startX: number,
+    public readonly startY: number,
+    public readonly endX: number,
+    public readonly endY: number,
+  ) {}
+}
+
+/** Emitted when the selection box is cancelled (e.g. Escape or no drag) */
+export class WarshipSelectionBoxCancelEvent implements GameEvent {}
+
+/** Emitted when the player triggers select-all-warships hotkey */
+export class SelectAllWarshipsEvent implements GameEvent {}
+
+/** Emitted when a touch long-press is detected (shows crosshair indicator) */
+export class TouchLongPressStartEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -114,6 +152,10 @@ export class ShowEmojiMenuEvent implements GameEvent {
 export class DoBoatAttackEvent implements GameEvent {}
 
 export class DoGroundAttackEvent implements GameEvent {}
+
+export class DoRequestAllianceEvent implements GameEvent {}
+
+export class DoBreakAllianceEvent implements GameEvent {}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
@@ -166,6 +208,17 @@ export class InputHandler {
 
   private alternateView = false;
 
+  // Warship selection box state
+  private selectionBoxActive: boolean = false;
+  // True while warships are selected via box (waiting for move target click)
+  private multiSelectionActive: boolean = false;
+
+  // Touch long-press state
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressActive: boolean = false;
+  private suppressNextTap: boolean = false;
+  private readonly LONG_PRESS_MS = 800;
+
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
@@ -173,6 +226,7 @@ export class InputHandler {
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
+  private readonly DRAG_THRESHOLD_PX = 10;
 
   private readonly userSettings: UserSettings = new UserSettings();
 
@@ -186,8 +240,28 @@ export class InputHandler {
   initialize() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
 
+    // Listen for warship selection to change cursor
+    this.eventBus.on(UnitSelectionEvent, (e) => {
+      if (e.isSelected && (e.units ?? []).length > 0) {
+        // Multi-selection active
+        this.multiSelectionActive = true;
+        this.canvas.style.cursor = "crosshair";
+      } else if (e.isSelected) {
+        // Single warship selected — cursor crosshair, but not multi
+        this.multiSelectionActive = false;
+        this.canvas.style.cursor = "crosshair";
+      } else {
+        // Deselected
+        this.multiSelectionActive = false;
+        if (!this.selectionBoxActive) {
+          this.canvas.style.cursor = "";
+        }
+      }
+    });
+
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    window.addEventListener("pointercancel", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
       (e) => {
@@ -216,6 +290,18 @@ export class InputHandler {
       }
       this.pointerDown = false;
       this.pointers.clear();
+      if (this.longPressTimer !== null) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressActive = false;
+      this.suppressNextTap = false;
+      if (this.selectionBoxActive || this.multiSelectionActive) {
+        this.selectionBoxActive = false;
+        this.multiSelectionActive = false;
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
+      this.canvas.style.cursor = "";
     });
     this.pointers.clear();
 
@@ -224,10 +310,7 @@ export class InputHandler {
       let deltaY = 0;
 
       // Skip if shift is held down
-      if (
-        this.activeKeys.has("ShiftLeft") ||
-        this.activeKeys.has("ShiftRight")
-      ) {
+      if (this.activeKeys.has(this.keybinds.shiftKey)) {
         return;
       }
 
@@ -281,7 +364,7 @@ export class InputHandler {
         return;
       }
 
-      if (e.code === this.keybinds.toggleView) {
+      if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -289,7 +372,10 @@ export class InputHandler {
         }
       }
 
-      if (e.code === this.keybinds.coordinateGrid && !e.repeat) {
+      if (
+        this.keybindMatchesEvent(e, this.keybinds.coordinateGrid) &&
+        !e.repeat
+      ) {
         e.preventDefault();
         this.coordinateGridEnabled = !this.coordinateGridEnabled;
         this.eventBus.emit(
@@ -301,6 +387,11 @@ export class InputHandler {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
         this.setGhostStructure(null);
+        if (this.selectionBoxActive || this.multiSelectionActive) {
+          this.selectionBoxActive = false;
+          this.multiSelectionActive = false;
+          this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+        }
       }
 
       if (
@@ -344,11 +435,19 @@ export class InputHandler {
           this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
-          "ShiftLeft",
-          "ShiftRight",
+          this.keybinds.shiftKey,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
+      }
+
+      // Shift = warship box selection mode.
+      // If a ghost structure is active, discard it first.
+      if (e.code === this.keybinds.shiftKey) {
+        if (this.uiState.ghostStructure !== null) {
+          this.setGhostStructure(null);
+        }
+        this.canvas.style.cursor = "crosshair";
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -375,7 +474,7 @@ export class InputHandler {
         this.activeKeys.delete(this.keybinds.zoomOut);
       }
 
-      if (e.code === this.keybinds.toggleView) {
+      if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
@@ -387,55 +486,73 @@ export class InputHandler {
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === this.keybinds.boatAttack) {
+      if (this.keybindMatchesEvent(e, this.keybinds.boatAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
       }
 
-      if (e.code === this.keybinds.groundAttack) {
+      if (this.keybindMatchesEvent(e, this.keybinds.groundAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoGroundAttackEvent());
       }
 
-      if (e.code === this.keybinds.attackRatioDown) {
+      if (this.keybindMatchesEvent(e, this.keybinds.attackRatioDown)) {
         e.preventDefault();
         const increment = this.userSettings.attackRatioIncrement();
         this.eventBus.emit(new AttackRatioEvent(-increment));
       }
 
-      if (e.code === this.keybinds.attackRatioUp) {
+      if (this.keybindMatchesEvent(e, this.keybinds.attackRatioUp)) {
         e.preventDefault();
         const increment = this.userSettings.attackRatioIncrement();
         this.eventBus.emit(new AttackRatioEvent(increment));
       }
 
-      if (e.code === this.keybinds.centerCamera) {
+      if (this.keybindMatchesEvent(e, this.keybinds.centerCamera)) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
 
+      if (e.code === this.keybinds.selectAllWarships) {
+        e.preventDefault();
+        this.eventBus.emit(new SelectAllWarshipsEvent());
+      }
+
       // Two-phase build keybind matching: exact code match first, then digit/Numpad alias.
-      const matchedBuild = this.resolveBuildKeybind(e.code);
+      const matchedBuild = this.resolveBuildKeybind(e.code, e.shiftKey);
       if (matchedBuild !== null) {
         e.preventDefault();
         this.setGhostStructure(matchedBuild);
       }
 
-      if (e.code === this.keybinds.swapDirection) {
+      if (this.keybindMatchesEvent(e, this.keybinds.requestAlliance)) {
+        e.preventDefault();
+        this.eventBus.emit(new DoRequestAllianceEvent());
+      }
+
+      if (this.keybindMatchesEvent(e, this.keybinds.breakAlliance)) {
+        e.preventDefault();
+        this.eventBus.emit(new DoBreakAllianceEvent());
+      }
+
+      if (this.keybindMatchesEvent(e, this.keybinds.swapDirection)) {
         e.preventDefault();
         const nextDirection = !this.uiState.rocketDirectionUp;
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
-      if (!e.repeat && e.code === this.keybinds.pauseGame) {
+      if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.pauseGame)) {
         e.preventDefault();
         this.eventBus.emit(new TogglePauseIntentEvent());
       }
-      if (!e.repeat && e.code === this.keybinds.gameSpeedUp) {
+      if (!e.repeat && this.keybindMatchesEvent(e, this.keybinds.gameSpeedUp)) {
         e.preventDefault();
         this.eventBus.emit(new GameSpeedUpIntentEvent());
       }
-      if (!e.repeat && e.code === this.keybinds.gameSpeedDown) {
+      if (
+        !e.repeat &&
+        this.keybindMatchesEvent(e, this.keybinds.gameSpeedDown)
+      ) {
         e.preventDefault();
         this.eventBus.emit(new GameSpeedDownIntentEvent());
       }
@@ -448,6 +565,15 @@ export class InputHandler {
       }
 
       this.activeKeys.delete(e.code);
+
+      // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
+      if (
+        e.code === this.keybinds.shiftKey &&
+        !this.selectionBoxActive &&
+        !this.multiSelectionActive
+      ) {
+        this.canvas.style.cursor = "";
+      }
     });
   }
 
@@ -473,7 +599,37 @@ export class InputHandler {
       this.lastPointerDownY = event.clientY;
 
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
+
+      // Start long-press timer for touch devices
+      if (event.pointerType === "touch") {
+        this.longPressActive = false;
+        if (this.longPressTimer !== null) {
+          clearTimeout(this.longPressTimer);
+          this.longPressTimer = null;
+        }
+        this.longPressTimer = setTimeout(() => {
+          this.longPressTimer = null;
+          this.longPressActive = true;
+          this.canvas.style.cursor = "crosshair";
+          this.eventBus.emit(
+            new TouchLongPressStartEvent(
+              this.lastPointerDownX,
+              this.lastPointerDownY,
+            ),
+          );
+        }, this.LONG_PRESS_MS);
+      }
     } else if (this.pointers.size === 2) {
+      // Second finger down — cancel any pending long-press to avoid
+      // triggering selection mode mid-pinch
+      if (this.longPressTimer !== null) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      if (this.longPressActive) {
+        this.longPressActive = false;
+        this.canvas.style.cursor = "";
+      }
       this.lastPinchDistance = this.getPinchDistance();
     }
   }
@@ -490,11 +646,50 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
+    // Clean up long-press state
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    const wasLongPress = this.longPressActive;
+    this.longPressActive = false;
+    if (wasLongPress) {
+      this.canvas.style.cursor = "";
+      // If long-press fired but no drag happened (selectionBoxActive is false),
+      // suppress the tap so we don't emit a spurious TouchEvent
+      if (!this.selectionBoxActive) {
+        this.suppressNextTap = true;
+      }
+    }
+
+    // Complete selection box if it was active
+    if (this.selectionBoxActive) {
+      this.selectionBoxActive = false;
+      const dist =
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
+      if (dist >= this.DRAG_THRESHOLD_PX) {
+        this.eventBus.emit(
+          new WarshipSelectionBoxCompleteEvent(
+            this.lastPointerDownX,
+            this.lastPointerDownY,
+            event.clientX,
+            event.clientY,
+          ),
+        );
+        return;
+      } else {
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
+    }
+
     if (this.isModifierKeyPressed(event)) {
+      this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
     if (this.isAltKeyPressed(event)) {
+      this.suppressNextTap = false;
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -502,8 +697,13 @@ export class InputHandler {
     const dist =
       Math.abs(event.x - this.lastPointerDownX) +
       Math.abs(event.y - this.lastPointerDownY);
-    if (dist < 10) {
+    if (dist < this.DRAG_THRESHOLD_PX) {
       if (event.pointerType === "touch") {
+        if (this.suppressNextTap) {
+          this.suppressNextTap = false;
+          event.preventDefault();
+          return;
+        }
         this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();
         return;
@@ -580,7 +780,36 @@ export class InputHandler {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
 
-      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      // Cancel long-press if finger moved significantly before timer fires
+      if (this.longPressTimer !== null) {
+        const moveDist =
+          Math.abs(event.clientX - this.lastPointerDownX) +
+          Math.abs(event.clientY - this.lastPointerDownY);
+        if (moveDist >= this.DRAG_THRESHOLD_PX) {
+          clearTimeout(this.longPressTimer);
+          this.longPressTimer = null;
+        }
+      }
+
+      // If shift is held OR touch long-press is active OR selection box already
+      // started, continue emitting selection box updates
+      if (
+        this.selectionBoxActive ||
+        this.activeKeys.has(this.keybinds.shiftKey) ||
+        this.longPressActive
+      ) {
+        this.selectionBoxActive = true;
+        this.eventBus.emit(
+          new WarshipSelectionBoxUpdateEvent(
+            this.lastPointerDownX,
+            this.lastPointerDownY,
+            event.clientX,
+            event.clientY,
+          ),
+        );
+      } else {
+        this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      }
 
       this.lastPointerX = event.clientX;
       this.lastPointerY = event.clientY;
@@ -616,6 +845,27 @@ export class InputHandler {
   }
 
   /**
+   * Parses a keybind value that may include a "Shift+" prefix.
+   * e.g. "Shift+KeyB" → { shift: true, code: "KeyB" }
+   *      "KeyB"       → { shift: false, code: "KeyB" }
+   */
+  private parseKeybind(value: string): { shift: boolean; code: string } {
+    if (value?.startsWith("Shift+")) {
+      return { shift: true, code: value.slice(6) };
+    }
+    return { shift: false, code: value };
+  }
+
+  /**
+   * Returns true if the keyboard event matches the given keybind value,
+   * including optional Shift+ prefix support.
+   */
+  private keybindMatchesEvent(e: KeyboardEvent, keybindValue: string): boolean {
+    const parsed = this.parseKeybind(keybindValue);
+    return e.code === parsed.code && e.shiftKey === parsed.shift;
+  }
+
+  /**
    * Extracts the digit character from KeyboardEvent.code.
    * Codes look like "Digit0".."Digit9" (6 chars, digit at index 5) and
    * "Numpad0".."Numpad9" (7 chars, digit at index 6). Returns null if not a digit key.
@@ -637,17 +887,25 @@ export class InputHandler {
   }
 
   /** Strict equality only: used for first-pass exact KeyboardEvent.code match. */
-  private buildKeybindMatches(code: string, keybindValue: string): boolean {
-    return code === keybindValue;
+  private buildKeybindMatches(
+    code: string,
+    shiftKey: boolean,
+    keybindValue: string,
+  ): boolean {
+    const parsed = this.parseKeybind(keybindValue);
+    return code === parsed.code && shiftKey === parsed.shift;
   }
 
   /** Digit/Numpad alias match: used only when no exact match was found. */
   private buildKeybindMatchesDigit(
     code: string,
+    shiftKey: boolean,
     keybindValue: string,
   ): boolean {
+    const parsed = this.parseKeybind(keybindValue);
+    if (shiftKey !== parsed.shift) return false;
     const digit = this.digitFromKeyCode(code);
-    const bindDigit = this.digitFromKeyCode(keybindValue);
+    const bindDigit = this.digitFromKeyCode(parsed.code);
     return digit !== null && bindDigit !== null && digit === bindDigit;
   }
 
@@ -655,7 +913,10 @@ export class InputHandler {
    * Resolves a keyup code to a build action: exact code match first, then digit/Numpad alias.
    * Returns the UnitType to set as ghost, or null if no build keybind matched.
    */
-  private resolveBuildKeybind(code: string): PlayerBuildableUnitType | null {
+  private resolveBuildKeybind(
+    code: string,
+    shiftKey: boolean,
+  ): PlayerBuildableUnitType | null {
     const buildKeybinds: ReadonlyArray<{
       key: string;
       type: PlayerBuildableUnitType;
@@ -672,10 +933,12 @@ export class InputHandler {
       { key: "buildMIRV", type: UnitType.MIRV },
     ];
     for (const { key, type } of buildKeybinds) {
-      if (this.buildKeybindMatches(code, this.keybinds[key])) return type;
+      if (this.buildKeybindMatches(code, shiftKey, this.keybinds[key]))
+        return type;
     }
     for (const { key, type } of buildKeybinds) {
-      if (this.buildKeybindMatchesDigit(code, this.keybinds[key])) return type;
+      if (this.buildKeybindMatchesDigit(code, shiftKey, this.keybinds[key]))
+        return type;
     }
     return null;
   }

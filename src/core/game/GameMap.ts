@@ -167,7 +167,14 @@ export class GameMapImpl implements GameMap {
   }
 
   isValidCoord(x: number, y: number): boolean {
-    return x >= 0 && x < this.width_ && y >= 0 && y < this.height_;
+    return (
+      Number.isInteger(x) &&
+      Number.isInteger(y) &&
+      x >= 0 &&
+      x < this.width_ &&
+      y >= 0 &&
+      y < this.height_
+    );
   }
 
   // Terrain getters (immutable)

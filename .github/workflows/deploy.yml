@@ -47,8 +47,8 @@ concurrency:
 
 jobs:
   deploy:
-    # Don't deploy on push if this is a fork; always deploy on schedule and workflow_dispatch
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.repository == 'openfrontio/OpenFrontIO' }}
+    # Deploy on push/schedule/workflow_dispatch (see "on:") unless this is a fork
+    if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
     name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}
     runs-on: ubuntu-latest
@@ -135,9 +135,9 @@ jobs:
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }} # schedule and push both use staging
+          CDN_BASE: ${{ vars.CDN_BASE }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
-          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}

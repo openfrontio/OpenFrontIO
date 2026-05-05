@@ -2,28 +2,28 @@
   "name": "Oceania",
   "nations": [
     {
-      "coordinates": [718, 738],
+      "coordinates": [515, 690],
       "name": "Australia",
       "flag": "au"
     },
     {
-      "coordinates": [1050, 809],
+      "coordinates": [1010, 836],
       "name": "New Zealand",
       "flag": "nz"
     },
     {
       "coordinates": [436, 407],
-      "name": "Timor-Leste",
+      "name": "Timor Leste",
       "flag": "tl"
     },
     {
-      "coordinates": [182, 378],
+      "coordinates": [236, 336],
       "name": "Indonesia",
       "flag": "id"
     },
     {
       "coordinates": [292, 243],
-      "name": "Brunei Darussalam",
+      "name": "Brunei",
       "flag": "bn"
     },
     {
@@ -32,33 +32,33 @@
       "flag": "sg"
     },
     {
-      "coordinates": [120, 261],
+      "coordinates": [115, 228],
       "name": "Malaysia",
       "flag": "my"
     },
     {
-      "coordinates": [106, 129],
+      "coordinates": [112, 113],
       "name": "Thailand",
       "flag": "th"
     },
     {
-      "coordinates": [51, 42],
+      "coordinates": [34, 23],
       "name": "Myanmar",
       "flag": "mm"
     },
     {
-      "coordinates": [158, 162],
+      "coordinates": [171, 153],
       "name": "Cambodia",
       "flag": "kh"
     },
     {
-      "coordinates": [182, 43],
+      "coordinates": [203, 105],
       "name": "Vietnam",
       "flag": "vn"
     },
     {
-      "coordinates": [143, 37],
-      "name": "Lao PDR",
+      "coordinates": [127, 42],
+      "name": "Laos",
       "flag": "la"
     },
     {
@@ -67,69 +67,34 @@
       "flag": "hk"
     },
     {
-      "coordinates": [359, 1],
-      "name": "Taiwan, Province of China",
+      "coordinates": [362, 9],
+      "name": "Taiwan",
       "flag": "tw"
     },
     {
-      "coordinates": [366, 119],
+      "coordinates": [425, 194],
       "name": "Philippines",
       "flag": "ph"
     },
     {
-      "coordinates": [536, 207],
-      "name": "Palau",
-      "flag": "pw"
-    },
-    {
-      "coordinates": [834, 215],
-      "name": "Micronesia",
-      "flag": "fm"
-    },
-    {
-      "coordinates": [664, 113],
-      "name": "Guam",
-      "flag": "gu"
-    },
-    {
-      "coordinates": [1042, 317],
-      "name": "Marshall Islands",
-      "flag": "mh"
-    },
-    {
-      "coordinates": [799, 385],
+      "coordinates": [630, 384],
       "name": "Papua New Guinea",
       "flag": "pg"
     },
     {
-      "coordinates": [862, 442],
+      "coordinates": [855, 424],
       "name": "Solomon Islands",
       "flag": "sb"
     },
     {
-      "coordinates": [945, 497],
-      "name": "Vanuatu",
-      "flag": "vu"
-    },
-    {
-      "coordinates": [930, 574],
+      "coordinates": [925, 574],
       "name": "New Caledonia",
       "flag": "nc"
     },
     {
-      "coordinates": [1085, 526],
+      "coordinates": [1080, 528],
       "name": "Fiji",
       "flag": "fj"
-    },
-    {
-      "coordinates": [1169, 568],
-      "name": "Tonga",
-      "flag": "to"
-    },
-    {
-      "coordinates": [1236, 541],
-      "name": "Niue",
-      "flag": "nu"
     },
     {
       "coordinates": [1204, 473],
@@ -142,24 +107,9 @@
       "flag": "ck"
     },
     {
-      "coordinates": [1623, 424],
-      "name": "French Polynesia",
-      "flag": "pf"
-    },
-    {
-      "coordinates": [1393, 278],
-      "name": "Kiribati",
-      "flag": "ki"
-    },
-    {
-      "coordinates": [1420, 56],
-      "name": "United States",
-      "flag": "us"
-    },
-    {
-      "coordinates": [1996, 644],
-      "name": "Chile",
-      "flag": "cl"
+      "coordinates": [1413, 56],
+      "name": "Hawaii",
+      "flag": "Hawaii"
     }
   ]
 }

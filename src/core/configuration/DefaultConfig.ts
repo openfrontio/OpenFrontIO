@@ -43,9 +43,6 @@ const JwksSchema = z.object({
 });
 
 export abstract class DefaultServerConfig implements ServerConfig {
-  turnstileSecretKey(): string {
-    return Env.TURNSTILE_SECRET_KEY ?? "";
-  }
   abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
@@ -204,10 +201,10 @@ export class DefaultConfig implements Config {
     return 5 - falloutRatio * 2;
   }
   SAMCooldown(): number {
-    return 120;
+    return 90;
   }
   SiloCooldown(): number {
-    return 75;
+    return 90;
   }
 
   defensePostRange(): number {
@@ -271,7 +268,7 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 0n;
     }
-    return BigInt(this._gameConfig.startingGold ?? 0);
+    return this.startingGoldFor(playerInfo);
   }
 
   trainSpawnRate(numPlayerFactories: number): number {
@@ -282,6 +279,7 @@ export class DefaultConfig implements Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
+    player: Player | PlayerView,
   ): Gold {
     // No penalty for the first 10 cities.
     citiesVisited = Math.max(0, citiesVisited - 9);
@@ -300,7 +298,7 @@ export class DefaultConfig implements Config {
     }
     const distPenalty = citiesVisited * 5_000;
     const gold = Math.max(5000, baseGold - distPenalty);
-    return toInt(gold * this.goldMultiplier());
+    return toInt(gold * this.goldMultiplierFor(player));
   }
 
   trainStationMinRange(): number {
@@ -375,7 +373,7 @@ export class DefaultConfig implements Config {
             UnitType.Port,
             UnitType.Factory,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           upgradable: true,
         };
         break;
@@ -469,12 +467,66 @@ export class DefaultConfig implements Config {
     return info;
   }
 
+  private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
+    if (this.infiniteGold()) return true;
+    const hc = this._gameConfig.hostCheats;
+    return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
+  }
+
+  private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
+    if (this.infiniteTroops()) return true;
+    return (
+      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+      player.isLobbyCreator()
+    );
+  }
+
+  private hasInfiniteTroopsForInfo(playerInfo: PlayerInfo): boolean {
+    if (this.infiniteTroops()) return true;
+    return (
+      (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
+      playerInfo.isLobbyCreator
+    );
+  }
+
+  private goldMultiplierFor(player: Player | PlayerView): number {
+    const base = this.goldMultiplier();
+    const hc = this._gameConfig.hostCheats;
+    if (hc?.goldMultiplier && player.isLobbyCreator()) {
+      return hc.goldMultiplier;
+    }
+    return base;
+  }
+
+  public conquerGoldAmount(captured: Player): Gold {
+    if (
+      captured.type() === PlayerType.Bot ||
+      captured.type() === PlayerType.Nation
+    ) {
+      return captured.gold();
+    } else {
+      return captured.gold() / 2n;
+    }
+  }
+
+  private startingGoldFor(playerInfo: PlayerInfo): Gold {
+    const base = BigInt(this._gameConfig.startingGold ?? 0);
+    const hc = this._gameConfig.hostCheats;
+    if (hc?.startingGold && playerInfo.isLobbyCreator) {
+      return base + BigInt(hc.startingGold);
+    }
+    return base;
+  }
+
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
   ): (g: Game, p: Player) => bigint {
     return (game: Game, player: Player) => {
-      if (player.type() === PlayerType.Human && this.infiniteGold()) {
+      if (
+        player.type() === PlayerType.Human &&
+        this.hasInfiniteGoldFor(player)
+      ) {
         return 0n;
       }
       const numUnits = types.reduce(
@@ -617,16 +669,11 @@ export class DefaultConfig implements Config {
         mag = 0;
       }
       if (
-        attacker.type() === PlayerType.Human &&
+        (attacker.type() === PlayerType.Human ||
+          attacker.type() === PlayerType.Nation) &&
         defender.type() === PlayerType.Bot
       ) {
-        mag *= 0.8;
-      }
-      if (
-        attacker.type() === PlayerType.Nation &&
-        defender.type() === PlayerType.Bot
-      ) {
-        mag *= 0.8;
+        mag *= 0.7;
       }
     }
 
@@ -663,7 +710,7 @@ export class DefaultConfig implements Config {
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
       const attackerTroopLoss =
-        0.7 * currentAttackerLoss + 0.3 * altAttackerLoss;
+        0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
 
       return {
         attackerTroopLoss,
@@ -752,12 +799,12 @@ export class DefaultConfig implements Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
-      player.type() === PlayerType.Human && this.infiniteTroops()
+      player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
@@ -798,7 +845,7 @@ export class DefaultConfig implements Config {
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
-      toAdd *= 0.6;
+      toAdd *= 0.5;
     }
 
     if (player.type() === PlayerType.Nation) {
@@ -824,7 +871,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplierFor(player);
     let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
       baseRate = 50n;
@@ -851,7 +898,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 6;
+    return 8;
   }
 
   defaultNukeTargetableRange(): number {
@@ -912,6 +959,30 @@ export class DefaultConfig implements Config {
 
   warshipShellAttackRate(): number {
     return 20;
+  }
+
+  warshipDockingRange(): number {
+    return 5;
+  }
+
+  warshipPortHealingBonusPerLevel(): number {
+    return 5;
+  }
+
+  warshipRetreatHealthThreshold(): number {
+    return 750;
+  }
+
+  warshipPassiveHealing(): number {
+    return 1;
+  }
+
+  warshipPassiveHealingRange(): number {
+    return 150;
+  }
+
+  warshipPortSwitchThreshold(): number {
+    return 0.75;
   }
 
   defensePostShellAttackRate(): number {

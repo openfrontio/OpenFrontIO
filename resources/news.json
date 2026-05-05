@@ -1,5 +1,12 @@
 [
   {
+    "id": "firefox-performance-issues-2026",
+    "title": "Firefox Performance Issues",
+    "descriptionTranslationKey": "news_box.firefox_warning",
+    "url": null,
+    "type": "warning"
+  },
+  {
     "id": "clan-tournament-spring-2026",
     "title": "Upcoming: Spring Clan Tournament",
     "description": "2v2 clan battles — Sign up on Discord before April 12",
