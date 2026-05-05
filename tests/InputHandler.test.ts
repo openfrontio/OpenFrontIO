@@ -9,7 +9,7 @@ import {
 import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
-import { GameView } from "../src/core/game/GameView";
+import { GameView, PlayerView } from "../src/core/game/GameView";
 import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
@@ -631,7 +631,8 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("does not set ghost structure when the player is dead", () => {
-      mockGameView.myPlayer = () => ({ isAlive: () => false });
+      mockGameView.myPlayer = () =>
+        ({ isAlive: () => false }) as unknown as PlayerView;
 
       window.dispatchEvent(
         new KeyboardEvent("keyup", { code: "Numpad1", key: "1" }),
