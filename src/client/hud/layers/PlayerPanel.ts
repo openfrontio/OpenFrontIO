@@ -882,7 +882,8 @@ export class PlayerPanel extends LitElement implements Controller {
     if (!this.isVisible) return html``;
 
     const my = this.g.myPlayer();
-    if (!my) return html``;
+    const isReplay = this.g.config().isReplay();
+    if (!my && !isReplay) return html``;
     if (!this.tile) return html``;
 
     const owner = this.g.owner(this.tile);
@@ -892,8 +893,10 @@ export class PlayerPanel extends LitElement implements Controller {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldNum = my.gold();
-    const myTroopsNum = Number(my.troops());
+    // In replay mode myPlayer() is null; use other as stand-in so read-only rendering works
+    const viewer = my ?? other;
+    const myGoldNum = viewer.gold();
+    const myTroopsNum = Number(viewer.troops());
 
     return html`
       <style>
@@ -961,7 +964,7 @@ export class PlayerPanel extends LitElement implements Controller {
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
                   >
                     <!-- Identity (flag, name, type, traitor, relation) -->
-                    <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+                    <div class="mb-1">${this.renderIdentityRow(other, viewer)}</div>
 
                     ${this.sendTarget
                       ? html`
@@ -972,7 +975,7 @@ export class PlayerPanel extends LitElement implements Controller {
                               ? myTroopsNum
                               : myGoldNum}
                             .uiState=${this.uiState}
-                            .myPlayer=${my}
+                            .myPlayer=${viewer}
                             .target=${this.sendTarget}
                             .gameView=${this.g}
                             .eventBus=${this.eventBus}
@@ -988,7 +991,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       ? html`
                           <player-moderation-modal
                             .open=${true}
-                            .myPlayer=${my}
+                            .myPlayer=${viewer}
                             .target=${this.moderationTarget}
                             .eventBus=${this.eventBus}
                             .isAdmin=${this.isAdminRole}
@@ -1007,12 +1010,12 @@ export class PlayerPanel extends LitElement implements Controller {
                     ${this.renderResources(other)}
 
                     <!-- Rocket direction toggle -->
-                    ${other === my ? this.renderRocketDirectionToggle() : ""}
+                    ${other === viewer && !isReplay ? this.renderRocketDirectionToggle() : ""}
 
                     <ui-divider></ui-divider>
 
                     <!-- Stats: betrayals / trading -->
-                    ${this.renderStats(other, my)}
+                    ${this.renderStats(other, viewer)}
 
                     <ui-divider></ui-divider>
 
@@ -1022,10 +1025,13 @@ export class PlayerPanel extends LitElement implements Controller {
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
 
-                    <ui-divider></ui-divider>
-
-                    <!-- Actions -->
-                    ${this.renderActions(my, other)}
+                    ${isReplay
+                      ? ""
+                      : html`
+                          <ui-divider></ui-divider>
+                          <!-- Actions -->
+                          ${this.renderActions(viewer, other)}
+                        `}
                   </div>
                 </div>
               </div>
