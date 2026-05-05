@@ -496,9 +496,7 @@ export class PlayerPanel extends LitElement implements Layer {
     my: PlayerView,
     myPanelClicked: boolean = false,
   ) {
-    const activeFlagPath = myPanelClicked
-      ? my.cosmetics.flag
-      : other.cosmetics.flag;
+    const activeFlagPath = myPanelClicked ? my.cosmetics.flag : other.cosmetics.flag;
     const flagCode = activeFlagPath?.match(/\/([^.]+)\./)?.[1];
 
     // Find the country based on that code
@@ -516,8 +514,13 @@ export class PlayerPanel extends LitElement implements Layer {
         ${country && activeFlagPath
           ? html`<img
               src=${activeFlagPath}
+<<<<<<< HEAD
               title=${typeof country !== "string" ? country.name : country}
               alt=${typeof country !== "string" ? country.name : country}
+=======
+              title=${typeof country!== "string"?country.name : country}
+              alt=${typeof country!== "string"?country.name : country}
+>>>>>>> 00715c0b (Fixed playerPanel doesnt show flag | Added flag name on hover)
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
