@@ -491,12 +491,18 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderIdentityRow(other: PlayerView, my: PlayerView) {
-    const flagCode = other.cosmetics.flag;
-    const country =
-      typeof flagCode === "string"
-        ? Countries.find((c) => c.code === flagCode)
-        : undefined;
+  private renderIdentityRow(
+    other: PlayerView,
+    my: PlayerView,
+    myPanelClicked: boolean = false,
+  ) {
+    const activeFlagPath = myPanelClicked ? my.cosmetics.flag : other.cosmetics.flag;
+    const flagCode = activeFlagPath?.match(/\/([^.]+)\./)?.[1];
+
+    // Find the country based on that code
+    const country = flagCode
+      ? Countries.find((c) => c.code === flagCode.split("/")[1])
+      : flagCode;
 
     const chip =
       other.type() === PlayerType.Human
@@ -505,10 +511,11 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
-        ${country && typeof flagCode === "string"
+        ${country && activeFlagPath
           ? html`<img
-              src=${assetUrl(`flags/${encodeURIComponent(flagCode)}.svg`)}
-              alt=${country?.name ?? "Flag"}
+              src=${activeFlagPath}
+              title=${typeof country!== "string"?country.name : country}
+              alt=${typeof country!== "string"?country.name : country}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
@@ -946,7 +953,9 @@ export class PlayerPanel extends LitElement implements Layer {
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
                   >
                     <!-- Identity (flag, name, type, traitor, relation) -->
-                    <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+                    <div class="mb-1">
+                      ${this.renderIdentityRow(other, my, owner === my)}
+                    </div>
 
                     ${this.sendTarget
                       ? html`
