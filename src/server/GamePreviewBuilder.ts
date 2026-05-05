@@ -141,8 +141,9 @@ export async function buildPreview(
   publicInfo: ExternalGameInfo | null,
 ): Promise<PreviewMeta> {
   const assetManifest = await getRuntimeAssetManifest();
+  const cdnBase = process.env.CDN_BASE ?? "";
   const buildAbsoluteAssetUrl = (path: string) =>
-    new URL(buildAssetUrl(path, assetManifest), origin).toString();
+    new URL(buildAssetUrl(path, assetManifest, cdnBase), origin).toString();
   const isFinished = !!publicInfo?.info?.end;
   const isPrivate = lobby?.gameConfig?.gameType === "Private";
 

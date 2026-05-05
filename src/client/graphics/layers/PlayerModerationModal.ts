@@ -18,6 +18,7 @@ export class PlayerModerationModal extends LitElement {
 
   @property({ type: Boolean }) open: boolean = false;
   @property({ type: Boolean }) alreadyKicked: boolean = false;
+  @property({ type: Boolean }) isAdmin: boolean = false;
 
   createRenderRoot() {
     return this;
@@ -44,7 +45,7 @@ export class PlayerModerationModal extends LitElement {
 
   private canKick(my: PlayerView, other: PlayerView): boolean {
     return (
-      my.isLobbyCreator() &&
+      (my.isLobbyCreator() || this.isAdmin) &&
       other !== my &&
       other.type() === PlayerType.Human &&
       !!other.clientID()

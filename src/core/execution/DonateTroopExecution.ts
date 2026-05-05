@@ -45,6 +45,10 @@ export class DonateTroopsExecution implements Execution {
     const maxDonation =
       mg.config().maxTroops(this.recipient) - this.recipient.troops();
     this.troops = Math.min(this.troops, maxDonation);
+
+    if (this.troops <= 0) {
+      this.active = false;
+    }
   }
 
   tick(ticks: number): void {

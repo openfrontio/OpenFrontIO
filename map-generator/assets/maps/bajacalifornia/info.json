@@ -1,0 +1,45 @@
+{
+  "name": "bajacalifornia",
+  "nations": [
+    {
+      "coordinates": [513, 44],
+      "name": "California",
+      "flag": "California"
+    },
+    {
+      "coordinates": [791, 699],
+      "name": "Baja California",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1312, 1426],
+      "name": "Baja California Sur",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1364, 679],
+      "name": "Sonora",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1767, 1243],
+      "name": "Sinaloa",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1733, 578],
+      "name": "Chihuahua",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [969, 62],
+      "name": "Arizona",
+      "flag": "Arizona"
+    },
+    {
+      "coordinates": [1534, 60],
+      "name": "New Mexico",
+      "flag": "New_Mexico"
+    }
+  ]
+}

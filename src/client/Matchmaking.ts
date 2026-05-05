@@ -123,7 +123,7 @@ export class MatchmakingModal extends BaseModal {
         this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
-    this.socket.onerror = (event: ErrorEvent) => {
+    this.socket.onerror = (event: Event) => {
       console.error("WebSocket error occurred:", event);
     };
     this.socket.onclose = () => {

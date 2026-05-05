@@ -114,8 +114,9 @@ describe("TerritoryPatternsModal", () => {
     await modal.open();
     await modal.updateComplete;
 
-    const storeBtn = Array.from(modal.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("main.store"),
+    // The store button is rendered as an <o-button> custom element with translationKey="main.store"
+    const storeBtn = modal.querySelector(
+      'o-button[translationKey="main.store"]',
     );
     expect(storeBtn).toBeTruthy();
   });

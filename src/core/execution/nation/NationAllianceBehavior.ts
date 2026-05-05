@@ -27,6 +27,8 @@ export class NationAllianceBehavior {
   ) {}
 
   handleAllianceRequests() {
+    if (this.game.config().disableAlliances()) return;
+
     for (const req of this.player.incomingAllianceRequests()) {
       // Alliance Request intents created during the spawn phase are executed on
       // the first tick post-spawn phase. With the following condition we reject
@@ -44,6 +46,8 @@ export class NationAllianceBehavior {
   }
 
   handleAllianceExtensionRequests() {
+    if (this.game.config().disableAlliances()) return;
+
     for (const alliance of this.player.alliances()) {
       // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
       // Skip if no expiration yet/ ally didn't request extension yet / nation already agreed to extend
@@ -59,6 +63,8 @@ export class NationAllianceBehavior {
   }
 
   maybeSendAllianceRequests(borderingEnemies: Player[]) {
+    if (this.game.config().disableAlliances()) return;
+
     // Only easy nations are allowed to send alliance requests to bots
     const isAcceptablePlayerType = (p: Player) =>
       (p.type() === PlayerType.Bot &&
@@ -276,7 +282,7 @@ export class NationAllianceBehavior {
       case Difficulty.Impossible: {
         // On hard and impossible we try to not ally with all our neighbors (If we have 2+ neighbors)
         const borderingPlayers = this.player
-          .neighbors()
+          .nearby()
           .filter(
             (n): n is Player => n.isPlayer() && n.type() !== PlayerType.Bot,
           );
@@ -384,9 +390,14 @@ export class NationAllianceBehavior {
     }
 
     // Betray very weak players (similar check as above but for the easier difficulties)
-    // This doesn't check for maxTroops and isn't really smart. It opens the nations up for attacks, but that's intended.
+    // This doesn't check for maxTroops and isn't really smart. It makes nations vulnerable, but that's intended.
+    // On easy, don't betray humans
     if (
       (difficulty === Difficulty.Easy || difficulty === Difficulty.Medium) &&
+      !(
+        difficulty === Difficulty.Easy &&
+        otherPlayer.type() === PlayerType.Human
+      ) &&
       this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);

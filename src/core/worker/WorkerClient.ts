@@ -1,3 +1,4 @@
+import { getCdnBase } from "../AssetUrls";
 import {
   BuildableUnit,
   Cell,
@@ -12,6 +13,45 @@ import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
+// ?worker&url returns the worker bundle's URL as a string. We load it via a
+// same-origin Blob trampoline because browsers refuse cross-origin
+// `new Worker(url)` even with valid CORS+CORP. A Blob URL is same-origin to
+// the page so the constructor accepts it, and dynamic `import()` inside the
+// Blob IS CORS-checked and can fetch the real worker module from the CDN.
+// R2 must serve the worker bundle with `Access-Control-Allow-Origin`.
+import workerUrl from "./Worker.worker.ts?worker&url";
+
+function createGameWorker(): Worker {
+  const cdnBase = getCdnBase().replace(/\/+$/, "");
+  // Same-origin path (dev, or any deploy without CDN_BASE set): construct the
+  // worker directly. The Blob trampoline below is only needed for cross-origin
+  // loads — browsers refuse `new Worker(url)` cross-origin even with valid
+  // CORS+CORP, and Vite's dev server doesn't serve `?worker&url` URLs as
+  // regular ES modules so the trampoline's dynamic `import()` would hang.
+  if (!cdnBase) {
+    return new Worker(workerUrl, { type: "module" });
+  }
+  const fullUrl = `${cdnBase}${workerUrl}`;
+  // Buffer-and-replay: the worker's port enables when the trampoline script
+  // starts, so any messages posted before the imported module attaches its
+  // `message` handler would dispatch to no listener and be dropped. Capture
+  // them here, then re-dispatch after the import resolves.
+  const trampoline = `
+const buffered = [];
+const buffer = (e) => buffered.push(e);
+self.addEventListener("message", buffer);
+import(${JSON.stringify(fullUrl)}).then(() => {
+  self.removeEventListener("message", buffer);
+  for (const e of buffered) self.dispatchEvent(new MessageEvent("message", { data: e.data }));
+}).catch((e) => self.postMessage({ type: "trampoline_error", message: String((e && e.message) || e) }));
+`;
+  const blobUrl = URL.createObjectURL(
+    new Blob([trampoline], { type: "application/javascript" }),
+  );
+  const worker = new Worker(blobUrl, { type: "module" });
+  URL.revokeObjectURL(blobUrl);
+  return worker;
+}
 
 export class WorkerClient {
   private worker: Worker;
@@ -25,9 +65,7 @@ export class WorkerClient {
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID | undefined,
   ) {
-    this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    this.worker = createGameWorker();
     this.messageHandlers = new Map();
 
     // Set up global message handler
@@ -74,8 +112,21 @@ export class WorkerClient {
     return new Promise((resolve, reject) => {
       const messageId = generateID();
 
+      const onTrampolineError = (event: MessageEvent) => {
+        if (event.data?.type !== "trampoline_error") return;
+        this.worker.removeEventListener("message", onTrampolineError);
+        this.messageHandlers.delete(messageId);
+        reject(
+          new Error(
+            `Worker trampoline import failed: ${event.data.message ?? "unknown error"}`,
+          ),
+        );
+      };
+      this.worker.addEventListener("message", onTrampolineError);
+
       this.messageHandlers.set(messageId, (message) => {
         if (message.type === "initialized") {
+          this.worker.removeEventListener("message", onTrampolineError);
           this.isInitialized = true;
           resolve();
         }
@@ -86,15 +137,18 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
+        cdnBase: getCdnBase(),
       });
 
-      // Add timeout for initialization
+      // Backstop for the worker hanging after a successful import (the
+      // trampoline_error path handles the cross-origin / CORS load failure).
       setTimeout(() => {
         if (!this.isInitialized) {
+          this.worker.removeEventListener("message", onTrampolineError);
           this.messageHandlers.delete(messageId);
           reject(new Error("Worker initialization timeout"));
         }
-      }, 20000); // 20 second timeout
+      }, 20000);
     });
   }
 

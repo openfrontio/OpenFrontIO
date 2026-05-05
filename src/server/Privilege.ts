@@ -176,21 +176,24 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
           refs.patternColorPaletteName ?? null,
         );
       } catch (e) {
-        return { type: "forbidden", reason: "invalid pattern: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid pattern: " + message };
       }
     }
     if (refs.color) {
       try {
         cosmetics.color = this.isColorAllowed(flares, refs.color);
       } catch (e) {
-        return { type: "forbidden", reason: "invalid color: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid color: " + message };
       }
     }
     if (refs.flag) {
       try {
         cosmetics.flag = this.isFlagAllowed(flares, refs.flag);
       } catch (e) {
-        return { type: "forbidden", reason: "invalid flag: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid flag: " + message };
       }
     }
 

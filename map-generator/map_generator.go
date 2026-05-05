@@ -148,10 +148,11 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 		}
 	}
 
-	removeSmallIslands(ctx, terrain, args.RemoveSmall)
+	removeSmallIslands(ctx, terrain, minIslandSize, args.RemoveSmall)
 	processWater(ctx, terrain, args.RemoveSmall)
 
 	terrain4x := createMiniMap(terrain)
+	removeSmallIslands(ctx, terrain4x, minIslandSize/2, args.RemoveSmall)
 	processWater(ctx, terrain4x, false)
 
 	terrain16x := createMiniMap(terrain4x)
@@ -275,6 +276,7 @@ func processShore(ctx context.Context, terrain [][]Terrain) []Coord {
 		for y := 0; y < height; y++ {
 			tile := &terrain[x][y]
 			neighbors := getNeighbors(x, y, terrain)
+			tile.Shoreline = false
 
 			if tile.Type == Land {
 				// Land tile adjacent to water is shoreline
@@ -490,7 +492,8 @@ func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 
 // removeSmallIslands identifies and removes small land masses from the terrain.
 // If removeSmall is true, any removed bodies are converted to Water.
-func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
+// Land bodies smaller than minSize are removed.
+func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, removeSmall bool) {
 	logger := LoggerFromContext(ctx)
 	if !removeSmall {
 		return
@@ -526,7 +529,7 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bo
 	smallIslands := 0
 
 	for _, body := range landBodies {
-		if body.size < minIslandSize {
+		if body.size < minSize {
 			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size), RemovalLogTag)
 			smallIslands++
 			for _, coord := range body.coords {
@@ -536,7 +539,7 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bo
 		}
 	}
 
-	logger.Info(fmt.Sprintf("Identified and removed %d islands smaller than %d tiles", smallIslands, minIslandSize))
+	logger.Info(fmt.Sprintf("Identified and removed %d islands smaller than %d tiles", smallIslands, minSize))
 }
 
 // packTerrain serializes the terrain grid into a byte slice.

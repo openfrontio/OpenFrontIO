@@ -335,7 +335,7 @@ export class UserSettingModal extends BaseModal {
             <button
               class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
                 .activeTab === "basic"
-                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
                 : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
               @click=${() => (this.activeTab = "basic")}
             >
@@ -344,7 +344,7 @@ export class UserSettingModal extends BaseModal {
             <button
               class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
                 .activeTab === "keybinds"
-                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
                 : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
               @click=${() => (this.activeTab = "keybinds")}
             >
@@ -654,6 +654,32 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.swapDirection}
         .value=${this.getKeyValue("swapDirection")}
         .display=${this.getKeyChar("swapDirection")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.ally_keybinds")}
+      </h2>
+
+      <setting-keybind
+        action="requestAlliance"
+        label=${translateText("user_setting.request_alliance")}
+        description=${translateText("user_setting.request_alliance_desc")}
+        defaultKey="KeyK"
+        .value=${this.getKeyValue("requestAlliance")}
+        .display=${this.getKeyChar("requestAlliance")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="breakAlliance"
+        label=${translateText("user_setting.break_alliance")}
+        description=${translateText("user_setting.break_alliance_desc")}
+        defaultKey="KeyL"
+        .value=${this.getKeyValue("breakAlliance")}
+        .display=${this.getKeyChar("breakAlliance")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
