@@ -254,6 +254,9 @@ func parseMapsFlag() (map[string]bool, error) {
 // It spins up goroutines for each map and aggregates any errors.
 // Concurrency is bounded by --workers to cap peak memory usage.
 func loadTerrainMaps() error {
+	if workersFlag < 1 {
+		return fmt.Errorf("--workers must be >= 1, got %d", workersFlag)
+	}
 	selectedMaps, err := parseMapsFlag()
 	if err != nil {
 		return err
