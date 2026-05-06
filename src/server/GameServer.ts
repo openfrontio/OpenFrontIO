@@ -578,12 +578,10 @@ export class GameServer {
           }
         }
       } catch (error) {
-        this.log.info(
-          `error handling websocket request in game server: ${error}`,
-          {
-            clientID: client.clientID,
-          },
-        );
+        this.log.error(`error handling websocket request in game server`, {
+          clientID: client.clientID,
+          error: String(error),
+        });
       }
     });
     client.ws.on("close", () => {

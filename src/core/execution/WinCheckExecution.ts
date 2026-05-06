@@ -69,13 +69,13 @@ export class WinCheckExecution implements Execution {
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     // Guard against division by zero when all land tiles have fallout
-    const percentOwned =
-      numTilesWithoutFallout > 0
-        ? (max.numTilesOwned() / numTilesWithoutFallout) * 100
-        : 0;
+    // Use integer cross-multiplication to avoid floating-point determinism issues
+    const exceedsThreshold =
+      numTilesWithoutFallout > 0 &&
+      max.numTilesOwned() * 100 >
+        this.mg.config().percentageTilesOwnedToWin() * numTilesWithoutFallout;
     if (
-      percentOwned >
-        this.mg.config().percentageTilesOwnedToWin() ||
+      exceedsThreshold ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
       timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS
@@ -110,12 +110,13 @@ export class WinCheckExecution implements Execution {
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     // Guard against division by zero when all land tiles have fallout
-    const percentage =
-      numTilesWithoutFallout > 0
-        ? (max[1] / numTilesWithoutFallout) * 100
-        : 0;
+    // Use integer cross-multiplication to avoid floating-point determinism issues
+    const exceedsThreshold =
+      numTilesWithoutFallout > 0 &&
+      max[1] * 100 >
+        this.mg.config().percentageTilesOwnedToWin() * numTilesWithoutFallout;
     if (
-      percentage > this.mg.config().percentageTilesOwnedToWin() ||
+      exceedsThreshold ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0) ||
       timeElapsed >= WinCheckExecution.HARD_TIME_LIMIT_SECONDS

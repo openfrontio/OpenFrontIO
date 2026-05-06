@@ -210,7 +210,6 @@ export async function startWorker() {
     res.json(game.gameInfo());
   });
 
-
   // Add other endpoints from your original server
   app.post("/api/start_game/:id", async (req, res) => {
     log.info(`starting private lobby with id ${req.params.id}`);
@@ -259,7 +258,6 @@ export async function startWorker() {
     game.start();
     res.status(200).json({ success: true });
   });
-
 
   app.get("/api/game/:id/exists", async (req, res) => {
     const lobbyId = req.params.id;
