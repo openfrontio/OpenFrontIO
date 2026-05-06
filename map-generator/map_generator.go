@@ -391,7 +391,9 @@ func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
 func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 	logger := LoggerFromContext(ctx)
 	logger.Info("Processing water bodies")
-	visited := make(map[string]bool)
+	width := len(terrain)
+	height := len(terrain[0])
+	visited := make([]bool, width*height)
 
 	type waterBody struct {
 		coords []Coord
@@ -401,11 +403,10 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 	var waterBodies []waterBody
 
 	// Find all distinct water bodies
-	for x := 0; x < len(terrain); x++ {
-		for y := 0; y < len(terrain[0]); y++ {
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
 			if terrain[x][y].Type == Water {
-				key := fmt.Sprintf("%d,%d", x, y)
-				if visited[key] {
+				if visited[x*height+y] {
 					continue
 				}
 
@@ -463,8 +464,10 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 
 // getArea performs a Breadth-First Search (BFS) to find a contiguous area of tiles
 // sharing the same TerrainType as the passed x,y coordinates.
-// The visited map is updated to prevent reprocessing tiles.
-func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
+// visited is a flat bool slice of size width*height indexed by x*height+y; it is
+// updated to prevent reprocessing tiles across multiple getArea calls.
+func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
+	height := len(terrain[0])
 	targetType := terrain[x][y].Type
 	var area []Coord
 	queue := []Coord{{X: x, Y: y}}
@@ -473,11 +476,11 @@ func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 		coord := queue[0]
 		queue = queue[1:]
 
-		key := fmt.Sprintf("%d,%d", coord.X, coord.Y)
-		if visited[key] {
+		idx := coord.X*height + coord.Y
+		if visited[idx] {
 			continue
 		}
-		visited[key] = true
+		visited[idx] = true
 
 		if terrain[coord.X][coord.Y].Type == targetType {
 			area = append(area, coord)
@@ -499,7 +502,7 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, r
 		return
 	}
 
-	visited := make(map[string]bool)
+	visited := make([]bool, len(terrain)*len(terrain[0]))
 
 	type landBody struct {
 		coords []Coord
@@ -509,11 +512,11 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, r
 	var landBodies []landBody
 
 	// Find all distinct land bodies
+	height := len(terrain[0])
 	for x := 0; x < len(terrain); x++ {
-		for y := 0; y < len(terrain[0]); y++ {
+		for y := 0; y < height; y++ {
 			if terrain[x][y].Type == Land {
-				key := fmt.Sprintf("%d,%d", x, y)
-				if visited[key] {
+				if visited[x*height+y] {
 					continue
 				}
 
