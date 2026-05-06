@@ -275,7 +275,7 @@ export class GameModeSelector extends LitElement {
       ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
       : undefined;
 
-    let timeDisplay: string = "";
+    let timeDisplay: string;
     let timeDisplayUppercase = false;
     if (timeRemaining === undefined) {
       timeDisplay = renderDuration(this.defaultLobbyTime);

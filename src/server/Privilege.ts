@@ -212,6 +212,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     try {
       decodePatternData(found.pattern, this.b64urlDecode);
     } catch (e) {
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(`Invalid pattern ${name}`);
     }
 
