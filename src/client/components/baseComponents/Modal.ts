@@ -128,7 +128,7 @@ export class OModal extends LitElement {
     const hasTabs = this.tabs.length > 0;
     const sectionClass = hasTabs
       ? "relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden"
-      : "relative flex-1 min-h-0 flex flex-col text-white bg-[#23232382] backdrop-blur-md lg:rounded-lg overflow-hidden";
+      : "relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-lg overflow-hidden";
 
     return html`
       <aside
