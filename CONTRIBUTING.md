@@ -101,7 +101,6 @@ All new features and bug fixes should include relevant tests. We use **Vitest**.
 ## Submitting a Pull Request
 
 1. **Commit your changes**:
-
    - Write clear, concise commit messages.
    - Use the present tense ("Add feature" not "Added feature").
 

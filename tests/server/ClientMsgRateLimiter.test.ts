@@ -28,6 +28,16 @@ describe("ClientMsgRateLimiter", () => {
       }
       expect(limiter.check(CLIENT_B, "intent", SMALL)).toBe("ok");
     });
+
+    it("allows intents up to MAX_INTENT_SIZE", () => {
+      const limiter = new ClientMsgRateLimiter();
+      expect(limiter.check(CLIENT_A, "intent", 2000)).toBe("ok");
+    });
+
+    it("kicks intents exceeding MAX_INTENT_SIZE", () => {
+      const limiter = new ClientMsgRateLimiter();
+      expect(limiter.check(CLIENT_A, "intent", 2001)).toBe("kick");
+    });
   });
 
   describe("non-intent messages", () => {

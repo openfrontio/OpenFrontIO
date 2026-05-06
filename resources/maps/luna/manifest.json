@@ -1,17 +1,17 @@
 {
   "map": {
-    "height": 3500,
-    "num_land_tiles": 1646031,
+    "height": 3508,
+    "num_land_tiles": 1517614,
     "width": 1308
   },
   "map16x": {
-    "height": 875,
-    "num_land_tiles": 93490,
+    "height": 877,
+    "num_land_tiles": 84692,
     "width": 327
   },
   "map4x": {
-    "height": 1750,
-    "num_land_tiles": 396787,
+    "height": 1754,
+    "num_land_tiles": 364566,
     "width": 654
   },
   "name": "Luna",
@@ -27,12 +27,12 @@
       "name": "Apollo 14"
     },
     {
-      "coordinates": [780, 345],
+      "coordinates": [780, 340],
       "flag": "us",
       "name": "Apollo 15"
     },
     {
-      "coordinates": [825, 735],
+      "coordinates": [825, 705],
       "flag": "us",
       "name": "Apollo 11"
     },
@@ -52,7 +52,7 @@
       "name": "Surveyor 3"
     },
     {
-      "coordinates": [256, 148],
+      "coordinates": [250, 148],
       "flag": "us",
       "name": "Apollo 13"
     },
@@ -62,7 +62,7 @@
       "name": "Artemis II"
     },
     {
-      "coordinates": [510, 170],
+      "coordinates": [515, 170],
       "flag": "Russian SSR",
       "name": "Luna 17"
     },
@@ -107,7 +107,7 @@
       "name": "Chang'e 4"
     },
     {
-      "coordinates": [270, 2690],
+      "coordinates": [260, 268],
       "flag": "cn",
       "name": "Chang'e 5"
     },
@@ -117,7 +117,7 @@
       "name": "Chang'e 6"
     },
     {
-      "coordinates": [830, 735],
+      "coordinates": [830, 745],
       "flag": "jp",
       "name": "S.L.I.M."
     },
@@ -127,34 +127,34 @@
       "name": "Chandrayaan 3"
     },
     {
-      "coordinates": [732, 3490],
+      "coordinates": [732, 3493],
       "flag": "in",
       "name": "Chandrayaan 1"
     },
     {
       "coordinates": [755, 3035],
       "flag": "",
-      "name": "T▅▚░S▅cr▅▟░M▅l▅t▅r▅░B▅s▅"
+      "name": "T▆p░S▅cr▅t░M▊l▊t▅r▆░B▅s▅"
     },
     {
       "coordinates": [628, 921],
       "flag": "",
-      "name": "[]"
+      "name": "▊"
     }
   ],
   "teamGameSpawnAreas": {
     "2": [
       {
-        "height": 1750,
+        "height": 1754,
         "width": 1308,
         "x": 0,
         "y": 0
       },
       {
-        "height": 1750,
+        "height": 1754,
         "width": 1308,
         "x": 0,
-        "y": 1750
+        "y": 1754
       }
     ]
   }
