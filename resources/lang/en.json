@@ -749,6 +749,8 @@
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "retaliate_attack": "Retaliate",
+    "retaliate_attack_desc": "Send a retaliation attack to blunt/negate the force of the most recent active attacker. Only available when you are being attacked.",
     "ally_keybinds": "Ally Keybinds",
     "request_alliance": "Request Alliance",
     "request_alliance_desc": "Send an alliance request to the player whose tile is under your cursor.",
