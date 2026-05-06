@@ -12,6 +12,7 @@ import {
 import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
 import { Platform } from "./Platform";
+import { get } from "http";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
@@ -407,9 +408,17 @@ function getCachedLangSelector(): LangSelector | null {
   return found;
 }
 
+export function getEnglishText(
+  key: string,
+  params?: Record<string, string | number>,
+): string {
+  return translateText(key, params, true);
+}
+
 export const translateText = (
   key: string,
   params?: Record<string, string | number>,
+  getOnlyEnglish: boolean = false,
 ): string => {
   const self = translateText as any;
   self.formatterCache ??= new Map();
@@ -436,7 +445,7 @@ export const translateText = (
     self.lastLang = langSelector.currentLang;
   }
 
-  let message = translations?.[key];
+  let message = getOnlyEnglish ? undefined : translations?.[key];
   const hasPrimaryTranslation = message !== undefined;
 
   message ??= defaultTranslations?.[key];

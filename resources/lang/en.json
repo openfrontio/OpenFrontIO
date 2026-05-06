@@ -1219,5 +1219,17 @@
   "fullscreen": {
     "enter": "Enter fullscreen",
     "exit": "Exit fullscreen"
+  },
+  "worker_error": {
+    "account_banned": "Account Banned",    
+    "cannot_join_game": "Cannot join game",
+    "connection_refused": "Connection refused",
+    "flare_forbidden": "Forbidden",
+    "game_not_found": "Game not found",
+    "lobby_full": "Lobby full",
+    "turnstile_invalid": "Unauthorized: invalid token",
+    "turnstile_fix_tips": "Try this to fix: \n 1. Do a hard refresh (Mac: Cmd+Shift+R, Windows: Ctrl+F5) \n 2. Or resync your device clock \n 3. Or close all browser windows and restart your browser \n 4. Or try another browser, preferably without extensions \n 5. Or clear site data for this site",
+    "unauthorized": "Unauthorized",
+    "user_me_fetch_failed": "Unauthorized: user fetch failed"
   }
 }

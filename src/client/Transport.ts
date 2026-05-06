@@ -29,6 +29,7 @@ import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
+import { getEnglishText, translateText } from "./Utils";
 
 export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -378,8 +379,30 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (event.code === 1002) {
+        const connRefusedKey = `worker_error.connection_refused`;
+        let alertMsg = translateText(connRefusedKey);
+        const errorKey = `worker_error.${event.reason}`;
+        alertMsg += `: ${translateText(errorKey)}`;
+
+        // Add tips if turnstile token invalid
+        if (event.reason === "turnstile_invalid") {
+          alertMsg += `\n\n${translateText("worker_error.turnstile_fix_tips")}`;
+        }
+
+        // Append English error if it differs, for screenshots posted by users
+        const englishMsg = getEnglishText(errorKey);
+        if (!alertMsg.includes(englishMsg)) {
+          const englishConnRefusedMsg = getEnglishText(connRefusedKey);
+          alertMsg += `\n\n--- English ---\n${englishConnRefusedMsg}: `;
+          if (englishMsg !== errorKey) {
+            alertMsg += `${englishMsg}`;
+          } else if (englishMsg === errorKey) {
+            alertMsg += `${event.reason}`;
+          }
+        }
+
         // TODO: make this a modal
-        alert(`connection refused: ${event.reason}`);
+        alert(alertMsg);
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();

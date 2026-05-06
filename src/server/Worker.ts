@@ -330,16 +330,13 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(
-            1002,
-            "Unauthorized: invalid token \n\n Try this to fix: \n 1. Do a hard refresh (Mac: Cmd+Shift+R, Windows: Ctrl+F5) \n 2. Or resync your device clock \n 3. Or close all browser windows and restart your browser \n 4. Or try another browser, preferably without extensions \n 5. Or clear site data for this site",
-          );
+          ws.close(1002, "turnstile_invalid");
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1002, "Account Banned");
+          ws.close(1002, "account_banned");
           return;
         }
 
@@ -358,7 +355,7 @@ export async function startWorker() {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            ws.close(1002, "Game not found");
+            ws.close(1002, "game_not_found");
           }
           return;
         }
@@ -388,7 +385,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
+            ws.close(1002, "unauthorized");
             return;
           }
         } else {
@@ -399,7 +396,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: user me fetch failed");
+            ws.close(1002, "user_me_fetch_failed");
             return;
           }
           flares = result.response.player.flares;
@@ -412,7 +409,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1002, "Forbidden");
+              ws.close(1002, "forbidden");
               return;
             }
           }
@@ -446,10 +443,7 @@ export async function startWorker() {
                 gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
-              ws.close(
-                1002,
-                "Unauthorized: Turnstile token rejected \n\n Try this to fix: \n 1. Do a hard refresh (Mac: Cmd+Shift+R, Windows: Ctrl+F5) \n 2. Or resync your device clock \n 3. Or close all browser windows and restart your browser \n 4. Or try another browser, preferably without extensions \n 5. Or clear site data for this site",
-              );
+              ws.close(1002, "turnstile_invalid");
               return;
             case "error":
               // Fail open, allow the client to join.
@@ -479,19 +473,19 @@ export async function startWorker() {
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1002, "Game not found");
+          ws.close(1002, "game_not_found");
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Cannot join game");
+          ws.close(1002, "cannot_join_game");
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Lobby full");
+          ws.close(1002, "lobby_full");
         }
 
         // Handle other message types
