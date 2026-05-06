@@ -593,7 +593,7 @@ func packTerrain(ctx context.Context, terrain [][]Terrain) (data []byte, numLand
 			if tile.Type == Land {
 				packedByte |= byte(math.Min(math.Ceil(tile.Magnitude), 31))
 			} else {
-				packedByte |= byte(math.Min(math.Ceil(tile.Magnitude/2), 31))
+				packedByte |= byte(math.Min(math.Ceil(tile.Magnitude/2), 11))
 			}
 
 			packedData[y*width+x] = packedByte
