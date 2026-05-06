@@ -212,6 +212,20 @@ export async function startWorker() {
 
   // Add other endpoints from your original server
   app.post("/api/start_game/:id", async (req, res) => {
+    // SEC-02: Verify the caller before touching any game state.
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ error: "Authorization header required to start a game" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const result = await verifyClientToken(token, config);
+    if (result.type === "error") {
+      log.warn(`Invalid token for start_game: ${result.message}`);
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
     log.info(`starting private lobby with id ${req.params.id}`);
     const game = gm.game(req.params.id);
     if (!game) {
@@ -226,18 +240,8 @@ export async function startWorker() {
       return res.status(400).json({ error: "Cannot start public game" });
     }
 
-    // SEC-02: Verify that the caller is the lobby creator
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res
-        .status(401)
-        .json({ error: "Authorization header required to start a game" });
-    }
-    const token = authHeader.substring("Bearer ".length);
-    const result = await verifyClientToken(token, config);
-    if (result.type === "error") {
-      log.warn(`Invalid token for start_game: ${result.message}`);
-      return res.status(401).json({ error: "Invalid token" });
+    if (game.hasStarted()) {
+      return res.status(409).json({ error: "Game already started" });
     }
 
     const callerPersistentId = result.persistentId;

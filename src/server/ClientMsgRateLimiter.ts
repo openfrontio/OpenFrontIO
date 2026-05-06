@@ -12,8 +12,7 @@ export type RateLimitResult = "ok" | "limit" | "kick";
 interface ClientBucket {
   perSecond: RateLimiter;
   perMinute: RateLimiter;
-  totalBytes: number;
-  byteWindowStart: number;
+  byteEvents: Array<{ at: number; bytes: number }>;
 }
 
 export class ClientMsgRateLimiter {
@@ -27,18 +26,19 @@ export class ClientMsgRateLimiter {
   ): RateLimitResult {
     const bucket = this.getOrCreate(clientID);
 
-    // Reset the byte counter if the current window has elapsed.
-    // This prevents legitimate long-running clients from being
-    // kicked after accumulating bytes over the entire game duration.
+    // Rolling-window byte accounting: evict events older than BYTE_WINDOW_MS
+    // so throughput is measured over a true sliding window instead of
+    // a fixed window that allows burst bypass at boundaries.
     const now = Date.now();
-    if (now - bucket.byteWindowStart >= BYTE_WINDOW_MS) {
-      bucket.totalBytes = 0;
-      bucket.byteWindowStart = now;
+    const cutoff = now - BYTE_WINDOW_MS;
+    while (bucket.byteEvents.length > 0 && bucket.byteEvents[0].at < cutoff) {
+      bucket.byteEvents.shift();
     }
 
-    bucket.totalBytes += bytes;
+    bucket.byteEvents.push({ at: now, bytes });
 
-    if (bucket.totalBytes >= TOTAL_BYTES) return "kick";
+    const totalBytes = bucket.byteEvents.reduce((sum, e) => sum + e.bytes, 0);
+    if (totalBytes >= TOTAL_BYTES) return "kick";
 
     if (type === "intent") {
       // Config updates are lobby-only and not stored in turn history,
@@ -80,8 +80,7 @@ export class ClientMsgRateLimiter {
         tokensPerInterval: INTENTS_PER_MINUTE,
         interval: "minute",
       }),
-      totalBytes: 0,
-      byteWindowStart: Date.now(),
+      byteEvents: [],
     };
     this.buckets.set(clientID, bucket);
     return bucket;
