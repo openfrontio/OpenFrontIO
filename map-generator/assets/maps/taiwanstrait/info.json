@@ -1,0 +1,126 @@
+{
+  "name": "strait",
+  "width": 2000,
+  "height": 1414,
+  "nations": [
+    {
+      "coordinates": [507, 357],
+      "name": "Xiamen",
+      "strength": 1,
+      "flag": "xiamen"
+    },
+    {
+      "coordinates": [1068, 725],
+      "name": "Penghu",
+      "strength": 1,
+      "flag": "penghu"
+    },
+    {
+      "coordinates": [1387, 792],
+      "name": "Chiayi",
+      "strength": 1,
+      "flag": "chiayi"
+    },
+    {
+      "coordinates": [1306, 980],
+      "name": "Tainan",
+      "strength": 1,
+      "flag": "tainan"
+    },
+    {
+      "coordinates": [1406, 1150],
+      "name": "Kaohsiung",
+      "strength": 1,
+      "flag": "kaohsiung"
+    },
+    {
+      "coordinates": [1376, 549],
+      "name": "Taichung",
+      "strength": 1,
+      "flag": "taichung"
+    },
+    {
+      "coordinates": [1638, 1000],
+      "name": "Taitung",
+      "strength": 1,
+      "flag": "taitung"
+    },
+    {
+      "coordinates": [1540, 273],
+      "name": "Hsinchu",
+      "strength": 1,
+      "flag": "hsinchu"
+    },
+    {
+      "coordinates": [1777, 584],
+      "name": "Hualien",
+      "strength": 1,
+      "flag": "hualien"
+    },
+    {
+      "coordinates": [1770, 153],
+      "name": "Taipei",
+      "strength": 1,
+      "flag": "taipei"
+    },
+    {
+      "coordinates": [1659, 179],
+      "name": "Taoyuan",
+      "strength": 1,
+      "flag": "taoyuan"
+    },
+    {
+      "coordinates": [366, 400],
+      "name": "Zhangzhou",
+      "strength": 1,
+      "flag": "zhangzhou"
+    },
+    {
+      "coordinates": [690, 214],
+      "name": "Quanzhou",
+      "strength": 1,
+      "flag": "quanzhou"
+    },
+    {
+      "coordinates": [199, 173],
+      "name": "Longyan",
+      "strength": 1,
+      "flag": "longyan"
+    },
+    {
+      "coordinates": [29, 783],
+      "name": "Shantou",
+      "strength": 1,
+      "flag": "shantou"
+    },
+    {
+      "coordinates": [1582, 669],
+      "name": "Nantou County",
+      "strength": 1,
+      "flag": "nantou_county"
+    },
+    {
+      "coordinates": [624, 373],
+      "name": "Kinmen Island",
+      "strength": 1,
+      "flag": "kinmen_island"
+    },
+    {
+      "coordinates": [880, 26],
+      "name": "Putian",
+      "strength": 1,
+      "flag": "putian"
+    },
+    {
+      "coordinates": [1895, 111],
+      "name": "Keelung",
+      "strength": 1,
+      "flag": "keelung"
+    },
+    {
+      "coordinates": [49, 381],
+      "name": "Giant Pandas",
+      "strength": 1
+    }
+  ]
+}

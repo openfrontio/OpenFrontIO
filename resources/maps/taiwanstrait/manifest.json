@@ -1,0 +1,129 @@
+{
+  "name": "taiwanstrait",
+  "nations": [
+    {
+      "name": "Taipei",
+      "flag": "tw",
+      "coordinates": [2655, 624]
+    },
+    {
+      "name": "Keelung",
+      "flag": "tw",
+      "coordinates": [2827, 616]
+    },
+    {
+      "name": "Taoyuan",
+      "flag": "tw",
+      "coordinates": [2501, 664]
+    },
+    {
+      "name": "Hsinchu",
+      "flag": "tw",
+      "coordinates": [2343, 841]
+    },
+    {
+      "name": "Hualien",
+      "flag": "tw",
+      "coordinates": [2650, 1245]
+    },
+    {
+      "name": "Taitung",
+      "flag": "tw",
+      "coordinates": [2469, 1802]
+    },
+    {
+      "name": "Penghu",
+      "flag": "tw",
+      "coordinates": [1756, 1381]
+    },
+    {
+      "name": "Taichung City",
+      "flag": "tw",
+      "coordinates": [2150, 1168]
+    },
+    {
+      "name": "Chiayi",
+      "flag": "tw",
+      "coordinates": [2180, 1434]
+    },
+    {
+      "name": "Tainan",
+      "flag": "tw",
+      "coordinates": [2087, 1672]
+    },
+    {
+      "name": "Kaohsiung",
+      "flag": "tw",
+      "coordinates": [2145, 1861]
+    },
+    {
+      "name": "Kinmen Island",
+      "flag": "tw",
+      "coordinates": [1182, 918]
+    },
+    {
+      "name": "Xiamen",
+      "flag": "cn",
+      "coordinates": [983, 891]
+    },
+    {
+      "name": "Zhangzhou",
+      "flag": "cn",
+      "coordinates": [811, 934]
+    },
+    {
+      "name": "Longyan",
+      "flag": "cn",
+      "coordinates": [484, 653]
+    },
+    {
+      "name": "Giant Pandas",
+      "coordinates": [174, 969]
+    },
+    {
+      "name": "Shantou",
+      "flag": "cn",
+      "coordinates": [412, 1424]
+    },
+    {
+      "name": "Jieyang",
+      "flag": "cn",
+      "coordinates": [229, 1473]
+    },
+    {
+      "name": "Fuzhou",
+      "flag": "cn",
+      "coordinates": [1611, 73]
+    },
+    {
+      "name": "Quanzhou",
+      "flag": "cn",
+      "coordinates": [1315, 666]
+    },
+    {
+      "name": "Putian",
+      "flag": "cn",
+      "coordinates": [1507, 463]
+    }
+  ],
+  "metadata": {
+    "author": "crunchybbbbb",
+    "description": "strait of taiwan"
+  },
+  "generatedAt": "2026-05-06T01:08:17.045Z",
+  "map": {
+    "width": 3000,
+    "height": 2280,
+    "num_land_tiles": 2797741
+  },
+  "map4x": {
+    "width": 1500,
+    "height": 1140,
+    "num_land_tiles": 696062
+  },
+  "map16x": {
+    "width": 750,
+    "height": 570,
+    "num_land_tiles": 172409
+  }
+}
