@@ -126,9 +126,8 @@ export class OModal extends LitElement {
       !this.inline && this.maxWidth ? `max-width: ${this.maxWidth};` : "";
 
     const hasTabs = this.tabs.length > 0;
-    const sectionClass = hasTabs
-      ? "relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden"
-      : "relative flex-1 min-h-0 flex flex-col text-white bg-[#23232382] backdrop-blur-md lg:rounded-lg overflow-hidden";
+    const sectionClass =
+      "relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden";
 
     return html`
       <aside
@@ -158,7 +157,7 @@ export class OModal extends LitElement {
           <section class="${sectionClass}">
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}
-            <div class="flex-1 min-h-0 overflow-y-auto p-0 lg:p-[1.4rem]">
+            <div class="flex-1 min-h-0 overflow-y-auto">
               <slot></slot>
             </div>
           </section>

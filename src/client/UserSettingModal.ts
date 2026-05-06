@@ -343,7 +343,9 @@ export class UserSettingModal extends BaseModal {
             showDivider: true,
           })}
         </div>
-        <div class="flex flex-col gap-2">${activeContent}</div>
+        <div class="flex flex-col gap-2 p-4 lg:p-[1.4rem]">
+          ${activeContent}
+        </div>
       </o-modal>
     `;
   }
