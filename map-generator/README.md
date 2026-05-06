@@ -35,9 +35,9 @@ the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
 
 6. Find the output folder at `../resources/maps/<map_name>`
 7. Go back to the root directory: `cd ..`
-8. Run Prettier: `npm run format`
+8. Run the default formatter: `npm run format`
    This rewrites ALL files in place. Git figures out which files are actually changed, don't worry.
-   Alternatively, you can either run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
+   Alternatively, while the formatter migration is in progress, you can run Prettier per file: `npx prettier --write resources/maps/<map_name>/<file_name>` or in VSCode install the Prettier extension and per file do Show and run Commands > Format Document.
 
 ## Output Files
 
