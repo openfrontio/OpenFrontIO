@@ -383,7 +383,7 @@ export class Transport {
         const errorKey = `worker_error.${event.reason}`;
 
         let alertMsg = `${translateText(connRefusedKey)}: `;
-        let translatedError = translateText(errorKey);
+        const translatedError = translateText(errorKey);
 
         if (translatedError === errorKey) {
           // No translation key in error.reason or no translation or default English found
