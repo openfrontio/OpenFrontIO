@@ -97,7 +97,7 @@
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.4.1",
+    "express-rate-limit": "^8.5.1",
     "fastpriorityqueue": "^0.8.0",
     "howler": "^2.2.4",
     "intl-messageformat": "^11.2.3",
