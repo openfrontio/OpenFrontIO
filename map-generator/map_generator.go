@@ -150,6 +150,9 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 			}
 		}
 	}
+	// Image data is no longer needed; release it for GC.
+	img = nil
+	args.ImageBuffer = nil
 
 	removeSmallIslands(ctx, terrain, minIslandSize, args.RemoveSmall)
 	processWater(ctx, terrain, args.RemoveSmall)
@@ -172,8 +175,11 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 	}
 
 	mapData, mapNumLandTiles := packTerrain(ctx, terrain)
+	terrain = nil
 	mapData4x, numLandTiles4x := packTerrain(ctx, terrain4x)
+	terrain4x = nil
 	mapData16x, numLandTiles16x := packTerrain(ctx, terrain16x)
+	terrain16x = nil
 
 	logger.Debug(fmt.Sprintf("Land Tile Count (1x): %d", mapNumLandTiles))
 	logger.Debug(fmt.Sprintf("Land Tile Count (4x): %d", numLandTiles4x))
