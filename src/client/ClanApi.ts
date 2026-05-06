@@ -109,7 +109,7 @@ export async function fetchClans(
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
-    if (search && search.length >= 3) params.set("search", search);
+    if (search && search.length >= 2) params.set("search", search);
     const res = await clanFetch(`/clans?${params}`);
     if (!res.ok) return false;
     const json = await res.json();

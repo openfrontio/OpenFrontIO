@@ -193,20 +193,6 @@ describe("fetchClans", () => {
     expect(url.searchParams.get("search")).toBe("abc");
   });
 
-  it("omits search param for 2-char query (below min length of 3)", async () => {
-    const fetchSpy = vi.fn(
-      (_input: string | URL | Request, _init?: RequestInit) =>
-        Promise.resolve(okJson(browseResponse)),
-    );
-    vi.stubGlobal("fetch", fetchSpy);
-
-    await fetchClans("AB", 1, 20);
-
-    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-    const url = new URL(calledUrl);
-    expect(url.searchParams.get("search")).toBeNull();
-  });
-
   it("omits search param when too short and non-alphanumeric", async () => {
     const fetchSpy = vi.fn(
       (_input: string | URL | Request, _init?: RequestInit) =>
