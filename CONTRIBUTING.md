@@ -68,7 +68,7 @@ git checkout -b fix/issue-number-bug-name
 
 ### Coding Standards
 
-We enforce code quality using ESLint and Prettier.
+We enforce code quality using Oxlint, ESLint, and Prettier. ESLint remains during the Oxlint migration as a compatibility backstop.
 
 - **Format Code**:
   ```bash
