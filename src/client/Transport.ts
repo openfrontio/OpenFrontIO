@@ -380,24 +380,26 @@ export class Transport {
       );
       if (event.code === 1002) {
         const connRefusedKey = `worker_error.connection_refused`;
-        let alertMsg = translateText(connRefusedKey);
         const errorKey = `worker_error.${event.reason}`;
-        alertMsg += `: ${translateText(errorKey)}`;
 
-        // Add tips if turnstile token invalid
-        if (event.reason === "turnstile_invalid") {
-          alertMsg += `\n\n${translateText("worker_error.turnstile_fix_tips")}`;
-        }
+        let alertMsg = `${translateText(connRefusedKey)}: `;
+        let translatedError = translateText(errorKey);
 
-        // Append English error if it differs, for screenshots posted by users
-        const englishMsg = getEnglishText(errorKey);
-        if (!alertMsg.includes(englishMsg)) {
-          const englishConnRefusedMsg = getEnglishText(connRefusedKey);
-          alertMsg += `\n\n--- English ---\n${englishConnRefusedMsg}: `;
-          if (englishMsg !== errorKey) {
-            alertMsg += `${englishMsg}`;
-          } else if (englishMsg === errorKey) {
-            alertMsg += `${event.reason}`;
+        if (translatedError === errorKey) {
+          // No translation key in error.reason or no translation or default English found
+          alertMsg += `${event.reason}`;
+        } else {
+          alertMsg += translatedError;
+
+          // Add tips if token invalid
+          if (event.reason === "turnstile_invalid") {
+            alertMsg += `\n${translateText("worker_error.turnstile_fix_tips")}`;
+          }
+
+          // Append English translation if it differs
+          const englishMsg = getEnglishText(errorKey);
+          if (englishMsg !== errorKey && !alertMsg.includes(englishMsg)) {
+            alertMsg += `\n\n--- English ---\n${getEnglishText(connRefusedKey)}: ${englishMsg}`;
           }
         }
 

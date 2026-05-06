@@ -1224,7 +1224,7 @@
     "account_banned": "Account Banned",
     "cannot_join_game": "Cannot join game",
     "connection_refused": "Connection refused",
-    "flare_forbidden": "Forbidden",
+    "forbidden": "Forbidden",
     "game_not_found": "Game not found",
     "lobby_full": "Lobby full",
     "turnstile_invalid": "Unauthorized: invalid token",
