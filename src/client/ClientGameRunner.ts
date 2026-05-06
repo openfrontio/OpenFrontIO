@@ -454,7 +454,7 @@ export class ClientGameRunner {
       this.transport.rejoinGame(this.turnsSeen);
     };
 
-    let hasGoneToPlayer = this.userSettings.goToPlayer();
+    let hasGoneToPlayer = !this.userSettings.goToPlayer();
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
