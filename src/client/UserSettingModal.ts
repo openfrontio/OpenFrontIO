@@ -664,7 +664,17 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
-        action=${KeybindAction.swapDirection}
+        action==${KeybindAction.retaliateAttack}
+        label=${translateText("user_setting.retaliate_attack")}
+        description=${translateText("user_setting.retaliate_attack_desc")}
+        defaultKey=${this.defaultKeybinds.retaliateAttack}
+        .value=${this.getKeyValue("retaliateAttack")}
+        .display=${this.getKeyChar("retaliateAttack")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="swapDirection"
         label=${translateText("user_setting.swap_direction")}
         description=${translateText("user_setting.swap_direction_desc")}
         .defaultKey=${this.defaultKeybinds.swapDirection}

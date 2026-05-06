@@ -131,7 +131,7 @@ export class GameRunner {
     this.currTurn++;
 
     let updates: GameUpdates;
-    let tickExecutionDuration: number = 0;
+    let tickExecutionDuration: number;
 
     try {
       const startTime = performance.now();

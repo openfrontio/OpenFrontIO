@@ -9,7 +9,7 @@ import {
 import { UIState } from "../src/client/graphics/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
-import { GameView } from "../src/core/game/GameView";
+import { GameView, PlayerView } from "../src/core/game/GameView";
 import {
   KEYBINDS_KEY,
   KeyUnbound,
@@ -54,7 +54,6 @@ describe("InputHandler AutoUpgrade", () => {
     testSettings = new UserSettings();
     testSettings.removeUserKeybinds(false);
 
-    mockGameView = { inSpawnPhase: () => false } as GameView;
     mockUIState = {
       attackRatio: 20,
       ghostStructure: null,
@@ -62,6 +61,10 @@ describe("InputHandler AutoUpgrade", () => {
       overlappingRailroads: [],
       ghostRailPaths: [],
     };
+    mockGameView = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+    } as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
@@ -635,6 +638,17 @@ describe("InputHandler AutoUpgrade", () => {
         new KeyboardEvent("keyup", { code: "Numpad0", key: "0" }),
       );
       expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.MIRV);
+    });
+
+    test("does not set ghost structure when the player is dead", () => {
+      mockGameView.myPlayer = () =>
+        ({ isAlive: () => false }) as unknown as PlayerView;
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Numpad1", key: "1" }),
+      );
+
+      expect(inputHandler["uiState"].ghostStructure).toBeNull();
     });
   });
 

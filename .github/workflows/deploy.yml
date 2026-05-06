@@ -138,7 +138,6 @@ jobs:
           CDN_BASE: ${{ vars.CDN_BASE }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
-          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
