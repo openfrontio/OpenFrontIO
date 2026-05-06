@@ -1221,7 +1221,7 @@
     "exit": "Exit fullscreen"
   },
   "worker_error": {
-    "account_banned": "Account Banned",    
+    "account_banned": "Account Banned",
     "cannot_join_game": "Cannot join game",
     "connection_refused": "Connection refused",
     "flare_forbidden": "Forbidden",
