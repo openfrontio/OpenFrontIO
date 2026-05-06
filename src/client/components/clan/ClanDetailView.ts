@@ -31,6 +31,7 @@ import {
   renderStat,
   showToast,
 } from "./ClanShared";
+import { ClanStatsBreakdown } from "./ClanStatsBreakdown";
 
 @customElement("clan-detail-view")
 export class ClanDetailView extends LitElement {
@@ -67,6 +68,7 @@ export class ClanDetailView extends LitElement {
   @state() private clanStats: ClanStats | null = null;
   @state() private loading = false;
   @state() private actionPending = false;
+  @state() private allStatsExpanded = false;
   private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private asyncGeneration = 0;
@@ -94,6 +96,14 @@ export class ClanDetailView extends LitElement {
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     super.disconnectedCallback();
+  }
+
+  protected updated() {
+    if (this.allStatsExpanded) {
+      this.querySelectorAll<ClanStatsBreakdown>("clan-stats-breakdown").forEach(
+        (el) => el.setAllExpanded(true),
+      );
+    }
   }
 
   private async loadDetail() {
@@ -430,13 +440,37 @@ export class ClanDetailView extends LitElement {
     `;
   }
 
+  private toggleAllStats() {
+    this.allStatsExpanded = !this.allStatsExpanded;
+    const target = this.allStatsExpanded;
+    this.querySelectorAll<ClanStatsBreakdown>("clan-stats-breakdown").forEach(
+      (el) => el.setAllExpanded(target),
+    );
+  }
+
   private renderMembersList() {
     const filtered = filterMembersBySearch(this.members, this.memberSearch);
+    const toggleLabel = translateText(
+      this.allStatsExpanded
+        ? "clan_modal.stats_collapse_all"
+        : "clan_modal.stats_expand_all",
+    );
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
-        <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
-          ${translateText("clan_modal.members")}
-        </h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+            ${translateText("clan_modal.members")}
+          </h3>
+          <button
+            type="button"
+            @click=${() => this.toggleAllStats()}
+            class="text-[10px] font-bold text-white/50 hover:text-white uppercase tracking-wider px-2 py-1 rounded-md border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors"
+            title=${toggleLabel}
+            aria-pressed=${this.allStatsExpanded}
+          >
+            ${toggleLabel}
+          </button>
+        </div>
         ${renderMemberSearchInput(
           (e: Event) => this.onSearchInput(e),
           undefined,

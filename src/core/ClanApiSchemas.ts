@@ -55,10 +55,35 @@ export const ClanMemberStatsSchema = z.object({
   ffa: ClanMemberWLSchema,
   team: ClanMemberWLSchema,
   hvn: ClanMemberWLSchema,
+  duos: ClanMemberWLSchema,
+  trios: ClanMemberWLSchema,
+  quads: ClanMemberWLSchema,
+  "2": ClanMemberWLSchema,
+  "3": ClanMemberWLSchema,
+  "4": ClanMemberWLSchema,
+  "5": ClanMemberWLSchema,
+  "6": ClanMemberWLSchema,
+  "7": ClanMemberWLSchema,
   ranked: ClanMemberWLSchema,
   "1v1": ClanMemberWLSchema,
 });
 export type ClanMemberStats = z.infer<typeof ClanMemberStatsSchema>;
+
+export const TEAM_BREAKDOWN_KEYS = [
+  "duos",
+  "trios",
+  "quads",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+] as const satisfies readonly (keyof ClanMemberStats)[];
+
+export const RANKED_BREAKDOWN_KEYS = [
+  "1v1",
+] as const satisfies readonly (keyof ClanMemberStats)[];
 
 export const ClanMemberSchema = z.object({
   role: z.enum(["leader", "officer", "member"]),

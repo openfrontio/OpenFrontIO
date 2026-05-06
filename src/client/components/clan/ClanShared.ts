@@ -8,6 +8,7 @@ import type {
   ClanStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
+import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
 
@@ -91,15 +92,7 @@ export function renderClanWL(stats: ClanStats): TemplateResult | string {
       <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
         ${translateText("clan_modal.statistics")}
       </h3>
-      <div class="space-y-1.5">
-        ${statBuckets.map(({ key, labelKey }) =>
-          renderWLBarRow(
-            translateText(labelKey),
-            stats.stats[key].wins,
-            stats.stats[key].losses,
-          ),
-        )}
-      </div>
+      <clan-stats-breakdown .stats=${stats.stats}></clan-stats-breakdown>
     </div>
   `;
 }
@@ -329,16 +322,7 @@ export function renderMemberPagination(
   `;
 }
 
-const statBuckets = [
-  { key: "total" as const, labelKey: "clan_modal.stats_total" },
-  { key: "ffa" as const, labelKey: "clan_modal.stats_ffa" },
-  { key: "team" as const, labelKey: "clan_modal.stats_team" },
-  { key: "hvn" as const, labelKey: "clan_modal.stats_hvn" },
-  { key: "ranked" as const, labelKey: "clan_modal.stats_ranked" },
-  { key: "1v1" as const, labelKey: "clan_modal.stats_1v1" },
-];
-
-function renderWLBarRow(
+export function renderWLBarRow(
   label: string,
   wins: number,
   losses: number,
@@ -362,26 +346,30 @@ function renderWLBarRow(
         ${label}
       </span>
       <div
-        class="flex-1 flex h-5 rounded-md overflow-hidden bg-white/5 text-[11px] font-bold text-white tabular-nums"
+        class="relative flex-1 h-5 rounded-md overflow-hidden bg-white/5"
         role="img"
         aria-label="${wins} wins, ${losses} losses"
       >
-        ${wins > 0
-          ? html`<div
-              class="bg-malibu-blue flex items-center px-1.5 overflow-hidden whitespace-nowrap"
-              style="width:${winPct}%"
-            >
-              ${wins}W
-            </div>`
-          : ""}
-        ${losses > 0
-          ? html`<div
-              class="bg-red-500 flex items-center justify-end px-1.5 overflow-hidden whitespace-nowrap"
-              style="width:${lossPct}%"
-            >
-              ${losses}L
-            </div>`
-          : ""}
+        <div class="absolute inset-0 flex">
+          ${wins > 0
+            ? html`<div
+                class="bg-malibu-blue h-full"
+                style="width:${winPct}%"
+              ></div>`
+            : ""}
+          ${losses > 0
+            ? html`<div
+                class="bg-red-500 h-full"
+                style="width:${lossPct}%"
+              ></div>`
+            : ""}
+        </div>
+        <div
+          class="absolute inset-0 flex items-center justify-between px-1.5 text-[11px] font-bold text-white tabular-nums whitespace-nowrap pointer-events-none"
+        >
+          <span>${wins > 0 ? `${wins}W` : ""}</span>
+          <span>${losses > 0 ? `${losses}L` : ""}</span>
+        </div>
       </div>
       <span
         class="text-xs font-bold shrink-0 tabular-nums w-9 text-right ${rateClass}"
@@ -397,14 +385,8 @@ export function renderMemberStats(
 ): TemplateResult | string {
   if (!stats) return "";
   return html`
-    <div class="mt-1.5 space-y-1">
-      ${statBuckets.map(({ key, labelKey }) =>
-        renderWLBarRow(
-          translateText(labelKey),
-          stats[key].wins,
-          stats[key].losses,
-        ),
-      )}
+    <div class="mt-1.5">
+      <clan-stats-breakdown .stats=${stats}></clan-stats-breakdown>
     </div>
   `;
 }
