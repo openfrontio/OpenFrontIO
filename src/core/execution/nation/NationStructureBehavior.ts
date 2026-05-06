@@ -134,11 +134,25 @@ export class NationStructureBehavior {
   private _hasHighStartingGold: boolean | null = null;
   private _postSaveUpStartTick: number | null = null;
 
+  private attackStressMeter = 0;
+  private lastAttackCheckTick = 0;
   constructor(
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
   ) {}
+  private isThreatenedByAttack(ratio: number): boolean {
+    const currentTick = this.game.ticks();
+    const elapsed = this.lastAttackCheckTick === 0 ? 0 : currentTick - this.lastAttackCheckTick;
+    this.lastAttackCheckTick = currentTick;
+
+    // Cooldown by 1x elapsed. If attacked (>5%), heat up by 3x elapsed (net +2x per tick)
+    this.attackStressMeter = Math.max(0, this.attackStressMeter - elapsed);
+    if (ratio > 0.05) this.attackStressMeter += elapsed * 3;
+
+    // 200 stress = approx 10 seconds of sustained fighting
+    return ratio >= UNDER_ATTACK_THREAT_RATIO || (this.attackStressMeter > 200 && ratio > 0);
+  }
 
   handleStructures(): boolean {
     // Defense posts are handled outside the normal pacing/counter system:
@@ -195,15 +209,15 @@ export class NationStructureBehavior {
 
     const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
     const ratio = incomingTroops / ourTroops;
-    if (ratio < UNDER_ATTACK_THREAT_RATIO) return false;
+    
+    if (!this.isThreatenedByAttack(ratio)) return false;
 
     let allowed: number;
     if (difficulty === Difficulty.Medium) {
       allowed = 1;
     } else {
-      allowed = Math.ceil(ratio / DEFENSE_POST_RATIO_PER_POST);
+      allowed = Math.max(1, Math.ceil(ratio / DEFENSE_POST_RATIO_PER_POST));
     }
-
     const frontTiles = this.getAttackFrontTiles(landAttacks);
     if (this.countDefensePostsNearFront(frontTiles, allowed) >= allowed)
       return false;
@@ -236,7 +250,8 @@ export class NationStructureBehavior {
     const ourTroops = this.player.troops();
     if (ourTroops <= 0) return false;
     const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
-    return incomingTroops / ourTroops >= UNDER_ATTACK_THREAT_RATIO;
+    const ratio = incomingTroops / ourTroops;
+    return this.isThreatenedByAttack(ratio);
   }
 
   /**
