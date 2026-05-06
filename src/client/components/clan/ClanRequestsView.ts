@@ -129,7 +129,9 @@ export class ClanRequestsView extends LitElement {
         <div
           class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
         >
-          ${translateText("clan_modal.join_requests")}: ${this.requestsTotal}
+          ${translateText("clan_modal.pending_requests_count", {
+            count: this.requestsTotal,
+          })}
         </div>
         ${renderMemberSearchInput(
           (e) => this.onSearchInput(e),

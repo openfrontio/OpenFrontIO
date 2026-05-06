@@ -310,6 +310,7 @@
     "ban": "Ban",
     "unban": "Unban",
     "banned_players": "Banned Players",
+    "banned_players_count": "{count, plural, one {# banned player} other {# banned players}}",
     "no_bans": "No banned players.",
     "ban_reason_prompt": "Ban reason (optional, max 200 characters):",
     "confirm_ban": "Are you sure you want to ban this player? They will be removed from the clan and unable to rejoin.",

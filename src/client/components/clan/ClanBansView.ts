@@ -104,7 +104,9 @@ export class ClanBansView extends LitElement {
         <div
           class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
         >
-          ${translateText("clan_modal.banned_players")}: ${this.bansTotal}
+          ${translateText("clan_modal.banned_players_count", {
+            count: this.bansTotal,
+          })}
         </div>
         ${renderMemberSearchInput(
           (e) => this.onSearchInput(e),
