@@ -16,12 +16,10 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
-import { modalHeader } from "../ui/ModalHeader";
 import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
-  modalContainerClass,
   renderClanWL,
   renderLoadingSpinner,
   renderMemberPagination,
@@ -282,16 +280,7 @@ export class ClanDetailView extends LitElement {
 
   render() {
     if (this.loading) {
-      return html`
-        <div class="${modalContainerClass}">
-          ${modalHeader({
-            title: translateText("clan_modal.title"),
-            onBack: () => this.back(),
-            ariaLabel: translateText("common.back"),
-          })}
-          ${renderLoadingSpinner()}
-        </div>
-      `;
+      return renderLoadingSpinner();
     }
 
     const clan = this.selectedClan;
@@ -306,58 +295,40 @@ export class ClanDetailView extends LitElement {
     );
 
     return html`
-      <div class="${modalContainerClass}">
-        ${modalHeader({
-          title: clan.name,
-          onBack: () => this.back(),
-          ariaLabel: translateText("common.back"),
-          rightContent: html`
-            <span
-              class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
-            >
-              [${clan.tag}]
-            </span>
-          `,
-        })}
+      <div class="space-y-6">
+        <div class="bg-white/5 rounded-xl border border-white/10 p-5">
+          <p class="text-white/70 text-sm">
+            ${clan.description || translateText("clan_modal.no_description")}
+          </p>
+        </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
-          <div class="space-y-6">
-            <div class="bg-white/5 rounded-xl border border-white/10 p-5">
-              <p class="text-white/70 text-sm">
-                ${clan.description ||
-                translateText("clan_modal.no_description")}
-              </p>
-            </div>
+        <div class="grid grid-cols-2 gap-3">
+          ${renderStat(
+            translateText("clan_modal.members"),
+            `${clan.memberCount ?? 0}`,
+          )}
+          ${renderStat(
+            translateText("clan_modal.status"),
+            clan.isOpen
+              ? translateText("clan_modal.open")
+              : translateText("clan_modal.invite_only"),
+          )}
+        </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              ${renderStat(
-                translateText("clan_modal.members"),
-                `${clan.memberCount ?? 0}`,
-              )}
-              ${renderStat(
-                translateText("clan_modal.status"),
-                clan.isOpen
-                  ? translateText("clan_modal.open")
-                  : translateText("clan_modal.invite_only"),
-              )}
-            </div>
+        ${this.clanStats ? renderClanWL(this.clanStats) : ""}
+        ${canManageRequests && this.pendingRequestCount > 0
+          ? this.renderRequestsButton()
+          : ""}
+        ${isMember ? this.renderMembersList() : ""}
 
-            ${this.clanStats ? renderClanWL(this.clanStats) : ""}
-            ${canManageRequests && this.pendingRequestCount > 0
-              ? this.renderRequestsButton()
-              : ""}
-            ${isMember ? this.renderMembersList() : ""}
-
-            <div class="flex flex-wrap gap-3">
-              ${this.renderActionButtons(
-                isMember,
-                isLeader,
-                isOfficer,
-                hasPendingRequest,
-                clan,
-              )}
-            </div>
-          </div>
+        <div class="flex flex-wrap gap-3">
+          ${this.renderActionButtons(
+            isMember,
+            isLeader,
+            isOfficer,
+            hasPendingRequest,
+            clan,
+          )}
         </div>
       </div>
     `;
@@ -530,11 +501,5 @@ export class ClanDetailView extends LitElement {
       `);
     }
     return buttons;
-  }
-
-  private back() {
-    this.dispatchEvent(
-      new CustomEvent("navigate-back", { bubbles: true, composed: true }),
-    );
   }
 }

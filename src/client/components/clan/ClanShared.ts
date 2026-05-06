@@ -17,9 +17,6 @@ export function defaultOrderForSort(sort: ClanMemberSort): ClanMemberOrder {
   return sort === "default" ? "asc" : "desc";
 }
 
-export const modalContainerClass =
-  "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10";
-
 const dateCache = new Map<string, string>();
 
 export function formatClanDate(iso: string): string {

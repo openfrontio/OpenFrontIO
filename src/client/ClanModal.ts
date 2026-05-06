@@ -73,7 +73,7 @@ export class ClanModal extends BaseModal {
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })
-      : null;
+      : this.renderSubViewHeader();
     return html`
       <o-modal
         id="clan-modal"
@@ -86,9 +86,70 @@ export class ClanModal extends BaseModal {
         .onTabChange=${(key: string) => this.handleTabChange(key as Tab)}
       >
         ${header ? html`<div slot="header">${header}</div>` : ""}
-        ${this.renderInner()}
+        <div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>
       </o-modal>
     `;
+  }
+
+  private tagPill(tag: string) {
+    return html`<span
+      class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
+      >[${tag}]</span
+    >`;
+  }
+
+  private renderSubViewHeader() {
+    const clan = this.selectedClan;
+    const ariaLabel = translateText("common.back");
+    if (this.view === "my-requests") {
+      return modalHeader({
+        title: translateText("clan_modal.pending_applications"),
+        onBack: () => (this.view = "list"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "manage") {
+      return modalHeader({
+        title: translateText("clan_modal.manage_clan"),
+        onBack: () => (this.view = "detail"),
+        ariaLabel,
+        rightContent: clan ? this.tagPill(clan.tag) : undefined,
+      });
+    }
+    if (this.view === "transfer") {
+      return modalHeader({
+        title: translateText("clan_modal.transfer_leadership"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "requests") {
+      return modalHeader({
+        title: translateText("clan_modal.join_requests"),
+        onBack: () => (this.view = "detail"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "bans") {
+      return modalHeader({
+        title: translateText("clan_modal.banned_players"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+      });
+    }
+    // Default: detail
+    return modalHeader({
+      title: clan?.name ?? translateText("clan_modal.title"),
+      onBack: () => {
+        this.view = "list";
+        this.selectedClan = null;
+        this.selectedClanTag = "";
+        this.myRole = null;
+        this.detailCache = null;
+      },
+      ariaLabel,
+      rightContent: clan ? this.tagPill(clan.tag) : undefined,
+    });
   }
 
   private handleTabChange(tab: Tab) {
@@ -351,7 +412,7 @@ export class ClanModal extends BaseModal {
     }
 
     return html`
-      <div class="p-4 lg:p-6 space-y-3">
+      <div class="space-y-3">
         ${hasRequests ? this.renderPendingRequestsButton() : ""}
         ${this.myClans.map(
           (clan) => html`
