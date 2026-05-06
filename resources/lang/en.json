@@ -961,7 +961,11 @@
     "unit_captured_by_enemy": "Your {unit} was captured by {name}",
     "captured_enemy_unit": "Captured {unit} from {name}",
     "unit_destroyed": "Your {unit} was destroyed",
-    "no_boats_available": "No boats available, max {max}"
+    "no_boats_available": "No boats available, max {max}",
+    "atom_bomb_inbound": "{name} - atom bomb inbound",
+    "hydrogen_bomb_inbound": "{name} - hydrogen bomb inbound",
+    "naval_invasion_inbound": "Naval invasion incoming from {name} ({troops})",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV INBOUND ⚠️⚠️⚠️"
   },
   "player_type": {
     "player": "Player",

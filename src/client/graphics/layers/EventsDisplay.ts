@@ -733,8 +733,13 @@ export class EventsDisplay extends LitElement implements Layer {
 
     const unitView = this.game.unit(event.unitID);
 
+    let description = event.message;
+    if (event.message.startsWith("events_display.")) {
+      description = translateText(event.message, event.params ?? {});
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,

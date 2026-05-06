@@ -281,6 +281,7 @@ export interface UnitIncomingUpdate {
   message: string;
   messageType: MessageType;
   playerID: number;
+  params?: Record<string, string | number>;
 }
 
 export interface EmbargoUpdate {

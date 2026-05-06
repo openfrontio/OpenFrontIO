@@ -198,18 +198,18 @@ export class NukeExecution implements Execution {
         } else if (this.nukeType === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
-            // TODO TranslateText
-            `${this.player.displayName()} - atom bomb inbound`,
+            "events_display.atom_bomb_inbound",
             MessageType.NUKE_INBOUND,
             target.id(),
+            { name: this.player.displayName() },
           );
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
-            // TODO TranslateText
-            `${this.player.displayName()} - hydrogen bomb inbound`,
+            "events_display.hydrogen_bomb_inbound",
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
+            { name: this.player.displayName() },
           );
         }
 
