@@ -240,10 +240,6 @@ export async function startWorker() {
       return res.status(400).json({ error: "Cannot start public game" });
     }
 
-    if (game.hasStarted()) {
-      return res.status(409).json({ error: "Game already started" });
-    }
-
     const callerPersistentId = result.persistentId;
     const existingClientId =
       game.getClientIdForPersistentId(callerPersistentId);
@@ -252,15 +248,23 @@ export async function startWorker() {
       existingClientId !== game.gameInfo().lobbyCreatorClientID
     ) {
       log.warn(
-        `Unauthorized start_game attempt by ${callerPersistentId?.substring(0, 8)}`,
+        `Unauthorized start_game attempt by ${callerPersistentId.substring(0, 8)}`,
       );
       return res
         .status(403)
         .json({ error: "Only the lobby creator can start the game" });
     }
 
-    game.start();
-    res.status(200).json({ success: true });
+    try {
+      if (game.hasStarted()) {
+        return res.status(409).json({ error: "Game already started" });
+      }
+      game.start();
+      res.status(200).json({ success: true });
+    } catch (error) {
+      log.error(`Error starting game ${req.params.id}:`, error);
+      return res.status(500).json({ error: "Failed to start game" });
+    }
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {

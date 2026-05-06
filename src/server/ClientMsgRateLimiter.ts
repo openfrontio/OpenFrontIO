@@ -13,6 +13,7 @@ interface ClientBucket {
   perSecond: RateLimiter;
   perMinute: RateLimiter;
   byteEvents: Array<{ at: number; bytes: number }>;
+  totalBytes: number;
 }
 
 export class ClientMsgRateLimiter {
@@ -32,13 +33,14 @@ export class ClientMsgRateLimiter {
     const now = Date.now();
     const cutoff = now - BYTE_WINDOW_MS;
     while (bucket.byteEvents.length > 0 && bucket.byteEvents[0].at < cutoff) {
-      bucket.byteEvents.shift();
+      const evicted = bucket.byteEvents.shift()!;
+      bucket.totalBytes -= evicted.bytes;
     }
 
     bucket.byteEvents.push({ at: now, bytes });
+    bucket.totalBytes += bytes;
 
-    const totalBytes = bucket.byteEvents.reduce((sum, e) => sum + e.bytes, 0);
-    if (totalBytes >= TOTAL_BYTES) return "kick";
+    if (bucket.totalBytes >= TOTAL_BYTES) return "kick";
 
     if (type === "intent") {
       // Config updates are lobby-only and not stored in turn history,
@@ -81,6 +83,7 @@ export class ClientMsgRateLimiter {
         interval: "minute",
       }),
       byteEvents: [],
+      totalBytes: 0,
     };
     this.buckets.set(clientID, bucket);
     return bucket;

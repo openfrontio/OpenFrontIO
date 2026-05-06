@@ -80,6 +80,8 @@ describe("AttackRetreatStats", () => {
       game.executeNextTick();
       maxTicks--;
     }
+    // Make sure the loop ended because the attack finished, not because we ran out of ticks.
+    expect(player1.outgoingAttacks().length).toBe(0);
 
     // Verify attackCancel was NOT called
     expect(attackCancelSpy).not.toHaveBeenCalled();
