@@ -96,8 +96,8 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Antarctica: 1,
   ArchipelagoSea: 3,
   BajaCalifornia: 4,
-  TaiwanStrait: 4,
   MiddleEast: 8,
+  TaiwanStrait: 4,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [

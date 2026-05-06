@@ -169,8 +169,8 @@ export enum GameMapType {
   Antarctica = "Antarctica",
   ArchipelagoSea = "ArchipelagoSea",
   BajaCalifornia = "Baja California",
-  TaiwanStrait = "Taiwan Strait",
   MiddleEast = "Middle East",
+  TaiwanStrait = "Taiwan Strait",
 }
 
 export type GameMapName = keyof typeof GameMapType;
