@@ -319,51 +319,10 @@ export class UserSettingModal extends BaseModal {
         ? this.renderBasicSettings()
         : this.renderKeybindSettings();
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <div
-          class="relative flex flex-col border-b border-white/10 lg:pb-4 shrink-0"
-        >
-          ${modalHeader({
-            title: translateText("user_setting.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-            showDivider: true,
-          })}
-
-          <div class="hidden lg:flex items-center gap-2 justify-center mt-4">
-            <button
-              class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-                .activeTab === "basic"
-                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
-                : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-              @click=${() => (this.activeTab = "basic")}
-            >
-              ${translateText("user_setting.tab_basic")}
-            </button>
-            <button
-              class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-                .activeTab === "keybinds"
-                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
-                : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-              @click=${() => (this.activeTab = "keybinds")}
-            >
-              ${translateText("user_setting.tab_keybinds")}
-            </button>
-          </div>
-        </div>
-
-        <div
-          class="pt-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
-        >
-          <div class="flex flex-col gap-2">${activeContent}</div>
-        </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
+    const tabs = [
+      { key: "basic", label: translateText("user_setting.tab_basic") },
+      { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
+    ];
 
     return html`
       <o-modal
@@ -371,8 +330,20 @@ export class UserSettingModal extends BaseModal {
         ?inline=${this.inline}
         hideCloseButton
         hideHeader
+        .tabs=${tabs}
+        .activeTab=${this.activeTab}
+        .onTabChange=${(key: string) =>
+          (this.activeTab = key as "basic" | "keybinds")}
       >
-        ${content}
+        <div slot="header">
+          ${modalHeader({
+            title: translateText("user_setting.title"),
+            onBack: () => this.close(),
+            ariaLabel: translateText("common.back"),
+            showDivider: true,
+          })}
+        </div>
+        <div class="flex flex-col gap-2">${activeContent}</div>
       </o-modal>
     `;
   }

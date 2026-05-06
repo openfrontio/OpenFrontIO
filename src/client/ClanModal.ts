@@ -60,8 +60,20 @@ export class ClanModal extends BaseModal {
   } | null = null;
 
   render() {
-    const content = this.renderInner();
-    if (this.inline) return content;
+    const onListView = this.view === "list" && !this.selectedClanTag;
+    const tabs = onListView
+      ? [
+          { key: "my-clans", label: translateText("clan_modal.my_clans") },
+          { key: "browse", label: translateText("clan_modal.browse") },
+        ]
+      : [];
+    const header = onListView
+      ? modalHeader({
+          title: translateText("clan_modal.title"),
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+        })
+      : null;
     return html`
       <o-modal
         id="clan-modal"
@@ -69,10 +81,24 @@ export class ClanModal extends BaseModal {
         ?hideCloseButton=${true}
         ?inline=${this.inline}
         hideHeader
+        .tabs=${tabs}
+        .activeTab=${this.activeTab}
+        .onTabChange=${(key: string) => this.handleTabChange(key as Tab)}
       >
-        ${content}
+        ${header ? html`<div slot="header">${header}</div>` : ""}
+        ${this.renderInner()}
       </o-modal>
     `;
+  }
+
+  private handleTabChange(tab: Tab) {
+    this.activeTab = tab;
+    this.view = "list";
+    this.selectedClan = null;
+    this.selectedClanTag = "";
+    if (tab === "my-clans") {
+      this.loadMyClans();
+    }
   }
 
   protected onOpen(): void {
@@ -131,16 +157,7 @@ export class ClanModal extends BaseModal {
 
   private renderInner() {
     if (this.loading) {
-      return html`
-        <div class="${this.modalContainerClass}">
-          ${modalHeader({
-            title: translateText("clan_modal.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-          })}
-          ${this.renderLoadingSpinner()}
-        </div>
-      `;
+      return this.renderLoadingSpinner();
     }
 
     if (this.view === "my-requests") {
@@ -289,74 +306,26 @@ export class ClanModal extends BaseModal {
       ></clan-detail-view>`;
     }
 
-    // List view (tabs + my clans / browse)
+    // List view (my clans / browse) — header + tabs are rendered by o-modal
     return html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        ${this.renderTabs()}
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${this.activeTab === "my-clans"
-            ? this.renderMyClans()
-            : html`<clan-browse-view
-                .myClanRoles=${this.myClanRoles}
-                .myPendingRequests=${this.myPendingRequests}
-                .cachedState=${this.browseCache}
-                @browse-updated=${(e: CustomEvent<BrowseState>) => {
-                  this.browseCache = e.detail;
-                }}
-                @clan-select=${(e: CustomEvent<{ tag: string }>) =>
-                  this.openDetail(e.detail.tag)}
-              ></clan-browse-view>`}
-        </div>
-      </div>
+      ${this.activeTab === "my-clans"
+        ? this.renderMyClans()
+        : html`<clan-browse-view
+            .myClanRoles=${this.myClanRoles}
+            .myPendingRequests=${this.myPendingRequests}
+            .cachedState=${this.browseCache}
+            @browse-updated=${(e: CustomEvent<BrowseState>) => {
+              this.browseCache = e.detail;
+            }}
+            @clan-select=${(e: CustomEvent<{ tag: string }>) =>
+              this.openDetail(e.detail.tag)}
+          ></clan-browse-view>`}
     `;
   }
 
   private openDetail(tag: string) {
     this.selectedClanTag = tag;
     this.view = "detail";
-  }
-
-  private renderTabs() {
-    const tabs: { key: Tab; label: string }[] = [
-      { key: "my-clans", label: translateText("clan_modal.my_clans") },
-      { key: "browse", label: translateText("clan_modal.browse") },
-    ];
-
-    return html`
-      <div class="flex border-b border-white/10 px-4 lg:px-6 gap-1">
-        ${tabs.map(
-          (tab) => html`
-            <button
-              @click=${() => {
-                this.activeTab = tab.key;
-                this.view = "list";
-                this.selectedClan = null;
-                this.selectedClanTag = "";
-                if (tab.key === "my-clans") {
-                  this.loadMyClans();
-                }
-              }}
-              class="px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all relative
-                ${this.activeTab === tab.key
-                ? "text-aquarius"
-                : "text-white/40 hover:text-white/70"}"
-            >
-              ${tab.label}
-              ${this.activeTab === tab.key
-                ? html`<div
-                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
-                  ></div>`
-                : ""}
-            </button>
-          `,
-        )}
-      </div>
-    `;
   }
 
   private renderMyClans() {
