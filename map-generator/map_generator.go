@@ -398,6 +398,13 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 	height := len(terrain[0])
 	visited := make([]bool, width*height)
 
+	// Clear any Ocean flags inherited from a previous scale's struct copy.
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			terrain[x][y].Ocean = false
+		}
+	}
+
 	type waterBody struct {
 		coords []Coord
 		size   int
