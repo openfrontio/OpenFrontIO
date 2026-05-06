@@ -198,6 +198,7 @@ export class ClanModal extends BaseModal {
             this.selectedClan = null;
             this.selectedClanTag = "";
             this.myRole = null;
+            this.detailCache = null;
             this.view = "list";
             this.loadMyClans();
           }}
@@ -290,6 +291,7 @@ export class ClanModal extends BaseModal {
           this.selectedClan = null;
           this.selectedClanTag = "";
           this.myRole = null;
+          this.detailCache = null;
           this.view = "list";
           this.loadMyClans();
         }}
