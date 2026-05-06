@@ -330,7 +330,10 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, `Unauthorized: invalid token`);
+          ws.close(
+            1002,
+            "Unauthorized: invalid token \n\n Try this to fix: \n 1. Do a hard refresh (Mac: Cmd+Shift+R, Windows: Ctrl+F5) \n 2. Or resync your device clock \n 3. Or close all browser windows and restart your browser \n 4. Or try another browser, preferably without extensions \n 5. Or clear site data for this site",
+          );
           return;
         }
         const { persistentId, claims } = result;
@@ -443,7 +446,10 @@ export async function startWorker() {
                 gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
-              ws.close(1002, "Unauthorized: Turnstile token rejected");
+              ws.close(
+                1002,
+                "Unauthorized: Turnstile token rejected \n\n Try this to fix: \n 1. Do a hard refresh (Mac: Cmd+Shift+R, Windows: Ctrl+F5) \n 2. Or resync your device clock \n 3. Or close all browser windows and restart your browser \n 4. Or try another browser, preferably without extensions \n 5. Or clear site data for this site",
+              );
               return;
             case "error":
               // Fail open, allow the client to join.
