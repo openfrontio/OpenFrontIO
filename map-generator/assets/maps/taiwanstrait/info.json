@@ -1,125 +1,182 @@
 {
-  "name": "Taiwan Strait",
+  "name": "TaiwanStrait",
+  "mapInfoState": {
+    "width": 1800,
+    "height": 1511,
+    "originalWidth": 1800,
+    "originalHeight": 1511,
+    "cropData": {
+      "isCropped": false,
+      "cropX": 0,
+      "cropY": 0,
+      "cropWidth": 0,
+      "cropHeight": 0,
+      "originalWidth": 0,
+      "originalHeight": 0
+    },
+    "colorMappings": []
+  },
   "nations": [
     {
-      "coordinates": [835, 35],
+      "coordinates": [900, 32],
       "name": "Fuzhou",
+
       "flag": "cn"
     },
     {
-      "coordinates": [777, 226],
+      "coordinates": [789, 282],
       "name": "Putian",
+
       "flag": "cn"
     },
     {
-      "coordinates": [686, 330],
+      "coordinates": [641, 447],
       "name": "Quanzhou",
+
       "flag": "cn"
     },
     {
-      "coordinates": [459, 116],
+      "coordinates": [430, 275],
       "name": "Chinese Military Base",
+
       "flag": "cn"
     },
     {
-      "coordinates": [540, 465],
+      "coordinates": [499, 590],
       "name": "Xiamen",
+
       "flag": "cn"
     },
     {
-      "coordinates": [435, 482],
+      "coordinates": [340, 550],
       "name": "Zhangzhou",
+
       "flag": "cn"
     },
     {
-      "coordinates": [279, 412],
+      "coordinates": [206, 449],
       "name": "Longyan",
+
       "flag": "cn"
     },
     {
-      "coordinates": [197, 743],
+      "coordinates": [107, 898],
       "name": "Shantou",
+
       "flag": "cn"
     },
     {
-      "coordinates": [112, 793],
-      "name": "Jieyang",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [125, 700],
+      "coordinates": [7, 836],
       "name": "Chaozhou",
+
       "flag": "cn"
     },
     {
-      "coordinates": [14, 215],
+      "coordinates": [21, 319],
       "name": "Giant Pandas",
+
       "flag": "cn"
     },
     {
-      "coordinates": [29, 503],
-      "name": "Meizhou",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [612, 478],
+      "coordinates": [593, 607],
       "name": "Kinmen Island",
+
       "flag": "tw"
     },
     {
-      "coordinates": [912, 718],
+      "coordinates": [975, 913],
       "name": "Penghu",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1134, 990],
+      "coordinates": [1252, 1244],
       "name": "Kaohsiung",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1085, 884],
+      "coordinates": [1210, 1079],
       "name": "Tainan",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1289, 931],
+      "coordinates": [1491, 1152],
       "name": "Taitung",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1378, 681],
+      "coordinates": [1643, 702],
       "name": "Hualien",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1121, 768],
+      "coordinates": [1249, 911],
       "name": "Chiayi",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1117, 618],
+      "coordinates": [1272, 697],
       "name": "Taichung City",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1476, 320],
+      "coordinates": [1752, 284],
       "name": "Keelung",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1388, 347],
+      "coordinates": [1655, 255],
       "name": "Taipei",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1295, 350],
+      "coordinates": [1542, 290],
       "name": "Taoyuan",
+
       "flag": "tw"
     },
     {
-      "coordinates": [1247, 415],
+      "coordinates": [1464, 353],
       "name": "Hsinchu",
+
       "flag": "tw"
+    },
+    {
+      "coordinates": [1351, 473],
+      "name": "Miaoli",
+
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1629, 1433],
+      "name": "Lanyu",
+
+      "flag": "tw"
+    },
+    {
+      "coordinates": [41, 602],
+      "name": "Meizhou",
+
+      "flag": "cn"
+    },
+    {
+      "coordinates": [619, 89],
+      "name": "Sanming",
+
+      "flag": "cn"
+    },
+    {
+      "coordinates": [225, 84],
+      "name": "Tea Plantations",
+      "strength": 1
     }
   ]
 }
