@@ -474,8 +474,9 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 
 // getArea performs a Breadth-First Search (BFS) to find a contiguous area of tiles
 // sharing the same TerrainType as the passed x,y coordinates.
-// visited is a flat bool slice of size width*height indexed by x*height+y; it is
-// updated to prevent reprocessing tiles across multiple getArea calls.
+// visited is a flat bool slice of size width*height indexed by x*height+y
+// (column-major, matching the terrain[x][y] grid layout); it is updated to
+// prevent reprocessing tiles across multiple getArea calls.
 func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
 	width := len(terrain)
 	height := len(terrain[0])
@@ -558,6 +559,8 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, r
 }
 
 // packTerrain serializes the terrain grid into a byte slice.
+// The output buffer is row-major (y*width+x), matching the expected
+// raster scan order of the binary map format.
 // Each byte represents a single tile with bit flags:
 //   - Bit 7: Land (1) / Water (0)
 //   - Bit 6: Shoreline
