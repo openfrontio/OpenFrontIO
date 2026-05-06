@@ -1,17 +1,17 @@
 {
   "map": {
-    "height": 2320,
-    "num_land_tiles": 2069756,
+    "height": 2276,
+    "num_land_tiles": 2066156,
     "width": 1800
   },
   "map16x": {
-    "height": 580,
+    "height": 569,
     "num_land_tiles": 123168,
     "width": 450
   },
   "map4x": {
-    "height": 1160,
-    "num_land_tiles": 509370,
+    "height": 1138,
+    "num_land_tiles": 508470,
     "width": 900
   },
   "name": "Los Angeles",
@@ -97,9 +97,14 @@
       "name": "Skid Row"
     },
     {
-      "coordinates": [925, 935],
+      "coordinates": [965, 865],
       "flag": "California",
       "name": "Inglewood"
+    },
+    {
+      "coordinates": [815, 945],
+      "flag": "California",
+      "name": "L.A.X."
     },
     {
       "coordinates": [1180, 1010],

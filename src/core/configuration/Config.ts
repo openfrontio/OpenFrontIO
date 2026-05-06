@@ -25,7 +25,6 @@ export enum GameEnv {
 
 export interface ServerConfig {
   turnstileSiteKey(): string;
-  turnstileSecretKey(): string;
   turnIntervalMs(): number;
   gameCreationRate(): number;
   numWorkers(): number;
@@ -86,6 +85,7 @@ export interface Config {
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
+  conquerGoldAmount(captured: Player): Gold;
   attackTilesPerTick(
     attckTroops: number,
     attacker: Player,

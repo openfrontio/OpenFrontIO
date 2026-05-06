@@ -1,12 +1,22 @@
+import { z } from "zod";
+import { ServerConfig } from "../core/configuration/Config";
+
+const TurnstileVerdictSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("approved") }),
+  z.object({ status: z.literal("rejected"), reason: z.string() }),
+]);
+
+type TurnstileVerdict = z.infer<typeof TurnstileVerdictSchema>;
+
+export type TurnstileResponse =
+  | TurnstileVerdict
+  | { status: "error"; reason: string };
+
 export async function verifyTurnstileToken(
   ip: string,
   turnstileToken: string | null,
-  turnstileSecret: string,
-): Promise<
-  | { status: "approved" }
-  | { status: "rejected"; reason: string }
-  | { status: "error"; reason: string }
-> {
+  config: ServerConfig,
+): Promise<TurnstileResponse> {
   if (!turnstileToken) {
     return { status: "rejected", reason: "No turnstile token provided" };
   }
@@ -15,54 +25,38 @@ export async function verifyTurnstileToken(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          secret: turnstileSecret,
-          response: turnstileToken,
-          remoteip: ip,
-        }),
-        signal: controller.signal,
+    const response = await fetch(`${config.jwtIssuer()}/turnstile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": config.apiKey(),
       },
-    );
+      body: JSON.stringify({ ip, token: turnstileToken }),
+      signal: controller.signal,
+    });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
       return {
         status: "error",
-        reason: `Turnstile API returned ${response.status}`,
+        reason: `api-worker returned ${response.status}`,
       };
     }
 
-    const result = (await response.json()) as {
-      success: boolean;
-      challenge_ts?: string;
-      hostname?: string;
-      "error-codes"?: string[];
-      action?: string;
-      cdata?: string;
-    };
-
-    if (!result.success) {
-      const codes = result["error-codes"]?.join(", ") ?? "unknown";
+    const parsed = TurnstileVerdictSchema.safeParse(await response.json());
+    if (!parsed.success) {
       return {
-        status: "rejected",
-        reason: `Turnstile token validation failed: ${codes}`,
+        status: "error",
+        reason: `api-worker returned malformed response: ${parsed.error.message}`,
       };
     }
-
-    return { status: "approved" };
+    return parsed.data;
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") {
       return {
         status: "error",
-        reason: "Turnstile token validation timed out after 3 seconds",
+        reason: "Turnstile token validation timed out after 5 seconds",
       };
     }
     return {

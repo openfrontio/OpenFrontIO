@@ -247,20 +247,6 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
-    if (this.sam.isInCooldown()) {
-      const frontTime = this.sam.missileTimerQueue()[0];
-      if (frontTime === undefined) {
-        return;
-      }
-      const cooldown =
-        this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
-
-      if (cooldown <= 0) {
-        this.sam.reloadMissile();
-      }
-      return;
-    }
-
     if (!this.sam.isActive()) {
       this.active = false;
       return;
@@ -268,6 +254,19 @@ export class SAMLauncherExecution implements Execution {
 
     if (this.player !== this.sam.owner()) {
       this.player = this.sam.owner();
+    }
+
+    const frontTime = this.sam.missileTimerQueue()[0];
+    if (frontTime !== undefined) {
+      const cooldown =
+        this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+
+      if (cooldown <= 0) {
+        this.sam.reloadMissile();
+      }
+    }
+    if (this.sam.isInCooldown()) {
+      return;
     }
 
     this.pseudoRandom ??= new PseudoRandom(this.sam.id());
