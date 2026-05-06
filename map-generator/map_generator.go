@@ -474,6 +474,8 @@ func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
 	height := len(terrain[0])
 	targetType := terrain[x][y].Type
 	var area []Coord
+
+	visited[x*height+y] = true
 	queue := []Coord{{X: x, Y: y}}
 
 	var buf [4]Coord
@@ -481,16 +483,15 @@ func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
 		coord := queue[0]
 		queue = queue[1:]
 
-		idx := coord.X*height + coord.Y
-		if visited[idx] {
-			continue
-		}
-		visited[idx] = true
-
 		if terrain[coord.X][coord.Y].Type == targetType {
 			area = append(area, coord)
 			n := neighborCoords(coord.X, coord.Y, width, height, &buf)
-			queue = append(queue, buf[:n]...)
+			for _, c := range buf[:n] {
+				if !visited[c.X*height+c.Y] {
+					visited[c.X*height+c.Y] = true
+					queue = append(queue, c)
+				}
+			}
 		}
 	}
 
