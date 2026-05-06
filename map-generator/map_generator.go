@@ -272,24 +272,25 @@ func processShore(ctx context.Context, terrain [][]Terrain) []Coord {
 	width := len(terrain)
 	height := len(terrain[0])
 
+	var buf [4]Coord
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			tile := &terrain[x][y]
-			neighbors := getNeighbors(x, y, terrain)
 			tile.Shoreline = false
+			n := neighborCoords(x, y, width, height, &buf)
 
 			if tile.Type == Land {
 				// Land tile adjacent to water is shoreline
-				for _, n := range neighbors {
-					if n.Type == Water {
+				for _, c := range buf[:n] {
+					if terrain[c.X][c.Y].Type == Water {
 						tile.Shoreline = true
 						break
 					}
 				}
 			} else {
 				// Water tile adjacent to land is shoreline
-				for _, n := range neighbors {
-					if n.Type == Land {
+				for _, c := range buf[:n] {
+					if terrain[c.X][c.Y].Type == Land {
 						tile.Shoreline = true
 						shorelineWaters = append(shorelineWaters, Coord{X: x, Y: y})
 						break
@@ -351,37 +352,30 @@ func processDistToLand(ctx context.Context, shorelineWaters []Coord, terrain [][
 	}
 }
 
-// getNeighbors returns a list of Terrain tiles adjacent to the specified coordinates.
-func getNeighbors(x, y int, terrain [][]Terrain) []Terrain {
-	coords := getNeighborCoords(x, y, terrain)
-	neighbors := make([]Terrain, len(coords))
-	for i, coord := range coords {
-		neighbors[i] = terrain[coord.X][coord.Y]
-	}
-	return neighbors
-}
-
-// getNeighborCoords returns a list of valid adjacent coordinates (up, down, left, right).
-// It ensures that the returned coordinates are within the bounds of the terrain grid.
-func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
-	width := len(terrain)
-	height := len(terrain[0])
-	var coords []Coord
-
+// neighborCoords fills out with the valid orthogonal neighbours of (x, y) and
+// returns the count. out must be a caller-allocated [4]Coord buffer; by
+// reusing the same buffer across calls the caller avoids any heap allocation.
+// Neighbours that would fall outside [0,width) × [0,height) are omitted, so
+// the count is 2 at corners, 3 on edges, and 4 in the interior.
+func neighborCoords(x, y, width, height int, out *[4]Coord) int {
+	n := 0
 	if x > 0 {
-		coords = append(coords, Coord{X: x - 1, Y: y})
+		out[n] = Coord{X: x - 1, Y: y}
+		n++
 	}
 	if x < width-1 {
-		coords = append(coords, Coord{X: x + 1, Y: y})
+		out[n] = Coord{X: x + 1, Y: y}
+		n++
 	}
 	if y > 0 {
-		coords = append(coords, Coord{X: x, Y: y - 1})
+		out[n] = Coord{X: x, Y: y - 1}
+		n++
 	}
 	if y < height-1 {
-		coords = append(coords, Coord{X: x, Y: y + 1})
+		out[n] = Coord{X: x, Y: y + 1}
+		n++
 	}
-
-	return coords
+	return n
 }
 
 // processWater identifies and processes bodies of water in the terrain.
@@ -467,11 +461,13 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 // visited is a flat bool slice of size width*height indexed by x*height+y; it is
 // updated to prevent reprocessing tiles across multiple getArea calls.
 func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
+	width := len(terrain)
 	height := len(terrain[0])
 	targetType := terrain[x][y].Type
 	var area []Coord
 	queue := []Coord{{X: x, Y: y}}
 
+	var buf [4]Coord
 	for len(queue) > 0 {
 		coord := queue[0]
 		queue = queue[1:]
@@ -484,9 +480,8 @@ func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
 
 		if terrain[coord.X][coord.Y].Type == targetType {
 			area = append(area, coord)
-
-			neighborCoords := getNeighborCoords(coord.X, coord.Y, terrain)
-			queue = append(queue, neighborCoords...)
+			n := neighborCoords(coord.X, coord.Y, width, height, &buf)
+			queue = append(queue, buf[:n]...)
 		}
 	}
 
