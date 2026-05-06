@@ -36,7 +36,7 @@ type Coord struct {
 }
 
 // TerrainType represents the classification of a map tile (e.g., Land or Water).
-type TerrainType int
+type TerrainType uint8
 
 // Enumeration of possible TerrainType values.
 const (
@@ -46,10 +46,13 @@ const (
 
 // Terrain represents the properties of a single map tile.
 // Magnitude represents elevation for Land (0-30) or distance to land for Water.
+// Fields are ordered to minimise alignment padding: float64 first (8 bytes,
+// offset 0), then three 1-byte fields, giving 16 bytes total vs 24 with the
+// original layout.
 type Terrain struct {
+	Magnitude float64
 	Type      TerrainType
 	Shoreline bool
-	Magnitude float64
 	Ocean     bool
 }
 
