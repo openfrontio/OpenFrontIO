@@ -291,6 +291,7 @@ async function createClientGame(
       worker,
       gameView,
       soundManager,
+      userSettings,
     );
   } catch (err) {
     soundManager.dispose();
@@ -322,6 +323,7 @@ export class ClientGameRunner {
     private worker: WorkerClient,
     private gameView: GameView,
     private soundManager: SoundManager,
+    private userSettings: UserSettings,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -452,7 +454,7 @@ export class ClientGameRunner {
       this.transport.rejoinGame(this.turnsSeen);
     };
 
-    let hasGoneToPlayer = false;
+    let hasGoneToPlayer = this.userSettings.goToPlayer();
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {

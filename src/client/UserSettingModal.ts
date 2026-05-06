@@ -842,6 +842,15 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleTerritoryPatterns}
       ></setting-toggle>
 
+      <!-- 🔍 Go to player -->
+      <setting-toggle
+        label="${translateText("user_setting.go_to_player_label")}"
+        description="${translateText("user_setting.go_to_player_desc")}"
+        id="territory-patterns-toggle"
+        .checked=${this.userSettings.goToPlayer()}
+        @change=${this.userSettings.toggleGoToPlayer()}
+      ></setting-toggle>
+
       <!-- 📱 Performance Overlay -->
       <setting-toggle
         label="${translateText("user_setting.performance_overlay_label")}"

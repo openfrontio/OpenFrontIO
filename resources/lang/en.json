@@ -704,6 +704,8 @@
     "coordinate_grid_desc": "Toggle the alphanumeric grid overlay",
     "attacking_troops_overlay_label": "Attacking Troops Overlay",
     "attacking_troops_overlay_desc": "Show attacker vs defender troop counts on active front lines.",
+    "go_to_player_label": "Go to player on start",
+    "go_to_player_desc": "Toggle zooming in on the player in the beginning of a game.",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
