@@ -187,12 +187,12 @@ export class ClanRequestsView extends LitElement {
                   `,
                 )}
               </div>
-              ${totalPages > 1
-                ? renderServerPagination(this.requestsPage, totalPages, (p) =>
-                    this.loadRequests(p, false),
-                  )
-                : ""}
             `}
+        ${totalPages > 1
+          ? renderServerPagination(this.requestsPage, totalPages, (p) =>
+              this.loadRequests(p, false),
+            )
+          : ""}
       </div>
     `;
   }
