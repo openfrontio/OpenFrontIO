@@ -142,7 +142,7 @@ export const ClanStatsSchema = z.object({
   games: z.number(),
   wins: z.number(),
   losses: z.number(),
-  stats: ClanMemberStatsSchema,
+  stats: ClanMemberStatsSchema.optional(),
   teamTypeWL: z.record(
     z.string(),
     z.object({ wl: z.tuple([z.number(), z.number()]) }),
@@ -153,3 +153,39 @@ export const ClanStatsSchema = z.object({
   ),
 });
 export type ClanStats = z.infer<typeof ClanStatsSchema>;
+
+export const ClanGamePlayerSchema = z.object({
+  publicId: z.string(),
+  username: z.string().optional(),
+  won: z.boolean(),
+});
+export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;
+
+export const ClanGameResultSchema = z.enum(["victory", "defeat"]);
+export type ClanGameResult = z.infer<typeof ClanGameResultSchema>;
+
+export const ClanGameFilters = ["ffa", "team", "hvn", "ranked"] as const;
+export const ClanGameFilterSchema = z.enum(ClanGameFilters);
+export type ClanGameFilter = z.infer<typeof ClanGameFilterSchema>;
+
+export const ClanGameSchema = z.object({
+  gameId: z.string(),
+  start: z.iso.datetime(),
+  durationSeconds: z.number().nonnegative(),
+  map: z.string().optional(),
+  mode: z.string().optional(),
+  playerTeams: z.string().optional(),
+  rankedType: z.string().optional(),
+  result: ClanGameResultSchema.optional(),
+  totalPlayers: z.number().nonnegative(),
+  clanPlayers: ClanGamePlayerSchema.array(),
+});
+export type ClanGame = z.infer<typeof ClanGameSchema>;
+
+export const ClanGamesResponseSchema = z.object({
+  results: ClanGameSchema.array(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type ClanGamesResponse = z.infer<typeof ClanGamesResponseSchema>;

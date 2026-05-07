@@ -52,6 +52,7 @@ export class ClanDetailView extends LitElement {
     pendingRequestCount: number;
     stats: ClanStats | null;
   } | null = null;
+  @property() detailTab: "overview" | "members" = "overview";
 
   @property({ type: Object }) cachedClan: ClanInfo | null = null;
   @state() private selectedClan: ClanInfo | null = null;
@@ -304,6 +305,28 @@ export class ClanDetailView extends LitElement {
       (r) => r.tag === clan.tag,
     );
 
+    if (this.detailTab === "members") {
+      if (!isMember) {
+        return html`
+          <div
+            class="bg-white/5 rounded-xl border border-white/10 p-8 text-center"
+          >
+            <p class="text-white/40 text-sm">
+              ${translateText("clan_modal.members_visible_to_members")}
+            </p>
+          </div>
+        `;
+      }
+      return html`
+        <div class="space-y-6">
+          ${canManageRequests && this.pendingRequestCount > 0
+            ? this.renderRequestsButton()
+            : ""}
+          ${this.renderMembersList()}
+        </div>
+      `;
+    }
+
     return html`
       <div class="space-y-6">
         <div class="bg-white/5 rounded-xl border border-white/10 p-5">
@@ -326,10 +349,6 @@ export class ClanDetailView extends LitElement {
         </div>
 
         ${this.clanStats ? renderClanWL(this.clanStats) : ""}
-        ${canManageRequests && this.pendingRequestCount > 0
-          ? this.renderRequestsButton()
-          : ""}
-        ${isMember ? this.renderMembersList() : ""}
 
         <div class="flex flex-wrap gap-3">
           ${this.renderActionButtons(

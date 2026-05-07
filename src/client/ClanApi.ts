@@ -3,6 +3,9 @@ import {
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  type ClanGameFilter,
+  type ClanGamesResponse,
+  ClanGamesResponseSchema,
   type ClanInfo,
   ClanInfoSchema,
   type ClanLeaderboardResponse,
@@ -21,6 +24,11 @@ export type {
   ClanBan,
   ClanBansResponse,
   ClanBrowseResponse,
+  ClanGame,
+  ClanGameFilter,
+  ClanGamePlayer,
+  ClanGameResult,
+  ClanGamesResponse,
   ClanInfo,
   ClanJoinRequest,
   ClanMember,
@@ -465,6 +473,36 @@ export async function unbanClanMember(
     return true;
   } catch {
     return { error: "clan_modal.error_network" };
+  }
+}
+
+export type ClanGamesFetchError = "forbidden" | "failed";
+
+export async function fetchClanGames(
+  tag: string,
+  page = 1,
+  limit = 10,
+  filter?: ClanGameFilter,
+): Promise<ClanGamesResponse | { error: ClanGamesFetchError }> {
+  try {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+    if (filter) params.set("filter", filter);
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/games?${params}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const json = await res.json();
+    const parsed = ClanGamesResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanGames: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
   }
 }
 

@@ -83,7 +83,7 @@ export function renderStat(label: string, value: string): TemplateResult {
 }
 
 export function renderClanWL(stats: ClanStats): TemplateResult | string {
-  if (stats.games === 0) return "";
+  if (stats.games === 0 || !stats.stats) return "";
   return html`
     <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
       <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
