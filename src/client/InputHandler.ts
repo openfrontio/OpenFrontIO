@@ -153,6 +153,8 @@ export class DoBoatAttackEvent implements GameEvent {}
 
 export class DoGroundAttackEvent implements GameEvent {}
 
+export class DoRetaliateAttackEvent implements GameEvent {}
+
 export class DoRequestAllianceEvent implements GameEvent {}
 
 export class DoBreakAllianceEvent implements GameEvent {}
@@ -494,6 +496,11 @@ export class InputHandler {
       if (this.keybindMatchesEvent(e, this.keybinds.groundAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoGroundAttackEvent());
+      }
+
+      if (this.keybindMatchesEvent(e, this.keybinds.retaliateAttack)) {
+        e.preventDefault();
+        this.eventBus.emit(new DoRetaliateAttackEvent());
       }
 
       if (this.keybindMatchesEvent(e, this.keybinds.attackRatioDown)) {

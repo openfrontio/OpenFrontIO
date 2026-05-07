@@ -9,11 +9,9 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../CopyButton";
-import { modalHeader } from "../ui/ModalHeader";
 import {
   filterRequestsBySearch,
   formatClanDate,
-  modalContainerClass,
   renderLoadingSpinner,
   renderMemberSearchInput,
   renderServerPagination,
@@ -122,97 +120,80 @@ export class ClanRequestsView extends LitElement {
   }
 
   render() {
-    if (this.loading)
-      return html`<div class="${modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.join_requests"),
-          onBack: () => this.back(),
-          ariaLabel: translateText("common.back"),
-        })}${renderLoadingSpinner()}
-      </div>`;
+    if (this.loading) return renderLoadingSpinner();
 
     const totalPages = Math.ceil(this.requestsTotal / this.requestsLimit);
     const filtered = filterRequestsBySearch(this.requests, this.memberSearch);
     return html`
-      <div class="${modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.join_requests"),
-          onBack: () => this.back(),
-          ariaLabel: translateText("common.back"),
-          rightContent: html`<span
-            class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
-            >${this.requestsTotal}</span
-          >`,
-        })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
-          ${renderMemberSearchInput(
-            (e) => this.onSearchInput(e),
-            "clan_modal.search_requests_placeholder",
-          )}
-          ${filtered.length === 0
-            ? html`<div
-                class="flex flex-col items-center justify-center p-12 text-center"
-              >
-                <p class="text-white/40 text-sm">
-                  ${translateText("clan_modal.no_requests")}
-                </p>
-              </div>`
-            : html`
-                <div class="space-y-3">
-                  ${filtered.map(
-                    (req) => html`
-                      <div
-                        class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
-                      >
-                        <div class="flex-1 min-w-0">
-                          <copy-button
-                            compact
-                            .copyText=${req.publicId}
-                            .displayText=${req.publicId}
-                            .showVisibilityToggle=${false}
-                            .showCopyIcon=${false}
-                          ></copy-button>
-                          <span class="text-white/30 text-[10px]">
-                            ${translateText("clan_modal.requested_on", {
-                              tag: this.selectedClan?.tag ?? this.clanTag,
-                              date: formatClanDate(req.createdAt),
-                            })}
-                          </span>
-                        </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                          <button
-                            @click=${() => this.handleApprove(req.publicId)}
-                            ?disabled=${this.memberActionPending}
-                            class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                          >
-                            ${translateText("clan_modal.approve")}
-                          </button>
-                          <button
-                            @click=${() => this.handleDeny(req.publicId)}
-                            ?disabled=${this.memberActionPending}
-                            class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                          >
-                            ${translateText("clan_modal.deny")}
-                          </button>
-                        </div>
-                      </div>
-                    `,
-                  )}
-                </div>
-                ${totalPages > 1
-                  ? renderServerPagination(this.requestsPage, totalPages, (p) =>
-                      this.loadRequests(p, false),
-                    )
-                  : ""}
-              `}
+      <div>
+        <div
+          class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
+        >
+          ${translateText("clan_modal.pending_requests_count", {
+            count: this.requestsTotal,
+          })}
         </div>
+        ${renderMemberSearchInput(
+          (e) => this.onSearchInput(e),
+          "clan_modal.search_requests_placeholder",
+        )}
+        ${filtered.length === 0
+          ? html`<div
+              class="flex flex-col items-center justify-center p-12 text-center"
+            >
+              <p class="text-white/40 text-sm">
+                ${translateText("clan_modal.no_requests")}
+              </p>
+            </div>`
+          : html`
+              <div class="space-y-3">
+                ${filtered.map(
+                  (req) => html`
+                    <div
+                      class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
+                    >
+                      <div class="flex-1 min-w-0">
+                        <copy-button
+                          compact
+                          .copyText=${req.publicId}
+                          .displayText=${req.publicId}
+                          .showVisibilityToggle=${false}
+                          .showCopyIcon=${false}
+                        ></copy-button>
+                        <span class="text-white/30 text-[10px]">
+                          ${translateText("clan_modal.requested_on", {
+                            tag: this.selectedClan?.tag ?? this.clanTag,
+                            date: formatClanDate(req.createdAt),
+                          })}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0">
+                        <button
+                          @click=${() => this.handleApprove(req.publicId)}
+                          ?disabled=${this.memberActionPending}
+                          class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                          ${translateText("clan_modal.approve")}
+                        </button>
+                        <button
+                          @click=${() => this.handleDeny(req.publicId)}
+                          ?disabled=${this.memberActionPending}
+                          class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                          ${translateText("clan_modal.deny")}
+                        </button>
+                      </div>
+                    </div>
+                  `,
+                )}
+              </div>
+            `}
+        ${totalPages > 1
+          ? renderServerPagination(this.requestsPage, totalPages, (p) =>
+              this.loadRequests(p, false),
+            )
+          : ""}
       </div>
     `;
-  }
-
-  private back() {
-    this.dispatchEvent(
-      new CustomEvent("navigate-back", { bubbles: true, composed: true }),
-    );
   }
 }
