@@ -818,34 +818,32 @@ export class GameImpl implements Game {
     );
   }
 
+  private broadcastToAlivePlayers(message: string, type: MessageType): void {
+    for (const player of this._players.values()) {
+      if (player.isAlive()) {
+        this.displayMessage(message, type, player.id());
+      }
+    }
+  }
+
   private checkAlliancesCutoff(): void {
     const cutoff = this._config.alliancesCutoffTick();
     if (cutoff === null) return;
 
     const fiveMinWarningTick = cutoff - 5 * 60 * 10;
     if (this._ticks === fiveMinWarningTick && fiveMinWarningTick > 0) {
-      for (const player of this._players.values()) {
-        if (player.isAlive()) {
-          this.displayMessage(
-            "events_display.alliances_disabled_warning_5min",
-            MessageType.ALLIANCES_DISABLED,
-            player.id(),
-          );
-        }
-      }
+      this.broadcastToAlivePlayers(
+        "events_display.alliances_disabled_warning_5min",
+        MessageType.ALLIANCES_DISABLED,
+      );
     }
 
     const oneMinWarningTick = cutoff - 60 * 10;
     if (this._ticks === oneMinWarningTick && oneMinWarningTick > 0) {
-      for (const player of this._players.values()) {
-        if (player.isAlive()) {
-          this.displayMessage(
-            "events_display.alliances_disabled_warning",
-            MessageType.ALLIANCES_DISABLED,
-            player.id(),
-          );
-        }
-      }
+      this.broadcastToAlivePlayers(
+        "events_display.alliances_disabled_warning",
+        MessageType.ALLIANCES_DISABLED,
+      );
     }
 
     if (this._ticks !== cutoff) return;
@@ -856,15 +854,10 @@ export class GameImpl implements Game {
     for (const req of [...this.allianceRequests]) {
       req.reject();
     }
-    for (const player of this._players.values()) {
-      if (player.isAlive()) {
-        this.displayMessage(
-          "events_display.alliances_disabled",
-          MessageType.ALLIANCES_DISABLED,
-          player.id(),
-        );
-      }
-    }
+    this.broadcastToAlivePlayers(
+      "events_display.alliances_disabled",
+      MessageType.ALLIANCES_DISABLED,
+    );
   }
 
   public isSpawnImmunityActive(): boolean {

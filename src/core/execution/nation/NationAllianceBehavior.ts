@@ -27,7 +27,6 @@ export class NationAllianceBehavior {
   ) {}
 
   private isAlliancesBlocked(): boolean {
-    if (this.game.config().disableAlliances()) return true;
     const cutoff = this.game.config().alliancesCutoffTick();
     return cutoff !== null && this.game.ticks() >= cutoff;
   }

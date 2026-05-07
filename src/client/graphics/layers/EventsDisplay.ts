@@ -92,7 +92,7 @@ export class EventsDisplay extends LitElement implements Layer {
     [MessageCategory.CHAT, false],
   ]);
   @state() private allianceCutoffCountdown: string | null = null;
-  @state() private allianceCutoffCenterWarning: boolean = false;
+  @state() private allianceCutoffCenterWarning: string | null = null;
 
   @query(".events-container")
   private _eventsContainer?: HTMLDivElement;
@@ -376,10 +376,16 @@ export class EventsDisplay extends LitElement implements Layer {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     this.allianceCutoffCountdown = `${mins}:${secs.toString().padStart(2, "0")}`;
-    if (ticks === oneMinStart && !this.allianceCutoffCenterWarning) {
-      this.allianceCutoffCenterWarning = true;
+    const warningKey =
+      ticks === fiveMinStart
+        ? "events_display.alliances_disabled_warning_5min"
+        : ticks === oneMinStart
+          ? "events_display.alliances_disabled_warning"
+          : null;
+    if (warningKey && !this.allianceCutoffCenterWarning) {
+      this.allianceCutoffCenterWarning = warningKey;
       setTimeout(() => {
-        this.allianceCutoffCenterWarning = false;
+        this.allianceCutoffCenterWarning = null;
       }, 5000);
     }
   }
@@ -879,9 +885,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 class="text-red-300/90 text-lg lg:text-2xl font-bold text-center m-0 whitespace-nowrap"
                 style="text-shadow: 0 0 4px #000, 0 0 4px #000, 0 0 4px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;"
               >
-                ${translateText(
-                  "events_display.alliances_disabled_warning",
-                )}
+                ${translateText(this.allianceCutoffCenterWarning)}
               </p>
             </div>
           `
@@ -963,7 +967,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <div
                       class="w-full px-3 py-1.5 bg-amber-600/90 text-white text-xs lg:text-sm font-semibold text-center"
                     >
-                      ⚠ ${translateText(
+                      ${translateText(
                         "events_display.alliances_ending_countdown",
                         { time: this.allianceCutoffCountdown },
                       )}
