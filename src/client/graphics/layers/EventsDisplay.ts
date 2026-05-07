@@ -281,9 +281,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer?.isAlive()) return;
 
-    const cutoff = this.game.config().alliancesCutoffTick();
-    if (cutoff !== null && this.game.ticks() >= cutoff) return;
-
     const currentAllianceIds = new Set<number>();
 
     for (const alliance of myPlayer.alliances()) {

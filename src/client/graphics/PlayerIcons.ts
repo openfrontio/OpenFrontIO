@@ -108,7 +108,7 @@ export function getPlayerIcons(
   const cutoff = game.config().alliancesCutoffTick();
   const pastCutoff = cutoff !== null && game.ticks() >= cutoff;
   const alliancesOff =
-    alliancesDisabled ?? (game.config().disableAlliances() || pastCutoff);
+    alliancesDisabled || game.config().disableAlliances() || pastCutoff;
 
   const icons: PlayerIconDescriptor[] = [];
 
