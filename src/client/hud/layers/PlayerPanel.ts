@@ -964,7 +964,9 @@ export class PlayerPanel extends LitElement implements Controller {
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
                   >
                     <!-- Identity (flag, name, type, traitor, relation) -->
-                    <div class="mb-1">${this.renderIdentityRow(other, viewer)}</div>
+                    <div class="mb-1">
+                      ${this.renderIdentityRow(other, viewer)}
+                    </div>
 
                     ${this.sendTarget
                       ? html`
@@ -1010,7 +1012,9 @@ export class PlayerPanel extends LitElement implements Controller {
                     ${this.renderResources(other)}
 
                     <!-- Rocket direction toggle -->
-                    ${other === viewer && !isReplay ? this.renderRocketDirectionToggle() : ""}
+                    ${other === viewer && !isReplay
+                      ? this.renderRocketDirectionToggle()
+                      : ""}
 
                     <ui-divider></ui-divider>
 
@@ -1024,7 +1028,6 @@ export class PlayerPanel extends LitElement implements Controller {
 
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
-
                     ${isReplay
                       ? ""
                       : html`
