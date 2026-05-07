@@ -169,8 +169,12 @@ export class NameLayer implements Layer {
   }
 
   public tick() {
-    // Precompute the first-place player for performance
     this.firstPlace = getFirstPlacePlayer(this.game);
+
+    const cutoff = this.config.alliancesCutoffTick();
+    if (cutoff !== null && !this.alliancesDisabled && this.game.ticks() >= cutoff) {
+      this.alliancesDisabled = true;
+    }
 
     for (const player of this.game.playerViews()) {
       if (player.isAlive()) {

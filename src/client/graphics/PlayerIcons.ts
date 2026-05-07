@@ -105,7 +105,10 @@ export function getPlayerIcons(
   const userSettings = game.config().userSettings();
   const isDarkMode = darkMode ?? userSettings?.darkMode() ?? false;
   const emojisEnabled = userSettings?.emojis() ?? false;
-  const alliancesOff = alliancesDisabled ?? game.config().disableAlliances();
+  const cutoff = game.config().alliancesCutoffTick();
+  const pastCutoff = cutoff !== null && game.ticks() >= cutoff;
+  const alliancesOff =
+    alliancesDisabled ?? (game.config().disableAlliances() || pastCutoff);
 
   const icons: PlayerIconDescriptor[] = [];
 

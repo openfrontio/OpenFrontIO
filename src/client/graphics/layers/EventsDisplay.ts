@@ -91,6 +91,8 @@ export class EventsDisplay extends LitElement implements Layer {
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
   ]);
+  @state() private allianceCutoffCountdown: string | null = null;
+  @state() private allianceCutoffCenterWarning: boolean = false;
 
   @query(".events-container")
   private _eventsContainer?: HTMLDivElement;
@@ -237,6 +239,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.checkForAllianceExpirations();
+    this.updateAllianceCutoffCountdown();
 
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
@@ -277,6 +280,9 @@ export class EventsDisplay extends LitElement implements Layer {
   private checkForAllianceExpirations() {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer?.isAlive()) return;
+
+    const cutoff = this.game.config().alliancesCutoffTick();
+    if (cutoff !== null && this.game.ticks() >= cutoff) return;
 
     const currentAllianceIds = new Set<number>();
 
@@ -350,6 +356,32 @@ export class EventsDisplay extends LitElement implements Layer {
       this.newEvents++;
     }
     this.requestUpdate();
+  }
+
+  private updateAllianceCutoffCountdown() {
+    const cutoff = this.game.config().alliancesCutoffTick();
+    if (cutoff === null) {
+      this.allianceCutoffCountdown = null;
+      return;
+    }
+    const fiveMinStart = cutoff - 5 * 60 * 10;
+    const oneMinStart = cutoff - 60 * 10;
+    const ticks = this.game.ticks();
+    if (ticks < fiveMinStart || ticks >= cutoff) {
+      this.allianceCutoffCountdown = null;
+      return;
+    }
+    const remainingTicks = cutoff - ticks;
+    const seconds = Math.ceil(remainingTicks / 10);
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    this.allianceCutoffCountdown = `${mins}:${secs.toString().padStart(2, "0")}`;
+    if (ticks === oneMinStart && !this.allianceCutoffCenterWarning) {
+      this.allianceCutoffCenterWarning = true;
+      setTimeout(() => {
+        this.allianceCutoffCenterWarning = false;
+      }, 5000);
+    }
   }
 
   private removeEvent(index: number) {
@@ -799,6 +831,24 @@ export class EventsDisplay extends LitElement implements Layer {
             transform: scale(1);
           }
         }
+        @keyframes fadeInOut {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+          }
+          15% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          85% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+          }
+        }
       </style>
     `;
 
@@ -818,6 +868,24 @@ export class EventsDisplay extends LitElement implements Layer {
 
     return html`
       ${styles}
+      <!-- Alliance Cutoff Center Warning -->
+      ${this.allianceCutoffCenterWarning
+        ? html`
+            <div
+              class="fixed top-1/2 left-1/2 z-[10000] pointer-events-none"
+              style="animation: fadeInOut 5s ease-in-out forwards;"
+            >
+              <p
+                class="text-red-300/90 text-lg lg:text-2xl font-bold text-center m-0 whitespace-nowrap"
+                style="text-shadow: 0 0 4px #000, 0 0 4px #000, 0 0 4px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;"
+              >
+                ${translateText(
+                  "events_display.alliances_disabled_warning",
+                )}
+              </p>
+            </div>
+          `
+        : ""}
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
@@ -888,6 +956,20 @@ export class EventsDisplay extends LitElement implements Layer {
                   </div>
                 </div>
               </div>
+
+              <!-- Alliance Cutoff Countdown -->
+              ${this.allianceCutoffCountdown
+                ? html`
+                    <div
+                      class="w-full px-3 py-1.5 bg-amber-600/90 text-white text-xs lg:text-sm font-semibold text-center"
+                    >
+                      ⚠ ${translateText(
+                        "events_display.alliances_ending_countdown",
+                        { time: this.allianceCutoffCountdown },
+                      )}
+                    </div>
+                  `
+                : ""}
 
               <!-- Content Area -->
               <div

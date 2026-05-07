@@ -521,6 +521,7 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.HYDROGEN_BOMB_INBOUND:
     case MessageType.SAM_MISS:
     case MessageType.ALLIANCE_EXPIRED:
+    case MessageType.ALLIANCES_DISABLED:
     case MessageType.NAVAL_INVASION_INBOUND:
     case MessageType.RENEW_ALLIANCE:
       return severityColors["warn"];
