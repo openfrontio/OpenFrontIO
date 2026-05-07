@@ -490,7 +490,8 @@
     "beringsea": "Bering Sea",
     "antarctica": "Antarctica",
     "archipelagosea": "Archipelago Sea",
-    "bajacalifornia": "Baja California"
+    "bajacalifornia": "Baja California",
+    "taiwanstrait": "Taiwan Strait"
   },
   "map_categories": {
     "featured": "Featured",
