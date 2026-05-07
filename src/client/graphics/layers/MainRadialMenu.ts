@@ -25,6 +25,14 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 import { ContextMenuEvent } from "../../InputHandler";
 
+function emptyPlayerActions(): PlayerActions {
+  return {
+    canAttack: false,
+    buildableUnits: [],
+    canSendEmojiAllPlayers: false,
+  };
+}
+
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
   private radialMenu: RadialMenu;
@@ -87,27 +95,40 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
         return;
       }
-      if (this.game.myPlayer() === null) {
+      const myPlayer = this.game.myPlayer();
+      const isReplay = this.game.config().isReplay();
+      if (myPlayer === null && !isReplay) {
         return;
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-            event.x,
-            event.y,
-          );
-        });
+      if (myPlayer === null) {
+        // Replay: only show the info-only radial when right-clicking on a player
+        if (!this.game.owner(this.clickedTile).isPlayer()) {
+          return;
+        }
+        this.updatePlayerActions(
+          null,
+          emptyPlayerActions(),
+          this.clickedTile,
+          event.x,
+          event.y,
+        );
+        return;
+      }
+      myPlayer.actions(this.clickedTile).then((actions) => {
+        this.updatePlayerActions(
+          myPlayer,
+          actions,
+          this.clickedTile!,
+          event.x,
+          event.y,
+        );
+      });
     });
   }
 
   private async updatePlayerActions(
-    myPlayer: PlayerView,
+    myPlayer: PlayerView | null,
     actions: PlayerActions,
     tile: TileRef,
     screenX: number | null = null,
@@ -139,6 +160,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     };
 
     const isFriendlyTarget =
+      myPlayer !== null &&
       recipient !== null &&
       recipient.isFriendly(myPlayer) &&
       !recipient.isDisconnected();
@@ -161,16 +183,11 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
-    this.game
-      .myPlayer()!
-      .actions(this.clickedTile)
-      .then((actions) => {
-        this.updatePlayerActions(
-          this.game.myPlayer()!,
-          actions,
-          this.clickedTile!,
-        );
-      });
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer === null) return; // replay mode: nothing to refresh
+    myPlayer.actions(this.clickedTile).then((actions) => {
+      this.updatePlayerActions(myPlayer, actions, this.clickedTile!);
+    });
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
