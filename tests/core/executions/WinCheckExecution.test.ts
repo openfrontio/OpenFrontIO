@@ -83,6 +83,53 @@ describe("WinCheckExecution", () => {
   it("should return false for activeDuringSpawnPhase", () => {
     expect(winCheck.activeDuringSpawnPhase()).toBe(false);
   });
+
+  it("should not set winner via tile percentage when all land tiles have fallout (FFA)", () => {
+    const player = {
+      numTilesOwned: vi.fn(() => 100),
+      name: vi.fn(() => "P1"),
+    };
+    mg.players = vi.fn(() => [player]);
+    mg.numLandTiles = vi.fn(() => 100);
+    mg.numTilesWithFallout = vi.fn(() => 100);
+    mg.config = vi.fn(() => ({
+      gameConfig: vi.fn(() => ({
+        gameMode: GameMode.FFA,
+        maxTimerValue: undefined,
+      })),
+      percentageTilesOwnedToWin: vi.fn(() => 80),
+      numSpawnPhaseTurns: vi.fn(() => 0),
+    }));
+    mg.ticks = vi.fn(() => 0);
+    mg.stats = vi.fn(() => ({ stats: () => ({}) }));
+    winCheck.init(mg, 0);
+    winCheck.checkWinnerFFA();
+    expect(mg.setWinner).not.toHaveBeenCalled();
+  });
+
+  it("should not set winner via tile percentage when all land tiles have fallout (Team)", () => {
+    const player = {
+      numTilesOwned: vi.fn(() => 100),
+      name: vi.fn(() => "P1"),
+      team: vi.fn(() => "Red"),
+    };
+    mg.players = vi.fn(() => [player]);
+    mg.numLandTiles = vi.fn(() => 100);
+    mg.numTilesWithFallout = vi.fn(() => 100);
+    mg.config = vi.fn(() => ({
+      gameConfig: vi.fn(() => ({
+        gameMode: GameMode.Team,
+        maxTimerValue: undefined,
+      })),
+      percentageTilesOwnedToWin: vi.fn(() => 80),
+      numSpawnPhaseTurns: vi.fn(() => 0),
+    }));
+    mg.ticks = vi.fn(() => 0);
+    mg.stats = vi.fn(() => ({ stats: () => ({}) }));
+    winCheck.init(mg, 0);
+    winCheck.checkWinnerTeam();
+    expect(mg.setWinner).not.toHaveBeenCalled();
+  });
 });
 
 describe("WinCheckExecution - Nation Winners", () => {
