@@ -57,66 +57,137 @@ describe("filterMembersBySearch", () => {
 });
 
 describe("renderMemberStats", () => {
+  const ZERO = { wins: 0, losses: 0 } as const;
   const stats: ClanMemberStats = {
     total: { wins: 7, losses: 5 },
     ffa: { wins: 2, losses: 4 },
     team: { wins: 5, losses: 1 },
-    hvn: { wins: 0, losses: 0 },
-    ranked: { wins: 0, losses: 0 },
-    "1v1": { wins: 0, losses: 0 },
+    hvn: { ...ZERO },
+    duos: { wins: 1, losses: 0 },
+    trios: { wins: 4, losses: 1 },
+    quads: { ...ZERO },
+    "2": { ...ZERO },
+    "3": { ...ZERO },
+    "4": { ...ZERO },
+    "5": { ...ZERO },
+    "6": { ...ZERO },
+    "7": { ...ZERO },
+    ranked: { ...ZERO },
+    "1v1": { ...ZERO },
   };
 
-  function renderTo(result: ReturnType<typeof renderMemberStats>): HTMLElement {
+  async function renderTo(
+    result: ReturnType<typeof renderMemberStats>,
+  ): Promise<HTMLElement> {
     const host = document.createElement("div");
     render(result, host);
+    document.body.appendChild(host);
+    // Allow Lit to upgrade the <clan-stats-breakdown> custom element.
+    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0));
     return host;
   }
 
-  it("renders nothing when stats is undefined", () => {
-    const host = renderTo(renderMemberStats(undefined));
+  function findExpandableButton(
+    host: HTMLElement,
+    labelKey: string,
+  ): HTMLButtonElement | undefined {
+    return Array.from(
+      host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]"),
+    ).find((b) => (b.textContent ?? "").includes(labelKey));
+  }
+
+  async function expandTotal(host: HTMLElement) {
+    const btn = findExpandableButton(host, "clan_modal.stats_total");
+    btn!.click();
+    await new Promise((r) => setTimeout(r, 0));
+  }
+
+  it("renders nothing when stats is undefined", async () => {
+    const host = await renderTo(renderMemberStats(undefined));
     expect(host.textContent?.trim()).toBe("");
   });
 
-  it("renders W/L labels inside bar segments and the win-rate per bucket", () => {
-    const host = renderTo(renderMemberStats(stats));
+  it("collapses everything except the total row by default", async () => {
+    const host = await renderTo(renderMemberStats(stats));
+    const text = host.textContent ?? "";
+    expect(text).toContain("clan_modal.stats_total");
+    expect(text).not.toContain("clan_modal.stats_ffa");
+    expect(text).not.toContain("clan_modal.stats_team");
+    expect(text).not.toContain("clan_modal.stats_hvn");
+    expect(text).not.toContain("clan_modal.stats_ranked");
+  });
+
+  it("renders W/L labels inside bar segments and the win-rate per bucket", async () => {
+    const host = await renderTo(renderMemberStats(stats));
+    await expandTotal(host);
     const text = host.textContent?.replace(/\s+/g, " ") ?? "";
-    // Each bucket with games shows `{wins}W` and `{losses}L` inside segments
     expect(text).toContain("2W");
     expect(text).toContain("4L");
     expect(text).toContain("5W");
     expect(text).toContain("1L");
-    // Win-rate, and em-dash placeholder for empty bucket
     expect(text).toContain("33%");
     expect(text).toContain("83%");
     expect(text).toContain("—");
   });
 
-  it("renders a proportional win-loss bar when there are games", () => {
-    const host = renderTo(renderMemberStats(stats));
+  it("renders a proportional win-loss bar when there are games", async () => {
+    const host = await renderTo(renderMemberStats(stats));
+    await expandTotal(host);
     const bars = host.querySelectorAll<HTMLDivElement>("[style*='width']");
-    // Two segments per bucket with games (total: 2, ffa: 2, team: 2). Ranked
-    // and 1v1 have 0 games → no segments.
+    // Top-level rows after expanding Total: total, ffa, team, hvn, ranked (5).
+    // Ranked and hvn have 0 games → no segments. Others contribute 2 each.
     expect(bars.length).toBe(6);
     const widths = Array.from(bars).map((b) =>
       (b.getAttribute("style") ?? "").replace(/\s+/g, ""),
     );
-    // total: 7/12 ≈ 58.3% wins, 41.7% losses
     expect(widths[0]).toContain("width:58.33");
     expect(widths[1]).toContain("width:41.66");
-    // ffa: 2/6 ≈ 33.3% wins, 66.7% losses
     expect(widths[2]).toContain("width:33.33");
     expect(widths[3]).toContain("width:66.66");
   });
 
-  it("includes all six translated bucket labels", () => {
-    const host = renderTo(renderMemberStats(stats));
+  it("includes the visible top-level translated bucket labels", async () => {
+    const host = await renderTo(renderMemberStats(stats));
+    await expandTotal(host);
     const text = host.textContent ?? "";
     expect(text).toContain("clan_modal.stats_total");
     expect(text).toContain("clan_modal.stats_ffa");
     expect(text).toContain("clan_modal.stats_team");
     expect(text).toContain("clan_modal.stats_hvn");
     expect(text).toContain("clan_modal.stats_ranked");
-    expect(text).toContain("clan_modal.stats_1v1");
+    // 1v1 lives under the ranked dropdown — hidden until expanded.
+    expect(text).not.toContain("clan_modal.stats_1v1");
+  });
+
+  it("reveals team sub-buckets when the team row is expanded", async () => {
+    const host = await renderTo(renderMemberStats(stats));
+    await expandTotal(host);
+    const teamButton = findExpandableButton(host, "clan_modal.stats_team");
+    expect(teamButton).toBeDefined();
+    expect(teamButton!.disabled).toBe(false);
+    teamButton!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    const text = host.textContent ?? "";
+    expect(text).toContain("clan_modal.stats_duos");
+    expect(text).toContain("clan_modal.stats_trios");
+    // Buckets with no games are hidden.
+    expect(text).not.toContain("clan_modal.stats_quads");
+  });
+
+  it("does not render an expandable button for ranked when no breakdown has games", async () => {
+    const host = await renderTo(renderMemberStats(stats));
+    await expandTotal(host);
+    const expandableLabels = Array.from(
+      host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]"),
+    ).map((b) => b.textContent ?? "");
+    expect(
+      expandableLabels.some((t) => t.includes("clan_modal.stats_ranked")),
+    ).toBe(false);
+    // Sanity: team is still expandable since it has sub-bucket games.
+    expect(
+      expandableLabels.some((t) => t.includes("clan_modal.stats_team")),
+    ).toBe(true);
   });
 });
 

@@ -349,13 +349,10 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         const bytes = Buffer.byteLength(message, "utf8");
-        const intentType =
-          clientMsg.type === "intent" ? clientMsg.intent.type : undefined;
         const rateResult = this.intentRateLimiter.check(
           client.clientID,
           clientMsg.type,
           bytes,
-          intentType,
         );
         if (rateResult === "kick") {
           this.log.warn(`Client rate limit exceeded, kicking`, {
@@ -794,6 +791,8 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
           0,

@@ -274,12 +274,11 @@ export class AttackExecution implements Execution {
       this.attack.removeBorderTile(tileToConquer);
 
       let onBorder = false;
-      for (const n of this.mg.neighbors(tileToConquer)) {
-        if (this.mg.owner(n) === this._owner) {
+      this.mg.forEachNeighbor(tileToConquer, (n) => {
+        if (!onBorder && this.mg.owner(n) === this._owner) {
           onBorder = true;
-          break;
         }
-      }
+      });
       if (this.mg.owner(tileToConquer) !== this.target || !onBorder) {
         continue;
       }
@@ -323,22 +322,22 @@ export class AttackExecution implements Execution {
 
     const tickNow = this.mg.ticks(); // cache tick
 
-    for (const neighbor of this.mg.neighbors(tile)) {
+    this.mg.forEachNeighbor(tile, (neighbor) => {
       if (
         this.mg.isWater(neighbor) ||
         this.mg.owner(neighbor) !== this.target
       ) {
-        continue;
+        return;
       }
-      this.attack.addBorderTile(neighbor);
+      this.attack!.addBorderTile(neighbor);
       let numOwnedByMe = 0;
-      for (const n of this.mg.neighbors(neighbor)) {
+      this.mg.forEachNeighbor(neighbor, (n) => {
         if (this.mg.owner(n) === this._owner) {
           numOwnedByMe++;
         }
-      }
+      });
 
-      let mag = 0;
+      let mag: number;
       switch (this.mg.terrainType(neighbor)) {
         case TerrainType.Plains:
           mag = 1;
@@ -349,6 +348,9 @@ export class AttackExecution implements Execution {
         case TerrainType.Mountain:
           mag = 2;
           break;
+        default:
+          mag = 0;
+          break;
       }
 
       const priority =
@@ -356,33 +358,35 @@ export class AttackExecution implements Execution {
         tickNow;
 
       this.toConquer.enqueue(neighbor, priority);
-    }
+    });
   }
 
   private handleDeadDefender() {
     if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
+    const target: Player = this.target;
 
-    this.mg.conquerPlayer(this._owner, this.target);
+    this.mg.conquerPlayer(this._owner, target);
 
     for (let i = 0; i < 10; i++) {
-      for (const tile of this.target.tiles()) {
-        const borders = this.mg
-          .neighbors(tile)
-          .some((t) => this.mg.owner(t) === this._owner);
+      for (const tile of target.tiles()) {
+        let borders = false;
+        this.mg.forEachNeighbor(tile, (t) => {
+          if (!borders && this.mg.owner(t) === this._owner) {
+            borders = true;
+          }
+        });
         if (borders) {
           this._owner.conquer(tile);
         } else {
-          for (const neighbor of this.mg.neighbors(tile)) {
+          let captured = false;
+          this.mg.forEachNeighbor(tile, (neighbor) => {
+            if (captured) return;
             const no = this.mg.owner(neighbor);
-            if (
-              no.isPlayer() &&
-              no !== this.target &&
-              !no.isFriendly(this.target)
-            ) {
+            if (no.isPlayer() && no !== target && !no.isFriendly(target)) {
               this.mg.player(no.id()).conquer(tile);
-              break;
+              captured = true;
             }
-          }
+          });
         }
       }
     }

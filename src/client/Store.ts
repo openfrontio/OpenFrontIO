@@ -41,43 +41,12 @@ export class StoreModal extends BaseModal {
   }
 
   private renderHeader(): TemplateResult {
-    return html`
-      ${modalHeader({
-        title: translateText("store.title"),
-        onBack: () => this.close(),
-        ariaLabel: translateText("common.back"),
-        rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
-      })}
-      <div class="flex items-center gap-2 justify-center pt-2">
-        <button
-          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-            .activeTab === "packs"
-            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
-            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-          @click=${() => (this.activeTab = "packs")}
-        >
-          ${translateText("store.packs")}
-        </button>
-        <button
-          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-            .activeTab === "patterns"
-            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
-            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-          @click=${() => (this.activeTab = "patterns")}
-        >
-          ${translateText("store.patterns")}
-        </button>
-        <button
-          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-            .activeTab === "flags"
-            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
-            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-          @click=${() => (this.activeTab = "flags")}
-        >
-          ${translateText("store.flags")}
-        </button>
-      </div>
-    `;
+    return modalHeader({
+      title: translateText("store.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+    });
   }
 
   private renderPatternGrid(): TemplateResult {
@@ -188,22 +157,18 @@ export class StoreModal extends BaseModal {
   render() {
     if (!this.isActive && !this.inline) return html``;
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${this.renderHeader()}
-        <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
-          ${this.activeTab === "patterns"
-            ? this.renderPatternGrid()
-            : this.activeTab === "flags"
-              ? this.renderFlagGrid()
-              : this.renderPackGrid()}
-        </div>
-      </div>
-    `;
+    const tabs = [
+      { key: "packs", label: translateText("store.packs") },
+      { key: "patterns", label: translateText("store.patterns") },
+      { key: "flags", label: translateText("store.flags") },
+    ];
 
-    if (this.inline) {
-      return content;
-    }
+    const grid =
+      this.activeTab === "patterns"
+        ? this.renderPatternGrid()
+        : this.activeTab === "flags"
+          ? this.renderFlagGrid()
+          : this.renderPackGrid();
 
     return html`
       <o-modal
@@ -212,8 +177,13 @@ export class StoreModal extends BaseModal {
         ?inline=${this.inline}
         ?hideHeader=${true}
         ?hideCloseButton=${true}
+        .tabs=${tabs}
+        .activeTab=${this.activeTab}
+        .onTabChange=${(key: string) =>
+          (this.activeTab = key as "patterns" | "flags" | "packs")}
       >
-        ${content}
+        <div slot="header">${this.renderHeader()}</div>
+        ${grid}
       </o-modal>
     `;
   }

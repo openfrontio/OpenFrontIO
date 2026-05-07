@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 569,
-    "num_land_tiles": 123168,
+    "num_land_tiles": 123167,
     "width": 450
   },
   "map4x": {
     "height": 1138,
-    "num_land_tiles": 508470,
+    "num_land_tiles": 508420,
     "width": 900
   },
   "name": "Los Angeles",
