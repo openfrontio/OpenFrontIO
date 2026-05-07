@@ -161,7 +161,11 @@ export const ClanGamePlayerSchema = z.object({
 });
 export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;
 
-export const ClanGameResultSchema = z.enum(["victory", "defeat"]);
+// "incomplete" covers games with no recorded winner.
+// The server stamps this when winnerType IS NULL,
+// so we have to accept it on the wire even if the UI collapses it back
+// into the defeat-styled badge.
+export const ClanGameResultSchema = z.enum(["victory", "defeat", "incomplete"]);
 export type ClanGameResult = z.infer<typeof ClanGameResultSchema>;
 
 export const ClanGameFilters = ["ffa", "team", "hvn", "ranked"] as const;
@@ -174,7 +178,9 @@ export const ClanGameSchema = z.object({
   durationSeconds: z.number().nonnegative(),
   map: z.string().optional(),
   mode: z.string().optional(),
-  playerTeams: z.string().optional(),
+  // playerTeams is `null` (not absent) for FFA / non-team games — use
+  // `.nullish()` so the wire `null` doesn't fail the parse.
+  playerTeams: z.string().nullish(),
   rankedType: z.string().optional(),
   result: ClanGameResultSchema.optional(),
   totalPlayers: z.number().nonnegative(),
