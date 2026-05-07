@@ -28,8 +28,7 @@ export type WorkerMessageType =
   | "attack_clustered_positions"
   | "attack_clustered_positions_result"
   | "transport_ship_spawn"
-  | "transport_ship_spawn_result"
-  | "trampoline_error";
+  | "transport_ship_spawn_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -122,7 +121,8 @@ export interface AttackClusteredPositionsMessage extends BaseWorkerMessage {
   attackID?: string;
 }
 
-export interface AttackClusteredPositionsResultMessage extends BaseWorkerMessage {
+export interface AttackClusteredPositionsResultMessage
+  extends BaseWorkerMessage {
   type: "attack_clustered_positions_result";
   attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
@@ -136,15 +136,6 @@ export interface TransportShipSpawnMessage extends BaseWorkerMessage {
 export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
   type: "transport_ship_spawn_result";
   result: TileRef | false;
-}
-
-// Posted by the Blob trampoline (see WorkerClient.createGameWorker) when the
-// dynamic import of the real worker module fails. The real worker module
-// never loaded, so no other message will ever arrive — initialize() must
-// reject on this rather than wait out its timeout.
-export interface TrampolineErrorMessage extends BaseWorkerMessage {
-  type: "trampoline_error";
-  message: string;
 }
 
 // Union types for type safety
@@ -169,5 +160,4 @@ export type WorkerMessage =
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackClusteredPositionsResultMessage
-  | TransportShipSpawnResultMessage
-  | TrampolineErrorMessage;
+  | TransportShipSpawnResultMessage;
