@@ -166,7 +166,10 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
   beforeEach(() => {
     mockGame = {
       addExecution: vi.fn(),
-      config: vi.fn(() => ({ disableAlliances: vi.fn(() => false) })),
+      config: vi.fn(() => ({
+        disableAlliances: vi.fn(() => false),
+        alliancesCutoffTick: vi.fn(() => null),
+      })),
     };
     mockHuman = { id: vi.fn(() => "human_id") };
     mockAlliance = {

@@ -14,6 +14,7 @@ export class TestConfig extends DefaultConfig {
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
   private _nationSpawnImmunityDuration: number = 0;
+  private _alliancesCutoffTick: Tick | null | undefined = undefined;
 
   disableNavMesh(): boolean {
     return this.gameConfig().disableNavMesh ?? true;
@@ -97,6 +98,17 @@ export class TestConfig extends DefaultConfig {
     numAdjacentTilesWithEnemy: number,
   ): number {
     return 1;
+  }
+
+  setAlliancesCutoffTick(tick: Tick | null): void {
+    this._alliancesCutoffTick = tick;
+  }
+
+  alliancesCutoffTick(): Tick | null {
+    if (this._alliancesCutoffTick !== undefined) {
+      return this._alliancesCutoffTick;
+    }
+    return super.alliancesCutoffTick();
   }
 }
 export class UseRealAttackLogic extends TestConfig {

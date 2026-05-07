@@ -28,6 +28,9 @@ export class AllianceExtensionExecution implements Execution {
       return;
     }
 
+    const cutoff = mg.config().alliancesCutoffTick();
+    if (cutoff !== null && mg.ticks() >= cutoff) return;
+
     const alliance = this.from.allianceWith(to);
     if (!alliance) {
       console.warn(

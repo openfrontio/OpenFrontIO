@@ -26,8 +26,14 @@ export class NationAllianceBehavior {
     private emojiBehavior: NationEmojiBehavior,
   ) {}
 
+  private isAlliancesBlocked(): boolean {
+    if (this.game.config().disableAlliances()) return true;
+    const cutoff = this.game.config().alliancesCutoffTick();
+    return cutoff !== null && this.game.ticks() >= cutoff;
+  }
+
   handleAllianceRequests() {
-    if (this.game.config().disableAlliances()) return;
+    if (this.isAlliancesBlocked()) return;
 
     for (const req of this.player.incomingAllianceRequests()) {
       // Alliance Request intents created during the spawn phase are executed on
@@ -46,7 +52,7 @@ export class NationAllianceBehavior {
   }
 
   handleAllianceExtensionRequests() {
-    if (this.game.config().disableAlliances()) return;
+    if (this.isAlliancesBlocked()) return;
 
     for (const alliance of this.player.alliances()) {
       // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
@@ -63,7 +69,7 @@ export class NationAllianceBehavior {
   }
 
   maybeSendAllianceRequests(borderingEnemies: Player[]) {
-    if (this.game.config().disableAlliances()) return;
+    if (this.isAlliancesBlocked()) return;
 
     // Only easy nations are allowed to send alliance requests to bots
     const isAcceptablePlayerType = (p: Player) =>

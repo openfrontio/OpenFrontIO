@@ -1011,4 +1011,9 @@ export class DefaultConfig implements Config {
   allianceExtensionPromptOffset(): number {
     return 300; // 30 seconds before expiration
   }
+
+  alliancesCutoffTick(): Tick | null {
+    if (this._gameConfig.disableAlliances) return 0;
+    return this.numSpawnPhaseTurns() + 45 * 60 * 10;
+  }
 }

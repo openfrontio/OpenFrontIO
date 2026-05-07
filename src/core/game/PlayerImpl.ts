@@ -521,6 +521,10 @@ export class PlayerImpl implements Player {
     if (this.mg.config().disableAlliances()) {
       return false;
     }
+    const cutoff = this.mg.config().alliancesCutoffTick();
+    if (cutoff !== null && this.mg.ticks() >= cutoff) {
+      return false;
+    }
     if (other === this) {
       return false;
     }

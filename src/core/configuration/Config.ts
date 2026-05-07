@@ -182,6 +182,7 @@ export interface Config {
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;
+  alliancesCutoffTick(): Tick | null;
 }
 
 export interface Theme {

@@ -65,7 +65,9 @@ export class TribeExecution implements Execution {
   }
 
   private acceptAllAllianceRequests() {
-    // Accept all alliance requests
+    const cutoff = this.mg.config().alliancesCutoffTick();
+    if (cutoff !== null && this.mg.ticks() >= cutoff) return;
+
     for (const req of this.tribe.incomingAllianceRequests()) {
       req.accept();
     }
