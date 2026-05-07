@@ -624,7 +624,7 @@ export class UserSettingModal extends BaseModal {
         action="retaliateAttack"
         label=${translateText("user_setting.retaliate_attack")}
         description=${translateText("user_setting.retaliate_attack_desc")}
-        defaultKey="Shift+KeyR"
+        defaultKey=${this.defaultKeybinds.retaliateAttack}
         .value=${this.getKeyValue("retaliateAttack")}
         .display=${this.getKeyChar("retaliateAttack")}
         @change=${this.handleKeybindChange}
