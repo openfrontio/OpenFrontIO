@@ -5,6 +5,7 @@ import type {
   AchievementsResponse,
   PlayerAchievementJson,
 } from "../../../../core/ApiSchemas";
+import { assetUrl } from "../../../../core/AssetUrls";
 import type { Difficulty } from "../../../../core/game/Game";
 import { translateText } from "../../../Utils";
 
@@ -143,6 +144,20 @@ export class PlayerAchievements extends LitElement {
     }
   }
 
+  private renderAchievementIcon(isUnlocked: boolean) {
+    const mask = `url('${assetUrl("images/MedalIconWhite.svg")}') no-repeat center / contain`;
+    const iconClasses = isUnlocked
+      ? "bg-yellow-300 opacity-100"
+      : "bg-white/40 opacity-35";
+
+    return html`
+      <div
+        class="mt-0.5 h-7 w-7 shrink-0 ${iconClasses}"
+        style="mask: ${mask}; -webkit-mask: ${mask};"
+      ></div>
+    `;
+  }
+
   private renderDifficultyBadge(difficulty: Difficulty | null) {
     if (!difficulty) {
       return html`
@@ -173,56 +188,53 @@ export class PlayerAchievements extends LitElement {
     const difficulty = this.resolveDifficulty(achievement.achievement);
     const description = this.resolveDescription(achievement.achievement);
     const cardClasses = achievement.isUnlocked
-      ? "border-white/10 bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-black/20"
+      ? "border-yellow-400/25 bg-gradient-to-br from-yellow-500/10 via-slate-900/55 to-black/20 shadow-yellow-950/20"
       : "border-white/6 bg-gradient-to-br from-slate-900/40 via-slate-900/20 to-black/10 opacity-80";
 
     return html`
       <article
-        class="rounded-2xl border p-5 shadow-lg shadow-black/20 ${cardClasses}"
+        class="flex h-full flex-col rounded-2xl border p-5 shadow-lg shadow-black/20 ${cardClasses}"
       >
         <div class="flex items-start justify-between gap-4">
-          <div class="min-w-0">
-            <div
-              class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/35"
-            >
-              ${translateText("account_modal.achievement_label")}
-            </div>
-            <h4 class="mt-2 text-lg font-semibold text-white">
+          <div class="flex min-w-0 items-start gap-3">
+            ${this.renderAchievementIcon(achievement.isUnlocked)}
+            <h4 class="text-lg font-semibold text-white">
               ${this.resolveTitle(achievement.achievement)}
             </h4>
-            ${description
-              ? html`
-                  <p class="mt-2 text-sm leading-6 text-white/60">
-                    ${description}
-                  </p>
-                `
-              : null}
           </div>
           ${this.renderDifficultyBadge(difficulty)}
         </div>
 
-        <div class="mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
-          <div
-            class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/35"
-          >
-            ${achievement.isUnlocked
-              ? translateText("account_modal.achieved_on")
-              : translateText("account_modal.status")}
+        ${description
+          ? html`
+              <p class="mt-2 text-sm leading-6 text-white/60">${description}</p>
+            `
+          : null}
+
+        <div class="mt-auto pt-5">
+          <div class="rounded-xl border border-white/10 bg-black/20 p-4">
+            <div
+              class="text-[11px] font-bold uppercase tracking-[0.24em] text-white/35"
+            >
+              ${achievement.isUnlocked
+                ? translateText("account_modal.achieved_on")
+                : translateText("account_modal.status")}
+            </div>
+            ${achievement.isUnlocked && achievement.achievedAt
+              ? html`
+                  <time
+                    class="mt-2 block text-sm font-medium text-white/80"
+                    datetime=${achievement.achievedAt}
+                  >
+                    ${this.formatDate(achievement.achievedAt)}
+                  </time>
+                `
+              : html`
+                  <div class="mt-2 text-sm font-medium text-white/50">
+                    ${translateText("account_modal.not_unlocked_yet")}
+                  </div>
+                `}
           </div>
-          ${achievement.isUnlocked && achievement.achievedAt
-            ? html`
-                <time
-                  class="mt-2 block text-sm font-medium text-white/80"
-                  datetime=${achievement.achievedAt}
-                >
-                  ${this.formatDate(achievement.achievedAt)}
-                </time>
-              `
-            : html`
-                <div class="mt-2 text-sm font-medium text-white/50">
-                  ${translateText("account_modal.not_unlocked_yet")}
-                </div>
-              `}
         </div>
       </article>
     `;
