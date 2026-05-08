@@ -1,0 +1,125 @@
+{
+  "name": "Taiwan Strait",
+  "nations": [
+    {
+      "coordinates": [835, 35],
+      "name": "Fuzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [777, 226],
+      "name": "Putian",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [686, 330],
+      "name": "Quanzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [459, 116],
+      "name": "Chinese Military Base",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [540, 465],
+      "name": "Xiamen",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [435, 482],
+      "name": "Zhangzhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [279, 412],
+      "name": "Longyan",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [197, 743],
+      "name": "Shantou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [112, 793],
+      "name": "Jieyang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [125, 700],
+      "name": "Chaozhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [14, 215],
+      "name": "Giant Pandas",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [29, 503],
+      "name": "Meizhou",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [612, 478],
+      "name": "Kinmen Island",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [912, 718],
+      "name": "Penghu",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1134, 990],
+      "name": "Kaohsiung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1085, 884],
+      "name": "Tainan",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1289, 931],
+      "name": "Taitung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1378, 681],
+      "name": "Hualien",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1121, 768],
+      "name": "Chiayi",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1117, 618],
+      "name": "Taichung City",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1476, 320],
+      "name": "Keelung",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1388, 347],
+      "name": "Taipei",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1295, 350],
+      "name": "Taoyuan",
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1247, 415],
+      "name": "Hsinchu",
+      "flag": "tw"
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "map": {
+    "height": 1184,
+    "num_land_tiles": 748967,
+    "width": 1560
+  },
+  "map16x": {
+    "height": 296,
+    "num_land_tiles": 45756,
+    "width": 390
+  },
+  "map4x": {
+    "height": 592,
+    "num_land_tiles": 185553,
+    "width": 780
+  },
+  "name": "Taiwan Strait",
+  "nations": [
+    {
+      "coordinates": [835, 35],
+      "flag": "cn",
+      "name": "Fuzhou"
+    },
+    {
+      "coordinates": [777, 226],
+      "flag": "cn",
+      "name": "Putian"
+    },
+    {
+      "coordinates": [686, 330],
+      "flag": "cn",
+      "name": "Quanzhou"
+    },
+    {
+      "coordinates": [459, 116],
+      "flag": "cn",
+      "name": "Chinese Military Base"
+    },
+    {
+      "coordinates": [540, 465],
+      "flag": "cn",
+      "name": "Xiamen"
+    },
+    {
+      "coordinates": [435, 482],
+      "flag": "cn",
+      "name": "Zhangzhou"
+    },
+    {
+      "coordinates": [279, 412],
+      "flag": "cn",
+      "name": "Longyan"
+    },
+    {
+      "coordinates": [197, 743],
+      "flag": "cn",
+      "name": "Shantou"
+    },
+    {
+      "coordinates": [112, 793],
+      "flag": "cn",
+      "name": "Jieyang"
+    },
+    {
+      "coordinates": [125, 700],
+      "flag": "cn",
+      "name": "Chaozhou"
+    },
+    {
+      "coordinates": [14, 215],
+      "flag": "cn",
+      "name": "Giant Pandas"
+    },
+    {
+      "coordinates": [29, 503],
+      "flag": "cn",
+      "name": "Meizhou"
+    },
+    {
+      "coordinates": [612, 478],
+      "flag": "tw",
+      "name": "Kinmen Island"
+    },
+    {
+      "coordinates": [912, 718],
+      "flag": "tw",
+      "name": "Penghu"
+    },
+    {
+      "coordinates": [1134, 990],
+      "flag": "tw",
+      "name": "Kaohsiung"
+    },
+    {
+      "coordinates": [1085, 884],
+      "flag": "tw",
+      "name": "Tainan"
+    },
+    {
+      "coordinates": [1289, 931],
+      "flag": "tw",
+      "name": "Taitung"
+    },
+    {
+      "coordinates": [1378, 681],
+      "flag": "tw",
+      "name": "Hualien"
+    },
+    {
+      "coordinates": [1121, 768],
+      "flag": "tw",
+      "name": "Chiayi"
+    },
+    {
+      "coordinates": [1117, 618],
+      "flag": "tw",
+      "name": "Taichung City"
+    },
+    {
+      "coordinates": [1476, 320],
+      "flag": "tw",
+      "name": "Keelung"
+    },
+    {
+      "coordinates": [1388, 347],
+      "flag": "tw",
+      "name": "Taipei"
+    },
+    {
+      "coordinates": [1295, 350],
+      "flag": "tw",
+      "name": "Taoyuan"
+    },
+    {
+      "coordinates": [1247, 415],
+      "flag": "tw",
+      "name": "Hsinchu"
+    }
+  ]
+}
