@@ -143,15 +143,20 @@ export class NationStructureBehavior {
   ) {}
   private isThreatenedByAttack(ratio: number): boolean {
     const currentTick = this.game.ticks();
-    const elapsed = this.lastAttackCheckTick === 0 ? 0 : currentTick - this.lastAttackCheckTick;
+    // Cap elapsed at 100 ticks (10s) to prevent stress spikes after long peace
+    const elapsed = this.lastAttackCheckTick === 0 ? 0 : Math.min(100, currentTick - this.lastAttackCheckTick);
     this.lastAttackCheckTick = currentTick;
 
-    // Cooldown by 1x elapsed. If attacked (>5%), heat up by 3x elapsed (net +2x per tick)
-    this.attackStressMeter = Math.max(0, this.attackStressMeter - elapsed);
-    if (ratio > 0.05) this.attackStressMeter += elapsed * 3;
+    // Convert to Basis Points (whole numbers) for multiplayer safety (desync prevention)
+    const ratioBps = Math.floor(ratio * 10000);
+    const thresholdBps = Math.floor(UNDER_ATTACK_THREAT_RATIO * 10000);
 
-    // 200 stress = approx 10 seconds of sustained fighting
-    return ratio >= UNDER_ATTACK_THREAT_RATIO || (this.attackStressMeter > 200 && ratio > 0);
+    // Cooldown by 1x. If attacked (>5%), heat up by 3x
+    this.attackStressMeter = Math.max(0, this.attackStressMeter - elapsed);
+    if (ratioBps > 500) this.attackStressMeter += elapsed * 3;
+
+    // Trigger if over 35% threshold OR sustained stress over 200 (approx 10s)
+    return ratioBps >= thresholdBps || (this.attackStressMeter > 200 && ratioBps > 0);
   }
 
   handleStructures(): boolean {
