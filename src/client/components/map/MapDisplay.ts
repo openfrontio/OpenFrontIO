@@ -1,9 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
+import medalIconRaw from "../../../../resources/images/MedalIconWhite.svg?raw";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
+
+const medalMaskUrl = `url('data:image/svg+xml;utf8,${encodeURIComponent(medalIconRaw)}') no-repeat center / contain`;
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -144,7 +146,7 @@ export class MapDisplay extends LitElement {
     const wins = this.readWins();
     return medalOrder.map((medal) => {
       const earned = wins.has(medal);
-      const mask = `url('${assetUrl("images/MedalIconWhite.svg")}') no-repeat center / contain`;
+      const mask = medalMaskUrl;
       return html`<div
         class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
         style="background-color:${colors[

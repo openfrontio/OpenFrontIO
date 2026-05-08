@@ -90,8 +90,7 @@ export class ClanBrowseView extends LitElement {
   }
 
   render() {
-    if (this.loading && !this.browseData)
-      return html`<div class="p-4 lg:p-6">${renderLoadingSpinner()}</div>`;
+    if (this.loading && !this.browseData) return renderLoadingSpinner();
 
     const totalPages = this.browseData
       ? Math.ceil(this.browseData.total / this.browseData.limit)
@@ -102,7 +101,7 @@ export class ClanBrowseView extends LitElement {
     );
 
     return html`
-      <div class="p-4 lg:p-6 space-y-4">
+      <div class="space-y-4">
         <div class="relative">
           <input
             type="text"

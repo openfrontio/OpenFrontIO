@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { v4 as uuidv4 } from "uuid";
-import { translateText } from "../client/Utils";
+import { generateCryptoRandomUUID, translateText } from "../client/Utils";
 import { sanitizeClanTag } from "../core/Util";
 import {
   MAX_CLAN_TAG_LENGTH,
@@ -224,7 +223,7 @@ export class UsernameInput extends LitElement {
 }
 
 export function genAnonUsername(): string {
-  const uuid = uuidv4();
+  const uuid = generateCryptoRandomUUID();
   const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
   const decimal = BigInt(`0x${cleanUuid}`);
   const threeDigits = decimal % 1000n;

@@ -16,12 +16,10 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
-import { modalHeader } from "../ui/ModalHeader";
 import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
-  modalContainerClass,
   renderClanWL,
   renderLoadingSpinner,
   renderMemberPagination,
@@ -31,6 +29,7 @@ import {
   renderStat,
   showToast,
 } from "./ClanShared";
+import { ClanStatsBreakdown } from "./ClanStatsBreakdown";
 
 @customElement("clan-detail-view")
 export class ClanDetailView extends LitElement {
@@ -67,6 +66,7 @@ export class ClanDetailView extends LitElement {
   @state() private clanStats: ClanStats | null = null;
   @state() private loading = false;
   @state() private actionPending = false;
+  @state() private allStatsExpanded = false;
   private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private asyncGeneration = 0;
@@ -94,6 +94,14 @@ export class ClanDetailView extends LitElement {
   disconnectedCallback() {
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     super.disconnectedCallback();
+  }
+
+  protected updated() {
+    if (this.allStatsExpanded) {
+      this.querySelectorAll<ClanStatsBreakdown>("clan-stats-breakdown").forEach(
+        (el) => el.setAllExpanded(true),
+      );
+    }
   }
 
   private async loadDetail() {
@@ -282,16 +290,7 @@ export class ClanDetailView extends LitElement {
 
   render() {
     if (this.loading) {
-      return html`
-        <div class="${modalContainerClass}">
-          ${modalHeader({
-            title: translateText("clan_modal.title"),
-            onBack: () => this.back(),
-            ariaLabel: translateText("common.back"),
-          })}
-          ${renderLoadingSpinner()}
-        </div>
-      `;
+      return renderLoadingSpinner();
     }
 
     const clan = this.selectedClan;
@@ -306,58 +305,40 @@ export class ClanDetailView extends LitElement {
     );
 
     return html`
-      <div class="${modalContainerClass}">
-        ${modalHeader({
-          title: clan.name,
-          onBack: () => this.back(),
-          ariaLabel: translateText("common.back"),
-          rightContent: html`
-            <span
-              class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
-            >
-              [${clan.tag}]
-            </span>
-          `,
-        })}
+      <div class="space-y-6">
+        <div class="bg-white/5 rounded-xl border border-white/10 p-5">
+          <p class="text-white/70 text-sm">
+            ${clan.description || translateText("clan_modal.no_description")}
+          </p>
+        </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1 p-4 lg:p-6">
-          <div class="space-y-6">
-            <div class="bg-white/5 rounded-xl border border-white/10 p-5">
-              <p class="text-white/70 text-sm">
-                ${clan.description ||
-                translateText("clan_modal.no_description")}
-              </p>
-            </div>
+        <div class="grid grid-cols-2 gap-3">
+          ${renderStat(
+            translateText("clan_modal.members"),
+            `${clan.memberCount ?? 0}`,
+          )}
+          ${renderStat(
+            translateText("clan_modal.status"),
+            clan.isOpen
+              ? translateText("clan_modal.open")
+              : translateText("clan_modal.invite_only"),
+          )}
+        </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              ${renderStat(
-                translateText("clan_modal.members"),
-                `${clan.memberCount ?? 0}`,
-              )}
-              ${renderStat(
-                translateText("clan_modal.status"),
-                clan.isOpen
-                  ? translateText("clan_modal.open")
-                  : translateText("clan_modal.invite_only"),
-              )}
-            </div>
+        ${this.clanStats ? renderClanWL(this.clanStats) : ""}
+        ${canManageRequests && this.pendingRequestCount > 0
+          ? this.renderRequestsButton()
+          : ""}
+        ${isMember ? this.renderMembersList() : ""}
 
-            ${this.clanStats ? renderClanWL(this.clanStats) : ""}
-            ${canManageRequests && this.pendingRequestCount > 0
-              ? this.renderRequestsButton()
-              : ""}
-            ${isMember ? this.renderMembersList() : ""}
-
-            <div class="flex flex-wrap gap-3">
-              ${this.renderActionButtons(
-                isMember,
-                isLeader,
-                isOfficer,
-                hasPendingRequest,
-                clan,
-              )}
-            </div>
-          </div>
+        <div class="flex flex-wrap gap-3">
+          ${this.renderActionButtons(
+            isMember,
+            isLeader,
+            isOfficer,
+            hasPendingRequest,
+            clan,
+          )}
         </div>
       </div>
     `;
@@ -430,13 +411,37 @@ export class ClanDetailView extends LitElement {
     `;
   }
 
+  private toggleAllStats() {
+    this.allStatsExpanded = !this.allStatsExpanded;
+    const target = this.allStatsExpanded;
+    this.querySelectorAll<ClanStatsBreakdown>("clan-stats-breakdown").forEach(
+      (el) => el.setAllExpanded(target),
+    );
+  }
+
   private renderMembersList() {
     const filtered = filterMembersBySearch(this.members, this.memberSearch);
+    const toggleLabel = translateText(
+      this.allStatsExpanded
+        ? "clan_modal.stats_collapse_all"
+        : "clan_modal.stats_expand_all",
+    );
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
-        <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
-          ${translateText("clan_modal.members")}
-        </h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+            ${translateText("clan_modal.members")}
+          </h3>
+          <button
+            type="button"
+            @click=${() => this.toggleAllStats()}
+            class="text-[10px] font-bold text-white/50 hover:text-white uppercase tracking-wider px-2 py-1 rounded-md border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors"
+            title=${toggleLabel}
+            aria-pressed=${this.allStatsExpanded}
+          >
+            ${toggleLabel}
+          </button>
+        </div>
         ${renderMemberSearchInput(
           (e: Event) => this.onSearchInput(e),
           undefined,
@@ -530,11 +535,5 @@ export class ClanDetailView extends LitElement {
       `);
     }
     return buttons;
-  }
-
-  private back() {
-    this.dispatchEvent(
-      new CustomEvent("navigate-back", { bubbles: true, composed: true }),
-    );
   }
 }

@@ -241,9 +241,8 @@ describe("ClanModal — rendering", () => {
     });
 
     it("shows 0 in the stats row of the detail view when memberCount is undefined", async () => {
-      const { fetchClanDetail, fetchClanStats } = await import(
-        "../../../src/client/ClanApi"
-      );
+      const { fetchClanDetail, fetchClanStats } =
+        await import("../../../src/client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan({ memberCount: undefined }),
       );

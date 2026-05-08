@@ -82,9 +82,14 @@
       "name": "Skid Row"
     },
     {
-      "coordinates": [925, 935],
+      "coordinates": [965, 865],
       "flag": "California",
       "name": "Inglewood"
+    },
+    {
+      "coordinates": [815, 945],
+      "flag": "California",
+      "name": "L.A.X."
     },
     {
       "coordinates": [1180, 1010],

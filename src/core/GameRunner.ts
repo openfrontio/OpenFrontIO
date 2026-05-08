@@ -132,7 +132,7 @@ export class GameRunner {
 
     const wasInSpawnPhase = this.game.inSpawnPhase();
     let updates: GameUpdates;
-    let tickExecutionDuration: number = 0;
+    let tickExecutionDuration: number;
 
     try {
       const startTime = performance.now();
