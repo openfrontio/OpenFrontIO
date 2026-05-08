@@ -26,6 +26,7 @@ export default [
           allowDefaultProject: [
             "__mocks__/fileMock.js",
             "eslint.config.js",
+            "scripts/build-namelayer-assets.mjs",
             "scripts/sync-assets.mjs",
           ],
         },
