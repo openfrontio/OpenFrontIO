@@ -10,9 +10,10 @@ export const NAME_LAYER_FONT_FAMILY = "namelayer_overpass";
 export const NAME_LAYER_FALLBACK_FONT_FAMILY = "round_6x6_modified";
 
 export class NameLayerAssets {
-  public fontFamily = NAME_LAYER_FONT_FAMILY;
+  public fontFamily: string | null = null;
+  public fontReady = false;
 
-  private readonly textures = new Map<string, PIXI.Texture | null>();
+  private readonly textures = new Map<string, PIXI.Texture>();
   private readonly pendingTextures = new Map<string, Promise<void>>();
   private readonly warnedTextureFailures = new Set<string>();
   private preloadPromise: Promise<void> | null = null;
@@ -24,7 +25,7 @@ export class NameLayerAssets {
 
   getTexture(src: string): PIXI.Texture | null {
     const cached = this.textures.get(src);
-    if (cached !== undefined) {
+    if (cached) {
       return cached;
     }
 
@@ -36,7 +37,7 @@ export class NameLayerAssets {
             this.textures.set(src, texture);
           })
           .catch((error) => {
-            this.textures.set(src, null);
+            this.textures.delete(src);
             this.warnTextureFailure(src, error);
           })
           .finally(() => {
@@ -70,6 +71,7 @@ export class NameLayerAssets {
     try {
       await PIXI.Assets.load(nameLayerFont);
       this.fontFamily = NAME_LAYER_FONT_FAMILY;
+      this.fontReady = true;
       return;
     } catch (error) {
       console.warn(
@@ -81,7 +83,10 @@ export class NameLayerAssets {
     try {
       await PIXI.Assets.load(fallbackFont);
       this.fontFamily = NAME_LAYER_FALLBACK_FONT_FAMILY;
+      this.fontReady = true;
     } catch (error) {
+      this.fontFamily = null;
+      this.fontReady = false;
       console.error("NameLayer failed to load bitmap font", error);
     }
   }

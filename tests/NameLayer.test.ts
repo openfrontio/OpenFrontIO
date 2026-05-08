@@ -101,7 +101,26 @@ describe("NameLayerLayout", () => {
     expect(computeTraitorFlashDurationSeconds(150)).toBeCloseTo(1);
     expect(computeTraitorFlashDurationSeconds(0)).toBeCloseTo(0.2);
     expect(computeTraitorFlashAlpha(150, 0)).toBeCloseTo(1);
+    expect(computeTraitorFlashAlpha(150, 250)).toBeCloseTo(0.65);
     expect(computeTraitorFlashAlpha(150, 500)).toBeCloseTo(0.3);
+  });
+
+  test("spreads multiple centered icons instead of stacking them", () => {
+    const layout = computeNameLayerLayout({
+      fontSize: 10,
+      iconSize: 15,
+      iconCount: 0,
+      centeredIconCount: 2,
+      hasFlag: false,
+      flagAspectRatio: 1,
+      nameWidth: 40,
+      troopWidth: 30,
+    });
+
+    expect(layout.centeredIconPositions).toEqual([
+      { x: -9.5, y: -4.75 },
+      { x: 9.5, y: -4.75 },
+    ]);
   });
 
   test("replaces unsupported glyphs once per glyph", () => {
@@ -110,6 +129,16 @@ describe("NameLayerLayout", () => {
 
     expect(replaceUnsupportedNameGlyphs("A🙂🙂B", warn)).toBe("A??B");
     expect(replaceUnsupportedNameGlyphs("🙂", warn)).toBe("?");
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  test("replaces unsupported grapheme clusters with one fallback glyph", () => {
+    resetNameLayerGlyphWarningsForTests();
+    const warn = vi.fn();
+
+    expect(
+      replaceUnsupportedNameGlyphs("A\u{1F469}\u200D\u{1F4BB}B", warn),
+    ).toBe("A?B");
     expect(warn).toHaveBeenCalledTimes(1);
   });
 });
