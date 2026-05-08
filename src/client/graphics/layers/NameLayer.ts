@@ -1,4 +1,5 @@
-import { assetUrl } from "src/core/AssetUrls";
+import * as PIXI from "pixi.js";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Config, Theme } from "../../../core/configuration/Config";
@@ -9,8 +10,7 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import {
   ALLIANCE_ICON_ID,
-  AllianceProgressIconRefs,
-  createAllianceProgressIconRefs,
+  computeAllianceTopCutPercent,
   EMOJI_ICON_KIND,
   getFirstPlacePlayer,
   getPlayerIcons,
@@ -18,58 +18,80 @@ import {
   PlayerIconDescriptor,
   PlayerIconId,
   TRAITOR_ICON_ID,
-  updateAllianceProgressIconRefs,
 } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { NameLayerAssets } from "./NameLayerAssets";
+import {
+  computeNameLayerFontSize,
+  computeNameLayerLayout,
+  computeNameLayerScale,
+  computeNameLayerVisible,
+  computeTraitorFlashAlpha,
+  replaceUnsupportedNameGlyphs,
+} from "./NameLayerLayout";
 
-const PLAYER_NAME = "player-name";
-const PLAYER_NAME_SPAN = "player-name-span";
-const PLAYER_TROOPS = "player-troops";
-const PLAYER_ICONS = "player-icons";
-const PLAYER_FLAG = "player-flag";
+const allianceIconFaded = assetUrl("images/AllianceIconFaded.svg");
+const questionMarkIcon = assetUrl("images/QuestionMarkIcon.svg");
+
+type PixiRenderer = PIXI.Renderer | PIXI.WebGLRenderer | PIXI.WebGPURenderer;
+
+interface PixiIconRender {
+  container: PIXI.Container;
+  centered: boolean;
+  src?: string;
+  sprite?: PIXI.Sprite;
+  text?: PIXI.Text;
+  alliance?: {
+    base: PIXI.Sprite;
+    colored: PIXI.Sprite;
+    questionMark: PIXI.Sprite;
+    mask: PIXI.Graphics;
+  };
+}
 
 class RenderInfo {
-  public icons: Map<PlayerIconId, HTMLElement> = new Map();
-  public allianceIconRefs: AllianceProgressIconRefs | null = null;
+  public icons: Map<PlayerIconId, PixiIconRender> = new Map();
+  public location: Cell | null = null;
+  public baseSize = 1;
+  public fontSize = 0;
+  public fontColor = "";
+  public flagSrc = "";
+  public flagSprite: PIXI.Sprite | null = null;
+  public lastDisplayName = "";
+  public lastTroopsText = "";
 
   constructor(
     public player: PlayerView,
     public lastRenderCalc: number,
-    public location: Cell | null,
-    public fontSize: number,
-    public fontColor: string,
-    public element: HTMLElement,
-    public nameDiv: HTMLDivElement,
-    public nameSpan: HTMLSpanElement,
-    public troopsDiv: HTMLDivElement,
-    public flagImg: HTMLImageElement,
-    public iconsDiv: HTMLDivElement,
-    public lastTransform: string = "",
+    public container: PIXI.Container,
+    public nameText: PIXI.BitmapText,
+    public troopsText: PIXI.BitmapText,
   ) {}
 }
 
 export class NameLayer implements Layer {
   private config: Config;
   private lastChecked = 0;
-  private renderCheckRate = 100;
-  private renderRefreshRate = 500;
-  private rand = new PseudoRandom(10);
-  private renders: RenderInfo[] = [];
-  private seenPlayers: Set<PlayerView> = new Set();
-  private container: HTMLDivElement;
+  private readonly renderCheckRate = 100;
+  private readonly renderRefreshRate = 500;
+  private readonly rand = new PseudoRandom(10);
+  private readonly renders: RenderInfo[] = [];
+  private readonly seenPlayers: Set<PlayerView> = new Set();
+  private readonly rootStage: PIXI.Container = new PIXI.Container();
+  private readonly labelStage: PIXI.Container = new PIXI.Container();
+  private readonly assets = new NameLayerAssets();
   private theme: Theme;
   private userSettings: UserSettings = new UserSettings();
-  private isVisible: boolean = true;
+  private isVisible = true;
   private firstPlace: PlayerView | null = null;
   private allianceDuration: number;
-  private alliancesDisabled: boolean = false;
+  private alliancesDisabled = false;
   private myPlayer: PlayerView | null = null;
-  private lastContainerTransform: string = "";
-  private basePlayerTemplate: HTMLDivElement;
-  private iconTemplate: HTMLImageElement;
-  private iconCenterTemplate: HTMLImageElement;
-  private emojiTemplate: HTMLDivElement;
+  private pixicanvas: HTMLCanvasElement;
+  private renderer: PixiRenderer | null = null;
+  private rendererInitialized = false;
+  private rebuildPending = false;
 
   constructor(
     private game: GameView,
@@ -81,86 +103,41 @@ export class NameLayer implements Layer {
     return false;
   }
 
-  redraw() {} // not affected by Canvas/WebGL context loss as this layer is DOM-based
-
-  public init() {
-    this.container = document.createElement("div");
-    this.container.style.position = "fixed";
-    this.container.style.left = "50%";
-    this.container.style.top = "50%";
-    this.container.style.pointerEvents = "none";
-    this.container.style.zIndex = "2";
-    document.body.appendChild(this.container);
-
-    // Add CSS keyframes for traitor icon flashing animation
-    // Append to container instead of document.head to keep styles scoped to this component
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes traitorFlash {
-        0%, 100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.3;
-        }
-      }
-    `;
-    this.container.appendChild(style);
-
+  async init() {
     this.myPlayer = this.game.myPlayer();
     this.config = this.game.config();
     this.theme = this.config.theme();
-
     this.alliancesDisabled = this.config.disableAlliances();
     this.allianceDuration = Math.max(1, this.config.allianceDuration());
 
-    this.basePlayerTemplate = this.createBasePlayerElement();
-
-    this.iconTemplate = document.createElement("img");
-
-    this.iconCenterTemplate = document.createElement("img");
-    this.iconCenterTemplate.style.position = "absolute";
-    this.iconCenterTemplate.style.top = "50%";
-    this.iconCenterTemplate.style.transform = "translateY(-50%)";
-
-    this.emojiTemplate = document.createElement("div");
-    this.emojiTemplate.style.position = "absolute";
-    this.emojiTemplate.style.top = "50%";
-    this.emojiTemplate.style.transform = "translateY(-50%)";
+    this.rootStage.addChild(this.labelStage);
+    this.rootStage.position.set(0, 0);
 
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
+    window.addEventListener("resize", () => this.resizeCanvas());
+
+    await this.setupRenderer();
+    this.resizeCanvas();
   }
 
-  private onAlternateViewChange(event: AlternateViewEvent) {
-    this.isVisible = !event.alternateView;
-    // Update visibility of all name elements immediately
-    for (const render of this.renders) {
-      this.updateElementVisibility(render);
-    }
-  }
-
-  private updateElementVisibility(render: RenderInfo, baseSize?: number) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
+  async redraw() {
+    if (this.rebuildPending || this.rendererOrGLContextLost()) {
       return;
     }
-
-    baseSize =
-      baseSize ?? Math.max(1, Math.floor(render.player.nameLocation().size));
-    const size = this.transformHandler.scale * baseSize;
-    const isOnScreen = render.location
-      ? this.transformHandler.isOnScreen(render.location)
-      : false;
-    const maxZoomScale = 17;
-
-    const display =
-      !this.isVisible ||
-      size < 7 ||
-      (this.transformHandler.scale > maxZoomScale && size > 100) ||
-      !isOnScreen
-        ? "none"
-        : "flex";
-    if (render.element.style.display !== display) {
-      render.element.style.display = display;
+    this.rebuildPending = true;
+    try {
+      if (this.renderer?.name === "webgpu") {
+        this.rendererInitialized = false;
+        await this.setupRenderer();
+      }
+      this.resizeCanvas();
+      for (const render of this.renders) {
+        render.container.destroy({ children: true });
+      }
+      this.renders.length = 0;
+      this.seenPlayers.clear();
+    } finally {
+      this.rebuildPending = false;
     }
   }
 
@@ -168,385 +145,526 @@ export class NameLayer implements Layer {
     return 1000;
   }
 
-  public tick() {
-    // Precompute the first-place player for performance
+  tick() {
     this.firstPlace = getFirstPlacePlayer(this.game);
 
     for (const player of this.game.playerViews()) {
-      if (player.isAlive()) {
-        if (!this.seenPlayers.has(player)) {
-          this.seenPlayers.add(player);
-          this.renders.push(this.createPlayerElement(player));
-        }
+      if (player.isAlive() && !this.seenPlayers.has(player)) {
+        this.seenPlayers.add(player);
+        this.renders.push(this.createPlayerRender(player));
       }
     }
   }
 
-  public renderLayer() {
-    const screenPosOld = this.transformHandler.worldToScreenCoordinates(
-      new Cell(0, 0),
-    );
-    const screenPos = new Cell(
-      screenPosOld.x - window.innerWidth / 2,
-      screenPosOld.y - window.innerHeight / 2,
-    );
-    const newTransform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
-    if (this.lastContainerTransform !== newTransform) {
-      this.container.style.transform = newTransform;
-      this.lastContainerTransform = newTransform;
+  renderLayer(mainContext: CanvasRenderingContext2D) {
+    if (this.rendererOrGLContextLost()) {
+      return;
     }
+
+    this.myPlayer ??= this.game.myPlayer();
+    this.updateTransformsAndVisibility();
 
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
       this.lastChecked = now;
-
-      this.myPlayer ??= this.game.myPlayer();
       const transitiveTargets = this.myPlayer?.transitiveTargets() ?? [];
-
-      for (const render of this.renders) {
-        this.renderPlayerInfo(render, transitiveTargets);
+      for (const render of [...this.renders]) {
+        this.renderPlayerInfo(render, transitiveTargets, now);
       }
     }
+
+    this.renderer?.render(this.rootStage);
+    if (this.renderer) {
+      mainContext.drawImage(this.renderer.canvas, 0, 0);
+    }
   }
 
-  private createBasePlayerElement(): HTMLDivElement {
-    const element = document.createElement("div");
-    element.style.position = "absolute";
-    element.style.flexDirection = "column";
-    element.style.alignItems = "center";
-    element.style.gap = "0px";
-    // Start off invisible so it doesn't flash at 0,0
-    element.style.display = "none";
-
-    const iconsDiv = document.createElement("div");
-    iconsDiv.classList.add(PLAYER_ICONS);
-    iconsDiv.style.display = "flex";
-    iconsDiv.style.gap = "4px";
-    iconsDiv.style.justifyContent = "center";
-    iconsDiv.style.alignItems = "center";
-    iconsDiv.style.zIndex = "2";
-    iconsDiv.style.opacity = "0.8";
-    element.appendChild(iconsDiv);
-
-    const nameDiv = document.createElement("div");
-    nameDiv.classList.add(PLAYER_NAME);
-    nameDiv.style.whiteSpace = "nowrap";
-    nameDiv.style.textOverflow = "ellipsis";
-    nameDiv.style.zIndex = "3";
-    nameDiv.style.display = "flex";
-    nameDiv.style.justifyContent = "flex-end";
-    nameDiv.style.alignItems = "center";
-
-    const flagImg = document.createElement("img");
-    flagImg.classList.add(PLAYER_FLAG);
-    flagImg.style.opacity = "0.8";
-    flagImg.style.zIndex = "1";
-    flagImg.style.objectFit = "contain";
-    flagImg.style.display = "none";
-    nameDiv.appendChild(flagImg);
-
-    const nameSpan = document.createElement("span");
-    nameSpan.classList.add(PLAYER_NAME_SPAN);
-    nameDiv.appendChild(nameSpan);
-    element.appendChild(nameDiv);
-
-    const troopsDiv = document.createElement("div");
-    troopsDiv.classList.add(PLAYER_TROOPS);
-    troopsDiv.setAttribute("translate", "no");
-    troopsDiv.style.zIndex = "3";
-    troopsDiv.style.marginTop = "-5%";
-    element.appendChild(troopsDiv);
-
-    return element;
-  }
-
-  private createPlayerElement(player: PlayerView): RenderInfo {
-    const element = this.basePlayerTemplate.cloneNode(true) as HTMLDivElement;
-
-    // Queryselector expensive but this runs only once per player and better maintainable
-    const nameDiv = element.querySelector(`.${PLAYER_NAME}`) as HTMLDivElement;
-    const nameSpan = element.querySelector(
-      `.${PLAYER_NAME_SPAN}`,
-    ) as HTMLSpanElement;
-    const troopsDiv = element.querySelector(
-      `.${PLAYER_TROOPS}`,
-    ) as HTMLDivElement;
-    const flagImg = element.querySelector(
-      `.${PLAYER_FLAG}`,
-    ) as HTMLImageElement;
-    const iconsDiv = element.querySelector(
-      `.${PLAYER_ICONS}`,
-    ) as HTMLDivElement;
-
-    const font = this.theme.font();
-    nameDiv.style.fontFamily = font;
-
-    const flag = player.cosmetics.flag;
-    if (flag) {
-      flagImg.src = assetUrl(flag);
-      flagImg.style.display = "block";
+  private async setupRenderer() {
+    if (this.renderer) {
+      this.renderer.destroy(true);
+      this.labelStage.removeChildren();
     }
 
-    const renderInfo = new RenderInfo(
-      player,
-      0,
-      null,
-      0,
-      "",
-      element,
-      nameDiv,
-      nameSpan,
-      troopsDiv,
-      flagImg,
-      iconsDiv,
-    );
+    await this.assets.preload();
 
-    this.container.appendChild(element);
-    return renderInfo;
+    this.pixicanvas = document.createElement("canvas");
+    this.pixicanvas.width = window.innerWidth;
+    this.pixicanvas.height = window.innerHeight;
+
+    const renderer = await PIXI.autoDetectRenderer({
+      canvas: this.pixicanvas,
+      resolution: 1,
+      width: this.pixicanvas.width,
+      height: this.pixicanvas.height,
+      antialias: false,
+      clearBeforeRender: true,
+      backgroundAlpha: 0,
+      backgroundColor: 0x00000000,
+    });
+
+    console.info(`Using ${renderer.name} for name layer`);
+    this.renderer = renderer;
+
+    if (this.renderer.name === "webgpu") {
+      const gpuRenderer = this.renderer as PIXI.WebGPURenderer;
+      gpuRenderer.gpu.device.lost.then(() => {
+        this.redraw();
+      });
+    }
+
+    if (this.renderer.name === "webgl") {
+      this.renderer.runners.contextChange.add({
+        contextChange: () => {
+          requestAnimationFrame(() => {
+            this.redraw();
+          });
+        },
+      });
+    }
+
+    this.rendererInitialized = true;
   }
 
-  renderPlayerInfo(render: RenderInfo, transitiveTargets: PlayerView[]) {
+  private rendererOrGLContextLost(): boolean {
+    if (!this.renderer || !this.rendererInitialized) return true;
+    if (this.renderer.name === "webgl") {
+      return (this.renderer as PIXI.WebGLRenderer).context?.isLost === true;
+    }
+    return false;
+  }
+
+  private resizeCanvas() {
+    if (this.rendererOrGLContextLost()) {
+      return;
+    }
+    this.pixicanvas.width = window.innerWidth;
+    this.pixicanvas.height = window.innerHeight;
+    this.renderer?.resize(window.innerWidth, window.innerHeight, 1);
+  }
+
+  private onAlternateViewChange(event: AlternateViewEvent) {
+    this.isVisible = !event.alternateView;
+    this.updateTransformsAndVisibility();
+  }
+
+  private createPlayerRender(player: PlayerView): RenderInfo {
+    const container = new PIXI.Container();
+    container.visible = false;
+
+    const nameText = this.createBitmapText("");
+    const troopsText = this.createBitmapText("");
+
+    container.addChild(nameText, troopsText);
+    this.labelStage.addChild(container);
+
+    const render = new RenderInfo(player, 0, container, nameText, troopsText);
+    this.updateFlag(render);
+    return render;
+  }
+
+  private createBitmapText(text: string): PIXI.BitmapText {
+    const bitmapText = new PIXI.BitmapText({
+      text,
+      style: {
+        fontFamily: this.assets.fontFamily,
+        fontSize: 12,
+        fill: "#ffffff",
+      },
+    });
+    bitmapText.anchor.set(0.5);
+    return bitmapText;
+  }
+
+  private updateTransformsAndVisibility() {
+    const now = performance.now();
+    for (const render of this.renders) {
+      const nameLocation = render.player.nameLocation();
+      if (!nameLocation || !render.player.isAlive()) {
+        render.container.visible = false;
+        continue;
+      }
+
+      render.baseSize = Math.max(1, Math.floor(nameLocation.size));
+      render.location = new Cell(nameLocation.x, nameLocation.y);
+      const isOnScreen = this.transformHandler.isOnScreen(render.location);
+      render.container.visible = computeNameLayerVisible({
+        isLayerVisible: this.isVisible,
+        transformScale: this.transformHandler.scale,
+        baseSize: render.baseSize,
+        isOnScreen,
+      });
+
+      if (!render.container.visible) {
+        continue;
+      }
+
+      const screenPos = this.transformHandler.worldToCanvasCoordinates(
+        render.location,
+      );
+      render.container.position.set(
+        Math.round(screenPos.x),
+        Math.round(screenPos.y),
+      );
+      render.container.scale.set(computeNameLayerScale(render.baseSize));
+      this.updateTraitorAlpha(render, now);
+    }
+  }
+
+  private renderPlayerInfo(
+    render: RenderInfo,
+    transitiveTargets: PlayerView[],
+    now: number,
+  ) {
     if (!render.player.nameLocation()) {
       return;
     }
     if (!render.player.isAlive()) {
-      this.renders = this.renders.filter((r) => r !== render);
-      render.element.remove();
+      this.deleteRender(render);
       return;
     }
-
-    // Update location and size, show or hide dependent on those
-    const nameLocation = render.player.nameLocation();
-    const newX = nameLocation.x;
-    const newY = nameLocation.y;
-
-    if (
-      !render.location ||
-      render.location.x !== newX ||
-      render.location.y !== newY
-    ) {
-      render.location = new Cell(newX, newY);
-    }
-
-    const baseSize = Math.max(1, Math.floor(nameLocation.size));
-    this.updateElementVisibility(render, baseSize);
-
-    if (render.element.style.display === "none") {
+    if (!render.container.visible) {
       return;
     }
-
-    // Throttle further updates
-    const now = Date.now();
     if (now - render.lastRenderCalc <= this.renderRefreshRate) {
       return;
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
-    // Update text sizes, content and color
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.nameDiv.style.fontSize = `${render.fontSize}px`;
-    render.nameDiv.style.lineHeight = `${render.fontSize}px`;
-    render.flagImg.style.height = `${render.fontSize}px`;
-    render.troopsDiv.style.fontSize = `${render.fontSize}px`;
+    render.fontSize = computeNameLayerFontSize(render.baseSize);
+    this.updateText(render);
+    this.updateFlag(render);
 
-    render.nameSpan.textContent = render.player.displayName();
-    render.troopsDiv.textContent = renderTroops(render.player.troops());
-
-    const fontColor = this.theme.textColor(render.player);
-    if (render.fontColor !== fontColor) {
-      render.fontColor = fontColor;
-      render.nameDiv.style.color = fontColor;
-      render.troopsDiv.style.color = fontColor;
-    }
-
-    // Handle icons
     const iconSize = Math.min(render.fontSize * 1.5, 48);
-    const darkMode = this.userSettings.darkMode();
-    const darkModeStr = darkMode.toString();
-
-    // Compute which icons should be shown for this player using shared logic
     const icons = getPlayerIcons({
       game: this.game,
       player: render.player,
       includeAllianceIcon: true,
       firstPlace: this.firstPlace,
-      darkMode: darkMode,
+      darkMode: this.userSettings.darkMode(),
       alliancesDisabled: this.alliancesDisabled,
-      transitiveTargets: transitiveTargets,
+      transitiveTargets,
     });
 
-    // Build a set of desired icon IDs
-    const desiredIconIds = new Set(icons.map((icon) => icon.id));
+    this.updateIcons(render, icons, iconSize);
+    this.layoutRender(render, iconSize);
+  }
 
-    // Remove any icons that are no longer needed
-    for (const [id, element] of render.icons) {
-      if (!desiredIconIds.has(id)) {
-        if (id === ALLIANCE_ICON_ID) {
-          render.allianceIconRefs?.wrapper.remove();
-          render.allianceIconRefs = null;
-          render.icons.delete(ALLIANCE_ICON_ID);
-        } else {
-          element.remove();
-          render.icons.delete(id);
-        }
+  private updateText(render: RenderInfo) {
+    const displayName = replaceUnsupportedNameGlyphs(
+      render.player.displayName(),
+    );
+    const troopsText = replaceUnsupportedNameGlyphs(
+      renderTroops(render.player.troops()),
+    );
+    const fontColor = this.theme.textColor(render.player);
+
+    if (
+      render.lastDisplayName !== displayName ||
+      render.fontColor !== fontColor ||
+      render.nameText.style.fontSize !== render.fontSize ||
+      render.nameText.style.fontFamily !== this.assets.fontFamily
+    ) {
+      render.nameText.text = displayName;
+      render.nameText.style = {
+        fontFamily: this.assets.fontFamily,
+        fontSize: render.fontSize,
+        fill: fontColor,
+      };
+      render.lastDisplayName = displayName;
+    }
+
+    if (
+      render.lastTroopsText !== troopsText ||
+      render.fontColor !== fontColor ||
+      render.troopsText.style.fontSize !== render.fontSize ||
+      render.troopsText.style.fontFamily !== this.assets.fontFamily
+    ) {
+      render.troopsText.text = troopsText;
+      render.troopsText.style = {
+        fontFamily: this.assets.fontFamily,
+        fontSize: render.fontSize,
+        fill: fontColor,
+      };
+      render.lastTroopsText = troopsText;
+    }
+
+    render.fontColor = fontColor;
+  }
+
+  private updateFlag(render: RenderInfo) {
+    const flag = render.player.cosmetics.flag;
+    const src = flag ? assetUrl(flag) : "";
+    if (!src) {
+      render.flagSprite?.destroy();
+      render.flagSprite = null;
+      render.flagSrc = "";
+      return;
+    }
+
+    if (src !== render.flagSrc) {
+      render.flagSprite?.destroy();
+      render.flagSprite = null;
+      render.flagSrc = src;
+    }
+
+    const texture = this.assets.getTexture(src);
+    if (!texture) {
+      if (render.flagSprite) {
+        render.flagSprite.visible = false;
+      }
+      return;
+    }
+
+    if (!render.flagSprite) {
+      render.flagSprite = new PIXI.Sprite(texture);
+      render.flagSprite.anchor.set(0.5);
+      render.flagSprite.alpha = 0.8;
+      render.container.addChild(render.flagSprite);
+    } else if (render.flagSprite.texture !== texture) {
+      render.flagSprite.texture = texture;
+    }
+
+    render.flagSprite.visible = true;
+  }
+
+  private updateIcons(
+    render: RenderInfo,
+    icons: PlayerIconDescriptor[],
+    size: number,
+  ) {
+    const desiredIds = new Set(icons.map((icon) => icon.id));
+    for (const [id, iconRender] of render.icons) {
+      if (!desiredIds.has(id)) {
+        iconRender.container.destroy({ children: true });
+        render.icons.delete(id);
       }
     }
 
-    // Add or update icons that should be shown
     for (const icon of icons) {
-      if (icon.kind === EMOJI_ICON_KIND && icon.text) {
-        this.handleEmojiIcon(render, icon, iconSize);
-        continue;
-      } else if (!(icon.kind === IMAGE_ICON_KIND && icon.src)) {
-        continue;
+      if (icon.kind === EMOJI_ICON_KIND) {
+        this.updateEmojiIcon(render, icon, size);
+      } else if (icon.id === ALLIANCE_ICON_ID) {
+        this.updateAllianceIcon(render, icon, size);
+      } else if (icon.kind === IMAGE_ICON_KIND && icon.src) {
+        this.updateImageIcon(render, icon, size);
       }
-      // Special handling for alliance icon with progress indicator
-      if (icon.id === ALLIANCE_ICON_ID) {
-        this.handleAllianceIcons(render, iconSize, darkModeStr);
-        continue; // Skip regular image handling
-      }
-
-      const imgElement = this.handleOtherIcons(
-        render,
-        icon,
-        iconSize,
-        darkModeStr,
-      );
-
-      // Traitor flashing - smooth speed increase starting at 15s
-      if (icon.id === TRAITOR_ICON_ID) {
-        this.handleTraitorIconFlashing(render.player, imgElement);
-      }
-    }
-
-    // Position element with scale
-    // Don't require nameLocation to be changed: Scale update otherwise sometimes only happens after seconds which looks buggy.
-    // Because of sometimes overlapping delays of 20 ticks for nameLocation() (largestClusterBoundingBox in PlayerExecution)
-    // and the 500ms renderRefreshRate in here.
-    const scale = Math.min(baseSize * 0.25, 3);
-    const transform = `translate(${newX}px, ${newY}px) translate(-50%, -50%) scale(${scale})`;
-    if (render.lastTransform !== transform) {
-      render.element.style.transform = transform;
-      render.lastTransform = transform;
     }
   }
 
-  private handleEmojiIcon(
+  private updateImageIcon(
     render: RenderInfo,
     icon: PlayerIconDescriptor,
     size: number,
   ) {
-    let emojiDiv = render.icons.get(icon.id) as HTMLDivElement | undefined;
-
-    if (!emojiDiv) {
-      emojiDiv = this.emojiTemplate.cloneNode(true) as HTMLDivElement;
-      render.iconsDiv.appendChild(emojiDiv);
-      render.icons.set(icon.id, emojiDiv);
+    const src = icon.src;
+    if (!src) {
+      return;
     }
 
-    emojiDiv.textContent = icon.text ?? "";
-    emojiDiv.style.fontSize = `${size}px`;
+    let iconRender = render.icons.get(icon.id);
+    if (!iconRender || iconRender.src !== src || !iconRender.sprite) {
+      iconRender?.container.destroy({ children: true });
+      const container = new PIXI.Container();
+      container.alpha = 0.8;
+      const sprite = new PIXI.Sprite();
+      sprite.anchor.set(0.5);
+      container.addChild(sprite);
+      render.container.addChild(container);
+      iconRender = {
+        container,
+        centered: icon.center ?? false,
+        src,
+        sprite,
+      };
+      render.icons.set(icon.id, iconRender);
+    }
+
+    iconRender.centered = icon.center ?? false;
+    const texture = this.assets.getTexture(src);
+    iconRender.container.visible = texture !== null;
+    if (!texture) {
+      return;
+    }
+
+    iconRender.sprite!.texture = texture;
+    iconRender.sprite!.width = size;
+    iconRender.sprite!.height = size;
   }
 
-  private handleAllianceIcons(
+  private updateEmojiIcon(
     render: RenderInfo,
+    icon: PlayerIconDescriptor,
     size: number,
-    darkMode: string,
   ) {
+    let iconRender = render.icons.get(icon.id);
+    if (!iconRender || !iconRender.text) {
+      iconRender?.container.destroy({ children: true });
+      const container = new PIXI.Container();
+      container.alpha = 0.8;
+      const text = new PIXI.Text({
+        text: icon.text ?? "",
+        style: {
+          fontFamily: "sans-serif",
+          fontSize: size,
+          fill: "#ffffff",
+        },
+      });
+      text.anchor.set(0.5);
+      container.addChild(text);
+      render.container.addChild(container);
+      iconRender = { container, centered: icon.center ?? false, text };
+      render.icons.set(icon.id, iconRender);
+    }
+
+    iconRender.centered = icon.center ?? false;
+    iconRender.text!.text = icon.text ?? "";
+    iconRender.text!.style = {
+      fontFamily: "sans-serif",
+      fontSize: size,
+      fill: "#ffffff",
+    };
+    iconRender.container.visible = true;
+  }
+
+  private updateAllianceIcon(
+    render: RenderInfo,
+    icon: PlayerIconDescriptor,
+    size: number,
+  ) {
+    let iconRender = render.icons.get(icon.id);
+    if (!iconRender || !iconRender.alliance) {
+      iconRender?.container.destroy({ children: true });
+      const container = new PIXI.Container();
+      container.alpha = 0.8;
+      const base = new PIXI.Sprite();
+      const colored = new PIXI.Sprite();
+      const questionMark = new PIXI.Sprite();
+      const mask = new PIXI.Graphics();
+      for (const sprite of [base, colored, questionMark]) {
+        sprite.anchor.set(0.5);
+        container.addChild(sprite);
+      }
+      colored.mask = mask;
+      container.addChild(mask);
+      render.container.addChild(container);
+      iconRender = {
+        container,
+        centered: false,
+        src: icon.src,
+        alliance: { base, colored, questionMark, mask },
+      };
+      render.icons.set(icon.id, iconRender);
+    }
+
+    const baseTexture = this.assets.getTexture(allianceIconFaded);
+    const coloredTexture = icon.src ? this.assets.getTexture(icon.src) : null;
+    const questionTexture = this.assets.getTexture(questionMarkIcon);
+    iconRender.container.visible =
+      baseTexture !== null && coloredTexture !== null;
+    if (!baseTexture || !coloredTexture) {
+      return;
+    }
+
+    const refs = iconRender.alliance!;
+    refs.base.texture = baseTexture;
+    refs.colored.texture = coloredTexture;
+    refs.base.width = size;
+    refs.base.height = size;
+    refs.colored.width = size;
+    refs.colored.height = size;
+
     this.myPlayer ??= this.game.myPlayer();
     const allianceView = this.myPlayer
       ?.alliances()
       .find((a) => a.other === render.player.id());
+    const remaining = allianceView
+      ? Math.max(0, allianceView.expiresAt - this.game.ticks())
+      : 0;
+    const fraction = Math.max(
+      0,
+      Math.min(1, remaining / this.allianceDuration),
+    );
+    const topCut = (computeAllianceTopCutPercent(fraction) / 100) * size;
+    refs.mask.clear();
+    refs.mask
+      .rect(-size / 2, -size / 2 + topCut, size, Math.max(0, size - topCut))
+      .fill(0xffffff);
 
-    let fraction = 0;
-    let hasExtensionRequest = false;
-    if (allianceView) {
-      const remaining = Math.max(0, allianceView.expiresAt - this.game.ticks());
-      fraction = Math.max(0, Math.min(1, remaining / this.allianceDuration));
-      hasExtensionRequest = allianceView.hasExtensionRequest;
+    refs.questionMark.visible =
+      allianceView?.hasExtensionRequest === true && questionTexture !== null;
+    if (questionTexture) {
+      refs.questionMark.texture = questionTexture;
+      refs.questionMark.width = size;
+      refs.questionMark.height = size;
     }
-
-    if (!render.allianceIconRefs) {
-      render.allianceIconRefs = createAllianceProgressIconRefs(
-        size,
-        fraction,
-        hasExtensionRequest,
-        darkMode,
-      );
-
-      render.iconsDiv.appendChild(render.allianceIconRefs.wrapper);
-      render.icons.set(ALLIANCE_ICON_ID, render.allianceIconRefs.wrapper);
-    } else {
-      updateAllianceProgressIconRefs(
-        render.allianceIconRefs,
-        size,
-        fraction,
-        hasExtensionRequest,
-        darkMode,
-      );
-    }
-    return;
   }
 
-  private handleOtherIcons(
-    render: RenderInfo,
-    icon: PlayerIconDescriptor,
-    size: number,
-    darkMode: string,
-  ): HTMLImageElement {
-    let imgElement = render.icons.get(icon.id) as HTMLImageElement | undefined;
+  private layoutRender(render: RenderInfo, iconSize: number) {
+    const regularIcons = Array.from(render.icons.values()).filter(
+      (icon) => !icon.centered && icon.container.visible,
+    );
+    const centeredIcons = Array.from(render.icons.values()).filter(
+      (icon) => icon.centered && icon.container.visible,
+    );
+    const flagTexture = render.flagSprite?.visible
+      ? render.flagSprite.texture
+      : null;
+    const flagAspectRatio =
+      flagTexture && flagTexture.height > 0
+        ? flagTexture.width / flagTexture.height
+        : 1;
 
-    if (!imgElement) {
-      imgElement = icon.center
-        ? (this.iconCenterTemplate.cloneNode(true) as HTMLImageElement)
-        : (this.iconTemplate.cloneNode(true) as HTMLImageElement);
+    const layout = computeNameLayerLayout({
+      fontSize: render.fontSize,
+      iconSize,
+      iconCount: regularIcons.length,
+      centeredIconCount: centeredIcons.length,
+      hasFlag: render.flagSprite?.visible === true,
+      flagAspectRatio,
+      nameWidth: render.nameText.width,
+      troopWidth: render.troopsText.width,
+    });
 
-      imgElement.src = icon.src ?? "";
-      imgElement.style.width = `${size}px`;
-      imgElement.style.height = `${size}px`;
-      imgElement.setAttribute("dark-mode", darkMode);
-      render.iconsDiv.appendChild(imgElement);
-      render.icons.set(icon.id, imgElement);
-    } else {
-      // Update src if it changed (e.g., nuke red/white or dark-mode icons)
-      if (imgElement.src !== icon.src) {
-        imgElement.src = icon.src ?? "";
-      }
+    regularIcons.forEach((icon, index) => {
+      const pos = layout.iconPositions[index];
+      icon.container.position.set(pos.x, pos.y);
+    });
+    centeredIcons.forEach((icon, index) => {
+      const pos = layout.centeredIconPositions[index];
+      icon.container.position.set(pos.x, pos.y);
+    });
 
-      imgElement.style.width = `${size}px`;
-      imgElement.style.height = `${size}px`;
-      imgElement.setAttribute("dark-mode", darkMode);
+    if (render.flagSprite && layout.flag) {
+      render.flagSprite.position.set(layout.flag.x, layout.flag.y);
+      render.flagSprite.width = layout.flag.width;
+      render.flagSprite.height = layout.flag.height;
+      render.flagSprite.visible = true;
+    } else if (render.flagSprite) {
+      render.flagSprite.visible = false;
     }
-    return imgElement;
+
+    render.nameText.position.set(layout.nameText.x, layout.nameText.y);
+    render.troopsText.position.set(layout.troopText.x, layout.troopText.y);
   }
 
-  private handleTraitorIconFlashing(
-    player: PlayerView,
-    icon: HTMLImageElement,
-  ) {
-    const remainingTicks = player.getTraitorRemainingTicks();
-    // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
-    const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
-
-    if (remainingSeconds <= 15) {
-      // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
-      // Using cubic ease-out for slower, more gradual acceleration
-      const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
-      const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
-
-      // Cubic ease-out: slower acceleration, smoother transition
-      const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
-      const maxDuration = 1.0; // Slow flash at 15 seconds
-      const minDuration = 0.2; // Fast flash at 0 seconds
-      const duration =
-        minDuration + (maxDuration - minDuration) * easedProgress;
-      const animationDuration = `${duration.toFixed(2)}s`;
-
-      icon.style.animation = `traitorFlash ${animationDuration} infinite`;
-      icon.style.animationTimingFunction = "ease-in-out";
-    } else {
-      // Don't flash if more than 15 seconds remaining
-      icon.style.animation = "none";
+  private updateTraitorAlpha(render: RenderInfo, nowMs: number) {
+    const traitorIcon = render.icons.get(TRAITOR_ICON_ID);
+    if (!traitorIcon) {
+      return;
     }
+    traitorIcon.container.alpha =
+      computeTraitorFlashAlpha(
+        render.player.getTraitorRemainingTicks(),
+        nowMs,
+      ) * 0.8;
+  }
+
+  private deleteRender(render: RenderInfo) {
+    const index = this.renders.indexOf(render);
+    if (index >= 0) {
+      this.renders.splice(index, 1);
+    }
+    this.seenPlayers.delete(render.player);
+    render.container.destroy({ children: true });
   }
 }

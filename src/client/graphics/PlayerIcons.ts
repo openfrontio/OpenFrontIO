@@ -341,6 +341,10 @@ export function updateAllianceProgressIconRefs(
 }
 
 export function computeAllianceClipPath(fraction: number): string {
-  const topCut = 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 82.40%
+  const topCut = computeAllianceTopCutPercent(fraction);
   return `inset(${topCut.toFixed(2)}% -2px 0 -2px)`;
+}
+
+export function computeAllianceTopCutPercent(fraction: number): number {
+  return 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 82.40%
 }
