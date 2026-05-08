@@ -494,11 +494,8 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderIdentityRow(
     other: PlayerView,
     my: PlayerView,
-    myPanelClicked: boolean = false,
   ) {
-    const activeFlagPath = myPanelClicked
-      ? my.cosmetics.flag
-      : other.cosmetics.flag;
+    const activeFlagPath = other.cosmetics.flag
     const flagCode = activeFlagPath?.match(/\/([^.]+)\./)?.[1];
 
     // Find the country based on that code
@@ -513,11 +510,11 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
-        ${country && activeFlagPath
+        ${activeFlagPath
           ? html`<img
               src=${activeFlagPath}
-              title=${typeof country !== "string" ? country.name : country}
-              alt=${typeof country !== "string" ? country.name : country}
+              title=${typeof country !== "string" ? country?.name : country}
+              alt=${typeof country !== "string" ? country?.name : country}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
@@ -956,7 +953,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   >
                     <!-- Identity (flag, name, type, traitor, relation) -->
                     <div class="mb-1">
-                      ${this.renderIdentityRow(other, my, owner === my)}
+                      ${this.renderIdentityRow(other, my)}
                     </div>
 
                     ${this.sendTarget
