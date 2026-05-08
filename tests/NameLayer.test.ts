@@ -4,6 +4,7 @@ import {
 } from "../src/client/graphics/PlayerIcons";
 import {
   computeNameLayerLayout,
+  computeNameLayerWorldScale,
   computeTraitorFlashAlpha,
   computeTraitorFlashDurationSeconds,
   replaceUnsupportedNameGlyphs,
@@ -94,6 +95,11 @@ describe("NameLayerLayout", () => {
     expect(layout.flag).toBeNull();
     expect(layout.nameText.x).toBe(0);
     expect(layout.width).toBe(60);
+  });
+
+  test("combines local label scale with camera scale for world-stable labels", () => {
+    expect(computeNameLayerWorldScale(8, 2)).toBeCloseTo(4);
+    expect(computeNameLayerWorldScale(20, 2)).toBeCloseTo(6);
   });
 
   test("matches traitor flash duration thresholds and alpha extrema", () => {

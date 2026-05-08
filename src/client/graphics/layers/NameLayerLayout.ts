@@ -63,6 +63,13 @@ export function computeNameLayerScale(baseSize: number): number {
   return Math.min(baseSize * 0.25, 3);
 }
 
+export function computeNameLayerWorldScale(
+  baseSize: number,
+  transformScale: number,
+): number {
+  return computeNameLayerScale(baseSize) * transformScale;
+}
+
 export function computeNameLayerFontSize(baseSize: number): number {
   return Math.max(4, Math.floor(baseSize * 0.4));
 }
