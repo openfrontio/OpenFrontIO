@@ -135,17 +135,17 @@ export class StructureIconsLayer implements Layer {
     }
 
     this.pixicanvas = document.createElement("canvas");
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
+    const resolution = window.devicePixelRatio || 1;
+    this.resizePixiCanvasElement(resolution);
 
     // This will prefer WebGL, eventually WebGPU, and fallback to Canvas
     // Restrict using 'preferences: ["WebGPU", "WebGL"]' or
     // 'preferences: "WebGPU"' later if needed
     const renderer = await PIXI.autoDetectRenderer({
       canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
+      resolution,
+      width: window.innerWidth,
+      height: window.innerHeight,
       antialias: false,
       clearBeforeRender: true,
       backgroundAlpha: 0,
@@ -293,9 +293,16 @@ export class StructureIconsLayer implements Layer {
     if (this.rendererOrGLContextLost()) {
       return;
     }
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
-    this.renderer?.resize(innerWidth, innerHeight, 1);
+    const resolution = window.devicePixelRatio || 1;
+    this.resizePixiCanvasElement(resolution);
+    this.renderer?.resize(window.innerWidth, window.innerHeight, resolution);
+  }
+
+  private resizePixiCanvasElement(resolution: number) {
+    this.pixicanvas.width = Math.ceil(window.innerWidth * resolution);
+    this.pixicanvas.height = Math.ceil(window.innerHeight * resolution);
+    this.pixicanvas.style.width = `${window.innerWidth}px`;
+    this.pixicanvas.style.height = `${window.innerHeight}px`;
   }
 
   tick() {
@@ -350,8 +357,18 @@ export class StructureIconsLayer implements Layer {
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
     if (this.renderer) {
-      this.renderer?.render(this.rootStage);
-      mainContext.drawImage(this.renderer.canvas, 0, 0);
+      this.renderer.render(this.rootStage);
+      mainContext.drawImage(
+        this.renderer.canvas,
+        0,
+        0,
+        this.renderer.canvas.width,
+        this.renderer.canvas.height,
+        0,
+        0,
+        mainContext.canvas.width,
+        mainContext.canvas.height,
+      );
     }
   }
 

@@ -88,7 +88,9 @@ export class NameLayer implements Layer {
   private allianceDuration: number;
   private alliancesDisabled = false;
   private myPlayer: PlayerView | null = null;
-  private pixicanvas: HTMLCanvasElement;
+  private readonly pixiCanvas: HTMLCanvasElement =
+    document.createElement("canvas");
+  private readonly onWindowResize = () => this.resizeCanvas();
   private renderer: PixiRenderer | null = null;
   private rendererInitialized = false;
   private rebuildPending = false;
@@ -114,19 +116,19 @@ export class NameLayer implements Layer {
     this.rootStage.position.set(0, 0);
 
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
-    window.addEventListener("resize", () => this.resizeCanvas());
+    window.addEventListener("resize", this.onWindowResize);
 
     await this.setupRenderer();
     this.resizeCanvas();
   }
 
   async redraw() {
-    if (this.rebuildPending || this.rendererOrGLContextLost()) {
+    if (this.rebuildPending) {
       return;
     }
     this.rebuildPending = true;
     try {
-      if (this.renderer?.name === "webgpu") {
+      if (!this.renderer || this.renderer.name === "webgpu") {
         this.rendererInitialized = false;
         await this.setupRenderer();
       }
@@ -136,6 +138,13 @@ export class NameLayer implements Layer {
       }
       this.renders.length = 0;
       this.seenPlayers.clear();
+    } catch (error) {
+      console.error("NameLayer redraw failed; retrying next frame", error);
+      this.renderer = null;
+      this.rendererInitialized = false;
+      requestAnimationFrame(() => {
+        void this.redraw();
+      });
     } finally {
       this.rebuildPending = false;
     }
@@ -151,7 +160,10 @@ export class NameLayer implements Layer {
     for (const player of this.game.playerViews()) {
       if (player.isAlive() && !this.seenPlayers.has(player)) {
         this.seenPlayers.add(player);
-        this.renders.push(this.createPlayerRender(player));
+        const render = this.createPlayerRender(player);
+        if (render) {
+          this.renders.push(render);
+        }
       }
     }
   }
@@ -175,27 +187,38 @@ export class NameLayer implements Layer {
 
     this.renderer?.render(this.rootStage);
     if (this.renderer) {
-      mainContext.drawImage(this.renderer.canvas, 0, 0);
+      mainContext.drawImage(
+        this.renderer.canvas,
+        0,
+        0,
+        this.renderer.canvas.width,
+        this.renderer.canvas.height,
+        0,
+        0,
+        mainContext.canvas.width,
+        mainContext.canvas.height,
+      );
     }
   }
 
   private async setupRenderer() {
     if (this.renderer) {
-      this.renderer.destroy(true);
+      this.renderer.destroy(false);
+      this.renderer = null;
+      this.rendererInitialized = false;
       this.labelStage.removeChildren();
     }
 
     await this.assets.preload();
 
-    this.pixicanvas = document.createElement("canvas");
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
+    const resolution = window.devicePixelRatio || 1;
+    this.resizePixiCanvasElement(resolution);
 
     const renderer = await PIXI.autoDetectRenderer({
-      canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
+      canvas: this.pixiCanvas,
+      resolution,
+      width: window.innerWidth,
+      height: window.innerHeight,
       antialias: false,
       clearBeforeRender: true,
       backgroundAlpha: 0,
@@ -208,7 +231,9 @@ export class NameLayer implements Layer {
     if (this.renderer.name === "webgpu") {
       const gpuRenderer = this.renderer as PIXI.WebGPURenderer;
       gpuRenderer.gpu.device.lost.then(() => {
-        this.redraw();
+        // device.lost is a one-time Promise; setupRenderer() intentionally
+        // re-attaches this handler on rebuild so future losses are observed.
+        void this.redraw();
       });
     }
 
@@ -216,7 +241,7 @@ export class NameLayer implements Layer {
       this.renderer.runners.contextChange.add({
         contextChange: () => {
           requestAnimationFrame(() => {
-            this.redraw();
+            void this.redraw();
           });
         },
       });
@@ -237,9 +262,16 @@ export class NameLayer implements Layer {
     if (this.rendererOrGLContextLost()) {
       return;
     }
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
-    this.renderer?.resize(window.innerWidth, window.innerHeight, 1);
+    const resolution = window.devicePixelRatio || 1;
+    this.resizePixiCanvasElement(resolution);
+    this.renderer?.resize(window.innerWidth, window.innerHeight, resolution);
+  }
+
+  private resizePixiCanvasElement(resolution: number) {
+    this.pixiCanvas.width = Math.ceil(window.innerWidth * resolution);
+    this.pixiCanvas.height = Math.ceil(window.innerHeight * resolution);
+    this.pixiCanvas.style.width = `${window.innerWidth}px`;
+    this.pixiCanvas.style.height = `${window.innerHeight}px`;
   }
 
   private onAlternateViewChange(event: AlternateViewEvent) {
@@ -247,7 +279,11 @@ export class NameLayer implements Layer {
     this.updateTransformsAndVisibility();
   }
 
-  private createPlayerRender(player: PlayerView): RenderInfo {
+  private createPlayerRender(player: PlayerView): RenderInfo | null {
+    if (!this.assets.fontReady) {
+      return null;
+    }
+
     const container = new PIXI.Container();
     container.visible = false;
 
@@ -263,6 +299,10 @@ export class NameLayer implements Layer {
   }
 
   private createBitmapText(text: string): PIXI.BitmapText {
+    if (!this.assets.fontReady || !this.assets.fontFamily) {
+      throw new Error("NameLayer bitmap font is not ready");
+    }
+
     const bitmapText = new PIXI.BitmapText({
       text,
       style: {
@@ -285,6 +325,12 @@ export class NameLayer implements Layer {
       }
 
       render.baseSize = Math.max(1, Math.floor(nameLocation.size));
+      const fontSize = computeNameLayerFontSize(render.baseSize);
+      if (render.fontSize !== fontSize) {
+        render.fontSize = fontSize;
+        this.updateText(render);
+        this.layoutRender(render, Math.min(render.fontSize * 1.5, 48));
+      }
       render.location = new Cell(nameLocation.x, nameLocation.y);
       const isOnScreen = this.transformHandler.isOnScreen(render.location);
       render.container.visible = computeNameLayerVisible({
@@ -330,7 +376,6 @@ export class NameLayer implements Layer {
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
-    render.fontSize = computeNameLayerFontSize(render.baseSize);
     this.updateText(render);
     this.updateFlag(render);
 
@@ -350,6 +395,10 @@ export class NameLayer implements Layer {
   }
 
   private updateText(render: RenderInfo) {
+    if (!this.assets.fontFamily) {
+      return;
+    }
+
     const displayName = replaceUnsupportedNameGlyphs(
       render.player.displayName(),
     );
@@ -357,10 +406,11 @@ export class NameLayer implements Layer {
       renderTroops(render.player.troops()),
     );
     const fontColor = this.theme.textColor(render.player);
+    const prevFontColor = render.fontColor;
 
     if (
       render.lastDisplayName !== displayName ||
-      render.fontColor !== fontColor ||
+      prevFontColor !== fontColor ||
       render.nameText.style.fontSize !== render.fontSize ||
       render.nameText.style.fontFamily !== this.assets.fontFamily
     ) {
@@ -375,7 +425,7 @@ export class NameLayer implements Layer {
 
     if (
       render.lastTroopsText !== troopsText ||
-      render.fontColor !== fontColor ||
+      prevFontColor !== fontColor ||
       render.troopsText.style.fontSize !== render.fontSize ||
       render.troopsText.style.fontFamily !== this.assets.fontFamily
     ) {
@@ -395,23 +445,17 @@ export class NameLayer implements Layer {
     const flag = render.player.cosmetics.flag;
     const src = flag ? assetUrl(flag) : "";
     if (!src) {
-      render.flagSprite?.destroy();
-      render.flagSprite = null;
-      render.flagSrc = "";
+      this.hideFlag(render, true);
       return;
     }
 
     if (src !== render.flagSrc) {
-      render.flagSprite?.destroy();
-      render.flagSprite = null;
-      render.flagSrc = src;
+      this.hideFlag(render, true);
     }
 
     const texture = this.assets.getTexture(src);
     if (!texture) {
-      if (render.flagSprite) {
-        render.flagSprite.visible = false;
-      }
+      this.hideFlag(render, false);
       return;
     }
 
@@ -424,7 +468,16 @@ export class NameLayer implements Layer {
       render.flagSprite.texture = texture;
     }
 
+    render.flagSrc = src;
     render.flagSprite.visible = true;
+  }
+
+  private hideFlag(render: RenderInfo, clearSource: boolean) {
+    render.flagSprite?.destroy();
+    render.flagSprite = null;
+    if (clearSource) {
+      render.flagSrc = "";
+    }
   }
 
   private updateIcons(
@@ -568,6 +621,7 @@ export class NameLayer implements Layer {
     const refs = iconRender.alliance!;
     refs.base.texture = baseTexture;
     refs.colored.texture = coloredTexture;
+    iconRender.src = icon.src;
     refs.base.width = size;
     refs.base.height = size;
     refs.colored.width = size;
@@ -586,6 +640,9 @@ export class NameLayer implements Layer {
     );
     const topCut = (computeAllianceTopCutPercent(fraction) / 100) * size;
     refs.mask.clear();
+    // computeAllianceTopCutPercent can intentionally make the visible alliance
+    // height zero when remaining / this.allianceDuration is depleted; PIXI v8
+    // tolerates the zero-area refs.mask.rect and the Math.max guard preserves it.
     refs.mask
       .rect(-size / 2, -size / 2 + topCut, size, Math.max(0, size - topCut))
       .fill(0xffffff);
@@ -666,5 +723,18 @@ export class NameLayer implements Layer {
     }
     this.seenPlayers.delete(render.player);
     render.container.destroy({ children: true });
+  }
+
+  destroy() {
+    window.removeEventListener("resize", this.onWindowResize);
+    for (const render of this.renders) {
+      render.container.destroy({ children: true });
+    }
+    this.renders.length = 0;
+    this.seenPlayers.clear();
+    this.rootStage.removeChildren();
+    this.renderer?.destroy(true);
+    this.renderer = null;
+    this.rendererInitialized = false;
   }
 }

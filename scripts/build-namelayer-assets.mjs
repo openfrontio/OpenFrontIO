@@ -202,7 +202,7 @@ async function buildIconAtlas() {
   );
   fs.writeFileSync(
     path.join(imagesDir, "namelayer-icons.json"),
-    JSON.stringify(
+    `${JSON.stringify(
       {
         frames,
         meta: {
@@ -215,7 +215,7 @@ async function buildIconAtlas() {
       },
       null,
       2,
-    ),
+    )}\n`,
   );
 }
 
@@ -283,7 +283,7 @@ async function buildEmojiAtlas() {
   );
   fs.writeFileSync(
     path.join(imagesDir, "namelayer-emojis.json"),
-    JSON.stringify(
+    `${JSON.stringify(
       {
         frames,
         meta: {
@@ -296,21 +296,26 @@ async function buildEmojiAtlas() {
       },
       null,
       2,
-    ),
+    )}\n`,
   );
 }
 
 function readEmojiTable() {
-  const utilSource = fs.readFileSync(
-    path.join(root, "src", "core", "Util.ts"),
-    "utf8",
-  );
-  const tableSource = utilSource.match(
+  const utilPath = path.join(root, "src", "core", "Util.ts");
+  const utilSource = fs.readFileSync(utilPath, "utf8");
+  const match = utilSource.match(
     /export const emojiTable = \[([\s\S]*?)\] as const;/,
-  )?.[1];
-  return tableSource
-    ? Array.from(tableSource.matchAll(/"([^"]+)"/g), (match) => match[1])
-    : [];
+  );
+  if (!match?.[1]) {
+    throw new Error(
+      `emojiTable not found in utilSource (${utilPath}). Start of file: ${utilSource.slice(
+        0,
+        160,
+      )}`,
+    );
+  }
+
+  return Array.from(match[1].matchAll(/"([^"]+)"/g), (match) => match[1]);
 }
 
 function writeFallbackAtlas(name, keys) {
@@ -333,7 +338,7 @@ function writeFallbackAtlas(name, keys) {
   fs.writeFileSync(path.join(imagesDir, `${name}.png`), transparentPng);
   fs.writeFileSync(
     path.join(imagesDir, `${name}.json`),
-    JSON.stringify(
+    `${JSON.stringify(
       {
         frames,
         meta: {
@@ -346,6 +351,6 @@ function writeFallbackAtlas(name, keys) {
       },
       null,
       2,
-    ),
+    )}\n`,
   );
 }

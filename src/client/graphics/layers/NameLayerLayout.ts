@@ -39,6 +39,11 @@ const SUPPORTED_TEXT_CHARS = new Set(
 
 const warnedUnsupportedGlyphs = new Set<string>();
 
+type IntlSegmenterConstructor = new (
+  locales?: string | string[],
+  options?: { granularity: "grapheme" },
+) => { segment(value: string): Iterable<{ segment: string }> };
+
 export function computeNameLayerVisible({
   isLayerVisible,
   transformScale,
@@ -116,10 +121,19 @@ export function computeNameLayerLayout({
       }
     : null;
   const nameTextX = nameStartX + flagWidth + nameWidth / 2;
+  const visibleCenteredIconCount = Math.max(0, centeredIconCount);
+  const centeredIconRowWidth =
+    visibleCenteredIconCount > 0
+      ? visibleCenteredIconCount * iconSize +
+        (visibleCenteredIconCount - 1) * NAME_LAYER_ICON_GAP
+      : 0;
   const centeredIconPositions = Array.from(
-    { length: centeredIconCount },
-    () => ({
-      x: 0,
+    { length: visibleCenteredIconCount },
+    (_, index) => ({
+      x:
+        -centeredIconRowWidth / 2 +
+        iconSize / 2 +
+        index * (iconSize + NAME_LAYER_ICON_GAP),
       y: nameY,
     }),
   );
@@ -173,21 +187,35 @@ export function replaceUnsupportedNameGlyphs(
   let changed = false;
   let result = "";
 
-  for (const char of value) {
-    if (SUPPORTED_TEXT_CHARS.has(char)) {
-      result += char;
+  const segments = segmentGraphemes(value);
+  for (const segment of segments) {
+    if (segment.length === 1 && SUPPORTED_TEXT_CHARS.has(segment)) {
+      result += segment;
       continue;
     }
 
     changed = true;
     result += "?";
-    if (!warnedUnsupportedGlyphs.has(char)) {
-      warnedUnsupportedGlyphs.add(char);
-      warn(`NameLayer unsupported glyph replaced with ?: ${char}`);
+    if (!warnedUnsupportedGlyphs.has(segment)) {
+      warnedUnsupportedGlyphs.add(segment);
+      warn(`NameLayer unsupported glyph replaced with ?: ${segment}`);
     }
   }
 
   return changed ? result : value;
+}
+
+function segmentGraphemes(value: string): string[] {
+  const Segmenter = (
+    Intl as typeof Intl & { Segmenter?: IntlSegmenterConstructor }
+  ).Segmenter;
+  if (typeof Segmenter === "function") {
+    const segmenter = new Segmenter(undefined, {
+      granularity: "grapheme",
+    });
+    return Array.from(segmenter.segment(value), ({ segment }) => segment);
+  }
+  return Array.from(value);
 }
 
 export function resetNameLayerGlyphWarningsForTests(): void {
