@@ -613,6 +613,12 @@ export const ServerErrorSchema = z.object({
   message: z.string().optional(),
 });
 
+export const WSErrorSchema = z.object({
+  translationKey: z.string(),
+  args: z.record(z.string(), z.string()).optional(),
+});
+export type WSError = z.infer<typeof WSErrorSchema>;
+
 export const ServerLobbyInfoMessageSchema = z.object({
   type: z.literal("lobby_info"),
   lobby: GameInfoSchema,

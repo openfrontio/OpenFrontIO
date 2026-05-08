@@ -28,6 +28,7 @@ import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { sendErrorAndClose } from "./Worker";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -613,7 +614,9 @@ export class GameServer {
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        sendErrorAndClose(client.ws, {
+          translationKey: "WS_ERR_UNEXPECTED_RSV_1",
+        });
       }
     });
 

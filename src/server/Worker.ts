@@ -14,6 +14,7 @@ import {
   GameID,
   PartialGameRecordSchema,
   ServerErrorMessage,
+  WSError,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
@@ -33,6 +34,13 @@ import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { verifyTurnstileToken } from "./Turnstile";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
+
+export function sendErrorAndClose(ws: WebSocket, error: WSError, code = 1002) {
+  if (ws.readyState === ws.OPEN) {
+    ws.send(JSON.stringify(error));
+  }
+  ws.close(code);
+}
 
 const config = getServerConfigFromServer();
 
@@ -300,7 +308,7 @@ export async function startWorker() {
               error: error.toString(),
             } satisfies ServerErrorMessage),
           );
-          ws.close(1002, "ClientJoinMessageSchema");
+          sendErrorAndClose(ws, { translationKey: "ClientJoinMessageSchema" });
           return;
         }
         const clientMsg = parsed.data;
@@ -330,13 +338,13 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, "turnstile_invalid");
+          sendErrorAndClose(ws, { translationKey: "turnstile_invalid" });
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1002, "account_banned");
+          sendErrorAndClose(ws, { translationKey: "account_banned" });
           return;
         }
 
@@ -355,7 +363,7 @@ export async function startWorker() {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            ws.close(1002, "game_not_found");
+            sendErrorAndClose(ws, { translationKey: "game_not_found" });
           }
           return;
         }
@@ -385,7 +393,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "unauthorized");
+            sendErrorAndClose(ws, { translationKey: "unauthorized" });
             return;
           }
         } else {
@@ -396,7 +404,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "user_me_fetch_failed");
+            sendErrorAndClose(ws, { translationKey: "user_me_fetch_failed" });
             return;
           }
           flares = result.response.player.flares;
@@ -409,7 +417,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1002, "forbidden");
+              sendErrorAndClose(ws, { translationKey: "forbidden" });
               return;
             }
           }
@@ -424,7 +432,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, cosmeticResult.reason);
+          sendErrorAndClose(ws, { translationKey: cosmeticResult.reason });
           return;
         }
 
@@ -443,7 +451,7 @@ export async function startWorker() {
                 gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
-              ws.close(1002, "turnstile_invalid");
+              sendErrorAndClose(ws, { translationKey: "turnstile_invalid" });
               return;
             case "error":
               // Fail open, allow the client to join.
@@ -473,19 +481,19 @@ export async function startWorker() {
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1002, "game_not_found");
+          sendErrorAndClose(ws, { translationKey: "game_not_found" });
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "cannot_join_game");
+          sendErrorAndClose(ws, { translationKey: "cannot_join_game" });
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "lobby_full");
+          sendErrorAndClose(ws, { translationKey: "lobby_full" });
         }
 
         // Handle other message types
@@ -502,7 +510,7 @@ export async function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        sendErrorAndClose(ws, { translationKey: "WS_ERR_UNEXPECTED_RSV_1" });
       }
     });
     ws.on("close", () => {

@@ -24,6 +24,8 @@ import {
   ServerMessage,
   ServerMessageSchema,
   Winner,
+  WSError,
+  WSErrorSchema,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
@@ -178,6 +180,7 @@ export class SendStartGameEvent implements GameEvent {}
 
 export class Transport {
   private socket: WebSocket | null = null;
+  private disconnectWSError: WSError | null = null;
 
   private localServer: LocalServer;
 
@@ -334,6 +337,7 @@ export class Transport {
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
+    this.disconnectWSError = null;
     this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
@@ -359,6 +363,12 @@ export class Transport {
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
         if (!result.success) {
+          const wsErrorResult = WSErrorSchema.safeParse(parsed);
+          if (wsErrorResult.success) {
+            this.disconnectWSError = wsErrorResult.data;
+            return;
+          }
+
           const error = z.prettifyError(result.error);
           console.error("Error parsing server message", error);
           return;
@@ -380,26 +390,36 @@ export class Transport {
       );
       if (event.code === 1002) {
         const connRefusedKey = `worker_error.connection_refused`;
-        const errorKey = `worker_error.${event.reason}`;
+        const translationKey = this.disconnectWSError
+          ? this.disconnectWSError.translationKey
+          : event.reason;
+        const args = this.disconnectWSError
+          ? this.disconnectWSError.args
+          : undefined;
+
+        const errorKey = `worker_error.${translationKey}`;
 
         let alertMsg = `${translateText(connRefusedKey)}: `;
-        const translatedError = translateText(errorKey);
+        const translatedError = translateText(errorKey, args);
 
         if (translatedError === errorKey) {
-          // No translation key in error.reason or no translation or default English found
-          alertMsg += `${event.reason}`;
+          // Raw string instead of translation key in disconnectWSError/error.reason,
+          // or no user lang nor default English translation found with the key
+          // Show the raw string or key as fallback. Eg. "WS_ERR_UNEXPECTED_RSV_1" or "ClientJoinMessageSchema"
+          alertMsg += `${translationKey}`;
         } else {
           alertMsg += translatedError;
 
-          // Add tips if token invalid
-          if (event.reason === "turnstile_invalid") {
+          // Add tips if turnstile token invalid
+          if (translationKey === "turnstile_invalid") {
             alertMsg += `\n${translateText("worker_error.turnstile_fix_tips")}`;
           }
 
-          // Append English translation if it differs
-          const englishMsg = getEnglishText(errorKey);
-          if (englishMsg !== errorKey && !alertMsg.includes(englishMsg)) {
-            alertMsg += `\n\n--- English ---\n${getEnglishText(connRefusedKey)}: ${englishMsg}`;
+          // Append English translation/key if it's not already there
+          // Helps debugging if user shares screenshot
+          const englishError = getEnglishText(errorKey, args);
+          if (englishError !== errorKey && !alertMsg.includes(englishError)) {
+            alertMsg += `\n\n--- English ---\n${getEnglishText(connRefusedKey)}: ${englishError}`;
           }
         }
 
