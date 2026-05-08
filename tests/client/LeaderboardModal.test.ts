@@ -101,6 +101,7 @@ beforeEach(() => {
   );
 });
 
+import "../../src/client/components/baseComponents/Modal";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
 
 describe("LeaderboardModal", () => {
@@ -334,7 +335,14 @@ describe("LeaderboardModal", () => {
         }),
       });
 
-      const tab = modal.querySelector("#clan-leaderboard-tab");
+      modal.inline = true;
+      await modal.updateComplete;
+      const oModal = modal.querySelector("o-modal");
+      await (oModal as unknown as { updateComplete: Promise<unknown> })
+        .updateComplete;
+      const tab = oModal!.shadowRoot!.querySelector(
+        'button[role="tab"][data-key="clans"]',
+      );
       expect(tab).toBeTruthy();
 
       tab!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
