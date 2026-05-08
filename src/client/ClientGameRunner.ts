@@ -454,7 +454,7 @@ export class ClientGameRunner {
       this.transport.rejoinGame(this.turnsSeen);
     };
 
-    let hasGoneToPlayer = !this.userSettings.goToPlayer();
+    let hasGoneToPlayer = false;
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
@@ -536,7 +536,8 @@ export class ClientGameRunner {
         if (
           !this.gameView.inSpawnPhase() &&
           !hasGoneToPlayer &&
-          this.gameView.myPlayer()
+          this.gameView.myPlayer() &&
+          this.userSettings.goToPlayer()
         ) {
           hasGoneToPlayer = true;
           this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));
