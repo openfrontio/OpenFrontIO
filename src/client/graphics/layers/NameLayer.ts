@@ -25,8 +25,8 @@ import { NameLayerAssets } from "./NameLayerAssets";
 import {
   computeNameLayerFontSize,
   computeNameLayerLayout,
-  computeNameLayerScale,
   computeNameLayerVisible,
+  computeNameLayerWorldScale,
   computeTraitorFlashAlpha,
   replaceUnsupportedNameGlyphs,
 } from "./NameLayerLayout";
@@ -347,11 +347,13 @@ export class NameLayer implements Layer {
       const screenPos = this.transformHandler.worldToCanvasCoordinates(
         render.location,
       );
-      render.container.position.set(
-        Math.round(screenPos.x),
-        Math.round(screenPos.y),
+      render.container.position.set(screenPos.x, screenPos.y);
+      render.container.scale.set(
+        computeNameLayerWorldScale(
+          render.baseSize,
+          this.transformHandler.scale,
+        ),
       );
-      render.container.scale.set(computeNameLayerScale(render.baseSize));
       this.updateTraitorAlpha(render, now);
     }
   }
