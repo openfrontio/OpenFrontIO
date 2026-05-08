@@ -133,7 +133,8 @@
     },
     {
       "coordinates": [225, 84],
-      "name": "Tea Plantations"
+      "name": "Tea Plantations",
+      "flag": "cn"
     }
   ]
 }
