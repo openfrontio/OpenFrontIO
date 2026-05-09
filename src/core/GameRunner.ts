@@ -2,11 +2,13 @@ import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getGameLogicConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
+import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   BuildableUnit,
   Game,
+  GameType,
   GameUpdates,
   NameViewData,
   Player,
@@ -93,6 +95,9 @@ export class GameRunner {
   ) {}
 
   init() {
+    if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
+      this.game.addExecution(new SpawnTimerExecution());
+    }
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }

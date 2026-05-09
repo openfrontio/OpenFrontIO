@@ -1,7 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { SharedWaterCache } from "../execution/nation/SharedWaterCache";
-import { SpawnTimerExecution } from "../execution/SpawnTimerExecution";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
@@ -19,7 +18,6 @@ import {
   Execution,
   Game,
   GameMode,
-  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -72,9 +70,6 @@ export function createGame(
     stats,
     teamGameSpawnAreas,
   );
-  if (config.gameConfig().gameType !== GameType.Singleplayer) {
-    game.addExecution(new SpawnTimerExecution());
-  }
   return game;
 }
 
