@@ -113,7 +113,8 @@ export class RailNetworkImpl implements RailNetwork {
     for (const cluster of this.dirtyClusters) {
       const allOriginalStations = new Set(cluster.stations);
       while (allOriginalStations.size > 0) {
-        const nextStation = allOriginalStations.values().next().value;
+        const nextStation = allOriginalStations.values().next()
+          .value as TrainStation;
         const allConnectedStations = this.computeCluster(nextStation);
         // Filter stations that are connected to the current cluster
         for (const connectedStation of allConnectedStations) {

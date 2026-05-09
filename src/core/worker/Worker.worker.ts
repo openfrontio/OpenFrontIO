@@ -50,7 +50,7 @@ async function drain(): Promise<void> {
 
   draining = true;
   drainRequested = false;
-  let shouldContinue = false;
+  let shouldContinue: boolean;
   try {
     const gr = await gameRunner;
     if (!gr) {
@@ -134,6 +134,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   switch (message.type) {
     case "init":
       try {
+        // Set before createGameRunner so map fetches via mapLoader pick up the
+        // CDN base. Workers have no `window`, so AssetUrls falls back to this.
+        globalThis.__CDN_BASE__ = message.cdnBase;
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,

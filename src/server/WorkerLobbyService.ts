@@ -44,20 +44,24 @@ export class WorkerLobbyService {
           // Update master with my lobby info
           this.sendMyLobbiesToMaster();
           break;
-        case "createGame":
+        case "createGame": {
           if (this.gm.game(msg.gameID) !== null) {
             this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
             return;
           }
           this.log.info(`Creating public game ${msg.gameID} from master`);
-          this.gm.createGame(
+          const game = this.gm.createGame(
             msg.gameID,
             msg.gameConfig,
             undefined,
             undefined,
             msg.publicGameType,
           );
+          if (game === null) {
+            this.log.warn(`Game ${msg.gameID} already exists, skipping create`);
+          }
           break;
+        }
         case "updateLobby": {
           const game = this.gm.game(msg.gameID);
           if (!game) {

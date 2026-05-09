@@ -254,4 +254,22 @@ describe("SAM", () => {
 
     expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
   });
+
+  test("SAM should reload expired missile timers even when not in cooldown", async () => {
+    // Upgrading to level 2 pushes a timer for the new slot. queue.length(1) < level(2)
+    // so isInCooldown() is false, but the expired timer still needs to be cleaned up.
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    sam.increaseLevel();
+    expect(sam.level()).toBe(2);
+
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    expect(sam.missileTimerQueue()).toHaveLength(1);
+    expect(sam.isInCooldown()).toBeFalsy();
+
+    // Wait for the timer to expire — reload must fire even though isInCooldown() is false
+    executeTicks(game, game.config().SAMCooldown() + 1);
+
+    expect(sam.missileTimerQueue()).toHaveLength(0);
+  });
 });

@@ -34,7 +34,7 @@ import { Layer } from "./Layer";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+import { GoToPlayerEvent, GoToUnitEvent } from "../TransformHandler";
 
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getMessageTypeClasses, translateText } from "../../Utils";
@@ -190,7 +190,26 @@ export class EventsDisplay extends LitElement implements Layer {
     this.events = [];
   }
 
-  init() {}
+  init() {
+    this.eventBus.on(
+      SendAllianceRequestIntentEvent,
+      this.onAllianceRequestSentConfirmation.bind(this),
+    );
+  }
+
+  private onAllianceRequestSentConfirmation(e: SendAllianceRequestIntentEvent) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || e.requestor.id() !== myPlayer.id()) {
+      return;
+    }
+    this.addEvent({
+      description: translateText("events_display.alliance_request_sent", {
+        name: e.recipient.name(),
+      }),
+      type: MessageType.ALLIANCE_REQUEST,
+      createdAt: this.game.ticks(),
+    });
+  }
 
   tick() {
     this.active = true;

@@ -154,42 +154,43 @@ export abstract class BaseModal extends LitElement {
     }
   }
 
-  /**
-   * Renders a standardized loading spinner with optional custom message.
-   * Use this for consistent loading states across all modals.
-   *
-   * @param message - Optional loading message text. Defaults to no message.
-   * @param spinnerColor - Optional spinner color. Defaults to 'blue'.
-   * @returns TemplateResult of the loading UI
-   */
   protected renderLoadingSpinner(
     message?: string,
     spinnerColor: "blue" | "green" | "yellow" | "white" = "blue",
   ): TemplateResult {
-    const colorClasses = {
-      blue: "border-blue-500/30 border-t-blue-500",
-      green: "border-green-500/30 border-t-green-500",
-      yellow: "border-yellow-500/30 border-t-yellow-500",
-      white: "border-white/20 border-t-white",
-    };
-
-    return html`
-      <div
-        class="flex flex-col items-center justify-center p-12 text-white h-full min-h-[400px]"
-      >
-        <div
-          class="w-12 h-12 border-4 ${colorClasses[
-            spinnerColor
-          ]} rounded-full animate-spin mb-4"
-        ></div>
-        ${message
-          ? html`<p
-              class="text-white/60 font-medium tracking-wide animate-pulse"
-            >
-              ${message}
-            </p>`
-          : ""}
-      </div>
-    `;
+    return renderLoadingSpinner(message, spinnerColor);
   }
+}
+
+const spinnerColorClasses: Record<string, string> = {
+  blue: "border-blue-500/30 border-t-blue-500",
+  green: "border-green-500/30 border-t-green-500",
+  yellow: "border-yellow-500/30 border-t-yellow-500",
+  white: "border-white/20 border-t-white",
+};
+
+/**
+ * Renders a standardized loading spinner with optional custom message.
+ * Use this for consistent loading states across all modals.
+ */
+export function renderLoadingSpinner(
+  message?: string,
+  spinnerColor: "blue" | "green" | "yellow" | "white" = "blue",
+): TemplateResult {
+  return html`
+    <div
+      class="flex flex-col items-center justify-center p-12 text-white h-full min-h-[400px]"
+    >
+      <div
+        class="w-12 h-12 border-4 ${spinnerColorClasses[
+          spinnerColor
+        ]} rounded-full animate-spin mb-4"
+      ></div>
+      ${message
+        ? html`<p class="text-white/60 font-medium tracking-wide animate-pulse">
+            ${message}
+          </p>`
+        : ""}
+    </div>
+  `;
 }

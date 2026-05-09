@@ -59,7 +59,12 @@ export class GameManager {
     creatorPersistentID?: string,
     startsAt?: number,
     publicGameType?: PublicGameType,
-  ) {
+  ): GameServer | null {
+    if (this.games.has(id)) {
+      this.log.warn("cannot create game, id already exists", { gameID: id });
+      return null;
+    }
+
     const game = new GameServer(
       id,
       this.log,

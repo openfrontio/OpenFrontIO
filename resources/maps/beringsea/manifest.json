@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 400,
-    "num_land_tiles": 96268,
+    "num_land_tiles": 96248,
     "width": 625
   },
   "map4x": {
     "height": 800,
-    "num_land_tiles": 397269,
+    "num_land_tiles": 396641,
     "width": 1250
   },
   "name": "Bering Sea",

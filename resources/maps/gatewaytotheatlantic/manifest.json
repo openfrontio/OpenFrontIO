@@ -6,165 +6,150 @@
   },
   "map16x": {
     "height": 492,
-    "num_land_tiles": 136295,
+    "num_land_tiles": 136293,
     "width": 554
   },
   "map4x": {
     "height": 984,
-    "num_land_tiles": 555003,
+    "num_land_tiles": 554983,
     "width": 1108
   },
   "name": "GatewayToTheAtlantic",
   "nations": [
     {
-      "coordinates": [2144, 344],
+      "coordinates": [2161, 420],
       "flag": "ch",
       "name": "Swiss Confederation"
     },
     {
-      "coordinates": [1964, 371],
+      "coordinates": [1938, 263],
       "flag": "burgundy",
-      "name": "Kingdom of Burgundy"
+      "name": "Duchy of Burgundy"
     },
     {
-      "coordinates": [1334, 537],
+      "coordinates": [1388, 485],
       "flag": "aquitaine",
       "name": "Duchy of Aquitaine"
     },
     {
-      "coordinates": [2115, 684],
+      "coordinates": [2137, 636],
       "flag": "provence",
       "name": "County of Provence"
     },
     {
-      "coordinates": [1207, 763],
-      "flag": "es-pv",
-      "name": "The Basque"
+      "coordinates": [1266, 748],
+      "flag": "navarre",
+      "name": "Kingdom of Navarre"
     },
     {
-      "coordinates": [1281, 1142],
+      "coordinates": [1375, 1190],
       "flag": "valencia",
       "name": "Kingdom of Valencia"
     },
     {
-      "coordinates": [1660, 891],
+      "coordinates": [1696, 858],
       "flag": "catalonia",
       "name": "Catalonia"
     },
     {
-      "coordinates": [561, 764],
+      "coordinates": [543, 807],
       "flag": "es-ga",
       "name": "Kingdom of Galicia"
     },
     {
-      "coordinates": [1004, 1436],
+      "coordinates": [1128, 1388],
       "flag": "granada",
       "name": "Emirate of Granada"
     },
     {
-      "coordinates": [431, 1197],
-      "flag": "pt",
-      "name": "Portuguese Republic"
+      "coordinates": [523, 1156],
+      "flag": "kingdom_of_portugal",
+      "name": "Kingdom of Portugal"
     },
     {
-      "coordinates": [560, 1894],
-      "flag": "ma",
-      "name": "Kingdom of Morocco"
+      "coordinates": [851, 1805],
+      "flag": "marinid",
+      "name": "Marinid Sultanate"
     },
     {
-      "coordinates": [1609, 1837],
-      "flag": "dz",
-      "name": "Algeria"
+      "coordinates": [1424, 1725],
+      "flag": "zayyanid",
+      "name": "Zayyanid Sultanate"
     },
     {
-      "coordinates": [1733, 622],
+      "coordinates": [1604, 641],
       "flag": "armagnac",
       "name": "County of Armagnac"
     },
     {
-      "coordinates": [896, 1240],
+      "coordinates": [946, 1300],
       "flag": "cordoba",
       "name": "City of Cordoba"
     },
     {
-      "coordinates": [636, 1781],
-      "flag": "seville",
-      "name": "City of Seville"
-    },
-    {
-      "coordinates": [750, 873],
+      "coordinates": [740, 1021],
       "flag": "leon",
       "name": "Kingdom of Leon"
     },
     {
-      "coordinates": [1001, 882],
+      "coordinates": [1040, 1036],
       "flag": "castille",
-      "name": "Kingdom of Castille"
+      "name": "Crown of Castile"
     },
     {
-      "coordinates": [775, 724],
+      "coordinates": [847, 767],
       "flag": "asturias",
       "name": "Principality of Asturias"
     },
     {
       "coordinates": [1755, 1130],
-      "flag": "neuragic_empire",
-      "name": "The Old Ones"
+      "flag": "majorca",
+      "name": "Kingdom of Majorca"
     },
     {
-      "coordinates": [2097, 1670],
-      "flag": "Amazigh flag",
-      "name": "Tamazgha"
+      "coordinates": [2004, 1630],
+      "flag": "hafsid",
+      "name": "Hafsid Sultanate"
     },
     {
-      "coordinates": [979, 1013],
-      "flag": "es",
-      "name": "Kingdom of Spain"
+      "coordinates": [1374, 926],
+      "flag": "catalonia",
+      "name": "Crown of Aragon"
     },
     {
-      "coordinates": [468, 930],
-      "flag": "sardines",
-      "name": "Sardines"
-    },
-    {
-      "coordinates": [1667, 96],
+      "coordinates": [1695, 119],
       "flag": "paris",
       "name": "City of Paris"
     },
     {
-      "coordinates": [1716, 296],
-      "flag": "baguette",
-      "name": "Baguettes"
-    },
-    {
-      "coordinates": [1017, 180],
+      "coordinates": [1121, 221],
       "flag": "brittany",
       "name": "Kingdom of Brittany"
     },
     {
-      "coordinates": [2072, 567],
-      "flag": "antipope",
-      "name": "An Anti-Pope"
+      "coordinates": [1933, 614],
+      "flag": "avignon",
+      "name": "City of Avignon"
     },
     {
-      "coordinates": [1355, 76],
+      "coordinates": [1434, 129],
       "flag": "normandy",
       "name": "Duchy of Normandy"
     },
     {
-      "coordinates": [1402, 529],
-      "flag": "",
-      "name": "Wine"
+      "coordinates": [1644, 383],
+      "flag": "Franks",
+      "name": "Kingdom of France"
     },
     {
-      "coordinates": [1475, 1657],
-      "flag": "French foreign legion",
-      "name": "French Foreign Legion"
+      "coordinates": [772, 1399],
+      "flag": "seville",
+      "name": "City of Seville"
     },
     {
-      "coordinates": [1685, 417],
-      "flag": "fr",
-      "name": "French Republic"
+      "coordinates": [2147, 90],
+      "flag": "Holy Roman Empire",
+      "name": "Holy Roman Empire"
     }
   ]
 }

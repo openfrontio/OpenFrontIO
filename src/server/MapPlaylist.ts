@@ -22,6 +22,7 @@ import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 const ARCADE_MAPS = new Set(mapCategories.arcade);
+const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
 // Hard cap on player count for performance. Applied after compact-map reduction.
 const MAX_PLAYER_COUNT = 125;
@@ -29,70 +30,75 @@ const MAX_PLAYER_COUNT = 125;
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
 const frequency: Partial<Record<GameMapName, number>> = {
+  Achiran: 5,
+  Aegean: 6,
   Africa: 7,
+  Alps: 4,
+  AmazonRiver: 3,
+  Antarctica: 1,
+  ArchipelagoSea: 3,
+  Arctic: 6,
   Asia: 6,
   Australia: 4,
-  Achiran: 5,
   Baikal: 5,
+  BajaCalifornia: 4,
+  BeringSea: 5,
+  BeringStrait: 2,
   BetweenTwoSeas: 5,
   BlackSea: 6,
+  BosphorusStraits: 3,
   Britannia: 5,
-  BritanniaClassic: 4,
+  Caucasus: 5,
+  Conakry: 3,
   DeglaciatedAntarctica: 4,
+  Didier: 1,
+  DidierFrance: 1,
+  Dyslexdria: 8,
   EastAsia: 5,
   Europe: 7,
   FalklandIslands: 4,
   FaroeIslands: 4,
   FourIslands: 4,
   GatewayToTheAtlantic: 5,
+  GreatLakes: 6,
   GulfOfStLawrence: 4,
   Halkidiki: 4,
+  Hawaii: 4,
   Iceland: 4,
   Italia: 6,
   Japan: 6,
+  Lemnos: 3,
   Lisbon: 4,
+  LosAngeles: 8,
+  Luna: 6,
   Manicouagan: 4,
+  MareNostrum: 6,
   Mars: 3,
   Mena: 6,
+  MiddleEast: 8,
+  MilkyWay: 8,
   Montreal: 6,
   NewYorkCity: 3,
+  NileDelta: 4,
   NorthAmerica: 5,
   Pangaea: 5,
+  Passage: 4,
   Pluto: 6,
+  SanFrancisco: 3,
+  Sierpinski: 10,
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
+  StraitOfHormuz: 4,
+  StraitOfMalacca: 4,
+  Surrounded: 4,
   Svalmel: 8,
+  TaiwanStrait: 5,
+  TheBox: 3,
+  TradersDream: 4,
+  TwoLakes: 6,
   World: 20,
   WorldOil: 6,
-  Lemnos: 3,
-  Passage: 4,
-  TwoLakes: 6,
-  StraitOfHormuz: 4,
-  Surrounded: 4,
-  DidierFrance: 1,
-  Didier: 1,
-  AmazonRiver: 3,
-  BosphorusStraits: 3,
-  BeringStrait: 2,
-  Sierpinski: 10,
-  TheBox: 3,
   Yenisei: 6,
-  TradersDream: 4,
-  Hawaii: 4,
-  Alps: 4,
-  NileDelta: 4,
-  Arctic: 6,
-  SanFrancisco: 3,
-  Aegean: 6,
-  MilkyWay: 8,
-  Mediterranean: 6,
-  Dyslexdria: 8,
-  GreatLakes: 6,
-  StraitOfMalacca: 4,
-  Luna: 6,
-  Conakry: 3,
-  Caucasus: 5,
-  BeringSea: 5,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -149,6 +155,8 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Baikal,
   GameMapType.Alps,
   GameMapType.TheBox,
+  GameMapType.Luna,
+  GameMapType.ArchipelagoSea,
 ]);
 
 // Modifiers that cannot be active at the same time.
@@ -243,10 +251,9 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // No extreme modifiers on FourIslands - Causes 3h long stalemates
-    if (map === GameMapType.FourIslands) {
+    // No gold multi on FourIslands team games - Too high chance of 3h long stalemates
+    if (map === GameMapType.FourIslands && mode === GameMode.Team) {
       excludedModifiers.push("goldMultiplier");
-      excludedModifiers.push("startingGold25M");
     }
 
     // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
@@ -506,7 +513,10 @@ export class MapPlaylist {
     const maps: GameMapType[] = [];
     (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
       const map = GameMapType[key];
-      if (type !== "special" && ARCADE_MAPS.has(map)) {
+      if (
+        type !== "special" &&
+        (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
+      ) {
         return;
       }
       let freq = frequency[key] ?? 0;
@@ -528,6 +538,9 @@ export class MapPlaylist {
     }
     if (map === GameMapType.FourIslands && Math.random() < 0.75) {
       return 4;
+    }
+    if (map === GameMapType.Luna && Math.random() < 0.75) {
+      return 2;
     }
 
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
@@ -663,7 +676,8 @@ export class MapPlaylist {
     if (playerTeams === HumansVsNations) return 5 * 10;
     if (startingGold !== undefined && startingGold >= 25_000_000)
       return 150 * 10;
-    if (startingGold) return SAM_CONSTRUCTION_TICKS + 15 * 10;
+    if (startingGold !== undefined && startingGold >= 5_000_000)
+      return SAM_CONSTRUCTION_TICKS + 15 * 10;
     return 5 * 10;
   }
 

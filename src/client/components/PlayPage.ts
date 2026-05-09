@@ -19,7 +19,7 @@ export class PlayPage extends LitElement {
 
         <!-- Mobile: Fixed top bar -->
         <div
-          class="lg:hidden fixed left-0 right-0 top-0 z-40 pt-[env(safe-area-inset-top)] bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-b border-white/10"
+          class="lg:hidden fixed left-0 right-0 top-0 z-40 pt-[env(safe-area-inset-top)] bg-surface border-b border-white/10"
         >
           <div
             class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-14 px-2 gap-2"
@@ -50,7 +50,7 @@ export class PlayPage extends LitElement {
             </button>
 
             <div
-              class="col-start-2 flex items-center justify-center text-[#0073b7] min-w-0"
+              class="col-start-2 flex items-center justify-center text-malibu-blue min-w-0"
             >
               <img
                 src=${assetUrl("images/OpenFrontLogo.svg")}
@@ -79,7 +79,7 @@ export class PlayPage extends LitElement {
 
           <!-- Username: left col -->
           <div
-            class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
+            class="px-2 py-2 bg-surface border-y border-white/10 overflow-visible lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
           >
             <div class="flex items-center gap-2 min-w-0 w-full">
               <username-input

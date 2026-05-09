@@ -62,6 +62,7 @@
     <script>
       window.GIT_COMMIT = <%- gitCommit %>;
       window.ASSET_MANIFEST = <%- assetManifest %>;
+      window.CDN_BASE = <%- cdnBase %>;
       window.BOOTSTRAP_CONFIG = {
         gameEnv: <%- gameEnv %>,
       };
@@ -143,7 +144,10 @@
       <div
         id="background-layer"
         class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
-        style="background-image: var(--background-image-url)"
+        style="
+          background-image: var(--background-image-url);
+          background-position: center calc(50% + 2cm);
+        "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
@@ -234,6 +238,11 @@
           class="hidden w-full h-full page-content relative z-50"
         ></troubleshooting-modal>
 
+        <clan-modal
+          id="page-clan"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></clan-modal>
         <account-modal
           id="page-account"
           inline
