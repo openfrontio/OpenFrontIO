@@ -14,7 +14,7 @@ const fontPng = "namelayer_overpass.png";
 const fontXml = "namelayer_overpass.xml";
 const fontFace = "namelayer_overpass";
 const emojiFontFamily = "NameLayerEmoji";
-const emojiFontPath = require.resolve("twemoji-colr-font/twemoji.woff2");
+const emojiFontPath = path.join(fontsDir, "twemoji-colr.woff2");
 const emojiFontSize = 96;
 const atlasFramePaddingRatio = 1 / 16;
 const colorDetectionThreshold = 12;
@@ -52,6 +52,7 @@ const iconSources = [
 fs.mkdirSync(fontsDir, { recursive: true });
 fs.mkdirSync(imagesDir, { recursive: true });
 
+const overpassFontPath = findFontSource();
 FontLibrary.use(emojiFontFamily, [emojiFontPath]);
 
 await buildMsdfFont();
@@ -59,11 +60,7 @@ await buildIconAtlas();
 await buildEmojiAtlas();
 
 async function buildMsdfFont() {
-  const fontPath = fontSourceCandidates
-    .map((fileName) => path.join(fontsDir, fileName))
-    .find((candidate) => fs.existsSync(candidate));
-
-  if (!fontPath) {
+  if (!overpassFontPath) {
     const fallbackXml = fs
       .readFileSync(path.join(fontsDir, "round_6x6_modified.xml"), "utf8")
       .replace(/face="round_6x6_modified"/g, `face="${fontFace}"`)
@@ -79,7 +76,7 @@ async function buildMsdfFont() {
   const generateBMFont = require("msdf-bmfont-xml");
   const { textures, font } = await new Promise((resolve, reject) => {
     generateBMFont(
-      fontPath,
+      overpassFontPath,
       {
         filename: path.join(fontsDir, path.basename(fontPng, ".png")),
         outputType: "xml",
@@ -216,10 +213,7 @@ async function buildEmojiAtlas() {
     const x = col * cell;
     const y = row * cell;
     drawPackedAtlasFrame(ctx, x, y, cell, (scratchCtx, scratchSize) => {
-      scratchCtx.textAlign = "center";
-      scratchCtx.textBaseline = "middle";
-      scratchCtx.font = `${emojiFontSize}px ${emojiFontFamily}`;
-      scratchCtx.fillText(emoji, scratchSize / 2, scratchSize / 2);
+      drawEmojiText(scratchCtx, scratchSize, emoji);
     });
     frames[emoji] = {
       frame: { x, y, w: cell, h: cell },
@@ -256,6 +250,13 @@ async function buildEmojiAtlas() {
       2,
     )}\n`,
   );
+}
+
+function drawEmojiText(ctx, size, emoji) {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${emojiFontSize}px ${emojiFontFamily}`;
+  ctx.fillText(emoji, size / 2, size / 2);
 }
 
 function drawPackedAtlasFrame(targetCtx, x, y, cell, drawSource) {
@@ -388,4 +389,10 @@ function readEmojiTable() {
   }
 
   return Array.from(match[1].matchAll(/"([^"]+)"/g), (match) => match[1]);
+}
+
+function findFontSource() {
+  return fontSourceCandidates
+    .map((fileName) => path.join(fontsDir, fileName))
+    .find((candidate) => fs.existsSync(candidate));
 }

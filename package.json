@@ -83,7 +83,6 @@
     "sinon-chai": "^4.0.0",
     "tailwindcss": "^4.1.18",
     "tsconfig-paths": "^4.2.0",
-    "twemoji-colr-font": "^15.0.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",
     "vite": "^7.3.2",
