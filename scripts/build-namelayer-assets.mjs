@@ -1,8 +1,10 @@
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 const root = path.resolve(__dirname, "..");
 const fontsDir = path.join(root, "resources", "fonts");
 const imagesDir = path.join(root, "resources", "images");
@@ -19,7 +21,7 @@ const fontSourceCandidates = [
 ];
 const glyphs = Array.from(
   new Set(
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ üÜ.[]+-=(),':!?/@#$%&\"".split(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ \u00fc\u00dc.[]+-=(),':!?/@#$%&\"".split(
       "",
     ),
   ),
@@ -46,7 +48,7 @@ fs.mkdirSync(imagesDir, { recursive: true });
 
 const canvasApi = await loadCanvasApi();
 
-await buildBitmapFont();
+await buildMsdfFont();
 await buildIconAtlas();
 await buildEmojiAtlas();
 
@@ -83,8 +85,12 @@ async function loadCanvasApi() {
   }
 }
 
-async function buildBitmapFont() {
-  if (!canvasApi) {
+async function buildMsdfFont() {
+  const fontPath = fontSourceCandidates
+    .map((fileName) => path.join(fontsDir, fileName))
+    .find((candidate) => fs.existsSync(candidate));
+
+  if (!fontPath) {
     const fallbackXml = fs
       .readFileSync(path.join(fontsDir, "round_6x6_modified.xml"), "utf8")
       .replace(/face="round_6x6_modified"/g, `face="${fontFace}"`)
@@ -97,63 +103,46 @@ async function buildBitmapFont() {
     return;
   }
 
-  const { createCanvas } = canvasApi;
-  const cell = 64;
-  const cols = 16;
-  const rows = Math.ceil(glyphs.length / cols);
-  const canvas = createCanvas(cols * cell, rows * cell);
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#ffffff";
-  ctx.textBaseline = "alphabetic";
-  ctx.textAlign = "left";
-  ctx.font = '48px "OverpassNameLayer", Arial, sans-serif';
-
-  const chars = [];
-  glyphs.forEach((glyph, index) => {
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    const x = col * cell;
-    const y = row * cell;
-    const metrics = ctx.measureText(glyph);
-    const advance = glyph === " " ? 16 : Math.max(16, Math.ceil(metrics.width));
-    const drawX = x + 4;
-    const drawY = y + 48;
-    if (glyph !== " ") {
-      ctx.fillText(glyph, drawX, drawY);
-    }
-    chars.push({
-      id: glyph.codePointAt(0),
-      x,
-      y,
-      width: cell,
-      height: cell,
-      xadvance: advance,
-      xoffset: 0,
-      yoffset: 0,
-      label: glyph,
-    });
+  const generateBMFont = require("msdf-bmfont-xml");
+  const { textures, font } = await new Promise((resolve, reject) => {
+    generateBMFont(
+      fontPath,
+      {
+        filename: path.join(fontsDir, path.basename(fontPng, ".png")),
+        outputType: "xml",
+        charset: glyphs,
+        fontSize: 64,
+        textureSize: [2048, 2048],
+        texturePadding: 2,
+        distanceRange: 8,
+        fieldType: "msdf",
+        smartSize: true,
+        pot: true,
+        roundDecimal: 0,
+      },
+      (error, textures, font) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve({ textures, font });
+      },
+      {
+        log: () => {},
+        warn: (message) => console.warn(`NameLayer MSDF font: ${message}`),
+        error: (message) => console.error(`NameLayer MSDF font: ${message}`),
+      },
+    );
   });
 
-  const xml = `<?xml version="1.0"?>
-<font>
-  <info face="${fontFace}" size="48" bold="0" italic="0"/>
-  <common lineHeight="56" base="48" scaleW="${canvas.width}" scaleH="${canvas.height}" pages="1" packed="0"/>
-  <pages>
-    <page id="0" file="${fontPng}"/>
-  </pages>
-  <chars count="${chars.length}">
-${chars
-  .map(
-    (char) =>
-      `    <char id="${char.id}" x="${char.x}" y="${char.y}" width="${char.width}" height="${char.height}" page="0" xadvance="${char.xadvance}" xoffset="${char.xoffset}" yoffset="${char.yoffset}"/>`,
-  )
-  .join("\n")}
-  </chars>
-</font>
-`;
+  for (const texture of textures) {
+    fs.writeFileSync(`${texture.filename}.png`, texture.texture);
+  }
 
-  fs.writeFileSync(path.join(fontsDir, fontPng), canvas.toBuffer("image/png"));
+  const xml = String(font.data).replace(
+    /(<info\s+[^>]*face=")[^"]+(")/,
+    `$1${fontFace}$2`,
+  );
   fs.writeFileSync(path.join(fontsDir, fontXml), xml);
 }
 
@@ -164,7 +153,7 @@ async function buildIconAtlas() {
   }
 
   const { createCanvas, loadImage } = canvasApi;
-  const cell = 64;
+  const cell = 256;
   const cols = 4;
   const rows = Math.ceil(iconSources.length / cols);
   const canvas = createCanvas(cols * cell, rows * cell);
@@ -250,7 +239,7 @@ async function buildEmojiAtlas() {
 
   const { createCanvas } = canvasApi;
   const emojis = readEmojiTable();
-  const cell = 64;
+  const cell = 128;
   const cols = 8;
   const rows = Math.max(1, Math.ceil(emojis.length / cols));
   const canvas = createCanvas(cols * cell, rows * cell);
@@ -259,7 +248,7 @@ async function buildEmojiAtlas() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font =
-    '48px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    '96px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
   const frames = {};
 
   emojis.forEach((emoji, index) => {

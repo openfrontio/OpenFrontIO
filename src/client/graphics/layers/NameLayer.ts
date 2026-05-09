@@ -23,10 +23,9 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { NameLayerAssets } from "./NameLayerAssets";
 import {
-  computeNameLayerFontSize,
   computeNameLayerLayout,
+  computeNameLayerScreenMetrics,
   computeNameLayerVisible,
-  computeNameLayerWorldScale,
   computeTraitorFlashAlpha,
   replaceUnsupportedNameGlyphs,
 } from "./NameLayerLayout";
@@ -41,7 +40,6 @@ interface PixiIconRender {
   centered: boolean;
   src?: string;
   sprite?: PIXI.Sprite;
-  text?: PIXI.Text;
   alliance?: {
     base: PIXI.Sprite;
     colored: PIXI.Sprite;
@@ -55,6 +53,7 @@ class RenderInfo {
   public location: Cell | null = null;
   public baseSize = 1;
   public fontSize = 0;
+  public iconSize = 0;
   public fontColor = "";
   public flagSrc = "";
   public flagSprite: PIXI.Sprite | null = null;
@@ -325,11 +324,19 @@ export class NameLayer implements Layer {
       }
 
       render.baseSize = Math.max(1, Math.floor(nameLocation.size));
-      const fontSize = computeNameLayerFontSize(render.baseSize);
-      if (render.fontSize !== fontSize) {
-        render.fontSize = fontSize;
+      const metrics = computeNameLayerScreenMetrics(
+        render.baseSize,
+        this.transformHandler.scale,
+      );
+      if (
+        render.fontSize !== metrics.fontSize ||
+        render.iconSize !== metrics.iconSize
+      ) {
+        render.fontSize = metrics.fontSize;
+        render.iconSize = metrics.iconSize;
         this.updateText(render);
-        this.layoutRender(render, Math.min(render.fontSize * 1.5, 48));
+        this.resizeIcons(render, render.iconSize);
+        this.layoutRender(render, render.iconSize);
       }
       render.location = new Cell(nameLocation.x, nameLocation.y);
       const isOnScreen = this.transformHandler.isOnScreen(render.location);
@@ -348,12 +355,7 @@ export class NameLayer implements Layer {
         render.location,
       );
       render.container.position.set(screenPos.x, screenPos.y);
-      render.container.scale.set(
-        computeNameLayerWorldScale(
-          render.baseSize,
-          this.transformHandler.scale,
-        ),
-      );
+      render.container.scale.set(1);
       this.updateTraitorAlpha(render, now);
     }
   }
@@ -381,7 +383,6 @@ export class NameLayer implements Layer {
     this.updateText(render);
     this.updateFlag(render);
 
-    const iconSize = Math.min(render.fontSize * 1.5, 48);
     const icons = getPlayerIcons({
       game: this.game,
       player: render.player,
@@ -392,8 +393,8 @@ export class NameLayer implements Layer {
       transitiveTargets,
     });
 
-    this.updateIcons(render, icons, iconSize);
-    this.layoutRender(render, iconSize);
+    this.updateIcons(render, icons, render.iconSize);
+    this.layoutRender(render, render.iconSize);
   }
 
   private updateText(render: RenderInfo) {
@@ -506,6 +507,25 @@ export class NameLayer implements Layer {
     }
   }
 
+  private resizeIcons(render: RenderInfo, size: number) {
+    for (const iconRender of render.icons.values()) {
+      if (iconRender.sprite) {
+        iconRender.sprite.width = size;
+        iconRender.sprite.height = size;
+      }
+      if (iconRender.alliance) {
+        const refs = iconRender.alliance;
+        refs.base.width = size;
+        refs.base.height = size;
+        refs.colored.width = size;
+        refs.colored.height = size;
+        refs.questionMark.width = size;
+        refs.questionMark.height = size;
+        this.updateAllianceProgressMask(render, refs, size);
+      }
+    }
+  }
+
   private updateImageIcon(
     render: RenderInfo,
     icon: PlayerIconDescriptor,
@@ -551,33 +571,38 @@ export class NameLayer implements Layer {
     icon: PlayerIconDescriptor,
     size: number,
   ) {
+    const text = icon.text ?? "";
+    const texture = text ? this.assets.getEmojiTexture(text) : null;
+    if (!texture) {
+      const existing = render.icons.get(icon.id);
+      if (existing) {
+        existing.container.visible = false;
+      }
+      return;
+    }
+
     let iconRender = render.icons.get(icon.id);
-    if (!iconRender || !iconRender.text) {
+    if (!iconRender || iconRender.src !== text || !iconRender.sprite) {
       iconRender?.container.destroy({ children: true });
       const container = new PIXI.Container();
       container.alpha = 0.8;
-      const text = new PIXI.Text({
-        text: icon.text ?? "",
-        style: {
-          fontFamily: "sans-serif",
-          fontSize: size,
-          fill: "#ffffff",
-        },
-      });
-      text.anchor.set(0.5);
-      container.addChild(text);
+      const sprite = new PIXI.Sprite(texture);
+      sprite.anchor.set(0.5);
+      container.addChild(sprite);
       render.container.addChild(container);
-      iconRender = { container, centered: icon.center ?? false, text };
+      iconRender = {
+        container,
+        centered: icon.center ?? false,
+        src: text,
+        sprite,
+      };
       render.icons.set(icon.id, iconRender);
     }
 
     iconRender.centered = icon.center ?? false;
-    iconRender.text!.text = icon.text ?? "";
-    iconRender.text!.style = {
-      fontFamily: "sans-serif",
-      fontSize: size,
-      fill: "#ffffff",
-    };
+    iconRender.sprite!.texture = texture;
+    iconRender.sprite!.width = size;
+    iconRender.sprite!.height = size;
     iconRender.container.visible = true;
   }
 
@@ -629,6 +654,26 @@ export class NameLayer implements Layer {
     refs.colored.width = size;
     refs.colored.height = size;
 
+    this.updateAllianceProgressMask(render, refs, size);
+
+    refs.questionMark.visible =
+      this.hasAllianceExtensionRequest(render) && questionTexture !== null;
+    if (questionTexture) {
+      refs.questionMark.texture = questionTexture;
+      refs.questionMark.width = size;
+      refs.questionMark.height = size;
+    }
+  }
+
+  private updateAllianceProgressMask(
+    render: RenderInfo,
+    refs: PixiIconRender["alliance"],
+    size: number,
+  ) {
+    if (!refs) {
+      return;
+    }
+
     this.myPlayer ??= this.game.myPlayer();
     const allianceView = this.myPlayer
       ?.alliances()
@@ -648,14 +693,14 @@ export class NameLayer implements Layer {
     refs.mask
       .rect(-size / 2, -size / 2 + topCut, size, Math.max(0, size - topCut))
       .fill(0xffffff);
+  }
 
-    refs.questionMark.visible =
-      allianceView?.hasExtensionRequest === true && questionTexture !== null;
-    if (questionTexture) {
-      refs.questionMark.texture = questionTexture;
-      refs.questionMark.width = size;
-      refs.questionMark.height = size;
-    }
+  private hasAllianceExtensionRequest(render: RenderInfo): boolean {
+    this.myPlayer ??= this.game.myPlayer();
+    return (
+      this.myPlayer?.alliances().find((a) => a.other === render.player.id())
+        ?.hasExtensionRequest === true
+    );
   }
 
   private layoutRender(render: RenderInfo, iconSize: number) {
