@@ -1,5 +1,5 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { consumeFuel, fuelBonus } from "../game/Fuel";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class MissileSiloExecution implements Execution {

@@ -1,4 +1,5 @@
 import { simpleHash, toInt, withinInt } from "../Util";
+import { fuelCapacity } from "./Fuel";
 import {
   AllUnitParams,
   MessageType,
@@ -13,7 +14,6 @@ import {
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
-import { fuelCapacity } from "./Fuel";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {

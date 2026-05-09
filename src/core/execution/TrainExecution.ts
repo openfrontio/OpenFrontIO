@@ -1,3 +1,4 @@
+import { fuelBonus } from "../game/Fuel";
 import {
   Execution,
   Game,
@@ -12,7 +13,6 @@ import { MotionPlanRecord } from "../game/MotionPlans";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
-import { fuelBonus } from "../game/Fuel";
 
 export class TrainExecution implements Execution {
   private active = true;

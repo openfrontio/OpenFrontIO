@@ -1,5 +1,5 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { consumeFuel, fuelBonus } from "../game/Fuel";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
@@ -58,11 +58,7 @@ export class PortExecution implements Execution {
 
     const port = this.random.randElement(ports);
     this.mg.addExecution(
-      new TradeShipExecution(
-        this.port.owner(),
-        this.port,
-        port,
-      ),
+      new TradeShipExecution(this.port.owner(), this.port, port),
     );
   }
 
@@ -76,10 +72,11 @@ export class PortExecution implements Execution {
 
   shouldSpawnTradeShip(): boolean {
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
-    const spawnRate = this.mg
-      .config()
-      .tradeShipSpawnRate(this.tradeShipSpawnRejections, numTradeShips)
-      / (1 + fuelBonus(this.mg.config(), this.port));
+    const spawnRate =
+      this.mg
+        .config()
+        .tradeShipSpawnRate(this.tradeShipSpawnRejections, numTradeShips) /
+      (1 + fuelBonus(this.mg.config(), this.port));
     for (let i = 0; i < this.port!.level(); i++) {
       if (this.random.chance(spawnRate)) {
         this.tradeShipSpawnRejections = 0;

@@ -1,5 +1,6 @@
 import { JWK } from "jose";
 import { z } from "zod";
+import { fuelBonus } from "../game/Fuel";
 import {
   Difficulty,
   Game,
@@ -23,7 +24,6 @@ import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, toInt, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
-import { fuelBonus } from "../game/Fuel";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 

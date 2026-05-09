@@ -1,4 +1,3 @@
-import { random } from "node_modules/colord/random";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TrainExecution } from "./TrainExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
@@ -63,7 +62,10 @@ export class OilRigExecution implements Execution {
     //   sourceStation,
     //   this.oilRig.owner(),
     // );
-    const destination = cluster.randomFuelDestination(sourceStation, this.oilRig.owner());
+    const destination = cluster.randomFuelDestination(
+      sourceStation,
+      this.oilRig.owner(),
+    );
     if (!destination) {
       return;
     }

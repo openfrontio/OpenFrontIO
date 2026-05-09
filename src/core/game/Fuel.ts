@@ -35,7 +35,9 @@ export function consumeFuel(config: Config, unit: Unit): void {
   );
 
   if (unit.fuel() > 0) {
-    console.log(`Unit ${unit.id()} has ${unit.fuel()} fuel and is now inactive.`);
+    console.log(
+      `Unit ${unit.id()} has ${unit.fuel()} fuel and is now inactive.`,
+    );
   }
 }
 
@@ -56,7 +58,6 @@ export function fuelBonus(config: Config, unit: FuelStatUnit): number {
   const fillRatio = Math.max(0, Math.min(1, unit.fuel() / capacity));
   const saturation = Math.max(0.001, config.fuelBonusSaturation());
   const diminishingRatio =
-    (1 - Math.exp(-saturation * fillRatio)) /
-    (1 - Math.exp(-saturation));
+    (1 - Math.exp(-saturation * fillRatio)) / (1 - Math.exp(-saturation));
   return config.fueledStructureMaxBonus() * diminishingRatio;
 }

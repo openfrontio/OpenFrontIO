@@ -1,7 +1,7 @@
 import { TrainExecution } from "../execution/TrainExecution";
 import { PseudoRandom } from "../PseudoRandom";
-import { Game, Player, TrainMission, Unit, UnitType } from "./Game";
 import { isFuelConsumer } from "./Fuel";
+import { Game, Player, TrainMission, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
 import { Railroad } from "./Railroad";
@@ -94,7 +94,9 @@ export function createTrainStopHandlers(
   };
 }
 
-function combineStopHandlers(...handlers: TrainStopHandler[]): TrainStopHandler {
+function combineStopHandlers(
+  ...handlers: TrainStopHandler[]
+): TrainStopHandler {
   return {
     onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution) {
       for (const handler of handlers) {
@@ -379,7 +381,7 @@ export class Cluster {
       eligibleSeen++;
 
       // Reservoir sampling: keep each eligible station with probability 1/eligibleSeen.
-      if ((Math.floor(Math.random() * (eligibleSeen + 1))) === 0) {
+      if (Math.floor(Math.random() * (eligibleSeen + 1)) === 0) {
         selected = station;
       }
     }
