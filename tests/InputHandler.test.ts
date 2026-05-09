@@ -1,6 +1,8 @@
 import {
   AutoUpgradeEvent,
+  CloseViewEvent,
   ConfirmGhostStructureEvent,
+  GhostStructureChangedEvent,
   InputHandler,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -587,6 +589,130 @@ describe("InputHandler AutoUpgrade", () => {
         (call) => call[0] instanceof ConfirmGhostStructureEvent,
       );
       expect(confirmCalls).toHaveLength(0);
+    });
+  });
+
+  describe("Escape while building", () => {
+    let uiState: UIState;
+
+    beforeEach(() => {
+      inputHandler.destroy();
+      uiState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("captures Escape and cancels active ghost structure without blocking later handlers", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      const laterHandler = vi.fn();
+      uiState.ghostStructure = UnitType.City;
+
+      window.addEventListener("keydown", laterHandler);
+      const event = new KeyboardEvent("keydown", {
+        code: "Escape",
+        cancelable: true,
+      });
+      window.dispatchEvent(event);
+      window.removeEventListener("keydown", laterHandler);
+
+      expect(uiState.ghostStructure).toBeNull();
+      expect(event.defaultPrevented).toBe(true);
+      expect(laterHandler).toHaveBeenCalled();
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.any(GhostStructureChangedEvent),
+      );
+    });
+
+    test("closes views and cancels active ghost structure if fullscreen exits before Escape keydown is delivered", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      const fullscreenDescriptor = Object.getOwnPropertyDescriptor(
+        document,
+        "fullscreenElement",
+      );
+      let fullscreenElement: Element | null = document.documentElement;
+      Object.defineProperty(document, "fullscreenElement", {
+        configurable: true,
+        get: () => fullscreenElement,
+      });
+
+      try {
+        inputHandler.destroy();
+        inputHandler = new InputHandler(
+          mockGameView,
+          uiState,
+          mockCanvas,
+          eventBus,
+        );
+        inputHandler.initialize();
+        uiState.ghostStructure = UnitType.Factory;
+
+        fullscreenElement = null;
+        document.dispatchEvent(new Event("fullscreenchange"));
+
+        expect(uiState.ghostStructure).toBeNull();
+        expect(mockEmit).toHaveBeenCalledWith(expect.any(CloseViewEvent));
+        expect(mockEmit).toHaveBeenCalledWith(
+          expect.any(GhostStructureChangedEvent),
+        );
+      } finally {
+        Reflect.deleteProperty(document, "fullscreenElement");
+        if (fullscreenDescriptor) {
+          Object.defineProperty(
+            document,
+            "fullscreenElement",
+            fullscreenDescriptor,
+          );
+        }
+      }
+    });
+
+    test("closes views if fullscreen exits with no active ghost structure", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      const fullscreenDescriptor = Object.getOwnPropertyDescriptor(
+        document,
+        "fullscreenElement",
+      );
+      let fullscreenElement: Element | null = document.documentElement;
+      Object.defineProperty(document, "fullscreenElement", {
+        configurable: true,
+        get: () => fullscreenElement,
+      });
+
+      try {
+        inputHandler.destroy();
+        inputHandler = new InputHandler(
+          mockGameView,
+          uiState,
+          mockCanvas,
+          eventBus,
+        );
+        inputHandler.initialize();
+
+        fullscreenElement = null;
+        document.dispatchEvent(new Event("fullscreenchange"));
+
+        expect(mockEmit).toHaveBeenCalledWith(expect.any(CloseViewEvent));
+      } finally {
+        Reflect.deleteProperty(document, "fullscreenElement");
+        if (fullscreenDescriptor) {
+          Object.defineProperty(
+            document,
+            "fullscreenElement",
+            fullscreenDescriptor,
+          );
+        }
+      }
     });
   });
 

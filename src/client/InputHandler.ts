@@ -229,6 +229,7 @@ export class InputHandler {
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
   private readonly DRAG_THRESHOLD_PX = 10;
+  private wasFullscreen = false;
 
   private readonly userSettings: UserSettings = new UserSettings();
 
@@ -241,6 +242,7 @@ export class InputHandler {
 
   initialize() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
+    this.wasFullscreen = !!document.fullscreenElement;
 
     // Listen for warship selection to change cursor
     this.eventBus.on(UnitSelectionEvent, (e) => {
@@ -359,6 +361,9 @@ export class InputHandler {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
     }, 1);
+
+    window.addEventListener("keydown", this.handleEscapeCapture, true);
+    document.addEventListener("fullscreenchange", this.handleFullscreenChange);
 
     window.addEventListener("keydown", (e) => {
       const isTextInput = this.isTextInputTarget(e.target);
@@ -848,6 +853,34 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
+  private handleEscapeCapture = (event: KeyboardEvent) => {
+    if (
+      event.code !== "Escape" ||
+      this.uiState.ghostStructure === null ||
+      this.isTextInputTarget(event.target)
+    ) {
+      return;
+    }
+
+    this.cancelGhostStructure();
+    event.preventDefault();
+  };
+
+  private handleFullscreenChange = () => {
+    const isFullscreen = !!document.fullscreenElement;
+    if (this.wasFullscreen && !isFullscreen) {
+      this.eventBus.emit(new CloseViewEvent());
+      if (this.uiState.ghostStructure) {
+        this.cancelGhostStructure();
+      }
+    }
+    this.wasFullscreen = isFullscreen;
+  };
+
+  private cancelGhostStructure() {
+    this.setGhostStructure(null);
+  }
+
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
     this.uiState.ghostStructure = ghostStructure;
     this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
@@ -992,6 +1025,11 @@ export class InputHandler {
     if (this.moveInterval !== null) {
       clearInterval(this.moveInterval);
     }
+    window.removeEventListener("keydown", this.handleEscapeCapture, true);
+    document.removeEventListener(
+      "fullscreenchange",
+      this.handleFullscreenChange,
+    );
     this.activeKeys.clear();
   }
 
