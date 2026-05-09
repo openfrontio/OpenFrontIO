@@ -30,6 +30,7 @@ const SNAPPABLE_STRUCTURES: UnitType[] = [
   UnitType.Port,
   UnitType.City,
   UnitType.Factory,
+  UnitType.OilRig,
 ];
 export class RailTileChangedEvent implements GameEvent {
   constructor(public tile: TileRef) {}

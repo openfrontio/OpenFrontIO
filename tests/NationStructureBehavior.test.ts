@@ -366,6 +366,8 @@ describe("NationStructureBehavior.oilRigValue", () => {
     const valueFn = (behavior as any).oilRigValue();
 
     expect(valueFn(nearTile)).toBeGreaterThan(valueFn(farTile));
+  });
+});
 // ── tryBuildDefensePost — early-exit guards ──────────────────────────────────
 
 describe("NationStructureBehavior.tryBuildDefensePost", () => {
