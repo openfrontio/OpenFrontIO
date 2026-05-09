@@ -59,10 +59,6 @@ describe("GameImpl", () => {
       ),
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
   });
@@ -136,9 +132,16 @@ describe("GameImpl", () => {
   });
 
   test("Singleplayer late human spawn gets spawn immunity", async () => {
-    const singleplayerGame = await setup("plains", {
-      gameType: GameType.Singleplayer,
-    });
+    const singleplayerGame = await setup(
+      "plains",
+      {
+        gameType: GameType.Singleplayer,
+      },
+      [],
+      undefined,
+      undefined,
+      false,
+    );
     (singleplayerGame.config() as any).setSpawnImmunityDuration(100);
 
     const pastSpawnCountdown =

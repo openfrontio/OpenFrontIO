@@ -1,7 +1,6 @@
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -18,20 +17,12 @@ describe("PlayerExecution", () => {
   beforeEach(async () => {
     game = await setup(
       "big_plains",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-      },
+      { infiniteGold: true, instantBuild: true },
       [
         new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
         new PlayerInfo("other", PlayerType.Human, "client_id2", "other_id"),
       ],
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     player = game.player("player_id");
     otherPlayer = game.player("other_id");

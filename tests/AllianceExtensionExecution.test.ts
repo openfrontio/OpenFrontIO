@@ -1,12 +1,6 @@
 import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import {
-  Game,
-  GameType,
-  MessageType,
-  Player,
-  PlayerType,
-} from "../src/core/game/Game";
+import { Game, MessageType, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -18,12 +12,7 @@ describe("AllianceExtensionExecution", () => {
   beforeEach(async () => {
     game = await setup(
       "ocean_and_land",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-        infiniteTroops: true,
-      },
+      { infiniteGold: true, instantBuild: true, infiniteTroops: true },
       [
         playerInfo("player1", PlayerType.Human),
         playerInfo("player2", PlayerType.Human),
@@ -34,10 +23,6 @@ describe("AllianceExtensionExecution", () => {
     player1 = game.player("player1");
     player2 = game.player("player2");
     player3 = game.player("player3");
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Successfully extends existing alliance between Humans", () => {

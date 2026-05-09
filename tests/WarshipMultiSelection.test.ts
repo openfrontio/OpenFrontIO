@@ -2,7 +2,6 @@ import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -20,13 +19,12 @@ describe("Warship multi-selection (MoveWarshipExecution)", () => {
   beforeEach(async () => {
     game = await setup(
       "half_land_half_ocean",
-      { gameType: GameType.Public, infiniteGold: true, instantBuild: true },
+      { infiniteGold: true, instantBuild: true },
       [
         new PlayerInfo("p1", PlayerType.Human, null, "p1"),
         new PlayerInfo("p2", PlayerType.Human, null, "p2"),
       ],
     );
-    while (game.inSpawnPhase()) game.executeNextTick();
     player1 = game.player("p1");
     player2 = game.player("p2");
   });

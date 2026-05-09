@@ -1,6 +1,5 @@
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -19,14 +18,10 @@ let player2: Player;
 describe("Stats", () => {
   beforeEach(async () => {
     stats = new StatsImpl();
-    game = await setup("half_land_half_ocean", { gameType: GameType.Public }, [
+    game = await setup("half_land_half_ocean", {}, [
       new PlayerInfo("boat dude", PlayerType.Human, "client1", "player_1_id"),
       new PlayerInfo("boat dude", PlayerType.Human, "client2", "player_2_id"),
     ]);
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     player1 = game.player("player_1_id");
     player2 = game.player("player_2_id");

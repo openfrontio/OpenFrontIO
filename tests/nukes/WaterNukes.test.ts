@@ -41,7 +41,6 @@ describe("Water Nukes", () => {
       const info = new PlayerInfo("p", PlayerType.Human, null, "p");
       game.addPlayer(info);
       game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
       player = game.player(info.id);
 
       // Build a missile silo
@@ -122,7 +121,8 @@ describe("Water Nukes", () => {
       navGame.addExecution(
         new SpawnExecution(gameID, info2, navGame.ref(1, 1)),
       );
-      while (navGame.inSpawnPhase()) navGame.executeNextTick();
+      navGame.executeNextTick();
+      navGame.executeNextTick();
       const player2 = navGame.player(info2.id);
       constructionExecution(navGame, player2, 1, 1, UnitType.MissileSilo);
 
@@ -151,7 +151,6 @@ describe("Water Nukes", () => {
       const info = new PlayerInfo("p", PlayerType.Human, null, "p");
       game.addPlayer(info);
       game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
       player = game.player(info.id);
 
       constructionExecution(game, player, 1, 1, UnitType.MissileSilo);
@@ -190,7 +189,6 @@ describe("Water Nukes", () => {
       const info = new PlayerInfo("p", PlayerType.Human, null, "p");
       game.addPlayer(info);
       game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
       player = game.player(info.id);
       constructionExecution(game, player, 1, 1, UnitType.MissileSilo);
 

@@ -4,7 +4,6 @@ import { NationExecution } from "../src/core/execution/NationExecution";
 import {
   Cell,
   GameMode,
-  GameType,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -16,7 +15,6 @@ import { executeTicks } from "./util/utils";
 describe("Nation MIRV Retaliation", () => {
   test("nation retaliates with MIRV when attacked by MIRV", async () => {
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -39,9 +37,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const attacker = game.player("attacker_id");
     const nation = game.player("nation_id");
@@ -147,7 +142,6 @@ describe("Nation MIRV Retaliation", () => {
   test("nation launches MIRV to prevent victory when player approaches win condition", async () => {
     // Setup game
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -170,9 +164,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const dominantPlayer = game.player("dominant_id");
     const nation = game.player("nation_id");
@@ -316,7 +307,6 @@ describe("Nation MIRV Retaliation", () => {
   test("nation launches MIRV to stop steamrolling player with excessive cities", async () => {
     // Setup game
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -346,9 +336,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const steamroller = game.player("steamroller_id");
     const secondPlayer = game.player("second_id");
@@ -477,7 +464,6 @@ describe("Nation MIRV Retaliation", () => {
   test("nation does not launch MIRV for steamroll when leader has <= 10 cities", async () => {
     // Setup game
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -507,9 +493,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const steamroller = game.player("steamroller_id");
     const secondPlayer = game.player("second_id");
@@ -631,7 +614,6 @@ describe("Nation MIRV Retaliation", () => {
     const game = await setup(
       "big_plains",
       {
-        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         gameMode: GameMode.Team,
@@ -643,9 +625,6 @@ describe("Nation MIRV Retaliation", () => {
     // Players already added via setup() with Team mode and shared clan for humans
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const teamPlayer1 = game.player("team1_id");
     const teamPlayer2 = game.player("team2_id");

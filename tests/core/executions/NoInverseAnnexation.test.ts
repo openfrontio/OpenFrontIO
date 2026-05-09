@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -18,20 +17,12 @@ describe("PlayerExecution Annexation Bug", () => {
   beforeEach(async () => {
     game = await setup(
       "big_plains",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-      },
+      { infiniteGold: true, instantBuild: true },
       [
         new PlayerInfo("large", PlayerType.Human, "client1", "large_id"),
         new PlayerInfo("small", PlayerType.Human, "client2", "small_id"),
       ],
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     largePlayer = game.player("large_id");
     smallPlayer = game.player("small_id");

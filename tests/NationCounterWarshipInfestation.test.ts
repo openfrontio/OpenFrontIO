@@ -3,7 +3,6 @@ import {
   Cell,
   Difficulty,
   GameMode,
-  GameType,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -19,7 +18,6 @@ import { setup } from "./util/Setup";
 describe("Counter Warship Infestation", () => {
   test("rich nation sends counter-warship in FFA when enemy has too many warships", async () => {
     const game = await setup("half_land_half_ocean", {
-      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
       difficulty: Difficulty.Hard, // Required for counter-warship logic
@@ -43,9 +41,6 @@ describe("Counter Warship Infestation", () => {
     game.addPlayer(enemyInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const nation = game.player("nation_id");
     const enemy = game.player("enemy_id");
@@ -178,7 +173,6 @@ describe("Counter Warship Infestation", () => {
     const game = await setup(
       "half_land_half_ocean",
       {
-        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         difficulty: Difficulty.Hard, // Required for counter-warship logic
@@ -189,9 +183,6 @@ describe("Counter Warship Infestation", () => {
     );
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const nation = game.player("nation_id");
     const ally = game.player("ally_id");

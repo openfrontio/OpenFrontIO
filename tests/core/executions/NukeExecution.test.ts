@@ -1,7 +1,6 @@
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -19,11 +18,7 @@ describe("NukeExecution", () => {
   beforeEach(async () => {
     game = await setup(
       "big_plains",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-      },
+      { infiniteGold: true, instantBuild: true },
       [
         new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
         new PlayerInfo("other", PlayerType.Human, "client_id2", "other_id"),
@@ -35,10 +30,6 @@ describe("NukeExecution", () => {
       outer: 10,
     }));
     (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(() => 5);
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     player = game.player("player_id");
     otherPlayer = game.player("other_id");

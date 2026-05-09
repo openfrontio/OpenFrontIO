@@ -1,7 +1,6 @@
 import { PortExecution } from "../src/core/execution/PortExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -15,21 +14,10 @@ let other: Player;
 
 describe("PortExecution", () => {
   beforeEach(async () => {
-    game = await setup(
-      "half_land_half_ocean",
-      {
-        gameType: GameType.Public,
-        instantBuild: true,
-      },
-      [
-        new PlayerInfo("player", PlayerType.Human, null, "player_id"),
-        new PlayerInfo("other", PlayerType.Human, null, "other_id"),
-      ],
-    );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game = await setup("half_land_half_ocean", { instantBuild: true }, [
+      new PlayerInfo("player", PlayerType.Human, null, "player_id"),
+      new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+    ]);
 
     player = game.player("player_id");
     player.addGold(BigInt(1000000));

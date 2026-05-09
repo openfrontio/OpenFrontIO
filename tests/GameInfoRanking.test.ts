@@ -7,7 +7,6 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
-  GameType,
 } from "../src/core/game/Game";
 import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
@@ -24,7 +23,6 @@ describe("Ranking class", () => {
     difficulty: Difficulty.Medium,
     donateGold: false,
     donateTroops: false,
-    gameType: GameType.Public,
     gameMode: GameMode.FFA,
     gameMapSize: GameMapSize.Normal,
     nations: "disabled",

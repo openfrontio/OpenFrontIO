@@ -20,7 +20,8 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     const info = new PlayerInfo("p", PlayerType.Human, null, "p");
     game.addPlayer(info);
     game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-    while (game.inSpawnPhase()) game.executeNextTick();
+    game.executeNextTick();
+    game.executeNextTick();
     player = game.player(info.id);
 
     player.conquer(game.ref(1, 1));
@@ -61,8 +62,8 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     gameWithConstruction.addExecution(
       new SpawnExecution(gameID, info, gameWithConstruction.ref(1, 1)),
     );
-    while (gameWithConstruction.inSpawnPhase())
-      gameWithConstruction.executeNextTick();
+    gameWithConstruction.executeNextTick();
+    gameWithConstruction.executeNextTick();
     const playerWithConstruction = gameWithConstruction.player(info.id);
 
     playerWithConstruction.conquer(gameWithConstruction.ref(1, 1));

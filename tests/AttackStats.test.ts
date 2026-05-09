@@ -26,10 +26,8 @@ describe("AttackStats", () => {
     game.addExecution(
       new SpawnExecution(gameID, player2.info(), game.ref(50, 55)),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   test("should increase war gold stat when a player is eliminated", () => {

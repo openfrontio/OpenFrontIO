@@ -1,13 +1,7 @@
 import { AllianceRejectExecution } from "../src/core/execution/alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
-import {
-  Game,
-  GameType,
-  Player,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerType, UnitType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 
@@ -19,12 +13,7 @@ describe("AllianceRequestExecution", () => {
   beforeEach(async () => {
     game = await setup(
       "plains",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-        infiniteTroops: true,
-      },
+      { infiniteGold: true, instantBuild: true, infiniteTroops: true },
       [
         playerInfo("player1", PlayerType.Human),
         playerInfo("player2", PlayerType.Human),
@@ -37,10 +26,6 @@ describe("AllianceRequestExecution", () => {
 
     player2 = game.player("player2");
     player2.conquer(game.ref(0, 1));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Can create alliance by counter-request", () => {

@@ -1,6 +1,6 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
-import { Game, GameType, Player, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -12,7 +12,6 @@ describe("Alliance Donation", () => {
     game = await setup(
       "plains",
       {
-        gameType: GameType.Public,
         infiniteGold: false,
         instantBuild: true,
         infiniteTroops: false,
@@ -34,10 +33,6 @@ describe("Alliance Donation", () => {
     player2.conquer(game.ref(0, 1));
     player2.addGold(100n);
     player2.addTroops(100);
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Can donate gold after alliance formed by reply", () => {

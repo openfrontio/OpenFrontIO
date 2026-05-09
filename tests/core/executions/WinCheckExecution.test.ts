@@ -2,7 +2,6 @@ import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution
 import {
   ColoredTeams,
   GameMode,
-  GameType,
   PlayerInfo,
   PlayerType,
   RankedType,
@@ -15,7 +14,6 @@ describe("WinCheckExecution", () => {
 
   beforeEach(async () => {
     mg = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       maxTimerValue: 5,
@@ -91,7 +89,6 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should set Nation as winner when reaching 80% territory", async () => {
     // Setup game
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       instantBuild: true,
@@ -108,9 +105,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     const nation = game.player("nation_id");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign 81% of land to Nation
     const totalLand = game.numLandTiles();
@@ -144,7 +138,6 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should set Nation as winner when timer expires with most territory", async () => {
     // Setup game with timer
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       instantBuild: true,
@@ -219,7 +212,6 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should set correct Nation as winner among multiple Nations", async () => {
     // Setup game
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.FFA,
       instantBuild: true,
@@ -254,9 +246,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     const nation3 = game.player("nation3_id");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territories: Nation1 (85%), Nation2 (10%), Nation3 (5%)
     const totalLand = game.numLandTiles();
@@ -303,7 +292,6 @@ describe("WinCheckExecution - Nation Winners", () => {
   test("should not set winner for bot team in Team mode", async () => {
     // Setup Team mode game
     const game = await setup("big_plains", {
-      gameType: GameType.Public,
       infiniteGold: true,
       gameMode: GameMode.Team,
       instantBuild: true,
@@ -324,9 +312,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     expect(bot2.team()).toBe(ColoredTeams.Bot);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign 96% of land to bot team (above 95% Team mode threshold)
     const totalLand = game.numLandTiles();
@@ -374,7 +359,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
-        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -390,9 +374,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign some territory to both players
     let human1Count = 0;
@@ -430,7 +411,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
-        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -446,9 +426,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territory to both players
     let human1Count = 0;
@@ -487,7 +464,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
-        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -503,9 +479,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Both players disconnect
     human1.markDisconnected(true);
@@ -530,7 +503,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const game = await setup(
       "big_plains",
       {
-        gameType: GameType.Public,
         infiniteGold: true,
         gameMode: GameMode.FFA,
         instantBuild: true,
@@ -548,9 +520,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const nation = game.player("NationPlayer");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territory to all players
     let humanCount = 0;

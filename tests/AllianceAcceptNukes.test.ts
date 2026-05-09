@@ -3,7 +3,6 @@ import { GameUpdateType } from "src/core/game/GameUpdates";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -21,12 +20,7 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
   beforeEach(async () => {
     game = await setup(
       "plains",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-        infiniteTroops: true,
-      },
+      { infiniteGold: true, instantBuild: true, infiniteTroops: true },
       [
         new PlayerInfo("player1", PlayerType.Human, "c1", "p1"),
         new PlayerInfo("player2", PlayerType.Human, "c2", "p2"),
@@ -35,10 +29,6 @@ describe("Alliance acceptance immediately destroys in-flight nukes", () => {
     );
 
     (game.config() as TestConfig).nukeAllianceBreakThreshold = () => 0;
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     player1 = game.player("p1");
     player2 = game.player("p2");

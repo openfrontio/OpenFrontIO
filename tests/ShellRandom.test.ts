@@ -3,7 +3,6 @@ import { ShellExecution } from "../src/core/execution/ShellExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
-  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -20,20 +19,12 @@ describe("Shell Random Damage", () => {
   beforeEach(async () => {
     game = await setup(
       "half_land_half_ocean",
-      {
-        gameType: GameType.Public,
-        infiniteGold: true,
-        instantBuild: true,
-      },
+      { infiniteGold: true, instantBuild: true },
       [
         new PlayerInfo("attacker", PlayerType.Human, null, "player_1_id"),
         new PlayerInfo("defender", PlayerType.Human, null, "player_2_id"),
       ],
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     player1 = game.player("player_1_id");
     player2 = game.player("player_2_id");
