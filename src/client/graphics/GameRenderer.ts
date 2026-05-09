@@ -377,9 +377,11 @@ export class GameRenderer {
     this.context = context;
   }
 
-  initialize() {
+  async initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
-    this.layers.forEach((l) => l.init?.());
+    for (const layer of this.layers) {
+      await layer.init?.();
+    }
 
     // only append the canvas if it's not already in the document to avoid reparenting side-effects
     if (!document.body.contains(this.canvas)) {
