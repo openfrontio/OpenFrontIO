@@ -170,6 +170,13 @@ export async function createCheckoutSession(
 }
 
 export function getApiBase() {
+  const viteApiDomain = (
+    import.meta as unknown as { env?: Record<string, string> }
+  ).env?.VITE_API_DOMAIN;
+  if (viteApiDomain) {
+    return `https://${viteApiDomain}`;
+  }
+
   const domainname = getAudience();
 
   if (domainname === "localhost") {

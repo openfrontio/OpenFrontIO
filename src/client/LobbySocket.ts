@@ -54,7 +54,10 @@ export class PublicLobbySocket {
       }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}${this.workerPath}/lobbies`;
+      const wsHost =
+        (import.meta as unknown as { env?: Record<string, string> }).env
+          ?.VITE_WS_HOST ?? window.location.host;
+      const wsUrl = `${protocol}//${wsHost}${this.workerPath}/lobbies`;
 
       this.ws = new WebSocket(wsUrl);
       this.wsAttemptCounted = false;
