@@ -432,6 +432,8 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      (window as unknown as Record<string, unknown>).__tourGameView =
+        this.gameView;
       this.renderer.tick();
 
       // Emit tick metrics event for performance overlay
@@ -611,6 +613,7 @@ export class ClientGameRunner {
       !this.gameView.config().isRandomSpawn()
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
+      window.dispatchEvent(new CustomEvent("tour:spawn-clicked"));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -850,6 +853,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAllianceRequestIntentEvent(myPlayer, recipient),
         );
+        window.dispatchEvent(new CustomEvent("tour:alliance-sent"));
       }
     });
   }

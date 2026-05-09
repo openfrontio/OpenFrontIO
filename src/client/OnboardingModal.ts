@@ -2,6 +2,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import "./components/baseComponents/Modal";
+import { getTourOverlay } from "./TourOverlay";
 
 const STORAGE_KEY = "openfront-onboarding-v1";
 const SHOWN_KEY = "openfront-onboarding-shown";
@@ -353,6 +354,14 @@ export class OnboardingModal extends BaseModal {
     this.videoOpen = false;
   }
 
+  private startTour() {
+    const tour = getTourOverlay();
+    if (tour) {
+      tour.activate(0);
+      this.close();
+    }
+  }
+
   // ── Rendering ─────────────────────────────────────────────────────────────
 
   private renderTrackBadge(track: Track) {
@@ -590,6 +599,14 @@ export class OnboardingModal extends BaseModal {
             style="width: ${pct}%"
           ></div>
         </div>
+        <!-- Interactive tour CTA -->
+        <button
+          @click=${() => this.startTour()}
+          class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all"
+          style="background:linear-gradient(135deg,#7c3aed,#6366f1);box-shadow:0 2px 12px rgba(124,58,237,0.3);"
+        >
+          🎮 Start Interactive Tour — play & learn in real-time
+        </button>
       </div>
     `;
   }

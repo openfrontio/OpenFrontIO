@@ -35,6 +35,8 @@ import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { hasSeenOnboarding, OnboardingModal } from "./OnboardingModal";
+import "./TourOverlay";
+import { getTourOverlay } from "./TourOverlay";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";

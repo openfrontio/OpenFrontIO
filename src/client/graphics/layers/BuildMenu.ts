@@ -399,6 +399,9 @@ export class BuildMenu extends LitElement implements Layer {
       this.eventBus.emit(
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );
+      if (buildableUnit.type === UnitType.City) {
+        window.dispatchEvent(new CustomEvent("tour:city-built"));
+      }
     }
     this.hideMenu();
   }
