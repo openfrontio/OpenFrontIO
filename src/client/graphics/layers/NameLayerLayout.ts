@@ -31,8 +31,13 @@ export interface NameLayerLayout {
   rows: { iconsY: number | null; nameY: number; troopsY: number };
 }
 
+export interface NameLayerScreenMetrics {
+  fontSize: number;
+  iconSize: number;
+}
+
 const SUPPORTED_TEXT_CHARS = new Set(
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ üÜ.[]+-=(),':!?/@#$%&\"".split(
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ \u00fc\u00dc.[]+-=(),':!?/@#$%&\"".split(
     "",
   ),
 );
@@ -72,6 +77,19 @@ export function computeNameLayerWorldScale(
 
 export function computeNameLayerFontSize(baseSize: number): number {
   return Math.max(4, Math.floor(baseSize * 0.4));
+}
+
+export function computeNameLayerScreenMetrics(
+  baseSize: number,
+  transformScale: number,
+): NameLayerScreenMetrics {
+  const worldScale = computeNameLayerWorldScale(baseSize, transformScale);
+  const localFontSize = computeNameLayerFontSize(baseSize);
+  const localIconSize = Math.min(localFontSize * 1.5, 48);
+  return {
+    fontSize: Math.max(1, localFontSize * worldScale),
+    iconSize: Math.max(1, localIconSize * worldScale),
+  };
 }
 
 export function computeNameLayerLayout({

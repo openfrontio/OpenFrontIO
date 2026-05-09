@@ -14,8 +14,11 @@ export class NameLayerAssets {
   public fontReady = false;
 
   private readonly textures = new Map<string, PIXI.Texture>();
+  private readonly atlasTextures = new Map<string, PIXI.Texture>();
+  private readonly emojiTextures = new Map<string, PIXI.Texture>();
   private readonly pendingTextures = new Map<string, Promise<void>>();
   private readonly warnedTextureFailures = new Set<string>();
+  private readonly warnedMissingEmojis = new Set<string>();
   private preloadPromise: Promise<void> | null = null;
 
   preload(): Promise<void> {
@@ -24,6 +27,11 @@ export class NameLayerAssets {
   }
 
   getTexture(src: string): PIXI.Texture | null {
+    const atlasTexture = this.atlasTextures.get(textureKeyFromSrc(src));
+    if (atlasTexture) {
+      return atlasTexture;
+    }
+
     const cached = this.textures.get(src);
     if (cached) {
       return cached;
@@ -49,6 +57,18 @@ export class NameLayerAssets {
     return null;
   }
 
+  getEmojiTexture(emoji: string): PIXI.Texture | null {
+    const texture = this.emojiTextures.get(emoji);
+    if (texture) {
+      return texture;
+    }
+    if (!this.warnedMissingEmojis.has(emoji)) {
+      this.warnedMissingEmojis.add(emoji);
+      console.warn(`NameLayer emoji omitted; atlas frame missing: ${emoji}`);
+    }
+    return null;
+  }
+
   preloadTextures(srcs: Iterable<string>): void {
     for (const src of srcs) {
       this.getTexture(src);
@@ -57,13 +77,18 @@ export class NameLayerAssets {
 
   resetWarningsForTests(): void {
     this.warnedTextureFailures.clear();
+    this.warnedMissingEmojis.clear();
   }
 
   private async loadBaseAssets(): Promise<void> {
     await this.loadFont();
     await Promise.all([
-      this.loadOptionalAtlas(iconAtlas, "static icon atlas"),
-      this.loadOptionalAtlas(emojiAtlas, "emoji atlas"),
+      this.loadOptionalAtlas(
+        iconAtlas,
+        "static icon atlas",
+        this.atlasTextures,
+      ),
+      this.loadOptionalAtlas(emojiAtlas, "emoji atlas", this.emojiTextures),
     ]);
   }
 
@@ -91,9 +116,18 @@ export class NameLayerAssets {
     }
   }
 
-  private async loadOptionalAtlas(src: string, label: string): Promise<void> {
+  private async loadOptionalAtlas(
+    src: string,
+    label: string,
+    target: Map<string, PIXI.Texture>,
+  ): Promise<void> {
     try {
-      await PIXI.Assets.load(src);
+      const atlas = (await PIXI.Assets.load(src)) as {
+        textures?: Record<string, PIXI.Texture>;
+      };
+      for (const [key, texture] of Object.entries(atlas.textures ?? {})) {
+        target.set(key, texture);
+      }
     } catch (error) {
       console.warn(`NameLayer ${label} unavailable`, error);
     }
@@ -105,5 +139,16 @@ export class NameLayerAssets {
     }
     this.warnedTextureFailures.add(src);
     console.warn(`NameLayer texture omitted after load failure: ${src}`, error);
+  }
+}
+
+function textureKeyFromSrc(src: string): string {
+  const clean = src.split(/[?#]/, 1)[0] ?? src;
+  const slash = clean.lastIndexOf("/");
+  const key = slash >= 0 ? clean.slice(slash + 1) : clean;
+  try {
+    return decodeURIComponent(key);
+  } catch {
+    return key;
   }
 }

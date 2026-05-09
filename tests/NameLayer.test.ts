@@ -4,6 +4,7 @@ import {
 } from "../src/client/graphics/PlayerIcons";
 import {
   computeNameLayerLayout,
+  computeNameLayerScreenMetrics,
   computeNameLayerWorldScale,
   computeTraitorFlashAlpha,
   computeTraitorFlashDurationSeconds,
@@ -100,6 +101,17 @@ describe("NameLayerLayout", () => {
   test("combines local label scale with camera scale for world-stable labels", () => {
     expect(computeNameLayerWorldScale(8, 2)).toBeCloseTo(4);
     expect(computeNameLayerWorldScale(20, 2)).toBeCloseTo(6);
+  });
+
+  test("computes final screen-space text and icon sizes", () => {
+    expect(computeNameLayerScreenMetrics(8, 2)).toEqual({
+      fontSize: 16,
+      iconSize: 24,
+    });
+    expect(computeNameLayerScreenMetrics(20, 2)).toEqual({
+      fontSize: 48,
+      iconSize: 72,
+    });
   });
 
   test("matches traitor flash duration thresholds and alpha extrema", () => {
