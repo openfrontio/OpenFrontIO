@@ -17,6 +17,7 @@ const emojiFontFamily = "NameLayerEmoji";
 const emojiFontPath = require.resolve("twemoji-colr-font/twemoji.woff2");
 const emojiFontSize = 96;
 const atlasFramePaddingRatio = 1 / 16;
+const colorDetectionThreshold = 12;
 const fontSourceCandidates = [
   "overpass-regular.otf",
   "overpass-regular.ttf",
@@ -51,7 +52,7 @@ const iconSources = [
 fs.mkdirSync(fontsDir, { recursive: true });
 fs.mkdirSync(imagesDir, { recursive: true });
 
-FontLibrary.use(emojiFontFamily, emojiFontPath);
+FontLibrary.use(emojiFontFamily, [emojiFontPath]);
 
 await buildMsdfFont();
 await buildIconAtlas();
@@ -188,14 +189,12 @@ async function loadIconImage(sourcePath) {
 
   let svg = fs.readFileSync(sourcePath, "utf8");
   if (!/<svg[^>]*\swidth=/i.test(svg) || !/<svg[^>]*\sheight=/i.test(svg)) {
-    const [, , , width, height] =
-      svg.match(
-        /viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i,
-      ) ?? [];
-    svg = svg.replace(
-      /<svg\b/i,
-      `<svg width="${width ?? 64}" height="${height ?? 64}"`,
+    const viewBoxMatch = svg.match(
+      /viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i,
     );
+    const width = viewBoxMatch?.[3] ?? 64;
+    const height = viewBoxMatch?.[4] ?? 64;
+    svg = svg.replace(/<svg\b/i, `<svg width="${width}" height="${height}"`);
   }
 
   return loadImage(Buffer.from(svg, "utf8"));
@@ -357,7 +356,7 @@ function validateAtlasFramesPixels(
           continue;
         }
         alphaPixels++;
-        if (Math.max(r, g, b) - Math.min(r, g, b) > 12) {
+        if (Math.max(r, g, b) - Math.min(r, g, b) > colorDetectionThreshold) {
           colorfulPixels++;
         }
       }
