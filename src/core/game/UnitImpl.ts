@@ -13,6 +13,7 @@ import {
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { fuelCapacity } from "./Fuel";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
@@ -38,6 +39,7 @@ export class UnitImpl implements Unit {
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
+  private _fuel: number = 0;
   // Nuke only
   private _trajectoryIndex: number = 0;
   private _trajectory: TrajectoryTile[];
@@ -140,6 +142,7 @@ export class UnitImpl implements Unit {
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
+      fuel: this._fuel > 0 ? this._fuel : undefined,
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
@@ -487,5 +490,36 @@ export class UnitImpl implements Unit {
       this._loaded = loaded;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  fuel(): number {
+    return this._fuel;
+  }
+
+  addFuel(amount: number): number {
+    if (amount <= 0) {
+      return 0;
+    }
+    const capacity = fuelCapacity(this.mg.config(), this);
+    const accepted = Math.min(amount, Math.max(0, capacity - this._fuel));
+    if (accepted <= 0) {
+      return 0;
+    }
+    this._fuel += accepted;
+    this.mg.addUpdate(this.toUpdate());
+    return accepted;
+  }
+
+  removeFuel(amount: number): number {
+    if (amount <= 0 || this._fuel <= 0) {
+      return 0;
+    }
+    const removed = Math.min(amount, this._fuel);
+    this._fuel -= removed;
+    if (this._fuel < 0.0001) {
+      this._fuel = 0;
+    }
+    this.mg.addUpdate(this.toUpdate());
+    return removed;
   }
 }

@@ -12,6 +12,7 @@ import { MotionPlanRecord } from "../game/MotionPlans";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
+import { fuelBonus } from "../game/Fuel";
 
 export class TrainExecution implements Execution {
   private active = true;
@@ -27,6 +28,7 @@ export class TrainExecution implements Execution {
   private speed: number = 2;
   private _tradeStopsVisited: number = 0;
   private readonly mission: TrainMission;
+  private fuelCargo: number = 0;
 
   constructor(
     private railNetwork: RailNetwork,
@@ -60,8 +62,34 @@ export class TrainExecution implements Execution {
     return this.destination.unit;
   }
 
+  public fuelRemaining(): number {
+    return this.fuelCargo;
+  }
+
+  public deliverFuel(amount: number): number {
+    if (this.mission !== "freight" || this.fuelCargo <= 0) {
+      return 0;
+    }
+    const delivered = Math.min(amount, this.fuelCargo);
+    this.fuelCargo -= delivered;
+    if (this.fuelCargo <= 0) {
+      this.fuelCargo = 0;
+      this.unloadCargo();
+    }
+    return delivered;
+  }
+
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    if (this.mission === "freight") {
+      this.fuelCargo = mg.config().freightTrainFuelCapacity();
+    }
+    if (this.source.unit.type() === UnitType.Factory) {
+      this.speed = Math.max(
+        1,
+        Math.round(this.speed * (1 + fuelBonus(mg.config(), this.source.unit))),
+      );
+    }
     const stations = this.railNetwork.findStationsPath(
       this.source,
       this.destination,
@@ -276,14 +304,15 @@ export class TrainExecution implements Execution {
     return false;
   }
 
-  private canTradeWithDestination() {
+  private canReachNextStation() {
     return (
-      this.stations.length > 1 && this.stations[1].tradeAvailable(this.player)
+      this.stations.length > 1 &&
+      this.stations[1].availableForTrain(this.player, this.mission)
     );
   }
 
   private getNextTile(): TileRef | null {
-    if (this.currentRailroad === null || !this.canTradeWithDestination()) {
+    if (this.currentRailroad === null || !this.canReachNextStation()) {
       return null;
     }
     this.saveTraversedTiles(this.currentTile, this.speed);

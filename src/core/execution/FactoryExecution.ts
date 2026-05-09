@@ -1,4 +1,5 @@
 import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { consumeFuel } from "../game/Fuel";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class FactoryExecution implements Execution {
@@ -21,6 +22,7 @@ export class FactoryExecution implements Execution {
       this.active = false;
       return;
     }
+    consumeFuel(this.game.config(), this.factory);
   }
 
   isActive(): boolean {
@@ -35,7 +37,13 @@ export class FactoryExecution implements Execution {
     const structures = this.game.nearbyUnits(
       this.factory.tile()!,
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Port, UnitType.OilRig, UnitType.Factory],
+      [
+        UnitType.City,
+        UnitType.Port,
+        UnitType.OilRig,
+        UnitType.Factory,
+        UnitType.MissileSilo,
+      ],
     );
 
     this.game.addExecution(new TrainStationExecution(this.factory, true));

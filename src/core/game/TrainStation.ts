@@ -1,6 +1,7 @@
 import { TrainExecution } from "../execution/TrainExecution";
 import { PseudoRandom } from "../PseudoRandom";
-import { Game, Player, Unit, UnitType } from "./Game";
+import { Game, Player, TrainMission, Unit, UnitType } from "./Game";
+import { isFuelConsumer } from "./Fuel";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
 import { Railroad } from "./Railroad";
@@ -40,7 +41,7 @@ class TradeStationStopHandler implements TrainStopHandler {
   }
 }
 
-class FactoryStopHandler implements TrainStopHandler {
+class FuelStopHandler implements TrainStopHandler {
   onStop(
     mg: Game,
     station: TrainStation,
@@ -49,18 +50,27 @@ class FactoryStopHandler implements TrainStopHandler {
     if (trainExecution.trainMission() !== "freight") {
       return;
     }
-    if (station.unit !== trainExecution.destinationUnit()) {
+    if (!isFuelConsumer(station.unit.type())) {
       return;
     }
 
-    trainExecution.unloadCargo();
-    trainExecution
-      .owner()
-      .addGold(
-        mg.config().oilRigIncome(trainExecution.sourceUnit().level()),
-        station.tile(),
-        "oil",
-      );
+    const accepted = station.unit.addFuel(trainExecution.fuelRemaining());
+    if (accepted <= 0) {
+      return;
+    }
+
+    trainExecution.deliverFuel(accepted);
+
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    if (stationOwner !== trainOwner) {
+      const gold =
+        (mg.config().trainGold(rel(trainOwner, stationOwner), 0, trainOwner) *
+          BigInt(Math.round(mg.config().fuelAllyGoldMultiplier() * 1000))) /
+        1000n;
+      trainOwner.addGold(gold, station.tile(), "oil");
+      mg.stats().trainSelfTrade(trainOwner, gold);
+    }
   }
 }
 
@@ -68,11 +78,29 @@ export function createTrainStopHandlers(
   random: PseudoRandom,
 ): Partial<Record<UnitType, TrainStopHandler>> {
   const tradeStationStopHandler = new TradeStationStopHandler();
+  const fuelStopHandler = new FuelStopHandler();
   return {
-    [UnitType.City]: tradeStationStopHandler,
-    [UnitType.Port]: tradeStationStopHandler,
+    [UnitType.City]: combineStopHandlers(
+      tradeStationStopHandler,
+      fuelStopHandler,
+    ),
+    [UnitType.Port]: combineStopHandlers(
+      tradeStationStopHandler,
+      fuelStopHandler,
+    ),
     [UnitType.OilRig]: tradeStationStopHandler,
-    [UnitType.Factory]: new FactoryStopHandler(),
+    [UnitType.Factory]: fuelStopHandler,
+    [UnitType.MissileSilo]: fuelStopHandler,
+  };
+}
+
+function combineStopHandlers(...handlers: TrainStopHandler[]): TrainStopHandler {
+  return {
+    onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution) {
+      for (const handler of handlers) {
+        handler.onStop(mg, station, trainExecution);
+      }
+    },
   };
 }
 
@@ -95,6 +123,21 @@ export class TrainStation {
   tradeAvailable(otherPlayer: Player): boolean {
     const player = this.unit.owner();
     return otherPlayer === player || player.canTrade(otherPlayer);
+  }
+
+  fuelAvailable(otherPlayer: Player): boolean {
+    const player = this.unit.owner();
+    return (
+      otherPlayer === player ||
+      (otherPlayer.isFriendly(player) && otherPlayer.canTrade(player))
+    );
+  }
+
+  availableForTrain(otherPlayer: Player, mission: TrainMission): boolean {
+    if (mission === "freight") {
+      return this.fuelAvailable(otherPlayer);
+    }
+    return this.tradeAvailable(otherPlayer);
   }
 
   clearRailroads() {
@@ -182,6 +225,7 @@ export class TrainStation {
 export class Cluster {
   public stations: Set<TrainStation> = new Set();
   private tradeStations: Set<TrainStation> = new Set();
+  private fuelStations: Set<TrainStation> = new Set();
 
   private isTradeStation(station: TrainStation): boolean {
     const type = station.unit.type();
@@ -201,12 +245,16 @@ export class Cluster {
     if (this.isTradeStation(station)) {
       this.tradeStations.add(station);
     }
+    if (isFuelConsumer(station.unit.type())) {
+      this.fuelStations.add(station);
+    }
     station.setCluster(this);
   }
 
   removeStation(station: TrainStation) {
     this.stations.delete(station);
     this.tradeStations.delete(station);
+    this.fuelStations.delete(station);
   }
 
   addStations(stations: Set<TrainStation>) {
@@ -275,10 +323,64 @@ export class Cluster {
         continue;
       }
 
-      const distance = railroadDistance(from, station);
+      const distance = railroadDistance(from, station, (next) =>
+        next.fuelAvailable(player),
+      );
       if (distance < selectedDistance) {
         selected = station;
         selectedDistance = distance;
+      }
+    }
+
+    return selected;
+  }
+
+  farthestFuelDestination(
+    from: TrainStation,
+    player: Player,
+  ): TrainStation | null {
+    let selected: TrainStation | null = null;
+    let selectedDistance = Number.NEGATIVE_INFINITY;
+
+    for (const station of this.fuelStations) {
+      if (station === from) {
+        continue;
+      }
+      if (!station.fuelAvailable(player)) {
+        continue;
+      }
+
+      const distance = railroadDistance(from, station);
+      if (!Number.isFinite(distance) || distance <= selectedDistance) {
+        continue;
+      }
+
+      selected = station;
+      selectedDistance = distance;
+    }
+
+    return selected;
+  }
+
+  randomFuelDestination(
+    from: TrainStation,
+    player: Player,
+  ): TrainStation | null {
+    let selected: TrainStation | null = null;
+    let eligibleSeen = 0;
+
+    for (const station of this.fuelStations) {
+      if (station === from) {
+        continue;
+      }
+      if (!station.fuelAvailable(player)) {
+        continue;
+      }
+      eligibleSeen++;
+
+      // Reservoir sampling: keep each eligible station with probability 1/eligibleSeen.
+      if ((Math.floor(Math.random() * (eligibleSeen + 1))) === 0) {
+        selected = station;
       }
     }
 
@@ -292,6 +394,7 @@ export class Cluster {
   clear() {
     this.stations.clear();
     this.tradeStations.clear();
+    this.fuelStations.clear();
   }
 }
 
@@ -311,7 +414,11 @@ function rel(
   return "other";
 }
 
-function railroadDistance(from: TrainStation, to: TrainStation): number {
+function railroadDistance(
+  from: TrainStation,
+  to: TrainStation,
+  canVisit: (station: TrainStation) => boolean = () => true,
+): number {
   if (from === to) {
     return 0;
   }
@@ -332,6 +439,9 @@ function railroadDistance(from: TrainStation, to: TrainStation): number {
     }
 
     for (const neighbor of current.station.neighbors()) {
+      if (!canVisit(neighbor)) {
+        continue;
+      }
       const rail = current.station.getRailroadTo(neighbor);
       if (!rail) {
         continue;

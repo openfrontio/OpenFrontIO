@@ -141,6 +141,12 @@ export interface Config {
     player: Player | PlayerView,
   ): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
+  freightTrainFuelCapacity(): number;
+  fuelStoragePerStructureLevel(): number;
+  fuelConsumptionPerSecondPerLevel(): number;
+  fueledStructureMaxBonus(): number;
+  fuelBonusSaturation(): number;
+  fuelAllyGoldMultiplier(): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
   railroadMaxSize(): number;

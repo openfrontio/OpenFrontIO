@@ -21,6 +21,7 @@ export class TradeShipExecution implements Execution {
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
+  private movementCarry = 0;
 
   private static _staggerCounter = 0;
 

@@ -1,9 +1,12 @@
-import { Execution, Game, Unit } from "../game/Game";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { consumeFuel, fuelBonus } from "../game/Fuel";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class MissileSiloExecution implements Execution {
   private active = true;
   private mg: Game;
   private silo: Unit;
+  private stationCreated = false;
 
   constructor(silo: Unit) {
     this.silo = silo;
@@ -18,14 +21,28 @@ export class MissileSiloExecution implements Execution {
       return;
     }
 
+    if (!this.stationCreated) {
+      this.createStation();
+      this.stationCreated = true;
+    }
+
+    if (!this.silo.isActive()) {
+      this.active = false;
+      return;
+    }
+
+    consumeFuel(this.mg.config(), this.silo);
+
     // frontTime is the time the earliest missile fired.
     const frontTime = this.silo.missileTimerQueue()[0];
     if (frontTime === undefined) {
       return;
     }
 
-    const cooldown =
-      this.mg.config().SiloCooldown() - (this.mg.ticks() - frontTime);
+    const cooldownDuration =
+      this.mg.config().SiloCooldown() *
+      (1 - fuelBonus(this.mg.config(), this.silo));
+    const cooldown = cooldownDuration - (this.mg.ticks() - frontTime);
 
     if (cooldown <= 0) {
       this.silo.reloadMissile();
@@ -38,5 +55,16 @@ export class MissileSiloExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  private createStation(): void {
+    const nearbyFactory = this.mg.hasUnitNearby(
+      this.silo.tile(),
+      this.mg.config().trainStationMaxRange(),
+      UnitType.Factory,
+    );
+    if (nearbyFactory) {
+      this.mg.addExecution(new TrainStationExecution(this.silo));
+    }
   }
 }

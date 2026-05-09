@@ -602,6 +602,11 @@ export interface Unit {
   isLoaded(): boolean | undefined;
   setLoaded(loaded: boolean): void;
 
+  // Fuel
+  fuel(): number;
+  addFuel(amount: number): number;
+  removeFuel(amount: number): number;
+
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;

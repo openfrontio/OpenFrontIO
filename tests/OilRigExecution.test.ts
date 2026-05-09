@@ -36,6 +36,9 @@ function makeFactoryUnit(opts: { tile?: number; owner?: any } = {}): any {
     tile: vi.fn(() => opts.tile ?? 20),
     owner: vi.fn(() => owner),
     type: vi.fn(() => UnitType.Factory),
+    level: vi.fn(() => 1),
+    fuel: vi.fn(() => 0),
+    addFuel: vi.fn((amount: number) => Math.min(100, amount)),
   };
 }
 
@@ -142,7 +145,7 @@ describe("OilRigExecution", () => {
     const destinationUnit = makeFactoryUnit();
     const destinationStation = { unit: destinationUnit };
     const cluster = {
-      nearestOwnedFactory: vi.fn(() => destinationStation),
+      randomFuelDestination: vi.fn(() => destinationStation),
     };
     const sourceStation = {
       unit: oilRig,
@@ -158,7 +161,7 @@ describe("OilRigExecution", () => {
     execution.tick(0);
 
     expect(addedExecutions).toHaveLength(0);
-    expect(cluster.nearestOwnedFactory).not.toHaveBeenCalled();
+    expect(cluster.randomFuelDestination).not.toHaveBeenCalled();
   });
 
   it("does not send an oil shipment when the rig has no rail station", () => {
@@ -203,7 +206,7 @@ describe("OilRigExecution", () => {
     });
     const execution = new OilRigExecution(oilRig);
     const cluster = {
-      nearestOwnedFactory: vi.fn(() => null),
+      randomFuelDestination: vi.fn(() => null),
     };
     const sourceStation = {
       unit: oilRig,
@@ -218,7 +221,7 @@ describe("OilRigExecution", () => {
     execution.init(mg as any, 0);
     execution.tick(0);
 
-    expect(cluster.nearestOwnedFactory).toHaveBeenCalledWith(
+    expect(cluster.randomFuelDestination).toHaveBeenCalledWith(
       sourceStation,
       oilRigOwner,
     );
@@ -235,7 +238,7 @@ describe("OilRigExecution", () => {
     const destinationUnit = makeFactoryUnit();
     const destinationStation = { unit: destinationUnit };
     const cluster = {
-      nearestOwnedFactory: vi.fn(() => destinationStation),
+      randomFuelDestination: vi.fn(() => destinationStation),
     };
     const sourceStation = {
       unit: oilRig,
@@ -302,20 +305,23 @@ describe("Oil rig construction integration", () => {
   });
 });
 
-describe("Oil rig income delivery", () => {
+describe("Oil rig fuel delivery", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("pays oil income when an oil shipment reaches the destination factory", () => {
+  it("fills a fueled structure when a freight train stops there", () => {
     const owner = {
       addGold: vi.fn(),
+      isOnSameTeam: vi.fn(() => false),
+      isAlliedWith: vi.fn(() => true),
     };
     const factory = makeFactoryUnit({ tile: 42, owner });
     const mg = {
       ticks: vi.fn(() => 0),
       config: vi.fn(() => ({
-        oilRigIncome: vi.fn((level: number) => BigInt(level * 10_000)),
+        fuelAllyGoldMultiplier: vi.fn(() => 0.5),
+        trainGold: vi.fn(() => 10_000n),
       })),
       stats: vi.fn(() => ({
         trainExternalTrade: vi.fn(),
@@ -325,30 +331,33 @@ describe("Oil rig income delivery", () => {
     const station = new TrainStation(mg as any, factory);
     const trainExecution = {
       trainMission: vi.fn(() => "freight"),
-      destinationUnit: vi.fn(() => factory),
-      unloadCargo: vi.fn(),
+      fuelRemaining: vi.fn(() => 300),
+      deliverFuel: vi.fn(),
       owner: vi.fn(() => owner),
-      sourceUnit: vi.fn(() => ({
-        level: vi.fn(() => 2),
-      })),
     };
 
     station.onTrainStop(trainExecution as any);
 
-    expect(trainExecution.unloadCargo).toHaveBeenCalled();
-    expect(owner.addGold).toHaveBeenCalledWith(20_000n, 42, "oil");
+    expect(factory.addFuel).toHaveBeenCalledWith(300);
+    expect(trainExecution.deliverFuel).toHaveBeenCalledWith(100);
+    expect(owner.addGold).not.toHaveBeenCalled();
   });
 
-  it("does not pay oil income when an oil shipment stops at the wrong factory", () => {
+  it("rewards the train owner when fuel is delivered to an ally", () => {
     const owner = {
       addGold: vi.fn(),
+      isOnSameTeam: vi.fn(() => false),
+      isAlliedWith: vi.fn(() => true),
     };
-    const factory = makeFactoryUnit({ tile: 42, owner });
-    const otherFactory = makeFactoryUnit({ tile: 99, owner });
+    const ally = {
+      addGold: vi.fn(),
+    };
+    const factory = makeFactoryUnit({ tile: 42, owner: ally });
     const mg = {
       ticks: vi.fn(() => 0),
       config: vi.fn(() => ({
-        oilRigIncome: vi.fn((level: number) => BigInt(level * 10_000)),
+        fuelAllyGoldMultiplier: vi.fn(() => 0.5),
+        trainGold: vi.fn(() => 10_000n),
       })),
       stats: vi.fn(() => ({
         trainExternalTrade: vi.fn(),
@@ -358,17 +367,15 @@ describe("Oil rig income delivery", () => {
     const station = new TrainStation(mg as any, factory);
     const trainExecution = {
       trainMission: vi.fn(() => "freight"),
-      destinationUnit: vi.fn(() => otherFactory),
-      unloadCargo: vi.fn(),
+      fuelRemaining: vi.fn(() => 300),
+      deliverFuel: vi.fn(),
       owner: vi.fn(() => owner),
-      sourceUnit: vi.fn(() => ({
-        level: vi.fn(() => 2),
-      })),
     };
 
     station.onTrainStop(trainExecution as any);
 
-    expect(trainExecution.unloadCargo).not.toHaveBeenCalled();
-    expect(owner.addGold).not.toHaveBeenCalled();
+    expect(factory.addFuel).toHaveBeenCalledWith(300);
+    expect(trainExecution.deliverFuel).toHaveBeenCalledWith(100);
+    expect(owner.addGold).toHaveBeenCalledWith(5_000n, 42, "oil");
   });
 });

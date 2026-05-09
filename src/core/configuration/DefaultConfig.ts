@@ -23,6 +23,7 @@ import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, toInt, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
+import { fuelBonus } from "../game/Fuel";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
@@ -279,6 +280,31 @@ export class DefaultConfig implements Config {
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
     return (numPlayerFactories + 10) * 15;
   }
+
+  freightTrainFuelCapacity(): number {
+    return 300;
+  }
+
+  fuelStoragePerStructureLevel(): number {
+    return 100;
+  }
+
+  fuelConsumptionPerSecondPerLevel(): number {
+    return 5;
+  }
+
+  fueledStructureMaxBonus(): number {
+    return 0.5;
+  }
+
+  fuelBonusSaturation(): number {
+    return 3;
+  }
+
+  fuelAllyGoldMultiplier(): number {
+    return 0.5;
+  }
+
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
@@ -834,9 +860,13 @@ export class DefaultConfig implements Config {
           player
             .units(UnitType.City)
             .filter((u) => !u.isUnderConstruction())
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+            .map(
+              (city) =>
+                city.level() *
+                this.cityTroopIncrease() *
+                (1 + fuelBonus(this, city)),
+            )
+            .reduce((a, b) => a + b, 0);
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;

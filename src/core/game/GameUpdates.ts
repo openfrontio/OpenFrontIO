@@ -148,6 +148,7 @@ export interface UnitUpdate {
   underConstruction?: boolean;
   missileTimerQueue: number[];
   level: number;
+  fuel?: number;
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains

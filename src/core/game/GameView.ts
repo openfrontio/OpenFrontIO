@@ -185,6 +185,9 @@ export class UnitView {
   level(): number {
     return this.data.level;
   }
+  fuel(): number {
+    return this.data.fuel ?? 0;
+  }
   hasTrainStation(): boolean {
     return this.data.hasTrainStation;
   }
