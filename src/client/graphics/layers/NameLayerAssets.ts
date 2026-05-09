@@ -17,6 +17,7 @@ export class NameLayerAssets {
   private readonly atlasTextures = new Map<string, PIXI.Texture>();
   private readonly emojiTextures = new Map<string, PIXI.Texture>();
   private readonly pendingTextures = new Map<string, Promise<void>>();
+  private readonly failedTextures = new Set<string>();
   private readonly warnedTextureFailures = new Set<string>();
   private readonly warnedMissingEmojis = new Set<string>();
   private preloadPromise: Promise<void> | null = null;
@@ -37,6 +38,10 @@ export class NameLayerAssets {
       return cached;
     }
 
+    if (this.failedTextures.has(src)) {
+      return null;
+    }
+
     if (!this.pendingTextures.has(src)) {
       this.pendingTextures.set(
         src,
@@ -46,6 +51,7 @@ export class NameLayerAssets {
           })
           .catch((error) => {
             this.textures.delete(src);
+            this.failedTextures.add(src);
             this.warnTextureFailure(src, error);
           })
           .finally(() => {
@@ -78,6 +84,10 @@ export class NameLayerAssets {
   resetWarningsForTests(): void {
     this.warnedTextureFailures.clear();
     this.warnedMissingEmojis.clear();
+    this.failedTextures.clear();
+    this.preloadPromise = null;
+    this.fontReady = false;
+    this.fontFamily = null;
   }
 
   private async loadBaseAssets(): Promise<void> {
