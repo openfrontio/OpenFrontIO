@@ -34,6 +34,7 @@ import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
+import { hasSeenOnboarding, OnboardingModal } from "./OnboardingModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
@@ -1018,6 +1019,20 @@ const bootstrap = () => {
   initLayout();
   new Client().initialize();
   initNavigation();
+
+  // Auto-open onboarding for first-time visitors
+  if (!hasSeenOnboarding()) {
+    setTimeout(() => {
+      window.showPage?.("page-onboarding");
+    }, 600);
+  }
+
+  // Wire up the onboarding nav button (desktop + mobile)
+  document.querySelectorAll("[data-action='open-onboarding']").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      window.showPage?.("page-onboarding");
+    });
+  });
 
   // Hide elements immediately
   hideCrazyGamesElements();

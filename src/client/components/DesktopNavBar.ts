@@ -128,6 +128,10 @@ export class DesktopNavBar extends LitElement {
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
+        <button
+          class="nav-menu-item text-white/70 hover:text-emerald-400 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-emerald-400"
+          data-page="page-onboarding"
+        >🎓 Guide</button>
         <div class="relative">
           <button
             class="nav-menu-item text-white/70 hover:text-malibu-blue  font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue "
