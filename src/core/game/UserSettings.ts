@@ -20,6 +20,9 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     attackRatioUp: "KeyY",
     boatAttack: "KeyB",
     groundAttack: "KeyG",
+    retaliateAttack: "Shift+KeyR",
+    requestAlliance: "KeyK",
+    breakAlliance: "KeyL",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -32,6 +35,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     altKey: "AltLeft",
     shiftKey: "ShiftLeft",
     resetGfx: "KeyR",
+    selectAllWarships: "KeyF",
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
@@ -381,7 +385,7 @@ export class UserSettings {
   }
 
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 1);
+    return this.getFloat("settings.soundEffectsVolume", 0);
   }
 
   setSoundEffectsVolume(volume: number): void {

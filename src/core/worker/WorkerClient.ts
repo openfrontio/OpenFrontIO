@@ -1,3 +1,4 @@
+import { getCdnBase } from "../AssetUrls";
 import {
   BuildableUnit,
   Cell,
@@ -12,6 +13,10 @@ import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
+// Inlined into the main bundle as a same-origin Blob, sidestepping the
+// cross-origin `new Worker(url)` restriction that would otherwise apply when
+// the worker bundle is served from the CDN.
+import GameWorker from "./Worker.worker.ts?worker&inline";
 
 export class WorkerClient {
   private worker: Worker;
@@ -25,9 +30,7 @@ export class WorkerClient {
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID | undefined,
   ) {
-    this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    this.worker = new GameWorker();
     this.messageHandlers = new Map();
 
     // Set up global message handler
@@ -86,15 +89,15 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
+        cdnBase: getCdnBase(),
       });
 
-      // Add timeout for initialization
       setTimeout(() => {
         if (!this.isInitialized) {
           this.messageHandlers.delete(messageId);
           reject(new Error("Worker initialization timeout"));
         }
-      }, 20000); // 20 second timeout
+      }, 60000);
     });
   }
 

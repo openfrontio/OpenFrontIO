@@ -122,7 +122,8 @@ export class NavalTarget extends Target {
     if (
       !this.ended &&
       (!this.unit.isActive() ||
-        (this.unit.type() === UnitType.TransportShip && this.unit.retreating()))
+        (this.unit.type() === UnitType.TransportShip &&
+          this.unit.transportShipState().isRetreating))
     ) {
       this.ended = true;
     }

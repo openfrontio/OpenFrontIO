@@ -5,7 +5,6 @@ import "./components/leaderboard/LeaderboardClanTable";
 import type { LeaderboardClanTable } from "./components/leaderboard/LeaderboardClanTable";
 import "./components/leaderboard/LeaderboardPlayerList";
 import type { LeaderboardPlayerList } from "./components/leaderboard/LeaderboardPlayerList";
-import "./components/leaderboard/LeaderboardTabs";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
@@ -81,46 +80,13 @@ export class LeaderboardModal extends BaseModal {
       >(${translateText("leaderboard_modal.refresh_time")})</span
     >`;
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          titleContent: html`
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="text-white text-xl sm:text-2xl font-bold uppercase tracking-widest"
-              >
-                ${translateText("leaderboard_modal.title")}
-              </span>
-              ${this.activeTab === "clans" ? dateRange : ""}
-              ${this.activeTab === "players" ? refreshTime : ""}
-            </div>
-          `,
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.close"),
-        })}
-
-        <div class="flex-1 flex flex-col min-h-0">
-          <leaderboard-tabs
-            .activeTab=${this.activeTab}
-            @tab-change=${(event: CustomEvent<"players" | "clans">) =>
-              this.handleTabChange(event.detail)}
-          ></leaderboard-tabs>
-          <div class="flex-1 min-h-0">
-            <leaderboard-player-list
-              class=${this.activeTab === "players" ? "h-full" : "hidden"}
-            ></leaderboard-player-list>
-            <leaderboard-clan-table
-              class=${this.activeTab === "clans" ? "h-full" : "hidden"}
-              @date-range-change=${(
-                event: CustomEvent<{ start: string; end: string }>,
-              ) => this.handleClanDateRangeChange(event)}
-            ></leaderboard-clan-table>
-          </div>
-        </div>
-      </div>
-    `;
-
-    if (this.inline) return content;
+    const tabs = [
+      {
+        key: "players",
+        label: translateText("leaderboard_modal.ranked_tab"),
+      },
+      { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
+    ];
 
     return html`
       <o-modal
@@ -128,8 +94,39 @@ export class LeaderboardModal extends BaseModal {
         ?inline=${this.inline}
         hideCloseButton
         hideHeader
+        .tabs=${tabs}
+        .activeTab=${this.activeTab}
+        .onTabChange=${(key: string) =>
+          this.handleTabChange(key as "players" | "clans")}
       >
-        ${content}
+        <div slot="header">
+          ${modalHeader({
+            titleContent: html`
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="text-white text-xl sm:text-2xl font-bold uppercase tracking-widest"
+                >
+                  ${translateText("leaderboard_modal.title")}
+                </span>
+                ${this.activeTab === "clans" ? dateRange : ""}
+                ${this.activeTab === "players" ? refreshTime : ""}
+              </div>
+            `,
+            onBack: () => this.close(),
+            ariaLabel: translateText("common.close"),
+          })}
+        </div>
+        <div class="flex-1 min-h-0 h-full">
+          <leaderboard-player-list
+            class=${this.activeTab === "players" ? "h-full" : "hidden"}
+          ></leaderboard-player-list>
+          <leaderboard-clan-table
+            class=${this.activeTab === "clans" ? "h-full" : "hidden"}
+            @date-range-change=${(
+              event: CustomEvent<{ start: string; end: string }>,
+            ) => this.handleClanDateRangeChange(event)}
+          ></leaderboard-clan-table>
+        </div>
       </o-modal>
     `;
   }

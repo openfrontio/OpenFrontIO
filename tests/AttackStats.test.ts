@@ -96,11 +96,11 @@ function expectWarGoldStatIsIncreasedAfterKill(
   const attackerStats = game.stats().stats()[attacker.clientID()!];
   const defenderStats = game.stats().stats()[defender.clientID()!];
 
-  // Verify that all defender's gold was recorded as war gold in the attacker's stats
+  // Conqueror receives 50% of human defender's gold as war gold
   expect(attackerStats?.gold?.[GOLD_INDEX_WAR]).toBeDefined();
   expect(defenderStats?.gold?.[GOLD_INDEX_WORK]).toBeDefined();
   expect(attackerStats?.gold?.[GOLD_INDEX_WAR]).toBe(
-    defenderStats?.gold?.reduce((acc, g) => acc + g, 0n),
+    (defenderStats?.gold?.reduce((acc, g) => acc + g, 0n) ?? 0n) / 2n,
   );
 }
 

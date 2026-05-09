@@ -7,33 +7,26 @@
   --fontColor: #202020;
   --fontColorLight: #fff;
 
-  /* Palette: Deep French Blue / Muted Cyan / Black / Forest Teal */
-  --frenchBlue: #1f3a70; /* Deeper French Blue */
-  --cyanBlue: #0f6ca3; /* Muted Cyan secondary */
-  --tealAccent: #1f6c5a; /* Darker Teal accent */
-
-  --primaryColor: var(--frenchBlue);
-  --primaryColorHover: var(--tealAccent);
+  --primaryColorHover: var(--color-malibu-blue);
   --primaryColorDisabled: linear-gradient(
     to right,
     rgb(74, 74, 74),
     rgb(61, 61, 61)
   );
-  --secondaryColor: var(--cyanBlue);
-  --secondaryColorHover: var(--cyanBlue);
+  --secondaryColor: var(--color-malibu-blue);
+  --secondaryColorHover: var(--color-aquarius);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --primaryColorDark: var(--frenchBlue);
-  --primaryColorHoverDark: var(--tealAccent);
+  --primaryColorHoverDark: var(--color-malibu-blue);
   --primaryColorDisabledDark: #4b5563;
-  --secondaryColorDark: var(--tealAccent);
-  --secondaryColorHoverDark: var(--frenchBlue);
+  --secondaryColorDark: var(--color-malibu-blue);
+  --secondaryColorHoverDark: var(--color-aquarius);
   --fontColorDark: #f3f4f6;
 
   /* Achievements */
   --medal-easy: #cd7f32;
   --medal-medium: #c0c0c0;
-  --medal-hard: #ffd700;
+  --medal-hard: var(--color-cyber-yellow);
   --medal-impossible: #d32f2f;
   --medal-custom: #2196f3;
 }

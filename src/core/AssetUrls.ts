@@ -51,6 +51,7 @@ function isAbsoluteUrl(path: string): boolean {
 export function buildAssetUrl(
   path: string,
   assetManifest: AssetManifest = {},
+  baseUrl: string = "",
 ): string {
   if (isAbsoluteUrl(path)) {
     return path;
@@ -60,15 +61,7 @@ export function buildAssetUrl(
 
   const directUrl = assetManifest[normalizedPath];
   if (directUrl) {
-    return directUrl;
-  }
-
-  const directoryPrefix = `${normalizedPath}/`;
-  const hasNestedAssets = Object.keys(assetManifest).some((manifestPath) =>
-    manifestPath.startsWith(directoryPrefix),
-  );
-  if (hasNestedAssets) {
-    return `/_assets/${encodeAssetPath(normalizedPath)}`;
+    return baseUrl ? `${baseUrl.replace(/\/+$/, "")}${directUrl}` : directUrl;
   }
 
   return `/${encodeAssetPath(normalizedPath)}`;
@@ -76,9 +69,11 @@ export function buildAssetUrl(
 
 declare global {
   var __ASSET_MANIFEST__: AssetManifest | undefined;
+  var __CDN_BASE__: string | undefined;
 
   interface Window {
     ASSET_MANIFEST?: AssetManifest;
+    CDN_BASE?: string;
   }
 }
 
@@ -89,6 +84,32 @@ export function getAssetManifest(): AssetManifest {
   return globalThis.__ASSET_MANIFEST__ ?? {};
 }
 
+// Web workers have no `window`, so they read `__CDN_BASE__` off globalThis,
+// which Worker.worker.ts sets from the init message before any asset fetches.
+// Without this fallback, asset fetches inside workers (e.g. map binaries)
+// would silently bypass the CDN.
+export function getCdnBase(): string {
+  if (typeof window !== "undefined" && window.CDN_BASE !== undefined) {
+    return window.CDN_BASE;
+  }
+  return globalThis.__CDN_BASE__ ?? "";
+}
+
 export function assetUrl(path: string): string {
-  return buildAssetUrl(path, getAssetManifest());
+  return buildAssetUrl(path, getAssetManifest(), getCdnBase());
+}
+
+// Rewrites Vite's emitted /assets/... references in the built index.html to
+// use the cdnBaseRaw EJS placeholder, so RenderHtml.ts can prefix them with
+// CDN_BASE at request time. Scoped to src=/href= attribute values so inline
+// scripts containing the literal "/assets/..." can't be mangled. Does NOT
+// match /_assets/ (underscore) — source-asset manifest URLs are prefixed via
+// buildAssetUrl, not this rewrite. Falls back to "" when cdnBaseRaw is missing
+// so a future renderer that forgets to provide it still produces working
+// same-origin URLs.
+export function rewriteAssetsForCdn(html: string): string {
+  return html.replace(
+    /(\s(?:src|href)=)(["'])\/assets\//g,
+    `$1$2<%- locals.cdnBaseRaw || "" %>/assets/`,
+  );
 }

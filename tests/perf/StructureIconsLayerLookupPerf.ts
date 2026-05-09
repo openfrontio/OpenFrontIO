@@ -42,7 +42,7 @@ const canUpgradeIds = Array.from(
 const myOwnerId = 3;
 const results: string[] = [];
 
-new Benchmark.Suite()
+const suite = new Benchmark.Suite()
   .add("StructureIconsLayer BEFORE (array O(n) lookup/delete)", () => {
     const localRenders = rendersArray.map((render) => ({ ...render }));
 
@@ -103,7 +103,7 @@ new Benchmark.Suite()
       console.log(result);
     }
 
-    const fastest = this.filter("fastest").map("name");
+    const fastest = suite.filter("fastest").map("name");
     console.log(`\nFastest implementation: ${fastest.join(", ")}`);
   })
   .run({ async: true });

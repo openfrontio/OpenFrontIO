@@ -44,9 +44,6 @@ const JwksSchema = z.object({
 });
 
 export abstract class DefaultServerConfig implements ServerConfig {
-  turnstileSecretKey(): string {
-    return Env.TURNSTILE_SECRET_KEY ?? "";
-  }
   abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
@@ -205,10 +202,10 @@ export class DefaultConfig implements Config {
     return 5 - falloutRatio * 2;
   }
   SAMCooldown(): number {
-    return 120;
+    return 90;
   }
   SiloCooldown(): number {
-    return 75;
+    return 90;
   }
 
   defensePostRange(): number {
@@ -419,7 +416,7 @@ export class DefaultConfig implements Config {
             UnitType.OilRig,
             UnitType.Factory,
           ),
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           upgradable: true,
         };
         break;
@@ -553,6 +550,17 @@ export class DefaultConfig implements Config {
     return base;
   }
 
+  public conquerGoldAmount(captured: Player): Gold {
+    if (
+      captured.type() === PlayerType.Bot ||
+      captured.type() === PlayerType.Nation
+    ) {
+      return captured.gold();
+    } else {
+      return captured.gold() / 2n;
+    }
+  }
+
   private startingGoldFor(playerInfo: PlayerInfo): Gold {
     const base = BigInt(this._gameConfig.startingGold ?? 0);
     const hc = this._gameConfig.hostCheats;
@@ -668,8 +676,8 @@ export class DefaultConfig implements Config {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
-    let mag = 0;
-    let speed = 0;
+    let mag: number;
+    let speed: number;
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
@@ -714,16 +722,11 @@ export class DefaultConfig implements Config {
         mag = 0;
       }
       if (
-        attacker.type() === PlayerType.Human &&
+        (attacker.type() === PlayerType.Human ||
+          attacker.type() === PlayerType.Nation) &&
         defender.type() === PlayerType.Bot
       ) {
-        mag *= 0.8;
-      }
-      if (
-        attacker.type() === PlayerType.Nation &&
-        defender.type() === PlayerType.Bot
-      ) {
-        mag *= 0.8;
+        mag *= 0.7;
       }
     }
 
@@ -760,7 +763,7 @@ export class DefaultConfig implements Config {
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
       const attackerTroopLoss =
-        0.7 * currentAttackerLoss + 0.3 * altAttackerLoss;
+        0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
 
       return {
         attackerTroopLoss,
@@ -899,7 +902,7 @@ export class DefaultConfig implements Config {
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
-      toAdd *= 0.6;
+      toAdd *= 0.5;
     }
 
     if (player.type() === PlayerType.Nation) {
@@ -952,7 +955,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 6;
+    return 8;
   }
 
   defaultNukeTargetableRange(): number {
@@ -1013,6 +1016,30 @@ export class DefaultConfig implements Config {
 
   warshipShellAttackRate(): number {
     return 20;
+  }
+
+  warshipDockingRange(): number {
+    return 5;
+  }
+
+  warshipPortHealingBonusPerLevel(): number {
+    return 5;
+  }
+
+  warshipRetreatHealthThreshold(): number {
+    return 750;
+  }
+
+  warshipPassiveHealing(): number {
+    return 1;
+  }
+
+  warshipPassiveHealingRange(): number {
+    return 150;
+  }
+
+  warshipPortSwitchThreshold(): number {
+    return 0.75;
   }
 
   defensePostShellAttackRate(): number {

@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 325,
-    "num_land_tiles": 118946,
+    "num_land_tiles": 118923,
     "width": 525
   },
   "map4x": {
     "height": 650,
-    "num_land_tiles": 489562,
+    "num_land_tiles": 489070,
     "width": 1050
   },
   "name": "Pluto",

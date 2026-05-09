@@ -1,0 +1,140 @@
+{
+  "name": "Middle East",
+  "nations": [
+    {
+      "coordinates": [300, 65],
+      "name": "Ottoman Empire",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [1639, 558],
+      "name": "Qajar Dynasty",
+      "flag": "Persia"
+    },
+    {
+      "coordinates": [1141, 797],
+      "name": "Emirate of Kuwait",
+      "flag": "Socialist_flag"
+    },
+    {
+      "coordinates": [1880, 1353],
+      "name": "Sultanate of Muscat",
+      "flag": "Socialist_flag"
+    },
+    {
+      "coordinates": [1703, 1402],
+      "name": "Imamate of Oman",
+      "flag": "White Flag"
+    },
+    {
+      "coordinates": [1592, 1239],
+      "name": "Trucial States",
+      "flag": "Socialist_flag"
+    },
+    {
+      "coordinates": [1129, 1875],
+      "name": "Aden Protectorate",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [964, 1744],
+      "name": "Kingdom of Yemen",
+      "flag": "Kingdom of Yemen"
+    },
+    {
+      "coordinates": [844, 1655],
+      "name": "Emirate of Asir",
+      "flag": "Emirate of Asir"
+    },
+    {
+      "coordinates": [579, 1173],
+      "name": "Kingdom of Hejaz",
+      "flag": "Arabia"
+    },
+    {
+      "coordinates": [800, 1052],
+      "name": "Rashidi Emirate",
+      "flag": "Rashidi Emirate"
+    },
+    {
+      "coordinates": [1092, 1336],
+      "name": "Sultanate of Nejd",
+      "flag": "Sultanate of Nejd"
+    },
+    {
+      "coordinates": [1397, 1128],
+      "name": "Qatar",
+      "flag": "qa"
+    },
+    {
+      "coordinates": [973, 296],
+      "name": "Kingdom of Iraq",
+      "flag": "Kingdom of Iraq"
+    },
+    {
+      "coordinates": [554, 364],
+      "name": "Kingdom of Syria",
+      "flag": "Kingdom of Syria"
+    },
+    {
+      "coordinates": [423, 647],
+      "name": "Palestine Mandate",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [100, 781],
+      "name": "Kingdom of Egypt",
+      "flag": "Kingdom of Egypt"
+    },
+    {
+      "coordinates": [159, 1530],
+      "name": "Anglo-Egyptian Sudan",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [578, 1766],
+      "name": "Italian Eritrea",
+      "flag": "italy"
+    },
+    {
+      "coordinates": [401, 2005],
+      "name": "Ethiopian Empire",
+      "flag": "Ethiopian Empire"
+    },
+    {
+      "coordinates": [826, 2044],
+      "name": "French Somaliland",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1455, 902],
+      "name": "British Bushehr",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [185, 375],
+      "name": "British Cyprus",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [2127, 373],
+      "name": "Emirate of Afghanistan",
+      "flag": "Emirate of Afghanistan"
+    },
+    {
+      "coordinates": [2087, 925],
+      "name": "Baluchistan Agency",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [932, 15],
+      "name": "Republic of Armenia",
+      "flag": "am"
+    },
+    {
+      "coordinates": [1671, 71],
+      "name": "Russian State",
+      "flag": "ru"
+    }
+  ]
+}

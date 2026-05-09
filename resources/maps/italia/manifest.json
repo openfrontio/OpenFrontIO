@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 318,
-    "num_land_tiles": 47192,
+    "num_land_tiles": 47179,
     "width": 340
   },
   "map4x": {
     "height": 636,
-    "num_land_tiles": 192915,
+    "num_land_tiles": 192649,
     "width": 680
   },
   "name": "Italia",

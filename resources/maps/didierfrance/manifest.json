@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 562,
-    "num_land_tiles": 141151,
+    "num_land_tiles": 141149,
     "width": 525
   },
   "map4x": {
     "height": 1124,
-    "num_land_tiles": 571943,
+    "num_land_tiles": 571849,
     "width": 1050
   },
   "name": "Didier (France)",

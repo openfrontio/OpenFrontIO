@@ -149,15 +149,16 @@ export class FlagInputModal extends BaseModal {
           </div>
         </div>
         <div class="flex justify-center py-3 shrink-0">
-          <button
-            class="no-crazygames px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors"
+          <o-button
+            class="no-crazygames"
+            variant="primary"
+            size="sm"
+            translationKey="main.store"
             @click=${() => {
               this.close();
               window.showPage?.("page-item-store");
             }}
-          >
-            ${translateText("main.store")}
-          </button>
+          ></o-button>
         </div>
 
         <div

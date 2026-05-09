@@ -164,7 +164,10 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
   let allianceBehavior: NationAllianceBehavior;
 
   beforeEach(() => {
-    mockGame = { addExecution: vi.fn() };
+    mockGame = {
+      addExecution: vi.fn(),
+      config: vi.fn(() => ({ disableAlliances: vi.fn(() => false) })),
+    };
     mockHuman = { id: vi.fn(() => "human_id") };
     mockAlliance = {
       onlyOneAgreedToExtend: vi.fn(() => true),

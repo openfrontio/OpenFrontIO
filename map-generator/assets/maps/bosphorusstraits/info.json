@@ -2,64 +2,114 @@
   "name": "Bosphorus Straits",
   "nations": [
     {
-      "coordinates": [520, 300],
-      "name": "Istanbul",
+      "coordinates": [564, 245],
+      "name": "Beykoz",
       "flag": "tr"
     },
     {
-      "coordinates": [360, 280],
-      "name": "Thrace",
+      "coordinates": [820, 209],
+      "name": "Sile",
       "flag": "tr"
     },
     {
-      "coordinates": [220, 260],
-      "name": "Edirne",
+      "coordinates": [700, 316],
+      "name": "Çekmeköy",
       "flag": "tr"
     },
     {
-      "coordinates": [650, 360],
-      "name": "Bursa",
+      "coordinates": [800, 438],
+      "name": "Pendik",
       "flag": "tr"
     },
     {
-      "coordinates": [690, 290],
-      "name": "Izmit",
+      "coordinates": [797, 566],
+      "name": "Tuzla",
       "flag": "tr"
     },
     {
-      "coordinates": [430, 430],
-      "name": "Canakkale",
+      "coordinates": [486, 381],
+      "name": "Üsküdar",
       "flag": "tr"
     },
     {
-      "coordinates": [320, 330],
-      "name": "Tekirdag",
+      "coordinates": [534, 425],
+      "name": "Kadıköy",
       "flag": "tr"
     },
     {
-      "coordinates": [610, 320],
-      "name": "Yalova",
+      "coordinates": [559, 568],
+      "name": "Adalar",
       "flag": "tr"
     },
     {
-      "coordinates": [720, 260],
+      "coordinates": [635, 500],
+      "name": "Maltepe",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [701, 423],
+      "name": "Sancaktepe",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [424, 394],
+      "name": "Fatih",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [128, 46],
+      "name": "Arnavutköy",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [965, 544],
       "name": "Kocaeli",
       "flag": "tr"
     },
     {
-      "coordinates": [160, 120],
-      "name": "Varna",
-      "flag": "bg"
+      "coordinates": [42, 325],
+      "name": "Büyükçekmece",
+      "flag": "tr"
     },
     {
-      "coordinates": [220, 150],
-      "name": "Burgas",
-      "flag": "bg"
+      "coordinates": [336, 175],
+      "name": "Eyüpsultan",
+      "flag": "tr"
     },
     {
-      "coordinates": [820, 470],
-      "name": "Aegean Isles",
-      "flag": "gr"
+      "coordinates": [459, 157],
+      "name": "Sarıyer",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [477, 297],
+      "name": "Beşiktaş",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [171, 379],
+      "name": "Avcılar",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [308, 412],
+      "name": "Bakırköy",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [263, 283],
+      "name": "Başakşehir",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [402, 272],
+      "name": "Sultangazi",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [130, 270],
+      "name": "Esenyurt",
+      "flag": "tr"
     }
   ]
 }

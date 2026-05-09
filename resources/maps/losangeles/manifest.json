@@ -1,0 +1,150 @@
+{
+  "map": {
+    "height": 2276,
+    "num_land_tiles": 2066156,
+    "width": 1800
+  },
+  "map16x": {
+    "height": 569,
+    "num_land_tiles": 123167,
+    "width": 450
+  },
+  "map4x": {
+    "height": 1138,
+    "num_land_tiles": 508420,
+    "width": 900
+  },
+  "name": "Los Angeles",
+  "nations": [
+    {
+      "coordinates": [546, 16],
+      "flag": "California",
+      "name": "Santa Clarita"
+    },
+    {
+      "coordinates": [1100, 475],
+      "flag": "California",
+      "name": "Glendale"
+    },
+    {
+      "coordinates": [1310, 400],
+      "flag": "California",
+      "name": "Pasadena"
+    },
+    {
+      "coordinates": [1766, 1080],
+      "flag": "California",
+      "name": "Anaheim"
+    },
+    {
+      "coordinates": [1776, 710],
+      "flag": "California",
+      "name": "Walnut"
+    },
+    {
+      "coordinates": [1750, 1330],
+      "flag": "California",
+      "name": "Santa Ana"
+    },
+    {
+      "coordinates": [1670, 1500],
+      "flag": "California",
+      "name": "Huntington Beach"
+    },
+    {
+      "coordinates": [1250, 1325],
+      "flag": "California",
+      "name": "Long Beach"
+    },
+    {
+      "coordinates": [925, 1135],
+      "flag": "California",
+      "name": "Torrance"
+    },
+    {
+      "coordinates": [30, 475],
+      "flag": "California",
+      "name": "Thousand Oaks"
+    },
+    {
+      "coordinates": [730, 150],
+      "flag": "California",
+      "name": "San Fernando"
+    },
+    {
+      "coordinates": [1790, 500],
+      "flag": "California",
+      "name": "Covina"
+    },
+    {
+      "coordinates": [1400, 930],
+      "flag": "California",
+      "name": "Downey"
+    },
+    {
+      "coordinates": [760, 650],
+      "flag": "California",
+      "name": "Beverly Hills"
+    },
+    {
+      "coordinates": [875, 640],
+      "flag": "California",
+      "name": "Hollywood"
+    },
+    {
+      "coordinates": [1130, 670],
+      "flag": "California",
+      "name": "Skid Row"
+    },
+    {
+      "coordinates": [965, 865],
+      "flag": "California",
+      "name": "Inglewood"
+    },
+    {
+      "coordinates": [815, 945],
+      "flag": "California",
+      "name": "L.A.X."
+    },
+    {
+      "coordinates": [1180, 1010],
+      "flag": "California",
+      "name": "Compton"
+    },
+    {
+      "coordinates": [670, 765],
+      "flag": "California",
+      "name": "Santa Monica"
+    },
+    {
+      "coordinates": [270, 760],
+      "flag": "California",
+      "name": "Malibu"
+    },
+    {
+      "coordinates": [50, 25],
+      "flag": "California",
+      "name": "Bardsdale"
+    },
+    {
+      "coordinates": [750, 2100],
+      "flag": "California",
+      "name": "Santa Catalina"
+    },
+    {
+      "coordinates": [1350, 90],
+      "flag": "California",
+      "name": "Hidden Springs"
+    },
+    {
+      "coordinates": [1580, 40],
+      "flag": "California",
+      "name": "Palmdale"
+    },
+    {
+      "coordinates": [380, 490],
+      "flag": "California",
+      "name": "Encino"
+    }
+  ]
+}

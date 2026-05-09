@@ -114,11 +114,9 @@ describe("UsernameCensor", () => {
       expect(matcher.hasMatch("MyChairName")).toBe(true);
     });
 
-    test("detects banned words with underscores/dots/numbers mixed in", () => {
-      // These should NOT bypass the filter (skipNonAlphabetic was intentionally removed)
-      // Words separated by non-alpha chars are treated as separate tokens
-      expect(matcher.hasMatch("n.i.g.g.e.r")).toBe(false); // dots break the word
-      expect(matcher.hasMatch("hi_tler")).toBe(false); // underscore breaks it
+    test("detects banned words with non-alphabetic characters mixed in", () => {
+      expect(matcher.hasMatch("n.i.g.g.e.r")).toBe(true);
+      expect(matcher.hasMatch("hi_tler")).toBe(true);
     });
 
     test("allows clean usernames", () => {
@@ -140,6 +138,19 @@ describe("UsernameCensor", () => {
       expect(matcher.hasMatch("KKK")).toBe(true);
       expect(matcher.hasMatch("kkklover")).toBe(true);
       expect(matcher.hasMatch("ilovekkkboys")).toBe(true);
+    });
+
+    test("catches slurs separated by periods (bypass attempt)", () => {
+      expect(matcher.hasMatch("n.i.g.g.e.r")).toBe(true);
+      expect(matcher.hasMatch("N.I.G.G.E.R")).toBe(true);
+      expect(matcher.hasMatch("n.i.g.g.a")).toBe(true);
+      expect(matcher.hasMatch("h.i.t.l.e.r")).toBe(true);
+      expect(matcher.hasMatch("hello n.i.g.g.e.r world")).toBe(true);
+    });
+
+    test("censor replaces period-separated slur usernames", () => {
+      const result = checker.censor("n.i.g.g.e.r", null);
+      expect(shadowNames).toContain(result.username);
     });
   });
 
