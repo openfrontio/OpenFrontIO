@@ -61,7 +61,7 @@ export function createGame(
   teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
-  const game = new GameImpl(
+  return new GameImpl(
     humans,
     nations,
     gameMap,
@@ -70,7 +70,6 @@ export function createGame(
     stats,
     teamGameSpawnAreas,
   );
-  return game;
 }
 
 export type CellString = string;
@@ -125,6 +124,7 @@ export class GameImpl implements Game {
     teamGameSpawnAreas?: TeamGameSpawnAreas,
   ) {
     const constructorStart = performance.now();
+
     this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
