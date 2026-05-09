@@ -1,5 +1,5 @@
 export interface Layer {
-  init?: () => void;
+  init?: () => void | Promise<void>;
   tick?: () => void;
   // Optional hint to throttle expensive ticks by wall-clock.
   // If omitted or <= 0, the layer ticks whenever GameRenderer ticks.

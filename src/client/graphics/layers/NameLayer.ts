@@ -90,6 +90,8 @@ export class NameLayer implements Layer {
   private readonly pixiCanvas: HTMLCanvasElement =
     document.createElement("canvas");
   private readonly onWindowResize = () => this.resizeCanvas();
+  private readonly onAlternateViewHandler = (e: AlternateViewEvent) =>
+    this.onAlternateViewChange(e);
   private renderer: PixiRenderer | null = null;
   private rendererInitialized = false;
   private rebuildPending = false;
@@ -114,7 +116,7 @@ export class NameLayer implements Layer {
     this.rootStage.addChild(this.labelStage);
     this.rootStage.position.set(0, 0);
 
-    this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
+    this.eventBus.on(AlternateViewEvent, this.onAlternateViewHandler);
     window.addEventListener("resize", this.onWindowResize);
 
     await this.setupRenderer();
@@ -773,6 +775,7 @@ export class NameLayer implements Layer {
   }
 
   destroy() {
+    this.eventBus.off(AlternateViewEvent, this.onAlternateViewHandler);
     window.removeEventListener("resize", this.onWindowResize);
     for (const render of this.renders) {
       render.container.destroy({ children: true });

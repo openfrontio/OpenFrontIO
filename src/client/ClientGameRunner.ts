@@ -148,9 +148,9 @@ export function joinLobby(
         terrainLoad,
         terrainMapFileLoader,
       )
-        .then((r) => {
+        .then(async (r) => {
           currentGameRunner = r;
-          r.start();
+          await r.start();
         })
         .catch((e) => {
           console.error("error creating client game", e);
@@ -373,7 +373,7 @@ export class ClientGameRunner {
     endGame(record);
   }
 
-  public start() {
+  public async start() {
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
@@ -410,7 +410,7 @@ export class ClientGameRunner {
       this.doBreakAllianceUnderCursor.bind(this),
     );
 
-    this.renderer.initialize();
+    await this.renderer.initialize();
     this.input.initialize();
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if (this.lobby.gameStartInfo === undefined) {
