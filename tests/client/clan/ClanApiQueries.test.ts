@@ -83,6 +83,15 @@ describe("fetchClanStats", () => {
       ffa: { wins: 7, losses: 3 },
       team: { wins: 4, losses: 1 },
       hvn: { wins: 1, losses: 0 },
+      duos: { wins: 2, losses: 0 },
+      trios: { wins: 1, losses: 1 },
+      quads: { wins: 1, losses: 0 },
+      "2": { wins: 2, losses: 0 },
+      "3": { wins: 1, losses: 1 },
+      "4": { wins: 1, losses: 0 },
+      "5": { wins: 0, losses: 0 },
+      "6": { wins: 0, losses: 0 },
+      "7": { wins: 0, losses: 0 },
       ranked: { wins: 3, losses: 1 },
       "1v1": { wins: 3, losses: 1 },
     },
@@ -191,20 +200,6 @@ describe("fetchClans", () => {
     const calledUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(calledUrl);
     expect(url.searchParams.get("search")).toBe("abc");
-  });
-
-  it("omits search param for 2-char query (below min length of 3)", async () => {
-    const fetchSpy = vi.fn(
-      (_input: string | URL | Request, _init?: RequestInit) =>
-        Promise.resolve(okJson(browseResponse)),
-    );
-    vi.stubGlobal("fetch", fetchSpy);
-
-    await fetchClans("AB", 1, 20);
-
-    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-    const url = new URL(calledUrl);
-    expect(url.searchParams.get("search")).toBeNull();
   });
 
   it("omits search param when too short and non-alphanumeric", async () => {

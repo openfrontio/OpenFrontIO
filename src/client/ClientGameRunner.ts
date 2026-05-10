@@ -14,7 +14,12 @@ import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import { TestSkinExecution } from "../core/execution/TestSkinExecution";
-import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
+import {
+  BuildableUnit,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -35,6 +40,7 @@ import {
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
+  DoRetaliateAttackEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -242,7 +248,7 @@ async function createClientGame(
     userSettings,
     lobbyConfig.gameRecord !== undefined,
   );
-  let gameMap: TerrainMapData | null = null;
+  let gameMap: TerrainMapData;
 
   if (terrainLoad) {
     gameMap = await terrainLoad;
@@ -435,6 +441,10 @@ export class ClientGameRunner {
     this.eventBus.on(
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoRetaliateAttackEvent,
+      this.doRetaliateAttackMostRecent.bind(this),
     );
     this.eventBus.on(
       DoRequestAllianceEvent,
@@ -833,6 +843,41 @@ export class ClientGameRunner {
         );
       }
     });
+  }
+
+  private doRetaliateAttackMostRecent(): void {
+    if (!this.isActive || this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const incomingAttacks = this.myPlayer.incomingAttacks().filter((a) => {
+      const t = (
+        this.gameView.playerBySmallID(a.attackerID) as PlayerView
+      ).type();
+      return t !== PlayerType.Bot;
+    });
+
+    if (incomingAttacks.length === 0) return;
+
+    const mostRecentAttack = incomingAttacks[incomingAttacks.length - 1];
+
+    const attacker = this.gameView.playerBySmallID(
+      mostRecentAttack.attackerID,
+    ) as PlayerView;
+    if (!attacker) return;
+
+    const counterTroops = Math.min(
+      mostRecentAttack.troops,
+      this.renderer.uiState.attackRatio * this.myPlayer.troops(),
+    );
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private doRequestAllianceUnderCursor(): void {
