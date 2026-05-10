@@ -86,4 +86,16 @@ export const Env = {
   get ADMIN_TOKEN() {
     return getEnv("ADMIN_TOKEN");
   },
+  get NUM_WORKERS() {
+    return getEnv("NUM_WORKERS");
+  },
+  get TURNSTILE_SITE_KEY() {
+    return getEnv("TURNSTILE_SITE_KEY");
+  },
+  get JWT_AUDIENCE() {
+    return getEnv("JWT_AUDIENCE");
+  },
+  get ALLOWED_FLARES() {
+    return getEnv("ALLOWED_FLARES");
+  },
 };

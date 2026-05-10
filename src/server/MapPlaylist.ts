@@ -1,4 +1,4 @@
-import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/DefaultConfig";
+import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/Config";
 import {
   Difficulty,
   Duos,

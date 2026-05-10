@@ -1,14 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/core/configuration/ConfigLoader", () => ({
-  getServerConfigFromServer: () => ({
+  ClientEnv: () => ({
     otelEnabled: () => false,
     otelAuthHeader: () => "",
     otelEndpoint: () => "",
     env: () => 0, // GameEnv.Dev
-  }),
-  getServerConfig: () => ({
-    otelEnabled: () => false,
   }),
 }));
 
@@ -69,7 +66,6 @@ function makeClient(
 
 describe("GameServer - kick_player authorization", () => {
   let mockLogger: any;
-  let mockConfig: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -78,11 +74,6 @@ describe("GameServer - kick_player authorization", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-    };
-    mockConfig = {
-      turnIntervalMs: () => 100,
-      gameCreationRate: () => 1000,
-      env: () => 0,
     };
   });
 
@@ -96,7 +87,6 @@ describe("GameServer - kick_player authorization", () => {
       "test-game",
       mockLogger,
       Date.now(),
-      mockConfig,
       { gameType: GameType.Private } as any,
       creatorPersistentID,
     );

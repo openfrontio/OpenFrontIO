@@ -66,6 +66,12 @@ export default defineConfig(({ mode }) => {
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
+    numWorkers: JSON.stringify(parseInt(env.NUM_WORKERS ?? "2", 10)),
+    turnstileSiteKey: JSON.stringify(
+      env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
+    ),
+    jwtAudience: JSON.stringify(env.JWT_AUDIENCE ?? "localhost"),
+    instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(

@@ -1,6 +1,5 @@
 import { Worker } from "cluster";
 import winston from "winston";
-import { ServerConfig } from "../core/configuration/Config";
 import { PublicGameInfo, PublicGameType } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
@@ -12,9 +11,9 @@ import {
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
+import { ServerEnv } from "./ServerEnv";
 
 export interface MasterLobbyServiceOptions {
-  config: ServerConfig;
   playlist: MapPlaylist;
   log: typeof logger;
 }
@@ -27,7 +26,6 @@ export class MasterLobbyService {
   private started = false;
 
   constructor(
-    private config: ServerConfig,
     private playlist: MapPlaylist,
     private log: winston.Logger,
   ) {}
@@ -63,16 +61,16 @@ export class MasterLobbyService {
   isHealthy(): boolean {
     // We consider the lobby service healthy if at least half of the workers are ready.
     // This allows for some leeway if a worker crashes.
-    const minWorkers = Math.max(this.config.numWorkers() / 2, 1);
+    const minWorkers = Math.max(ServerEnv.numWorkers() / 2, 1);
     return this.started && this.readyWorkers.size >= minWorkers;
   }
 
   private handleWorkerReady(workerId: number) {
     this.readyWorkers.add(workerId);
     this.log.info(
-      `Worker ${workerId} is ready. (${this.readyWorkers.size}/${this.config.numWorkers()} ready)`,
+      `Worker ${workerId} is ready. (${this.readyWorkers.size}/${ServerEnv.numWorkers()} ready)`,
     );
-    if (this.readyWorkers.size === this.config.numWorkers() && !this.started) {
+    if (this.readyWorkers.size === ServerEnv.numWorkers() && !this.started) {
       this.started = true;
       this.log.info("All workers ready, starting game scheduling");
       startPolling(async () => this.broadcastLobbies(), 500);
@@ -145,7 +143,7 @@ export class MasterLobbyService {
         this.sendMessageToWorker({
           type: "updateLobby",
           gameID: nextLobby.gameID,
-          startsAt: Date.now() + this.config.gameCreationRate(),
+          startsAt: Date.now() + ServerEnv.gameCreationRate(),
         });
       }
 
@@ -163,7 +161,7 @@ export class MasterLobbyService {
   }
 
   private sendMessageToWorker(msg: MasterCreateGame | MasterUpdateGame): void {
-    const workerId = this.config.workerIndex(msg.gameID);
+    const workerId = ServerEnv.workerIndex(msg.gameID);
     const worker = this.workers.get(workerId);
     if (!worker) {
       this.log.error(`Worker ${workerId} not found`);

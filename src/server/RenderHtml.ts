@@ -24,6 +24,10 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
     // refs to use this placeholder.
     cdnBaseRaw: cdnBase,
     gameEnv: JSON.stringify(process.env.GAME_ENV ?? "dev"),
+    numWorkers: JSON.stringify(parseInt(process.env.NUM_WORKERS ?? "", 10)),
+    turnstileSiteKey: JSON.stringify(process.env.TURNSTILE_SITE_KEY ?? ""),
+    jwtAudience: JSON.stringify(process.env.JWT_AUDIENCE ?? ""),
+    instanceId: JSON.stringify(process.env.INSTANCE_ID ?? ""),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(

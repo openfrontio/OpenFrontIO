@@ -1,5 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   calculateServerTimeOffset,
   getMapName,
@@ -19,7 +20,6 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -967,8 +967,7 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const config = await getRuntimeClientServerConfig();
-    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+    const url = `/${ClientEnv.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -1037,9 +1036,11 @@ export class JoinLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
+    const gitCommit = window.BOOTSTRAP_CONFIG?.gitCommit;
     if (
-      window.GIT_COMMIT !== "DEV" &&
-      parsed.data.gitCommit !== window.GIT_COMMIT
+      gitCommit !== "DEV" &&
+      gitCommit !== undefined &&
+      parsed.data.gitCommit !== gitCommit
     ) {
       const safeLobbyId = this.sanitizeForLog(lobbyId);
       console.warn(

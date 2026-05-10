@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { translateText } from "../client/Utils";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -121,8 +121,7 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
-    const config = await getRuntimeClientServerConfig();
-    return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
+    return `${window.location.origin}/${ClientEnv.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
   private async constructUrl(): Promise<string> {
@@ -1050,13 +1049,12 @@ export class HostLobbyModal extends BaseModal {
 }
 
 async function createLobby(gameID: string): Promise<GameInfo> {
-  const config = await getRuntimeClientServerConfig();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
   try {
     const response = await fetch(
-      `/${config.workerPath(gameID)}/api/create_game/${gameID}`,
+      `/${ClientEnv.workerPath(gameID)}/api/create_game/${gameID}`,
       {
         method: "POST",
         headers: {

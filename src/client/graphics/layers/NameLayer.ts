@@ -1,7 +1,8 @@
 import { assetUrl } from "src/core/AssetUrls";
+import { Theme } from "src/core/configuration/Theme";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Config, Theme } from "../../../core/configuration/Config";
+import { Config } from "../../../core/configuration/Config";
 import { Cell } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";

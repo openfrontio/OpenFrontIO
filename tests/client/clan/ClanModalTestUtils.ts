@@ -130,7 +130,7 @@ export function authMockFactory() {
 
 export function configLoaderMockFactory() {
   return {
-    getRuntimeClientServerConfig: vi.fn(() => ({})),
+    ClientEnv: vi.fn(() => ({})),
   };
 }
 

@@ -1,14 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/core/configuration/ConfigLoader", () => ({
-  getServerConfigFromServer: () => ({
+  ClientEnv: () => ({
     otelEnabled: () => false,
     otelAuthHeader: () => "",
     otelEndpoint: () => "",
     env: () => 0, // GameEnv.Dev
-  }),
-  getServerConfig: () => ({
-    otelEnabled: () => false,
   }),
 }));
 

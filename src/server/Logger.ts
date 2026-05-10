@@ -7,11 +7,9 @@ import {
 import { OpenTelemetryTransportV3 } from "@opentelemetry/winston-transport";
 import * as dotenv from "dotenv";
 import winston from "winston";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { getOtelResource } from "./OtelResource";
+import { ServerEnv } from "./ServerEnv";
 dotenv.config();
-
-const config = getServerConfigFromServer();
 
 const resource = getOtelResource();
 
@@ -20,14 +18,14 @@ const loggerProvider = new LoggerProvider({
   resource,
 });
 
-if (config.otelEnabled()) {
+if (ServerEnv.otelEnabled()) {
   console.log("OTEL enabled");
   // Configure OpenTelemetry endpoint with basic auth (if provided)
   const headers: Record<string, string> = {};
-  headers["Authorization"] = "Basic " + config.otelAuthHeader();
+  headers["Authorization"] = "Basic " + ServerEnv.otelAuthHeader();
   // Add OTLP exporter for logs
   const logExporter = new OTLPLogExporter({
-    url: `${config.otelEndpoint()}/v1/logs`,
+    url: `${ServerEnv.otelEndpoint()}/v1/logs`,
     headers,
   });
 

@@ -1,6 +1,6 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
+import { Theme } from "src/core/configuration/Theme";
 import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
