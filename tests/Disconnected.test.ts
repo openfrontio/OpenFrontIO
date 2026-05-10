@@ -1,35 +1,39 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnectedExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
+import { getSpawnTiles } from "../src/core/execution/Util";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
   GameMode,
+  HumansVsNations,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { GameID } from "../src/core/Schemas";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 let game: Game;
-const gameID: GameID = "game_id";
 let player1: Player;
 let player2: Player;
 let enemy: Player;
 
+function spawnPlayerForTest(game: Game, player: Player, x: number, y: number) {
+  const spawn = game.map().ref(x, y);
+  for (const tile of getSpawnTiles(game, spawn, false)) {
+    player.conquer(tile);
+  }
+  player.setSpawnTile(spawn);
+  game.addExecution(new PlayerExecution(player));
+}
+
 describe("Disconnected", () => {
   beforeEach(async () => {
-    game = await setup("plains", {
-      infiniteGold: true,
-      instantBuild: true,
-    });
-
     const player1Info = new PlayerInfo(
       "Active Player",
       PlayerType.Human,
@@ -44,15 +48,19 @@ describe("Disconnected", () => {
       "player2_id",
     );
 
-    player1 = game.addPlayer(player1Info);
-    player2 = game.addPlayer(player2Info);
-
-    game.addExecution(
-      new SpawnExecution(gameID, player1Info, game.ref(1, 1)),
-      new SpawnExecution(gameID, player2Info, game.ref(7, 7)),
+    game = await setup(
+      "plains",
+      {
+        infiniteGold: true,
+        instantBuild: true,
+      },
+      [player1Info, player2Info],
     );
-    game.executeNextTick(); // init spawns
-    game.executeNextTick(); // tick spawns -> players get territory
+
+    player1 = game.player(player1Info.id);
+    player2 = game.player(player2Info.id);
+    player1.conquer(game.ref(1, 1));
+    player2.conquer(game.ref(7, 7));
   });
 
   describe("Player disconnected state", () => {
@@ -199,22 +207,17 @@ describe("Disconnected", () => {
           infiniteGold: true,
           instantBuild: true,
           gameMode: GameMode.Team,
-          playerTeams: 2, // ignore player2 "kicked" console warn
+          playerTeams: HumansVsNations,
         },
         [player1Info, player2Info],
         undefined,
         UseRealAttackLogic, // don't use TestConfig's mock attackLogic
       );
 
-      game.addExecution(
-        new SpawnExecution(gameID, player1Info, game.map().ref(coastX - 2, 1)),
-        new SpawnExecution(gameID, player2Info, game.map().ref(coastX - 2, 4)),
-      );
-      game.executeNextTick(); // init spawns
-      game.executeNextTick(); // tick spawns -> players get territory
-
       player1 = game.player(player1Info.id);
       player2 = game.player(player2Info.id);
+      spawnPlayerForTest(game, player1, coastX - 2, 1);
+      spawnPlayerForTest(game, player2, coastX - 2, 4);
       player2.markDisconnected(false);
 
       expect(player1.team()).not.toBeNull();
