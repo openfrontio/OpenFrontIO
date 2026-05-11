@@ -1,12 +1,12 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   PlayerGame,
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -229,9 +229,8 @@ export class AccountModal extends BaseModal {
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const config = await getRuntimeClientServerConfig();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(

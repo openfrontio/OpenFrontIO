@@ -128,12 +128,6 @@ export function authMockFactory() {
   };
 }
 
-export function configLoaderMockFactory() {
-  return {
-    getRuntimeClientServerConfig: vi.fn(() => ({})),
-  };
-}
-
 export function crazyGamesSdkMockFactory() {
   return {
     crazyGamesSDK: { isAvailable: false },

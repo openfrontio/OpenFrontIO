@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getRuntimeClientServerConfig } from "src/core/configuration/ConfigLoader";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   Duos,
   GameMapType,
@@ -59,9 +59,7 @@ export class GameModeSelector extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    getRuntimeClientServerConfig().then((config) => {
-      this.defaultLobbyTime = config.gameCreationRate() / 1000;
-    });
+    this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
   }
 
   disconnectedCallback() {

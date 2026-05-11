@@ -1,3 +1,4 @@
+import { ClientEnv } from "src/client/ClientEnv";
 import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
@@ -330,9 +331,7 @@ export class Transport {
     this.killExistingSocket();
     const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const workerPath = this.lobbyConfig.serverConfig.workerPath(
-      this.lobbyConfig.gameID,
-    );
+    const workerPath = ClientEnv.workerPath(this.lobbyConfig.gameID);
     this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
