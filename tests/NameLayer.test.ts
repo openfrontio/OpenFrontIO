@@ -1,4 +1,16 @@
-import { computeAllianceClipPath } from "../src/client/graphics/PlayerIcons";
+import {
+  computeAllianceClipPath,
+  computeAllianceTopCutPercent,
+} from "../src/client/graphics/PlayerIcons";
+import {
+  computeNameLayerLayout,
+  computeNameLayerScreenMetrics,
+  computeNameLayerWorldScale,
+  computeTraitorFlashAlpha,
+  computeTraitorFlashDurationSeconds,
+  replaceUnsupportedNameGlyphs,
+  resetNameLayerGlyphWarningsForTests,
+} from "../src/client/graphics/layers/NameLayerLayout";
 
 describe("PlayerIcons", () => {
   describe("computeAllianceClipPath", () => {
@@ -37,5 +49,114 @@ describe("PlayerIcons", () => {
       expect(result).toContain("-2px");
       expect(result.match(/-2px/g)).toHaveLength(2); // Should appear twice (left and right)
     });
+
+    test("shares numeric top-cut helper with Pixi masks", () => {
+      expect(computeAllianceTopCutPercent(1.0)).toBeCloseTo(20);
+      expect(computeAllianceTopCutPercent(0.5)).toBeCloseTo(51.2);
+      expect(computeAllianceTopCutPercent(0.0)).toBeCloseTo(82.4);
+    });
+  });
+});
+
+describe("NameLayerLayout", () => {
+  test("computes DOM-compatible local row positions with flag and icon gaps", () => {
+    const layout = computeNameLayerLayout({
+      fontSize: 10,
+      iconSize: 15,
+      iconCount: 2,
+      centeredIconCount: 1,
+      hasFlag: true,
+      flagAspectRatio: 2,
+      nameWidth: 40,
+      troopWidth: 30,
+    });
+
+    expect(layout.iconPositions).toEqual([
+      { x: -9.5, y: -9.75 },
+      { x: 9.5, y: -9.75 },
+    ]);
+    expect(layout.flag).toEqual({ x: -20, y: 2.75, width: 20, height: 10 });
+    expect(layout.nameText).toEqual({ x: 10, y: 2.75 });
+    expect(layout.troopText).toEqual({ x: 0, y: 12.25 });
+    expect(layout.centeredIconPositions).toEqual([{ x: 0, y: 2.75 }]);
+  });
+
+  test("keeps no-flag names centered on the text width", () => {
+    const layout = computeNameLayerLayout({
+      fontSize: 12,
+      iconSize: 18,
+      iconCount: 0,
+      centeredIconCount: 0,
+      hasFlag: false,
+      flagAspectRatio: 1,
+      nameWidth: 60,
+      troopWidth: 24,
+    });
+
+    expect(layout.flag).toBeNull();
+    expect(layout.nameText.x).toBe(0);
+    expect(layout.width).toBe(60);
+  });
+
+  test("combines local label scale with camera scale for world-stable labels", () => {
+    expect(computeNameLayerWorldScale(8, 2)).toBeCloseTo(4);
+    expect(computeNameLayerWorldScale(20, 2)).toBeCloseTo(6);
+  });
+
+  test("computes final screen-space text and icon sizes", () => {
+    expect(computeNameLayerScreenMetrics(8, 2)).toEqual({
+      fontSize: 16,
+      iconSize: 24,
+    });
+    expect(computeNameLayerScreenMetrics(20, 2)).toEqual({
+      fontSize: 48,
+      iconSize: 72,
+    });
+  });
+
+  test("matches traitor flash duration thresholds and alpha extrema", () => {
+    expect(computeTraitorFlashDurationSeconds(156)).toBeNull();
+    expect(computeTraitorFlashDurationSeconds(150)).toBeCloseTo(1);
+    expect(computeTraitorFlashDurationSeconds(0)).toBeCloseTo(0.2);
+    expect(computeTraitorFlashAlpha(150, 0)).toBeCloseTo(1);
+    expect(computeTraitorFlashAlpha(150, 250)).toBeCloseTo(0.65);
+    expect(computeTraitorFlashAlpha(150, 500)).toBeCloseTo(0.3);
+  });
+
+  test("spreads multiple centered icons instead of stacking them", () => {
+    const layout = computeNameLayerLayout({
+      fontSize: 10,
+      iconSize: 15,
+      iconCount: 0,
+      centeredIconCount: 2,
+      hasFlag: false,
+      flagAspectRatio: 1,
+      nameWidth: 40,
+      troopWidth: 30,
+    });
+
+    expect(layout.centeredIconPositions).toEqual([
+      { x: -9.5, y: -4.75 },
+      { x: 9.5, y: -4.75 },
+    ]);
+  });
+
+  test("replaces unsupported glyphs once per glyph", () => {
+    resetNameLayerGlyphWarningsForTests();
+    const warn = vi.fn();
+
+    expect(replaceUnsupportedNameGlyphs("A🙂🙂B", warn)).toBe("A??B");
+    expect(replaceUnsupportedNameGlyphs("🙂", warn)).toBe("?");
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  test("replaces unsupported grapheme clusters with one fallback glyph", () => {
+    resetNameLayerGlyphWarningsForTests();
+    const warn = vi.fn();
+
+    expect(
+      replaceUnsupportedNameGlyphs("A\u{1F469}\u200D\u{1F4BB}B", warn),
+    ).toBe("A?B");
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 });
