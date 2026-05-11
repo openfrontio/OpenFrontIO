@@ -574,7 +574,7 @@ export class GameServer {
         }
       } catch (error) {
         this.log.info(
-          `error handline websocket request in game server: ${error}`,
+          `error handling websocket request in game server: ${error}`,
           {
             clientID: client.clientID,
           },
