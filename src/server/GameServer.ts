@@ -574,7 +574,7 @@ export class GameServer {
         }
       } catch (error) {
         this.log.info(
-          `error handline websocket request in game server: ${error}`,
+          `error handling websocket request in game server: ${error}`,
           {
             clientID: client.clientID,
           },
@@ -791,6 +791,8 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
           0,
