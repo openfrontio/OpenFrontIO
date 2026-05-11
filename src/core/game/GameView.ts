@@ -715,6 +715,13 @@ export class GameView implements GameMap {
         flag: nation.flag ? `/flags/${nation.flag}.svg` : undefined,
       } satisfies PlayerCosmetics);
     }
+    for (const extra of this._mapData.additionalNations) {
+      // Only set if not already provided by a manifest nation with the same name.
+      if (this._cosmetics.has(extra.name)) continue;
+      this._cosmetics.set(extra.name, {
+        flag: extra.flag ? `/flags/${extra.flag}.svg` : undefined,
+      } satisfies PlayerCosmetics);
+    }
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {
