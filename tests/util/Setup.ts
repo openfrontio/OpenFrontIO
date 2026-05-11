@@ -26,6 +26,7 @@ export async function setup(
   humans: PlayerInfo[] = [],
   currentDir: string = __dirname,
   ConfigClass: typeof TestConfig = TestConfig,
+  autoEndSpawnPhase: boolean = true,
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -78,7 +79,9 @@ export async function setup(
     false,
   );
 
-  return createGame(humans, [], gameMap, miniGameMap, config);
+  const game = createGame(humans, [], gameMap, miniGameMap, config);
+  if (autoEndSpawnPhase) game.endSpawnPhase();
+  return game;
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {

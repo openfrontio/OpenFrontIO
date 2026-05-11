@@ -56,9 +56,6 @@ describe("Conquest gold transfer", () => {
     game.addExecution(
       new SpawnExecution(gameID, conquerorInfo, game.ref(0, 10)),
     );
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
     conqueror = game.player(conquerorInfo.id);
   });
 
