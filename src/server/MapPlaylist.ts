@@ -278,6 +278,13 @@ export class MapPlaylist {
     if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
     }
+
+    // On special team maps nukes-disabled makes cross-water attacks
+    // nearly impossible (extreme warship spam).
+    if (mode === GameMode.Team && SPECIAL_TEAM_MAPS.has(map)) {
+      excludedModifiers.push("isNukesDisabled");
+    }
+
     if (playerTeams === HumansVsNations) {
       excludedModifiers.push("startingGold25M"); // Nations are disabled if that modifier is active (Because of PVP immunity)
       excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
