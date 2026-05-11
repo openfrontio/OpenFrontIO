@@ -309,6 +309,15 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleGoToPlayer() {
+    this.userSettings.toggleGoToPlayer();
+
+    console.log(
+      "🔍 Go to player:",
+      this.userSettings.goToPlayer() ? "ON" : "OFF",
+    );
+  }
+
   private togglePerformanceOverlay() {
     this.userSettings.togglePerformanceOverlay();
   }
@@ -840,6 +849,15 @@ export class UserSettingModal extends BaseModal {
         id="territory-patterns-toggle"
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 🔍 Go to player -->
+      <setting-toggle
+        label="${translateText("user_setting.go_to_player_label")}"
+        description="${translateText("user_setting.go_to_player_desc")}"
+        id="go-to-player-toggle"
+        .checked=${this.userSettings.goToPlayer()}
+        @change=${this.toggleGoToPlayer}
       ></setting-toggle>
 
       <!-- 📱 Performance Overlay -->
