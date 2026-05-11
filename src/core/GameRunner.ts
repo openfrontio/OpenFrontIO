@@ -57,6 +57,7 @@ export async function createGameRunner(
   const nations = createNationsForGame(
     gameStart,
     gameMap.nations,
+    gameMap.additionalNations,
     humans.length,
     random,
   );
