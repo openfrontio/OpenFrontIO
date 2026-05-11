@@ -2,11 +2,13 @@ import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getGameLogicConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
+import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   BuildableUnit,
   Game,
+  GameType,
   GameUpdates,
   NameViewData,
   Player,
@@ -57,6 +59,7 @@ export async function createGameRunner(
   const nations = createNationsForGame(
     gameStart,
     gameMap.nations,
+    gameMap.additionalNations,
     humans.length,
     random,
   );
@@ -93,6 +96,9 @@ export class GameRunner {
   ) {}
 
   init() {
+    if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
+      this.game.addExecution(new SpawnTimerExecution());
+    }
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
@@ -130,6 +136,7 @@ export class GameRunner {
     );
     this.currTurn++;
 
+    const wasInSpawnPhase = this.game.inSpawnPhase();
     let updates: GameUpdates;
     let tickExecutionDuration: number;
 
@@ -164,7 +171,12 @@ export class GameRunner {
         );
     }
 
-    if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
+    const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
+    if (
+      spawnJustEnded ||
+      this.game.ticks() < 3 ||
+      this.game.ticks() % 30 === 0
+    ) {
       this.game.players().forEach((p) => {
         this.playerViewData[p.id()] = placeName(this.game, p);
       });

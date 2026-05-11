@@ -823,7 +823,9 @@ export class GameServer {
       turn: pastTurn,
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
-      c.ws.send(msg);
+      if (c.ws.readyState === c.ws.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 

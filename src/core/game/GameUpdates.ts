@@ -66,6 +66,7 @@ export enum GameUpdateType {
   RailroadSnapEvent,
   ConquestEvent,
   EmbargoEvent,
+  SpawnPhaseEnd,
   GamePaused,
 }
 
@@ -90,6 +91,7 @@ export type GameUpdate =
   | RailroadSnapUpdate
   | ConquestUpdate
   | EmbargoUpdate
+  | SpawnPhaseEndUpdate
   | GamePausedUpdate;
 
 export interface BonusEventUpdate {
@@ -288,6 +290,11 @@ export interface EmbargoUpdate {
   event: "start" | "stop";
   playerID: number;
   embargoedID: number;
+}
+
+export interface SpawnPhaseEndUpdate {
+  type: GameUpdateType.SpawnPhaseEnd;
+  startTick: Tick;
 }
 
 export interface GamePausedUpdate {

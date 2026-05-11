@@ -297,6 +297,7 @@ async function createClientGame(
       worker,
       gameView,
       soundManager,
+      userSettings,
     );
   } catch (err) {
     soundManager.dispose();
@@ -329,6 +330,7 @@ export class ClientGameRunner {
     private worker: WorkerClient,
     private gameView: GameView,
     private soundManager: SoundManager,
+    private userSettings: UserSettings,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -584,7 +586,8 @@ export class ClientGameRunner {
         if (
           !this.gameView.inSpawnPhase() &&
           !hasGoneToPlayer &&
-          this.gameView.myPlayer()
+          this.gameView.myPlayer() &&
+          this.userSettings.goToPlayer()
         ) {
           hasGoneToPlayer = true;
           this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));

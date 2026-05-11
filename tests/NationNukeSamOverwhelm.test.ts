@@ -40,10 +40,6 @@ describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
     game.addPlayer(nationInfo);
     game.addPlayer(humanInfo);
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     const nation = game.player("nation_id");
     const human = game.player("human_id");
 

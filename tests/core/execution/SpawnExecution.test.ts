@@ -27,13 +27,11 @@ describe("Spawn execution", () => {
         spawnExecutions.push(new SpawnExecution("game_id", playerInfo));
       }
 
-      const game = await setup(mapName, undefined, players);
+      const game = await setup(mapName, {}, players);
 
       game.addExecution(...spawnExecutions);
-
-      while (game.inSpawnPhase()) {
-        game.executeNextTick();
-      }
+      game.executeNextTick();
+      game.executeNextTick();
 
       game.allPlayers().forEach((player) => {
         const spawnTile = player.spawnTile()!;
@@ -73,13 +71,11 @@ describe("Spawn execution", () => {
       spawnExecutions.push(new SpawnExecution("game_id", playerInfo));
     }
 
-    const game = await setup("half_land_half_ocean", undefined, players);
+    const game = await setup("half_land_half_ocean", {}, players);
 
     game.addExecution(...spawnExecutions);
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
 
     // Should spawn fewer than requested when map is too small
     expect(
@@ -96,14 +92,12 @@ describe("Spawn execution", () => {
       `player_id`,
     );
 
-    const game = await setup("half_land_half_ocean", undefined, [playerInfo]);
+    const game = await setup("half_land_half_ocean", {}, [playerInfo]);
 
     game.addExecution(new SpawnExecution("game_id", playerInfo, 10));
     game.addExecution(new SpawnExecution("game_id", playerInfo, 20));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
 
     expect(game.playerByClientID("client_id")?.spawnTile()).toBe(20);
     // Previous territory from first spawn should be relinquished
