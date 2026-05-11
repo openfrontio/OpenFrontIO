@@ -210,7 +210,6 @@ export class LangSelector extends LitElement {
       "join-lobby-modal",
       "emoji-table",
       "leader-board",
-      "leaderboard-tabs",
       "leaderboard-player-list",
       "leaderboard-clan-table",
       "build-menu",

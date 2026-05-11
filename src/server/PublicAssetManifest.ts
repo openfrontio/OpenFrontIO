@@ -34,7 +34,7 @@ const ROOT_PUBLIC_FILES = new Set([
 const manifestCache = new Map<string, AssetManifest>();
 
 // Bump this to force-invalidate all CDN-cached assets (e.g. after a bad deploy with wrong cache headers).
-const CACHE_BUST_VERSION = "2";
+const CACHE_BUST_VERSION = "3";
 
 type DerivedPublicAssetRenderContext = {
   resourcesDir: string;

@@ -43,9 +43,6 @@ const JwksSchema = z.object({
 });
 
 export abstract class DefaultServerConfig implements ServerConfig {
-  turnstileSecretKey(): string {
-    return Env.TURNSTILE_SECRET_KEY ?? "";
-  }
   abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
@@ -638,8 +635,8 @@ export class DefaultConfig implements Config {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
-    let mag = 0;
-    let speed = 0;
+    let mag: number;
+    let speed: number;
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:

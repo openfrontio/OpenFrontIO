@@ -432,7 +432,7 @@ export async function startWorker() {
           const turnstileResult = await verifyTurnstileToken(
             ip,
             clientMsg.turnstileToken,
-            config.turnstileSecretKey(),
+            config,
           );
           switch (turnstileResult.status) {
             case "approved":

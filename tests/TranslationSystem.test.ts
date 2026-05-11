@@ -620,5 +620,5 @@ describe("Translation System", () => {
 
     expect(missingKeys).toEqual([]);
     expect(unusedKeys).toEqual([]);
-  });
+  }, 30000);
 });

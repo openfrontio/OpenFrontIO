@@ -18,7 +18,7 @@ export function placeName(game: Game, player: Player): NameViewData {
     player.largestClusterBoundingBox ??
     calculateBoundingBox(game, player.borderTiles());
 
-  let scalingFactor = 1;
+  let scalingFactor: number;
   const width = boundingBox.max.x - boundingBox.min.x;
   const height = boundingBox.max.y - boundingBox.min.y;
   const size = Math.min(width, height);

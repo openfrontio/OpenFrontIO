@@ -666,6 +666,16 @@
     "name": "El Salvador"
   },
   {
+    "code": "Emirate of Afghanistan",
+    "continent": "Asia",
+    "name": "Emirate of Afghanistan"
+  },
+  {
+    "code": "Emirate of Asir",
+    "continent": "Asia",
+    "name": "Emirate of Asir"
+  },
+  {
     "code": "granada",
     "continent": "Europe",
     "name": "Emirate of Granada"
@@ -720,6 +730,11 @@
     "code": "et",
     "continent": "Africa",
     "name": "Ethiopia"
+  },
+  {
+    "code": "Ethiopian Empire",
+    "continent": "Africa",
+    "name": "Ethiopian Empire"
   },
   {
     "code": "eu",
@@ -1051,11 +1066,6 @@
     "name": "Italy"
   },
   {
-    "code": "italy",
-    "continent": "Europe",
-    "name": "Kingdom of Italy"
-  },
-  {
     "code": "jm",
     "continent": "North America",
     "name": "Jamaica"
@@ -1131,6 +1141,11 @@
     "name": "Kingdom of Iraq"
   },
   {
+    "code": "italy",
+    "continent": "Europe",
+    "name": "Kingdom of Italy"
+  },
+  {
     "code": "Kingdom of Jerusalem",
     "continent": "Asia",
     "name": "Kingdom of Jerusalem"
@@ -1139,6 +1154,16 @@
     "code": "Kingdom of Judah",
     "continent": "Asia",
     "name": "Kingdom of Judah"
+  },
+  {
+    "code": "Kingdom of Syria",
+    "continent": "Asia",
+    "name": "Kingdom of Syria"
+  },
+  {
+    "code": "Kingdom of Yemen",
+    "continent": "Asia",
+    "name": "Kingdom of Yemen"
   },
   {
     "code": "Kirghiz SSR",
@@ -1809,6 +1834,11 @@
     "name": "Quebec"
   },
   {
+    "code": "Rashidi Emirate",
+    "continent": "Asia",
+    "name": "Rashidi Emirate"
+  },
+  {
     "code": "Republic of China",
     "continent": "Asia",
     "name": "Republic of China"
@@ -2057,7 +2087,7 @@
   },
   {
     "code": "Socialist_flag",
-    "name": "Socialist Flag"
+    "name": "Red Flag"
   },
   {
     "code": "sb",
@@ -2462,6 +2492,10 @@
     "code": "eh",
     "continent": "Africa",
     "name": "Western Sahara"
+  },
+  {
+    "code": "White Flag",
+    "name": "White Flag"
   },
   {
     "code": "Wisconsin",
