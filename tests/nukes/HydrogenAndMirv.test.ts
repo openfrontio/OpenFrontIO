@@ -1,5 +1,4 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -7,22 +6,18 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
-import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
 describe("Hydrogen Bomb and MIRV flows", () => {
   let game: Game;
   let player: Player;
-  const gameID: GameID = "game_id";
+  const info = new PlayerInfo("p", PlayerType.Human, null, "p");
 
   beforeEach(async () => {
-    game = await setup("plains", { infiniteGold: true, instantBuild: true });
-    const info = new PlayerInfo("p", PlayerType.Human, null, "p");
-    game.addPlayer(info);
-    game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-    while (game.inSpawnPhase()) game.executeNextTick();
+    game = await setup("plains", { infiniteGold: true, instantBuild: true }, [
+      info,
+    ]);
     player = game.player(info.id);
-
     player.conquer(game.ref(1, 1));
   });
 
@@ -52,17 +47,14 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
   test("Hydrogen bomb launch fails when silo is under construction and succeeds after completion", async () => {
     // Set up a game without instantBuild to test construction duration
-    const gameWithConstruction = await setup("plains", {
-      infiniteGold: false,
-      instantBuild: false,
-    });
-    const info = new PlayerInfo("p", PlayerType.Human, null, "p");
-    gameWithConstruction.addPlayer(info);
-    gameWithConstruction.addExecution(
-      new SpawnExecution(gameID, info, gameWithConstruction.ref(1, 1)),
+    const gameWithConstruction = await setup(
+      "plains",
+      {
+        infiniteGold: false,
+        instantBuild: false,
+      },
+      [info],
     );
-    while (gameWithConstruction.inSpawnPhase())
-      gameWithConstruction.executeNextTick();
     const playerWithConstruction = gameWithConstruction.player(info.id);
 
     playerWithConstruction.conquer(gameWithConstruction.ref(1, 1));

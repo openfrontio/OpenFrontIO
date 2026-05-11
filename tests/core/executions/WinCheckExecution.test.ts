@@ -65,12 +65,8 @@ describe("WinCheckExecution", () => {
     mg.numLandTiles = vi.fn(() => 100);
     mg.numTilesWithFallout = vi.fn(() => 0);
     mg.stats = vi.fn(() => ({ stats: () => ({ mocked: true }) }));
-    // Advance ticks until timeElapsed (in seconds) >= maxTimerValue * 60
-    // timeElapsed = (ticks - numSpawnPhaseTurns) / 10  =>
-    // ticks >= numSpawnPhaseTurns + maxTimerValue * 600
-    const threshold =
-      mg.config().numSpawnPhaseTurns() +
-      (mg.config().gameConfig().maxTimerValue ?? 0) * 600;
+    mg.endSpawnPhase();
+    const threshold = (mg.config().gameConfig().maxTimerValue ?? 0) * 600;
     while (mg.ticks() < threshold) {
       mg.executeNextTick();
     }
@@ -109,9 +105,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     const nation = game.player("nation_id");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign 81% of land to Nation
     const totalLand = game.numLandTiles();
@@ -171,10 +164,7 @@ describe("WinCheckExecution - Nation Winners", () => {
     game.addPlayer(nationInfo);
     const nation = game.player("nation_id");
 
-    // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.endSpawnPhase();
 
     // Give Nation 60% territory (below 80% threshold)
     // Give human 30% territory
@@ -200,9 +190,7 @@ describe("WinCheckExecution - Nation Winners", () => {
     expect(nation.numTilesOwned()).toBeGreaterThan(human.numTilesOwned());
 
     // Fast-forward game ticks past timer expiration
-    const threshold =
-      game.config().numSpawnPhaseTurns() +
-      (game.config().gameConfig().maxTimerValue ?? 0) * 600;
+    const threshold = (game.config().gameConfig().maxTimerValue ?? 0) * 600;
     while (game.ticks() < threshold) {
       game.executeNextTick();
     }
@@ -258,9 +246,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     const nation3 = game.player("nation3_id");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territories: Nation1 (85%), Nation2 (10%), Nation3 (5%)
     const totalLand = game.numLandTiles();
@@ -327,9 +312,6 @@ describe("WinCheckExecution - Nation Winners", () => {
     expect(bot2.team()).toBe(ColoredTeams.Bot);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign 96% of land to bot team (above 95% Team mode threshold)
     const totalLand = game.numLandTiles();
@@ -392,9 +374,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign some territory to both players
     let human1Count = 0;
@@ -447,9 +426,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territory to both players
     let human1Count = 0;
@@ -503,9 +479,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human2 = game.player("Player2");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Both players disconnect
     human1.markDisconnected(true);
@@ -547,9 +520,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const nation = game.player("NationPlayer");
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     // Assign territory to all players
     let humanCount = 0;

@@ -21,22 +21,18 @@ describe("Warship", () => {
   beforeEach(async () => {
     game = await setup(
       "half_land_half_ocean",
-      {
-        infiniteGold: true,
-        instantBuild: true,
-      },
+      { infiniteGold: true, instantBuild: true },
       [
         new PlayerInfo("boat dude", PlayerType.Human, null, "player_1_id"),
         new PlayerInfo("boat dude", PlayerType.Human, null, "player_2_id"),
       ],
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player1 = game.player("player_1_id");
     player2 = game.player("player_2_id");
+
+    // Advance past the manualMoveRetreatDisabledDuration window.
+    executeTicks(game, 50);
   });
 
   test("Warship heals only if player has port", async () => {
