@@ -48,6 +48,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -850,6 +851,8 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAllianceRequestIntentEvent(myPlayer, recipient),
         );
+      } else if (actions.interaction?.allianceInfo?.canExtend) {
+        this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
       }
     });
   }
