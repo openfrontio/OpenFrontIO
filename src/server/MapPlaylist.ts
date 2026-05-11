@@ -94,6 +94,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Svalmel: 8,
   TaiwanStrait: 5,
   TheBox: 3,
+  TheStraits: 5,
   TradersDream: 4,
   TwoLakes: 6,
   World: 20,
