@@ -65,6 +65,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -1008,6 +1009,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
+  // on iOS and can softlock the HUD. See issue #2330.
+  installSafariPinchZoomBlocker();
+
   initLayout();
   new Client().initialize();
   initNavigation();
