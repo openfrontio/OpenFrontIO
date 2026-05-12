@@ -818,17 +818,16 @@ export class StructureIconsLayer implements Layer {
   }
 
   private oilBoostGlowFilter(render: StructureRenderInfo): GlowFilter {
-    if (!render.oilBoostGlowFilter) {
-      render.oilBoostGlowFilter = new GlowFilter({
-        distance: OIL_BOOST_GLOW_DISTANCE,
-        outerStrength: 0,
-        innerStrength: 0,
-        color: OIL_BOOST_MAX_COLOR,
-        alpha: 0,
-        quality: 0.1,
-        knockout: false,
-      });
-    }
+    render.oilBoostGlowFilter ??= new GlowFilter({
+      distance: OIL_BOOST_GLOW_DISTANCE,
+      outerStrength: 0,
+      innerStrength: 0,
+      color: OIL_BOOST_MAX_COLOR,
+      alpha: 0,
+      quality: 0.1,
+      knockout: false,
+    });
+
     return render.oilBoostGlowFilter;
   }
 

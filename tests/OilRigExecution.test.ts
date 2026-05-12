@@ -1,10 +1,55 @@
 import { vi } from "vitest";
+import { DefaultConfig } from "../src/core/configuration/DefaultConfig";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { OilRigExecution } from "../src/core/execution/OilRigExecution";
 import { TrainExecution } from "../src/core/execution/TrainExecution";
 import { TrainStationExecution } from "../src/core/execution/TrainStationExecution";
-import { UnitType } from "../src/core/game/Game";
+import { consumeFuel, consumeFuelIfDue } from "../src/core/game/Fuel";
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  GameType,
+  UnitType,
+} from "../src/core/game/Game";
 import { TrainStation } from "../src/core/game/TrainStation";
+import { UserSettings } from "../src/core/game/UserSettings";
+import { TestServerConfig } from "./util/TestServerConfig";
+
+class OilTestServerConfig extends TestServerConfig {
+  constructor(private readonly intervalMs: number) {
+    super();
+  }
+
+  turnIntervalMs(): number {
+    return this.intervalMs;
+  }
+}
+
+function makeDefaultConfig(turnIntervalMs: number): DefaultConfig {
+  return new DefaultConfig(
+    new OilTestServerConfig(turnIntervalMs),
+    {
+      gameMap: GameMapType.World,
+      gameMode: GameMode.FFA,
+      gameMapSize: GameMapSize.Normal,
+      gameType: GameType.Singleplayer,
+      difficulty: Difficulty.Medium,
+      nations: "default",
+      donateGold: false,
+      donateTroops: false,
+      bots: 0,
+      infiniteGold: false,
+      infiniteTroops: false,
+      instantBuild: false,
+      disableNavMesh: false,
+      randomSpawn: false,
+    },
+    new UserSettings(),
+    false,
+  );
+}
 
 function makeOilRigUnit(
   opts: {
@@ -228,7 +273,7 @@ describe("OilRigExecution", () => {
     expect(addedExecutions).toHaveLength(0);
   });
 
-  it("sends an oil shipment to the nearest owned factory on the income interval", () => {
+  it("sends an oil shipment to a random reachable fuel destination on the income interval", () => {
     const oilRigOwner = { id: "oil-owner" };
     const oilRig = makeOilRigUnit({
       hasTrainStation: true,
@@ -261,6 +306,43 @@ describe("OilRigExecution", () => {
     expect(freight.sourceUnit()).toBe(oilRig);
     expect(freight.destinationUnit()).toBe(destinationUnit);
     expect(freight.trainMission()).toBe("freight");
+  });
+
+  it("uses a shorter oil interval with proportionally smaller freight cargo", () => {
+    const config = makeDefaultConfig(100);
+
+    expect(config.oilRigIncomeInterval()).toBe(50);
+    expect(config.freightTrainFuelCapacity()).toBe(150);
+    expect(
+      config.freightTrainFuelCapacity() / config.oilRigIncomeInterval(),
+    ).toBe(3);
+  });
+
+  it("initializes freight cargo from the configured oil shipment size", () => {
+    const oilRigOwner = { canBuild: vi.fn(() => false) };
+    const oilRig = makeOilRigUnit({ owner: oilRigOwner });
+    const destinationUnit = makeFactoryUnit();
+    const sourceStation = { unit: oilRig };
+    const destinationStation = { unit: destinationUnit };
+    const train = new TrainExecution(
+      {
+        findStationsPath: vi.fn(() => null),
+      } as any,
+      oilRigOwner as any,
+      sourceStation as any,
+      destinationStation as any,
+      5,
+      "freight",
+    );
+    const mg = {
+      config: vi.fn(() => ({
+        freightTrainFuelCapacity: vi.fn(() => 150),
+      })),
+    };
+
+    train.init(mg as any, 0);
+
+    expect(train.fuelRemaining()).toBe(150);
   });
 });
 
@@ -377,5 +459,71 @@ describe("Oil rig fuel delivery", () => {
     expect(factory.addFuel).toHaveBeenCalledWith(300);
     expect(trainExecution.deliverFuel).toHaveBeenCalledWith(100);
     expect(owner.addGold).toHaveBeenCalledWith(5_000n, 42, "oil");
+  });
+});
+
+describe("Oil-backed fuel consumption", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function makeFuelConsumerUnit(opts: { id?: number; level?: number } = {}) {
+    return {
+      id: vi.fn(() => opts.id ?? 2),
+      type: vi.fn(() => UnitType.City),
+      level: vi.fn(() => opts.level ?? 2),
+      isUnderConstruction: vi.fn(() => false),
+      removeFuel: vi.fn(),
+    };
+  }
+
+  function makeFuelConfig() {
+    return {
+      fuelConsumptionInterval: vi.fn(() => 5),
+      fuelConsumptionPerSecondPerLevel: vi.fn(() => 10),
+      serverConfig: vi.fn(() => ({
+        turnIntervalMs: vi.fn(() => 100),
+      })),
+    };
+  }
+
+  it("skips fuel depletion on non-consumption ticks", () => {
+    const config = makeFuelConfig();
+    const unit = makeFuelConsumerUnit({ id: 2 });
+
+    consumeFuelIfDue(config as any, unit as any, 2);
+
+    expect(unit.removeFuel).not.toHaveBeenCalled();
+  });
+
+  it("depletes the interval-scaled fuel amount only when due", () => {
+    const config = makeFuelConfig();
+    const unit = makeFuelConsumerUnit({ id: 2, level: 2 });
+
+    consumeFuelIfDue(config as any, unit as any, 3);
+
+    expect(unit.removeFuel).toHaveBeenCalledWith(10);
+  });
+
+  it("preserves the same total fuel depletion as per-tick consumption", () => {
+    const intervalConfig = makeFuelConfig();
+    const intervalUnit = makeFuelConsumerUnit({ id: 2, level: 2 });
+    const perTickConfig = makeFuelConfig();
+    const perTickUnit = makeFuelConsumerUnit({ id: 2, level: 2 });
+
+    consumeFuelIfDue(intervalConfig as any, intervalUnit as any, 3);
+    for (let i = 0; i < 5; i++) {
+      consumeFuel(perTickConfig as any, perTickUnit as any);
+    }
+
+    const intervalRemoved = intervalUnit.removeFuel.mock.calls.reduce(
+      (sum, [amount]) => sum + amount,
+      0,
+    );
+    const perTickRemoved = perTickUnit.removeFuel.mock.calls.reduce(
+      (sum, [amount]) => sum + amount,
+      0,
+    );
+    expect(intervalRemoved).toBe(perTickRemoved);
   });
 });

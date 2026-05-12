@@ -6,6 +6,7 @@ import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
+import { fuelBonus } from "./Fuel";
 import {
   BuildableUnit,
   Cell,
@@ -31,7 +32,6 @@ import {
   WarshipState,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
-import { fuelBonus } from "./Fuel";
 import {
   AllianceView,
   AttackUpdate,
