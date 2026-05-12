@@ -1116,7 +1116,8 @@
     "legendary": "Legendary",
     "adfree": "ad-free for life!",
     "hard": "Plutonium",
-    "soft": "Caps"
+    "soft": "Caps",
+    "free": "+{numFree} BONUS!"
   },
   "flag_input": {
     "title": "Select Flag",
