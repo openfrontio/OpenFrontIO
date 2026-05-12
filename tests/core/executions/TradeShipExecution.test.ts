@@ -143,6 +143,8 @@ describe("TradeShipExecution", () => {
     vi.spyOn(game, "getWaterComponent").mockReturnValue(1);
     vi.spyOn(game, "hasWaterComponent").mockReturnValue(true);
     vi.spyOn(game, "manhattanDist").mockReturnValue(10);
+
+    currentTarget = null;
   });
 
   it("should initialize and tick without errors", () => {
