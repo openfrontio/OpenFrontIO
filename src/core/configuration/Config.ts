@@ -314,6 +314,7 @@ export class Config {
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Port,
+            UnitType.OilRig,
             UnitType.Factory,
           ),
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
@@ -400,6 +401,7 @@ export class Config {
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Factory,
             UnitType.Port,
+            UnitType.OilRig,
           ),
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -580,6 +582,7 @@ export class Config {
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
+      case TerrainType.Oil:
         mag = 80;
         speed = 16.5;
         break;
