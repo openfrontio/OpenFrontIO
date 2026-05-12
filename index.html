@@ -327,11 +327,18 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
+    <!-- Top HUD: mirrors bottom HUD grid layout -->
     <div
-      class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
+      class="fixed top-0 left-0 w-full z-[1000] flex flex-col pointer-events-none lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-start min-[1200px]:px-4"
+      style="
+        padding-top: env(safe-area-inset-top);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      "
     >
-      <game-right-sidebar></game-right-sidebar>
-      <replay-panel></replay-panel>
+      <div class="lg:col-start-3 flex flex-col items-end pointer-events-auto">
+        <game-menu></game-menu>
+      </div>
     </div>
     <settings-modal></settings-modal>
     <player-panel></player-panel>
@@ -342,11 +349,8 @@
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <multi-tab-modal></multi-tab-modal>
-    <game-left-sidebar></game-left-sidebar>
     <performance-overlay></performance-overlay>
     <player-info-overlay></player-info-overlay>
-    <leader-board></leader-board>
-    <team-stats></team-stats>
     <heads-up-message></heads-up-message>
 
     <!-- Scripts -->
