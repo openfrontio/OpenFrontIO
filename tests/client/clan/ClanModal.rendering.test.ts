@@ -4,7 +4,6 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
-  configLoaderMockFactory,
   crazyGamesSdkMockFactory,
   getElState,
   makeClan,
@@ -20,9 +19,6 @@ vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
-vi.mock("../../../src/core/configuration/ConfigLoader", () =>
-  configLoaderMockFactory(),
-);
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
 
 stubLocalStorage();

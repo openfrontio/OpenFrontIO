@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ServerConfig } from "../core/configuration/Config";
+import { ServerEnv } from "./ServerEnv";
 
 const TurnstileVerdictSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("approved") }),
@@ -15,7 +15,6 @@ export type TurnstileResponse =
 export async function verifyTurnstileToken(
   ip: string,
   turnstileToken: string | null,
-  config: ServerConfig,
 ): Promise<TurnstileResponse> {
   if (!turnstileToken) {
     return { status: "rejected", reason: "No turnstile token provided" };
@@ -25,11 +24,11 @@ export async function verifyTurnstileToken(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch(`${config.jwtIssuer()}/turnstile`, {
+    const response = await fetch(`${ServerEnv.jwtIssuer()}/turnstile`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
+        "x-api-key": ServerEnv.apiKey(),
       },
       body: JSON.stringify({ ip, token: turnstileToken }),
       signal: controller.signal,

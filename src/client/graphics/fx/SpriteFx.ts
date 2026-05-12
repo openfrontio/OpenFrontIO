@@ -1,4 +1,4 @@
-import { Theme } from "../../../core/configuration/Config";
+import { Theme } from "src/core/configuration/Theme";
 import { PlayerView } from "../../../core/game/GameView";
 import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";

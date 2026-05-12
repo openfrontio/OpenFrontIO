@@ -1,3 +1,4 @@
+import { Config } from "src/core/configuration/Config";
 import { translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
@@ -11,8 +12,6 @@ import {
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
-import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import {
   BuildableUnit,
   PlayerType,
@@ -63,7 +62,6 @@ import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
-  serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
@@ -238,7 +236,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getGameLogicConfig(
+  const config = new Config(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,

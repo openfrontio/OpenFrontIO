@@ -70,16 +70,14 @@ export function buildAssetUrl(
 declare global {
   var __ASSET_MANIFEST__: AssetManifest | undefined;
   var __CDN_BASE__: string | undefined;
-
-  interface Window {
-    ASSET_MANIFEST?: AssetManifest;
-    CDN_BASE?: string;
-  }
 }
 
 export function getAssetManifest(): AssetManifest {
-  if (typeof window !== "undefined" && window.ASSET_MANIFEST !== undefined) {
-    return window.ASSET_MANIFEST;
+  if (
+    typeof window !== "undefined" &&
+    window.BOOTSTRAP_CONFIG?.assetManifest !== undefined
+  ) {
+    return window.BOOTSTRAP_CONFIG.assetManifest;
   }
   return globalThis.__ASSET_MANIFEST__ ?? {};
 }
@@ -89,8 +87,11 @@ export function getAssetManifest(): AssetManifest {
 // Without this fallback, asset fetches inside workers (e.g. map binaries)
 // would silently bypass the CDN.
 export function getCdnBase(): string {
-  if (typeof window !== "undefined" && window.CDN_BASE !== undefined) {
-    return window.CDN_BASE;
+  if (
+    typeof window !== "undefined" &&
+    window.BOOTSTRAP_CONFIG?.cdnBase !== undefined
+  ) {
+    return window.BOOTSTRAP_CONFIG.cdnBase;
   }
   return globalThis.__CDN_BASE__ ?? "";
 }

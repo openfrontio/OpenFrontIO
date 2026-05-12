@@ -1,6 +1,5 @@
 import { Logger } from "winston";
 import WebSocket from "ws";
-import { ServerConfig } from "../core/configuration/Config";
 import {
   Difficulty,
   GameMapSize,
@@ -15,10 +14,7 @@ import { GamePhase, GameServer } from "./GameServer";
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
-  constructor(
-    private config: ServerConfig,
-    private log: Logger,
-  ) {
+  constructor(private log: Logger) {
     setInterval(() => this.tick(), 1000);
   }
 
@@ -69,7 +65,6 @@ export class GameManager {
       id,
       this.log,
       Date.now(),
-      this.config,
       {
         donateGold: false,
         donateTroops: false,
