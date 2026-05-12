@@ -882,8 +882,8 @@ export class PlayerPanel extends LitElement implements Controller {
     if (!this.isVisible) return html``;
 
     const my = this.g.myPlayer();
-    const isReplay = this.g.config().isReplay();
-    if (!my && !isReplay) return html``;
+    const isSpectator = this.g.isSpectator();
+    if (!my && !isSpectator) return html``;
     if (!this.tile) return html``;
 
     const owner = this.g.owner(this.tile);
@@ -893,7 +893,7 @@ export class PlayerPanel extends LitElement implements Controller {
       return html``;
     }
     const other = owner as PlayerView;
-    // In replay mode myPlayer() is null; use other as stand-in so read-only rendering works
+    // Spectators (replay viewers, dead, or pre-spawn) have no live player; use other as a read-only stand-in
     const viewer = my ?? other;
     const myGoldNum = viewer.gold();
     const myTroopsNum = Number(viewer.troops());
@@ -968,7 +968,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       ${this.renderIdentityRow(other, viewer)}
                     </div>
 
-                    ${this.sendTarget
+                    ${this.sendTarget && !isSpectator
                       ? html`
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
@@ -989,7 +989,7 @@ export class PlayerPanel extends LitElement implements Controller {
                           ></send-resource-modal>
                         `
                       : ""}
-                    ${this.moderationTarget
+                    ${this.moderationTarget && !isSpectator
                       ? html`
                           <player-moderation-modal
                             .open=${true}
@@ -1012,7 +1012,7 @@ export class PlayerPanel extends LitElement implements Controller {
                     ${this.renderResources(other)}
 
                     <!-- Rocket direction toggle -->
-                    ${other === viewer && !isReplay
+                    ${other === viewer && !isSpectator
                       ? this.renderRocketDirectionToggle()
                       : ""}
 
@@ -1028,7 +1028,7 @@ export class PlayerPanel extends LitElement implements Controller {
 
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
-                    ${isReplay
+                    ${isSpectator
                       ? ""
                       : html`
                           <ui-divider></ui-divider>
