@@ -147,45 +147,53 @@ export class GameModeSelector extends LitElement {
         <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
 
         <!-- Game cards grid -->
-        <div
-          class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
-        >
-          <!-- Left col: main card (desktop only) -->
-          ${ffa
-            ? html`<div class="hidden sm:block">
-                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-              </div>`
-            : nothing}
+        ${this.lobbies === null
+          ? html`<div
+              class="flex items-center justify-center h-44 sm:h-[min(24rem,40vh)]"
+            >
+              <span
+                class="w-24 h-24 border-[6px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+              ></span>
+            </div>`
+          : html`<div
+              class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
+            >
+              <!-- Left col: main card (desktop only) -->
+              ${ffa
+                ? html`<div class="hidden sm:block">
+                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                  </div>`
+                : nothing}
 
-          <!-- Right col: special + teams (desktop only) -->
-          <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderSpecialLobbyCard(special)}
-                </div>`
-              : nothing}
-            ${teams
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                </div>`
-              : nothing}
-          </div>
+              <!-- Right col: special + teams (desktop only) -->
+              <div class="hidden sm:flex sm:flex-col sm:gap-4">
+                ${special
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderSpecialLobbyCard(special)}
+                    </div>`
+                  : nothing}
+                ${teams
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                    </div>`
+                  : nothing}
+              </div>
 
-          <!-- Mobile: special, ffa, teams inline -->
-          <div class="sm:hidden">
-            ${special ? this.renderSpecialLobbyCard(special) : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${ffa
-              ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-              : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${teams
-              ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-              : nothing}
-          </div>
-        </div>
+              <!-- Mobile: special, ffa, teams inline -->
+              <div class="sm:hidden">
+                ${special ? this.renderSpecialLobbyCard(special) : nothing}
+              </div>
+              <div class="sm:hidden">
+                ${ffa
+                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                  : nothing}
+              </div>
+              <div class="sm:hidden">
+                ${teams
+                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+                  : nothing}
+              </div>
+            </div>`}
 
         <!-- Solo: full width, desktop only -->
         <div class="hidden sm:block h-14">
