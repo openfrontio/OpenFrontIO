@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/core/configuration/ConfigLoader", () => ({
-  getServerConfigFromServer: () => ({
+vi.mock("../../src/server/ServerEnv", () => ({
+  ServerEnv: {
     jwtIssuer: () => "https://archive.test.invalid",
     apiKey: () => "test-key",
     gitCommit: () => "DEV",
     subdomain: () => "test",
     domain: () => "test",
-  }),
+  },
 }));
 
 vi.mock("../../src/server/Logger", () => ({

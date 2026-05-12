@@ -1,5 +1,6 @@
 import { vi } from "vitest";
-import { DefaultConfig } from "../src/core/configuration/DefaultConfig";
+import { ClientEnv } from "../src/client/ClientEnv";
+import { Config } from "../src/core/configuration/Config";
 import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { OilRigExecution } from "../src/core/execution/OilRigExecution";
 import { TrainExecution } from "../src/core/execution/TrainExecution";
@@ -15,41 +16,31 @@ import {
 } from "../src/core/game/Game";
 import { TrainStation } from "../src/core/game/TrainStation";
 import { UserSettings } from "../src/core/game/UserSettings";
-import { TestServerConfig } from "./util/TestServerConfig";
+import { GameConfig } from "../src/core/Schemas";
 
-class OilTestServerConfig extends TestServerConfig {
-  constructor(private readonly intervalMs: number) {
-    super();
-  }
+function makeDefaultConfig(turnIntervalMs: number): Config {
+  vi.spyOn(ClientEnv, "turnIntervalMs").mockReturnValue(turnIntervalMs);
 
-  turnIntervalMs(): number {
-    return this.intervalMs;
-  }
+  const gameConfig: GameConfig = {
+    gameMap: GameMapType.World,
+    gameMode: GameMode.FFA,
+    gameMapSize: GameMapSize.Normal,
+    gameType: GameType.Singleplayer,
+    difficulty: Difficulty.Medium,
+    nations: "default",
+    donateGold: false,
+    donateTroops: false,
+    bots: 0,
+    infiniteGold: false,
+    infiniteTroops: false,
+    instantBuild: false,
+    disableNavMesh: false,
+    randomSpawn: false,
+  };
+
+  return new Config(gameConfig, new UserSettings(), false);
 }
-
-function makeDefaultConfig(turnIntervalMs: number): DefaultConfig {
-  return new DefaultConfig(
-    new OilTestServerConfig(turnIntervalMs),
-    {
-      gameMap: GameMapType.World,
-      gameMode: GameMode.FFA,
-      gameMapSize: GameMapSize.Normal,
-      gameType: GameType.Singleplayer,
-      difficulty: Difficulty.Medium,
-      nations: "default",
-      donateGold: false,
-      donateTroops: false,
-      bots: 0,
-      infiniteGold: false,
-      infiniteTroops: false,
-      instantBuild: false,
-      disableNavMesh: false,
-      randomSpawn: false,
-    },
-    new UserSettings(),
-    false,
-  );
-}
+// }
 
 function makeOilRigUnit(
   opts: {

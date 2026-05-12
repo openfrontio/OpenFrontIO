@@ -5,7 +5,7 @@ import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
-import { Theme } from "./Config";
+import { Theme } from "./Theme";
 
 export class PastelTheme implements Theme {
   private rand = new PseudoRandom(123);

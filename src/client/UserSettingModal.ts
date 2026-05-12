@@ -343,6 +343,15 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleGoToPlayer() {
+    this.userSettings.toggleGoToPlayer();
+
+    console.log(
+      "🔍 Go to player:",
+      this.userSettings.goToPlayer() ? "ON" : "OFF",
+    );
+  }
+
   private togglePerformanceOverlay() {
     this.userSettings.togglePerformanceOverlay();
   }
@@ -420,7 +429,7 @@ export class UserSettingModal extends BaseModal {
         action="toggleView"
         label=${translateText("user_setting.toggle_view")}
         description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
+        defaultKey=${this.defaultKeybinds.toggleView}
         .value=${this.getKeyValue("toggleView")}
         .display=${this.getKeyChar("toggleView")}
         @change=${this.handleKeybindChange}
@@ -446,7 +455,7 @@ export class UserSettingModal extends BaseModal {
         action="buildCity"
         label=${translateText("user_setting.build_city")}
         description=${translateText("user_setting.build_city_desc")}
-        defaultKey="Digit1"
+        defaultKey=${this.defaultKeybinds.buildCity}
         .value=${this.getKeyValue("buildCity")}
         .display=${this.getKeyChar("buildCity")}
         @change=${this.handleKeybindChange}
@@ -456,7 +465,7 @@ export class UserSettingModal extends BaseModal {
         action="buildFactory"
         label=${translateText("user_setting.build_factory")}
         description=${translateText("user_setting.build_factory_desc")}
-        defaultKey="Digit2"
+        defaultKey=${this.defaultKeybinds.buildFactory}
         .value=${this.getKeyValue("buildFactory")}
         .display=${this.getKeyChar("buildFactory")}
         @change=${this.handleKeybindChange}
@@ -466,7 +475,7 @@ export class UserSettingModal extends BaseModal {
         action="buildPort"
         label=${translateText("user_setting.build_port")}
         description=${translateText("user_setting.build_port_desc")}
-        defaultKey="Digit3"
+        defaultKey=${this.defaultKeybinds.buildPort}
         .value=${this.getKeyValue("buildPort")}
         .display=${this.getKeyChar("buildPort")}
         @change=${this.handleKeybindChange}
@@ -486,7 +495,7 @@ export class UserSettingModal extends BaseModal {
         action="buildDefensePost"
         label=${translateText("user_setting.build_defense_post")}
         description=${translateText("user_setting.build_defense_post_desc")}
-        defaultKey="Digit4"
+        defaultKey=${this.defaultKeybinds.buildDefensePost}
         .value=${this.getKeyValue("buildDefensePost")}
         .display=${this.getKeyChar("buildDefensePost")}
         @change=${this.handleKeybindChange}
@@ -496,7 +505,7 @@ export class UserSettingModal extends BaseModal {
         action="buildMissileSilo"
         label=${translateText("user_setting.build_missile_silo")}
         description=${translateText("user_setting.build_missile_silo_desc")}
-        defaultKey="Digit5"
+        defaultKey=${this.defaultKeybinds.buildMissileSilo}
         .value=${this.getKeyValue("buildMissileSilo")}
         .display=${this.getKeyChar("buildMissileSilo")}
         @change=${this.handleKeybindChange}
@@ -506,7 +515,7 @@ export class UserSettingModal extends BaseModal {
         action="buildSamLauncher"
         label=${translateText("user_setting.build_sam_launcher")}
         description=${translateText("user_setting.build_sam_launcher_desc")}
-        defaultKey="Digit6"
+        defaultKey=${this.defaultKeybinds.buildSamLauncher}
         .value=${this.getKeyValue("buildSamLauncher")}
         .display=${this.getKeyChar("buildSamLauncher")}
         @change=${this.handleKeybindChange}
@@ -516,7 +525,7 @@ export class UserSettingModal extends BaseModal {
         action="buildWarship"
         label=${translateText("user_setting.build_warship")}
         description=${translateText("user_setting.build_warship_desc")}
-        defaultKey="Digit7"
+        defaultKey=${this.defaultKeybinds.buildWarship}
         .value=${this.getKeyValue("buildWarship")}
         .display=${this.getKeyChar("buildWarship")}
         @change=${this.handleKeybindChange}
@@ -526,7 +535,7 @@ export class UserSettingModal extends BaseModal {
         action="buildAtomBomb"
         label=${translateText("user_setting.build_atom_bomb")}
         description=${translateText("user_setting.build_atom_bomb_desc")}
-        defaultKey="Digit8"
+        defaultKey=${this.defaultKeybinds.buildAtomBomb}
         .value=${this.getKeyValue("buildAtomBomb")}
         .display=${this.getKeyChar("buildAtomBomb")}
         @change=${this.handleKeybindChange}
@@ -536,7 +545,7 @@ export class UserSettingModal extends BaseModal {
         action="buildHydrogenBomb"
         label=${translateText("user_setting.build_hydrogen_bomb")}
         description=${translateText("user_setting.build_hydrogen_bomb_desc")}
-        defaultKey="Digit9"
+        defaultKey=${this.defaultKeybinds.buildHydrogenBomb}
         .value=${this.getKeyValue("buildHydrogenBomb")}
         .display=${this.getKeyChar("buildHydrogenBomb")}
         @change=${this.handleKeybindChange}
@@ -546,7 +555,7 @@ export class UserSettingModal extends BaseModal {
         action="buildMIRV"
         label=${translateText("user_setting.build_mirv")}
         description=${translateText("user_setting.build_mirv_desc")}
-        defaultKey="Digit0"
+        defaultKey=${this.defaultKeybinds.buildMIRV}
         .value=${this.getKeyValue("buildMIRV")}
         .display=${this.getKeyChar("buildMIRV")}
         @change=${this.handleKeybindChange}
@@ -620,7 +629,7 @@ export class UserSettingModal extends BaseModal {
         description=${translateText("user_setting.attack_ratio_down_desc", {
           amount: this.userSettings.attackRatioIncrement(),
         })}
-        defaultKey="KeyT"
+        defaultKey=${this.defaultKeybinds.attackRatioDown}
         .value=${this.getKeyValue("attackRatioDown")}
         .display=${this.getKeyChar("attackRatioDown")}
         @change=${this.handleKeybindChange}
@@ -632,7 +641,7 @@ export class UserSettingModal extends BaseModal {
         description=${translateText("user_setting.attack_ratio_up_desc", {
           amount: this.userSettings.attackRatioIncrement(),
         })}
-        defaultKey="KeyY"
+        defaultKey=${this.defaultKeybinds.attackRatioUp}
         .value=${this.getKeyValue("attackRatioUp")}
         .display=${this.getKeyChar("attackRatioUp")}
         @change=${this.handleKeybindChange}
@@ -648,7 +657,7 @@ export class UserSettingModal extends BaseModal {
         action="boatAttack"
         label=${translateText("user_setting.boat_attack")}
         description=${translateText("user_setting.boat_attack_desc")}
-        defaultKey="KeyB"
+        defaultKey=${this.defaultKeybinds.boatAttack}
         .value=${this.getKeyValue("boatAttack")}
         .display=${this.getKeyChar("boatAttack")}
         @change=${this.handleKeybindChange}
@@ -658,7 +667,7 @@ export class UserSettingModal extends BaseModal {
         action="groundAttack"
         label=${translateText("user_setting.ground_attack")}
         description=${translateText("user_setting.ground_attack_desc")}
-        defaultKey="KeyG"
+        defaultKey=${this.defaultKeybinds.groundAttack}
         .value=${this.getKeyValue("groundAttack")}
         .display=${this.getKeyChar("groundAttack")}
         @change=${this.handleKeybindChange}
@@ -668,7 +677,7 @@ export class UserSettingModal extends BaseModal {
         action="retaliateAttack"
         label=${translateText("user_setting.retaliate_attack")}
         description=${translateText("user_setting.retaliate_attack_desc")}
-        defaultKey="Shift+KeyR"
+        defaultKey=${this.defaultKeybinds.retaliateAttack}
         .value=${this.getKeyValue("retaliateAttack")}
         .display=${this.getKeyChar("retaliateAttack")}
         @change=${this.handleKeybindChange}
@@ -694,7 +703,7 @@ export class UserSettingModal extends BaseModal {
         action="requestAlliance"
         label=${translateText("user_setting.request_alliance")}
         description=${translateText("user_setting.request_alliance_desc")}
-        defaultKey="KeyK"
+        defaultKey=${this.defaultKeybinds.requestAlliance}
         .value=${this.getKeyValue("requestAlliance")}
         .display=${this.getKeyChar("requestAlliance")}
         @change=${this.handleKeybindChange}
@@ -704,7 +713,7 @@ export class UserSettingModal extends BaseModal {
         action="breakAlliance"
         label=${translateText("user_setting.break_alliance")}
         description=${translateText("user_setting.break_alliance_desc")}
-        defaultKey="KeyL"
+        defaultKey=${this.defaultKeybinds.breakAlliance}
         .value=${this.getKeyValue("breakAlliance")}
         .display=${this.getKeyChar("breakAlliance")}
         @change=${this.handleKeybindChange}
@@ -720,7 +729,7 @@ export class UserSettingModal extends BaseModal {
         action="zoomOut"
         label=${translateText("user_setting.zoom_out")}
         description=${translateText("user_setting.zoom_out_desc")}
-        defaultKey="KeyQ"
+        defaultKey=${this.defaultKeybinds.zoomOut}
         .value=${this.getKeyValue("zoomOut")}
         .display=${this.getKeyChar("zoomOut")}
         @change=${this.handleKeybindChange}
@@ -730,7 +739,7 @@ export class UserSettingModal extends BaseModal {
         action="zoomIn"
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
-        defaultKey="KeyE"
+        defaultKey=${this.defaultKeybinds.zoomIn}
         .value=${this.getKeyValue("zoomIn")}
         .display=${this.getKeyChar("zoomIn")}
         @change=${this.handleKeybindChange}
@@ -746,7 +755,7 @@ export class UserSettingModal extends BaseModal {
         action="centerCamera"
         label=${translateText("user_setting.center_camera")}
         description=${translateText("user_setting.center_camera_desc")}
-        defaultKey="KeyC"
+        defaultKey=${this.defaultKeybinds.centerCamera}
         .value=${this.getKeyValue("centerCamera")}
         .display=${this.getKeyChar("centerCamera")}
         @change=${this.handleKeybindChange}
@@ -756,7 +765,7 @@ export class UserSettingModal extends BaseModal {
         action="moveUp"
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        defaultKey="KeyW"
+        defaultKey=${this.defaultKeybinds.moveUp}
         .value=${this.getKeyValue("moveUp")}
         .display=${this.getKeyChar("moveUp")}
         @change=${this.handleKeybindChange}
@@ -766,7 +775,7 @@ export class UserSettingModal extends BaseModal {
         action="moveLeft"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        defaultKey="KeyA"
+        defaultKey=${this.defaultKeybinds.moveLeft}
         .value=${this.getKeyValue("moveLeft")}
         .display=${this.getKeyChar("moveLeft")}
         @change=${this.handleKeybindChange}
@@ -776,7 +785,7 @@ export class UserSettingModal extends BaseModal {
         action="moveDown"
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        defaultKey="KeyS"
+        defaultKey=${this.defaultKeybinds.moveDown}
         .value=${this.getKeyValue("moveDown")}
         .display=${this.getKeyChar("moveDown")}
         @change=${this.handleKeybindChange}
@@ -786,7 +795,7 @@ export class UserSettingModal extends BaseModal {
         action="moveRight"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        defaultKey="KeyD"
+        defaultKey=${this.defaultKeybinds.moveRight}
         .value=${this.getKeyValue("moveRight")}
         .display=${this.getKeyChar("moveRight")}
         @change=${this.handleKeybindChange}
@@ -884,6 +893,15 @@ export class UserSettingModal extends BaseModal {
         id="territory-patterns-toggle"
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 🔍 Go to player -->
+      <setting-toggle
+        label="${translateText("user_setting.go_to_player_label")}"
+        description="${translateText("user_setting.go_to_player_desc")}"
+        id="go-to-player-toggle"
+        .checked=${this.userSettings.goToPlayer()}
+        @change=${this.toggleGoToPlayer}
       ></setting-toggle>
 
       <!-- 📱 Performance Overlay -->

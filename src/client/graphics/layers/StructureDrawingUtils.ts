@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
+import { Theme } from "src/core/configuration/Theme";
 import { assetUrl } from "../../../core/AssetUrls";
-import { Theme } from "../../../core/configuration/Config";
 import {
   Cell,
   PlayerBuildableUnitType,

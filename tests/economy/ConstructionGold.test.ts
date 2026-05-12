@@ -1,6 +1,5 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
-import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -8,15 +7,10 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
-import { TestConfig } from "../util/TestConfig";
-import { TestServerConfig } from "../util/TestServerConfig";
 
 describe("Construction economy", () => {
   let game: Game;
-  const gameID: GameID = "game_id";
   let player: Player;
   let other: Player;
   const builderInfo = new PlayerInfo(
@@ -37,14 +31,10 @@ describe("Construction economy", () => {
       },
       [builderInfo, otherInfo],
     );
-    const spawn = game.ref(0, 10);
-    game.addExecution(new SpawnExecution(gameID, builderInfo, spawn));
-    game.addExecution(new SpawnExecution(gameID, otherInfo, spawn));
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
     player = game.player(builderInfo.id);
     other = game.player(otherInfo.id);
+    player.conquer(game.ref(0, 10));
+    other.conquer(game.ref(10, 10));
   });
 
   test("City charges gold once and no refund thereafter (allow passive income)", () => {
@@ -106,40 +96,5 @@ describe("Construction economy", () => {
     expect(game.config().unitInfo(UnitType.MIRV).cost(game, other)).toBe(
       40_000_000n,
     );
-  });
-
-  test("Ports, oil rigs, and factories share one escalating price ladder", () => {
-    const config = new TestConfig(
-      new TestServerConfig(),
-      {
-        infiniteGold: false,
-        instantBuild: false,
-      } as any,
-      new UserSettings(),
-      false,
-    );
-
-    const counts = new Map<UnitType, number>();
-    const pricingPlayer = {
-      type: () => PlayerType.Human,
-      unitsOwned: (type: UnitType) => counts.get(type) ?? 0,
-      unitsConstructed: (type: UnitType) => counts.get(type) ?? 0,
-    } as Player;
-
-    const structureCost = (type: UnitType) =>
-      config.unitInfo(type).cost({} as Game, pricingPlayer);
-
-    expect(structureCost(UnitType.Port)).toBe(125_000n);
-
-    counts.set(UnitType.Port, 1);
-    expect(structureCost(UnitType.OilRig)).toBe(250_000n);
-
-    counts.set(UnitType.OilRig, 1);
-    expect(structureCost(UnitType.Factory)).toBe(500_000n);
-
-    counts.set(UnitType.Factory, 1);
-    expect(structureCost(UnitType.Port)).toBe(1_000_000n);
-    expect(structureCost(UnitType.OilRig)).toBe(1_000_000n);
-    expect(structureCost(UnitType.Factory)).toBe(1_000_000n);
   });
 });

@@ -58,7 +58,6 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this._isVisible = true;
-    this.game.inSpawnPhase();
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -113,10 +112,6 @@ export class GameRightSidebar extends LitElement implements Layer {
     }
 
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
-    const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
-    const ticks = this.game.ticks();
-    const gameTicks = Math.max(0, ticks - spawnPhaseTurns);
-    const elapsedSeconds = Math.floor(gameTicks / 10); // 10 ticks per second
 
     if (this.game.inSpawnPhase()) {
       this.timer =
@@ -125,6 +120,8 @@ export class GameRightSidebar extends LitElement implements Layer {
           : 0;
       return;
     }
+
+    const elapsedSeconds = Math.floor(this.game.elapsedGameSeconds());
 
     if (this.hasWinner) {
       return;

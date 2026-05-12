@@ -5,11 +5,13 @@ import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
 } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
 
 const gameID: GameID = "game_id";
@@ -56,10 +58,6 @@ describe("GameImpl", () => {
         defenderSpawn,
       ),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
@@ -131,5 +129,44 @@ describe("GameImpl", () => {
 
     expect(attacker.isTraitor()).toBe(true);
     expect(attacker.allianceWith(defender)).toBeFalsy();
+  });
+
+  test("Singleplayer late human spawn gets spawn immunity", async () => {
+    const singleplayerGame = await setup(
+      "plains",
+      {
+        gameType: GameType.Singleplayer,
+      },
+      [],
+      undefined,
+      undefined,
+      false,
+    );
+    (singleplayerGame.config() as any).setSpawnImmunityDuration(100);
+
+    const pastSpawnCountdown =
+      singleplayerGame.config().numSpawnPhaseTurns() + 20;
+    for (let i = 0; i < pastSpawnCountdown; i++) {
+      singleplayerGame.executeNextTick();
+    }
+
+    const lateHumanInfo = new PlayerInfo(
+      "late human",
+      PlayerType.Human,
+      "late_client_id",
+      "late_player_id",
+    );
+
+    singleplayerGame.addExecution(
+      new SpawnExecution(gameID, lateHumanInfo, singleplayerGame.ref(5, 5)),
+    );
+
+    // First tick initializes the execution, second tick applies the spawn.
+    singleplayerGame.executeNextTick();
+    const spawnUpdates = singleplayerGame.executeNextTick();
+
+    expect(singleplayerGame.player(lateHumanInfo.id).hasSpawned()).toBe(true);
+    expect(spawnUpdates[GameUpdateType.SpawnPhaseEnd]).toHaveLength(1);
+    expect(singleplayerGame.isSpawnImmunityActive()).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import { describe, expect, it, vi } from "vitest";
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
-import { TestServerConfig } from "../util/TestServerConfig";
+import { ServerEnv } from "../../src/server/ServerEnv";
 
 vi.mock("../../src/server/Logger", () => ({
   logger: {
@@ -27,10 +27,9 @@ function sendWorkerReady(worker: EventEmitter, workerId: number) {
 }
 
 function createService(numWorkers: number): MasterLobbyService {
-  const config = new TestServerConfig();
-  vi.spyOn(config, "numWorkers").mockReturnValue(numWorkers);
+  vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(numWorkers);
   const log = { info: vi.fn(), error: vi.fn() } as any;
-  return new MasterLobbyService(config, {} as any, log);
+  return new MasterLobbyService({} as any, log);
 }
 
 function startAllWorkers(

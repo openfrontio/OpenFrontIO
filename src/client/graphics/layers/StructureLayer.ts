@@ -1,6 +1,6 @@
 import { colord, Colord } from "colord";
+import { Theme } from "src/core/configuration/Theme";
 import { assetUrl } from "../../../core/AssetUrls";
-import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";

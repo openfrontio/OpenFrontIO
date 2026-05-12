@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
@@ -12,7 +12,6 @@ import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
-  private static instanceIdPromise: Promise<string> | null = null;
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
   private connectTimeout: ReturnType<typeof setTimeout> | null = null;
   @state() private connected = false;
@@ -86,11 +85,8 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private async connect() {
-    const config = await getRuntimeClientServerConfig();
-    const instanceId = await MatchmakingModal.getInstanceId();
-
     this.socket = new WebSocket(
-      `${config.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(instanceId)}`,
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}`,
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
@@ -129,32 +125,6 @@ export class MatchmakingModal extends BaseModal {
     this.socket.onclose = () => {
       console.log("Matchmaking server closed connection");
     };
-  }
-
-  private static async getInstanceId(): Promise<string> {
-    MatchmakingModal.instanceIdPromise ??= fetch("/api/instance", {
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load instance id: ${response.status} ${response.statusText}`,
-          );
-        }
-
-        const data = (await response.json()) as { instanceId?: string };
-        if (!data.instanceId) {
-          throw new Error("Missing instance id");
-        }
-
-        return data.instanceId;
-      })
-      .catch((error: unknown) => {
-        MatchmakingModal.instanceIdPromise = null;
-        throw error;
-      });
-
-    return MatchmakingModal.instanceIdPromise;
   }
 
   protected async onOpen(): Promise<void> {
@@ -209,8 +179,7 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
-    const config = await getRuntimeClientServerConfig();
-    const url = `/${config.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
+    const url = `/${ClientEnv.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
       method: "GET",

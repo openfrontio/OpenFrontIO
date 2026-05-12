@@ -173,6 +173,7 @@ export enum GameMapType {
   BajaCalifornia = "Baja California",
   MiddleEast = "Middle East",
   TaiwanStrait = "Taiwan Strait",
+  TheStraits = "The Straits",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -237,6 +238,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BajaCalifornia,
     GameMapType.MiddleEast,
     GameMapType.TaiwanStrait,
+    GameMapType.TheStraits,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -884,10 +886,12 @@ export interface Game extends GameMap {
   // Immunity timer
   isSpawnImmunityActive(): boolean;
   isNationSpawnImmunityActive(): boolean;
+  elapsedGameSeconds(): number;
 
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
+  endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;

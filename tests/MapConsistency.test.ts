@@ -71,7 +71,7 @@ function getCategorizedMaps(): Set<string> {
 function getFrequencyKeys(): Set<string> {
   const content = fs.readFileSync(MAP_PLAYLIST, "utf8");
   // Extract the frequency block
-  const freqMatch = content.match(/const frequency[\s\S]*?\{([\s\S]*?)\};/);
+  const freqMatch = content.match(/const FREQUENCY[\s\S]*?\{([\s\S]*?)\};/);
   if (!freqMatch) {
     throw new Error(
       `Failed to parse frequency record from MapPlaylist.ts (first 200 chars: ${content.slice(0, 200)})`,

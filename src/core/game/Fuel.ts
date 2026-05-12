@@ -1,3 +1,4 @@
+import { ClientEnv } from "../../client/ClientEnv";
 import type { Config } from "../configuration/Config";
 import { UnitType, type Unit } from "./Game";
 
@@ -57,7 +58,7 @@ export function consumeFuelIfDue(config: Config, unit: Unit, ticks: number) {
 
 function fuelTicksPerSecond(config: Config): number {
   try {
-    return Math.max(1, 1000 / config.serverConfig().turnIntervalMs());
+    return Math.max(1, 1000 / ClientEnv.turnIntervalMs());
   } catch {
     return 10;
   }

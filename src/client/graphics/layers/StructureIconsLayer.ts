@@ -2,8 +2,8 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { GlowFilter, OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
+import { Theme } from "src/core/configuration/Theme";
 import { assetUrl } from "../../../core/AssetUrls";
-import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {

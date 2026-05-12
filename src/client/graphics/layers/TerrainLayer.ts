@@ -1,4 +1,5 @@
-import { Config, Theme } from "../../../core/configuration/Config";
+import { Theme } from "src/core/configuration/Theme";
+import { Config } from "../../../core/configuration/Config";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";

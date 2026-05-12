@@ -1,3 +1,4 @@
+import { Theme } from "src/core/configuration/Theme";
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
 import buildingExplosion from "../../../resources/sprites/buildingExplosion.png";
 import conquestSword from "../../../resources/sprites/conquestSword.png";
@@ -10,7 +11,6 @@ import sinkingShip from "../../../resources/sprites/sinkingShip.png";
 import miniSmoke from "../../../resources/sprites/smoke.png";
 import miniSmokeAndFire from "../../../resources/sprites/smokeAndFire.png";
 import unitExplosion from "../../../resources/sprites/unitExplosion.png";
-import { Theme } from "../../core/configuration/Config";
 import { PlayerView } from "../../core/game/GameView";
 import { AnimatedSprite } from "./AnimatedSprite";
 import { FxType } from "./fx/Fx";

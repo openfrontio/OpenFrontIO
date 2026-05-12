@@ -47,11 +47,6 @@ describe("Ai Attack Behavior", () => {
     testBot.addTroops(5000);
     testHuman.addTroops(5000);
 
-    // Skip spawn phase
-    while (testGame.inSpawnPhase()) {
-      testGame.executeNextTick();
-    }
-
     const behavior = new AiAttackBehavior(
       new PseudoRandom(42),
       testGame,

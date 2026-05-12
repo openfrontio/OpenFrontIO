@@ -1,3 +1,4 @@
+import { Config } from "src/core/configuration/Config";
 import { translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
@@ -11,8 +12,6 @@ import {
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
-import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
 import {
   BuildableUnit,
   PlayerType,
@@ -48,6 +47,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -63,7 +63,6 @@ import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
-  serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
@@ -238,7 +237,7 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getGameLogicConfig(
+  const config = new Config(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
@@ -291,6 +290,7 @@ async function createClientGame(
       worker,
       gameView,
       soundManager,
+      userSettings,
     );
   } catch (err) {
     soundManager.dispose();
@@ -322,6 +322,7 @@ export class ClientGameRunner {
     private worker: WorkerClient,
     private gameView: GameView,
     private soundManager: SoundManager,
+    private userSettings: UserSettings,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -534,7 +535,8 @@ export class ClientGameRunner {
         if (
           !this.gameView.inSpawnPhase() &&
           !hasGoneToPlayer &&
-          this.gameView.myPlayer()
+          this.gameView.myPlayer() &&
+          this.userSettings.goToPlayer()
         ) {
           hasGoneToPlayer = true;
           this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));
@@ -850,6 +852,8 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAllianceRequestIntentEvent(myPlayer, recipient),
         );
+      } else if (actions.interaction?.allianceInfo?.canExtend) {
+        this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
       }
     });
   }
