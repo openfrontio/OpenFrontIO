@@ -1,4 +1,4 @@
-import { consumeFuel, fuelBonus } from "../game/Fuel";
+import { consumeFuelIfDue, fuelBonus } from "../game/Fuel";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -31,7 +31,7 @@ export class MissileSiloExecution implements Execution {
       return;
     }
 
-    consumeFuel(this.mg.config(), this.silo);
+    consumeFuelIfDue(this.mg.config(), this.silo, ticks);
 
     // frontTime is the time the earliest missile fired.
     const frontTime = this.silo.missileTimerQueue()[0];

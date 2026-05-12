@@ -279,7 +279,7 @@ export class DefaultConfig implements Config {
   }
 
   freightTrainFuelCapacity(): number {
-    return 300;
+    return 150;
   }
 
   fuelStoragePerStructureLevel(): number {
@@ -288,6 +288,17 @@ export class DefaultConfig implements Config {
 
   fuelConsumptionPerSecondPerLevel(): number {
     return 5;
+  }
+
+  fuelConsumptionInterval(): Tick {
+    try {
+      return Math.max(
+        1,
+        Math.round(1000 / this.serverConfig().turnIntervalMs()),
+      );
+    } catch {
+      return 10;
+    }
   }
 
   fueledStructureMaxBonus(): number {
@@ -362,10 +373,9 @@ export class DefaultConfig implements Config {
   }
 
   oilRigIncomeInterval(): Tick {
-    // Oil rigs dispatch freight roughly every 10 real-time seconds.
     return Math.max(
       1,
-      Math.round(10_000 / this.serverConfig().turnIntervalMs()),
+      Math.round(5_000 / this.serverConfig().turnIntervalMs()),
     );
   }
 

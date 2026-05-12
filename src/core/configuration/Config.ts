@@ -144,6 +144,7 @@ export interface Config {
   freightTrainFuelCapacity(): number;
   fuelStoragePerStructureLevel(): number;
   fuelConsumptionPerSecondPerLevel(): number;
+  fuelConsumptionInterval(): Tick;
   fueledStructureMaxBonus(): number;
   fuelBonusSaturation(): number;
   fuelAllyGoldMultiplier(): number;

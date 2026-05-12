@@ -23,22 +23,36 @@ export function fuelCapacity(config: Config, unit: FuelStatUnit): number {
   return config.fuelStoragePerStructureLevel() * Math.max(1, unit.level());
 }
 
-export function consumeFuel(config: Config, unit: Unit): void {
+export function consumeFuel(
+  config: Config,
+  unit: Unit,
+  elapsedTicks: number = 1,
+): void {
   if (!isFuelConsumer(unit.type()) || unit.isUnderConstruction()) {
     return;
   }
 
   const ticksPerSecond = fuelTicksPerSecond(config);
   unit.removeFuel(
-    (config.fuelConsumptionPerSecondPerLevel() * Math.max(1, unit.level())) /
+    (config.fuelConsumptionPerSecondPerLevel() *
+      Math.max(1, unit.level()) *
+      Math.max(1, elapsedTicks)) /
       ticksPerSecond,
   );
 
-  if (unit.fuel() > 0) {
-    console.log(
-      `Unit ${unit.id()} has ${unit.fuel()} fuel and is now inactive.`,
-    );
+  // if (unit.fuel() > 0) {
+  //   console.log(
+  //     `Unit ${unit.id()} has ${unit.fuel()} fuel and is now active.`,
+  //   );
+  // }
+}
+
+export function consumeFuelIfDue(config: Config, unit: Unit, ticks: number) {
+  const interval = Math.max(1, config.fuelConsumptionInterval());
+  if ((ticks + unit.id()) % interval !== 0) {
+    return;
   }
+  consumeFuel(config, unit, interval);
 }
 
 function fuelTicksPerSecond(config: Config): number {

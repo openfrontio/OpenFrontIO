@@ -1,4 +1,4 @@
-import { consumeFuel } from "../game/Fuel";
+import { consumeFuelIfDue } from "../game/Fuel";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -22,7 +22,7 @@ export class CityExecution implements Execution {
       this.active = false;
       return;
     }
-    consumeFuel(this.mg.config(), this.city);
+    consumeFuelIfDue(this.mg.config(), this.city, ticks);
   }
 
   isActive(): boolean {

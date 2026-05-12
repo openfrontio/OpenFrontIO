@@ -31,6 +31,7 @@ import {
   WarshipState,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
+import { fuelBonus } from "./Fuel";
 import {
   AllianceView,
   AttackUpdate,
@@ -1243,6 +1244,17 @@ export class GameView implements GameMap {
     return Array.from(this._units.values()).filter(
       (u) => u.isActive() && types.includes(u.type()),
     );
+  }
+  getOilBoostLevel(unit: UnitView): number {
+    if (!unit.isActive()) {
+      return 0;
+    }
+
+    const maxBonus = this.config().fueledStructureMaxBonus();
+    if (maxBonus <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(1, fuelBonus(this.config(), unit) / maxBonus));
   }
   unit(id: number): UnitView | undefined {
     return this._units.get(id);

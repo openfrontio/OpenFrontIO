@@ -1,4 +1,4 @@
-import { consumeFuel, fuelBonus } from "../game/Fuel";
+import { consumeFuelIfDue, fuelBonus } from "../game/Fuel";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
@@ -35,7 +35,7 @@ export class PortExecution implements Execution {
     if (this.port.isUnderConstruction()) {
       return;
     }
-    consumeFuel(this.mg.config(), this.port);
+    consumeFuelIfDue(this.mg.config(), this.port, ticks);
 
     if (!this.port.hasTrainStation()) {
       this.createStation();

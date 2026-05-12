@@ -1,6 +1,6 @@
 import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
-import { OutlineFilter } from "pixi-filters";
+import { GlowFilter, OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { Theme } from "../../../core/configuration/Config";
@@ -44,6 +44,14 @@ import {
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
 const bitmapFont = assetUrl("fonts/round_6x6_modified.xml");
+const OIL_BOOST_MAX_COLOR = "#FFD700";
+const OIL_BOOST_GLOW_DISTANCE = 10;
+const OIL_BOOST_GLOW_MAX_ALPHA = 0.4;
+const OIL_BOOST_GLOW_MIN_PULSE = 0.8;
+const OIL_BOOST_GLOW_PULSE_SPEED = 0.0022;
+const OIL_BOOST_GLOW_MAX_OUTER_STRENGTH = 3;
+const OIL_BOOST_REFRESH_INTERVAL_TICKS = 10;
+const OIL_BOOST_ANIMATION_INTERVAL_MS = 100;
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
@@ -62,6 +70,8 @@ class StructureRenderInfo {
     public dotContainer: PIXI.Container,
     public level: number = 0,
     public underConstruction: boolean = true,
+    public oilBoostLevel: number = 0,
+    public oilBoostGlowFilter?: GlowFilter,
   ) {}
 }
 
@@ -102,6 +112,8 @@ export class StructureIconsLayer implements Layer {
   private pendingConfirm: MouseUpEvent | null = null;
   private hasHiddenStructure = false;
   private rebuildPending = false;
+  private lastOilBoostRefreshTick = -1;
+  private lastOilBoostGlowAnimationAt = 0;
   potentialUpgrade: StructureRenderInfo | undefined;
   private filterRedArray: OutlineFilter[] = [];
   private filterGreenArray: OutlineFilter[] = [];
@@ -317,6 +329,16 @@ export class StructureIconsLayer implements Layer {
     }
     this.renderSprites =
       this.game.config().userSettings()?.structureSprites() ?? true;
+    const tick = this.game.ticks();
+    if (
+      tick !== this.lastOilBoostRefreshTick &&
+      tick % OIL_BOOST_REFRESH_INTERVAL_TICKS === 0
+    ) {
+      this.lastOilBoostRefreshTick = tick;
+      for (const render of this.rendersByUnitId.values()) {
+        this.refreshOilBoostFilter(render);
+      }
+    }
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
@@ -349,6 +371,7 @@ export class StructureIconsLayer implements Layer {
       scale > DOTS_ZOOM_THRESHOLD &&
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
+    this.animateOilBoostGlows();
     if (this.renderer) {
       this.renderer.render(this.rootStage);
       mainContext.drawImage(this.renderer.canvas, 0, 0);
@@ -408,8 +431,7 @@ export class StructureIconsLayer implements Layer {
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {
         if (this.potentialUpgrade) {
-          this.potentialUpgrade.iconContainer.filters = [];
-          this.potentialUpgrade.dotContainer.filters = [];
+          this.modifyVisibility(this.potentialUpgrade);
         }
         if (this.ghostUnit?.container) {
           this.ghostUnit.container.filters = [];
@@ -451,8 +473,10 @@ export class StructureIconsLayer implements Layer {
             this.potentialUpgrade = undefined;
           }
           if (this.potentialUpgrade) {
-            this.potentialUpgrade.iconContainer.filters = this.filterGreenArray;
-            this.potentialUpgrade.dotContainer.filters = this.filterGreenArray;
+            this.applyStructureFilters(
+              this.potentialUpgrade,
+              this.filterGreenArray,
+            );
           }
           // No overlapping when a structure is upgradable
           this.uiState.overlappingRailroads = [];
@@ -630,8 +654,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostUnit = null;
     }
     if (this.potentialUpgrade) {
-      this.potentialUpgrade.iconContainer.filters = [];
-      this.potentialUpgrade.dotContainer.filters = [];
+      this.modifyVisibility(this.potentialUpgrade);
       this.potentialUpgrade = undefined;
     }
     this.uiState.ghostRailPaths = [];
@@ -765,12 +788,87 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && this.hasHiddenStructure) {
-        render.iconContainer.filters = this.filterWhiteArray;
-        render.dotContainer.filters = this.filterWhiteArray;
+        this.applyStructureFilters(render, this.filterWhiteArray);
       } else {
-        render.iconContainer.filters = [];
-        render.dotContainer.filters = [];
+        this.applyStructureFilters(render);
       }
+    }
+  }
+
+  private refreshOilBoostFilter(render: StructureRenderInfo) {
+    const myPlayer = this.game.myPlayer();
+    const shouldGlow =
+      myPlayer !== null &&
+      render.unit.owner().id() === myPlayer.id() &&
+      !render.unit.isUnderConstruction();
+    const nextBoost = shouldGlow ? this.game.getOilBoostLevel(render.unit) : 0;
+    if (render.oilBoostLevel === nextBoost) {
+      return;
+    }
+    render.oilBoostLevel = nextBoost;
+    if (nextBoost <= 0 && render.oilBoostGlowFilter) {
+      render.oilBoostGlowFilter.destroy();
+      render.oilBoostGlowFilter = undefined;
+    }
+    if (this.potentialUpgrade?.unit.id() === render.unit.id()) {
+      this.applyStructureFilters(render, this.filterGreenArray);
+    } else {
+      this.modifyVisibility(render);
+    }
+  }
+
+  private oilBoostGlowFilter(render: StructureRenderInfo): GlowFilter {
+    if (!render.oilBoostGlowFilter) {
+      render.oilBoostGlowFilter = new GlowFilter({
+        distance: OIL_BOOST_GLOW_DISTANCE,
+        outerStrength: 0,
+        innerStrength: 0,
+        color: OIL_BOOST_MAX_COLOR,
+        alpha: 0,
+        quality: 0.1,
+        knockout: false,
+      });
+    }
+    return render.oilBoostGlowFilter;
+  }
+
+  private applyStructureFilters(
+    render: StructureRenderInfo,
+    outlineFilters: OutlineFilter[] = [],
+  ) {
+    const iconFilters: PIXI.Filter[] = [...outlineFilters];
+    const levelFilters: PIXI.Filter[] = [];
+    if (render.oilBoostLevel > 0) {
+      const glow = this.oilBoostGlowFilter(render);
+      iconFilters.push(glow);
+      levelFilters.push(glow);
+    }
+    render.iconContainer.filters = iconFilters;
+    render.levelContainer.filters = levelFilters;
+    render.dotContainer.filters = outlineFilters;
+  }
+
+  private animateOilBoostGlows() {
+    const now = performance.now();
+    if (
+      now - this.lastOilBoostGlowAnimationAt <
+      OIL_BOOST_ANIMATION_INTERVAL_MS
+    ) {
+      return;
+    }
+    this.lastOilBoostGlowAnimationAt = now;
+    const pulse =
+      OIL_BOOST_GLOW_MIN_PULSE +
+      (1 - OIL_BOOST_GLOW_MIN_PULSE) *
+        ((Math.sin(now * OIL_BOOST_GLOW_PULSE_SPEED) + 1) / 2);
+
+    for (const render of this.rendersByUnitId.values()) {
+      const glow = render.oilBoostGlowFilter;
+      if (!glow || render.oilBoostLevel <= 0) {
+        continue;
+      }
+      glow.alpha = OIL_BOOST_GLOW_MAX_ALPHA * render.oilBoostLevel * pulse;
+      glow.outerStrength = OIL_BOOST_GLOW_MAX_OUTER_STRENGTH;
     }
   }
 
@@ -894,6 +992,7 @@ export class StructureIconsLayer implements Layer {
     );
     this.rendersByUnitId.set(unitView.id(), render);
     this.computeNewLocation(render);
+    this.refreshOilBoostFilter(render);
     this.modifyVisibility(render);
   }
 
@@ -922,6 +1021,7 @@ export class StructureIconsLayer implements Layer {
     render.iconContainer?.destroy({ children: true });
     render.levelContainer?.destroy({ children: true });
     render.dotContainer?.destroy({ children: true });
+    render.oilBoostGlowFilter?.destroy();
     const unitId = render.unit.id();
     this.rendersByUnitId.delete(unitId);
     this.seenUnitIds.delete(unitId);
