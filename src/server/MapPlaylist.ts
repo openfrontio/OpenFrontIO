@@ -21,6 +21,7 @@ import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
+
 const ARCADE_MAPS = new Set(mapCategories.arcade);
 const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
 
@@ -29,7 +30,7 @@ const MAX_PLAYER_COUNT = 125;
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
-const frequency: Partial<Record<GameMapName, number>> = {
+const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Achiran: 5,
   Aegean: 6,
   Africa: 7,
@@ -114,6 +115,17 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: HumansVsNations, weight: 20 },
 ];
 
+// Maps with a preferred team count in team / special games.
+// For these maps: team-playlist frequency is doubled, and the preferred
+// team count overrides the random TEAM_WEIGHTS roll with SPECIAL_TEAM_FORCE_CHANCE.
+const SPECIAL_TEAM_FORCE_CHANCE = 0.75;
+const SPECIAL_TEAM_FREQ_MULTIPLIER = 2;
+const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
+  [GameMapType.Baikal, 2],
+  [GameMapType.FourIslands, 4],
+  [GameMapType.Luna, 2],
+]);
+
 type ModifierKey =
   | "isRandomSpawn"
   | "isCompact"
@@ -131,21 +143,22 @@ type ModifierKey =
   | "isWaterNukes";
 
 // Each entry represents one "ticket" in the pool. More tickets = higher chance of selection.
+// Weights are roughly informed by the community "favorite modifier" poll.
 const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
-  ...Array<ModifierKey>(2).fill("isRandomSpawn"),
+  ...Array<ModifierKey>(4).fill("isRandomSpawn"),
   ...Array<ModifierKey>(4).fill("isCompact"),
   ...Array<ModifierKey>(2).fill("isCrowded"),
   ...Array<ModifierKey>(1).fill("isHardNations"),
-  ...Array<ModifierKey>(3).fill("startingGold1M"),
-  ...Array<ModifierKey>(5).fill("startingGold5M"),
-  ...Array<ModifierKey>(1).fill("startingGold25M"),
-  ...Array<ModifierKey>(4).fill("goldMultiplier"),
+  ...Array<ModifierKey>(2).fill("startingGold1M"),
+  ...Array<ModifierKey>(4).fill("startingGold5M"),
+  ...Array<ModifierKey>(3).fill("startingGold25M"),
+  ...Array<ModifierKey>(6).fill("goldMultiplier"),
   ...Array<ModifierKey>(1).fill("isAlliancesDisabled"),
   ...Array<ModifierKey>(1).fill("isPortsDisabled"),
   ...Array<ModifierKey>(1).fill("isNukesDisabled"),
   ...Array<ModifierKey>(1).fill("isSAMsDisabled"),
   ...Array<ModifierKey>(1).fill("isPeaceTime"),
-  ...Array<ModifierKey>(3).fill("isWaterNukes"),
+  ...Array<ModifierKey>(4).fill("isWaterNukes"),
 ];
 
 // Maps where water nukes have a higher chance on top of the normal pool
@@ -153,10 +166,16 @@ const SPECIAL_MODIFIER_POOL: ModifierKey[] = [
 const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.FourIslands,
   GameMapType.Baikal,
-  GameMapType.Alps,
-  GameMapType.TheBox,
   GameMapType.Luna,
   GameMapType.ArchipelagoSea,
+]);
+
+// Maps that are entirely land.
+// - Water nukes forced on 75% of the time (overrides WATER_NUKES_BOOSTED_MAPS)
+// - The "ports disabled" modifier is only allowed when water nukes is on
+const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([
+  GameMapType.TheBox,
+  GameMapType.Alps,
 ]);
 
 // Modifiers that cannot be active at the same time.
@@ -260,6 +279,13 @@ export class MapPlaylist {
     if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
     }
+
+    // On special team maps nukes-disabled makes cross-water attacks
+    // nearly impossible (extreme warship spam).
+    if (mode === GameMode.Team && SPECIAL_TEAM_MAPS.has(map)) {
+      excludedModifiers.push("isNukesDisabled");
+    }
+
     if (playerTeams === HumansVsNations) {
       excludedModifiers.push("startingGold25M"); // Nations are disabled if that modifier is active (Because of PVP immunity)
       excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
@@ -267,10 +293,19 @@ export class MapPlaylist {
 
     // Boost water nukes chance
     // When boosted, water nukes is forced on and takes one modifier slot.
-    const boostWaterNukes =
-      WATER_NUKES_BOOSTED_MAPS.has(map) && Math.random() < 0.5;
+    const waterNukesBoostChance = FULL_LAND_MAPS.has(map)
+      ? 0.75
+      : WATER_NUKES_BOOSTED_MAPS.has(map)
+        ? 0.5
+        : 0;
+    const boostWaterNukes = Math.random() < waterNukesBoostChance;
     if (boostWaterNukes) {
       excludedModifiers.push("isWaterNukes", "isNukesDisabled");
+    }
+
+    // On full-land maps, ports-disabled is only allowed alongside water nukes
+    if (FULL_LAND_MAPS.has(map) && !boostWaterNukes) {
+      excludedModifiers.push("isPortsDisabled");
     }
 
     const poolResult = this.getRandomSpecialGameModifiers(
@@ -519,10 +554,10 @@ export class MapPlaylist {
       ) {
         return;
       }
-      let freq = frequency[key] ?? 0;
-      // Double frequency for Baikal and FourIslands in team games
-      if (type === "team" && (key === "Baikal" || key === "FourIslands")) {
-        freq *= 2;
+      let freq = FREQUENCY[key] ?? 0;
+      // Boost frequency for special team maps in the team playlist
+      if (type === "team" && SPECIAL_TEAM_MAPS.has(map)) {
+        freq *= SPECIAL_TEAM_FREQ_MULTIPLIER;
       }
       for (let i = 0; i < freq; i++) {
         maps.push(map);
@@ -532,15 +567,13 @@ export class MapPlaylist {
   }
 
   private getTeamCount(map: GameMapType): TeamCountConfig {
-    // Override team count for specific maps (75% chance)
-    if (map === GameMapType.Baikal && Math.random() < 0.75) {
-      return 2;
-    }
-    if (map === GameMapType.FourIslands && Math.random() < 0.75) {
-      return 4;
-    }
-    if (map === GameMapType.Luna && Math.random() < 0.75) {
-      return 2;
+    // Override team count for specific maps
+    const forcedTeamCount = SPECIAL_TEAM_MAPS.get(map);
+    if (
+      forcedTeamCount !== undefined &&
+      Math.random() < SPECIAL_TEAM_FORCE_CHANCE
+    ) {
+      return forcedTeamCount;
     }
 
     const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
