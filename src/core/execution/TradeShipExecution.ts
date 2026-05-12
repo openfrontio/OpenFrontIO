@@ -254,7 +254,7 @@ export class TradeShipExecution implements Execution {
     const candidatePorts = eligiblePlayers.flatMap((p) =>
       p.units(UnitType.Port),
     );
-    
+
     const validPorts = candidatePorts.filter(
       (port) =>
         port.isActive() &&
