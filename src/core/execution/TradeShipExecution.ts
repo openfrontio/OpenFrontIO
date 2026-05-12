@@ -66,6 +66,8 @@ export class TradeShipExecution implements Execution {
 
     const tradeShipOwner = this.tradeShip.owner();
     const dstPortOwner = this._dstPort.owner();
+    const curTile = this.tradeShip.tile();
+
     if (this.wasCaptured !== true && this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
@@ -79,42 +81,51 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (
-      !this.wasCaptured &&
-      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
-    ) {
-      this.tradeShip.delete(false);
+    if (!this.tradeShip.isActive()) {
       this.active = false;
       return;
     }
 
-    const curTile = this.tradeShip.tile();
+    // Handle embargo or inactives ports destinations
+    if (
+      !this.wasCaptured &&
+      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
+    ) {
+      const newPort = this.findNearestValidPort(
+        curTile,
+        (p) => p !== this.origOwner && p.canTrade(tradeShipOwner),
+      );
 
+      if (newPort === null) {
+        this.tradeShip.delete(false);
+        this.active = false;
+        return;
+      }
+      this._dstPort = newPort;
+      this.tradeShip.setTargetUnit(this._dstPort);
+      this.tradeShip.touch();
+      this.motionPlanDst = null; // Force motion plan re-recording
+    }
+
+    // Handle captured ship that needs rerouting to nearest new owner port
     if (
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
-      const myComponent = this.mg.getWaterComponent(curTile);
-      const nearestPort = findClosestBy(
-        tradeShipOwner.units(UnitType.Port),
-        (port) => this.mg.manhattanDist(port.tile(), curTile),
-        (port) =>
-          port.isActive() &&
-          !port.isMarkedForDeletion() &&
-          !port.isUnderConstruction() &&
-          myComponent !== null &&
-          this.mg.hasWaterComponent(port.tile(), myComponent),
+      const newPort = this.findNearestValidPort(
+        curTile,
+        (p) => p === tradeShipOwner,
       );
-      if (nearestPort === null) {
+
+      if (newPort === null) {
         this.tradeShip.delete(false);
         this.active = false;
         return;
-      } else {
-        this._dstPort = nearestPort;
-        this.tradeShip.setTargetUnit(this._dstPort);
-        // Plan-driven units don't emit per-tick unit updates, so force a sync for the new target.
-        this.tradeShip.touch();
       }
+      this._dstPort = newPort;
+      this.tradeShip.setTargetUnit(this._dstPort);
+      this.tradeShip.touch();
+      this.motionPlanDst = null; // Force path recalc
     }
 
     if (curTile === this.dstPort()) {
@@ -229,5 +240,33 @@ export class TradeShipExecution implements Execution {
 
   dstPort(): TileRef {
     return this._dstPort.tile();
+  }
+
+  private findNearestValidPort(
+    curTile: TileRef,
+    playerFilter: (p: Player) => boolean,
+  ): Unit | null {
+    const myComponent = this.mg.getWaterComponent(curTile);
+    if (myComponent === null) return null;
+
+    const eligiblePlayers = this.mg.players().filter(playerFilter);
+
+    const candidatePorts = eligiblePlayers.flatMap((p) =>
+      p.units(UnitType.Port),
+    );
+    
+    const validPorts = candidatePorts.filter(
+      (port) =>
+        port.isActive() &&
+        !port.isMarkedForDeletion() &&
+        !port.isUnderConstruction() &&
+        this.mg.hasWaterComponent(port.tile(), myComponent),
+    );
+
+    if (validPorts.length === 0) return null;
+
+    return findClosestBy(validPorts, (port) =>
+      this.mg.manhattanDist(port.tile(), curTile),
+    );
   }
 }
