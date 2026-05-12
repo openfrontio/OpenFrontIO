@@ -95,31 +95,25 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
         return;
       }
-      const myPlayer = this.game.myPlayer();
-      const isReplay = this.game.config().isReplay();
-      if (myPlayer === null && !isReplay) {
-        return;
-      }
-      this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      if (myPlayer === null) {
-        // Replay: only show the info-only radial when right-clicking on a player
-        if (!this.game.owner(this.clickedTile).isPlayer()) {
-          return;
+      const clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.clickedTile = clickedTile;
+
+      // Spectators (replay, dead, pre-spawn): skip the action radial and open
+      // the read-only PlayerPanel directly when right-clicking on a player.
+      if (this.game.isSpectator()) {
+        if (this.game.owner(clickedTile).isPlayer()) {
+          this.playerPanel.show(emptyPlayerActions(), clickedTile);
         }
-        this.updatePlayerActions(
-          null,
-          emptyPlayerActions(),
-          this.clickedTile,
-          event.x,
-          event.y,
-        );
         return;
       }
-      myPlayer.actions(this.clickedTile).then((actions) => {
+
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) return;
+      myPlayer.actions(clickedTile).then((actions) => {
         this.updatePlayerActions(
           myPlayer,
           actions,
-          this.clickedTile!,
+          clickedTile,
           event.x,
           event.y,
         );
@@ -128,7 +122,7 @@ export class MainRadialMenu extends LitElement implements Layer {
   }
 
   private async updatePlayerActions(
-    myPlayer: PlayerView | null,
+    myPlayer: PlayerView,
     actions: PlayerActions,
     tile: TileRef,
     screenX: number | null = null,
@@ -139,7 +133,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     const tileOwner = this.game.owner(tile);
     const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
 
-    if (myPlayer && recipient) {
+    if (recipient) {
       this.chatIntegration.setupChatModal(myPlayer, recipient);
     }
 
@@ -160,7 +154,6 @@ export class MainRadialMenu extends LitElement implements Layer {
     };
 
     const isFriendlyTarget =
-      myPlayer !== null &&
       recipient !== null &&
       recipient.isFriendly(myPlayer) &&
       !recipient.isDisconnected();
@@ -184,9 +177,10 @@ export class MainRadialMenu extends LitElement implements Layer {
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
     const myPlayer = this.game.myPlayer();
-    if (myPlayer === null) return; // replay mode: nothing to refresh
-    myPlayer.actions(this.clickedTile).then((actions) => {
-      this.updatePlayerActions(myPlayer, actions, this.clickedTile!);
+    if (myPlayer === null) return;
+    const tile = this.clickedTile;
+    myPlayer.actions(tile).then((actions) => {
+      this.updatePlayerActions(myPlayer, actions, tile);
     });
   }
 

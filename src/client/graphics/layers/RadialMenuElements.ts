@@ -35,7 +35,7 @@ const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
 const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
-  myPlayer: PlayerView | null;
+  myPlayer: PlayerView;
   selected: PlayerView | null;
   tile: TileRef;
   playerActions: PlayerActions;
@@ -124,7 +124,7 @@ export enum Slot {
 
 function isFriendlyTarget(params: MenuElementParams): boolean {
   const selectedPlayer = params.selected;
-  if (selectedPlayer === null || params.myPlayer === null) return false;
+  if (selectedPlayer === null) return false;
   const isFriendly = (selectedPlayer as PlayerView).isFriendly;
   if (typeof isFriendly !== "function") return false;
   return isFriendly.call(selectedPlayer, params.myPlayer);
@@ -215,7 +215,7 @@ const allyRequestElement: MenuElement = {
   icon: allianceIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleAllianceRequest(
-      params.myPlayer!,
+      params.myPlayer,
       params.selected!,
     );
     params.closeMenu();
@@ -266,7 +266,7 @@ const allyBreakElement: MenuElement = {
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
-      params.myPlayer!,
+      params.myPlayer,
       params.selected!,
     );
     params.closeMenu();
@@ -500,10 +500,8 @@ const donateGoldRadialElement: MenuElement = {
 export const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
-  cooldown: (params: MenuElementParams) =>
-    params.myPlayer?.deleteUnitCooldown() ?? 0,
+  cooldown: (params: MenuElementParams) => params.myPlayer.deleteUnitCooldown(),
   disabled: (params: MenuElementParams) => {
-    if (params.myPlayer === null) return true;
     const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
 
@@ -550,8 +548,8 @@ export const deleteUnitElement: MenuElement = {
   ],
   action: (params: MenuElementParams) => {
     const DELETE_SELECTION_RADIUS = 5;
-    const myUnits = params
-      .myPlayer!.units()
+    const myUnits = params.myPlayer
+      .units()
       .filter(
         (unit) =>
           params.game.manhattanDist(unit.tile(), params.tile) <=
@@ -593,7 +591,7 @@ export const boatMenuElement: MenuElement = {
   color: COLORS.boat,
 
   action: async (params: MenuElementParams) => {
-    params.playerActionHandler.handleBoatAttack(params.myPlayer!, params.tile);
+    params.playerActionHandler.handleBoatAttack(params.myPlayer, params.tile);
 
     params.closeMenu();
   },
@@ -629,7 +627,7 @@ export const centerButtonElement: CenterButtonElement = {
       if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
         const selectedPlayer = params.selected as PlayerView;
         const ratio = params.uiState?.attackRatio ?? 1;
-        const troopsToDonate = Math.floor(ratio * params.myPlayer!.troops());
+        const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
         if (troopsToDonate > 0) {
           params.playerActionHandler.handleDonateTroops(
             selectedPlayer,
@@ -638,7 +636,7 @@ export const centerButtonElement: CenterButtonElement = {
         }
       } else {
         params.playerActionHandler.handleAttack(
-          params.myPlayer!,
+          params.myPlayer,
           params.selected?.id() ?? null,
         );
       }
@@ -654,9 +652,6 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
-    if (params.myPlayer === null) {
-      return [infoMenuElement];
-    }
     const isAllied = params.selected?.isAlliedWith(params.myPlayer);
     const isDisconnected = isDisconnectedTarget(params);
 
