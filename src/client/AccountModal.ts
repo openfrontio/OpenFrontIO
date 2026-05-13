@@ -7,6 +7,7 @@ import {
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
+import { Cosmetics } from "../core/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -17,7 +18,9 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
+import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { fetchCosmetics } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -28,6 +31,7 @@ export class AccountModal extends BaseModal {
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
+  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -157,6 +161,8 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
 
+          ${this.renderSubscriptionPanel()}
+
           <!-- Middle Row: Stats Section -->
           ${this.hasAnyStats()
             ? html`<div
@@ -190,6 +196,16 @@ export class AccountModal extends BaseModal {
         </div>
       </div>
     `;
+  }
+
+  private renderSubscriptionPanel(): TemplateResult | "" {
+    const sub = this.userMeResponse?.player?.subscription;
+    if (!sub) return "";
+    const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
+    return html`<subscription-panel
+      .sub=${sub}
+      .cosmetic=${cosmetic}
+    ></subscription-panel>`;
   }
 
   private renderCurrency(): TemplateResult {
@@ -376,6 +392,11 @@ export class AccountModal extends BaseModal {
 
   protected onOpen(): void {
     this.isLoadingUser = true;
+
+    void fetchCosmetics().then((cosmetics) => {
+      this.cosmetics = cosmetics;
+      this.requestUpdate();
+    });
 
     void getUserMe()
       .then((userMe) => {

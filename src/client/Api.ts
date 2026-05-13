@@ -169,6 +169,65 @@ export async function createCheckoutSession(
   }
 }
 
+export async function cancelSubscription(): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/subscriptions/@me/cancel`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "cancelSubscription: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("cancelSubscription: request failed", e);
+    return false;
+  }
+}
+
+export async function openSubscriptionPortal(): Promise<string | false> {
+  try {
+    const response = await fetch(`${getApiBase()}/subscriptions/@me/portal`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({
+        returnUrl: window.location.origin,
+      }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "openSubscriptionPortal: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    const json = await response.json();
+    return json.url;
+  } catch (e) {
+    console.error("openSubscriptionPortal: request failed", e);
+    return false;
+  }
+}
+
 export function getApiBase() {
   const domainname = getAudience();
 
