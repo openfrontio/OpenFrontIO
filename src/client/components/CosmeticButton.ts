@@ -79,7 +79,7 @@ export class CosmeticButton extends LitElement {
       const colorClass = isHard ? "text-green-400" : "text-amber-700";
       const currencyKey = isHard ? "cosmetics.hard" : "cosmetics.soft";
       return html`<div
-        class="flex flex-col items-center justify-end h-full w-full text-center gap-1 pb-1"
+        class="relative flex flex-col items-center justify-end h-full w-full text-center gap-1 pb-1"
       >
         ${icon}
         <span class="text-lg font-black ${colorClass}"
@@ -88,6 +88,15 @@ export class CosmeticButton extends LitElement {
         <span class="text-[10px] font-bold text-white/50 uppercase"
           >${translateText(currencyKey)}</span
         >
+        ${pack.bonusAmount > 0
+          ? html`<div
+              class="absolute top-3 -right-8 bg-green-500 text-white text-[10px] font-black px-8 py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
+            >
+              ${translateText("cosmetics.free", {
+                numFree: pack.bonusAmount.toLocaleString(),
+              })}
+            </div>`
+          : nothing}
       </div>`;
     }
 

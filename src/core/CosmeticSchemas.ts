@@ -83,6 +83,7 @@ export const PackSchema = CosmeticSchema.extend({
   displayName: z.string(),
   currency: z.enum(["hard", "soft"]),
   amount: z.number().int().positive(),
+  bonusAmount: z.number().int().nonnegative(),
 });
 
 // Schema for resources/cosmetics/cosmetics.json
