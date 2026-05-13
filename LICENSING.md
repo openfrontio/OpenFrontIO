@@ -113,7 +113,7 @@ The open source license (AGPL) applies ONLY to code. The CC BY-SA license applie
 
 See CONTRIBUTING.md for current licensing requirements. All code contributions are licensed under AGPL v3 and assets under CC BY-SA 4.0.
 
-For questions, contact OpenFront Inc..
+For questions, contact OpenFront Inc.
 
 ## Historical MIT License
 
