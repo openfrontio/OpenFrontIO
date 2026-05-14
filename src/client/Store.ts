@@ -17,7 +17,8 @@ import { translateText } from "./Utils";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
-  @state() private activeTab: "patterns" | "flags" | "packs" = "patterns";
+  @state() private activeTab: "patterns" | "flags" | "packs" | "subscriptions" =
+    "patterns";
 
   private cosmetics: Cosmetics | null = null;
   private isActive = false;
@@ -154,11 +155,45 @@ export class StoreModal extends BaseModal {
     `;
   }
 
+  private renderSubscriptionGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) => r.type === "subscription" && r.relationship === "purchasable",
+    );
+
+    if (items.length === 0) {
+      return html`<div
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.no_subscriptions")}
+      </div>`;
+    }
+
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${purchaseCosmetic}
+            ></cosmetic-button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   render() {
     if (!this.isActive && !this.inline) return html``;
 
     const tabs = [
       { key: "packs", label: translateText("store.packs") },
+      { key: "subscriptions", label: translateText("store.subscriptions") },
       { key: "patterns", label: translateText("store.patterns") },
       { key: "flags", label: translateText("store.flags") },
     ];
@@ -168,7 +203,9 @@ export class StoreModal extends BaseModal {
         ? this.renderPatternGrid()
         : this.activeTab === "flags"
           ? this.renderFlagGrid()
-          : this.renderPackGrid();
+          : this.activeTab === "subscriptions"
+            ? this.renderSubscriptionGrid()
+            : this.renderPackGrid();
 
     return html`
       <o-modal
@@ -180,7 +217,11 @@ export class StoreModal extends BaseModal {
         .tabs=${tabs}
         .activeTab=${this.activeTab}
         .onTabChange=${(key: string) =>
-          (this.activeTab = key as "patterns" | "flags" | "packs")}
+          (this.activeTab = key as
+            | "patterns"
+            | "flags"
+            | "packs"
+            | "subscriptions")}
       >
         <div slot="header">${this.renderHeader()}</div>
         ${grid}

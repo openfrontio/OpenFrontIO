@@ -7,6 +7,7 @@ export type Cosmetics = z.infer<typeof CosmeticsSchema>;
 export type Pattern = z.infer<typeof PatternSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type Pack = z.infer<typeof PackSchema>;
+export type Subscription = z.infer<typeof SubscriptionSchema>;
 export type PatternName = z.infer<typeof CosmeticNameSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ColorPalette = z.infer<typeof ColorPaletteSchema>;
@@ -54,7 +55,7 @@ export const ColorPaletteSchema = z.object({
 
 const CosmeticSchema = z.object({
   name: CosmeticNameSchema,
-  affiliateCode: z.string().nullable(),
+  affiliateCode: z.string().nullable().optional(),
   product: ProductSchema.nullable(),
   priceSoft: z.number().optional(),
   priceHard: z.number().optional(),
@@ -85,12 +86,20 @@ export const PackSchema = CosmeticSchema.extend({
   amount: z.number().int().positive(),
 });
 
+export const SubscriptionSchema = CosmeticSchema.extend({
+  description: z.string(),
+  priceMonthly: z.number(),
+  dailySoftCurrency: z.number(),
+  dailyHardCurrency: z.number(),
+});
+
 // Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({
   colorPalettes: z.record(z.string(), ColorPaletteSchema).optional(),
   patterns: z.record(z.string(), PatternSchema),
   flags: z.record(z.string(), FlagSchema),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
+  subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
 });
 
 export const DefaultPattern = {

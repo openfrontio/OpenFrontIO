@@ -8,6 +8,7 @@ import {
   Pack,
   Pattern,
   Product,
+  Subscription,
 } from "../core/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
@@ -39,6 +40,15 @@ export async function purchaseCosmetic(
   const c = resolved.cosmetic;
   const colorPaletteName = resolved.colorPalette?.name;
 
+  if (resolved.type === "subscription") {
+    const userMe = await getUserMe();
+    const flares = userMe === false ? [] : (userMe.player.flares ?? []);
+    if (flares.some((f) => f.startsWith("subscription:"))) {
+      alert(translateText("store.already_subscribed"));
+      return;
+    }
+  }
+
   if (method === "dollar") {
     if (!c.product) {
       alert(translateText("store.checkout_failed"));
@@ -56,8 +66,18 @@ export async function purchaseCosmetic(
     return;
   }
 
-  // Currency purchase (hard or soft)
-  const price = method === "hard" ? (c.priceHard ?? 0) : (c.priceSoft ?? 0);
+  // Currency purchase (hard or soft) — not valid for subscriptions.
+  if (resolved.type === "subscription") {
+    console.error(
+      "purchaseCosmetic: currency purchase not supported for subscriptions",
+    );
+    return;
+  }
+  // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
+  // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
+  const priced = c as Pattern | Flag | Pack;
+  const price =
+    method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
   const userMe = await getUserMe();
   if (userMe === false) {
     alert(translateText("store.login_required"));
@@ -228,7 +248,7 @@ export function patternRelationship(
       priceSoft: pattern.priceSoft,
       priceHard: pattern.priceHard,
       affiliateCode,
-      itemAffiliateCode: pattern.affiliateCode,
+      itemAffiliateCode: pattern.affiliateCode ?? null,
     },
     userMeResponse,
   );
@@ -247,15 +267,15 @@ export function flagRelationship(
       priceSoft: flag.priceSoft,
       priceHard: flag.priceHard,
       affiliateCode,
-      itemAffiliateCode: flag.affiliateCode,
+      itemAffiliateCode: flag.affiliateCode ?? null,
     },
     userMeResponse,
   );
 }
 
 export type ResolvedCosmetic = {
-  type: "pattern" | "flag" | "pack";
-  cosmetic: Pattern | Flag | Pack | null;
+  type: "pattern" | "flag" | "pack" | "subscription";
+  cosmetic: Pattern | Flag | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
@@ -330,6 +350,25 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `pack:${packKey}`,
+    });
+  }
+
+  // Subscriptions
+  const flares =
+    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
+    const key = `subscription:${subKey}`;
+    const rel = flares.includes(key)
+      ? "owned"
+      : sub.product
+        ? "purchasable"
+        : "blocked";
+    result.push({
+      type: "subscription",
+      cosmetic: sub,
+      colorPalette: null,
+      relationship: rel,
+      key,
     });
   }
 

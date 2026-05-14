@@ -18,7 +18,7 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import "./AccountModal";
-import { getUserMe } from "./Api";
+import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
@@ -656,6 +656,14 @@ class Client {
       const type = params.get("type");
       if (type === "currency_pack") {
         alertAndStrip(translateText("store.currency_pack_purchase_success"));
+        return;
+      }
+
+      if (type === "subscription_tier") {
+        alert(translateText("store.subscription_purchase_success"));
+        strip();
+        invalidateUserMe();
+        window.location.reload();
         return;
       }
 
