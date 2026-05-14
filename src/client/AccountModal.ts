@@ -25,6 +25,8 @@ import { translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
+  protected routerName = "account";
+
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
 

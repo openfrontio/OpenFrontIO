@@ -1,5 +1,6 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
+import { modalRouter } from "../ModalRouter";
 import "./baseComponents/Modal";
 import type { OModalTab } from "./baseComponents/Modal";
 
@@ -56,6 +57,13 @@ export abstract class BaseModal extends LitElement {
   protected modalConfig(): ModalConfig {
     return {};
   }
+
+  /**
+   * Optional router name. When set, BaseModal syncs URL state on open/close/
+   * tab change as `#modal=<routerName>&tab=<key>&...`. Modals that own their
+   * own URL state (e.g. lobby modals) should leave this undefined.
+   */
+  protected routerName?: string;
 
   /** Render slot="header" content. Default: no header slot. */
   protected renderHeaderSlot(): TemplateResult | null {
@@ -149,19 +157,24 @@ export abstract class BaseModal extends LitElement {
       if (tabs.length && this.activeTab === "") {
         this.activeTab = tabs[0].key;
       }
-      if (
-        typeof args?.tab === "string" &&
-        tabs.some((t) => t.key === args.tab)
-      ) {
-        this.activeTab = args.tab;
-      }
+      const requestedTab =
+        typeof args?.tab === "string" && tabs.some((t) => t.key === args.tab)
+          ? args.tab
+          : null;
 
       const wasOpen = this.isModalOpen;
       if (!wasOpen) {
+        if (requestedTab) this.activeTab = requestedTab;
         this.registerEscapeHandler();
+        this.onOpen(args);
+        if (this.activeTab) this.onTabEnter(this.activeTab);
+      } else {
+        this.onOpen(args);
+        // Already open: route tab changes through setActiveTab so URL syncs.
+        if (requestedTab && requestedTab !== this.activeTab) {
+          this.setActiveTab(requestedTab);
+        }
       }
-      this.onOpen(args);
-      if (this.activeTab) this.onTabEnter(this.activeTab);
 
       if (wasOpen) return;
 
@@ -175,6 +188,10 @@ export abstract class BaseModal extends LitElement {
         this.style.pointerEvents = "auto";
       } else {
         this.modalEl?.open();
+      }
+
+      if (this.routerName) {
+        modalRouter.syncOpened(this.routerName, args);
       }
     } finally {
       this.opening = false;
@@ -193,6 +210,10 @@ export abstract class BaseModal extends LitElement {
     } else {
       this.modalEl?.close();
     }
+
+    if (this.routerName) {
+      modalRouter.syncClosed(this.routerName);
+    }
   }
 
   // ---- Tab management ----
@@ -204,6 +225,9 @@ export abstract class BaseModal extends LitElement {
     if (this.activeTab === key) return;
     this.activeTab = key;
     this.onTabEnter(key);
+    if (this.routerName) {
+      modalRouter.syncTab(this.routerName, key);
+    }
   }
 
   // ---- Internals ----

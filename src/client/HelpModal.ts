@@ -11,6 +11,8 @@ import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
+  protected routerName = "help";
+
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 

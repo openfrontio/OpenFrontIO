@@ -29,6 +29,8 @@ function countryFlag(name: string, code: string): Flag {
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends BaseModal {
+  protected routerName = "flag-input";
+
   @state() private search = "";
   @state() private cosmetics: Cosmetics | null = null;
   @state() private userMe: UserMeResponse | false = false;

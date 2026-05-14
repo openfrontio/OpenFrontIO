@@ -43,6 +43,7 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
@@ -268,6 +269,50 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+
+    // Register modals with the URL router. Lobby modals (join/host) and
+    // matchmaking are intentionally omitted — they own their own URL state
+    // (path-based) or none at all.
+    modalRouter.register("store", {
+      tag: "store-modal",
+      pageId: "page-item-store",
+    });
+    modalRouter.register("settings", {
+      tag: "user-setting",
+      pageId: "page-settings",
+    });
+    modalRouter.register("leaderboard", {
+      tag: "leaderboard-modal",
+      pageId: "page-leaderboard",
+    });
+    modalRouter.register("clan", { tag: "clan-modal", pageId: "page-clan" });
+    modalRouter.register("account", {
+      tag: "account-modal",
+      pageId: "page-account",
+    });
+    modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
+    modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
+    modalRouter.register("language", {
+      tag: "language-modal",
+      pageId: "page-language",
+    });
+    modalRouter.register("single-player", {
+      tag: "single-player-modal",
+      pageId: "page-single-player",
+    });
+    modalRouter.register("ranked", {
+      tag: "ranked-modal",
+      pageId: "page-ranked",
+    });
+    modalRouter.register("troubleshooting", {
+      tag: "troubleshooting-modal",
+      pageId: "page-troubleshooting",
+    });
+    modalRouter.register("territory-patterns", {
+      tag: "territory-patterns-modal",
+    });
+    modalRouter.register("flag-input", { tag: "flag-input-modal" });
+
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -525,6 +570,13 @@ class Client {
     }
 
     const onHashUpdate = () => {
+      // Router-managed hash changes (#modal=...) are handled by the router
+      // syncing in/out; we don't need to tear down the lobby state for them.
+      if (modalRouter.isHashRouted()) {
+        modalRouter.routeFromHash();
+        return;
+      }
+
       // Reset the UI to its initial state
       this.joinModal?.close();
 
@@ -723,6 +775,9 @@ class Client {
       window.showPage?.("page-join-lobby");
       this.joinModal.open({ lobbyId });
       console.log(`joining lobby ${lobbyId}`);
+      return;
+    }
+    if (modalRouter.routeFromHash()) {
       return;
     }
     if (decodedHash.startsWith("#affiliate=")) {

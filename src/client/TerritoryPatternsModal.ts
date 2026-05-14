@@ -24,6 +24,7 @@ import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends BaseModal {
+  protected routerName = "territory-patterns";
   public previewButton: HTMLElement | null = null;
 
   @state() private selectedPattern: PlayerPattern | null;

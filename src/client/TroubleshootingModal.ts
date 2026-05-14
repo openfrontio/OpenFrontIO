@@ -12,6 +12,8 @@ const infoIcon = assetUrl("images/InfoIcon.svg");
 
 @customElement("troubleshooting-modal")
 export class TroubleshootingModal extends BaseModal {
+  protected routerName = "troubleshooting";
+
   @property({ type: String }) markdown = "Loading...";
 
   @property({ type: Object })

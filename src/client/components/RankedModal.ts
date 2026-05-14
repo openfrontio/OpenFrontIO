@@ -9,6 +9,8 @@ import { modalHeader } from "./ui/ModalHeader";
 
 @customElement("ranked-modal")
 export class RankedModal extends BaseModal {
+  protected routerName = "ranked";
+
   @state() private elo: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;

@@ -89,6 +89,10 @@ export async function purchaseCosmetic(
       : (userMe.player.currency?.soft ?? 0);
   if (balance < price) {
     alert(translateText("store.not_enough_currency"));
+    if (method === "hard") {
+      // Send the user to the packs tab so they can top up plutonium.
+      window.location.hash = "#modal=store&tab=packs";
+    }
     return;
   }
 
