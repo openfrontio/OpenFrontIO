@@ -13,20 +13,10 @@ let other: Player;
 
 describe("PlayerImpl", () => {
   beforeEach(async () => {
-    game = await setup(
-      "plains",
-      {
-        instantBuild: true,
-      },
-      [
-        new PlayerInfo("player", PlayerType.Human, null, "player_id"),
-        new PlayerInfo("other", PlayerType.Human, null, "other_id"),
-      ],
-    );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("player", PlayerType.Human, null, "player_id"),
+      new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+    ]);
 
     player = game.player("player_id");
     other = game.player("other_id");

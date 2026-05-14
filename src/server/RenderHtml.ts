@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import { buildAssetUrl } from "../core/AssetUrls";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
+import { ServerEnv } from "./ServerEnv";
 
 const APP_SHELL_CACHE_CONTROL =
   "public, max-age=0, s-maxage=300, stale-while-revalidate=86400";
@@ -13,9 +14,9 @@ const appShellContentCache = new Map<string, Promise<string>>();
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
   const assetManifest = await getRuntimeAssetManifest();
-  const cdnBase = process.env.CDN_BASE ?? "";
+  const cdnBase = ServerEnv.cdnBase();
   return ejs.render(htmlContent, {
-    gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
+    gitCommit: JSON.stringify(ServerEnv.gitCommit()),
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     // Raw (unquoted) value for use as a URL prefix in the index.html template,
@@ -23,7 +24,11 @@ export async function renderHtmlContent(htmlPath: string): Promise<string> {
     // build plugin inject-cdn-base-template rewrites Vite's emitted /assets/
     // refs to use this placeholder.
     cdnBaseRaw: cdnBase,
-    gameEnv: JSON.stringify(process.env.GAME_ENV ?? "dev"),
+    gameEnv: JSON.stringify(ServerEnv.gameEnvName()),
+    numWorkers: JSON.stringify(ServerEnv.numWorkers()),
+    turnstileSiteKey: JSON.stringify(ServerEnv.turnstileSiteKey()),
+    jwtAudience: JSON.stringify(ServerEnv.jwtAudience()),
+    instanceId: JSON.stringify(ServerEnv.instanceId()),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(

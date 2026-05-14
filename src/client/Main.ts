@@ -1,4 +1,5 @@
 import version from "resources/version.txt?raw";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
@@ -10,7 +11,6 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   DARK_MODE_KEY,
@@ -65,6 +65,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -169,7 +170,6 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 
 declare global {
   interface Window {
-    GIT_COMMIT: string;
     turnstile: any;
     adsEnabled: boolean;
     PageOS: {
@@ -770,16 +770,14 @@ class Client {
     if (lobby.source === "public") {
       this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const config = await getRuntimeClientServerConfig();
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
-      this.updateJoinUrlForShare(lobby.gameID, config);
+      this.updateJoinUrlForShare(lobby.gameID);
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
@@ -881,7 +879,7 @@ class Client {
         "",
         lobbyIdHidden
           ? "/streamer-mode"
-          : `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
       );
 
       // Store current URL for popstate confirmation
@@ -889,14 +887,11 @@ class Client {
     });
   }
 
-  private updateJoinUrlForShare(
-    lobbyId: string,
-    config: Awaited<ReturnType<typeof getRuntimeClientServerConfig>>,
-  ) {
+  private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     const targetUrl = lobbyIdHidden
       ? "/streamer-mode"
-      : `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
+      : `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
     const currentUrl = window.location.pathname;
 
     if (currentUrl !== targetUrl) {
@@ -970,9 +965,8 @@ class Client {
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
   ): Promise<string | null> {
-    const config = await getRuntimeClientServerConfig();
     if (
-      config.env() === GameEnv.Dev ||
+      ClientEnv.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;
@@ -1015,6 +1009,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
+  // on iOS and can softlock the HUD. See issue #2330.
+  installSafariPinchZoomBlocker();
+
   initLayout();
   new Client().initialize();
   initNavigation();
@@ -1048,9 +1046,8 @@ async function getTurnstileToken(): Promise<{
     throw new Error("Failed to load Turnstile script");
   }
 
-  const config = await getRuntimeClientServerConfig();
   const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
+    sitekey: ClientEnv.turnstileSiteKey(),
     size: "normal",
     appearance: "interaction-only",
     theme: "light",

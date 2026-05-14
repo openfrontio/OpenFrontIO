@@ -60,11 +60,15 @@
 
     <!-- Injected from Server env -->
     <script>
-      window.GIT_COMMIT = <%- gitCommit %>;
-      window.ASSET_MANIFEST = <%- assetManifest %>;
-      window.CDN_BASE = <%- cdnBase %>;
       window.BOOTSTRAP_CONFIG = {
+        gitCommit: <%- gitCommit %>,
+        assetManifest: <%- assetManifest %>,
+        cdnBase: <%- cdnBase %>,
         gameEnv: <%- gameEnv %>,
+        numWorkers: <%- numWorkers %>,
+        turnstileSiteKey: <%- turnstileSiteKey %>,
+        jwtAudience: <%- jwtAudience %>,
+        instanceId: <%- instanceId %>,
       };
       document.documentElement.style.setProperty(
         "--background-image-url",

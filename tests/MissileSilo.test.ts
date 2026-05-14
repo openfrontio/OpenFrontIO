@@ -50,10 +50,6 @@ describe("MissileSilo", () => {
       ),
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     attacker = game.player("attacker_id");
 
     constructionExecution(game, attacker, 1, 1, UnitType.MissileSilo);
