@@ -29,6 +29,8 @@ type View =
 
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
+  protected routerName = "clan";
+
   @state() private view: View = "list";
   @state() private loading = false;
 

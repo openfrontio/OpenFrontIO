@@ -10,6 +10,8 @@ import { translateText } from "./Utils";
 
 @customElement("leaderboard-modal")
 export class LeaderboardModal extends BaseModal {
+  protected routerName = "leaderboard";
+
   @state()
   private clanDateRange: { start: string; end: string } | null = null;
 

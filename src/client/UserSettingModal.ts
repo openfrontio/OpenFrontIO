@@ -14,6 +14,7 @@ import { Platform } from "./Platform";
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  protected routerName = "settings";
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 

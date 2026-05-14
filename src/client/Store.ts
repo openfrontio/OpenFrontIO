@@ -19,6 +19,7 @@ type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
+  protected routerName = "store";
   private cosmetics: Cosmetics | null = null;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;

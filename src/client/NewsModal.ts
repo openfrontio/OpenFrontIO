@@ -10,6 +10,8 @@ import { normalizeNewsMarkdown } from "./NewsMarkdown";
 
 @customElement("news-modal")
 export class NewsModal extends BaseModal {
+  protected routerName = "news";
+
   @property({ type: String }) markdown = "Loading...";
 
   private initialized: boolean = false;

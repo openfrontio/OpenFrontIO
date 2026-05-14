@@ -14,6 +14,8 @@ interface LanguageOption {
 
 @customElement("language-modal")
 export class LanguageModal extends BaseModal {
+  protected routerName = "language";
+
   @property({ type: Array }) languageList: LanguageOption[] = [];
   @property({ type: String }) currentLang = "en";
 

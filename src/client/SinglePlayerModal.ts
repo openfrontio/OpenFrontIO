@@ -63,6 +63,8 @@ const DEFAULT_OPTIONS = {
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
+  protected routerName = "single-player";
+
   @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
   @state() private selectedDifficulty: Difficulty =
     DEFAULT_OPTIONS.selectedDifficulty;
