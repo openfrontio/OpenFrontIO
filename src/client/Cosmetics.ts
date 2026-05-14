@@ -248,7 +248,7 @@ export function patternRelationship(
       priceSoft: pattern.priceSoft,
       priceHard: pattern.priceHard,
       affiliateCode,
-      itemAffiliateCode: pattern.affiliateCode,
+      itemAffiliateCode: pattern.affiliateCode ?? null,
     },
     userMeResponse,
   );
@@ -267,7 +267,7 @@ export function flagRelationship(
       priceSoft: flag.priceSoft,
       priceHard: flag.priceHard,
       affiliateCode,
-      itemAffiliateCode: flag.affiliateCode,
+      itemAffiliateCode: flag.affiliateCode ?? null,
     },
     userMeResponse,
   );

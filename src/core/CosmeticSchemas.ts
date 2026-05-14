@@ -55,7 +55,7 @@ export const ColorPaletteSchema = z.object({
 
 const CosmeticSchema = z.object({
   name: CosmeticNameSchema,
-  affiliateCode: z.string().nullable(),
+  affiliateCode: z.string().nullable().optional(),
   product: ProductSchema.nullable(),
   priceSoft: z.number().optional(),
   priceHard: z.number().optional(),
@@ -86,16 +86,11 @@ export const PackSchema = CosmeticSchema.extend({
   amount: z.number().int().positive(),
 });
 
-export const SubscriptionSchema = z.object({
-  name: CosmeticNameSchema,
+export const SubscriptionSchema = CosmeticSchema.extend({
   description: z.string(),
   priceMonthly: z.number(),
   dailySoftCurrency: z.number(),
   dailyHardCurrency: z.number(),
-  rarity: z
-    .enum(["common", "uncommon", "rare", "epic", "legendary"])
-    .or(z.string()),
-  product: ProductSchema.nullable(),
 });
 
 // Schema for resources/cosmetics/cosmetics.json
