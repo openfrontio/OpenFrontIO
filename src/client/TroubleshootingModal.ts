@@ -3,7 +3,6 @@ import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../core/AssetUrls";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
-import "./components/baseComponents/Modal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   collectGraphicsDiagnostics,
@@ -29,140 +28,117 @@ export class TroubleshootingModal extends BaseModal {
     this.initialized = true;
   }
 
-  render() {
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          titleContent: html` <div
-            class="w-full flex flex-col sm:flex-row justify-between gap-2"
-          >
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              <a
-                class="hover:text-blue-200 text-blue-400 cursor-pointer"
-                @click=${this.close}
-                >${translateText("main.help")}</a
-              >
-              / ${translateText("troubleshooting.title")}
-            </span>
-            <o-button
-              variant="primary"
-              size="sm"
-              translationKey="common.copy"
-              @click=${this.copyDiagnostics}
-            ></o-button>
-          </div>`,
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        ${this.loading
-          ? ""
-          : html`
-              <div
-                class="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
-              >
-                ${this.section(
-                  "",
-                  html`${this.infoTip(
-                    translateText("troubleshooting.hardware_acceleration_tip"),
-                    true,
-                  )}`,
-                )}
-                ${this.section(
-                  translateText("troubleshooting.environment"),
-                  html`
-                    ${this.row(
-                      translateText("troubleshooting.browser"),
-                      this.diagnostics!.browser.engine,
-                    )}
-                    ${this.row(
-                      translateText("troubleshooting.platform"),
-                      this.diagnostics!.browser.platform,
-                    )}
-                    ${this.row(
-                      translateText("troubleshooting.os"),
-                      this.diagnostics!.browser.os,
-                    )}
-                    ${this.row(
-                      translateText("troubleshooting.device_pixel_ratio"),
-                      this.diagnostics!.browser.dpr,
-                    )}
-                    ${this.infoTip(
-                      translateText("troubleshooting.chromium_tip"),
-                    )}
-                  `,
-                )}
-                ${this.section(
-                  translateText("troubleshooting.rendering"),
-                  html`
-                    ${this.row(
-                      translateText("troubleshooting.renderer"),
-                      this.describeRenderer(this.diagnostics!.rendering),
-                    )}
-                    ${this.row(
-                      translateText("troubleshooting.max_texture_size"),
-                      this.diagnostics!.rendering.maxTextureSize ??
-                        translateText("troubleshooting.unknown"),
-                    )}
-                    ${this.row(
-                      translateText("troubleshooting.high_precision_shaders"),
-                      this.diagnostics!.rendering.shaderHighp === true
-                        ? translateText("troubleshooting.yes")
-                        : translateText("troubleshooting.no"),
-                    )}${this.row(
-                      translateText("troubleshooting.gpu"),
-                      !this.diagnostics!.rendering.gpu ||
-                        this.diagnostics!.rendering.gpu.unavailable
-                        ? translateText("troubleshooting.unavailable")
-                        : `${this.diagnostics!.rendering.gpu.vendor} — ${this.diagnostics!.rendering.gpu.renderer}`,
-                    )}
-                    ${this.infoTip(translateText("troubleshooting.gpu_tip"))}
-                  `,
-                )}
-                ${this.section(
-                  translateText("troubleshooting.power"),
-                  html`
-                    ${this.diagnostics!.power.unavailable
-                      ? this.row(
-                          translateText("troubleshooting.battery"),
-                          translateText("troubleshooting.unavailable"),
-                        )
-                      : html`
-                          ${this.row(
-                            translateText("troubleshooting.charging"),
-                            this.diagnostics!.power.charging
-                              ? translateText("troubleshooting.yes")
-                              : translateText("troubleshooting.no"),
-                          )}
-                          ${this.row(
-                            translateText("troubleshooting.battery_level"),
-                            this.diagnostics!.power.level,
-                          )}
-                        `}
-                    ${this.infoTip(
-                      translateText("troubleshooting.power_saving_tip"),
-                    )}
-                  `,
-                )}
-              </div>
-            `}
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        title=${translateText("troubleshooting.title")}
-        ?inline=${this.inline}
-        hideCloseButton
-        hideHeader
+  protected renderHeaderSlot() {
+    return modalHeader({
+      titleContent: html` <div
+        class="w-full flex flex-col sm:flex-row justify-between gap-2"
       >
-        ${content}
-      </o-modal>
+        <span
+          class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
+        >
+          <a
+            class="hover:text-blue-200 text-blue-400 cursor-pointer"
+            @click=${this.close}
+            >${translateText("main.help")}</a
+          >
+          / ${translateText("troubleshooting.title")}
+        </span>
+        <o-button
+          variant="primary"
+          size="sm"
+          translationKey="common.copy"
+          @click=${this.copyDiagnostics}
+        ></o-button>
+      </div>`,
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
+    if (this.loading) return html``;
+    return html`
+      <div class="px-1">
+        ${this.section(
+          "",
+          html`${this.infoTip(
+            translateText("troubleshooting.hardware_acceleration_tip"),
+            true,
+          )}`,
+        )}
+        ${this.section(
+          translateText("troubleshooting.environment"),
+          html`
+            ${this.row(
+              translateText("troubleshooting.browser"),
+              this.diagnostics!.browser.engine,
+            )}
+            ${this.row(
+              translateText("troubleshooting.platform"),
+              this.diagnostics!.browser.platform,
+            )}
+            ${this.row(
+              translateText("troubleshooting.os"),
+              this.diagnostics!.browser.os,
+            )}
+            ${this.row(
+              translateText("troubleshooting.device_pixel_ratio"),
+              this.diagnostics!.browser.dpr,
+            )}
+            ${this.infoTip(translateText("troubleshooting.chromium_tip"))}
+          `,
+        )}
+        ${this.section(
+          translateText("troubleshooting.rendering"),
+          html`
+            ${this.row(
+              translateText("troubleshooting.renderer"),
+              this.describeRenderer(this.diagnostics!.rendering),
+            )}
+            ${this.row(
+              translateText("troubleshooting.max_texture_size"),
+              this.diagnostics!.rendering.maxTextureSize ??
+                translateText("troubleshooting.unknown"),
+            )}
+            ${this.row(
+              translateText("troubleshooting.high_precision_shaders"),
+              this.diagnostics!.rendering.shaderHighp === true
+                ? translateText("troubleshooting.yes")
+                : translateText("troubleshooting.no"),
+            )}${this.row(
+              translateText("troubleshooting.gpu"),
+              !this.diagnostics!.rendering.gpu ||
+                this.diagnostics!.rendering.gpu.unavailable
+                ? translateText("troubleshooting.unavailable")
+                : `${this.diagnostics!.rendering.gpu.vendor} — ${this.diagnostics!.rendering.gpu.renderer}`,
+            )}
+            ${this.infoTip(translateText("troubleshooting.gpu_tip"))}
+          `,
+        )}
+        ${this.section(
+          translateText("troubleshooting.power"),
+          html`
+            ${this.diagnostics!.power.unavailable
+              ? this.row(
+                  translateText("troubleshooting.battery"),
+                  translateText("troubleshooting.unavailable"),
+                )
+              : html`
+                  ${this.row(
+                    translateText("troubleshooting.charging"),
+                    this.diagnostics!.power.charging
+                      ? translateText("troubleshooting.yes")
+                      : translateText("troubleshooting.no"),
+                  )}
+                  ${this.row(
+                    translateText("troubleshooting.battery_level"),
+                    this.diagnostics!.power.level,
+                  )}
+                `}
+            ${this.infoTip(translateText("troubleshooting.power_saving_tip"))}
+          `,
+        )}
+      </div>
     `;
   }
 
@@ -237,13 +213,13 @@ export class TroubleshootingModal extends BaseModal {
   }
 
   public close(): void {
+    // Override BaseModal.close() to navigate back to Help (this modal is
+    // opened from inside HelpModal), not to page-play like other inline modals.
     this.unregisterEscapeHandler();
-
+    this.onClose();
     if (this.inline) {
       this.style.pointerEvents = "none";
-      if (window.showPage) {
-        window.showPage?.("page-help");
-      }
+      window.showPage?.("page-help");
     } else {
       this.modalEl?.close();
     }

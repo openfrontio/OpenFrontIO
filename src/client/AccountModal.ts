@@ -64,71 +64,43 @@ export class AccountModal extends BaseModal {
     );
   }
 
-  render() {
-    const content = this.isLoadingUser
-      ? this.renderLoadingSpinner(
-          translateText("account_modal.fetching_account"),
-        )
-      : this.renderInner();
-
-    if (this.inline) {
-      return this.isLoadingUser
-        ? html`<div class="${this.modalContainerClass}">
-            ${modalHeader({
-              title: translateText("account_modal.title"),
-              onBack: () => this.close(),
-              ariaLabel: translateText("common.back"),
-            })}
-            ${content}
-          </div>`
-        : content;
-    }
-
-    return html`
-      <o-modal
-        id="account-modal"
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
-    `;
-  }
-
-  private renderInner() {
+  protected renderHeaderSlot() {
     const isLoggedIn = !!this.userMeResponse?.user;
-    const title = translateText("account_modal.title");
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
+    return modalHeader({
+      title: translateText("account_modal.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      rightContent:
+        isLoggedIn && !this.isLoadingUser
+          ? html`
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
+                  >${translateText("account_modal.public_player_id")}</span
+                >
+                <copy-button
+                  .lobbyId=${publicId}
+                  .copyText=${publicId}
+                  .displayText=${displayId}
+                ></copy-button>
+              </div>
+            `
+          : undefined,
+    });
+  }
 
+  protected renderBody() {
+    if (this.isLoadingUser) {
+      return this.renderLoadingSpinner(
+        translateText("account_modal.fetching_account"),
+      );
+    }
+    const isLoggedIn = !!this.userMeResponse?.user;
     return html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title,
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-          rightContent: isLoggedIn
-            ? html`
-                <div class="flex items-center gap-2">
-                  <span
-                    class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                    >${translateText("account_modal.public_player_id")}</span
-                  >
-                  <copy-button
-                    .lobbyId=${publicId}
-                    .copyText=${publicId}
-                    .displayText=${displayId}
-                  ></copy-button>
-                </div>
-              `
-            : undefined,
-        })}
-
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
-        </div>
+      <div class="custom-scrollbar mr-1">
+        ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
       </div>
     `;
   }

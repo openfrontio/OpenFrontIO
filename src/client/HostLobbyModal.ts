@@ -150,7 +150,25 @@ export class HostLobbyModal extends BaseModal {
     this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("host_modal.title"),
+      onBack: () => {
+        this.leaveLobbyOnClose = true;
+        this.close();
+      },
+      ariaLabel: translateText("common.back"),
+      rightContent: html`
+        <copy-button
+          .lobbyId=${this.lobbyId}
+          .lobbySuffix=${this.lobbyUrlSuffix}
+          include-lobby-query
+        ></copy-button>
+      `,
+    });
+  }
+
+  protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
         .labelKey=${"host_modal.max_timer"}
@@ -258,28 +276,9 @@ export class HostLobbyModal extends BaseModal {
       ></toggle-input-card>`,
     ];
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <!-- Header -->
-        ${modalHeader({
-          title: translateText("host_modal.title"),
-          onBack: () => {
-            this.leaveLobbyOnClose = true;
-            this.close();
-          },
-          ariaLabel: translateText("common.back"),
-          rightContent: html`
-            <copy-button
-              .lobbyId=${this.lobbyId}
-              .lobbySuffix=${this.lobbyUrlSuffix}
-              include-lobby-query
-            ></copy-button>
-          `,
-        })}
-
-        <div
-          class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
-        >
+    return html`
+      <div class="flex flex-col h-full">
+        <div class="flex-1 p-6 mx-auto w-full max-w-5xl">
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-10"}
@@ -415,21 +414,6 @@ export class HostLobbyModal extends BaseModal {
           ></o-button>
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
     `;
   }
 

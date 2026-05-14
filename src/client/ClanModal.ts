@@ -18,7 +18,6 @@ import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
-type Tab = "my-clans" | "browse";
 type View =
   | "list"
   | "detail"
@@ -30,7 +29,6 @@ type View =
 
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
-  @state() private activeTab: Tab = "my-clans";
   @state() private view: View = "list";
   @state() private loading = false;
 
@@ -59,36 +57,42 @@ export class ClanModal extends BaseModal {
     stats: ClanStats | null;
   } | null = null;
 
-  render() {
-    const onListView = this.view === "list" && !this.selectedClanTag;
-    const tabs = onListView
-      ? [
-          { key: "my-clans", label: translateText("clan_modal.my_clans") },
-          { key: "browse", label: translateText("clan_modal.browse") },
-        ]
-      : [];
-    const header = onListView
+  private get onListView(): boolean {
+    return this.view === "list" && !this.selectedClanTag;
+  }
+
+  protected modalConfig() {
+    return {
+      tabs: this.onListView
+        ? [
+            { key: "my-clans", label: translateText("clan_modal.my_clans") },
+            { key: "browse", label: translateText("clan_modal.browse") },
+          ]
+        : [],
+    };
+  }
+
+  protected renderHeaderSlot() {
+    return this.onListView
       ? modalHeader({
           title: translateText("clan_modal.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })
       : this.renderSubViewHeader();
-    return html`
-      <o-modal
-        id="clan-modal"
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-        .tabs=${tabs}
-        .activeTab=${this.activeTab}
-        .onTabChange=${(key: string) => this.handleTabChange(key as Tab)}
-      >
-        ${header ? html`<div slot="header">${header}</div>` : ""}
-        <div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>
-      </o-modal>
-    `;
+  }
+
+  protected renderBody() {
+    return html`<div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>`;
+  }
+
+  protected onTabEnter(tab: string): void {
+    this.view = "list";
+    this.selectedClan = null;
+    this.selectedClanTag = "";
+    if (tab === "my-clans") {
+      this.loadMyClans();
+    }
   }
 
   private tagPill(tag: string) {
@@ -150,16 +154,6 @@ export class ClanModal extends BaseModal {
       ariaLabel,
       rightContent: clan ? this.tagPill(clan.tag) : undefined,
     });
-  }
-
-  private handleTabChange(tab: Tab) {
-    this.activeTab = tab;
-    this.view = "list";
-    this.selectedClan = null;
-    this.selectedClanTag = "";
-    if (tab === "my-clans") {
-      this.loadMyClans();
-    }
   }
 
   protected onOpen(): void {

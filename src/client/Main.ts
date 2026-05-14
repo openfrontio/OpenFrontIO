@@ -611,7 +611,7 @@ class Client {
         // On low end-chromebooks the join modal was not registered in time.
         await new Promise((resolve) => setTimeout(resolve, 2000));
         window.showPage?.("page-join-lobby");
-        this.joinModal?.open(lobbyId);
+        this.joinModal?.open({ lobbyId });
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
@@ -721,7 +721,7 @@ class Client {
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
       window.showPage?.("page-join-lobby");
-      this.joinModal.open(lobbyId);
+      this.joinModal.open({ lobbyId });
       console.log(`joining lobby ${lobbyId}`);
       return;
     }
@@ -729,7 +729,7 @@ class Client {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.storeModal?.open(affiliateCode);
+        this.storeModal?.open({ affiliateCode });
       }
     }
     if (decodedHash.startsWith("#refresh")) {
@@ -776,7 +776,10 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
-      this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
+      this.joinModal?.open({
+        lobbyId: lobby.gameID,
+        lobbyInfo: lobby.publicLobbyInfo,
+      });
     }
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
