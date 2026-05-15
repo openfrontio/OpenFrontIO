@@ -196,6 +196,40 @@ export async function cancelSubscription(): Promise<boolean> {
   }
 }
 
+export async function changeSubscriptionTier(
+  tierName: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/subscriptions/@me/change-tier`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: await getAuthHeader(),
+        },
+        body: JSON.stringify({ tierName }),
+      },
+    );
+    if (response.status === 401) {
+      await logOut();
+      return false;
+    }
+    if (!response.ok) {
+      console.error(
+        "changeSubscriptionTier: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("changeSubscriptionTier: request failed", e);
+    return false;
+  }
+}
+
 export async function openSubscriptionPortal(): Promise<string | false> {
   try {
     const response = await fetch(`${getApiBase()}/subscriptions/@me/portal`, {

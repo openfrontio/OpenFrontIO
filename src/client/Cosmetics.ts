@@ -17,6 +17,7 @@ import {
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
 import {
+  changeSubscriptionTier,
   createCheckoutSession,
   getApiBase,
   getUserMe,
@@ -41,10 +42,41 @@ export async function purchaseCosmetic(
   const colorPaletteName = resolved.colorPalette?.name;
 
   if (resolved.type === "subscription") {
+    const sub = c as Subscription;
     const userMe = await getUserMe();
-    const flares = userMe === false ? [] : (userMe.player.flares ?? []);
-    if (flares.some((f) => f.startsWith("subscription:"))) {
-      alert(translateText("store.already_subscribed"));
+    const currentSub =
+      userMe === false ? null : (userMe.player.subscription ?? null);
+
+    if (currentSub) {
+      if (currentSub.tier === sub.name) {
+        alert(translateText("store.already_subscribed"));
+        return;
+      }
+
+      // Direction-aware confirm based on priceMonthly. We don't have the
+      // server's sortOrder client-side — priceMonthly is a good proxy.
+      const currentCosmetic =
+        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const isUpgrade =
+        currentCosmetic !== null
+          ? sub.priceMonthly > currentCosmetic.priceMonthly
+          : true;
+      const targetName = translateCosmetic("subscriptions", sub.name);
+      const confirmKey = isUpgrade
+        ? "store.confirm_upgrade"
+        : "store.confirm_downgrade";
+      const confirmed = window.confirm(
+        translateText(confirmKey, { tier: targetName }),
+      );
+      if (!confirmed) return;
+
+      const ok = await changeSubscriptionTier(sub.name);
+      if (!ok) {
+        alert(translateText("store.change_tier_failed"));
+        return;
+      }
+      alert(translateText("store.change_tier_success", { tier: targetName }));
+      window.location.reload();
       return;
     }
   }
@@ -360,9 +392,14 @@ export function resolveCosmetics(
   // Subscriptions
   const flares =
     userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  const currentSubTier =
+    userMeResponse === false
+      ? null
+      : (userMeResponse.player.subscription?.tier ?? null);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    const rel = flares.includes(key)
+    const isCurrent = subKey === currentSubTier || flares.includes(key);
+    const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
       : sub.product
         ? "purchasable"

@@ -13,6 +13,7 @@ import "./CosmeticContainer";
 import "./CosmeticInfo";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
+import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 
 @customElement("cosmetic-button")
 export class CosmeticButton extends LitElement {
@@ -27,6 +28,10 @@ export class CosmeticButton extends LitElement {
 
   @property({ type: Function })
   onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
+
+  /** True if the user already has a subscription (any tier). */
+  @property({ type: Boolean })
+  userHasSubscription: boolean = false;
 
   createRenderRoot() {
     return this;
@@ -151,6 +156,16 @@ export class CosmeticButton extends LitElement {
     const isPurchasable = this.resolved.relationship === "purchasable";
     const type = this.resolved.type;
     const isPattern = type === "pattern";
+    const isOwnedSubscription =
+      type === "subscription" && this.resolved.relationship === "owned";
+    const dollarLabelKey =
+      type === "subscription"
+        ? this.userHasSubscription
+          ? "store.switch_button"
+          : "store.subscribe_button"
+        : DEFAULT_DOLLAR_LABEL_KEY;
+    const priceSuffix =
+      type === "subscription" ? translateText("store.price_per_month") : "";
     const sizeClass = type === "flag" ? "gap-1 p-1.5 w-36" : "gap-2 p-3 w-48";
     const crazygamesClass = isPattern ? "no-crazygames " : "";
 
@@ -162,6 +177,8 @@ export class CosmeticButton extends LitElement {
         .product=${isPurchasable && c?.product ? c.product : null}
         .priceHard=${isPurchasable ? (priceHard ?? null) : null}
         .priceSoft=${isPurchasable ? (priceSoft ?? null) : null}
+        .dollarLabelKey=${dollarLabelKey}
+        .priceSuffix=${priceSuffix}
         .onPurchaseDollar=${isPurchasable && c?.product
           ? () => this.onPurchase?.(this.resolved, "dollar")
           : undefined}
@@ -194,6 +211,13 @@ export class CosmeticButton extends LitElement {
             ${this.renderPreview()}
           </div>
         </button>
+        ${isOwnedSubscription
+          ? html`<div
+              class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"
+            >
+              ${translateText("store.current_plan")}
+            </div>`
+          : nothing}
       </cosmetic-container>
     `;
   }
