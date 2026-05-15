@@ -58,6 +58,7 @@ export class ClanModal extends BaseModal {
     pendingRequestCount: number;
     stats: ClanStats | null;
   } | null = null;
+  private openGeneration = 0;
 
   private get onListView(): boolean {
     return this.view === "list" && !this.selectedClanTag;
@@ -158,7 +159,12 @@ export class ClanModal extends BaseModal {
     });
   }
 
-  protected onOpen(): void {
+  protected onOpen(args?: Record<string, unknown>): void {
+    const clanTag = typeof args?.clan === "string" ? args.clan.trim() : "";
+    if (clanTag) {
+      void this.openInitialView(clanTag);
+      return;
+    }
     this.loadMyClans();
   }
 
@@ -170,6 +176,14 @@ export class ClanModal extends BaseModal {
     this.myRole = null;
     this.browseCache = null;
     this.detailCache = null;
+    this.openGeneration++;
+  }
+
+  private async openInitialView(clanTag: string) {
+    const generation = ++this.openGeneration;
+    await this.loadMyClans();
+    if (generation !== this.openGeneration || !this.isModalOpen) return;
+    this.openDetail(clanTag);
   }
 
   private async loadMyClans() {
