@@ -22,10 +22,10 @@ export const BoatUnitSchema = z.enum(boatUnits);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
 export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 
-// export const unitTypeToBoatUnit = {
-//   [UnitType.TradeShip]: "trade",
-//   [UnitType.TransportShip]: "trans",
-// } as const satisfies Record<BoatUnitType, BoatUnit>;
+export const unitTypeToBoatUnit = {
+  [UnitType.TradeShip]: "trade",
+  [UnitType.TransportShip]: "trans",
+} as const satisfies Record<BoatUnitType, BoatUnit>;
 
 export const otherUnits = [
   "city",
