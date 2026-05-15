@@ -1,5 +1,5 @@
 import { AllPlayersStats } from "../Schemas";
-import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
+import { BoatUnitType, NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
@@ -29,25 +29,27 @@ export interface Stats {
   lobbyFillTime(fillTimeMs: number): void;
 
   // Player sends a trade ship to target
-  boatSendTrade(player: Player, target: Player): void;
+  boatSendTrade(player: Player, target: Player, type: BoatUnitType): void;
 
   // Player's trade ship arrives at target, both players earn gold
-  boatArriveTrade(player: Player, target: Player, gold: number | bigint): void;
+  boatArriveTrade(player: Player, target: Player, type: BoatUnitType, gold: number | bigint): void;
 
   // Player's trade ship, captured from target, arrives. Player earns gold.
   boatCapturedTrade(
     player: Player,
     target: Player,
+    type: BoatUnitType,
     gold: number | bigint,
   ): void;
 
   // Player destroys target's trade ship
-  boatDestroyTrade(player: Player, target: Player): void;
+  boatDestroyTrade(player: Player, target: Player, type: BoatUnitType): void;
 
   // Player sends a transport ship to target with troops
   boatSendTroops(
     player: Player,
     target: Player | TerraNullius,
+    type: BoatUnitType,
     troops: number | bigint,
   ): void;
 
@@ -55,6 +57,7 @@ export interface Stats {
   boatArriveTroops(
     player: Player,
     target: Player | TerraNullius,
+    type: BoatUnitType,
     troops: number | bigint,
   ): void;
 
@@ -62,6 +65,7 @@ export interface Stats {
   boatDestroyTroops(
     player: Player,
     target: Player,
+    type: BoatUnitType,
     troops: number | bigint,
   ): void;
 

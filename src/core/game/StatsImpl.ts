@@ -7,7 +7,7 @@ import {
   BOAT_INDEX_CAPTURE,
   BOAT_INDEX_DESTROY,
   BOAT_INDEX_SENT,
-  BoatUnit,
+  BoatUnitType,
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
@@ -28,6 +28,7 @@ import {
   PLAYER_INDEX_HUMAN,
   PLAYER_INDEX_NATION,
   PlayerStats,
+  unitTypeToBoatUnit,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -97,10 +98,11 @@ export class StatsImpl implements Stats {
 
   private _addBoat(
     player: Player,
-    type: BoatUnit,
+    boatType: BoatUnitType,
     index: number,
     value: BigIntLike,
   ) {
+    const type = unitTypeToBoatUnit[boatType];
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     p.boats ??= { [type]: [0n] };
@@ -188,43 +190,45 @@ export class StatsImpl implements Stats {
     this._addBetrayal(player, 1);
   }
 
-  boatSendTrade(player: Player, target: Player): void {
-    this._addBoat(player, "trade", BOAT_INDEX_SENT, 1);
+  boatSendTrade(player: Player, target: Player, type: BoatUnitType): void {
+    this._addBoat(player, type, BOAT_INDEX_SENT, 1);
   }
 
-  boatArriveTrade(player: Player, target: Player, gold: BigIntLike): void {
-    this._addBoat(player, "trade", BOAT_INDEX_ARRIVE, 1);
+  boatArriveTrade(player: Player, target: Player, type: BoatUnitType, gold: BigIntLike): void {
+    this._addBoat(player, type, BOAT_INDEX_ARRIVE, 1);
     this._addGold(player, GOLD_INDEX_TRADE, gold);
     this._addGold(target, GOLD_INDEX_TRADE, gold);
   }
 
-  boatCapturedTrade(player: Player, target: Player, gold: BigIntLike): void {
-    this._addBoat(player, "trade", BOAT_INDEX_CAPTURE, 1);
+  boatCapturedTrade(player: Player, target: Player, type: BoatUnitType, gold: BigIntLike): void {
+    this._addBoat(player, type, BOAT_INDEX_CAPTURE, 1);
     this._addGold(player, GOLD_INDEX_STEAL, gold);
   }
 
-  boatDestroyTrade(player: Player, target: Player): void {
-    this._addBoat(player, "trade", BOAT_INDEX_DESTROY, 1);
+  boatDestroyTrade(player: Player, target: Player, type: BoatUnitType): void {
+    this._addBoat(player, type, BOAT_INDEX_DESTROY, 1);
   }
 
   boatSendTroops(
     player: Player,
     target: Player | TerraNullius,
+    type: BoatUnitType,
     troops: BigIntLike,
   ): void {
-    this._addBoat(player, "trans", BOAT_INDEX_SENT, 1);
+    this._addBoat(player, type, BOAT_INDEX_SENT, 1);
   }
 
   boatArriveTroops(
     player: Player,
     target: Player | TerraNullius,
+    type: BoatUnitType,
     troops: BigIntLike,
   ): void {
-    this._addBoat(player, "trans", BOAT_INDEX_ARRIVE, 1);
+    this._addBoat(player, type, BOAT_INDEX_ARRIVE, 1);
   }
 
-  boatDestroyTroops(player: Player, target: Player, troops: BigIntLike): void {
-    this._addBoat(player, "trans", BOAT_INDEX_DESTROY, 1);
+  boatDestroyTroops(player: Player, target: Player, type: BoatUnitType, troops: BigIntLike): void {
+    this._addBoat(player, type, BOAT_INDEX_DESTROY, 1);
   }
 
   bombLaunch(
