@@ -160,7 +160,7 @@ class ModalRouter {
     if (args) {
       for (const [key, value] of Object.entries(args)) {
         if (key === "modal") continue;
-        if (value === undefined || value === null) continue;
+        if (value === undefined || value === null || value === "") continue;
         if (typeof value === "object") continue;
         params.set(key, String(value));
       }
