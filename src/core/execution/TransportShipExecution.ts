@@ -158,7 +158,12 @@ export class TransportShipExecution implements Execution {
     // Record stats
     this.mg
       .stats()
-      .boatSendTroops(this.attacker, this.target, UnitType.TransportShip, this.boat.troops());
+      .boatSendTroops(
+        this.attacker,
+        this.target,
+        UnitType.TransportShip,
+        this.boat.troops(),
+      );
   }
 
   tick(ticks: number) {
@@ -241,7 +246,12 @@ export class TransportShipExecution implements Execution {
           // Record stats
           this.mg
             .stats()
-            .boatArriveTroops(this.attacker, this.target, UnitType.TransportShip, survivors);
+            .boatArriveTroops(
+              this.attacker,
+              this.target,
+              UnitType.TransportShip,
+              survivors,
+            );
           if (deaths) {
             this.mg.displayMessage(
               "events_display.attack_cancelled_retreat",
@@ -273,7 +283,12 @@ export class TransportShipExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .boatArriveTroops(this.attacker, this.target, UnitType.TransportShip, this.boat.troops());
+          .boatArriveTroops(
+            this.attacker,
+            this.target,
+            UnitType.TransportShip,
+            this.boat.troops(),
+          );
         return;
       case PathStatus.NEXT:
         this.boat.move(result.node);

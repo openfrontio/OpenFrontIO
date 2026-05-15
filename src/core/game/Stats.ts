@@ -1,5 +1,10 @@
 import { AllPlayersStats } from "../Schemas";
-import { BoatUnitType, NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
+import {
+  BoatUnitType,
+  NukeType,
+  OtherUnitType,
+  PlayerStats,
+} from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
@@ -32,7 +37,12 @@ export interface Stats {
   boatSendTrade(player: Player, target: Player, type: BoatUnitType): void;
 
   // Player's trade ship arrives at target, both players earn gold
-  boatArriveTrade(player: Player, target: Player, type: BoatUnitType, gold: number | bigint): void;
+  boatArriveTrade(
+    player: Player,
+    target: Player,
+    type: BoatUnitType,
+    gold: number | bigint,
+  ): void;
 
   // Player's trade ship, captured from target, arrives. Player earns gold.
   boatCapturedTrade(

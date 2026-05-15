@@ -302,10 +302,17 @@ export class UnitImpl implements Unit {
         case UnitType.TransportShip:
           this.mg
             .stats()
-            .boatDestroyTroops(destroyer, this._owner, UnitType.TransportShip, this._troops);
+            .boatDestroyTroops(
+              destroyer,
+              this._owner,
+              UnitType.TransportShip,
+              this._troops,
+            );
           break;
         case UnitType.TradeShip:
-          this.mg.stats().boatDestroyTrade(destroyer, this._owner, UnitType.TradeShip);
+          this.mg
+            .stats()
+            .boatDestroyTrade(destroyer, this._owner, UnitType.TradeShip);
           break;
         case UnitType.City:
         case UnitType.DefensePost:

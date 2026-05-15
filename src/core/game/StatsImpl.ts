@@ -194,13 +194,23 @@ export class StatsImpl implements Stats {
     this._addBoat(player, type, BOAT_INDEX_SENT, 1);
   }
 
-  boatArriveTrade(player: Player, target: Player, type: BoatUnitType, gold: BigIntLike): void {
+  boatArriveTrade(
+    player: Player,
+    target: Player,
+    type: BoatUnitType,
+    gold: BigIntLike,
+  ): void {
     this._addBoat(player, type, BOAT_INDEX_ARRIVE, 1);
     this._addGold(player, GOLD_INDEX_TRADE, gold);
     this._addGold(target, GOLD_INDEX_TRADE, gold);
   }
 
-  boatCapturedTrade(player: Player, target: Player, type: BoatUnitType, gold: BigIntLike): void {
+  boatCapturedTrade(
+    player: Player,
+    target: Player,
+    type: BoatUnitType,
+    gold: BigIntLike,
+  ): void {
     this._addBoat(player, type, BOAT_INDEX_CAPTURE, 1);
     this._addGold(player, GOLD_INDEX_STEAL, gold);
   }
@@ -227,7 +237,12 @@ export class StatsImpl implements Stats {
     this._addBoat(player, type, BOAT_INDEX_ARRIVE, 1);
   }
 
-  boatDestroyTroops(player: Player, target: Player, type: BoatUnitType, troops: BigIntLike): void {
+  boatDestroyTroops(
+    player: Player,
+    target: Player,
+    type: BoatUnitType,
+    troops: BigIntLike,
+  ): void {
     this._addBoat(player, type, BOAT_INDEX_DESTROY, 1);
   }
 
