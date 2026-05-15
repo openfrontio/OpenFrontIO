@@ -115,5 +115,8 @@
     "ws": "^8.20.0",
     "zod": "^4.4.2"
   },
+  "overrides": {
+    "sanitize-html": ">=2.17.4"
+  },
   "type": "module"
 }
