@@ -175,7 +175,9 @@ export class StoreModal extends BaseModal {
       this.userMeResponse,
       this.affiliateCode,
     ).filter(
-      (r) => r.type === "subscription" && r.relationship === "purchasable",
+      (r) =>
+        r.type === "subscription" &&
+        (r.relationship === "purchasable" || r.relationship === "owned"),
     );
 
     if (items.length === 0) {
@@ -186,6 +188,10 @@ export class StoreModal extends BaseModal {
       </div>`;
     }
 
+    const userHasSubscription =
+      this.userMeResponse !== false &&
+      this.userMeResponse.player.subscription !== null;
+
     return html`
       <div
         class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
@@ -195,6 +201,7 @@ export class StoreModal extends BaseModal {
             <cosmetic-button
               .resolved=${r}
               .onPurchase=${purchaseCosmetic}
+              .userHasSubscription=${userHasSubscription}
             ></cosmetic-button>
           `,
         )}
