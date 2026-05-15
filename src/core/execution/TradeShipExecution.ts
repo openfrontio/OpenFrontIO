@@ -56,7 +56,7 @@ export class TradeShipExecution implements Execution {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
-      this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
+      this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner(), UnitType.TradeShip);
     }
 
     if (!this.tradeShip.isActive()) {
@@ -187,7 +187,7 @@ export class TradeShipExecution implements Execution {
       // Record stats
       this.mg
         .stats()
-        .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
+        .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, UnitType.TradeShip, gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
@@ -214,7 +214,7 @@ export class TradeShipExecution implements Execution {
       // Record stats
       this.mg
         .stats()
-        .boatArriveTrade(this.srcPort.owner(), this._dstPort.owner(), gold);
+        .boatArriveTrade(this.srcPort.owner(), this._dstPort.owner(), UnitType.TradeShip, gold);
     }
     return;
   }

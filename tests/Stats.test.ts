@@ -61,7 +61,7 @@ describe("Stats", () => {
   });
 
   test("boatSendTrade", () => {
-    stats.boatSendTrade(player1, player2);
+    stats.boatSendTrade(player1, player2, UnitType.TradeShip);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: {
@@ -72,7 +72,7 @@ describe("Stats", () => {
   });
 
   test("boatArriveTrade", () => {
-    stats.boatArriveTrade(player1, player2, 1);
+    stats.boatArriveTrade(player1, player2, UnitType.TradeShip, 1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: { trade: [0n, 1n] },
@@ -85,7 +85,7 @@ describe("Stats", () => {
   });
 
   test("boatCapturedTrade", () => {
-    stats.boatCapturedTrade(player1, player2, 1);
+    stats.boatCapturedTrade(player1, player2, UnitType.TradeShip, 1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: { trade: [0n, 0n, 1n] },
@@ -95,7 +95,7 @@ describe("Stats", () => {
   });
 
   test("boatDestroyTrade", () => {
-    stats.boatDestroyTrade(player1, player2);
+    stats.boatDestroyTrade(player1, player2, UnitType.TradeShip);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: { trade: [0n, 0n, 0n, 1n] },
@@ -104,7 +104,7 @@ describe("Stats", () => {
   });
 
   test("boatSendTroops", () => {
-    stats.boatSendTroops(player1, player2, 1);
+    stats.boatSendTroops(player1, player2, UnitType.TransportShip, 1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: {
@@ -115,7 +115,7 @@ describe("Stats", () => {
   });
 
   test("boatArriveTroops", () => {
-    stats.boatArriveTroops(player1, player2, 1);
+    stats.boatArriveTroops(player1, player2, UnitType.TransportShip, 1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: { trans: [0n, 1n] },
@@ -124,7 +124,7 @@ describe("Stats", () => {
   });
 
   test("boatDestroyTroops", () => {
-    stats.boatDestroyTroops(player1, player2, 1);
+    stats.boatDestroyTroops(player1, player2, UnitType.TransportShip, 1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: { trans: [0n, 0n, 0n, 1n] },
