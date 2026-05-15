@@ -16,6 +16,7 @@ import "./components/clan/ClanTransferView";
 import "./components/ConfirmDialog";
 import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { modalRouter } from "./ModalRouter";
 import { translateText } from "./Utils";
 
 type View =
@@ -153,6 +154,7 @@ export class ClanModal extends BaseModal {
         this.selectedClanTag = "";
         this.myRole = null;
         this.detailCache = null;
+        modalRouter.syncArgs("clan", { clan: null });
       },
       ariaLabel,
       rightContent: clan ? this.tagPill(clan.tag) : undefined,
@@ -399,6 +401,7 @@ export class ClanModal extends BaseModal {
   private openDetail(tag: string) {
     this.selectedClanTag = tag;
     this.view = "detail";
+    modalRouter.syncArgs("clan", { clan: tag });
   }
 
   private renderMyClans() {

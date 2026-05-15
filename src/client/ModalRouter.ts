@@ -123,6 +123,24 @@ class ModalRouter {
     this.replaceHash("#" + params.toString());
   }
 
+  /** Called when a router-managed modal changes non-tab route state. */
+  syncArgs(name: string, args: Record<string, unknown>): void {
+    if (this.routingFromUrl) return;
+    if (this.currentName !== name) return;
+    const params = this.currentHashParams();
+    params.set("modal", name);
+    for (const [key, value] of Object.entries(args)) {
+      if (key === "modal") continue;
+      if (value === undefined || value === null || value === "") {
+        params.delete(key);
+        continue;
+      }
+      if (typeof value === "object") continue;
+      params.set(key, String(value));
+    }
+    this.replaceHash("#" + params.toString());
+  }
+
   /** True if the current hash is `#modal=...`. */
   isHashRouted(): boolean {
     const hash = window.location.hash;
