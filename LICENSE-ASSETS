@@ -10,7 +10,7 @@ Assets in the `/resources` directory are licensed under Creative Commons BY-SA 4
 - Font files
 - Level/map data files
 
-Attribution required: "OpenFront" or "OpenFront LLC"
+Attribution required: "OpenFront" or "OpenFront Inc."
 
 To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/
 or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
@@ -18,7 +18,7 @@ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 ## Proprietary Assets (/proprietary) - All Rights Reserved
 
 Assets in the `/proprietary` directory are:
-- Copyright © 2024-2025 OpenFront LLC and Contributors
+- Copyright © 2024-2026 OpenFront Inc. and Contributors
 - All Rights Reserved
 - NOT licensed for use, modification, or redistribution outside of OpenFront
 - May only be used as part of the complete OpenFront software package
@@ -34,7 +34,7 @@ The following assets are NOT included in this repository and are NOT covered by 
 - Sound effects and music accessed via API
 - Any assets not explicitly included in this repository
 
-These external assets are proprietary property of OpenFront LLC.
+These external assets are proprietary property of OpenFront Inc.
 
 ## Important Legal Notice
 
