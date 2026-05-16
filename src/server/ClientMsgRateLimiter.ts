@@ -11,6 +11,7 @@ interface ClientBucket {
   perSecond: RateLimiter;
   perMinute: RateLimiter;
   totalBytes: number;
+  lastByteReset: number;
 }
 
 export class ClientMsgRateLimiter {
@@ -18,6 +19,15 @@ export class ClientMsgRateLimiter {
 
   check(clientID: ClientID, type: string, bytes: number): RateLimitResult {
     const bucket = this.getOrCreate(clientID);
+
+    // Reset byte counter every 60 seconds to prevent lifetime accumulation
+    // from kicking legitimate long-session players.
+    const now = Date.now();
+    if (now - bucket.lastByteReset > 60_000) {
+      bucket.totalBytes = 0;
+      bucket.lastByteReset = now;
+    }
+
     bucket.totalBytes += bytes;
 
     if (bucket.totalBytes >= TOTAL_BYTES) return "kick";
@@ -57,6 +67,7 @@ export class ClientMsgRateLimiter {
         interval: "minute",
       }),
       totalBytes: 0,
+      lastByteReset: Date.now(),
     };
     this.buckets.set(clientID, bucket);
     return bucket;
