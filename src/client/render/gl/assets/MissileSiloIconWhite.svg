@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   fill="#fff"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg3"
+   sodipodi:docname="MissileSiloIconWhite.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <sodipodi:namedview
+     id="namedview3"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="36.78125"
+     inkscape:cx="15.986406"
+     inkscape:cy="16"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg3"
+     showguides="true">
+    <sodipodi:guide
+       position="6.144435,8.9447749"
+       orientation="0,-1"
+       id="guide3"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <!-- Nose cone -->
+  <path
+     d="m 16,1.592183 c 0,0 -3,6 -3,8.999997 h 6 C 19,7.592183 16,1.592183 16,1.592183 Z"
+     id="path1" />
+  <!-- Body tube -->
+  <rect
+     x="13"
+     y="11"
+     width="6"
+     height="14.322554"
+     rx="0.5"
+     id="rect1"
+     style="stroke-width:1.04964" />
+  <!-- Left fin — swept-back old-school style -->
+  <path
+     d="M 13,19 9.0390824,23.079014 9,28 13,24 Z"
+     id="path2"
+     sodipodi:nodetypes="ccccc" />
+  <!-- Right fin -->
+  <path
+     d="M 19,19 23.015293,23.106202 23,28 19,24 Z"
+     id="path3"
+     sodipodi:nodetypes="ccccc" />
+  <!-- Nozzle -->
+  <rect
+     x="14"
+     y="25.322554"
+     width="4"
+     height="2.7543371"
+     rx="0.5"
+     id="rect3"
+     style="stroke-width:1.04964" />
+</svg>
