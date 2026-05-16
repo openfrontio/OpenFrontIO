@@ -410,7 +410,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private getTraitorRemainingSeconds(player: PlayerView): number | null {
-    const ticksLeft = player.data.traitorRemainingTicks ?? 0;
+    const ticksLeft = player.getTraitorRemainingTicks();
     if (!player.isTraitor() || ticksLeft <= 0) return null;
     return Math.ceil(ticksLeft / 10); // 10 ticks = 1 second
   }
@@ -608,7 +608,7 @@ export class PlayerPanel extends LitElement implements Layer {
           <span>${translateText("player_panel.betrayals")}</span>
         </div>
         <div class="text-right text-[14px] font-semibold text-zinc-200">
-          ${other.data.betrayals ?? 0}
+          ${other.betrayals()}
         </div>
       </div>
 

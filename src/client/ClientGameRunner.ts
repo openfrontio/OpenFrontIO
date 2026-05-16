@@ -230,7 +230,6 @@ export function joinLobby(
 
 function mountWebGLDebugRenderer(
   terrainMap: TerrainMapData,
-  gameView: GameView,
   transformHandler: import("./graphics/TransformHandler").TransformHandler,
 ): { builder: WebGLFrameBuilder; syncCamera: () => void } {
   const gameMap = terrainMap.gameMap;
@@ -257,10 +256,19 @@ function mountWebGLDebugRenderer(
       mapHeight,
       unitTypes: [...ALL_UNIT_TYPES],
       players: [],
+      // Pre-allocate renderer textures for up to 1024 players. We add players
+      // dynamically via view.addPlayers() as they come in from the simulation,
+      // but the NamePass / palette / relation matrix all need a static upper
+      // bound at construction time.
+      maxPlayers: 1024,
     },
     terrainBytes,
     palette,
   );
+
+  // Names are rendered by the existing HTML NameLayer; disable the renderer's
+  // NamePass to avoid drawing them twice.
+  view.getSettings().passEnabled.name = false;
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "\\") {
@@ -287,7 +295,7 @@ function mountWebGLDebugRenderer(
 
   (window as unknown as { __webglView?: unknown }).__webglView = view;
 
-  return { builder: new WebGLFrameBuilder(view, gameView), syncCamera };
+  return { builder: new WebGLFrameBuilder(view), syncCamera };
 }
 
 async function createClientGame(
@@ -343,7 +351,6 @@ async function createClientGame(
 
     const { builder: webglBuilder, syncCamera } = mountWebGLDebugRenderer(
       gameMap,
-      gameView,
       gameRenderer.transformHandler,
     );
     gameRenderer.onPreRender = syncCamera;
@@ -507,7 +514,7 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
-      this.webglBuilder?.update(this.gameView, gu);
+      this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
 
       // Emit tick metrics event for performance overlay
