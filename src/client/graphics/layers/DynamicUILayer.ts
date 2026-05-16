@@ -1,11 +1,7 @@
 import { renderNumber } from "src/client/Utils";
 import { EventBus } from "src/core/EventBus";
 import { UnitType } from "src/core/game/Game";
-import {
-  BonusEventUpdate,
-  ConquestUpdate,
-  GameUpdateType,
-} from "src/core/game/GameUpdates";
+import { BonusEventUpdate, GameUpdateType } from "src/core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
@@ -18,7 +14,6 @@ import { Layer } from "./Layer";
 
 const TEXT_OFFSET_Y = -5;
 const TEXT_STACK_SPACING = 8;
-const TEXT_DURATION = 2500;
 
 export class DynamicUILayer implements Layer {
   private readonly uiElements: Array<UIElement> = [];
@@ -61,11 +56,6 @@ export class DynamicUILayer implements Layer {
       if (bonusEvent === undefined) return;
       this.onBonusEvent(bonusEvent);
     });
-
-    updates[GameUpdateType.ConquestEvent]?.forEach((update) => {
-      if (update === undefined) return;
-      this.onConquestEvent(update);
-    });
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
@@ -87,18 +77,6 @@ export class DynamicUILayer implements Layer {
     if (troops !== 0) {
       this.addNumber(troops, x, y, 1000, 10);
     }
-  }
-
-  onConquestEvent(conquest: ConquestUpdate) {
-    // Only display text for the current player
-    const conqueror = this.game.player(conquest.conquerorId);
-    if (conqueror !== this.game.myPlayer()) {
-      return;
-    }
-    const nameLocation = this.game.player(conquest.conqueredId).nameLocation();
-    const x = nameLocation.x;
-    const y = nameLocation.y;
-    this.addNumber(conquest.gold, x, y + 8, TEXT_DURATION, 0);
   }
 
   onUnitEvent(unit: UnitView) {
