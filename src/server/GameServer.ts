@@ -781,6 +781,13 @@ export class GameServer {
     });
 
     try {
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.log.warn(`WebSocket not open, skipping start message`, {
+          clientID: client.clientID,
+          readyState: ws.readyState,
+        });
+        return;
+      }
       ws.send(
         JSON.stringify({
           type: "start",
@@ -791,14 +798,10 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
-      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
-      // eslint-disable-next-line preserve-caught-error
-      throw new Error(
-        `error sending start message for game ${this.id}, ${error}`.substring(
-          0,
-          250,
-        ),
-      );
+      this.log.error(`error sending start message for game ${this.id}`, {
+        clientID: client.clientID,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
