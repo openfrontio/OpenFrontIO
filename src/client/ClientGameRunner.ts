@@ -58,8 +58,11 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
+import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/TransformHandler";
+import { GameView as WebGLGameView } from "./render/gl";
+import { ALL_UNIT_TYPES } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -225,6 +228,68 @@ export function joinLobby(
   };
 }
 
+function mountWebGLDebugRenderer(
+  terrainMap: TerrainMapData,
+  gameView: GameView,
+  transformHandler: import("./graphics/TransformHandler").TransformHandler,
+): { builder: WebGLFrameBuilder; syncCamera: () => void } {
+  const gameMap = terrainMap.gameMap;
+  const mapWidth = gameMap.width();
+  const mapHeight = gameMap.height();
+
+  const terrainBytes = new Uint8Array(mapWidth * mapHeight);
+  for (let y = 0; y < mapHeight; y++) {
+    for (let x = 0; x < mapWidth; x++) {
+      terrainBytes[y * mapWidth + x] = gameMap.terrainByte(gameMap.ref(x, y));
+    }
+  }
+
+  const glCanvas = createCanvas();
+  glCanvas.id = "webgl-debug-canvas";
+  glCanvas.style.pointerEvents = "none";
+  document.body.insertBefore(glCanvas, document.body.firstChild);
+
+  const palette = new Float32Array(4096 * 2 * 4);
+  const view = new WebGLGameView(
+    glCanvas,
+    {
+      mapWidth,
+      mapHeight,
+      unitTypes: [...ALL_UNIT_TYPES],
+      players: [],
+    },
+    terrainBytes,
+    palette,
+  );
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "\\") {
+      glCanvas.style.display =
+        glCanvas.style.display === "none" ? "block" : "none";
+    }
+  });
+
+  const syncCamera = (): void => {
+    const scale = transformHandler.scale;
+    const dpr = window.devicePixelRatio || 1;
+    const canvasW = glCanvas.clientWidth;
+    const canvasH = glCanvas.clientHeight;
+    const centerX =
+      transformHandler.offsetX +
+      mapWidth / 2 +
+      (canvasW - mapWidth) / (2 * scale);
+    const centerY =
+      transformHandler.offsetY +
+      mapHeight / 2 +
+      (canvasH - mapHeight) / (2 * scale);
+    view.setCameraState(centerX, centerY, scale * dpr);
+  };
+
+  (window as unknown as { __webglView?: unknown }).__webglView = view;
+
+  return { builder: new WebGLFrameBuilder(view, gameView), syncCamera };
+}
+
 async function createClientGame(
   lobbyConfig: LobbyConfig,
   clientID: ClientID | undefined,
@@ -276,6 +341,13 @@ async function createClientGame(
       lobbyConfig.playerRole,
     );
 
+    const { builder: webglBuilder, syncCamera } = mountWebGLDebugRenderer(
+      gameMap,
+      gameView,
+      gameRenderer.transformHandler,
+    );
+    gameRenderer.onPreRender = syncCamera;
+
     console.log(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
     );
@@ -291,6 +363,7 @@ async function createClientGame(
       gameView,
       soundManager,
       userSettings,
+      webglBuilder,
     );
   } catch (err) {
     soundManager.dispose();
@@ -323,6 +396,7 @@ export class ClientGameRunner {
     private gameView: GameView,
     private soundManager: SoundManager,
     private userSettings: UserSettings,
+    private webglBuilder: WebGLFrameBuilder | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -433,6 +507,7 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      this.webglBuilder?.update(this.gameView, gu);
       this.renderer.tick();
 
       // Emit tick metrics event for performance overlay

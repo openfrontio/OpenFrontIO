@@ -28,8 +28,8 @@ export const CAMERA_SMOOTHING = 0.03;
 export class TransformHandler {
   public scale: number = 1.8;
   private _boundingRect: DOMRect;
-  private offsetX: number = -350;
-  private offsetY: number = -200;
+  public offsetX: number = -350;
+  public offsetY: number = -200;
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;

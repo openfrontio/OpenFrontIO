@@ -2,7 +2,6 @@ import { Colord } from "colord";
 import { Theme } from "src/core/configuration/Theme";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
   CloseViewEvent,
@@ -11,34 +10,19 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../../InputHandler";
-import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-const COLOR_PROGRESSION = [
-  "rgb(232, 25, 25)",
-  "rgb(240, 122, 25)",
-  "rgb(202, 231, 15)",
-  "rgb(44, 239, 18)",
-];
-const HEALTHBAR_WIDTH = 11; // Width of the health bar
-const LOADINGBAR_WIDTH = 14; // Width of the loading bar
-const PROGRESSBAR_HEIGHT = 3; // Height of a bar
-
 /**
- * Layer responsible for drawing UI elements that overlay the game
- * such as selection boxes, health bars, etc.
+ * Layer responsible for drawing UI elements that overlay the game.
+ * Currently: warship selection boxes + drag-rectangle selection.
+ * Health/progress bars are now drawn by the WebGL BarPass.
  */
 export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D | null;
   private theme: Theme | null = null;
   private selectionAnimTime = 0;
-  private allProgressBars: Map<
-    number,
-    { unit: UnitView; progressBar: ProgressBar }
-  > = new Map();
-  private allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
 
@@ -109,15 +93,6 @@ export class UILayer implements Layer {
     this.multiSelectedWarships = this.multiSelectedWarships.filter((u) =>
       u.isActive(),
     );
-
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
-      ?.forEach((unitView) => {
-        if (unitView === undefined) return;
-        this.onUnitEvent(unitView);
-      });
-    this.updateProgressBars();
   }
 
   init() {
@@ -247,56 +222,6 @@ export class UILayer implements Layer {
     this.selectionBoxCanvas.width = this.game.width();
     this.selectionBoxCanvas.height = this.game.height();
     this.selectionBoxCtx = this.selectionBoxCanvas.getContext("2d");
-  }
-
-  onUnitEvent(unit: UnitView) {
-    const underConst = unit.isUnderConstruction();
-    if (underConst) {
-      this.createLoadingBar(unit);
-      return;
-    }
-    switch (unit.type()) {
-      case UnitType.Warship: {
-        this.drawHealthBar(unit);
-        break;
-      }
-      case UnitType.City:
-      case UnitType.Factory:
-      case UnitType.DefensePost:
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.SAMLauncher:
-        if (
-          unit.markedForDeletion() !== false ||
-          unit.missileReadinesss() < 1
-        ) {
-          this.createLoadingBar(unit);
-        }
-        break;
-      default:
-        return;
-    }
-  }
-
-  private clearIcon(icon: HTMLImageElement, startX: number, startY: number) {
-    if (this.context !== null) {
-      this.context.clearRect(startX, startY, icon.width, icon.height);
-    }
-  }
-
-  private drawIcon(
-    icon: HTMLImageElement,
-    unit: UnitView,
-    startX: number,
-    startY: number,
-  ) {
-    if (this.context === null || this.theme === null) {
-      return;
-    }
-    const color = unit.owner().borderColor();
-    this.context.fillStyle = color.toRgbString();
-    this.context.fillRect(startX, startY, icon.width, icon.height);
-    this.context.drawImage(icon, startX, startY);
   }
 
   /**
@@ -456,117 +381,6 @@ export class UILayer implements Layer {
       y: centerY,
       size: this.SELECTION_BOX_SIZE,
     };
-  }
-
-  /**
-   * Draw health bar for a unit
-   */
-  public drawHealthBar(unit: UnitView) {
-    const maxHealth = this.game.unitInfo(unit.type()).maxHealth;
-    if (maxHealth === undefined || this.context === null) {
-      return;
-    }
-    if (
-      this.allHealthBars.has(unit.id()) &&
-      (unit.health() >= maxHealth || unit.health() <= 0 || !unit.isActive())
-    ) {
-      // full hp/dead warships dont need a hp bar
-      this.allHealthBars.get(unit.id())?.clear();
-      this.allHealthBars.delete(unit.id());
-    } else if (
-      unit.isActive() &&
-      unit.health() < maxHealth &&
-      unit.health() > 0
-    ) {
-      this.allHealthBars.get(unit.id())?.clear();
-      const healthBar = new ProgressBar(
-        COLOR_PROGRESSION,
-        this.context,
-        this.game.x(unit.tile()) - 4,
-        this.game.y(unit.tile()) - 6,
-        HEALTHBAR_WIDTH,
-        PROGRESSBAR_HEIGHT,
-        unit.health() / maxHealth,
-      );
-      // keep track of units that have health bars for clearing purposes
-      this.allHealthBars.set(unit.id(), healthBar);
-    }
-  }
-
-  private updateProgressBars() {
-    this.allProgressBars.forEach((progressBarInfo, unitId) => {
-      const progress = this.getProgress(progressBarInfo.unit);
-      if (progress >= 1) {
-        this.allProgressBars.get(unitId)?.progressBar.clear();
-        this.allProgressBars.delete(unitId);
-        return;
-      } else {
-        progressBarInfo.progressBar.setProgress(progress);
-      }
-    });
-  }
-
-  private getProgress(unit: UnitView): number {
-    if (!unit.isActive()) {
-      return 1;
-    }
-    const underConst = unit.isUnderConstruction();
-    if (underConst) {
-      const constDuration = this.game.unitInfo(
-        unit.type(),
-      ).constructionDuration;
-      if (constDuration === undefined) {
-        throw new Error("unit does not have constructionTime");
-      }
-      return (
-        (this.game.ticks() - unit.createdAt()) /
-        (constDuration === 0 ? 1 : constDuration)
-      );
-    }
-    switch (unit.type()) {
-      case UnitType.MissileSilo:
-      case UnitType.SAMLauncher:
-        return !unit.markedForDeletion()
-          ? unit.missileReadinesss()
-          : this.deletionProgress(this.game, unit);
-      case UnitType.City:
-      case UnitType.Factory:
-      case UnitType.Port:
-      case UnitType.DefensePost:
-        return this.deletionProgress(this.game, unit);
-      default:
-        return 1;
-    }
-  }
-
-  private deletionProgress(game: GameView, unit: UnitView): number {
-    const deleteAt = unit.markedForDeletion();
-    if (deleteAt === false) return 1;
-    return Math.max(
-      0,
-      (deleteAt - game.ticks()) / game.config().deletionMarkDuration(),
-    );
-  }
-
-  public createLoadingBar(unit: UnitView) {
-    if (!this.context) {
-      return;
-    }
-    if (!this.allProgressBars.has(unit.id())) {
-      const progressBar = new ProgressBar(
-        COLOR_PROGRESSION,
-        this.context,
-        this.game.x(unit.tile()) - 6,
-        this.game.y(unit.tile()) + 6,
-        LOADINGBAR_WIDTH,
-        PROGRESSBAR_HEIGHT,
-        0,
-      );
-      this.allProgressBars.set(unit.id(), {
-        unit,
-        progressBar,
-      });
-    }
   }
 
   paintCell(x: number, y: number, color: Colord, alpha: number) {

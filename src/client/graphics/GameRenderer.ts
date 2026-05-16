@@ -13,11 +13,9 @@ import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
-import { CoordinateGridLayer } from "./layers/CoordinateGridLayer";
 import { DynamicUILayer } from "./layers/DynamicUILayer";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
-import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
@@ -28,23 +26,16 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
-import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
-import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
-import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
-import { TerrainLayer } from "./layers/TerrainLayer";
-import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
-import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -230,9 +221,6 @@ export function createRenderer(
   }
   headsUpMessage.game = game;
 
-  const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
-
   const performanceOverlay = document.querySelector(
     "performance-overlay",
   ) as PerformanceOverlay;
@@ -275,16 +263,7 @@ export function createRenderer(
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
-    new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler),
-    new RailroadLayer(game, eventBus, transformHandler, uiState),
-    new CoordinateGridLayer(game, eventBus, transformHandler),
-    structureLayer,
-    samRadiusLayer,
-    new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
@@ -338,6 +317,7 @@ export class GameRenderer {
   private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
   private renderFramesSinceLastTick: number = 0;
   private renderLayerDurationsSinceLastTick: Record<string, number> = {};
+  public onPreRender: (() => void) | null = null;
 
   constructor(
     private game: GameView,
@@ -348,7 +328,7 @@ export class GameRenderer {
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
   ) {
-    const context = canvas.getContext("2d", { alpha: false });
+    const context = canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }
@@ -399,13 +379,8 @@ export class GameRenderer {
       FrameProfiler.clear();
     }
     const start = performance.now();
-    // Set background
-    this.context.fillStyle = this.game
-      .config()
-      .theme()
-      .backgroundColor()
-      .toHex();
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.onPreRender?.();
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     const handleTransformState = (
       needsTransform: boolean,

@@ -215,6 +215,9 @@ export class UnitView {
   isLoaded(): boolean | undefined {
     return this.data.loaded;
   }
+  missileTimerQueue(): number[] {
+    return this.data.missileTimerQueue;
+  }
 }
 
 export class PlayerView {
