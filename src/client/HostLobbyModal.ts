@@ -10,6 +10,7 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
+import { hasListedPrivateGameFlare } from "../core/ListedPrivateGame";
 import {
   ClientInfo,
   GameConfig,
@@ -19,6 +20,7 @@ import {
   isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { getUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -85,6 +87,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private hostCheatGoldMultiplierValue: number | undefined = undefined;
   @state() private hostCheatStartingGold: boolean = false;
   @state() private hostCheatStartingGoldValue: number | undefined = undefined;
+  @state() private canListPrivateGame: boolean = false;
+  @state() private listedPrivateGame: boolean = false;
   @state() private lobbyCreatorClientID: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
@@ -352,6 +356,12 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.host_cheats",
                     checked: this.hostCheatsEnabled,
                   },
+                  {
+                    labelKey: "host_modal.listed_private_game",
+                    descriptionKey: "host_modal.listed_private_game_desc",
+                    checked: this.listedPrivateGame,
+                    hidden: !this.canListPrivateGame,
+                  },
                 ],
                 inputCards,
               },
@@ -419,6 +429,7 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.startLobbyUpdates();
+    void this.loadListedPrivateGameAccess();
     this.lobbyId = generateID();
     // Note: clientID will be assigned by server when we join the lobby
     // lobbyCreatorClientID stays empty until then
@@ -537,6 +548,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatGoldMultiplierValue = undefined;
     this.hostCheatStartingGold = false;
     this.hostCheatStartingGoldValue = undefined;
+    this.listedPrivateGame = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -623,6 +635,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.host_cheats":
         this.hostCheatsEnabled = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.listed_private_game":
+        this.listedPrivateGame = this.canListPrivateGame && checked;
         this.putGameConfig();
         break;
       default:
@@ -944,6 +960,8 @@ export class HostLobbyModal extends BaseModal {
             instantBuild: this.instantBuild,
             randomSpawn: this.randomSpawn,
             gameMode: this.gameMode,
+            listedPrivateGame:
+              this.canListPrivateGame && this.listedPrivateGame,
             disabledUnits: this.disabledUnits,
             spawnImmunityDuration: this.spawnImmunity
               ? spawnImmunityTicks
@@ -1028,6 +1046,16 @@ export class HostLobbyModal extends BaseModal {
     } catch (error) {
       console.warn("Failed to load nation count", error);
       // Leave existing values unchanged so the UI stays consistent
+    }
+  }
+
+  private async loadListedPrivateGameAccess() {
+    const userMe = await getUserMe();
+    const flares = userMe === false ? [] : (userMe.player.flares ?? []);
+    this.canListPrivateGame = hasListedPrivateGameFlare(flares);
+    if (!this.canListPrivateGame && this.listedPrivateGame) {
+      this.listedPrivateGame = false;
+      this.putGameConfig();
     }
   }
 }

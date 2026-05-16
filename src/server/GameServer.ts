@@ -5,6 +5,7 @@ import { z } from "zod";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
+import { hasListedPrivateGameFlare } from "../core/ListedPrivateGame";
 import {
   ClientID,
   ClientMessageSchema,
@@ -176,6 +177,9 @@ export class GameServer {
     }
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
+    }
+    if (gameConfig.listedPrivateGame !== undefined) {
+      this.gameConfig.listedPrivateGame = gameConfig.listedPrivateGame;
     }
     this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
@@ -470,6 +474,20 @@ export class GameServer {
                     gameID: this.id,
                     clientID: client.clientID,
                   });
+                  return;
+                }
+
+                if (
+                  stampedIntent.config.listedPrivateGame === true &&
+                  !hasListedPrivateGameFlare(client.flares ?? [])
+                ) {
+                  this.log.warn(
+                    `Client without required flare attempted to list private game`,
+                    {
+                      gameID: this.id,
+                      clientID: client.clientID,
+                    },
+                  );
                   return;
                 }
 

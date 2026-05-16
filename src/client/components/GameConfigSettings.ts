@@ -163,6 +163,7 @@ function renderSectionHeader(
 
 export interface ToggleOptionConfig {
   labelKey: string;
+  descriptionKey?: string;
   checked: boolean;
   hidden?: boolean;
 }
@@ -283,6 +284,27 @@ export class GameConfigSettings extends LitElement {
 
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
+
+    if (toggle.descriptionKey) {
+      return html`
+        <button
+          class="${cardClass(toggle.checked, "p-4 text-center")}"
+          @click=${() => this.handleOptionToggle(toggle)}
+          aria-pressed=${toggle.checked}
+        >
+          <span class="${CARD_LABEL_CLASS} ${stateTextClass(toggle.checked)}">
+            ${translateText(toggle.labelKey)}
+          </span>
+          <span
+            class="block mt-2 text-[11px] normal-case font-medium tracking-normal leading-snug ${toggle.checked
+              ? "text-white/80"
+              : "text-white/45"}"
+          >
+            ${translateText(toggle.descriptionKey)}
+          </span>
+        </button>
+      `;
+    }
 
     return renderTextCardButton(
       translateText(toggle.labelKey),

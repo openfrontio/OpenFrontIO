@@ -1,5 +1,6 @@
 import { Worker } from "cluster";
 import winston from "winston";
+import { LISTED_PRIVATE_GAME_TYPE } from "../core/ListedPrivateGame";
 import { PublicGameInfo, PublicGameType } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
@@ -85,9 +86,13 @@ export class MasterLobbyService {
       ffa: [],
       team: [],
       special: [],
+      [LISTED_PRIVATE_GAME_TYPE]: [],
     };
 
     for (const lobby of lobbies) {
+      if (!result[lobby.publicGameType]) {
+        continue;
+      }
       result[lobby.publicGameType].push(lobby);
     }
 
@@ -131,7 +136,7 @@ export class MasterLobbyService {
   private async maybeScheduleLobby() {
     const lobbiesByType = this.getAllLobbies();
 
-    for (const type of Object.keys(lobbiesByType) as PublicGameType[]) {
+    for (const type of ["ffa", "team", "special"] as const) {
       const lobbies = lobbiesByType[type];
 
       // Always ensure the next lobby has a timer, even if we already have 2+

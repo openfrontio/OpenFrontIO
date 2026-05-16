@@ -189,14 +189,16 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["isNukesDisabled", "isWaterNukes"],
 ];
 
+type ScheduledPublicGameType = Exclude<PublicGameType, "listed-private">;
+
 export class MapPlaylist {
-  private playlists: Record<PublicGameType, GameMapType[]> = {
+  private playlists: Record<ScheduledPublicGameType, GameMapType[]> = {
     ffa: [],
     special: [],
     team: [],
   };
 
-  public async gameConfig(type: PublicGameType): Promise<GameConfig> {
+  public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     if (type === "special") {
       return this.getSpecialConfig();
     }
@@ -488,7 +490,7 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: PublicGameType): GameMapType {
+  private getNextMap(type: ScheduledPublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {
       playlist.push(...this.generateNewPlaylist(type));
@@ -496,7 +498,7 @@ export class MapPlaylist {
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(type: PublicGameType): GameMapType[] {
+  private generateNewPlaylist(type: ScheduledPublicGameType): GameMapType[] {
     const maps = this.buildMapsList(type);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
@@ -545,7 +547,7 @@ export class MapPlaylist {
     return false;
   }
 
-  private buildMapsList(type: PublicGameType): GameMapType[] {
+  private buildMapsList(type: ScheduledPublicGameType): GameMapType[] {
     const maps: GameMapType[] = [];
     (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
       const map = GameMapType[key];

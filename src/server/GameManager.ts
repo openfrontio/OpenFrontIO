@@ -28,6 +28,15 @@ export class GameManager {
     );
   }
 
+  public listedPrivateLobbies(): GameServer[] {
+    return Array.from(this.games.values()).filter(
+      (g) =>
+        g.phase() === GamePhase.Lobby &&
+        !g.isPublic() &&
+        g.gameConfig.listedPrivateGame === true,
+    );
+  }
+
   joinClient(
     client: Client,
     gameID: GameID,

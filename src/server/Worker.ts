@@ -9,6 +9,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
+import { hasListedPrivateGameFlare } from "../core/ListedPrivateGame";
 import {
   ClientMessageSchema,
   GameID,
@@ -145,10 +146,11 @@ export async function startWorker() {
     // Extract persistentID from Authorization header token
     // Never accept persistentID directly from client
     let creatorPersistentID: string | undefined;
+    let creatorToken: string | undefined;
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring("Bearer ".length);
-      const result = await verifyClientToken(token);
+      creatorToken = authHeader.substring("Bearer ".length);
+      const result = await verifyClientToken(creatorToken);
       if (result.type === "success") {
         creatorPersistentID = result.persistentId;
       } else {
@@ -184,6 +186,24 @@ export async function startWorker() {
         `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
       );
       return res.status(401).send("Unauthorized");
+    }
+
+    if (gc?.listedPrivateGame === true) {
+      if (creatorToken === undefined) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userMe = await getUserMe(creatorToken);
+      if (userMe.type === "error") {
+        log.warn(`cannot verify listed private game flare: ${userMe.message}`);
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const creatorFlares = userMe.response.player.flares ?? [];
+      if (!hasListedPrivateGameFlare(creatorFlares)) {
+        log.warn(
+          `Forbidden: player without game:* flare attempted to create listed private game`,
+        );
+        return res.status(403).json({ error: "Forbidden" });
+      }
     }
 
     // Double-check this worker should host this game

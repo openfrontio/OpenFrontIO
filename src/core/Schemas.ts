@@ -20,6 +20,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
+import { LISTED_PRIVATE_GAME_TYPE } from "./ListedPrivateGame";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
@@ -139,7 +140,12 @@ export type PublicGames = z.infer<typeof PublicGamesSchema>;
 export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
 export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
 
-export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
+export const PublicGameTypeSchema = z.enum([
+  "ffa",
+  "team",
+  "special",
+  LISTED_PRIVATE_GAME_TYPE,
+] as const);
 
 export const UsernameSchema = z
   .string()
@@ -221,6 +227,7 @@ export const GameConfigSchema = z.object({
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
+  listedPrivateGame: z.boolean().optional(),
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   publicGameModifiers: z

@@ -11,6 +11,7 @@ import {
 } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
+import { LISTED_PRIVATE_GAME_TYPE } from "../core/ListedPrivateGame";
 import {
   ClientInfo,
   GAME_ID_REGEX,
@@ -19,6 +20,7 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
   PublicGameInfo,
+  PublicGames,
 } from "../core/Schemas";
 import {
   Difficulty,
@@ -55,6 +57,9 @@ export class JoinLobbyModal extends BaseModal {
   @state() private serverTimeOffset: number = 0;
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
+  @state() private publicGames: PublicGames | null = null;
+  @state() private listedPrivateGamesExpanded: boolean = false;
+  @state() private expandedListedPrivateGameSettings: Set<string> = new Set();
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -75,6 +80,11 @@ export class JoinLobbyModal extends BaseModal {
       ...lobby,
       startsAt: lobby.startsAt ?? undefined,
     });
+  };
+
+  private readonly handlePublicLobbiesUpdate = (event: Event) => {
+    const customEvent = event as CustomEvent<{ payload: PublicGames }>;
+    this.publicGames = customEvent.detail.payload;
   };
 
   protected renderHeaderSlot() {
@@ -217,8 +227,25 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private renderJoinForm() {
+    const listedPrivateGames =
+      this.publicGames?.games?.[LISTED_PRIVATE_GAME_TYPE] ?? [];
+    const visibleListedPrivateGames = this.listedPrivateGamesExpanded
+      ? listedPrivateGames
+      : listedPrivateGames.slice(0, 3);
+    const hiddenListedPrivateGameCount =
+      listedPrivateGames.length - visibleListedPrivateGames.length;
+
     return html`
-      <form @submit=${this.joinLobbyFromInput} class="custom-scrollbar p-6 space-y-4 mr-1">
+      <form
+        @submit=${this.joinLobbyFromInput}
+        class="custom-scrollbar p-6 space-y-4 mr-1"
+      >
+        <div class="pt-2 border-t border-white/10">
+          <h3
+            class="mb-3 text-sm font-bold text-white uppercase tracking-wider"
+          >
+            ${translateText("private_lobby.join_by_lobby_id")}
+          </h3>
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -256,8 +283,217 @@ export class JoinLobbyModal extends BaseModal {
             ></o-button>
           </div>
         </div>
+
+        <div class="space-y-3 pt-2 border-t border-white/10">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">
+              ${translateText("private_lobby.listed_private_games")}
+            </h3>
+            ${listedPrivateGames.length > 3
+              ? html`
+                  <button
+                    type="button"
+                    class="text-xs font-bold uppercase tracking-wider text-malibu-blue hover:text-aquarius transition-colors"
+                    @click=${this.toggleListedPrivateGamesExpanded}
+                  >
+                    ${this.listedPrivateGamesExpanded
+                      ? translateText("common.show_less")
+                      : translateText(
+                          "private_lobby.show_all_listed_private_games",
+                          {
+                            count: String(hiddenListedPrivateGameCount),
+                          },
+                        )}
+                  </button>
+                `
+              : ""}
+          </div>
+          ${listedPrivateGames.length === 0
+            ? html`
+                <div
+                  class="px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-sm text-white/50"
+                >
+                  ${translateText("private_lobby.no_listed_private_games")}
+                </div>
+              `
+            : html`
+                <div class="grid grid-cols-1 gap-2">
+                  ${visibleListedPrivateGames.map((lobby) =>
+                    this.renderListedPrivateGame(lobby),
+                  )}
+                </div>
+              `}
+        </div>
       </form>
     `;
+  }
+
+  private renderListedPrivateGame(lobby: PublicGameInfo): TemplateResult {
+    const mapName = getMapName(lobby.gameConfig?.gameMap);
+    const settings = this.listedPrivateGameSettings(lobby.gameConfig);
+    const settingsExpanded = this.expandedListedPrivateGameSettings.has(
+      lobby.gameID,
+    );
+    const visibleSettings = settingsExpanded ? settings : settings.slice(0, 3);
+    const hiddenSettingsCount = settings.length - visibleSettings.length;
+    const mode =
+      lobby.gameConfig?.gameMode === GameMode.Team
+        ? translateText("game_mode.teams")
+        : translateText("game_mode.ffa");
+
+    return html`
+      <div
+        class="w-full min-w-0 px-3 py-3 rounded-xl border border-white/10 bg-white/5 text-left"
+      >
+        <div class="flex flex-col gap-3">
+          <div class="min-w-0 space-y-1">
+            <div class="text-sm font-bold text-white truncate">
+              ${mapName ?? lobby.gameConfig?.gameMap ?? lobby.gameID}
+            </div>
+            <div class="text-xs text-white/55 uppercase tracking-wider">
+              ${mode}
+            </div>
+          </div>
+          ${settings.length > 0
+            ? html`
+                <div class="grid grid-cols-1 gap-1">
+                  ${visibleSettings.map(
+                    (setting) => html`
+                      <div
+                        class="w-full min-w-0 rounded bg-black/25 border border-white/10 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-white/70 truncate"
+                      >
+                        ${setting}
+                      </div>
+                    `,
+                  )}
+                </div>
+                ${settings.length > 3
+                  ? html`
+                      <button
+                        type="button"
+                        class="self-start text-[11px] font-bold uppercase tracking-wider text-malibu-blue hover:text-aquarius transition-colors"
+                        @click=${() =>
+                          this.toggleListedPrivateGameSettings(lobby.gameID)}
+                      >
+                        ${settingsExpanded
+                          ? translateText("private_lobby.show_fewer_settings")
+                          : translateText("private_lobby.show_all_settings", {
+                              count: String(hiddenSettingsCount),
+                            })}
+                      </button>
+                    `
+                  : ""}
+              `
+            : ""}
+          <div class="flex items-center justify-between gap-2">
+            <div class="shrink-0 text-xs font-bold text-white/80">
+              ${lobby.numClients}/${lobby.gameConfig?.maxPlayers ?? "-"}
+            </div>
+            <button
+              type="button"
+              class="px-3 py-2 rounded-lg bg-malibu-blue hover:bg-aquarius text-white text-xs font-bold uppercase tracking-wider transition-colors"
+              @click=${() => this.joinListedPrivateGame(lobby)}
+            >
+              ${translateText("private_lobby.join_lobby")}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private listedPrivateGameSettings(config: GameConfig | undefined): string[] {
+    if (!config) return [];
+    const settings: string[] = [];
+    const isTeam = config.gameMode === GameMode.Team;
+    const isCompact =
+      config.gameMapSize === GameMapSize.Compact ||
+      config.publicGameModifiers?.isCompact;
+
+    if (isCompact) settings.push(translateText("host_modal.compact_map"));
+    if (config.difficulty !== Difficulty.Easy) {
+      settings.push(
+        translateText(`difficulty.${config.difficulty.toLowerCase()}`),
+      );
+    }
+    if (config.infiniteTroops)
+      settings.push(translateText("host_modal.infinite_troops"));
+    if (config.infiniteGold)
+      settings.push(translateText("host_modal.infinite_gold"));
+    if (config.instantBuild)
+      settings.push(translateText("host_modal.instant_build"));
+    if (config.randomSpawn)
+      settings.push(translateText("host_modal.random_spawn"));
+    if (config.maxTimerValue)
+      settings.push(
+        `${translateText("private_lobby.game_length")}: ${config.maxTimerValue} min`,
+      );
+    if (config.spawnImmunityDuration) {
+      const seconds = Math.round(config.spawnImmunityDuration / 10);
+      settings.push(
+        `${translateText("private_lobby.pvp_immunity")}: ${renderDuration(seconds)}`,
+      );
+    }
+    if (config.startingGold) {
+      const millions = parseFloat(
+        (config.startingGold / 1_000_000).toPrecision(12),
+      );
+      settings.push(
+        `${translateText("private_lobby.starting_gold")}: ${millions}M`,
+      );
+    }
+    if (config.goldMultiplier) {
+      settings.push(
+        `${translateText("host_modal.gold_multiplier")}: x${config.goldMultiplier}`,
+      );
+    }
+    if (config.disableAlliances) {
+      settings.push(translateText("host_modal.disable_alliances"));
+    }
+    if (config.waterNukes) {
+      settings.push(translateText("host_modal.water_nukes"));
+    }
+    if ((isTeam && !config.donateGold) || (!isTeam && config.donateGold)) {
+      settings.push(translateText("host_modal.donate_gold"));
+    }
+    if ((isTeam && !config.donateTroops) || (!isTeam && config.donateTroops)) {
+      settings.push(translateText("host_modal.donate_troops"));
+    }
+    if (config.disabledUnits && config.disabledUnits.length > 0) {
+      settings.push(translateText("private_lobby.disabled_units"));
+    }
+    if (config.hostCheats) {
+      settings.push(translateText("private_lobby.host_cheats"));
+    }
+    return settings;
+  }
+
+  private toggleListedPrivateGameSettings(gameID: string) {
+    const expanded = new Set(this.expandedListedPrivateGameSettings);
+    if (expanded.has(gameID)) {
+      expanded.delete(gameID);
+    } else {
+      expanded.add(gameID);
+    }
+    this.expandedListedPrivateGameSettings = expanded;
+  }
+
+  private toggleListedPrivateGamesExpanded = () => {
+    this.listedPrivateGamesExpanded = !this.listedPrivateGamesExpanded;
+  };
+
+  private joinListedPrivateGame(lobby: PublicGameInfo) {
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: lobby.gameID,
+          source: "listed-private",
+          publicLobbyInfo: lobby,
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
@@ -374,12 +610,26 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
+    this.listedPrivateGamesExpanded = false;
+    this.expandedListedPrivateGameSettings = new Set();
   }
 
   disconnectedCallback() {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
+    document.removeEventListener(
+      "public-lobbies-update",
+      this.handlePublicLobbiesUpdate,
+    );
     super.disconnectedCallback();
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "public-lobbies-update",
+      this.handlePublicLobbiesUpdate,
+    );
   }
 
   public closeAndLeave() {

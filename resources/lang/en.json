@@ -27,7 +27,8 @@
     "click_to_copy": "Click to copy",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "map_default": "Map default"
+    "map_default": "Map default",
+    "show_less": "Show Less"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -537,6 +538,12 @@
     "error": "An error occurred. Please try again or contact support.",
     "joined_waiting": "Lobby joined! Waiting for host to start...",
     "version_mismatch": "This game was created with a different version. Cannot join.",
+    "listed_private_games": "Listed Private Games",
+    "no_listed_private_games": "No listed private games available.",
+    "show_all_listed_private_games": "Show More Lobbies (+{count})",
+    "show_all_settings": "Show All Settings (+{count})",
+    "show_fewer_settings": "Show Fewer Settings",
+    "join_by_lobby_id": "Join by Lobby ID",
     "disabled_units": "Disabled Units",
     "game_length": "Game length",
     "pvp_immunity": "PVP immunity duration",
@@ -619,6 +626,8 @@
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
     "host_cheats": "Host Cheats",
+    "listed_private_game": "Listed Private Game",
+    "listed_private_game_desc": "Show this private lobby in the Join Lobby menu.",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
   "team_colors": {

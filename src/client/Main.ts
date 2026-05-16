@@ -240,7 +240,13 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-  source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
+  source?:
+    | "public"
+    | "listed-private"
+    | "private"
+    | "host"
+    | "matchmaking"
+    | "singleplayer";
   publicLobbyInfo?: GameInfo | PublicGameInfo;
 }
 
@@ -824,7 +830,7 @@ class Client {
       this.lobbyHandle.stop(true);
       document.body.classList.remove("in-game");
     }
-    if (lobby.source === "public") {
+    if (lobby.source === "public" || lobby.source === "listed-private") {
       this.joinModal?.open({
         lobbyId: lobby.gameID,
         lobbyInfo: lobby.publicLobbyInfo,

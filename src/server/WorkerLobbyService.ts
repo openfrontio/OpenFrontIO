@@ -1,6 +1,7 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { LISTED_PRIVATE_GAME_TYPE } from "../core/ListedPrivateGame";
+import { GameInfo, PublicGameInfo, PublicGames } from "../core/Schemas";
 import { GameManager } from "./GameManager";
 import {
   MasterMessageSchema,
@@ -83,18 +84,27 @@ export class WorkerLobbyService {
   }
 
   private sendMyLobbiesToMaster() {
-    const lobbies = this.gm
+    const toLobbyInfo = (
+      gi: GameInfo,
+      publicGameType: PublicGameInfo["publicGameType"],
+    ) => {
+      return {
+        gameID: gi.gameID,
+        numClients: gi.clients?.length ?? 0,
+        startsAt: gi.startsAt,
+        gameConfig: gi.gameConfig,
+        publicGameType,
+      } satisfies PublicGameInfo;
+    };
+    const publicLobbies = this.gm
       .publicLobbies()
       .map((g) => g.gameInfo())
-      .map((gi) => {
-        return {
-          gameID: gi.gameID,
-          numClients: gi.clients?.length ?? 0,
-          startsAt: gi.startsAt,
-          gameConfig: gi.gameConfig,
-          publicGameType: gi.publicGameType!,
-        } satisfies PublicGameInfo;
-      });
+      .map((gi) => toLobbyInfo(gi, gi.publicGameType!));
+    const listedPrivateLobbies = this.gm
+      .listedPrivateLobbies()
+      .map((g) => g.gameInfo())
+      .map((gi) => toLobbyInfo(gi, LISTED_PRIVATE_GAME_TYPE));
+    const lobbies = [...publicLobbies, ...listedPrivateLobbies];
     process.send?.({ type: "lobbyList", lobbies } satisfies WorkerLobbyList);
   }
 
