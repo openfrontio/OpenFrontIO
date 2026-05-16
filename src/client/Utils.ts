@@ -1,6 +1,7 @@
 import IntlMessageFormat from "intl-messageformat";
 import {
   Duos,
+  GameMapType,
   GameMode,
   HumansVsNations,
   MessageType,
@@ -16,6 +17,10 @@ import { Platform } from "./Platform";
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
 
 export function normaliseMapKey(mapName: string): string {
+  const enumKey = Object.keys(GameMapType).find(
+    (k) => GameMapType[k as keyof typeof GameMapType] === mapName,
+  );
+  if (enumKey) return enumKey.toLowerCase();
   return mapName.toLowerCase().replace(/[\s.]+/g, "");
 }
 

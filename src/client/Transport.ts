@@ -22,6 +22,7 @@ import {
   ClientSendWinnerMessage,
   GameConfig,
   Intent,
+  PublicGameType,
   ServerMessage,
   ServerMessageSchema,
   Winner,
@@ -176,6 +177,10 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
 
 export class SendStartGameEvent implements GameEvent {}
 
+export class SendOpenToPublicIntentEvent implements GameEvent {
+  constructor(public readonly publicGameType: PublicGameType | null) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -267,6 +272,10 @@ export class Transport {
     );
 
     this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
+
+    this.eventBus.on(SendOpenToPublicIntentEvent, (e) =>
+      this.onSendOpenToPublicIntent(e),
+    );
   }
 
   private startPing() {
@@ -649,6 +658,13 @@ export class Transport {
 
   private onSendStartGame() {
     this.sendIntent({ type: "start_game" });
+  }
+
+  private onSendOpenToPublicIntent(event: SendOpenToPublicIntentEvent) {
+    this.sendIntent({
+      type: "open_to_public",
+      publicGameType: event.publicGameType,
+    });
   }
 
   private sendIntent(intent: Intent) {

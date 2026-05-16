@@ -95,7 +95,25 @@ export class WorkerLobbyService {
           publicGameType: gi.publicGameType!,
         } satisfies PublicGameInfo;
       });
-    process.send?.({ type: "lobbyList", lobbies } satisfies WorkerLobbyList);
+
+    const openLobbies = this.gm
+      .openCustomLobbies()
+      .map((g) => g.gameInfo())
+      .map((gi) => {
+        return {
+          gameID: gi.gameID,
+          numClients: gi.clients?.length ?? 0,
+          startsAt: gi.startsAt,
+          gameConfig: gi.gameConfig,
+          publicGameType: gi.openCustomType!,
+        } satisfies PublicGameInfo;
+      });
+
+    process.send?.({
+      type: "lobbyList",
+      lobbies,
+      openLobbies,
+    } satisfies WorkerLobbyList);
   }
 
   private setupUpgradeHandler() {

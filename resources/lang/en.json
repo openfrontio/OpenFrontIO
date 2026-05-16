@@ -527,7 +527,7 @@
     "error": "Error"
   },
   "private_lobby": {
-    "title": "Join Private Lobby",
+    "title": "Join Custom Lobby",
     "enter_id": "Enter Lobby ID",
     "join_lobby": "Join Lobby",
     "not_found": "Lobby not found. Please check the ID and try again.",
@@ -573,7 +573,7 @@
     "tag_invalid_chars": "Clan tag can only contain letters and numbers."
   },
   "host_modal": {
-    "title": "Create Private Lobby",
+    "title": "Create Custom Lobby",
     "mode": "Mode",
     "team_count": "Number of Teams",
     "options_title": "Options",
@@ -616,7 +616,12 @@
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
     "host_cheats": "Host Cheats",
-    "leave_confirmation": "Are you sure you want to leave the lobby?"
+    "leave_confirmation": "Are you sure you want to leave the lobby?",
+    "open_to_public_title": "Open to Public",
+    "open_to_public_desc": "Allow anyone to find and join this lobby from the main menu.",
+    "open_to_public_active": "Open to Public",
+    "open_button": "Open to Public",
+    "close_to_public_button": "Close to Public"
   },
   "team_colors": {
     "red": "Red",
@@ -644,7 +649,18 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "team": "Teams",
+    "teams": "Teams",
+    "special": "Special"
+  },
+  "join_lobby": {
+    "open_custom_section_title": "Open Custom Lobbies",
+    "no_open_custom_lobbies": "No open custom lobbies at the moment.",
+    "players_label": "players",
+    "join_button": "Join",
+    "expand": "Show details",
+    "collapse": "Hide details",
+    "no_custom_options": "Default settings"
   },
   "mode_selector": {
     "teams_title": "Teams",

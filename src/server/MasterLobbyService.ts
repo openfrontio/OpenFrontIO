@@ -22,6 +22,8 @@ export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
   private readonly workerLobbies = new Map<number, PublicGameInfo[]>();
+  // Worker id => open custom lobbies it owns.
+  private readonly workerOpenLobbies = new Map<number, PublicGameInfo[]>();
   private readonly readyWorkers = new Set<number>();
   private started = false;
 
@@ -47,6 +49,7 @@ export class MasterLobbyService {
           break;
         case "lobbyList":
           this.workerLobbies.set(workerId, msg.lobbies);
+          this.workerOpenLobbies.set(workerId, msg.openLobbies ?? []);
           break;
       }
     });
@@ -55,6 +58,7 @@ export class MasterLobbyService {
   removeWorker(workerId: number) {
     this.workers.delete(workerId);
     this.workerLobbies.delete(workerId);
+    this.workerOpenLobbies.delete(workerId);
     this.readyWorkers.delete(workerId);
   }
 
@@ -108,11 +112,13 @@ export class MasterLobbyService {
   }
 
   private broadcastLobbies() {
+    const openLobbies = Array.from(this.workerOpenLobbies.values()).flat();
     const msg = {
       type: "lobbiesBroadcast",
       publicGames: {
         serverTime: Date.now(),
         games: this.getAllLobbies(),
+        openLobbies,
       },
     } satisfies MasterLobbiesBroadcast;
     for (const [workerId, worker] of this.workers.entries()) {

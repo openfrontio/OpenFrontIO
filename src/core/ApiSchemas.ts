@@ -149,6 +149,7 @@ export const PlayerStatsTreeSchema = z.object({
   Singleplayer: GameModeStatsSchema.optional(),
   Public: GameModeStatsSchema.optional(),
   Private: GameModeStatsSchema.optional(),
+  Custom: GameModeStatsSchema.optional(),
   Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;

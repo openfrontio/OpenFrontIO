@@ -4,7 +4,7 @@ import WebSocket from "ws";
 import { z } from "zod";
 import { isAdminRole } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -13,6 +13,7 @@ import {
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
+  OpenToPublicIntent,
   PlayerRecord,
   PublicGameType,
   ServerDesyncSchema,
@@ -93,6 +94,11 @@ export class GameServer {
 
   private visibleAt?: number;
 
+  // When set, this private lobby is open for anyone to join via the custom list.
+  // Null means the lobby is closed to public. Once set to non-null at least once,
+  // gameConfig.gameType is permanently set to GameType.Custom.
+  private openCustomType: PublicGameType | null = null;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -117,6 +123,9 @@ export class GameServer {
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
+    }
+    if (gameConfig.useRandomMap !== undefined) {
+      this.gameConfig.useRandomMap = gameConfig.useRandomMap;
     }
     if (gameConfig.gameMapSize !== undefined) {
       this.gameConfig.gameMapSize = gameConfig.gameMapSize;
@@ -482,6 +491,54 @@ export class GameServer {
                 );
 
                 this.updateGameConfig(stampedIntent.config);
+                // Keep openCustomType in sync with gameMode when open to public
+                if (
+                  this.openCustomType !== null &&
+                  stampedIntent.config.gameMode !== undefined
+                ) {
+                  this.openCustomType =
+                    stampedIntent.config.gameMode === GameMode.Team
+                      ? "team"
+                      : "ffa";
+                }
+                return;
+              }
+              case "open_to_public": {
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can open lobby to public`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.isPublic()) {
+                  this.log.warn(
+                    `Cannot open a system-managed public game to public`,
+                    { gameID: this.id },
+                  );
+                  return;
+                }
+                if (this.hasStarted()) {
+                  this.log.warn(
+                    `Cannot change visibility after game has started`,
+                    { gameID: this.id },
+                  );
+                  return;
+                }
+                const intent = stampedIntent as StampedIntent &
+                  OpenToPublicIntent;
+                this.openCustomType = intent.publicGameType;
+                if (intent.publicGameType !== null) {
+                  // Permanently mark as Custom once opened to public
+                  this.gameConfig.gameType = GameType.Custom;
+                  this.log.info(`Lobby opened to public`, {
+                    gameID: this.id,
+                    category: intent.publicGameType,
+                  });
+                } else {
+                  this.log.info(`Lobby closed to public`, { gameID: this.id });
+                }
                 return;
               }
               case "start_game": {
@@ -961,12 +1018,17 @@ export class GameServer {
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
-      publicGameType: this.publicGameType,
+      publicGameType: this.publicGameType ?? this.openCustomType ?? undefined,
+      openCustomType: this.openCustomType ?? undefined,
     };
   }
 
   public isPublic(): boolean {
     return this.gameConfig.gameType === GameType.Public;
+  }
+
+  public openCustomLobbyType(): PublicGameType | null {
+    return this.openCustomType;
   }
 
   public kickClient(

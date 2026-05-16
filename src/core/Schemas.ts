@@ -51,7 +51,8 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | StartGameIntent;
+  | StartGameIntent
+  | OpenToPublicIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -86,6 +87,7 @@ export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
 export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
+export type OpenToPublicIntent = z.infer<typeof OpenToPublicIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -166,6 +168,7 @@ export const GameInfoSchema = z.object({
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
+  openCustomType: PublicGameTypeSchema.optional(),
 });
 
 export const PublicGameInfoSchema = z.object({
@@ -179,6 +182,7 @@ export const PublicGameInfoSchema = z.object({
 export const PublicGamesSchema = z.object({
   serverTime: z.number(),
   games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+  openLobbies: z.array(PublicGameInfoSchema).optional(),
 });
 
 export class LobbyInfoEvent implements GameEvent {
@@ -253,6 +257,7 @@ export const GameConfigSchema = z.object({
   disableAlliances: z.boolean().nullable().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
+  useRandomMap: z.boolean().optional(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
@@ -459,6 +464,12 @@ export const StartGameIntentSchema = z.object({
   type: z.literal("start_game"),
 });
 
+export const OpenToPublicIntentSchema = z.object({
+  type: z.literal("open_to_public"),
+  // null closes the lobby to public; non-null opens it under the given category
+  publicGameType: PublicGameTypeSchema.nullable(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -485,6 +496,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   StartGameIntentSchema,
+  OpenToPublicIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

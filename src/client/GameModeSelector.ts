@@ -81,6 +81,13 @@ export class GameModeSelector extends LitElement {
     );
     this.requestUpdate();
 
+    const joinModal = document.querySelector(
+      "join-lobby-modal",
+    ) as JoinLobbyModal | null;
+    if (joinModal) {
+      joinModal.openLobbies = lobbies.openLobbies ?? [];
+    }
+
     const allGames = Object.values(lobbies.games ?? {}).flat();
     for (const game of allGames) {
       const mapType = game.gameConfig?.gameMap as GameMapType;

@@ -54,6 +54,7 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
+  SendOpenToPublicIntentEvent,
   SendStartGameEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
@@ -225,6 +226,7 @@ declare global {
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
+    "open-to-public": CustomEvent<{ publicGameType: string | null }>;
   }
 
   // Fixes the globalThis.addEventListener errors
@@ -380,6 +382,10 @@ class Client {
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
+    );
+    document.addEventListener(
+      "open-to-public",
+      this.handleOpenToPublic.bind(this),
     );
     document.addEventListener(
       "open-matchmaking",
@@ -1025,6 +1031,22 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
+    }
+  }
+
+  private handleOpenToPublic(
+    event: CustomEvent<{ publicGameType: string | null }>,
+  ) {
+    if (this.eventBus) {
+      this.eventBus.emit(
+        new SendOpenToPublicIntentEvent(
+          event.detail.publicGameType as
+            | "ffa"
+            | "team"
+            | "special"
+            | null,
+        ),
+      );
     }
   }
 

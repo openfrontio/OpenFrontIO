@@ -44,6 +44,7 @@ export class JoinLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
+  @property({ attribute: false }) openLobbies: PublicGameInfo[] = [];
 
   @state() private players: ClientInfo[] = [];
   @state() private playerCount: number = 0;
@@ -55,6 +56,7 @@ export class JoinLobbyModal extends BaseModal {
   @state() private serverTimeOffset: number = 0;
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
+  @state() private expandedLobbies: Set<string> = new Set();
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
@@ -218,7 +220,8 @@ export class JoinLobbyModal extends BaseModal {
 
   private renderJoinForm() {
     return html`
-      <form @submit=${this.joinLobbyFromInput} class="custom-scrollbar p-6 space-y-4 mr-1">
+      <div class="custom-scrollbar p-6 space-y-6 mr-1">
+        <form @submit=${this.joinLobbyFromInput}>
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -255,9 +258,311 @@ export class JoinLobbyModal extends BaseModal {
               submit
             ></o-button>
           </div>
-        </div>
-      </form>
+        </form>
+
+        ${this.renderOpenLobbies()}
+      </div>
     `;
+  }
+
+  private renderOpenLobbies() {
+    return html`
+      <div class="border-t border-white/10 pt-5">
+        <h3
+          class="text-xs font-bold uppercase tracking-widest text-white/40 mb-3"
+        >
+          ${translateText("join_lobby.open_custom_section_title")}
+        </h3>
+        ${this.openLobbies.length === 0
+          ? html`<p class="text-xs text-white/30 text-center py-4">
+              ${translateText("join_lobby.no_open_custom_lobbies")}
+            </p>`
+          : html`<div class="flex flex-col gap-2">
+              ${this.openLobbies.map((lobby) =>
+                this.renderOpenLobbyCard(lobby),
+              )}
+            </div>`}
+      </div>
+    `;
+  }
+
+  private gameModeLabel(lobby: PublicGameInfo): string {
+    const c = lobby.gameConfig;
+    const isTeam = c?.gameMode === GameMode.Team;
+    if (!isTeam || !c) return translateText("game_mode.ffa");
+    if (c.playerTeams === HumansVsNations) {
+      return translateText("host_modal.teams_Humans Vs Nations");
+    }
+    if (typeof c.playerTeams === "string") {
+      return translateText("host_modal.teams_" + c.playerTeams);
+    }
+    if (typeof c.playerTeams === "number") {
+      return translateText("public_lobby.teams", { num: c.playerTeams });
+    }
+    return translateText("game_mode.team");
+  }
+
+  private readonly randomMapThumbnail = assetUrl("images/RandomMap.webp");
+
+  private renderOpenLobbyCard(lobby: PublicGameInfo) {
+    // ===================================================================
+    // EXPLICIT ISOLATED RANDOM BYPASS — do not touch / do not merge with
+    // the normal map resolution logic below. If the host selected Random,
+    // force name and thumbnail directly: no lookup, no fallback, no resolve.
+    // ===================================================================
+    const isRandomMap = lobby.gameConfig?.useRandomMap === true;
+
+    let mapName: string;
+    let thumbnailUrl: string;
+    if (isRandomMap) {
+      mapName = translateText("map.random");
+      thumbnailUrl = this.randomMapThumbnail;
+    } else {
+      // ----- Normal map logic (unchanged) -----
+      const mapKey = lobby.gameConfig?.gameMap;
+      mapName = getMapName(mapKey) ?? mapKey ?? "";
+      thumbnailUrl = mapKey
+        ? assetUrl(
+            `maps/${encodeURIComponent(normaliseMapKey(mapKey))}/thumbnail.webp`,
+          )
+        : this.randomMapThumbnail;
+    }
+
+    const playerCount = lobby.numClients;
+    const maxPlayers = lobby.gameConfig?.maxPlayers ?? 0;
+    const categoryLabel = this.gameModeLabel(lobby);
+    const isExpanded = this.expandedLobbies.has(lobby.gameID);
+
+    return html`
+      <div
+        class="rounded-xl border border-white/10 bg-white/5 overflow-hidden transition-all"
+      >
+        <!-- Main row -->
+        <div class="flex items-center gap-3 px-3 py-3">
+          <!-- Map thumbnail -->
+          <img
+            src=${thumbnailUrl}
+            alt=${mapName}
+            class="w-16 h-12 rounded-lg object-cover border border-white/10 shrink-0"
+            @error=${(e: Event) => {
+              if (!isRandomMap) {
+                (e.target as HTMLImageElement).src = this.randomMapThumbnail;
+              }
+            }}
+          />
+
+          <!-- Map name + mode -->
+          <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+            <span class="text-sm font-bold text-white truncate"
+              >${mapName}</span
+            >
+            <span
+              class="text-[10px] font-bold uppercase tracking-widest text-white/40"
+              >${categoryLabel}</span
+            >
+          </div>
+
+          <!-- Player count + join + expand -->
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-1 text-white/60">
+              <svg
+                class="w-4 h-4"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                ></path>
+              </svg>
+              <span class="text-xs font-bold">
+                ${maxPlayers > 0 ? `${playerCount}/${maxPlayers}` : playerCount}
+              </span>
+            </div>
+            <button
+              class="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-all"
+              @click=${() => this.joinOpenLobby(lobby.gameID)}
+            >
+              ${translateText("join_lobby.join_button")}
+            </button>
+            <button
+              class="flex items-center justify-center w-7 h-7 rounded-lg border border-white/10 bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-all"
+              @click=${() => this.toggleLobbyExpanded(lobby.gameID)}
+              aria-label=${isExpanded
+                ? translateText("join_lobby.collapse")
+                : translateText("join_lobby.expand")}
+            >
+              <svg
+                class="w-3.5 h-3.5 transition-transform ${isExpanded
+                  ? "rotate-90"
+                  : ""}"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 5l7 7-7 7"
+                ></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Expandable details -->
+        ${isExpanded && lobby.gameConfig
+          ? this.renderOpenLobbyDetails(lobby.gameConfig)
+          : html``}
+      </div>
+    `;
+  }
+
+  private renderOpenLobbyDetails(c: GameConfig): TemplateResult {
+    const isTeam = c.gameMode === GameMode.Team;
+    const isCompact =
+      c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
+
+    const tags: string[] = [];
+
+    if (c.difficulty !== Difficulty.Easy)
+      tags.push(translateText(`difficulty.${c.difficulty.toLowerCase()}`));
+    if (c.instantBuild) tags.push(translateText("host_modal.instant_build"));
+    if (c.randomSpawn) tags.push(translateText("host_modal.random_spawn"));
+    if (c.infiniteGold) tags.push(translateText("host_modal.infinite_gold"));
+    if (c.infiniteTroops) tags.push(translateText("host_modal.infinite_troops"));
+    if (c.disableAlliances)
+      tags.push(
+        translateText("public_game_modifier.disable_alliances_label"),
+      );
+    if (c.waterNukes)
+      tags.push(translateText("public_game_modifier.water_nukes_label"));
+    if (isCompact) tags.push(translateText("host_modal.compact_map"));
+    if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
+      tags.push(
+        `${translateText("host_modal.donate_gold")}: ${translateText(c.donateGold ? "common.enabled" : "common.disabled")}`,
+      );
+    if ((isTeam && !c.donateTroops) || (!isTeam && c.donateTroops))
+      tags.push(
+        `${translateText("host_modal.donate_troops")}: ${translateText(c.donateTroops ? "common.enabled" : "common.disabled")}`,
+      );
+    if (c.maxTimerValue)
+      tags.push(
+        `${translateText("private_lobby.game_length")}: ${c.maxTimerValue} min`,
+      );
+    if (c.spawnImmunityDuration && Math.round(c.spawnImmunityDuration / 10) !== 5) {
+      const s = Math.round(c.spawnImmunityDuration / 10);
+      const val =
+        s < 60
+          ? `${s}s`
+          : s % 60 > 0
+            ? `${Math.floor(s / 60)}m ${s % 60}s`
+            : `${Math.floor(s / 60)} min`;
+      tags.push(`${translateText("private_lobby.pvp_immunity")}: ${val}`);
+    }
+    if (c.startingGold)
+      tags.push(
+        `${translateText("private_lobby.starting_gold")}: ${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}M`,
+      );
+    if (c.goldMultiplier)
+      tags.push(
+        `${translateText("host_modal.gold_multiplier")}: x${c.goldMultiplier}`,
+      );
+    if (c.bots !== (isCompact ? 100 : 400))
+      tags.push(`${translateText("host_modal.bots")} ${c.bots}`);
+    if (c.nations === "disabled")
+      tags.push(
+        `${translateText("host_modal.nations")}: ${translateText("common.disabled")}`,
+      );
+
+    const unitKeys: Record<string, string> = {
+      City: "unit_type.city",
+      Port: "unit_type.port",
+      "Defense Post": "unit_type.defense_post",
+      "SAM Launcher": "unit_type.sam_launcher",
+      "Missile Silo": "unit_type.missile_silo",
+      Warship: "unit_type.warship",
+      Factory: "unit_type.factory",
+      "Atom Bomb": "unit_type.atom_bomb",
+      "Hydrogen Bomb": "unit_type.hydrogen_bomb",
+      MIRV: "unit_type.mirv",
+      "Trade Ship": "player_stats_table.unit.trade",
+      Transport: "player_stats_table.unit.trans",
+      "MIRV Warhead": "player_stats_table.unit.mirvw",
+    };
+    const disabledUnits = c.disabledUnits ?? [];
+
+    if (tags.length === 0 && disabledUnits.length === 0) {
+      return html`
+        <div class="px-3 pb-3 pt-1">
+          <p class="text-xs text-white/30">
+            ${translateText("join_lobby.no_custom_options")}
+          </p>
+        </div>
+      `;
+    }
+
+    return html`
+      <div class="px-3 pb-3 border-t border-white/10 pt-3 space-y-2">
+        ${tags.length > 0
+          ? html`
+              <div class="flex flex-wrap gap-1.5">
+                ${tags.map(
+                  (tag) => html`
+                    <span
+                      class="px-2 py-0.5 bg-white/10 text-white/70 text-[10px] font-bold rounded-md border border-white/10"
+                    >
+                      ${tag}
+                    </span>
+                  `,
+                )}
+              </div>
+            `
+          : html``}
+        ${disabledUnits.length > 0
+          ? html`
+              <div class="flex flex-wrap gap-1.5">
+                ${disabledUnits.map((unit) => {
+                  const key = unitKeys[unit];
+                  const name = key ? translateText(key) : unit;
+                  return html`
+                    <span
+                      class="px-2 py-0.5 bg-red-500/20 text-red-300 text-[10px] font-bold rounded-md border border-red-500/30"
+                    >
+                      ${name}
+                    </span>
+                  `;
+                })}
+              </div>
+            `
+          : html``}
+      </div>
+    `;
+  }
+
+  private toggleLobbyExpanded(gameID: string) {
+    const next = new Set(this.expandedLobbies);
+    if (next.has(gameID)) {
+      next.delete(gameID);
+    } else {
+      next.add(gameID);
+    }
+    this.expandedLobbies = next;
+  }
+
+  private async joinOpenLobby(gameID: string) {
+    this.startTrackingLobby(gameID);
+    try {
+      const gameExists = await this.checkActiveLobby(gameID);
+      if (!gameExists) {
+        this.resetTrackingState();
+        this.showMessage(translateText("private_lobby.not_found"), "red");
+      }
+    } catch {
+      this.resetTrackingState();
+      this.showMessage(translateText("private_lobby.error"), "red");
+    }
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
@@ -374,6 +679,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
+    this.expandedLobbies = new Set();
   }
 
   disconnectedCallback() {
@@ -410,11 +716,15 @@ export class JoinLobbyModal extends BaseModal {
     if (!this.gameConfig) return html``;
 
     const c = this.gameConfig;
-    const mapName = getMapName(c.gameMap);
-    const normalizedMap = normaliseMapKey(c.gameMap);
-    const thumbnailUrl = assetUrl(
-      `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
-    );
+    const isRandomMap = c.useRandomMap === true;
+    const mapName = isRandomMap
+      ? translateText("map.random")
+      : (getMapName(c.gameMap) ?? c.gameMap);
+    const thumbnailUrl = isRandomMap
+      ? this.randomMapThumbnail
+      : assetUrl(
+          `maps/${encodeURIComponent(normaliseMapKey(c.gameMap))}/thumbnail.webp`,
+        );
     const isTeam = c.gameMode === GameMode.Team;
 
     let modeSubtitle: string;
@@ -598,7 +908,9 @@ export class JoinLobbyModal extends BaseModal {
           alt=${mapName ?? c.gameMap}
           class="w-20 h-20 rounded-lg object-cover border border-white/10 shrink-0"
           @error=${(e: Event) => {
-            (e.target as HTMLImageElement).style.display = "none";
+            if (!isRandomMap) {
+              (e.target as HTMLImageElement).src = this.randomMapThumbnail;
+            }
           }}
         />
         <div class="flex flex-col gap-1">
