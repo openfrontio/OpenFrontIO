@@ -248,6 +248,21 @@ function mountWebGLDebugRenderer(
   glCanvas.style.pointerEvents = "none";
   document.body.insertBefore(glCanvas, document.body.firstChild);
 
+  // Capture the WebGL renderer's animation-frame callback rather than letting
+  // it run its own RAF loop. Two independent RAF loops race: when the user
+  // pans, the WebGL renderer can draw with one-frame-stale camera state
+  // because its RAF fires before canvas2D's RAF (which would have synced the
+  // camera). Driving WebGL's draw synchronously from canvas2D's onPreRender
+  // hook locks them to the same frame.
+  let cachedWebGLFrameCallback: FrameRequestCallback | null = null;
+  const captureRaf = (cb: FrameRequestCallback): number => {
+    cachedWebGLFrameCallback = cb;
+    return 0;
+  };
+  const captureCaf = (_id: number): void => {
+    cachedWebGLFrameCallback = null;
+  };
+
   const palette = new Float32Array(4096 * 2 * 4);
   const view = new WebGLGameView(
     glCanvas,
@@ -264,6 +279,8 @@ function mountWebGLDebugRenderer(
     },
     terrainBytes,
     palette,
+    captureRaf,
+    captureCaf,
   );
 
   // Names are rendered by the existing HTML NameLayer; disable the renderer's
@@ -277,20 +294,40 @@ function mountWebGLDebugRenderer(
     }
   });
 
+  // Cache canvas dimensions to avoid forced reflows every frame. Reading
+  // clientWidth/clientHeight flushes pending layout — at 60fps that's a
+  // measurable cost. Only update on resize events from the observer.
+  let cachedCanvasW = glCanvas.clientWidth;
+  let cachedCanvasH = glCanvas.clientHeight;
+  const resizeObs = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        cachedCanvasW = width;
+        cachedCanvasH = height;
+      }
+    }
+  });
+  resizeObs.observe(glCanvas);
+
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
     const dpr = window.devicePixelRatio || 1;
-    const canvasW = glCanvas.clientWidth;
-    const canvasH = glCanvas.clientHeight;
     const centerX =
       transformHandler.offsetX +
       mapWidth / 2 +
-      (canvasW - mapWidth) / (2 * scale);
+      (cachedCanvasW - mapWidth) / (2 * scale);
     const centerY =
       transformHandler.offsetY +
       mapHeight / 2 +
-      (canvasH - mapHeight) / (2 * scale);
+      (cachedCanvasH - mapHeight) / (2 * scale);
     view.setCameraState(centerX, centerY, scale * dpr);
+    // Invoke the WebGL renderer's frame callback synchronously, with the just-
+    // updated camera state. The callback re-arms itself via captureRaf, so
+    // we'll get a fresh callback ready for the next canvas2D frame.
+    const cb = cachedWebGLFrameCallback;
+    cachedWebGLFrameCallback = null;
+    cb?.(performance.now());
   };
 
   (window as unknown as { __webglView?: unknown }).__webglView = view;
