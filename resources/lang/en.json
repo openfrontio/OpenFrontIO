@@ -573,6 +573,7 @@
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "tag": "TAG",
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
+    "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers."
   },
   "host_modal": {
