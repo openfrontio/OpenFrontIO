@@ -431,11 +431,10 @@ export class JoinLobbyModal extends BaseModal {
     if (c.instantBuild) tags.push(translateText("host_modal.instant_build"));
     if (c.randomSpawn) tags.push(translateText("host_modal.random_spawn"));
     if (c.infiniteGold) tags.push(translateText("host_modal.infinite_gold"));
-    if (c.infiniteTroops) tags.push(translateText("host_modal.infinite_troops"));
+    if (c.infiniteTroops)
+      tags.push(translateText("host_modal.infinite_troops"));
     if (c.disableAlliances)
-      tags.push(
-        translateText("public_game_modifier.disable_alliances_label"),
-      );
+      tags.push(translateText("public_game_modifier.disable_alliances_label"));
     if (c.waterNukes)
       tags.push(translateText("public_game_modifier.water_nukes_label"));
     if (isCompact) tags.push(translateText("host_modal.compact_map"));
@@ -451,7 +450,10 @@ export class JoinLobbyModal extends BaseModal {
       tags.push(
         `${translateText("private_lobby.game_length")}: ${c.maxTimerValue} min`,
       );
-    if (c.spawnImmunityDuration && Math.round(c.spawnImmunityDuration / 10) !== 5) {
+    if (
+      c.spawnImmunityDuration &&
+      Math.round(c.spawnImmunityDuration / 10) !== 5
+    ) {
       const s = Math.round(c.spawnImmunityDuration / 10);
       const val =
         s < 60

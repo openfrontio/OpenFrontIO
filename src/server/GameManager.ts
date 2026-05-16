@@ -30,8 +30,7 @@ export class GameManager {
 
   public openCustomLobbies(): GameServer[] {
     return Array.from(this.games.values()).filter(
-      (g) =>
-        g.phase() === GamePhase.Lobby && g.openCustomLobbyType() !== null,
+      (g) => g.phase() === GamePhase.Lobby && g.openCustomLobbyType() !== null,
     );
   }
 

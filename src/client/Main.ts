@@ -1040,11 +1040,7 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(
         new SendOpenToPublicIntentEvent(
-          event.detail.publicGameType as
-            | "ffa"
-            | "team"
-            | "special"
-            | null,
+          event.detail.publicGameType as "ffa" | "team" | "special" | null,
         ),
       );
     }
