@@ -23,6 +23,14 @@ export class WinCheckExecution implements Execution {
   // maxGameDuration hard kill. 170mins (10 mins before 3hrs)
   private static readonly HARD_TIME_LIMIT_SECONDS = 170 * 60;
 
+  // Grace period (in ticks) before declaring a winner due to disconnect
+  // in 1v1 ranked. 300 ticks = 30 seconds at 100ms/tick.
+  private static readonly DISCONNECT_GRACE_TICKS = 300;
+
+  // The tick at which we first detected only one connected human in 1v1.
+  // null means both players are currently connected (or grace not started).
+  private disconnectGraceTick: number | null = null;
+
   constructor() {}
 
   init(mg: Game, ticks: number) {
@@ -52,14 +60,53 @@ export class WinCheckExecution implements Execution {
     }
 
     if (this.mg.config().gameConfig().rankedType === RankedType.OneVOne) {
-      const humans = sorted.filter(
-        (p) => p.type() === PlayerType.Human && !p.isDisconnected(),
-      );
-      if (humans.length === 1) {
-        this.mg.setWinner(humans[0], this.mg.stats().stats());
-        console.log(`${humans[0].name()} has won the game`);
-        this.active = false;
+      const allHumans = sorted.filter((p) => p.type() === PlayerType.Human);
+      const connectedHumans = allHumans.filter((p) => !p.isDisconnected());
+
+      if (connectedHumans.length === 1 && allHumans.length === 2) {
+        // One player is disconnected — start or continue grace period
+        if (this.disconnectGraceTick === null) {
+          this.disconnectGraceTick = this.mg.ticks();
+          console.log(
+            `1v1 disconnect grace period started at tick ${this.disconnectGraceTick}`,
+          );
+        }
+
+        const elapsed = this.mg.ticks() - this.disconnectGraceTick;
+        if (elapsed >= WinCheckExecution.DISCONNECT_GRACE_TICKS) {
+          // Grace period expired — declare the connected player as winner
+          this.mg.setWinner(connectedHumans[0], this.mg.stats().stats());
+          console.log(
+            `${connectedHumans[0].name()} has won the game (opponent disconnected for ${elapsed} ticks)`,
+          );
+          this.active = false;
+          return;
+        }
+        // Still within grace period — wait for reconnect
         return;
+      } else if (connectedHumans.length === 0 && allHumans.length === 2) {
+        // Both players disconnected — don't reset grace, don't declare winner
+        // The grace timer keeps running from when first disconnect was detected
+        if (this.disconnectGraceTick !== null) {
+          const elapsed = this.mg.ticks() - this.disconnectGraceTick;
+          if (elapsed >= WinCheckExecution.DISCONNECT_GRACE_TICKS) {
+            // Both disconnected past grace — pick the one with more tiles
+            const winner = allHumans[0]; // already sorted by tiles desc
+            this.mg.setWinner(winner, this.mg.stats().stats());
+            console.log(
+              `${winner.name()} has won the game (both disconnected, most tiles)`,
+            );
+            this.active = false;
+            return;
+          }
+        }
+        return;
+      } else {
+        // Both players are connected — reset grace timer
+        if (this.disconnectGraceTick !== null) {
+          console.log(`1v1 disconnect grace period reset (player reconnected)`);
+          this.disconnectGraceTick = null;
+        }
       }
     }
 
