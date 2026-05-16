@@ -177,7 +177,9 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
-    this.gameConfig.hostCheats = gameConfig.hostCheats;
+    if (gameConfig.hostCheats !== undefined) {
+      this.gameConfig.hostCheats = gameConfig.hostCheats;
+    }
   }
 
   private isKicked(clientID: ClientID): boolean {
