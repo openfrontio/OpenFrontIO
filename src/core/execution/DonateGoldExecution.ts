@@ -18,7 +18,7 @@ import {
 
 export class DonateGoldExecution implements Execution {
   private recipient: Player;
-  private gold: Gold;
+  private gold: Gold | null;
 
   private mg: Game;
   private random: PseudoRandom;
@@ -30,7 +30,7 @@ export class DonateGoldExecution implements Execution {
     private recipientID: PlayerID,
     goldNum: number | null,
   ) {
-    this.gold = toInt(goldNum ?? 0);
+    this.gold = goldNum === null ? null : toInt(goldNum);
   }
 
   init(mg: Game, ticks: number): void {

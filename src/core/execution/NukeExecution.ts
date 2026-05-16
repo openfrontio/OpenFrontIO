@@ -238,8 +238,12 @@ export class NukeExecution implements Execution {
       return;
     }
 
+    if (this.src === null || this.src === undefined) {
+      this.active = false;
+      return;
+    }
     // Move to next tile
-    const result = this.pathFinder.next(this.src!, this.dst, this.speed);
+    const result = this.pathFinder.next(this.src, this.dst, this.speed);
     if (result.status === PathStatus.COMPLETE) {
       this.detonate();
       return;
@@ -259,7 +263,10 @@ export class NukeExecution implements Execution {
     const trajectoryTiles: TrajectoryTile[] = [];
     const targetRangeSquared =
       this.mg.config().defaultNukeTargetableRange() ** 2;
-    const allTiles = this.pathFinder.findPath(this.src!, target) ?? [];
+    if (this.src === null || this.src === undefined) {
+      return trajectoryTiles;
+    }
+    const allTiles = this.pathFinder.findPath(this.src, target) ?? [];
     for (const tile of allTiles) {
       trajectoryTiles.push({
         tile,

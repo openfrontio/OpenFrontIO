@@ -205,7 +205,6 @@ export class AttackExecution implements Execution {
 
     const survivors = this.attack.troops() - deaths;
     this._owner.addTroops(survivors);
-    this.attack.delete();
     this.active = false;
 
     // Not all retreats are canceled attacks
@@ -213,6 +212,7 @@ export class AttackExecution implements Execution {
       // Record stats
       this.mg.stats().attackCancel(this._owner, this.target, survivors);
     }
+    this.attack.delete();
   }
 
   tick(ticks: number) {
@@ -367,8 +367,10 @@ export class AttackExecution implements Execution {
 
     this.mg.conquerPlayer(this._owner, target);
 
-    for (let i = 0; i < 10; i++) {
-      for (const tile of target.tiles()) {
+    for (let i = 0; i < 100; i++) {
+      const remainingTiles = Array.from(target.tiles());
+      if (remainingTiles.length === 0) break;
+      for (const tile of remainingTiles) {
         let borders = false;
         this.mg.forEachNeighbor(tile, (t) => {
           if (!borders && this.mg.owner(t) === this._owner) {
