@@ -656,13 +656,11 @@
   "game_mode": {
     "ffa": "Free for All",
     "team": "Teams",
-    "teams": "Teams",
-    "special": "Special"
+    "teams": "Teams"
   },
   "join_lobby": {
     "open_custom_section_title": "Open Custom Lobbies",
     "no_open_custom_lobbies": "No open custom lobbies at the moment.",
-    "players_label": "players",
     "join_button": "Join",
     "expand": "Show details",
     "collapse": "Hide details",
