@@ -672,7 +672,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(msg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -999,13 +1001,15 @@ export class GameServer {
         persistentID: client.persistentID,
         reasonKey,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: reasonKey,
-        } satisfies ServerErrorMessage),
-      );
-      client.ws.close(1000, reasonKey);
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(
+          JSON.stringify({
+            type: "error",
+            error: reasonKey,
+          } satisfies ServerErrorMessage),
+        );
+        client.ws.close(1000, reasonKey);
+      }
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
@@ -1137,7 +1141,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(desyncMsg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(desyncMsg);
+      }
     }
   }
 
