@@ -448,7 +448,7 @@ export class JoinLobbyModal extends BaseModal {
       );
     if (c.maxTimerValue)
       tags.push(
-        `${translateText("private_lobby.game_length")}: ${c.maxTimerValue} min`,
+        `${translateText("private_lobby.game_length")}: ${c.maxTimerValue} ${translateText("units.minute")}`,
       );
     if (
       c.spawnImmunityDuration &&
@@ -457,15 +457,15 @@ export class JoinLobbyModal extends BaseModal {
       const s = Math.round(c.spawnImmunityDuration / 10);
       const val =
         s < 60
-          ? `${s}s`
+          ? `${s}${translateText("units.second_short")}`
           : s % 60 > 0
-            ? `${Math.floor(s / 60)}m ${s % 60}s`
-            : `${Math.floor(s / 60)} min`;
+            ? `${Math.floor(s / 60)}${translateText("units.minute_short")} ${s % 60}${translateText("units.second_short")}`
+            : `${Math.floor(s / 60)} ${translateText("units.minute")}`;
       tags.push(`${translateText("private_lobby.pvp_immunity")}: ${val}`);
     }
     if (c.startingGold)
       tags.push(
-        `${translateText("private_lobby.starting_gold")}: ${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}M`,
+        `${translateText("private_lobby.starting_gold")}: ${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}${translateText("units.million_short")}`,
       );
     if (c.goldMultiplier)
       tags.push(

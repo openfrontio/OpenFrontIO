@@ -1037,13 +1037,18 @@ class Client {
   private handleOpenToPublic(
     event: CustomEvent<{ publicGameType: string | null }>,
   ) {
-    if (this.eventBus) {
-      this.eventBus.emit(
-        new SendOpenToPublicIntentEvent(
-          event.detail.publicGameType as "ffa" | "team" | "special" | null,
-        ),
-      );
+    if (!this.eventBus) return;
+    const raw = event.detail.publicGameType;
+    const validTypes = ["ffa", "team", "special"] as const;
+    const isValid =
+      raw === null || (validTypes as readonly string[]).includes(raw);
+    if (!isValid) {
+      console.error(`[open-to-public] invalid publicGameType: ${raw}`);
+      return;
     }
+    this.eventBus.emit(
+      new SendOpenToPublicIntentEvent(raw as "ffa" | "team" | "special" | null),
+    );
   }
 
   private async getTurnstileToken(

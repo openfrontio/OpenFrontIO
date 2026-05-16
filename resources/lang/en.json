@@ -5,6 +5,12 @@
     "svg": "uk_us_flag",
     "lang_code": "en"
   },
+  "units": {
+    "second_short": "s",
+    "minute_short": "m",
+    "minute": "min",
+    "million_short": "M"
+  },
   "common": {
     "not_logged_in": "Not logged in",
     "close": "Close",

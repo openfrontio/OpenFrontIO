@@ -168,7 +168,7 @@ export const GameInfoSchema = z.object({
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
-  openCustomType: PublicGameTypeSchema.optional(),
+  openCustomType: PublicGameTypeSchema.nullable().optional(),
 });
 
 export const PublicGameInfoSchema = z.object({

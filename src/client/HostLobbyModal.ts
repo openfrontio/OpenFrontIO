@@ -607,6 +607,7 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatGoldMultiplierValue = undefined;
     this.hostCheatStartingGold = false;
     this.hostCheatStartingGoldValue = undefined;
+    this.openToPublicType = null;
 
     this.leaveLobbyOnClose = true;
   }
