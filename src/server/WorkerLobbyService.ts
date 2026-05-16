@@ -99,7 +99,9 @@ export class WorkerLobbyService {
     const openLobbies = this.gm
       .openCustomLobbies()
       .map((g) => g.gameInfo())
-      .filter((gi) => gi.openCustomType != null)
+      .filter(
+        (gi) => gi.openCustomType !== null && gi.openCustomType !== undefined,
+      )
       .map((gi) => {
         return {
           gameID: gi.gameID,

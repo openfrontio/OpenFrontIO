@@ -473,6 +473,8 @@ export class JoinLobbyModal extends BaseModal {
       );
     if (c.bots !== (isCompact ? 100 : 400))
       tags.push(`${translateText("host_modal.bots")} ${c.bots}`);
+    if (typeof c.nations === "number")
+      tags.push(`${translateText("host_modal.nations")}: ${c.nations}`);
     if (c.nations === "disabled")
       tags.push(
         `${translateText("host_modal.nations")}: ${translateText("common.disabled")}`,
@@ -557,11 +559,13 @@ export class JoinLobbyModal extends BaseModal {
     this.startTrackingLobby(gameID);
     try {
       const gameExists = await this.checkActiveLobby(gameID);
+      if (this.currentLobbyId !== gameID) return;
       if (!gameExists) {
         this.resetTrackingState();
         this.showMessage(translateText("private_lobby.not_found"), "red");
       }
     } catch {
+      if (this.currentLobbyId !== gameID) return;
       this.resetTrackingState();
       this.showMessage(translateText("private_lobby.error"), "red");
     }
