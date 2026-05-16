@@ -68,7 +68,7 @@ export class WinCheckExecution implements Execution {
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
 
-    if (numTilesWithoutFallout === 0) {
+    if (numTilesWithoutFallout <= 0) {
       return;
     }
 
@@ -108,7 +108,7 @@ export class WinCheckExecution implements Execution {
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
 
-    if (numTilesWithoutFallout === 0) {
+    if (numTilesWithoutFallout <= 0) {
       return;
     }
 
