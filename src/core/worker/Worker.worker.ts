@@ -1,7 +1,7 @@
 import { assetUrl } from "../AssetUrls";
-import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { createGameRunner, GameRunner } from "../GameRunner";
 import {
   AttackClusteredPositionsResultMessage,
   InitializedMessage,
@@ -50,7 +50,7 @@ async function drain(): Promise<void> {
 
   draining = true;
   drainRequested = false;
-  let shouldContinue = false;
+  let shouldContinue: boolean;
   try {
     const gr = await gameRunner;
     if (!gr) {

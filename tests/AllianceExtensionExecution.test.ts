@@ -12,11 +12,7 @@ describe("AllianceExtensionExecution", () => {
   beforeEach(async () => {
     game = await setup(
       "ocean_and_land",
-      {
-        infiniteGold: true,
-        instantBuild: true,
-        infiniteTroops: true,
-      },
+      { infiniteGold: true, instantBuild: true, infiniteTroops: true },
       [
         playerInfo("player1", PlayerType.Human),
         playerInfo("player2", PlayerType.Human),
@@ -27,10 +23,6 @@ describe("AllianceExtensionExecution", () => {
     player1 = game.player("player1");
     player2 = game.player("player2");
     player3 = game.player("player3");
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   test("Successfully extends existing alliance between Humans", () => {

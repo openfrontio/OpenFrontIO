@@ -1,3 +1,4 @@
+import { Config } from "src/core/configuration/Config";
 import { translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
@@ -11,9 +12,12 @@ import {
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
-import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
-import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
+import {
+  BuildableUnit,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -34,6 +38,7 @@ import {
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
+  DoRetaliateAttackEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -42,6 +47,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -57,7 +63,6 @@ import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
-  serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
@@ -232,12 +237,12 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getGameLogicConfig(
+  const config = new Config(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
   );
-  let gameMap: TerrainMapData | null = null;
+  let gameMap: TerrainMapData;
 
   if (terrainLoad) {
     gameMap = await terrainLoad;
@@ -285,6 +290,7 @@ async function createClientGame(
       worker,
       gameView,
       soundManager,
+      userSettings,
     );
   } catch (err) {
     soundManager.dispose();
@@ -316,6 +322,7 @@ export class ClientGameRunner {
     private worker: WorkerClient,
     private gameView: GameView,
     private soundManager: SoundManager,
+    private userSettings: UserSettings,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -390,6 +397,10 @@ export class ClientGameRunner {
     this.eventBus.on(
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoRetaliateAttackEvent,
+      this.doRetaliateAttackMostRecent.bind(this),
     );
     this.eventBus.on(
       DoRequestAllianceEvent,
@@ -524,7 +535,8 @@ export class ClientGameRunner {
         if (
           !this.gameView.inSpawnPhase() &&
           !hasGoneToPlayer &&
-          this.gameView.myPlayer()
+          this.gameView.myPlayer() &&
+          this.userSettings.goToPlayer()
         ) {
           hasGoneToPlayer = true;
           this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));
@@ -783,6 +795,41 @@ export class ClientGameRunner {
     });
   }
 
+  private doRetaliateAttackMostRecent(): void {
+    if (!this.isActive || this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const incomingAttacks = this.myPlayer.incomingAttacks().filter((a) => {
+      const t = (
+        this.gameView.playerBySmallID(a.attackerID) as PlayerView
+      ).type();
+      return t !== PlayerType.Bot;
+    });
+
+    if (incomingAttacks.length === 0) return;
+
+    const mostRecentAttack = incomingAttacks[incomingAttacks.length - 1];
+
+    const attacker = this.gameView.playerBySmallID(
+      mostRecentAttack.attackerID,
+    ) as PlayerView;
+    if (!attacker) return;
+
+    const counterTroops = Math.min(
+      mostRecentAttack.troops,
+      this.renderer.uiState.attackRatio * this.myPlayer.troops(),
+    );
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
+  }
+
   private doRequestAllianceUnderCursor(): void {
     const tile = this.getTileUnderCursor();
     if (tile === null) return;
@@ -805,6 +852,8 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAllianceRequestIntentEvent(myPlayer, recipient),
         );
+      } else if (actions.interaction?.allianceInfo?.canExtend) {
+        this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
       }
     });
   }

@@ -5,7 +5,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import tsconfigPaths from "vite-tsconfig-paths";
 import {
   type AssetManifest,
   buildAssetUrl,
@@ -66,6 +65,12 @@ export default defineConfig(({ mode }) => {
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
+    numWorkers: JSON.stringify(parseInt(env.NUM_WORKERS ?? "2", 10)),
+    turnstileSiteKey: JSON.stringify(
+      env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
+    ),
+    jwtAudience: JSON.stringify(env.DOMAIN ?? "localhost"),
+    instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(
@@ -155,17 +160,13 @@ export default defineConfig(({ mode }) => {
     publicDir: isProduction ? false : "resources",
 
     resolve: {
+      tsconfigPaths: true,
       alias: {
-        "protobufjs/minimal": path.resolve(
-          __dirname,
-          "node_modules/protobufjs/minimal.js",
-        ),
         resources: path.resolve(__dirname, "resources"),
       },
     },
 
     plugins: [
-      tsconfigPaths(),
       ...(!isProduction
         ? [serveProprietaryDir(proprietaryDir, resourcesDir)]
         : []),
@@ -209,8 +210,11 @@ export default defineConfig(({ mode }) => {
       assetsDir: "assets", // Sub-directory for assets
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ["pixi.js", "howler", "zod", "protobufjs"],
+          manualChunks: (id) => {
+            const vendorModules = ["pixi.js", "howler", "zod"];
+            if (vendorModules.some((module) => id.includes(module))) {
+              return "vendor";
+            }
           },
         },
       },

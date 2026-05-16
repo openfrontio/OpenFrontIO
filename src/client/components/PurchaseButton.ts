@@ -5,6 +5,8 @@ import { translateText } from "../Utils";
 import "./CapIcon";
 import "./PlutoniumIcon";
 
+export const DEFAULT_DOLLAR_LABEL_KEY = "territory_patterns.purchase";
+
 const PURCHASE_STYLE_ID = "purchase-button-styles";
 if (!document.getElementById(PURCHASE_STYLE_ID)) {
   const style = document.createElement("style");
@@ -190,6 +192,14 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   rarity: string = "common";
 
+  /** Override the dollar-button label key. */
+  @property({ type: String })
+  dollarLabelKey: string = DEFAULT_DOLLAR_LABEL_KEY;
+
+  /** Optional suffix appended to the displayed price, e.g. "/mo". Not translated here. */
+  @property({ type: String })
+  priceSuffix: string = "";
+
   @property({ type: Function })
   onPurchaseDollar?: () => void;
 
@@ -226,8 +236,10 @@ export class PurchaseButton extends LitElement {
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
         <span class="purchase-sparkle-streak"></span>
-        ${translateText("territory_patterns.purchase")}
-        <span class="ml-1 text-white/50">(${this.product!.price})</span>
+        ${translateText(this.dollarLabelKey)}
+        <span class="ml-1 text-white/50"
+          >(${this.product!.price}${this.priceSuffix})</span
+        >
       </button>
     `;
   }

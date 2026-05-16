@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Product } from "../../core/CosmeticSchemas";
 import "./PurchaseButton";
+import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 
 type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | string;
 
@@ -157,6 +158,14 @@ export class CosmeticContainer extends LitElement {
 
   @property({ type: Number })
   priceSoft: number | null = null;
+
+  /** Override the dollar-button label key. */
+  @property({ type: String })
+  dollarLabelKey: string = DEFAULT_DOLLAR_LABEL_KEY;
+
+  /** Optional suffix appended to the displayed price, e.g. "/mo". */
+  @property({ type: String })
+  priceSuffix: string = "";
 
   @property({ type: Function })
   onPurchaseDollar?: () => void;
@@ -404,7 +413,7 @@ export class CosmeticContainer extends LitElement {
     if (this.name) {
       this._nameEl ??= document.createElement("div");
       const cfg = rarityConfig[this.rarity] ?? fallback;
-      this._nameEl.className = `text-xs font-bold uppercase tracking-wider text-center truncate w-full`;
+      this._nameEl.className = `text-xs font-bold uppercase tracking-wider text-center whitespace-normal break-words w-full`;
       this._nameEl.style.color = cfg.nameColor;
       this._nameEl.title = this.name;
       this._nameEl.textContent = this.name;
@@ -448,6 +457,8 @@ export class CosmeticContainer extends LitElement {
             .priceHard=${this.priceHard}
             .priceSoft=${this.priceSoft}
             .rarity=${this.rarity}
+            .dollarLabelKey=${this.dollarLabelKey}
+            .priceSuffix=${this.priceSuffix}
             .onPurchaseDollar=${this.onPurchaseDollar}
             .onPurchaseHard=${this.onPurchaseHard}
             .onPurchaseSoft=${this.onPurchaseSoft}

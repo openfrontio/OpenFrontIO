@@ -41,6 +41,15 @@ export function clanApiMockFactory() {
         ffa: { wins: 3, losses: 2 },
         team: { wins: 2, losses: 1 },
         hvn: { wins: 1, losses: 0 },
+        duos: { wins: 1, losses: 0 },
+        trios: { wins: 0, losses: 1 },
+        quads: { wins: 1, losses: 0 },
+        "2": { wins: 1, losses: 0 },
+        "3": { wins: 0, losses: 1 },
+        "4": { wins: 1, losses: 0 },
+        "5": { wins: 0, losses: 0 },
+        "6": { wins: 0, losses: 0 },
+        "7": { wins: 0, losses: 0 },
         ranked: { wins: 1, losses: 0 },
         "1v1": { wins: 1, losses: 0 },
       },
@@ -116,12 +125,6 @@ export function authMockFactory() {
   return {
     getAuthHeader: vi.fn(async () => "Bearer test-token"),
     userAuth: vi.fn(async () => ({ jwt: "test-token", claims: {} })),
-  };
-}
-
-export function configLoaderMockFactory() {
-  return {
-    getRuntimeClientServerConfig: vi.fn(() => ({})),
   };
 }
 

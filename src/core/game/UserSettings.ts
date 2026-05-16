@@ -19,6 +19,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     attackRatioUp: "KeyY",
     boatAttack: "KeyB",
     groundAttack: "KeyG",
+    retaliateAttack: "Shift+KeyR",
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
     swapDirection: "KeyU",
@@ -163,6 +164,10 @@ export class UserSettings {
     return this.getBool("settings.territoryPatterns", true);
   }
 
+  goToPlayer() {
+    return this.getBool("settings.goToPlayer", true);
+  }
+
   attackingTroopsOverlay() {
     return this.getBool("settings.attackingTroopsOverlay", true);
   }
@@ -222,6 +227,10 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.setBool("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  toggleGoToPlayer() {
+    this.setBool("settings.goToPlayer", !this.goToPlayer());
   }
 
   toggleDarkMode() {

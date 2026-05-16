@@ -21,20 +21,33 @@ var maps = []struct {
 	Name   string
 	IsTest bool
 }{
+	{Name: "achiran"},
+	{Name: "aegean"},
 	{Name: "africa"},
+	{Name: "alps"},
+	{Name: "amazonriver"},
+	{Name: "antarctica"},
+	{Name: "archipelagosea"},
+	{Name: "arctic"},
 	{Name: "asia"},
 	{Name: "australia"},
-	{Name: "achiran"},
-	{Name: "alps"},
 	{Name: "baikal"},
 	{Name: "baikalnukewars"},
-	{Name: "betweentwoseas"},
+	{Name: "bajacalifornia"},
+	{Name: "beringsea"},
 	{Name: "beringstrait"},
+	{Name: "betweentwoseas"},
 	{Name: "blacksea"},
 	{Name: "bosphorusstraits"},
 	{Name: "britannia"},
 	{Name: "britanniaclassic"},
+	{Name: "caucasus"},
+	{Name: "conakry"},
+	{Name: "danishstraits"},
 	{Name: "deglaciatedantarctica"},
+	{Name: "didier"},
+	{Name: "didierfrance"},
+	{Name: "dyslexdria"},
 	{Name: "eastasia"},
 	{Name: "europe"},
 	{Name: "europeclassic"},
@@ -43,59 +56,50 @@ var maps = []struct {
 	{Name: "fourislands"},
 	{Name: "gatewaytotheatlantic"},
 	{Name: "giantworldmap"},
+	{Name: "greatlakes"},
 	{Name: "gulfofstlawrence"},
 	{Name: "halkidiki"},
+	{Name: "hawaii"},
 	{Name: "iceland"},
 	{Name: "italia"},
 	{Name: "japan"},
+	{Name: "lemnos"},
 	{Name: "lisbon"},
+	{Name: "losangeles"},
+	{Name: "luna"},
 	{Name: "manicouagan"},
-    {Name: "straitofmalacca"},
+	{Name: "marenostrum"},
 	{Name: "mars"},
 	{Name: "mena"},
+	{Name: "middleeast"},
+	{Name: "milkyway"},
 	{Name: "montreal"},
 	{Name: "newyorkcity"},
+	{Name: "niledelta"},
 	{Name: "northamerica"},
+	{Name: "northwestpassage"},
 	{Name: "oceania"},
 	{Name: "pangaea"},
 	{Name: "passage"},
 	{Name: "pluto"},
+	{Name: "sanfrancisco"},
 	{Name: "sierpinski"},
 	{Name: "southamerica"},
 	{Name: "straitofgibraltar"},
 	{Name: "straitofhormuz"},
+	{Name: "straitofmalacca"},
 	{Name: "surrounded"},
 	{Name: "svalmel"},
-	{Name: "world"},
-	{Name: "lemnos"},
-	{Name: "twolakes"},
+	{Name: "taiwanstrait"},
+	{Name: "thebox"},
 	{Name: "tourney1"},
 	{Name: "tourney2"},
 	{Name: "tourney3"},
 	{Name: "tourney4"},
-	{Name: "thebox"},
-	{Name: "didier"},
-	{Name: "didierfrance"},
-	{Name: "amazonriver"},
-	{Name: "yenisei"},
 	{Name: "tradersdream"},
-	{Name: "hawaii"},
-	{Name: "niledelta"},
-	{Name: "arctic"},
-	{Name: "sanfrancisco"},
-	{Name: "aegean"},
-	{Name: "milkyway"},
-	{Name: "marenostrum"},
-	{Name: "greatlakes"},
-	{Name: "dyslexdria"},
-	{Name: "luna"},
-	{Name: "conakry"},
-	{Name: "caucasus"},
-    {Name: "losangeles"},
-    {Name: "beringsea"}, 
-    {Name: "antarctica"},
-    {Name: "archipelagosea"},
-    {Name: "bajacalifornia"},
+	{Name: "twolakes"},
+	{Name: "world"},
+	{Name: "yenisei"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},
@@ -106,6 +110,9 @@ var maps = []struct {
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
 var mapsFlag string
+
+// workersFlag controls how many maps are processed concurrently, bounding peak memory usage.
+var workersFlag int
 
 // logFlags holds all the flags related to configuring the map-generator logging
 var logFlags LogFlags
@@ -248,15 +255,20 @@ func parseMapsFlag() (map[string]bool, error) {
 
 // loadTerrainMaps manages the concurrent generation of all selected maps.
 // It spins up goroutines for each map and aggregates any errors.
+// Concurrency is bounded by --workers to cap peak memory usage.
 func loadTerrainMaps() error {
+	if workersFlag < 1 {
+		return fmt.Errorf("--workers must be >= 1, got %d", workersFlag)
+	}
 	selectedMaps, err := parseMapsFlag()
 	if err != nil {
 		return err
 	}
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(maps))
+	sem := make(chan struct{}, workersFlag)
 
-	// Process maps concurrently
+	// Process maps concurrently, bounded by the semaphore
 	for _, mapItem := range maps {
 		if selectedMaps != nil && !selectedMaps[mapItem.Name] {
 			continue
@@ -265,6 +277,8 @@ func loadTerrainMaps() error {
 		mapItem := mapItem
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			mapLogTag := slog.String("map", mapItem.Name)
 			testLogTag := slog.Bool("isTest", mapItem.IsTest)
 			logger := slog.Default().With(mapLogTag).With(testLogTag)
@@ -293,6 +307,7 @@ func loadTerrainMaps() error {
 // It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
+	flag.IntVar(&workersFlag, "workers", 4, "number of maps to process concurrently. reduce to lower peak memory usage.")
 	flag.StringVar(&logFlags.logLevel, "log-level", "", "Explicitly sets the log level to one of: ALL, DEBUG, INFO (default), WARN, ERROR.")
 	flag.BoolVar(&logFlags.verbose, "verbose", false, "Adds additional logging and prefixes logs with the [mapname].  Alias of log-level=DEBUG.")
 	flag.BoolVar(&logFlags.verbose, "v", false, "-verbose shorthand")

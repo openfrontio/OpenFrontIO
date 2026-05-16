@@ -1,5 +1,4 @@
 import z from "zod";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   GameID,
@@ -10,8 +9,7 @@ import {
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
 import { logger } from "./Logger";
-
-const config = getServerConfigFromServer();
+import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({ component: "Archive" });
 
@@ -31,13 +29,13 @@ export async function archive(
       });
       return;
     }
-    const url = `${config.jwtIssuer()}/game/${gameRecord.info.gameID}`;
+    const url = `${ServerEnv.jwtIssuer()}/game/${gameRecord.info.gameID}`;
     const response = await fetch(url, {
       method: "POST",
       body: JSON.stringify(gameRecord, replacer),
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
+        "x-api-key": ServerEnv.apiKey(),
       },
     });
     if (!response.ok) {
@@ -62,12 +60,12 @@ export async function readGameRecord(
       log.error(`invalid game ID: ${gameId}`);
       return null;
     }
-    const url = `${config.jwtIssuer()}/game/${gameId}`;
+    const url = `${ServerEnv.jwtIssuer()}/game/${gameId}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
+        "x-api-key": ServerEnv.apiKey(),
       },
     });
     const record = await response.json();
@@ -91,9 +89,9 @@ export function finalizeGameRecord(
 ): GameRecord {
   return {
     ...clientRecord,
-    gitCommit: config.gitCommit(),
-    subdomain: config.subdomain(),
-    domain: config.domain(),
+    gitCommit: ServerEnv.gitCommit(),
+    subdomain: ServerEnv.subdomain(),
+    domain: ServerEnv.domain(),
   };
 }
 

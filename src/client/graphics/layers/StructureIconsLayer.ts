@@ -2,8 +2,8 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
+import { Theme } from "src/core/configuration/Theme";
 import { assetUrl } from "../../../core/AssetUrls";
-import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
@@ -350,7 +350,7 @@ export class StructureIconsLayer implements Layer {
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
     if (this.renderer) {
-      this.renderer?.render(this.rootStage);
+      this.renderer.render(this.rootStage);
       mainContext.drawImage(this.renderer.canvas, 0, 0);
     }
   }

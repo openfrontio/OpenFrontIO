@@ -18,7 +18,6 @@ import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
-type Tab = "my-clans" | "browse";
 type View =
   | "list"
   | "detail"
@@ -30,7 +29,8 @@ type View =
 
 @customElement("clan-modal")
 export class ClanModal extends BaseModal {
-  @state() private activeTab: Tab = "my-clans";
+  protected routerName = "clan";
+
   @state() private view: View = "list";
   @state() private loading = false;
 
@@ -59,20 +59,103 @@ export class ClanModal extends BaseModal {
     stats: ClanStats | null;
   } | null = null;
 
-  render() {
-    const content = this.renderInner();
-    if (this.inline) return content;
-    return html`
-      <o-modal
-        id="clan-modal"
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
-    `;
+  private get onListView(): boolean {
+    return this.view === "list" && !this.selectedClanTag;
+  }
+
+  protected modalConfig() {
+    return {
+      tabs: this.onListView
+        ? [
+            { key: "my-clans", label: translateText("clan_modal.my_clans") },
+            { key: "browse", label: translateText("clan_modal.browse") },
+          ]
+        : [],
+    };
+  }
+
+  protected renderHeaderSlot() {
+    return this.onListView
+      ? modalHeader({
+          title: translateText("clan_modal.title"),
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+        })
+      : this.renderSubViewHeader();
+  }
+
+  protected renderBody() {
+    return html`<div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>`;
+  }
+
+  protected onTabEnter(tab: string): void {
+    this.view = "list";
+    this.selectedClan = null;
+    this.selectedClanTag = "";
+    if (tab === "my-clans") {
+      this.loadMyClans();
+    }
+  }
+
+  private tagPill(tag: string) {
+    return html`<span
+      class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
+      >[${tag}]</span
+    >`;
+  }
+
+  private renderSubViewHeader() {
+    const clan = this.selectedClan;
+    const ariaLabel = translateText("common.back");
+    if (this.view === "my-requests") {
+      return modalHeader({
+        title: translateText("clan_modal.pending_applications"),
+        onBack: () => (this.view = "list"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "manage") {
+      return modalHeader({
+        title: translateText("clan_modal.manage_clan"),
+        onBack: () => (this.view = "detail"),
+        ariaLabel,
+        rightContent: clan ? this.tagPill(clan.tag) : undefined,
+      });
+    }
+    if (this.view === "transfer") {
+      return modalHeader({
+        title: translateText("clan_modal.transfer_leadership"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "requests") {
+      return modalHeader({
+        title: translateText("clan_modal.join_requests"),
+        onBack: () => (this.view = "detail"),
+        ariaLabel,
+      });
+    }
+    if (this.view === "bans") {
+      return modalHeader({
+        title: translateText("clan_modal.banned_players"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+      });
+    }
+    // Default: detail
+    return modalHeader({
+      title: clan?.name ?? translateText("clan_modal.title"),
+      onBack: () => {
+        this.view = "list";
+        this.selectedClan = null;
+        this.selectedClanTag = "";
+        this.myRole = null;
+        this.detailCache = null;
+      },
+      ariaLabel,
+      rightContent: clan ? this.tagPill(clan.tag) : undefined,
+    });
   }
 
   protected onOpen(): void {
@@ -131,16 +214,7 @@ export class ClanModal extends BaseModal {
 
   private renderInner() {
     if (this.loading) {
-      return html`
-        <div class="${this.modalContainerClass}">
-          ${modalHeader({
-            title: translateText("clan_modal.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-          })}
-          ${this.renderLoadingSpinner()}
-        </div>
-      `;
+      return this.renderLoadingSpinner();
     }
 
     if (this.view === "my-requests") {
@@ -181,6 +255,7 @@ export class ClanModal extends BaseModal {
             this.selectedClan = null;
             this.selectedClanTag = "";
             this.myRole = null;
+            this.detailCache = null;
             this.view = "list";
             this.loadMyClans();
           }}
@@ -273,6 +348,7 @@ export class ClanModal extends BaseModal {
           this.selectedClan = null;
           this.selectedClanTag = "";
           this.myRole = null;
+          this.detailCache = null;
           this.view = "list";
           this.loadMyClans();
         }}
@@ -289,74 +365,26 @@ export class ClanModal extends BaseModal {
       ></clan-detail-view>`;
     }
 
-    // List view (tabs + my clans / browse)
+    // List view (my clans / browse) — header + tabs are rendered by o-modal
     return html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("clan_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        ${this.renderTabs()}
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${this.activeTab === "my-clans"
-            ? this.renderMyClans()
-            : html`<clan-browse-view
-                .myClanRoles=${this.myClanRoles}
-                .myPendingRequests=${this.myPendingRequests}
-                .cachedState=${this.browseCache}
-                @browse-updated=${(e: CustomEvent<BrowseState>) => {
-                  this.browseCache = e.detail;
-                }}
-                @clan-select=${(e: CustomEvent<{ tag: string }>) =>
-                  this.openDetail(e.detail.tag)}
-              ></clan-browse-view>`}
-        </div>
-      </div>
+      ${this.activeTab === "my-clans"
+        ? this.renderMyClans()
+        : html`<clan-browse-view
+            .myClanRoles=${this.myClanRoles}
+            .myPendingRequests=${this.myPendingRequests}
+            .cachedState=${this.browseCache}
+            @browse-updated=${(e: CustomEvent<BrowseState>) => {
+              this.browseCache = e.detail;
+            }}
+            @clan-select=${(e: CustomEvent<{ tag: string }>) =>
+              this.openDetail(e.detail.tag)}
+          ></clan-browse-view>`}
     `;
   }
 
   private openDetail(tag: string) {
     this.selectedClanTag = tag;
     this.view = "detail";
-  }
-
-  private renderTabs() {
-    const tabs: { key: Tab; label: string }[] = [
-      { key: "my-clans", label: translateText("clan_modal.my_clans") },
-      { key: "browse", label: translateText("clan_modal.browse") },
-    ];
-
-    return html`
-      <div class="flex border-b border-white/10 px-4 lg:px-6 gap-1">
-        ${tabs.map(
-          (tab) => html`
-            <button
-              @click=${() => {
-                this.activeTab = tab.key;
-                this.view = "list";
-                this.selectedClan = null;
-                this.selectedClanTag = "";
-                if (tab.key === "my-clans") {
-                  this.loadMyClans();
-                }
-              }}
-              class="px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all relative
-                ${this.activeTab === tab.key
-                ? "text-aquarius"
-                : "text-white/40 hover:text-white/70"}"
-            >
-              ${tab.label}
-              ${this.activeTab === tab.key
-                ? html`<div
-                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
-                  ></div>`
-                : ""}
-            </button>
-          `,
-        )}
-      </div>
-    `;
   }
 
   private renderMyClans() {
@@ -380,7 +408,7 @@ export class ClanModal extends BaseModal {
     }
 
     return html`
-      <div class="p-4 lg:p-6 space-y-3">
+      <div class="space-y-3">
         ${hasRequests ? this.renderPendingRequestsButton() : ""}
         ${this.myClans.map(
           (clan) => html`

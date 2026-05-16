@@ -1,6 +1,6 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
+import { Theme } from "src/core/configuration/Theme";
 import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
@@ -244,7 +244,7 @@ export class TerritoryLayer implements Layer {
       minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
 
     const baseColor = this.theme.spawnHighlightSelfColor(); //white
-    let teamColor: Colord | null = null;
+    let teamColor: Colord;
 
     const team: Team | null = focusedPlayer.team();
     if (team !== null && Object.values(ColoredTeams).includes(team)) {

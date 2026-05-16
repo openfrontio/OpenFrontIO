@@ -76,6 +76,7 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
+  private startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -409,7 +410,18 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
-    return this._ticks <= this.config().numSpawnPhaseTurns();
+    return this.startTick === null;
+  }
+
+  endSpawnPhase(): void {
+    if (this.startTick !== null) {
+      return;
+    }
+    this.startTick = this._ticks;
+    this.addUpdate({
+      type: GameUpdateType.SpawnPhaseEnd,
+      startTick: this.startTick,
+    });
   }
 
   ticks(): number {
@@ -819,18 +831,28 @@ export class GameImpl implements Game {
 
   public isSpawnImmunityActive(): boolean {
     return (
-      this.config().numSpawnPhaseTurns() +
-        this.config().spawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this.config().spawnImmunityDuration()
     );
+  }
+
+  public elapsedGameSeconds(): number {
+    return this.ticksSinceStart() / 10;
   }
 
   public isNationSpawnImmunityActive(): boolean {
     return (
-      this.config().numSpawnPhaseTurns() +
-        this.config().nationSpawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this.config().nationSpawnImmunityDuration()
     );
+  }
+
+  private ticksSinceStart(): number {
+    if (this.inSpawnPhase()) {
+      return 0;
+    }
+
+    return Math.max(0, this.ticks() - this.startTick!);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
@@ -1204,6 +1226,9 @@ export class GameImpl implements Game {
     const skipGoldTransfer =
       attacksSent === 0n && conquered.type() === PlayerType.Human;
     const gold = skipGoldTransfer ? 0n : conquered.gold();
+    const goldCaptured = skipGoldTransfer
+      ? 0n
+      : this._config.conquerGoldAmount(conquered);
 
     if (skipGoldTransfer) {
       this.displayMessage(
@@ -1222,22 +1247,22 @@ export class GameImpl implements Game {
         conqueror.id(),
         gold,
         {
-          gold: renderNumber(gold),
+          gold: renderNumber(goldCaptured),
           name: conquered.displayName(),
         },
       );
-      conqueror.addGold(gold);
+      conqueror.addGold(goldCaptured);
       conquered.removeGold(gold);
 
       // Record stats
-      this.stats().goldWar(conqueror, conquered, gold);
+      this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
       conqueredId: conquered.id(),
-      gold,
+      gold: goldCaptured,
     });
   }
 }
