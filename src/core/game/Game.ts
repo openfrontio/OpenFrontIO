@@ -172,6 +172,7 @@ export enum GameMapType {
   MiddleEast = "Middle East",
   TaiwanStrait = "Taiwan Strait",
   DanishStraits = "Danish Straits",
+  ChoppingBlock = "Chopping Block",
   NorthwestPassage = "Northwest Passage",
 }
 
@@ -259,6 +260,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TheBox,
     GameMapType.Didier,
     GameMapType.DidierFrance,
+    GameMapType.ChoppingBlock,
     GameMapType.Sierpinski,
   ],
   tournament: [

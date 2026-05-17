@@ -50,6 +50,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   BosphorusStraits: 3,
   Britannia: 5,
   Caucasus: 5,
+  ChoppingBlock: 5,
   Conakry: 3,
   DanishStraits: 5,
   DeglaciatedAntarctica: 4,

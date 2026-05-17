@@ -42,6 +42,7 @@ var maps = []struct {
 	{Name: "britannia"},
 	{Name: "britanniaclassic"},
 	{Name: "caucasus"},
+	{Name: "choppingblock"},
 	{Name: "conakry"},
 	{Name: "danishstraits"},
 	{Name: "deglaciatedantarctica"},
