@@ -818,11 +818,14 @@ class Client {
       return;
     }
 
-    if (
-      "Notification" in window &&
-      Notification.permission === "default"
-    ) {
-      Notification.requestPermission();
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {
+          // Ignore permission request errors
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to request notification permission:", err);
     }
 
     console.log(`joining lobby ${lobby.gameID}`);

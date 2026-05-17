@@ -46,7 +46,6 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { PlaySoundEffectEvent } from "./sound/Sounds";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
@@ -62,6 +61,7 @@ import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
+import { PlaySoundEffectEvent } from "./sound/Sounds";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -141,10 +141,13 @@ export function joinLobby(
         document.hidden &&
         userSettings.gameStartNotificationsEnabled()
       ) {
-        new Notification(
-          translateText("game_start_notification.title"),
-          { body: translateText("game_start_notification.body") },
-        );
+        try {
+          new Notification(translateText("game_start_notification.title"), {
+            body: translateText("game_start_notification.body"),
+          });
+        } catch (err) {
+          console.warn("Failed to show game start notification:", err);
+        }
       }
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
