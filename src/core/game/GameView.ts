@@ -268,11 +268,11 @@ export class PlayerView {
     const isMyPlayer = this.game.myClientID() === this.data.clientID;
     const colorMode = isMyPlayer ? userSettings.colorMode() : "random";
 
-    if (colorMode === "custom") {
-      // Always use user's chosen color, even if in a team
+    if (colorMode === "custom" && this.team() === null) {
+      // Custom color only in solo/FFA — team games always use assigned team color
       this._territoryColor = colord(userSettings.customPrimaryColor());
-    } else if (colorMode === "team") {
-      // Force team color (default game behavior, team always wins)
+    } else if (colorMode === "team" || this.team() !== null) {
+      // Force team color (default game behavior)
       this._territoryColor = defaultTerritoryColor;
     } else {
       // "random" — normal game logic
@@ -293,7 +293,7 @@ export class PlayerView {
         ? theme.focusedBorderColor()
         : defaultBorderColor;
 
-    if (colorMode === "custom") {
+    if (colorMode === "custom" && this.team() === null) {
       this._borderColor = new Colord(userSettings.customSecondaryColor());
     } else {
       this._borderColor = new Colord(
