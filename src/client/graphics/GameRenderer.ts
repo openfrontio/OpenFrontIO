@@ -13,7 +13,6 @@ import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
-import { DynamicUILayer } from "./layers/DynamicUILayer";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
@@ -265,7 +264,6 @@ export function createRenderer(
   const layers: Layer[] = [
     new UILayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
-    new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,

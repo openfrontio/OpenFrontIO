@@ -47,6 +47,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  MoveWarshipIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -231,6 +232,8 @@ export function joinLobby(
 function mountWebGLDebugRenderer(
   terrainMap: TerrainMapData,
   transformHandler: import("./graphics/TransformHandler").TransformHandler,
+  gameView: GameView,
+  eventBus: EventBus,
 ): { builder: WebGLFrameBuilder; syncCamera: () => void } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
@@ -332,6 +335,20 @@ function mountWebGLDebugRenderer(
 
   (window as unknown as { __webglView?: unknown }).__webglView = view;
 
+  // Move-target chevrons: when the player issues a warship move, show the
+  // animated chevron pass at the target tile. The renderer needs the target's
+  // tile x/y and the warship's owner smallID (so the chevrons use the right
+  // color).
+  eventBus.on(MoveWarshipIntentEvent, (e) => {
+    const tile = e.tile;
+    const tx = gameView.x(tile);
+    const ty = gameView.y(tile);
+    // Resolve owner via the first unit in the move set.
+    const firstUnit = gameView.unit(e.unitIds[0]);
+    if (firstUnit === undefined) return;
+    view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
+  });
+
   return { builder: new WebGLFrameBuilder(view), syncCamera };
 }
 
@@ -389,6 +406,8 @@ async function createClientGame(
     const { builder: webglBuilder, syncCamera } = mountWebGLDebugRenderer(
       gameMap,
       gameRenderer.transformHandler,
+      gameView,
+      eventBus,
     );
     gameRenderer.onPreRender = syncCamera;
 
