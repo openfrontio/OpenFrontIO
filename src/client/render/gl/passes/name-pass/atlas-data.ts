@@ -3,9 +3,9 @@
  * kerning data, and icon atlas index maps from static JSON assets.
  */
 
-import emojiAtlasMeta from "../../assets/emoji-atlas-meta.json";
-import flagAtlasMeta from "../../assets/flag-atlas-meta.json";
-import atlasData from "../../assets/msdf-atlas.json";
+import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
+import flagAtlasMeta from "resources/atlases/flag-atlas-meta.json";
+import atlasData from "resources/atlases/msdf-atlas.json";
 import type { BMChar, BMKerning, ParsedAtlas } from "./types";
 import { CHAR_RANGE } from "./types";
 

@@ -6,13 +6,15 @@
  * and bound at draw time but not owned/deleted by this class.
  */
 
-import atlasUrl from "../../assets/msdf-atlas.png?url";
+import { assetUrl } from "src/core/AssetUrls";
 import type { RenderSettings } from "../../render-settings";
 import nameFragSrc from "../../shaders/name/name.frag.glsl?raw";
 import nameVertSrc from "../../shaders/name/name.vert.glsl?raw";
 import { createProgram, shaderSrc } from "../../utils/gl-utils";
 import type { ParsedAtlas } from "./types";
 import { LINES_PER_PLAYER, MAX_CHARS } from "./types";
+
+const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 
 export interface TextProgramTextures {
   glyphMetrics: WebGLTexture;

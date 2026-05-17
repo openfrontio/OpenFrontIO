@@ -5,7 +5,7 @@
  * The shared playerDataTex is passed in but not owned/deleted.
  */
 
-import flagAtlasMeta from "../../assets/flag-atlas-meta.json";
+import flagAtlasMeta from "resources/atlases/flag-atlas-meta.json";
 import type { RenderSettings } from "../../render-settings";
 import debugBoxFragSrc from "../../shaders/name/debug-box.frag.glsl?raw";
 import debugBoxVertSrc from "../../shaders/name/debug-box.vert.glsl?raw";

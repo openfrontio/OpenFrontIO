@@ -15,9 +15,11 @@ import { buildGlyphMetricsTex } from "./name-pass/data-textures";
 import { layoutString } from "./name-pass/text-layout";
 import { CHAR_RANGE, MAX_CHARS } from "./name-pass/types";
 
-import atlasUrl from "../assets/msdf-atlas.png?url";
+import { assetUrl } from "src/core/AssetUrls";
 import fragSrc from "../shaders/conquest-popup/conquest-popup.frag.glsl?raw";
 import vertSrc from "../shaders/conquest-popup/conquest-popup.vert.glsl?raw";
+
+const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 
 // ---------------------------------------------------------------------------
 // Constants

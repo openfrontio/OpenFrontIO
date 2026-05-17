@@ -20,8 +20,10 @@ import arcVertSrc from "../shaders/radial-menu/arcs.vert.glsl?raw";
 import iconFragSrc from "../shaders/radial-menu/icon.frag.glsl?raw";
 import iconVertSrc from "../shaders/radial-menu/icon.vert.glsl?raw";
 
-import emojiAtlasMeta from "../assets/emoji-atlas-meta.json";
-import emojiAtlasUrl from "../assets/emoji-atlas.png?url";
+import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
+import { assetUrl } from "src/core/AssetUrls";
+
+const emojiAtlasUrl = assetUrl("atlases/emoji-atlas.png");
 
 // ---------------------------------------------------------------------------
 // Ring layout configs (CSS pixels)

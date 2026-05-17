@@ -18,11 +18,13 @@ import { DynamicInstanceBuffer } from "../../dynamic-buffer";
 import type { RenderSettings } from "../../render-settings";
 import { createProgram, shaderSrc } from "../../utils/gl-utils";
 
-import fxAtlasMeta from "../../assets/fx-atlas-meta.json";
-import fxAtlasUrl from "../../assets/fx-atlas.png?url";
+import fxAtlasMeta from "resources/atlases/fx-atlas-meta.json";
+import { assetUrl } from "src/core/AssetUrls";
 
 import spriteFragSrc from "../../shaders/fx/sprite.frag.glsl?raw";
 import spriteVertSrc from "../../shaders/fx/sprite.vert.glsl?raw";
+
+const fxAtlasUrl = assetUrl("atlases/fx-atlas.png");
 
 // ---------------------------------------------------------------------------
 // FX type indices (atlas row)

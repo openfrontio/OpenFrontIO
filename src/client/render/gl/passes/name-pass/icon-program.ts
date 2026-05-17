@@ -5,15 +5,17 @@
  * The shared playerDataTex is passed in but not owned/deleted.
  */
 
-import emojiAtlasMeta from "../../assets/emoji-atlas-meta.json";
-import emojiAtlasUrl from "../../assets/emoji-atlas.png?url";
-import flagAtlasMeta from "../../assets/flag-atlas-meta.json";
-import flagAtlasUrl from "../../assets/flag-atlas.png?url";
+import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
+import flagAtlasMeta from "resources/atlases/flag-atlas-meta.json";
+import { assetUrl } from "src/core/AssetUrls";
 import type { RenderSettings } from "../../render-settings";
 import iconFragSrc from "../../shaders/name/icon.frag.glsl?raw";
 import iconVertSrc from "../../shaders/name/icon.vert.glsl?raw";
 import { createProgram } from "../../utils/gl-utils";
 import type { ParsedAtlas } from "./types";
+
+const emojiAtlasUrl = assetUrl("atlases/emoji-atlas.png");
+const flagAtlasUrl = assetUrl("atlases/flag-atlas.png");
 
 export class IconProgram {
   private gl: WebGL2RenderingContext;

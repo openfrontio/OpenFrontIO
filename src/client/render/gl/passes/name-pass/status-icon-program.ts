@@ -9,13 +9,15 @@
  * The shared playerDataTex is passed in but not owned/deleted.
  */
 
-import statusAtlasMeta from "../../assets/status-atlas-meta.json";
-import statusAtlasUrl from "../../assets/status-atlas.png?url";
+import statusAtlasMeta from "resources/atlases/status-atlas-meta.json";
+import { assetUrl } from "src/core/AssetUrls";
 import type { RenderSettings } from "../../render-settings";
 import statusFragSrc from "../../shaders/name/status-icon.frag.glsl?raw";
 import statusVertSrc from "../../shaders/name/status-icon.vert.glsl?raw";
 import { createProgram } from "../../utils/gl-utils";
 import type { ParsedAtlas } from "./types";
+
+const statusAtlasUrl = assetUrl("atlases/status-atlas.png");
 
 const MAX_STATUS_ICONS = 8;
 
