@@ -867,7 +867,8 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.isVisible) return html``;
 
     const my = this.g.myPlayer();
-    if (!my) return html``;
+    const isSpectator = this.g.isSpectator();
+    if (!my && !isSpectator) return html``;
     if (!this.tile) return html``;
 
     const owner = this.g.owner(this.tile);
@@ -877,8 +878,10 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldNum = my.gold();
-    const myTroopsNum = Number(my.troops());
+    // Spectators (replay viewers, dead, or pre-spawn) have no live player; use other as a read-only stand-in
+    const viewer = my ?? other;
+    const myGoldNum = viewer.gold();
+    const myTroopsNum = Number(viewer.troops());
 
     return html`
       <style>
@@ -946,9 +949,11 @@ export class PlayerPanel extends LitElement implements Layer {
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
                   >
                     <!-- Identity (flag, name, type, traitor, relation) -->
-                    <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+                    <div class="mb-1">
+                      ${this.renderIdentityRow(other, viewer)}
+                    </div>
 
-                    ${this.sendTarget
+                    ${this.sendTarget && !isSpectator
                       ? html`
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
@@ -957,7 +962,7 @@ export class PlayerPanel extends LitElement implements Layer {
                               ? myTroopsNum
                               : myGoldNum}
                             .uiState=${this.uiState}
-                            .myPlayer=${my}
+                            .myPlayer=${viewer}
                             .target=${this.sendTarget}
                             .gameView=${this.g}
                             .eventBus=${this.eventBus}
@@ -969,11 +974,11 @@ export class PlayerPanel extends LitElement implements Layer {
                           ></send-resource-modal>
                         `
                       : ""}
-                    ${this.moderationTarget
+                    ${this.moderationTarget && !isSpectator
                       ? html`
                           <player-moderation-modal
                             .open=${true}
-                            .myPlayer=${my}
+                            .myPlayer=${viewer}
                             .target=${this.moderationTarget}
                             .eventBus=${this.eventBus}
                             .isAdmin=${this.isAdminRole}
@@ -992,12 +997,14 @@ export class PlayerPanel extends LitElement implements Layer {
                     ${this.renderResources(other)}
 
                     <!-- Rocket direction toggle -->
-                    ${other === my ? this.renderRocketDirectionToggle() : ""}
+                    ${other === viewer && !isSpectator
+                      ? this.renderRocketDirectionToggle()
+                      : ""}
 
                     <ui-divider></ui-divider>
 
                     <!-- Stats: betrayals / trading -->
-                    ${this.renderStats(other, my)}
+                    ${this.renderStats(other, viewer)}
 
                     <ui-divider></ui-divider>
 
@@ -1006,11 +1013,13 @@ export class PlayerPanel extends LitElement implements Layer {
 
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
-
-                    <ui-divider></ui-divider>
-
-                    <!-- Actions -->
-                    ${this.renderActions(my, other)}
+                    ${isSpectator
+                      ? ""
+                      : html`
+                          <ui-divider></ui-divider>
+                          <!-- Actions -->
+                          ${this.renderActions(viewer, other)}
+                        `}
                   </div>
                 </div>
               </div>
