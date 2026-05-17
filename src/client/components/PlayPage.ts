@@ -1,10 +1,28 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import { UserSettings } from "../../core/game/UserSettings";
+import "./baseComponents/setting/SettingToggle";
+import "./baseComponents/setting/SettingColor";
 import "./NewsBox";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
+  private userSettings = new UserSettings();
+
+  private toggleCustomColorsEnabled() {
+    this.userSettings.toggleCustomColorsEnabled();
+    this.requestUpdate();
+  }
+
+  private handleCustomPrimaryColor(e: CustomEvent<{ value: string }>) {
+    this.userSettings.setCustomPrimaryColor(e.detail.value);
+  }
+
+  private handleCustomSecondaryColor(e: CustomEvent<{ value: string }>) {
+    this.userSettings.setCustomSecondaryColor(e.detail.value);
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -111,6 +129,35 @@ export class PlayPage extends LitElement {
               show-select-label
               class="flex-1 h-full"
             ></flag-input>
+          </div>
+
+          <!-- Custom Colors: full width row -->
+          <div class="lg:col-span-2 px-2 py-2 bg-surface border-y border-white/10 lg:rounded-xl lg:border-y-0">
+            <setting-toggle
+              label="Custom Territory Colors"
+              description="Override lobby settings and use your own colors"
+              id="custom-colors-toggle-main"
+              .checked=${this.userSettings.customColorsEnabled()}
+              @change=${this.toggleCustomColorsEnabled}
+            ></setting-toggle>
+
+            ${this.userSettings.customColorsEnabled()
+              ? html`
+                  <setting-color
+                    label="Primary Color"
+                    description="The main fill color of your territory"
+                    .value=${this.userSettings.customPrimaryColor()}
+                    @change=${this.handleCustomPrimaryColor}
+                  ></setting-color>
+                  
+                  <setting-color
+                    label="Secondary Color"
+                    description="The color of your borders"
+                    .value=${this.userSettings.customSecondaryColor()}
+                    @change=${this.handleCustomSecondaryColor}
+                  ></setting-color>
+                `
+              : ""}
           </div>
         </div>
 
