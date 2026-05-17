@@ -610,6 +610,9 @@ export class GameServer {
           }
           this._hasEnded = true;
         }
+      } else {
+        // Check if remaining clients have reached a winner consensus
+        this.checkWinnerConsensus();
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -1263,7 +1266,7 @@ export class GameServer {
       },
     );
 
-    if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+    if (potentialWinner.ips.size * 2 <= activeUniqueIPs.size) {
       return;
     }
 
@@ -1276,5 +1279,27 @@ export class GameServer {
       },
     );
     this.archiveGame();
+  }
+
+  private checkWinnerConsensus() {
+    if (this.winner !== null) {
+      return;
+    }
+
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+
+    for (const [winnerKey, potentialWinner] of this.winnerVotes.entries()) {
+      if (potentialWinner.ips.size * 2 > activeUniqueIPs.size) {
+        this.winner = potentialWinner.winner;
+        this.log.info(
+          `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs after client disconnect`,
+          {
+            winnerKey: winnerKey,
+          },
+        );
+        this.archiveGame();
+        return;
+      }
+    }
   }
 }
