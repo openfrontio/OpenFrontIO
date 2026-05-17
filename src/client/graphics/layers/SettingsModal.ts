@@ -11,7 +11,7 @@ import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "../../sound/Sounds";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 const structureIcon = assetUrl("images/CityIconWhite.svg");
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
@@ -35,7 +35,7 @@ export class ShowSettingsModalEvent {
 }
 
 @customElement("settings-modal")
-export class SettingsModal extends LitElement implements Layer {
+export class SettingsModal extends LitElement implements Controller {
   public eventBus: EventBus;
   public userSettings: UserSettings;
 

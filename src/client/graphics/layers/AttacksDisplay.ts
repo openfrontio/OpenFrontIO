@@ -22,12 +22,12 @@ import {
   GoToUnitEvent,
 } from "../TransformHandler";
 import { UIState } from "../UIState";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("attacks-display")
-export class AttacksDisplay extends LitElement implements Layer {
+export class AttacksDisplay extends LitElement implements Controller {
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
@@ -109,12 +109,6 @@ export class AttacksDisplay extends LitElement implements Layer {
 
     this.requestUpdate();
   }
-
-  shouldTransform(): boolean {
-    return false;
-  }
-
-  renderLayer(): void {}
 
   private renderButton(options: {
     content: any;

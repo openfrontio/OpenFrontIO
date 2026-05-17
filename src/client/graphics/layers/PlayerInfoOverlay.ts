@@ -31,8 +31,8 @@ import {
   IMAGE_ICON_KIND,
 } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
+import { Controller } from "./Controller";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
-import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
@@ -68,7 +68,7 @@ function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
 }
 
 @customElement("player-info-overlay")
-export class PlayerInfoOverlay extends LitElement implements Layer {
+export class PlayerInfoOverlay extends LitElement implements Controller {
   @property({ type: Object })
   public game!: GameView;
 
@@ -169,14 +169,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   tick() {
     this.requestUpdate();
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {
-    // Implementation for Layer interface
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   setVisible(visible: boolean) {

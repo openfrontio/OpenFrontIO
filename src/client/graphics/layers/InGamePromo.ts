@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 const AD_TYPES = [
   { type: "standard_iab_left1", selectorId: "in-game-bottom-left-ad" },
@@ -11,7 +11,7 @@ const AD_TYPES = [
 ];
 
 @customElement("in-game-promo")
-export class InGamePromo extends LitElement implements Layer {
+export class InGamePromo extends LitElement implements Controller {
   public game: GameView;
 
   private shouldShow: boolean = false;
@@ -167,10 +167,6 @@ export class InGamePromo extends LitElement implements Layer {
       console.error("error destroying in-game ads:", e);
     }
     this.requestUpdate();
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   render() {

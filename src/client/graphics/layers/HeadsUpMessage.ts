@@ -4,10 +4,10 @@ import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 @customElement("heads-up-message")
-export class HeadsUpMessage extends LitElement implements Layer {
+export class HeadsUpMessage extends LitElement implements Controller {
   public game: GameView;
 
   @state()

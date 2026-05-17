@@ -8,7 +8,7 @@ import {
   ReplaySpeedMultiplier,
 } from "../../utilities/ReplaySpeedMultiplier";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 export class ShowReplayPanelEvent {
   constructor(
@@ -18,7 +18,7 @@ export class ShowReplayPanelEvent {
 }
 
 @customElement("replay-panel")
-export class ReplayPanel extends LitElement implements Layer {
+export class ReplayPanel extends LitElement implements Controller {
   public game: GameView | undefined;
   public eventBus: EventBus | undefined;
 
@@ -63,11 +63,6 @@ export class ReplayPanel extends LitElement implements Layer {
   onReplaySpeedChange(value: ReplaySpeedMultiplier) {
     this._replaySpeedMultiplier = value;
     this.eventBus?.emit(new ReplaySpeedChangeEvent(value));
-  }
-
-  renderLayer(_ctx: CanvasRenderingContext2D) {}
-  shouldTransform() {
-    return false;
   }
 
   render() {

@@ -25,7 +25,7 @@ import {
 import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -124,7 +124,7 @@ export const buildTable: BuildItemDisplay[][] = [
 export const flattenedBuildTable = buildTable.flat();
 
 @customElement("build-menu")
-export class BuildMenu extends LitElement implements Layer {
+export class BuildMenu extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;

@@ -17,7 +17,7 @@ import {
 } from "../../InputHandler";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -31,7 +31,7 @@ const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 
 @customElement("unit-display")
-export class UnitDisplay extends LitElement implements Layer {
+export class UnitDisplay extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;

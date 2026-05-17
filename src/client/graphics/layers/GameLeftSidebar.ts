@@ -7,8 +7,8 @@ import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Platform } from "../../Platform";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
+import { Controller } from "./Controller";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
-import { Layer } from "./Layer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
 const leaderboardRegularIcon = assetUrl(
   "images/LeaderboardIconRegularWhite.svg",
@@ -18,7 +18,7 @@ const teamRegularIcon = assetUrl("images/TeamIconRegularWhite.svg");
 const teamSolidIcon = assetUrl("images/TeamIconSolidWhite.svg");
 
 @customElement("game-left-sidebar")
-export class GameLeftSidebar extends LitElement implements Layer {
+export class GameLeftSidebar extends LitElement implements Controller {
   @state()
   private isLeaderboardShow = false;
   @state()

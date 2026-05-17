@@ -7,7 +7,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 // Parameters for the alert animation
 const ALERT_SPEED = 1.6;
@@ -16,7 +16,7 @@ const RETALIATION_WINDOW_TICKS = 15 * 10; // 15 seconds
 const ALERT_COOLDOWN_TICKS = 15 * 10; // 15 seconds
 
 @customElement("alert-frame")
-export class AlertFrame extends LitElement implements Layer {
+export class AlertFrame extends LitElement implements Controller {
   public game: GameView;
   private userSettings: UserSettings = new UserSettings();
 
@@ -118,9 +118,6 @@ export class AlertFrame extends LitElement implements Layer {
   }
 
   // The alert frame is not affected by the camera transform
-  shouldTransform(): boolean {
-    return false;
-  }
 
   private onBrokeAllianceUpdate(update: BrokeAllianceUpdate) {
     const myPlayer = this.game.myPlayer();

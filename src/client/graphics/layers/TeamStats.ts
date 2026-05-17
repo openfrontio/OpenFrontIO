@@ -9,7 +9,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 interface TeamEntry {
   teamName: string;
@@ -26,7 +26,7 @@ interface TeamEntry {
 }
 
 @customElement("team-stats")
-export class TeamStats extends LitElement implements Layer {
+export class TeamStats extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
 
@@ -123,12 +123,6 @@ export class TeamStats extends LitElement implements Layer {
       .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
 
     this.requestUpdate();
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {}
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   render() {

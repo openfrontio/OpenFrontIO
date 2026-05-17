@@ -6,7 +6,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { formatPercentage, renderNumber } from "../../Utils";
 import { GoToPlayerEvent } from "../TransformHandler";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 interface Entry {
   name: string;
@@ -20,7 +20,7 @@ interface Entry {
 }
 
 @customElement("leader-board")
-export class Leaderboard extends LitElement implements Layer {
+export class Leaderboard extends LitElement implements Controller {
   public game: GameView | null = null;
   public eventBus: EventBus | null = null;
 
@@ -155,12 +155,6 @@ export class Leaderboard extends LitElement implements Layer {
   private handleRowClickPlayer(player: PlayerView) {
     if (this.eventBus === null) return;
     this.eventBus.emit(new GoToPlayerEvent(player));
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {}
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   render() {

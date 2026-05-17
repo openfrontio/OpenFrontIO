@@ -8,8 +8,8 @@ import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import { Controller } from "./Controller";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
-import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
@@ -22,7 +22,7 @@ const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
 
 @customElement("game-right-sidebar")
-export class GameRightSidebar extends LitElement implements Layer {
+export class GameRightSidebar extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
 

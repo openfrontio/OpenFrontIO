@@ -13,10 +13,10 @@ import {
 import type { LangSelector } from "../../LangSelector";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 @customElement("performance-overlay")
-export class PerformanceOverlay extends LitElement implements Layer {
+export class PerformanceOverlay extends LitElement implements Controller {
   @property({ type: Object })
   public eventBus!: EventBus;
 
@@ -967,10 +967,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
         this.tickDelayMax = Math.round(max);
       }
     }
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   private getPerformanceColor(fps: number): string {

@@ -10,7 +10,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 interface ChatEvent {
   description: string;
@@ -20,7 +20,7 @@ interface ChatEvent {
 }
 
 @customElement("chat-display")
-export class ChatDisplay extends LitElement implements Layer {
+export class ChatDisplay extends LitElement implements Controller {
   public eventBus: EventBus;
   public game: GameView;
 

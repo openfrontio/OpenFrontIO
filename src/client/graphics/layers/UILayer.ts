@@ -16,7 +16,7 @@ import {
 } from "../../InputHandler";
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 const WARSHIP_SELECTION_RADIUS = 10;
 
@@ -29,7 +29,7 @@ const WARSHIP_SELECTION_RADIUS = 10;
  * it stays in the Layer list for lifecycle hooks (init / tick / event
  * subscriptions).
  */
-export class UILayer implements Layer {
+export class UILayer implements Controller {
   // Currently selected single warship (game-logic readers use this; the
   // visual is drawn by WebGL SelectionBoxPass).
   private selectedUnit: UnitView | null = null;

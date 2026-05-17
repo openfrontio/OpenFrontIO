@@ -3,14 +3,14 @@ import { customElement } from "lit/decorators.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 export class ImmunityBarVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
 }
 
 @customElement("immunity-timer")
-export class ImmunityTimer extends LitElement implements Layer {
+export class ImmunityTimer extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
 
@@ -86,10 +86,6 @@ export class ImmunityTimer extends LitElement implements Layer {
       this._barVisible = nowVisible;
       this.eventBus?.emit(new ImmunityBarVisibleEvent(this._barVisible));
     }
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   render() {

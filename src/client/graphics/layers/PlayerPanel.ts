@@ -36,8 +36,8 @@ import {
 } from "../../Utils";
 import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
+import { Controller } from "./Controller";
 import { EmojiTable } from "./EmojiTable";
-import { Layer } from "./Layer";
 import "./PlayerModerationModal";
 import "./SendResourceModal";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
@@ -53,7 +53,7 @@ const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
 @customElement("player-panel")
-export class PlayerPanel extends LitElement implements Layer {
+export class PlayerPanel extends LitElement implements Controller {
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;

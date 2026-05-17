@@ -29,7 +29,7 @@ import {
   SendAllianceRejectIntentEvent,
   SendAllianceRequestIntentEvent,
 } from "../../Transport";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
@@ -68,7 +68,7 @@ interface GameEvent {
 }
 
 @customElement("events-display")
-export class EventsDisplay extends LitElement implements Layer {
+export class EventsDisplay extends LitElement implements Controller {
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
@@ -358,12 +358,6 @@ export class EventsDisplay extends LitElement implements Layer {
       ...this.events.slice(index + 1),
     ];
   }
-
-  shouldTransform(): boolean {
-    return false;
-  }
-
-  renderLayer(): void {}
 
   private removeAllianceRenewalEvents(allianceID: number) {
     this.events = this.events.filter(

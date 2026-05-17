@@ -4,14 +4,14 @@ import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode, GameType, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
+import { Controller } from "./Controller";
 
 export class SpawnBarVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
 }
 
 @customElement("spawn-timer")
-export class SpawnTimer extends LitElement implements Layer {
+export class SpawnTimer extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public transformHandler: TransformHandler;
@@ -93,10 +93,6 @@ export class SpawnTimer extends LitElement implements Layer {
       this._barVisible = nowVisible;
       this.eventBus?.emit(new SpawnBarVisibleEvent(this._barVisible));
     }
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   render() {

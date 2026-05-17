@@ -2,7 +2,6 @@ import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -13,6 +12,7 @@ import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
+import { Controller } from "./layers/Controller";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
@@ -20,7 +20,6 @@ import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
-import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -260,7 +259,7 @@ export function createRenderer(
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
-  const layers: Layer[] = [
+  const layers: Controller[] = [
     new UILayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
@@ -298,7 +297,6 @@ export function createRenderer(
   ];
 
   return new GameRenderer(
-    eventBus,
     transformHandler,
     uiState,
     layers,
@@ -307,18 +305,16 @@ export function createRenderer(
 }
 
 export class GameRenderer {
-  private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
+  private layerTickState = new Map<Controller, { lastTickAtMs: number }>();
 
   constructor(
-    private eventBus: EventBus,
     public transformHandler: TransformHandler,
     public uiState: UIState,
-    private layers: Layer[],
+    private layers: Controller[],
     private performanceOverlay: PerformanceOverlay,
   ) {}
 
   initialize() {
-    this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
     window.addEventListener("resize", () =>
@@ -327,14 +323,6 @@ export class GameRenderer {
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
-  }
-
-  redraw() {
-    this.layers.forEach((l) => {
-      if (l.redraw) {
-        l.redraw();
-      }
-    });
   }
 
   tick() {
