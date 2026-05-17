@@ -96,6 +96,17 @@ export class GhostStructureChangedEvent implements GameEvent {
   constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
 
+/**
+ * Per-frame ghost preview state for the WebGL renderer. Emitted by the
+ * canvas2D ghost layer; consumed in ClientGameRunner.mountWebGLDebugRenderer
+ * to push to view.updateGhostPreview. `data` is null when no ghost is active.
+ */
+export class GhostPreviewUpdatedEvent implements GameEvent {
+  constructor(
+    public readonly data: import("./render/types").GhostPreviewData | null,
+  ) {}
+}
+
 export class ConfirmGhostStructureEvent implements GameEvent {}
 
 export class SwapRocketDirectionEvent implements GameEvent {

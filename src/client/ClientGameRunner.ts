@@ -39,6 +39,7 @@ import {
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
+  GhostPreviewUpdatedEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -344,6 +345,12 @@ function mountWebGLDebugRenderer(
     const firstUnit = gameView.unit(e.unitIds[0]);
     if (firstUnit === undefined) return;
     view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
+  });
+
+  // Build-mode ghost preview: forward the per-frame state to the renderer's
+  // ghost passes (structure outline, range circle, rail snap, crosshair).
+  eventBus.on(GhostPreviewUpdatedEvent, (e) => {
+    view.updateGhostPreview(e.data);
   });
 
   // Warship selection boxes: forward UnitSelectionEvent to the renderer's

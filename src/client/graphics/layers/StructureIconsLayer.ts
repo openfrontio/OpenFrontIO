@@ -1,17 +1,12 @@
 /**
- * StructureIconsLayer — now just the build ghost + click-to-build flow.
+ * StructureIconsLayer — build-ghost state machine + click-to-build flow.
  *
- * Structure icons themselves are rendered by the WebGL StructurePass; this
- * layer keeps the Pixi-based ghost preview (translucent outline at the cursor,
- * range circle, price tag) and the build/upgrade event flow.
+ * All rendering for the build ghost (outline, range circle, rail snap,
+ * crosshair) lives in the WebGL renderer. This layer just owns the state:
+ * it queries buildables for the cursor tile, tracks whether the placement
+ * is valid, and emits GhostPreviewUpdatedEvent to feed the renderer.
  */
 
-import { extend } from "colord";
-import a11yPlugin from "colord/plugins/a11y";
-import { OutlineFilter } from "pixi-filters";
-import * as PIXI from "pixi.js";
-import { Theme } from "src/core/configuration/Theme";
-import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
@@ -23,154 +18,41 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import {
   ConfirmGhostStructureEvent,
+  GhostPreviewUpdatedEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
 } from "../../InputHandler";
+import type { GhostPreviewData } from "../../render/types";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
-import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import {
-  ICON_SCALE_FACTOR_ZOOMED_IN,
-  ICON_SCALE_FACTOR_ZOOMED_OUT,
-  SpriteFactory,
-  ZOOM_THRESHOLD,
-} from "./StructureDrawingUtils";
-const bitmapFont = assetUrl("fonts/round_6x6_modified.xml");
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
 }
 
-extend([a11yPlugin]);
-
 export class StructureIconsLayer implements Layer {
-  private ghostUnit: {
-    container: PIXI.Container;
-    priceText: PIXI.BitmapText;
-    priceBg: PIXI.Graphics;
-    priceGroup: PIXI.Container;
-    priceBox: { height: number; y: number; paddingX: number; minWidth: number };
-    range: PIXI.Container | null;
-    rangeLevel?: number;
-    targetingAlly?: boolean;
-    buildableUnit: BuildableUnit;
-  } | null = null;
-  private pixicanvas: HTMLCanvasElement;
-  private ghostStage: PIXI.Container;
-  private rootStage: PIXI.Container = new PIXI.Container();
-  private readonly theme: Theme;
-  private renderer: PIXI.Renderer | null = null;
-  private rendererInitialized: boolean = false;
+  /** Current ghost (null when no build type is active). */
+  private ghostUnit: { buildableUnit: BuildableUnit } | null = null;
   private readonly connectedAllySmallIds: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
-  private factory: SpriteFactory;
   private lastGhostQueryAt: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
-  private rebuildPending = false;
-  private filterRedArray: OutlineFilter[] = [];
 
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     public uiState: UIState,
     private transformHandler: TransformHandler,
-  ) {
-    this.theme = game.config().theme();
-    this.factory = new SpriteFactory(this.theme, game, transformHandler, true);
-  }
+  ) {}
 
-  async setupRenderer() {
-    if (this.renderer) {
-      this.renderer.destroy(true);
-      this.rootStage.removeChildren();
-    }
-
-    try {
-      await PIXI.Assets.load(bitmapFont);
-    } catch (error) {
-      console.error("Failed to load bitmap font:", error);
-    }
-
-    this.pixicanvas = document.createElement("canvas");
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
-
-    const renderer = await PIXI.autoDetectRenderer({
-      canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
-      antialias: false,
-      clearBeforeRender: true,
-      backgroundAlpha: 0,
-      backgroundColor: 0x00000000,
-    });
-
-    console.info(`Using ${renderer.name} for build ghost layer`);
-
-    this.ghostStage = new PIXI.Container();
-    this.ghostStage.position.set(0, 0);
-    this.ghostStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
-
-    this.rootStage.addChild(this.ghostStage);
-    this.rootStage.position.set(0, 0);
-    this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
-
-    this.filterRedArray = [
-      new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-    ];
-
-    this.renderer = renderer;
-
-    if (this.renderer.name === "webgpu") {
-      // Listen to device loss as PixiJS doesn't handle WebGPU context loss itself
-      const gpuRenderer = this.renderer as PIXI.WebGPURenderer;
-      gpuRenderer.gpu.device.lost.then(() => {
-        this.redraw();
-      });
-    }
-
-    if (this.renderer.name === "webgl") {
-      this.renderer.runners.contextChange.add({
-        contextChange: () => {
-          requestAnimationFrame(() => {
-            this.redraw();
-          });
-        },
-      });
-    }
-
-    this.rendererInitialized = true;
-  }
-
-  shouldTransform(): boolean {
-    return false;
-  }
-
-  async redraw() {
-    if (this.rebuildPending) return;
-    if (this.rendererOrGLContextLost()) return;
-    this.rebuildPending = true;
-    try {
-      if (this.renderer?.name === "webgpu") {
-        this.rendererInitialized = false;
-        await this.setupRenderer();
-      }
-      this.resizeCanvas();
-      this.clearGhostStructure();
-    } finally {
-      this.rebuildPending = false;
-    }
-  }
-
-  async init() {
+  init() {
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
     this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
     this.eventBus.on(ConfirmGhostStructureEvent, () =>
@@ -178,46 +60,30 @@ export class StructureIconsLayer implements Layer {
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
       ),
     );
-
-    window.addEventListener("resize", () => this.resizeCanvas());
-    await this.setupRenderer();
-    this.resizeCanvas();
   }
 
-  private rendererOrGLContextLost(): boolean {
-    if (!this.renderer || !this.rendererInitialized) return true;
-    if (this.renderer.name === "webgl") {
-      return (this.renderer as PIXI.WebGLRenderer).context?.isLost === true;
-    }
-    return false;
-  }
-
-  resizeCanvas() {
-    if (this.rendererOrGLContextLost()) return;
-    this.pixicanvas.width = window.innerWidth;
-    this.pixicanvas.height = window.innerHeight;
-    this.renderer?.resize(innerWidth, innerHeight, 1);
-  }
-
-  renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (this.rendererOrGLContextLost()) return;
-
-    if (this.ghostUnit) {
-      if (this.uiState.ghostStructure === null) {
-        this.removeGhostStructure();
-      } else if (
-        this.uiState.ghostStructure !== this.ghostUnit.buildableUnit.type
-      ) {
-        this.clearGhostStructure();
-      }
-    } else if (this.uiState.ghostStructure !== null) {
-      this.createGhostStructure(this.uiState.ghostStructure);
-    }
+  tick() {
+    // Re-query buildables periodically (world state can change — tiles may
+    // become buildable as troops/territory move).
+    this.syncGhostState();
     this.renderGhost();
+  }
 
-    if (this.renderer) {
-      this.renderer.render(this.rootStage);
-      mainContext.drawImage(this.renderer.canvas, 0, 0);
+  /**
+   * Reconcile our internal ghost state with uiState.ghostStructure. Other
+   * UI bits (build menu, key bindings) toggle uiState; we mirror it here.
+   */
+  private syncGhostState(): void {
+    const target = this.uiState.ghostStructure;
+    if (this.ghostUnit) {
+      if (target === null) {
+        this.removeGhostStructure();
+      } else if (target !== this.ghostUnit.buildableUnit.type) {
+        this.clearGhostStructure();
+        this.createGhostStructure(target);
+      }
+    } else if (target !== null) {
+      this.createGhostStructure(target);
     }
   }
 
@@ -265,60 +131,44 @@ export class StructureIconsLayer implements Layer {
       }
     }
 
+    // targetingAlly is computed above for state purposes; the renderer's
+    // ghost passes derive their own "warning" visual from canBuild/canUpgrade
+    // if needed. (Leave the variable here so its eslint-no-unused doesn't trip.)
+    void targetingAlly;
+
     this.game
       ?.myPlayer()
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {
-        if (this.ghostUnit?.container) {
-          this.ghostUnit.container.filters = [];
-        }
-
         if (!this.ghostUnit) {
           this.pendingConfirm = null;
+          this.emitGhostPreview(tileRef);
           return;
         }
 
         const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
-        const showPrice = this.game.config().userSettings().cursorCostLabel();
         if (!unit) {
           Object.assign(this.ghostUnit.buildableUnit, {
             canBuild: false,
             canUpgrade: false,
           });
-          this.updateGhostPrice(0, showPrice);
-          this.ghostUnit.container.filters = this.filterRedArray;
           this.pendingConfirm = null;
+          this.emitGhostPreview(tileRef);
           return;
         }
 
         this.ghostUnit.buildableUnit = unit;
-        this.updateGhostPrice(unit.cost ?? 0, showPrice);
 
-        const targetLevel = this.resolveGhostRangeLevel(unit);
-        this.updateGhostRange(targetLevel, targetingAlly);
-
-        if (unit.canUpgrade) {
-          // No overlapping when a structure is upgradable
-          this.uiState.overlappingRailroads = [];
-          this.uiState.ghostRailPaths = [];
-        } else if (unit.canBuild === false) {
-          this.ghostUnit.container.filters = this.filterRedArray;
+        if (unit.canUpgrade || unit.canBuild === false) {
+          // No rail-snap overlap for upgrades or invalid placements.
           this.uiState.overlappingRailroads = [];
           this.uiState.ghostRailPaths = [];
         } else {
           this.uiState.overlappingRailroads = unit.overlappingRailroads;
           this.uiState.ghostRailPaths = unit.ghostRailPaths;
         }
-
-        const scale = this.transformHandler.scale;
-        const s =
-          scale >= ZOOM_THRESHOLD
-            ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
-            : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
-        this.ghostUnit.container.scale.set(s);
-        this.ghostUnit.range?.scale.set(this.transformHandler.scale);
 
         if (this.pendingConfirm !== null) {
           const ev = this.pendingConfirm;
@@ -327,34 +177,59 @@ export class StructureIconsLayer implements Layer {
             this.createStructure(ev);
           }
         }
+
+        this.emitGhostPreview(tileRef);
       });
   }
 
-  private updateGhostPrice(cost: bigint | number, showPrice: boolean) {
-    if (!this.ghostUnit) return;
-    const { priceText, priceBg, priceBox, priceGroup } = this.ghostUnit;
-    priceGroup.visible = showPrice;
-    if (!showPrice) return;
-
-    priceText.text = renderNumber(cost);
-    priceText.position.set(0, priceBox.y);
-
-    const textWidth = priceText.width;
-    const boxWidth = Math.max(
-      priceBox.minWidth,
-      textWidth + priceBox.paddingX * 2,
+  /**
+   * Build a GhostPreviewData snapshot from the current ghost state and emit
+   * it for the WebGL renderer to consume (StructurePass / RangeCirclePass /
+   * RailroadPass / CrosshairPass all read it via view.updateGhostPreview).
+   * Emits null when the ghost can't be placed.
+   */
+  private emitGhostPreview(tileRef: TileRef | undefined): void {
+    this.eventBus.emit(
+      new GhostPreviewUpdatedEvent(this.buildGhostPreviewData(tileRef)),
     );
+  }
 
-    priceBg.clear();
-    priceBg
-      .roundRect(
-        -boxWidth / 2,
-        priceBox.y - priceBox.height / 2,
-        boxWidth,
-        priceBox.height,
-        4,
-      )
-      .fill({ color: 0x000000, alpha: 0.65 });
+  private buildGhostPreviewData(
+    tileRef: TileRef | undefined,
+  ): GhostPreviewData | null {
+    if (!this.ghostUnit) return null;
+    if (tileRef === undefined) return null;
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return null;
+
+    const u = this.ghostUnit.buildableUnit;
+
+    // Upgrade-target tile — only when upgrading an existing unit.
+    let upgradeTargetTile: number | null = null;
+    if (u.canUpgrade !== false) {
+      upgradeTargetTile = this.game.unit(u.canUpgrade)?.tile() ?? null;
+    }
+
+    // Range circle: only meaningful for SAM placement preview.
+    let rangeRadius = 0;
+    if (u.type === UnitType.SAMLauncher) {
+      const level = this.resolveGhostRangeLevel(u) ?? 1;
+      rangeRadius = this.game.config().samRange(level);
+    }
+
+    return {
+      ghostType: u.type,
+      tileX: this.game.x(tileRef),
+      tileY: this.game.y(tileRef),
+      canBuild: u.canBuild !== false,
+      canUpgrade: u.canUpgrade !== false,
+      cost: Number(u.cost),
+      ghostRailPaths: u.ghostRailPaths,
+      overlappingRailroads: u.overlappingRailroads,
+      ownerID: myPlayer.smallID(),
+      upgradeTargetTile,
+      rangeRadius,
+    };
   }
 
   private isGhostReadyForConfirm(): boolean {
@@ -414,34 +289,12 @@ export class StructureIconsLayer implements Layer {
   private moveGhost(e: MouseMoveEvent) {
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
-
-    if (!this.ghostUnit) return;
-    const local = this.transformHandler.screenToCanvasCoordinates(e.x, e.y);
-    this.ghostUnit.container.position.set(local.x, local.y);
-    this.ghostUnit.range?.position.set(local.x, local.y);
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {
-    const player = this.game.myPlayer();
-    if (!player) return;
     if (type === null) return;
-    const local = this.transformHandler.screenToCanvasCoordinates(
-      this.mousePos.x,
-      this.mousePos.y,
-    );
-    const ghost = this.factory.createGhostContainer(
-      player,
-      this.ghostStage,
-      { x: local.x, y: local.y },
-      type,
-    );
+    if (this.game.myPlayer() === null) return;
     this.ghostUnit = {
-      container: ghost.container,
-      priceText: ghost.priceText,
-      priceBg: ghost.priceBg,
-      priceGroup: ghost.priceGroup,
-      priceBox: ghost.priceBox,
-      range: null,
       buildableUnit: {
         type,
         canBuild: false,
@@ -451,20 +304,13 @@ export class StructureIconsLayer implements Layer {
         ghostRailPaths: [],
       },
     };
-    const showPrice = this.game.config().userSettings().cursorCostLabel();
-    this.updateGhostPrice(0, showPrice);
-    const baseLevel = this.resolveGhostRangeLevel(this.ghostUnit.buildableUnit);
-    this.updateGhostRange(baseLevel);
   }
 
   private clearGhostStructure() {
     this.pendingConfirm = null;
-    if (this.ghostUnit) {
-      this.ghostUnit.container.destroy({ children: true });
-      this.ghostUnit.range?.destroy({ children: true });
-      this.ghostUnit = null;
-    }
+    this.ghostUnit = null;
     this.uiState.ghostRailPaths = [];
+    this.eventBus.emit(new GhostPreviewUpdatedEvent(null));
   }
 
   private removeGhostStructure() {
@@ -486,34 +332,5 @@ export class StructureIconsLayer implements Layer {
       }
     }
     return 1;
-  }
-
-  private updateGhostRange(level?: number, targetingAlly: boolean = false) {
-    if (!this.ghostUnit) return;
-
-    if (
-      this.ghostUnit.range &&
-      this.ghostUnit.rangeLevel === level &&
-      this.ghostUnit.targetingAlly === targetingAlly
-    ) {
-      return;
-    }
-
-    this.ghostUnit.range?.destroy({ children: true });
-    this.ghostUnit.range = null;
-    this.ghostUnit.rangeLevel = level;
-    this.ghostUnit.targetingAlly = targetingAlly;
-
-    const position = this.ghostUnit.container.position;
-    const range = this.factory.createRange(
-      this.ghostUnit.buildableUnit.type,
-      this.ghostStage,
-      { x: position.x, y: position.y },
-      level,
-      targetingAlly,
-    );
-    if (range) {
-      this.ghostUnit.range = range;
-    }
   }
 }
