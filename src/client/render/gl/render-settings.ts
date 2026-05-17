@@ -89,6 +89,13 @@ export interface RenderSettings {
     /** Icon size multiplier when zoomed out past dotsZoomThreshold. */
     dotScale: number;
     iconScaleFactorZoomedOut: number;
+    /**
+     * Zoom level at which structures begin growing with the canvas.
+     * Below this zoom, structures stay at a fixed screen size (capped).
+     * Above this zoom, they grow proportionally to zoom — i.e. world-anchored,
+     * so they cover a fixed area of the map.
+     */
+    iconGrowZoom: number;
     shapes: Record<string, { scale: number; iconFill: number }>;
     highlightOutlineWidth: number;
     highlightDimAlpha: number;

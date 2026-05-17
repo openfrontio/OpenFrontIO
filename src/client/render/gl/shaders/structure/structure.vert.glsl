@@ -14,6 +14,7 @@ uniform float uIconSize;
 uniform float uDotsThreshold;
 uniform float uDotScale;
 uniform float uScaleFactor;
+uniform float uIconGrowZoom;
 uniform float uShapeScales[ATLAS_COLS];
 uniform float uIconFills[ATLAS_COLS];
 
@@ -38,6 +39,11 @@ void main() {
   float iconScale;
   if (uZoom <= uDotsThreshold) {
     iconScale = uDotScale;
+  } else if (uZoom >= uIconGrowZoom) {
+    // World-anchored: grow proportionally to zoom so the structure covers a
+    // fixed area of the map. Past this zoom, structures should feel like
+    // they're "on" the canvas rather than overlaid at constant pixel size.
+    iconScale = uZoom / uIconGrowZoom;
   } else {
     iconScale = min(1.0, uZoom / uScaleFactor);
   }
