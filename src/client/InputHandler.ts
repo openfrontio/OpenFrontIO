@@ -246,7 +246,7 @@ export class InputHandler {
   constructor(
     private gameView: GameView,
     public uiState: UIState,
-    private canvas: HTMLCanvasElement,
+    private canvas: HTMLElement,
     private eventBus: EventBus,
   ) {}
 

@@ -236,7 +236,7 @@ function mountWebGLDebugRenderer(
   transformHandler: import("./graphics/TransformHandler").TransformHandler,
   gameView: GameView,
   eventBus: EventBus,
-): { builder: WebGLFrameBuilder; syncCamera: () => void } {
+): { builder: WebGLFrameBuilder } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
   const mapHeight = gameMap.height();
@@ -368,7 +368,17 @@ function mountWebGLDebugRenderer(
     view.setSelectedUnits(e.unit ? [e.unit.id()] : []);
   });
 
-  return { builder: new WebGLFrameBuilder(view), syncCamera };
+  // Self-driving RAF: syncCamera reads the latest camera state from
+  // TransformHandler, pushes it to WebGL, and synchronously invokes the
+  // renderer's captured frame callback (which draws). One RAF = one
+  // synchronized camera-update + WebGL render.
+  const driveFrame = (): void => {
+    syncCamera();
+    requestAnimationFrame(driveFrame);
+  };
+  requestAnimationFrame(driveFrame);
+
+  return { builder: new WebGLFrameBuilder(view) };
 }
 
 async function createClientGame(
@@ -412,23 +422,34 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.players,
   );
 
-  const canvas = createCanvas();
+  // Transparent fullscreen overlay used purely as the pointer-event /
+  // bounding-rect target for InputHandler + TransformHandler. The actual
+  // map drawing happens on the WebGL canvas created in mountWebGLDebugRenderer.
+  const inputOverlay = document.createElement("div");
+  inputOverlay.id = "game-input-overlay";
+  inputOverlay.style.position = "fixed";
+  inputOverlay.style.left = "0";
+  inputOverlay.style.top = "0";
+  inputOverlay.style.width = "100%";
+  inputOverlay.style.height = "100%";
+  inputOverlay.style.touchAction = "none";
+  document.body.appendChild(inputOverlay);
+
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
     const gameRenderer = createRenderer(
-      canvas,
+      inputOverlay,
       gameView,
       eventBus,
       lobbyConfig.playerRole,
     );
 
-    const { builder: webglBuilder, syncCamera } = mountWebGLDebugRenderer(
+    const { builder: webglBuilder } = mountWebGLDebugRenderer(
       gameMap,
       gameRenderer.transformHandler,
       gameView,
       eventBus,
     );
-    gameRenderer.onPreRender = syncCamera;
 
     console.log(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -439,7 +460,7 @@ async function createClientGame(
       clientID,
       eventBus,
       gameRenderer,
-      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
+      new InputHandler(gameView, gameRenderer.uiState, inputOverlay, eventBus),
       transport,
       worker,
       gameView,
