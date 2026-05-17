@@ -82,9 +82,10 @@
     "railAlpha": 1
   },
   "structure": {
-    "iconSize": 35,
-    "dotsZoomThreshold": 0.5,
-    "iconScaleFactorZoomedOut": 1.4,
+    "iconSize": 65,
+    "dotsZoomThreshold": 1.2,
+    "dotScale": 0.3,
+    "iconScaleFactorZoomedOut": 3.5,
     "shapes": {
       "City": {
         "scale": 1,

@@ -86,6 +86,8 @@ export interface RenderSettings {
   structure: {
     iconSize: number;
     dotsZoomThreshold: number;
+    /** Icon size multiplier when zoomed out past dotsZoomThreshold. */
+    dotScale: number;
     iconScaleFactorZoomedOut: number;
     shapes: Record<string, { scale: number; iconFill: number }>;
     highlightOutlineWidth: number;

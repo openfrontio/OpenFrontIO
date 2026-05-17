@@ -74,6 +74,7 @@ export class StructurePass {
   private uZoom: WebGLUniformLocation;
   private uIconSize: WebGLUniformLocation;
   private uDotsThreshold: WebGLUniformLocation;
+  private uDotScale: WebGLUniformLocation;
   private uScaleFactor: WebGLUniformLocation;
   private uShapeScales: WebGLUniformLocation;
   private uIconFills: WebGLUniformLocation;
@@ -140,6 +141,7 @@ export class StructurePass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uZoom = gl.getUniformLocation(this.program, "uZoom")!;
     this.uIconSize = gl.getUniformLocation(this.program, "uIconSize")!;
+    this.uDotScale = gl.getUniformLocation(this.program, "uDotScale")!;
     this.uDotsThreshold = gl.getUniformLocation(
       this.program,
       "uDotsThreshold",
@@ -330,6 +332,7 @@ export class StructurePass {
     gl.uniform1f(this.uZoom, zoom);
     gl.uniform1f(this.uIconSize, ss.iconSize);
     gl.uniform1f(this.uDotsThreshold, ss.dotsZoomThreshold);
+    gl.uniform1f(this.uDotScale, ss.dotScale);
     gl.uniform1f(this.uScaleFactor, ss.iconScaleFactorZoomedOut);
 
     // Build per-structure uniform arrays from settings, ordered by atlas column

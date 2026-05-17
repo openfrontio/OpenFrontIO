@@ -12,6 +12,7 @@ uniform float uZoom;
 
 uniform float uIconSize;
 uniform float uDotsThreshold;
+uniform float uDotScale;
 uniform float uScaleFactor;
 uniform float uShapeScales[ATLAS_COLS];
 uniform float uIconFills[ATLAS_COLS];
@@ -36,7 +37,7 @@ void main() {
 
   float iconScale;
   if (uZoom <= uDotsThreshold) {
-    iconScale = 1.0 / 2.5;
+    iconScale = uDotScale;
   } else {
     iconScale = min(1.0, uZoom / uScaleFactor);
   }
