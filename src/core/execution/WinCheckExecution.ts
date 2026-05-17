@@ -85,20 +85,18 @@ export class WinCheckExecution implements Execution {
         // Still within grace period — wait for reconnect
         return;
       } else if (connectedHumans.length === 0 && allHumans.length === 2) {
-        // Both players disconnected — don't reset grace, don't declare winner
-        // The grace timer keeps running from when first disconnect was detected
-        if (this.disconnectGraceTick !== null) {
-          const elapsed = this.mg.ticks() - this.disconnectGraceTick;
-          if (elapsed >= WinCheckExecution.DISCONNECT_GRACE_TICKS) {
-            // Both disconnected past grace — pick the one with more tiles
-            const winner = allHumans[0]; // already sorted by tiles desc
-            this.mg.setWinner(winner, this.mg.stats().stats());
-            console.log(
-              `${winner.name()} has won the game (both disconnected, most tiles)`,
-            );
-            this.active = false;
-            return;
-          }
+        // Both players disconnected — keep/start grace timer
+        this.disconnectGraceTick ??= this.mg.ticks();
+        const elapsed = this.mg.ticks() - this.disconnectGraceTick;
+        if (elapsed >= WinCheckExecution.DISCONNECT_GRACE_TICKS) {
+          // Both disconnected past grace — pick the one with more tiles
+          const winner = allHumans[0]; // already sorted by tiles desc
+          this.mg.setWinner(winner, this.mg.stats().stats());
+          console.log(
+            `${winner.name()} has won the game (both disconnected, most tiles)`,
+          );
+          this.active = false;
+          return;
         }
         return;
       } else {

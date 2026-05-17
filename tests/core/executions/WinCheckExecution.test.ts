@@ -569,7 +569,7 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     expect(winCheck.isActive()).toBe(true);
   });
 
-  test("should not set winner immediately when both players disconnect", async () => {
+  test("should not set winner immediately when both players disconnect, but should after grace", async () => {
     const game = await setup(
       "big_plains",
       {
@@ -587,6 +587,21 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human1 = game.player("Player1");
     const human2 = game.player("Player2");
 
+    // Give both players tiles so both are alive (isAlive requires tiles > 0)
+    // human1 gets more tiles so winner is deterministic
+    let h1Count = 0;
+    let h2Count = 0;
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      if (h1Count < 10) {
+        human1.conquer(tile);
+        h1Count++;
+      } else if (h2Count < 5) {
+        human2.conquer(tile);
+        h2Count++;
+      }
+    });
+
     human1.markDisconnected(true);
     human2.markDisconnected(true);
 
@@ -597,9 +612,20 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     winCheck.init(game, 0);
     winCheck.checkWinnerFFA();
 
-    // No grace timer was started (both disconnected simultaneously)
+    // Grace timer should have started — no immediate winner
     expect(setWinnerSpy).not.toHaveBeenCalled();
     expect(winCheck.isActive()).toBe(true);
+
+    // Advance past grace period (300 ticks)
+    game.endSpawnPhase();
+    for (let i = 0; i < 310; i++) {
+      game.executeNextTick();
+    }
+
+    // Now check again — grace period expired, winner by tiles
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).toHaveBeenCalledWith(human1, expect.anything());
+    expect(winCheck.isActive()).toBe(false);
   });
 
   test("should ignore bots and nations in 1v1 ranked mode (only 1 human = no opponent)", async () => {
