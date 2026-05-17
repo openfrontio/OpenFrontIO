@@ -64,8 +64,8 @@ function staticFromUpdate(pu: PlayerUpdate): PlayerStatic {
 }
 
 function stateFromUpdate(pu: PlayerUpdate): PlayerState {
-  // embargoes: Set<PlayerID strings> on the wire, but the renderer expects
-  // stringified smallIDs. GameView fills these in via setEmbargoes() because
+  // embargoes: Set<PlayerID strings> on the wire, but the renderer stores
+  // smallIDs (numbers). GameView fills these in via setEmbargoes() because
   // it has the PlayerID → smallID lookup table.
   return {
     smallID: pu.smallID,
@@ -249,9 +249,9 @@ export class PlayerView {
     applyStateUpdate(this.state, pu);
   }
 
-  /** Set the renderer-format embargoes (stringified smallIDs). */
-  setEmbargoSmallIDs(smallIDStrings: string[]): void {
-    this.state.embargoes = smallIDStrings;
+  /** Set the renderer-format embargoes (smallIDs). */
+  setEmbargoSmallIDs(smallIDs: number[]): void {
+    this.state.embargoes = smallIDs;
   }
 
   territoryColor(tile?: TileRef): Colord {
@@ -493,8 +493,7 @@ export class PlayerView {
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
-    const otherSmallIDStr = String(other.smallID());
-    return this.state.embargoes.includes(otherSmallIDStr);
+    return this.state.embargoes.includes(other.smallID());
   }
 
   hasEmbargo(other: PlayerView): boolean {

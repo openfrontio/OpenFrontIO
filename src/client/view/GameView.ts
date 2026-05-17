@@ -342,14 +342,14 @@ export class GameView implements GameMap {
     gu.updates[GameUpdateType.Player].forEach((pu) => {
       const player = this._players.get(pu.id);
       if (player === undefined) return;
-      const smallIDStrings: string[] = [];
+      const smallIDs: number[] = [];
       for (const otherPlayerID of pu.embargoes) {
         const otherPV = this._players.get(otherPlayerID);
         if (otherPV !== undefined) {
-          smallIDStrings.push(String(otherPV.smallID()));
+          smallIDs.push(otherPV.smallID());
         }
       }
-      player.setEmbargoSmallIDs(smallIDStrings);
+      player.setEmbargoSmallIDs(smallIDs);
     });
 
     if (this._myClientID) {

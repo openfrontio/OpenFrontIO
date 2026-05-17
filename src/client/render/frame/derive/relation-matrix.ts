@@ -67,8 +67,7 @@ export function buildRelationMatrix(
     }
 
     if (ps.embargoes) {
-      for (const eStr of ps.embargoes) {
-        const eID = parseInt(eStr, 10);
+      for (const eID of ps.embargoes) {
         if (eID > 0 && eID < RELATION_SIZE) {
           matrix[sid * RELATION_SIZE + eID] = RELATION_EMBARGO;
           matrix[eID * RELATION_SIZE + sid] = RELATION_EMBARGO;

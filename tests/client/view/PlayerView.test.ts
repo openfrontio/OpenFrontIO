@@ -152,8 +152,8 @@ describe("PlayerView relations", () => {
       aTeam?: string;
       bTeam?: string;
       // Embargoes are renderer-format: stringified smallIDs of the OTHER player.
-      aEmbargoSmallIDs?: string[];
-      bEmbargoSmallIDs?: string[];
+      aEmbargoSmallIDs?: number[];
+      bEmbargoSmallIDs?: number[];
       aOutgoingReq?: string[];
     } = {},
   ) {
@@ -207,7 +207,7 @@ describe("PlayerView relations", () => {
 
   it("hasEmbargoAgainst / hasEmbargo are symmetric on the second", () => {
     // a embargoes b — by smallID (renderer format)
-    const aEmbargoesB = pair(1, 2, { aEmbargoSmallIDs: ["2"] });
+    const aEmbargoesB = pair(1, 2, { aEmbargoSmallIDs: [2] });
     // One-way directional embargo from a
     expect(aEmbargoesB.a.hasEmbargoAgainst(aEmbargoesB.b)).toBe(true);
     expect(aEmbargoesB.b.hasEmbargoAgainst(aEmbargoesB.a)).toBe(false);

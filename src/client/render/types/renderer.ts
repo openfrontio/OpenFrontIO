@@ -63,7 +63,7 @@ export interface PlayerState {
   hasSpawned: boolean;
   lastDeleteUnitTick: number;
   allies: number[];
-  embargoes: string[];
+  embargoes: number[];
   targets: number[];
   outgoingAttacks: AttackData[];
   incomingAttacks: AttackData[];
