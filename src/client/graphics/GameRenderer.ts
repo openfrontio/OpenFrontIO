@@ -2,6 +2,8 @@ import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
+import { BuildPreviewController } from "../controllers/BuildPreviewController";
+import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -29,9 +31,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
-import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { TeamStats } from "./layers/TeamStats";
-import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
 
@@ -256,12 +256,9 @@ export function createRenderer(
   }
   inGamePromo.game = game;
 
-  // When updating these layers please be mindful of the order.
-  // Try to group layers by the return value of shouldTransform.
-  // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Controller[] = [
-    new UILayer(game, eventBus, transformHandler),
-    new StructureIconsLayer(game, eventBus, uiState, transformHandler),
+    new WarshipSelectionController(game, eventBus, transformHandler),
+    new BuildPreviewController(game, eventBus, uiState, transformHandler),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     attacksDisplay,

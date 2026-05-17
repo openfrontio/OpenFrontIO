@@ -1,43 +1,43 @@
 /**
- * StructureIconsLayer — build-ghost state machine + click-to-build flow.
+ * BuildPreviewController — build-ghost state machine + click-to-build flow.
  *
  * All rendering for the build ghost (outline, range circle, rail snap,
- * crosshair) lives in the WebGL renderer. This layer just owns the state:
+ * crosshair) lives in the WebGL renderer. This controller owns the state:
  * it queries buildables for the cursor tile, tracks whether the placement
  * is valid, and emits GhostPreviewUpdatedEvent to feed the renderer.
  */
 
-import { EventBus } from "../../../core/EventBus";
-import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
+import { EventBus } from "../../core/EventBus";
+import { wouldNukeBreakAlliance } from "../../core/execution/Util";
 import {
   BuildableUnit,
   PlayerBuildableUnitType,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView } from "../../../core/game/GameView";
+} from "../../core/game/Game";
+import { TileRef } from "../../core/game/GameMap";
+import { GameView } from "../../core/game/GameView";
+import { Controller } from "../graphics/layers/Controller";
+import { TransformHandler } from "../graphics/TransformHandler";
+import { UIState } from "../graphics/UIState";
 import {
   ConfirmGhostStructureEvent,
   GhostPreviewUpdatedEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
-} from "../../InputHandler";
-import type { GhostPreviewData } from "../../render/types";
+} from "../InputHandler";
+import type { GhostPreviewData } from "../render/types";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
-} from "../../Transport";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
-import { Controller } from "./Controller";
+} from "../Transport";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
 }
 
-export class StructureIconsLayer implements Controller {
+export class BuildPreviewController implements Controller {
   /** Current ghost (null when no build type is active). */
   private ghostUnit: { buildableUnit: BuildableUnit } | null = null;
   private readonly connectedAllySmallIds: Set<number> = new Set();

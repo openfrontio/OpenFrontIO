@@ -1,8 +1,10 @@
 import { Cell } from "src/core/game/Game";
-import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import { EventBus } from "../../core/EventBus";
+import { UnitType } from "../../core/game/Game";
+import { TileRef } from "../../core/game/GameMap";
+import { GameView, UnitView } from "../../core/game/GameView";
+import { Controller } from "../graphics/layers/Controller";
+import { TransformHandler } from "../graphics/TransformHandler";
 import {
   CloseViewEvent,
   ContextMenuEvent,
@@ -13,23 +15,24 @@ import {
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
-} from "../../InputHandler";
-import { MoveWarshipIntentEvent } from "../../Transport";
-import { TransformHandler } from "../TransformHandler";
-import { Controller } from "./Controller";
+} from "../InputHandler";
+import { MoveWarshipIntentEvent } from "../Transport";
 
 const WARSHIP_SELECTION_RADIUS = 10;
 
 /**
- * Layer responsible for warship selection state + click handling.
+ * Controller for warship selection state + click handling.
  *
  * Drawing for selection boxes (single + multi) lives in the WebGL
- * SelectionBoxPass; the drag-rectangle preview is a screen-space DOM
- * overlay (dragRectEl). This layer does not draw to canvas2D at all —
- * it stays in the Layer list for lifecycle hooks (init / tick / event
- * subscriptions).
+ * SelectionBoxPass (forwarded via UnitSelectionEvent from ClientGameRunner).
+ * The drag-rectangle preview is a screen-space DOM overlay (dragRectEl) we
+ * own here.
+ *
+ * This class does not render anything to canvas2D — it's purely a state +
+ * click controller. The "Controller" pattern: main-thread analog of the
+ * worker's Execution (init + tick + event subscriptions).
  */
-export class UILayer implements Controller {
+export class WarshipSelectionController implements Controller {
   // Currently selected single warship (game-logic readers use this; the
   // visual is drawn by WebGL SelectionBoxPass).
   private selectedUnit: UnitView | null = null;

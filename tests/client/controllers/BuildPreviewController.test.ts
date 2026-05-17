@@ -1,14 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { shouldPreserveGhostAfterBuild } from "../../../../src/client/graphics/layers/StructureIconsLayer";
-import { UnitType } from "../../../../src/core/game/Game";
+import { shouldPreserveGhostAfterBuild } from "../../../src/client/controllers/BuildPreviewController";
+import { UnitType } from "../../../src/core/game/Game";
 
-/**
- * Tests for StructureIconsLayer edge cases mentioned in comments:
- * - Locked nuke / AtomBomb / HydrogenBomb: when confirming placement (Enter or key),
- *   the ghost is preserved so the user can place multiple nukes or keep the nuke
- *   selected. Other structure types clear the ghost after placement.
- */
-describe("StructureIconsLayer ghost preservation (locked nuke / Enter confirm)", () => {
+describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
   describe("shouldPreserveGhostAfterBuild", () => {
     test("returns true for AtomBomb so ghost is not cleared after placement", () => {
       expect(shouldPreserveGhostAfterBuild(UnitType.AtomBomb)).toBe(true);

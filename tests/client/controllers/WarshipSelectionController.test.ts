@@ -1,7 +1,7 @@
-import { UILayer } from "../../../src/client/graphics/layers/UILayer";
+import { WarshipSelectionController } from "../../../src/client/controllers/WarshipSelectionController";
 import { UnitSelectionEvent } from "../../../src/client/InputHandler";
 
-describe("UILayer", () => {
+describe("WarshipSelectionController", () => {
   let game: any;
   let eventBus: any;
   let transformHandler: any;
@@ -29,7 +29,7 @@ describe("UILayer", () => {
   });
 
   it("tracks the selected unit on single-unit selection (rendering is WebGL)", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new WarshipSelectionController(game, eventBus, transformHandler);
     const unit = {
       type: () => "Warship",
       isActive: () => true,
@@ -45,7 +45,7 @@ describe("UILayer", () => {
   });
 
   it("clears selection on deselect", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new WarshipSelectionController(game, eventBus, transformHandler);
     const unit = {
       type: () => "Warship",
       isActive: () => true,
@@ -61,7 +61,7 @@ describe("UILayer", () => {
   });
 
   it("tracks multi-selection list", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new WarshipSelectionController(game, eventBus, transformHandler);
     const units = [
       { id: () => 1, isActive: () => true },
       { id: () => 2, isActive: () => true },
