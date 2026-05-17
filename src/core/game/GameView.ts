@@ -265,28 +265,37 @@ export class PlayerView {
       } satisfies ColorPalette;
     }
 
+    const isMyPlayer = this.game.myClientID() === this.data.clientID;
+
     if (this.team() === null) {
-      this._territoryColor = colord(
-        this.cosmetics.color?.color ??
-          pattern?.colorPalette?.primaryColor ??
-          defaultTerritoryColor.toHex(),
-      );
+      if (isMyPlayer && userSettings.customColorsEnabled()) {
+        this._territoryColor = colord(userSettings.customPrimaryColor());
+      } else {
+        this._territoryColor = colord(
+          this.cosmetics.color?.color ??
+            pattern?.colorPalette?.primaryColor ??
+            defaultTerritoryColor.toHex(),
+        );
+      }
     } else {
       this._territoryColor = defaultTerritoryColor;
     }
 
     this._structureColors = theme.structureColors(this._territoryColor);
 
-    const maybeFocusedBorderColor =
-      this.game.myClientID() === this.data.clientID
+    const maybeFocusedBorderColor = isMyPlayer
         ? theme.focusedBorderColor()
         : defaultBorderColor;
 
-    this._borderColor = new Colord(
-      pattern?.colorPalette?.secondaryColor ??
-        this.cosmetics.color?.color ??
-        maybeFocusedBorderColor.toHex(),
-    );
+    if (isMyPlayer && userSettings.customColorsEnabled()) {
+      this._borderColor = new Colord(userSettings.customSecondaryColor());
+    } else {
+      this._borderColor = new Colord(
+        pattern?.colorPalette?.secondaryColor ??
+          this.cosmetics.color?.color ??
+          maybeFocusedBorderColor.toHex(),
+      );
+    }
 
     // Pre-compute all border color variants once
     const baseRgb = this._borderColor.toRgb();
@@ -619,6 +628,9 @@ export class PlayerView {
 
   isTraitor(): boolean {
     return this.data.isTraitor;
+  }
+  betrayals(): number {
+    return this.data.betrayals;
   }
   getTraitorRemainingTicks(): number {
     return Math.max(0, this.data.traitorRemainingTicks ?? 0);

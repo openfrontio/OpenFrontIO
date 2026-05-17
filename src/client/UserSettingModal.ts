@@ -8,6 +8,7 @@ import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import "./components/baseComponents/setting/SettingColor";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
@@ -306,6 +307,19 @@ export class UserSettingModal extends BaseModal {
       "🏳️ Territory Patterns:",
       this.userSettings.territoryPatterns() ? "ON" : "OFF",
     );
+  }
+
+  private toggleCustomColorsEnabled() {
+    this.userSettings.toggleCustomColorsEnabled();
+    this.requestUpdate();
+  }
+
+  private handleCustomPrimaryColor(e: CustomEvent<{ value: string }>) {
+    this.userSettings.setCustomPrimaryColor(e.detail.value);
+  }
+
+  private handleCustomSecondaryColor(e: CustomEvent<{ value: string }>) {
+    this.userSettings.setCustomSecondaryColor(e.detail.value);
   }
 
   private toggleGoToPlayer() {
@@ -840,6 +854,33 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
       ></setting-toggle>
+
+      <!-- 🎨 Custom Territory Colors -->
+      <setting-toggle
+        label="Custom Territory Colors"
+        description="Override lobby settings and use your own colors"
+        id="custom-colors-toggle"
+        .checked=${this.userSettings.customColorsEnabled()}
+        @change=${this.toggleCustomColorsEnabled}
+      ></setting-toggle>
+
+      ${this.userSettings.customColorsEnabled()
+        ? html`
+            <setting-color
+              label="Primary Color"
+              description="The main fill color of your territory"
+              .value=${this.userSettings.customPrimaryColor()}
+              @change=${this.handleCustomPrimaryColor}
+            ></setting-color>
+            
+            <setting-color
+              label="Secondary Color"
+              description="The color of your borders"
+              .value=${this.userSettings.customSecondaryColor()}
+              @change=${this.handleCustomSecondaryColor}
+            ></setting-color>
+          `
+        : ""}
 
       <!-- 🔍 Go to player -->
       <setting-toggle

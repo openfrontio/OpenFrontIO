@@ -14,6 +14,8 @@ interface Entry {
   score: string;
   gold: string;
   maxTroops: string;
+  betrayals: string;
+  alliances: string;
   isMyPlayer: boolean;
   isOnSameTeam: boolean;
   player: PlayerView;
@@ -30,7 +32,10 @@ export class Leaderboard extends LitElement implements Layer {
   private showTopFive = true;
 
   @state()
-  private _sortKey: "tiles" | "gold" | "maxtroops" = "tiles";
+  private _viewState: "default" | "alliances" = "default";
+
+  @state()
+  private _sortKey: "tiles" | "gold" | "maxtroops" | "betrayals" | "alliances" = "tiles";
 
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
@@ -57,7 +62,7 @@ export class Leaderboard extends LitElement implements Layer {
     this.updateLeaderboard();
   }
 
-  private setSort(key: "tiles" | "gold" | "maxtroops") {
+  private setSort(key: "tiles" | "gold" | "maxtroops" | "betrayals" | "alliances") {
     if (this._sortKey === key) {
       this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -87,6 +92,12 @@ export class Leaderboard extends LitElement implements Layer {
       case "maxtroops":
         sorted = sorted.sort((a, b) => compare(maxTroops(a), maxTroops(b)));
         break;
+      case "betrayals":
+        sorted = sorted.sort((a, b) => compare(a.betrayals(), b.betrayals()));
+        break;
+      case "alliances":
+        sorted = sorted.sort((a, b) => compare(a.alliances().length, b.alliances().length));
+        break;
       default:
         sorted = sorted.sort((a, b) =>
           compare(a.numTilesOwned(), b.numTilesOwned()),
@@ -102,7 +113,7 @@ export class Leaderboard extends LitElement implements Layer {
       : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      const maxTroops = this.game!.config().maxTroops(player);
+      const pMaxTroops = this.game!.config().maxTroops(player);
       return {
         name: player.displayName(),
         position: index + 1,
@@ -110,7 +121,9 @@ export class Leaderboard extends LitElement implements Layer {
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
-        maxTroops: renderTroops(maxTroops),
+        maxTroops: renderTroops(pMaxTroops),
+        betrayals: player.betrayals().toString(),
+        alliances: player.alliances().length.toString(),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
           myPlayer !== null &&
@@ -142,6 +155,8 @@ export class Leaderboard extends LitElement implements Layer {
           ),
           gold: renderNumber(myPlayer.gold()),
           maxTroops: renderTroops(myPlayerMaxTroops),
+          betrayals: myPlayer.betrayals().toString(),
+          alliances: myPlayer.alliances().length.toString(),
           isMyPlayer: true,
           isOnSameTeam: true,
           player: myPlayer,
@@ -199,28 +214,38 @@ export class Leaderboard extends LitElement implements Layer {
                   : "⬇️"
                 : ""}
             </div>
-            <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
-              @click=${() => this.setSort("gold")}
-            >
-              ${translateText("leaderboard.gold")}
-              ${this._sortKey === "gold"
-                ? this._sortOrder === "asc"
-                  ? "⬆️"
-                  : "⬇️"
-                : ""}
-            </div>
-            <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
-              @click=${() => this.setSort("maxtroops")}
-            >
-              ${translateText("leaderboard.maxtroops")}
-              ${this._sortKey === "maxtroops"
-                ? this._sortOrder === "asc"
-                  ? "⬆️"
-                  : "⬇️"
-                : ""}
-            </div>
+            
+            ${this._viewState === "default" ? html`
+              <div
+                class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+                @click=${() => this.setSort("gold")}
+              >
+                ${translateText("leaderboard.gold")}
+                ${this._sortKey === "gold" ? (this._sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
+              </div>
+              <div
+                class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+                @click=${() => this.setSort("maxtroops")}
+              >
+                ${translateText("leaderboard.maxtroops")}
+                ${this._sortKey === "maxtroops" ? (this._sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
+              </div>
+            ` : html`
+              <div
+                class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+                @click=${() => this.setSort("betrayals")}
+              >
+                Betrayals
+                ${this._sortKey === "betrayals" ? (this._sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
+              </div>
+              <div
+                class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+                @click=${() => this.setSort("alliances")}
+              >
+                Alliances
+                ${this._sortKey === "alliances" ? (this._sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
+              </div>
+            `}
           </div>
 
           ${repeat(
@@ -257,39 +282,53 @@ export class Leaderboard extends LitElement implements Layer {
                 >
                   ${player.score}
                 </div>
-                <div
-                  class="py-1 md:py-2 text-center ${index <
-                  this.players.length - 1
-                    ? "border-b border-slate-500"
-                    : ""}"
-                >
-                  ${player.gold}
-                </div>
-                <div
-                  class="py-1 md:py-2 text-center ${index <
-                  this.players.length - 1
-                    ? "border-b border-slate-500"
-                    : ""}"
-                >
-                  ${player.maxTroops}
-                </div>
+                
+                ${this._viewState === "default" ? html`
+                  <div class="py-1 md:py-2 text-center ${index < this.players.length - 1 ? "border-b border-slate-500" : ""}">
+                    ${player.gold}
+                  </div>
+                  <div class="py-1 md:py-2 text-center ${index < this.players.length - 1 ? "border-b border-slate-500" : ""}">
+                    ${player.maxTroops}
+                  </div>
+                ` : html`
+                  <div class="py-1 md:py-2 text-center ${index < this.players.length - 1 ? "border-b border-slate-500" : ""}">
+                    ${player.betrayals}
+                  </div>
+                  <div class="py-1 md:py-2 text-center ${index < this.players.length - 1 ? "border-b border-slate-500" : ""}">
+                    ${player.alliances}
+                  </div>
+                `}
               </div>
             `,
           )}
         </div>
       </div>
 
-      <button
-        class="mt-2 p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm 
-        border rounded-md border-slate-500 transition-colors
-        text-white mx-auto block hover:bg-white/10 bg-gray-700/50"
-        @click=${() => {
-          this.showTopFive = !this.showTopFive;
-          this.updateLeaderboard();
-        }}
-      >
-        ${this.showTopFive ? "+" : "-"}
-      </button>
+      <div class="flex justify-center gap-2 mt-2">
+        <button
+          class="p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm border rounded-md border-slate-500 transition-colors text-white block hover:bg-white/10 bg-gray-700/50"
+          @click=${() => {
+            this.showTopFive = !this.showTopFive;
+            this.updateLeaderboard();
+          }}
+        >
+          ${this.showTopFive ? "+" : "-"}
+        </button>
+        <button
+          class="p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm border rounded-md border-slate-500 transition-colors text-white block hover:bg-white/10 bg-gray-700/50"
+          @click=${() => {
+            this._viewState = this._viewState === "default" ? "alliances" : "default";
+            if (this._viewState === "alliances" && (this._sortKey === "gold" || this._sortKey === "maxtroops")) {
+              this._sortKey = "tiles";
+            } else if (this._viewState === "default" && (this._sortKey === "betrayals" || this._sortKey === "alliances")) {
+              this._sortKey = "tiles";
+            }
+            this.updateLeaderboard();
+          }}
+        >
+          ${this._viewState === "default" ? "Show Alliances" : "Show Stats"}
+        </button>
+      </div>
     `;
   }
 }

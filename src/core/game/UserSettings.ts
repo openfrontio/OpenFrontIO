@@ -237,6 +237,30 @@ export class UserSettings {
     this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
+  customColorsEnabled() {
+    return this.getBool("settings.customColorsEnabled", false);
+  }
+
+  toggleCustomColorsEnabled() {
+    this.setBool("settings.customColorsEnabled", !this.customColorsEnabled());
+  }
+
+  customPrimaryColor(): string {
+    return this.getString("settings.customPrimaryColor", "#2196f3");
+  }
+
+  setCustomPrimaryColor(color: string): void {
+    this.setString("settings.customPrimaryColor", color);
+  }
+
+  customSecondaryColor(): string {
+    return this.getString("settings.customSecondaryColor", "#1565c0");
+  }
+
+  setCustomSecondaryColor(color: string): void {
+    this.setString("settings.customSecondaryColor", color);
+  }
+
   // For development only. Used for testing patterns, set in the console manually.
   getDevOnlyPattern(): PlayerPattern | undefined {
     const data = localStorage.getItem("dev-pattern") ?? undefined;
