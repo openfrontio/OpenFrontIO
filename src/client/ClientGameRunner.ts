@@ -346,21 +346,19 @@ function mountWebGLDebugRenderer(
     view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
   });
 
-  // Single-unit warship selection box: forward UnitSelectionEvent to the
-  // renderer's SelectionBoxPass. Multi-selection (event.units.length > 0)
-  // stays canvas2D for now — SelectionBoxPass only supports one unit.
+  // Warship selection boxes: forward UnitSelectionEvent to the renderer's
+  // SelectionBoxPass for both single and multi selections.
   eventBus.on(UnitSelectionEvent, (e) => {
     if (!e.isSelected) {
-      view.setSelectedUnit(null);
+      view.setSelectedUnits([]);
       return;
     }
-    if ((e.units ?? []).length > 0) {
-      // Multi-selection: drop any prior single highlight; canvas2D draws
-      // the multi outlines in UILayer.
-      view.setSelectedUnit(null);
+    const multi = e.units ?? [];
+    if (multi.length > 0) {
+      view.setSelectedUnits(multi.map((u) => u.id()));
       return;
     }
-    view.setSelectedUnit(e.unit?.id() ?? null);
+    view.setSelectedUnits(e.unit ? [e.unit.id()] : []);
   });
 
   return { builder: new WebGLFrameBuilder(view), syncCamera };

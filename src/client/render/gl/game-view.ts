@@ -341,6 +341,11 @@ export class GameView {
     this.renderer.setSelectedUnit(unitId);
   }
 
+  /** Set multiple selected units (multi-select). Pass [] to clear. */
+  setSelectedUnits(unitIds: readonly number[]): void {
+    this.renderer.setSelectedUnits(unitIds);
+  }
+
   /** Flash converging-chevron animation at a warship move target. */
   showMoveIndicator(tileX: number, tileY: number, ownerID: number): void {
     this.renderer.showMoveIndicator(tileX, tileY, ownerID);

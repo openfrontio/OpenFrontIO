@@ -1,5 +1,3 @@
-import { Colord } from "colord";
-import { Theme } from "src/core/configuration/Theme";
 import { Cell } from "src/core/game/Game";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
@@ -23,65 +21,35 @@ import { Layer } from "./Layer";
 const WARSHIP_SELECTION_RADIUS = 10;
 
 /**
- * Layer responsible for drawing UI elements that overlay the game.
- * Currently: warship selection boxes + drag-rectangle selection.
- * Health/progress bars are now drawn by the WebGL BarPass.
+ * Layer responsible for warship selection state + click handling.
+ *
+ * Drawing for selection boxes (single + multi) lives in the WebGL
+ * SelectionBoxPass; the drag-rectangle preview is a screen-space DOM
+ * overlay (dragRectEl). This layer does not draw to canvas2D at all —
+ * it stays in the Layer list for lifecycle hooks (init / tick / event
+ * subscriptions).
  */
 export class UILayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D | null;
-  private theme: Theme | null = null;
-  private selectionAnimTime = 0;
-  // Keep track of currently selected unit
+  // Currently selected single warship (game-logic readers use this; the
+  // visual is drawn by WebGL SelectionBoxPass).
   private selectedUnit: UnitView | null = null;
-
-  // Keep track of multi-selected warships (box selection)
+  // Currently multi-selected warships (shift+drag box select).
   private multiSelectedWarships: UnitView[] = [];
 
-  // Per-unit last selection box position for multi-select cleanup
-  private multiSelectionBoxCenters: Map<
-    number,
-    { x: number; y: number; size: number }
-  > = new Map();
-
-  // Visual settings for selection
-  private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
-
   // Drag rectangle (shift+drag warship selection box) — a screen-space DOM
-  // overlay positioned via inline style. Not part of the canvas2D draw path.
+  // overlay positioned via inline style.
   private dragRectEl: HTMLDivElement | null = null;
 
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-  ) {
-    this.theme = game.config().theme();
-  }
-
-  shouldTransform(): boolean {
-    return true;
-  }
+  ) {}
 
   tick() {
-    // Update the selection animation time (only used by the multi-selection
-    // boxes — the single-unit box is now drawn by the WebGL SelectionBoxPass).
-    this.selectionAnimTime = (this.selectionAnimTime + 1) % 60;
-
-    // Animate multi-selected warships
-    for (const unit of this.multiSelectedWarships) {
-      if (unit.isActive()) {
-        this.drawSelectionBoxMulti(unit);
-      } else {
-        // Unit was destroyed — clean up its box
-        const prev = this.multiSelectionBoxCenters.get(unit.id());
-        if (prev) {
-          this.clearSelectionBox(prev.x, prev.y, prev.size);
-          this.multiSelectionBoxCenters.delete(unit.id());
-        }
-      }
-    }
-    // Remove destroyed units from the list
+    // Prune any destroyed warships from the multi-selection so callers
+    // (move-warship intent) don't try to act on dead units. The WebGL
+    // SelectionBoxPass also drops them automatically.
     this.multiSelectedWarships = this.multiSelectedWarships.filter((u) =>
       u.isActive(),
     );
@@ -106,8 +74,6 @@ export class UILayer implements Layer {
       this.onSelectionBoxComplete(e),
     );
     this.eventBus.on(SelectAllWarshipsEvent, () => this.onSelectAllWarships());
-
-    this.redraw();
   }
 
   /**
@@ -319,23 +285,6 @@ export class UILayer implements Layer {
     this.eventBus.emit(new UnitSelectionEvent(null, true, allWarships));
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
-  }
-
-  redraw() {
-    this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d");
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
-  }
-
   /**
    * Handle the unit selection event (single or multi).
    * When event.units.length > 0 it's a multi-selection from box/select-all.
@@ -343,111 +292,17 @@ export class UILayer implements Layer {
    * When event.isSelected is false it clears all selection state.
    */
   private onUnitSelection(event: UnitSelectionEvent) {
-    // Clear previous multi-selection boxes (the single-unit box is now drawn
-    // by the WebGL SelectionBoxPass — see ClientGameRunner.mountWebGLDebugRenderer
-    // which forwards this event to view.setSelectedUnit).
-    for (const [, center] of this.multiSelectionBoxCenters) {
-      this.clearSelectionBox(center.x, center.y, center.size);
-    }
-    this.multiSelectionBoxCenters.clear();
+    // Selection box visuals are drawn by the WebGL SelectionBoxPass; this
+    // method just tracks selection state for the click-handler logic.
     this.multiSelectedWarships = [];
     this.selectedUnit = null;
 
     if (!event.isSelected) return;
 
     if ((event.units ?? []).length > 0) {
-      // Multi-selection — canvas2D draws the per-unit outlines.
       this.multiSelectedWarships = event.units;
-      for (const unit of this.multiSelectedWarships) {
-        if (unit.isActive()) {
-          this.drawSelectionBoxMulti(unit);
-        }
-      }
     } else {
-      // Single selection — state only; WebGL draws the box.
       this.selectedUnit = event.unit;
     }
-  }
-
-  /**
-   * Draw selection box for a multi-selected warship, tracking position per unit id.
-   */
-  private drawSelectionBoxMulti(unit: UnitView) {
-    if (!unit || !unit.isActive()) return;
-
-    if (this.theme === null) throw new Error("missing theme");
-    const selectionColor = unit.owner().territoryColor().lighten(0.2);
-    const centerX = this.game.x(unit.tile());
-    const centerY = this.game.y(unit.tile());
-
-    const prev = this.multiSelectionBoxCenters.get(unit.id());
-    if (prev && (prev.x !== centerX || prev.y !== centerY)) {
-      this.clearSelectionBox(prev.x, prev.y, prev.size);
-    }
-
-    this.paintSelectionBoxAt(centerX, centerY, selectionColor);
-
-    this.multiSelectionBoxCenters.set(unit.id(), {
-      x: centerX,
-      y: centerY,
-      size: this.SELECTION_BOX_SIZE,
-    });
-  }
-
-  /**
-   * Shared helper: paint the dashed pulsing border pixels for a selection box.
-   */
-  private paintSelectionBoxAt(
-    centerX: number,
-    centerY: number,
-    selectionColor: Colord,
-  ) {
-    const size = this.SELECTION_BOX_SIZE;
-    const opacity = 200 + Math.sin(this.selectionAnimTime * 0.1) * 55;
-
-    for (let x = centerX - size; x <= centerX + size; x++) {
-      for (let y = centerY - size; y <= centerY + size; y++) {
-        if (
-          x === centerX - size ||
-          x === centerX + size ||
-          y === centerY - size ||
-          y === centerY + size
-        ) {
-          if ((x + y) % 2 === 0) {
-            this.paintCell(x, y, selectionColor, opacity);
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Clear the selection box at a specific position
-   */
-  private clearSelectionBox(x: number, y: number, size: number) {
-    for (let px = x - size; px <= x + size; px++) {
-      for (let py = y - size; py <= y + size; py++) {
-        if (
-          px === x - size ||
-          px === x + size ||
-          py === y - size ||
-          py === y + size
-        ) {
-          this.clearCell(px, py);
-        }
-      }
-    }
-  }
-
-  paintCell(x: number, y: number, color: Colord, alpha: number) {
-    if (this.context === null) throw new Error("null context");
-    this.clearCell(x, y);
-    this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
-    this.context.fillRect(x, y, 1, 1);
-  }
-
-  clearCell(x: number, y: number) {
-    if (this.context === null) throw new Error("null context");
-    this.context.clearRect(x, y, 1, 1);
   }
 }

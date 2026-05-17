@@ -1,9 +1,9 @@
 /**
- * SelectionBoxPass — draws a stippled pulsating square border around a
- * selected warship, matching the game's native UILayer selection box.
+ * SelectionBoxPass — draws stippled pulsating square borders around selected
+ * warships. Supports any number of selections; renders one quad per selection.
  *
- * Single quad with tile-space SDF logic in the fragment shader.
- * Active only when a unit is selected via setSelectedUnit().
+ * For typical use (1-50 selected units) the draw-call overhead is fine; if
+ * this ever becomes hot we could swap to instanced rendering.
  */
 
 import { createProgram } from "../utils/gl-utils";
@@ -13,6 +13,14 @@ import vertSrc from "../shaders/selection-box/selection-box.vert.glsl?raw";
 
 /** Half-size of the selection box in tiles (matches game's SELECTION_BOX_SIZE). */
 const HALF_SIZE = 6;
+
+export interface SelectionEntry {
+  centerX: number;
+  centerY: number;
+  r: number;
+  g: number;
+  b: number;
+}
 
 export class SelectionBoxPass {
   private gl: WebGL2RenderingContext;
@@ -25,12 +33,8 @@ export class SelectionBoxPass {
   private uTime: WebGLUniformLocation;
   private uColor: WebGLUniformLocation;
 
-  private active = false;
-  private centerX = 0;
-  private centerY = 0;
-  private colorR = 1;
-  private colorG = 1;
-  private colorB = 1;
+  /** Reusable buffer of selections — caller mutates via setSelections(). */
+  private readonly selections: SelectionEntry[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -58,8 +62,18 @@ export class SelectionBoxPass {
   }
 
   /**
-   * Set the selection box center and color. Pass active=false to hide.
+   * Replace the set of selections drawn this frame. Call with [] to hide.
+   * Stored by reference — the renderer rebuilds the array each frame from
+   * the current unit positions/colors, so we just swap pointers.
    */
+  setSelections(entries: readonly SelectionEntry[]): void {
+    this.selections.length = 0;
+    for (let i = 0; i < entries.length; i++) {
+      this.selections.push(entries[i]);
+    }
+  }
+
+  /** Legacy single-selection API kept for callers that haven't migrated. */
   update(
     active: boolean,
     centerX: number,
@@ -68,31 +82,33 @@ export class SelectionBoxPass {
     g: number,
     b: number,
   ): void {
-    this.active = active;
-    this.centerX = centerX;
-    this.centerY = centerY;
-    this.colorR = r;
-    this.colorG = g;
-    this.colorB = b;
+    this.selections.length = 0;
+    if (active) this.selections.push({ centerX, centerY, r, g, b });
   }
 
   hide(): void {
-    this.active = false;
+    this.selections.length = 0;
   }
 
   draw(cameraMatrix: Float32Array, frameTick: number): void {
-    if (!this.active) return;
+    if (this.selections.length === 0) return;
 
     const gl = this.gl;
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
-    gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uHalfSize, HALF_SIZE);
     gl.uniform1f(this.uTime, frameTick);
-    gl.uniform3f(this.uColor, this.colorR, this.colorG, this.colorB);
-
     gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // One draw call per selection — for the typical N=1..50, this is cheap.
+    // (If profiling ever shows it matters, swap to instanced rendering with a
+    // small per-instance VBO of {centerX, centerY, r, g, b}.)
+    for (let i = 0; i < this.selections.length; i++) {
+      const s = this.selections[i];
+      gl.uniform2f(this.uCenter, s.centerX, s.centerY);
+      gl.uniform3f(this.uColor, s.r, s.g, s.b);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
   }
 
   dispose(): void {

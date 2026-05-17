@@ -28,17 +28,8 @@ describe("UILayer", () => {
     transformHandler = {};
   });
 
-  it("should initialize and redraw canvas", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
-    ui.redraw();
-    expect(ui["canvas"].width).toBe(100);
-    expect(ui["canvas"].height).toBe(100);
-    expect(ui["context"]).not.toBeNull();
-  });
-
   it("tracks the selected unit on single-unit selection (rendering is WebGL)", () => {
     const ui = new UILayer(game, eventBus, transformHandler);
-    ui.redraw();
     const unit = {
       type: () => "Warship",
       isActive: () => true,
@@ -48,14 +39,13 @@ describe("UILayer", () => {
     const event = { isSelected: true, unit };
     ui["onUnitSelection"](event as UnitSelectionEvent);
     // selectedUnit is held for game-logic callers (the click handlers). The
-    // visual selection box is now drawn by WebGL SelectionBoxPass — wired
-    // from ClientGameRunner via view.setSelectedUnit(unit.id()).
+    // visual selection box is drawn by WebGL SelectionBoxPass — wired from
+    // ClientGameRunner via view.setSelectedUnits([unit.id()]).
     expect(ui["selectedUnit"]).toBe(unit);
   });
 
   it("clears selection on deselect", () => {
     const ui = new UILayer(game, eventBus, transformHandler);
-    ui.redraw();
     const unit = {
       type: () => "Warship",
       isActive: () => true,
@@ -67,6 +57,21 @@ describe("UILayer", () => {
       isSelected: false,
       unit: null,
     } as unknown as UnitSelectionEvent);
+    expect(ui["selectedUnit"]).toBeNull();
+  });
+
+  it("tracks multi-selection list", () => {
+    const ui = new UILayer(game, eventBus, transformHandler);
+    const units = [
+      { id: () => 1, isActive: () => true },
+      { id: () => 2, isActive: () => true },
+    ];
+    ui["onUnitSelection"]({
+      isSelected: true,
+      unit: null,
+      units,
+    } as unknown as UnitSelectionEvent);
+    expect(ui["multiSelectedWarships"]).toEqual(units);
     expect(ui["selectedUnit"]).toBeNull();
   });
 });

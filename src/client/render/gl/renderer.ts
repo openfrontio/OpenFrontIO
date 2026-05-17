@@ -164,8 +164,11 @@ export class GPURenderer {
   private samGhostVisible = false;
   private samHighlightVisible = false;
 
-  // Warship selection
-  private selectedUnitId: number | null = null;
+  // Warship selection — supports any number of selections.
+  private selectedUnitIds: number[] = [];
+  /** Reusable scratch buffer of {x,y,r,g,b} for the selection-box pass. */
+  private readonly selectionBoxEntries: import("./passes/selection-box-pass").SelectionEntry[] =
+    [];
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -884,40 +887,56 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   setSelectedUnit(unitId: number | null): void {
-    this.selectedUnitId = unitId;
-    if (unitId === null) {
+    this.setSelectedUnits(unitId === null ? [] : [unitId]);
+  }
+
+  setSelectedUnits(unitIds: readonly number[]): void {
+    // Copy in (callers may mutate their array).
+    this.selectedUnitIds.length = 0;
+    for (let i = 0; i < unitIds.length; i++) {
+      this.selectedUnitIds.push(unitIds[i]);
+    }
+    if (this.selectedUnitIds.length === 0) {
       this.selectionBoxPass.hide();
     }
-    // Position + color are updated each frame in draw() from lastUnits.
+    // Position + color are rebuilt each frame in updateSelectionBox() from
+    // lastUnits — dead units get dropped automatically.
   }
 
   private updateSelectionBox(): void {
-    if (this.selectedUnitId === null) return;
-    const unit = this.lastUnits.get(this.selectedUnitId);
-    if (!unit || !unit.isActive) {
-      this.selectedUnitId = null;
-      this.selectionBoxPass.hide();
-      return;
+    if (this.selectedUnitIds.length === 0) return;
+
+    // Build the entries for this frame and prune dead unit IDs in place.
+    const entries = this.selectionBoxEntries;
+    entries.length = 0;
+    let writeIdx = 0;
+    for (let i = 0; i < this.selectedUnitIds.length; i++) {
+      const id = this.selectedUnitIds[i];
+      const unit = this.lastUnits.get(id);
+      if (!unit || !unit.isActive) continue; // dead — drop
+      this.selectedUnitIds[writeIdx++] = id;
+
+      const centerX = unit.pos % this.mapW;
+      const centerY = Math.floor(unit.pos / this.mapW);
+      // Lighten the owner's territory color by ~20% (mix toward white).
+      const off = unit.ownerID * 4;
+      const r = Math.min(
+        1,
+        this.paletteData[off] + (1 - this.paletteData[off]) * 0.3,
+      );
+      const g = Math.min(
+        1,
+        this.paletteData[off + 1] + (1 - this.paletteData[off + 1]) * 0.3,
+      );
+      const b = Math.min(
+        1,
+        this.paletteData[off + 2] + (1 - this.paletteData[off + 2]) * 0.3,
+      );
+      entries.push({ centerX, centerY, r, g, b });
     }
-    const x = unit.pos % this.mapW;
-    const y = Math.floor(unit.pos / this.mapW);
+    this.selectedUnitIds.length = writeIdx;
 
-    // Lighten the owner's territory color by ~20% (mix toward white)
-    const off = unit.ownerID * 4;
-    const lr = Math.min(
-      1,
-      this.paletteData[off] + (1 - this.paletteData[off]) * 0.3,
-    );
-    const lg = Math.min(
-      1,
-      this.paletteData[off + 1] + (1 - this.paletteData[off + 1]) * 0.3,
-    );
-    const lb = Math.min(
-      1,
-      this.paletteData[off + 2] + (1 - this.paletteData[off + 2]) * 0.3,
-    );
-
-    this.selectionBoxPass.update(true, x, y, lr, lg, lb);
+    this.selectionBoxPass.setSelections(entries);
   }
 
   // ---------------------------------------------------------------------------
