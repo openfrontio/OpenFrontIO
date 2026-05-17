@@ -301,6 +301,7 @@ export class UnitPass {
 
   private async loadAtlas(): Promise<void> {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = unitAtlasUrl;
     await img.decode();
     const gl = this.gl;

@@ -113,6 +113,7 @@ export class IconProgram {
     const gl = this.gl;
     const load = (url: string, cb: (tex: WebGLTexture) => void) => {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
         const tex = gl.createTexture()!;
         gl.bindTexture(gl.TEXTURE_2D, tex);

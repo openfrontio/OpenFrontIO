@@ -245,6 +245,7 @@ export class StructurePass {
 
   private async loadAtlas(): Promise<void> {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = iconAtlasUrl;
     await img.decode();
     const gl = this.gl;

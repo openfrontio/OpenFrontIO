@@ -229,6 +229,7 @@ export class RadialMenuPass {
 
   private loadEmojiAtlas(): void {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       this.atlasImg = img;
       this.rebuildAtlasTexture();

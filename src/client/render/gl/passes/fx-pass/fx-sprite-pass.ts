@@ -268,6 +268,7 @@ export class FxSpritePass {
 
   private async loadAtlas(): Promise<void> {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = fxAtlasUrl;
     await img.decode();
     const gl = this.gl;

@@ -207,6 +207,7 @@ export class ConquestPopupPass {
 
   private loadAtlas(): void {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       const gl = this.gl;
       const tex = gl.createTexture()!;
