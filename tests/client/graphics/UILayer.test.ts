@@ -36,7 +36,7 @@ describe("UILayer", () => {
     expect(ui["context"]).not.toBeNull();
   });
 
-  it("should handle unit selection event", () => {
+  it("tracks the selected unit on single-unit selection (rendering is WebGL)", () => {
     const ui = new UILayer(game, eventBus, transformHandler);
     ui.redraw();
     const unit = {
@@ -46,8 +46,27 @@ describe("UILayer", () => {
       owner: () => ({}),
     };
     const event = { isSelected: true, unit };
-    ui.drawSelectionBox = vi.fn();
     ui["onUnitSelection"](event as UnitSelectionEvent);
-    expect(ui.drawSelectionBox).toHaveBeenCalledWith(unit);
+    // selectedUnit is held for game-logic callers (the click handlers). The
+    // visual selection box is now drawn by WebGL SelectionBoxPass — wired
+    // from ClientGameRunner via view.setSelectedUnit(unit.id()).
+    expect(ui["selectedUnit"]).toBe(unit);
+  });
+
+  it("clears selection on deselect", () => {
+    const ui = new UILayer(game, eventBus, transformHandler);
+    ui.redraw();
+    const unit = {
+      type: () => "Warship",
+      isActive: () => true,
+      tile: () => ({}),
+      owner: () => ({}),
+    };
+    ui["onUnitSelection"]({ isSelected: true, unit } as UnitSelectionEvent);
+    ui["onUnitSelection"]({
+      isSelected: false,
+      unit: null,
+    } as unknown as UnitSelectionEvent);
+    expect(ui["selectedUnit"]).toBeNull();
   });
 });

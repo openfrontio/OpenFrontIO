@@ -43,6 +43,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
+  UnitSelectionEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -343,6 +344,23 @@ function mountWebGLDebugRenderer(
     const firstUnit = gameView.unit(e.unitIds[0]);
     if (firstUnit === undefined) return;
     view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
+  });
+
+  // Single-unit warship selection box: forward UnitSelectionEvent to the
+  // renderer's SelectionBoxPass. Multi-selection (event.units.length > 0)
+  // stays canvas2D for now — SelectionBoxPass only supports one unit.
+  eventBus.on(UnitSelectionEvent, (e) => {
+    if (!e.isSelected) {
+      view.setSelectedUnit(null);
+      return;
+    }
+    if ((e.units ?? []).length > 0) {
+      // Multi-selection: drop any prior single highlight; canvas2D draws
+      // the multi outlines in UILayer.
+      view.setSelectedUnit(null);
+      return;
+    }
+    view.setSelectedUnit(e.unit?.id() ?? null);
   });
 
   return { builder: new WebGLFrameBuilder(view), syncCamera };

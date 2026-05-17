@@ -44,13 +44,6 @@ export class UILayer implements Layer {
     { x: number; y: number; size: number }
   > = new Map();
 
-  // Keep track of previous selection box position for cleanup
-  private lastSelectionBoxCenter: {
-    x: number;
-    y: number;
-    size: number;
-  } | null = null;
-
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
 
@@ -71,13 +64,9 @@ export class UILayer implements Layer {
   }
 
   tick() {
-    // Update the selection animation time
+    // Update the selection animation time (only used by the multi-selection
+    // boxes — the single-unit box is now drawn by the WebGL SelectionBoxPass).
     this.selectionAnimTime = (this.selectionAnimTime + 1) % 60;
-
-    // If there's a selected warship, redraw to update the selection box animation
-    if (this.selectedUnit && this.selectedUnit.type() === UnitType.Warship) {
-      this.drawSelectionBox(this.selectedUnit);
-    }
 
     // Animate multi-selected warships
     for (const unit of this.multiSelectedWarships) {
@@ -354,50 +343,29 @@ export class UILayer implements Layer {
    * When event.isSelected is false it clears all selection state.
    */
   private onUnitSelection(event: UnitSelectionEvent) {
-    if (event.isSelected) {
-      // Always clear single-selection outline first
-      if (this.lastSelectionBoxCenter) {
-        const { x, y, size } = this.lastSelectionBoxCenter;
-        this.clearSelectionBox(x, y, size);
-        this.lastSelectionBoxCenter = null;
-      }
-      // selectedUnit is always reset regardless of lastSelectionBoxCenter
-      this.selectedUnit = null;
-      // Always clear previous multi-selection boxes
-      for (const [, center] of this.multiSelectionBoxCenters) {
-        this.clearSelectionBox(center.x, center.y, center.size);
-      }
-      this.multiSelectionBoxCenters.clear();
-      this.multiSelectedWarships = [];
+    // Clear previous multi-selection boxes (the single-unit box is now drawn
+    // by the WebGL SelectionBoxPass — see ClientGameRunner.mountWebGLDebugRenderer
+    // which forwards this event to view.setSelectedUnit).
+    for (const [, center] of this.multiSelectionBoxCenters) {
+      this.clearSelectionBox(center.x, center.y, center.size);
+    }
+    this.multiSelectionBoxCenters.clear();
+    this.multiSelectedWarships = [];
+    this.selectedUnit = null;
 
-      if ((event.units ?? []).length > 0) {
-        // Multi-selection
-        this.multiSelectedWarships = event.units;
-        for (const unit of this.multiSelectedWarships) {
-          if (unit.isActive()) {
-            this.drawSelectionBoxMulti(unit);
-          }
-        }
-      } else {
-        // Single selection
-        this.selectedUnit = event.unit;
-        if (event.unit && event.unit.type() === UnitType.Warship) {
-          this.drawSelectionBox(event.unit);
+    if (!event.isSelected) return;
+
+    if ((event.units ?? []).length > 0) {
+      // Multi-selection — canvas2D draws the per-unit outlines.
+      this.multiSelectedWarships = event.units;
+      for (const unit of this.multiSelectedWarships) {
+        if (unit.isActive()) {
+          this.drawSelectionBoxMulti(unit);
         }
       }
     } else {
-      // Deselect everything
-      if (this.lastSelectionBoxCenter) {
-        const { x, y, size } = this.lastSelectionBoxCenter;
-        this.clearSelectionBox(x, y, size);
-        this.lastSelectionBoxCenter = null;
-      }
-      this.selectedUnit = null;
-      for (const [, center] of this.multiSelectionBoxCenters) {
-        this.clearSelectionBox(center.x, center.y, center.size);
-      }
-      this.multiSelectionBoxCenters.clear();
-      this.multiSelectedWarships = [];
+      // Single selection — state only; WebGL draws the box.
+      this.selectedUnit = event.unit;
     }
   }
 
@@ -469,41 +437,6 @@ export class UILayer implements Layer {
         }
       }
     }
-  }
-
-  /**
-   * Draw a selection box around the given unit
-   */
-  public drawSelectionBox(unit: UnitView) {
-    if (!unit || !unit.isActive()) {
-      return;
-    }
-
-    if (this.theme === null) throw new Error("missing theme");
-    const selectionColor = unit.owner().territoryColor().lighten(0.2);
-    const centerX = this.game.x(unit.tile());
-    const centerY = this.game.y(unit.tile());
-
-    // Clear previous box if unit moved
-    if (
-      this.lastSelectionBoxCenter &&
-      (this.lastSelectionBoxCenter.x !== centerX ||
-        this.lastSelectionBoxCenter.y !== centerY)
-    ) {
-      this.clearSelectionBox(
-        this.lastSelectionBoxCenter.x,
-        this.lastSelectionBoxCenter.y,
-        this.lastSelectionBoxCenter.size,
-      );
-    }
-
-    this.paintSelectionBoxAt(centerX, centerY, selectionColor);
-
-    this.lastSelectionBoxCenter = {
-      x: centerX,
-      y: centerY,
-      size: this.SELECTION_BOX_SIZE,
-    };
   }
 
   paintCell(x: number, y: number, color: Colord, alpha: number) {
