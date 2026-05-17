@@ -294,7 +294,7 @@ function createWebGLView(terrainMap: TerrainMapData): {
   return { view, glCanvas, cachedWebGLFrameCallback };
 }
 
-function mountWebGLDebugRenderer(
+function mountWebGLFrameLoop(
   terrainMap: TerrainMapData,
   view: WebGLGameView,
   glCanvas: HTMLCanvasElement,
@@ -306,13 +306,6 @@ function mountWebGLDebugRenderer(
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
   const mapHeight = gameMap.height();
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "\\") {
-      glCanvas.style.display =
-        glCanvas.style.display === "none" ? "block" : "none";
-    }
-  });
 
   // Cache canvas dimensions to avoid forced reflows every frame. Reading
   // clientWidth/clientHeight flushes pending layout — at 60fps that's a
@@ -420,7 +413,7 @@ async function createClientGame(
 
   // Transparent fullscreen overlay used purely as the pointer-event /
   // bounding-rect target for InputHandler + TransformHandler. The actual
-  // map drawing happens on the WebGL canvas created in mountWebGLDebugRenderer.
+  // map drawing happens on the WebGL canvas created in createWebGLView.
   const inputOverlay = document.createElement("div");
   inputOverlay.id = "game-input-overlay";
   inputOverlay.style.position = "fixed";
@@ -444,7 +437,7 @@ async function createClientGame(
       view,
     );
 
-    const { builder: webglBuilder } = mountWebGLDebugRenderer(
+    const { builder: webglBuilder } = mountWebGLFrameLoop(
       gameMap,
       view,
       glCanvas,
