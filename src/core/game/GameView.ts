@@ -266,19 +266,25 @@ export class PlayerView {
     }
 
     const isMyPlayer = this.game.myClientID() === this.data.clientID;
+    const colorMode = isMyPlayer ? userSettings.colorMode() : "random";
 
-    if (this.team() === null) {
-      if (isMyPlayer && userSettings.customColorsEnabled()) {
-        this._territoryColor = colord(userSettings.customPrimaryColor());
-      } else {
+    if (colorMode === "custom") {
+      // Always use user's chosen color, even if in a team
+      this._territoryColor = colord(userSettings.customPrimaryColor());
+    } else if (colorMode === "team") {
+      // Force team color (default game behavior, team always wins)
+      this._territoryColor = defaultTerritoryColor;
+    } else {
+      // "random" — normal game logic
+      if (this.team() === null) {
         this._territoryColor = colord(
           this.cosmetics.color?.color ??
             pattern?.colorPalette?.primaryColor ??
             defaultTerritoryColor.toHex(),
         );
+      } else {
+        this._territoryColor = defaultTerritoryColor;
       }
-    } else {
-      this._territoryColor = defaultTerritoryColor;
     }
 
     this._structureColors = theme.structureColors(this._territoryColor);
@@ -287,7 +293,7 @@ export class PlayerView {
         ? theme.focusedBorderColor()
         : defaultBorderColor;
 
-    if (isMyPlayer && userSettings.customColorsEnabled()) {
+    if (colorMode === "custom") {
       this._borderColor = new Colord(userSettings.customSecondaryColor());
     } else {
       this._borderColor = new Colord(

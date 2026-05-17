@@ -237,12 +237,24 @@ export class UserSettings {
     this.setBool(DARK_MODE_KEY, !this.darkMode());
   }
 
-  customColorsEnabled() {
-    return this.getBool("settings.customColorsEnabled", false);
+  // Color mode: "random" = game default, "custom" = user picks, "team" = always use team color
+  colorMode(): "random" | "custom" | "team" {
+    const val = this.getString("settings.colorMode", "random");
+    if (val === "custom" || val === "team") return val;
+    return "random";
+  }
+
+  setColorMode(mode: "random" | "custom" | "team"): void {
+    this.setString("settings.colorMode", mode);
+  }
+
+  // Keep legacy helpers so GameView still compiles
+  customColorsEnabled(): boolean {
+    return this.colorMode() === "custom";
   }
 
   toggleCustomColorsEnabled() {
-    this.setBool("settings.customColorsEnabled", !this.customColorsEnabled());
+    this.setColorMode(this.colorMode() === "custom" ? "random" : "custom");
   }
 
   customPrimaryColor(): string {
