@@ -24,7 +24,6 @@ import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
-import { NameLayer } from "./layers/NameLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -264,7 +263,6 @@ export function createRenderer(
   const layers: Layer[] = [
     new UILayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
-    new NameLayer(game, transformHandler, eventBus),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     attacksDisplay,

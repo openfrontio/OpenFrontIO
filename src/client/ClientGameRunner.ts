@@ -286,10 +286,6 @@ function mountWebGLDebugRenderer(
     captureCaf,
   );
 
-  // Names are rendered by the existing HTML NameLayer; disable the renderer's
-  // NamePass to avoid drawing them twice.
-  view.getSettings().passEnabled.name = false;
-
   window.addEventListener("keydown", (e) => {
     if (e.key === "\\") {
       glCanvas.style.display =
