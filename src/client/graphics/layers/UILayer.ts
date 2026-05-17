@@ -54,15 +54,9 @@ export class UILayer implements Layer {
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
 
-  // Selection box (drag rectangle) state
-  private selectionBoxActive = false;
-  private selectionBoxStartX = 0;
-  private selectionBoxStartY = 0;
-  private selectionBoxEndX = 0;
-  private selectionBoxEndY = 0;
-  private selectionBoxCanvas: HTMLCanvasElement =
-    document.createElement("canvas");
-  private selectionBoxCtx: CanvasRenderingContext2D | null = null;
+  // Drag rectangle (shift+drag warship selection box) — a screen-space DOM
+  // overlay positioned via inline style. Not part of the canvas2D draw path.
+  private dragRectEl: HTMLDivElement | null = null;
 
   constructor(
     private game: GameView,
@@ -106,22 +100,12 @@ export class UILayer implements Layer {
 
   init() {
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
+
+    this.ensureDragRectEl();
     this.eventBus.on(WarshipSelectionBoxUpdateEvent, (e) => {
-      this.selectionBoxActive = true;
-      this.selectionBoxStartX = e.startX;
-      this.selectionBoxStartY = e.startY;
-      this.selectionBoxEndX = e.endX;
-      this.selectionBoxEndY = e.endY;
+      this.updateDragRect(e.startX, e.startY, e.endX, e.endY);
     });
-    const clearBox = () => {
-      this.selectionBoxActive = false;
-      this.selectionBoxCtx?.clearRect(
-        0,
-        0,
-        this.selectionBoxCanvas.width,
-        this.selectionBoxCanvas.height,
-      );
-    };
+    const clearBox = () => this.hideDragRect();
     this.eventBus.on(WarshipSelectionBoxCompleteEvent, clearBox);
     this.eventBus.on(WarshipSelectionBoxCancelEvent, clearBox);
     this.eventBus.on(CloseViewEvent, clearBox);
@@ -135,6 +119,62 @@ export class UILayer implements Layer {
     this.eventBus.on(SelectAllWarshipsEvent, () => this.onSelectAllWarships());
 
     this.redraw();
+  }
+
+  /**
+   * Lazily create the shift+drag rectangle overlay. Screen-space DOM element,
+   * pointer-events: none so it doesn't intercept the drag itself. z-index
+   * sits above the WebGL/canvas2D map canvases but below HUD modals.
+   */
+  private ensureDragRectEl(): void {
+    if (this.dragRectEl !== null) return;
+    const el = document.createElement("div");
+    el.id = "warship-drag-rect";
+    el.style.position = "fixed";
+    el.style.pointerEvents = "none";
+    el.style.display = "none";
+    el.style.zIndex = "30";
+    el.style.borderStyle = "dashed";
+    el.style.borderWidth = "1px";
+    el.style.boxSizing = "border-box";
+    document.body.appendChild(el);
+    this.dragRectEl = el;
+  }
+
+  private updateDragRect(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+  ): void {
+    const el = this.dragRectEl;
+    if (el === null) return;
+    const x1 = Math.min(startX, endX);
+    const y1 = Math.min(startY, endY);
+    const w = Math.abs(endX - startX);
+    const h = Math.abs(endY - startY);
+
+    // Color from the local player's territory tint (matches the canvas2D look).
+    const myPlayer = this.game.myPlayer();
+    const base = myPlayer ? myPlayer.territoryColor().lighten(0.2) : null;
+    const border = base
+      ? base.alpha(0.85).toRgbString()
+      : "rgba(100, 200, 255, 0.85)";
+    const fill = base
+      ? base.alpha(0.06).toRgbString()
+      : "rgba(100, 200, 255, 0.06)";
+
+    el.style.left = `${x1}px`;
+    el.style.top = `${y1}px`;
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    el.style.borderColor = border;
+    el.style.backgroundColor = fill;
+    el.style.display = "block";
+  }
+
+  private hideDragRect(): void {
+    if (this.dragRectEl !== null) this.dragRectEl.style.display = "none";
   }
 
   /**
@@ -298,89 +338,6 @@ export class UILayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
-    if (this.selectionBoxActive) {
-      this.renderSelectionBox(context);
-    }
-  }
-
-  private renderSelectionBox(context: CanvasRenderingContext2D) {
-    if (!this.selectionBoxCtx) return;
-
-    const topLeft = this.transformHandler.screenToWorldCoordinates(
-      Math.min(this.selectionBoxStartX, this.selectionBoxEndX),
-      Math.min(this.selectionBoxStartY, this.selectionBoxEndY),
-    );
-    const bottomRight = this.transformHandler.screenToWorldCoordinates(
-      Math.max(this.selectionBoxStartX, this.selectionBoxEndX),
-      Math.max(this.selectionBoxStartY, this.selectionBoxEndY),
-    );
-
-    const cx1 = Math.max(0, Math.floor(topLeft.x));
-    const cy1 = Math.max(0, Math.floor(topLeft.y));
-    const cx2 = Math.min(
-      this.selectionBoxCanvas.width - 1,
-      Math.floor(bottomRight.x),
-    );
-    const cy2 = Math.min(
-      this.selectionBoxCanvas.height - 1,
-      Math.floor(bottomRight.y),
-    );
-
-    if (cx2 <= cx1 || cy2 <= cy1) return;
-
-    const myPlayer = this.game.myPlayer();
-    const baseColor = myPlayer ? myPlayer.territoryColor().lighten(0.2) : null;
-    const colorStr = baseColor
-      ? baseColor.alpha(0.85).toRgbString()
-      : "rgba(100,200,255,0.85)";
-
-    this.selectionBoxCtx.clearRect(
-      0,
-      0,
-      this.selectionBoxCanvas.width,
-      this.selectionBoxCanvas.height,
-    );
-    this.selectionBoxCtx.fillStyle = colorStr;
-    this.drawDashedLine(this.selectionBoxCtx, cx1, cy1, cx2, cy1);
-    this.drawDashedLine(this.selectionBoxCtx, cx1, cy2, cx2, cy2);
-    this.drawDashedLine(this.selectionBoxCtx, cx1, cy1, cx1, cy2);
-    this.drawDashedLine(this.selectionBoxCtx, cx2, cy1, cx2, cy2);
-
-    this.selectionBoxCtx.fillStyle = baseColor
-      ? baseColor.alpha(0.06).toRgbString()
-      : "rgba(100,200,255,0.06)";
-    this.selectionBoxCtx.fillRect(
-      cx1 + 1,
-      cy1 + 1,
-      cx2 - cx1 - 1,
-      cy2 - cy1 - 1,
-    );
-
-    context.drawImage(
-      this.selectionBoxCanvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
-  }
-
-  private drawDashedLine(
-    ctx: CanvasRenderingContext2D,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-  ) {
-    if (x1 === x2) {
-      for (let y = y1; y <= y2; y++) {
-        if ((x1 + y) % 2 === 0) ctx.fillRect(x1, y, 1, 1);
-      }
-    } else {
-      for (let x = x1; x <= x2; x++) {
-        if ((x + y1) % 2 === 0) ctx.fillRect(x, y1, 1, 1);
-      }
-    }
   }
 
   redraw() {
@@ -388,11 +345,6 @@ export class UILayer implements Layer {
     this.context = this.canvas.getContext("2d");
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
-
-    this.selectionBoxCanvas = document.createElement("canvas");
-    this.selectionBoxCanvas.width = this.game.width();
-    this.selectionBoxCanvas.height = this.game.height();
-    this.selectionBoxCtx = this.selectionBoxCanvas.getContext("2d");
   }
 
   /**
