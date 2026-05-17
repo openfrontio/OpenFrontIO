@@ -39,12 +39,10 @@ import {
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
-  GhostPreviewUpdatedEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
-  UnitSelectionEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -231,12 +229,13 @@ export function joinLobby(
   };
 }
 
-function mountWebGLDebugRenderer(
-  terrainMap: TerrainMapData,
-  transformHandler: import("./graphics/TransformHandler").TransformHandler,
-  gameView: GameView,
-  eventBus: EventBus,
-): { builder: WebGLFrameBuilder } {
+// Build the WebGL view + its glCanvas. Must run before createRenderer so the
+// controllers can be wired directly to the view.
+function createWebGLView(terrainMap: TerrainMapData): {
+  view: WebGLGameView;
+  glCanvas: HTMLCanvasElement;
+  cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
+} {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
   const mapHeight = gameMap.height();
@@ -259,13 +258,15 @@ function mountWebGLDebugRenderer(
   // because its RAF fires before canvas2D's RAF (which would have synced the
   // camera). Driving WebGL's draw synchronously from canvas2D's onPreRender
   // hook locks them to the same frame.
-  let cachedWebGLFrameCallback: FrameRequestCallback | null = null;
+  const cachedWebGLFrameCallback: { current: FrameRequestCallback | null } = {
+    current: null,
+  };
   const captureRaf = (cb: FrameRequestCallback): number => {
-    cachedWebGLFrameCallback = cb;
+    cachedWebGLFrameCallback.current = cb;
     return 0;
   };
   const captureCaf = (_id: number): void => {
-    cachedWebGLFrameCallback = null;
+    cachedWebGLFrameCallback.current = null;
   };
 
   const palette = new Float32Array(4096 * 2 * 4);
@@ -287,6 +288,24 @@ function mountWebGLDebugRenderer(
     captureRaf,
     captureCaf,
   );
+
+  (window as unknown as { __webglView?: unknown }).__webglView = view;
+
+  return { view, glCanvas, cachedWebGLFrameCallback };
+}
+
+function mountWebGLDebugRenderer(
+  terrainMap: TerrainMapData,
+  view: WebGLGameView,
+  glCanvas: HTMLCanvasElement,
+  cachedWebGLFrameCallback: { current: FrameRequestCallback | null },
+  transformHandler: import("./graphics/TransformHandler").TransformHandler,
+  gameView: GameView,
+  eventBus: EventBus,
+): { builder: WebGLFrameBuilder } {
+  const gameMap = terrainMap.gameMap;
+  const mapWidth = gameMap.width();
+  const mapHeight = gameMap.height();
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "\\") {
@@ -326,12 +345,10 @@ function mountWebGLDebugRenderer(
     // Invoke the WebGL renderer's frame callback synchronously, with the just-
     // updated camera state. The callback re-arms itself via captureRaf, so
     // we'll get a fresh callback ready for the next canvas2D frame.
-    const cb = cachedWebGLFrameCallback;
-    cachedWebGLFrameCallback = null;
+    const cb = cachedWebGLFrameCallback.current;
+    cachedWebGLFrameCallback.current = null;
     cb?.(performance.now());
   };
-
-  (window as unknown as { __webglView?: unknown }).__webglView = view;
 
   // Move-target chevrons: when the player issues a warship move, show the
   // animated chevron pass at the target tile. The renderer needs the target's
@@ -345,27 +362,6 @@ function mountWebGLDebugRenderer(
     const firstUnit = gameView.unit(e.unitIds[0]);
     if (firstUnit === undefined) return;
     view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
-  });
-
-  // Build-mode ghost preview: forward the per-frame state to the renderer's
-  // ghost passes (structure outline, range circle, rail snap, crosshair).
-  eventBus.on(GhostPreviewUpdatedEvent, (e) => {
-    view.updateGhostPreview(e.data);
-  });
-
-  // Warship selection boxes: forward UnitSelectionEvent to the renderer's
-  // SelectionBoxPass for both single and multi selections.
-  eventBus.on(UnitSelectionEvent, (e) => {
-    if (!e.isSelected) {
-      view.setSelectedUnits([]);
-      return;
-    }
-    const multi = e.units ?? [];
-    if (multi.length > 0) {
-      view.setSelectedUnits(multi.map((u) => u.id()));
-      return;
-    }
-    view.setSelectedUnits(e.unit ? [e.unit.id()] : []);
   });
 
   // Self-driving RAF: syncCamera reads the latest camera state from
@@ -437,15 +433,22 @@ async function createClientGame(
 
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
+    const { view, glCanvas, cachedWebGLFrameCallback } =
+      createWebGLView(gameMap);
+
     const gameRenderer = createRenderer(
       inputOverlay,
       gameView,
       eventBus,
       lobbyConfig.playerRole,
+      view,
     );
 
     const { builder: webglBuilder } = mountWebGLDebugRenderer(
       gameMap,
+      view,
+      glCanvas,
+      cachedWebGLFrameCallback,
       gameRenderer.transformHandler,
       gameView,
       eventBus,

@@ -16,6 +16,7 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../InputHandler";
+import { GameView as WebGLGameView } from "../render/gl";
 import { MoveWarshipIntentEvent } from "../Transport";
 
 const WARSHIP_SELECTION_RADIUS = 10;
@@ -47,6 +48,7 @@ export class WarshipSelectionController implements Controller {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    private view: WebGLGameView,
   ) {}
 
   tick() {
@@ -295,17 +297,20 @@ export class WarshipSelectionController implements Controller {
    * When event.isSelected is false it clears all selection state.
    */
   private onUnitSelection(event: UnitSelectionEvent) {
-    // Selection box visuals are drawn by the WebGL SelectionBoxPass; this
-    // method just tracks selection state for the click-handler logic.
     this.multiSelectedWarships = [];
     this.selectedUnit = null;
 
-    if (!event.isSelected) return;
+    if (!event.isSelected) {
+      this.view.setSelectedUnits([]);
+      return;
+    }
 
     if ((event.units ?? []).length > 0) {
       this.multiSelectedWarships = event.units;
+      this.view.setSelectedUnits(event.units.map((u) => u.id()));
     } else {
       this.selectedUnit = event.unit;
+      this.view.setSelectedUnits(event.unit ? [event.unit.id()] : []);
     }
   }
 }

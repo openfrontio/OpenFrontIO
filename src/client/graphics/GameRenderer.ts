@@ -4,6 +4,7 @@ import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
+import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -40,6 +41,7 @@ export function createRenderer(
   game: GameView,
   eventBus: EventBus,
   playerRole: string | null,
+  view: WebGLGameView,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
   const userSettings = new UserSettings();
@@ -257,8 +259,8 @@ export function createRenderer(
   inGamePromo.game = game;
 
   const layers: Controller[] = [
-    new WarshipSelectionController(game, eventBus, transformHandler),
-    new BuildPreviewController(game, eventBus, uiState, transformHandler),
+    new WarshipSelectionController(game, eventBus, transformHandler, view),
+    new BuildPreviewController(game, eventBus, uiState, transformHandler, view),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     attacksDisplay,

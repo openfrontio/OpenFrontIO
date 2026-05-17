@@ -4,7 +4,7 @@
  * All rendering for the build ghost (outline, range circle, rail snap,
  * crosshair) lives in the WebGL renderer. This controller owns the state:
  * it queries buildables for the cursor tile, tracks whether the placement
- * is valid, and emits GhostPreviewUpdatedEvent to feed the renderer.
+ * is valid, and pushes preview data straight to the WebGL view.
  */
 
 import { EventBus } from "../../core/EventBus";
@@ -21,11 +21,11 @@ import { TransformHandler } from "../graphics/TransformHandler";
 import { UIState } from "../graphics/UIState";
 import {
   ConfirmGhostStructureEvent,
-  GhostPreviewUpdatedEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
+import { GameView as WebGLGameView } from "../render/gl";
 import type { GhostPreviewData } from "../render/types";
 import {
   BuildUnitIntentEvent,
@@ -50,6 +50,7 @@ export class BuildPreviewController implements Controller {
     private eventBus: EventBus,
     public uiState: UIState,
     private transformHandler: TransformHandler,
+    private view: WebGLGameView,
   ) {}
 
   init() {
@@ -183,15 +184,12 @@ export class BuildPreviewController implements Controller {
   }
 
   /**
-   * Build a GhostPreviewData snapshot from the current ghost state and emit
-   * it for the WebGL renderer to consume (StructurePass / RangeCirclePass /
-   * RailroadPass / CrosshairPass all read it via view.updateGhostPreview).
-   * Emits null when the ghost can't be placed.
+   * Push a GhostPreviewData snapshot to the WebGL view (StructurePass /
+   * RangeCirclePass / RailroadPass / CrosshairPass all read it). null when
+   * the ghost can't be placed.
    */
   private emitGhostPreview(tileRef: TileRef | undefined): void {
-    this.eventBus.emit(
-      new GhostPreviewUpdatedEvent(this.buildGhostPreviewData(tileRef)),
-    );
+    this.view.updateGhostPreview(this.buildGhostPreviewData(tileRef));
   }
 
   private buildGhostPreviewData(
@@ -310,7 +308,7 @@ export class BuildPreviewController implements Controller {
     this.pendingConfirm = null;
     this.ghostUnit = null;
     this.uiState.ghostRailPaths = [];
-    this.eventBus.emit(new GhostPreviewUpdatedEvent(null));
+    this.view.updateGhostPreview(null);
   }
 
   private removeGhostStructure() {
