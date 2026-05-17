@@ -46,6 +46,7 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
   SendAllianceExtensionIntentEvent,
@@ -61,7 +62,6 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { GameView as WebGLGameView } from "./render/gl";
 import { ALL_UNIT_TYPES } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
@@ -299,7 +299,7 @@ function mountWebGLDebugRenderer(
   view: WebGLGameView,
   glCanvas: HTMLCanvasElement,
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null },
-  transformHandler: import("./graphics/TransformHandler").TransformHandler,
+  transformHandler: import("./TransformHandler").TransformHandler,
   gameView: GameView,
   eventBus: EventBus,
 ): { builder: WebGLFrameBuilder } {

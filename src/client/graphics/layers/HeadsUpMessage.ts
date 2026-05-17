@@ -3,8 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";
-import { Controller } from "./Controller";
 
 @customElement("heads-up-message")
 export class HeadsUpMessage extends LitElement implements Controller {

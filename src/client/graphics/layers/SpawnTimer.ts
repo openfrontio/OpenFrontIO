@@ -3,8 +3,8 @@ import { customElement } from "lit/decorators.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode, GameType, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { TransformHandler } from "../TransformHandler";
-import { Controller } from "./Controller";
+import { Controller } from "../../Controller";
+import { TransformHandler } from "../../TransformHandler";
 
 export class SpawnBarVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}

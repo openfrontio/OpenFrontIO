@@ -2,10 +2,10 @@ import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { Controller } from "../../Controller";
 import { AlternateViewEvent } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import { renderTroops } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { Controller } from "./Controller";
 
 // Match AttacksDisplay: aquarius for outgoing, red-400 for incoming.
 const OUTGOING_COLOR = "var(--color-aquarius)";

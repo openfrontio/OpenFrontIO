@@ -12,11 +12,13 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
   MouseMoveEvent,
   TouchEvent,
 } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import {
   getTranslatedPlayerTeamLabel,
   renderDuration,
@@ -30,8 +32,6 @@ import {
   getPlayerIcons,
   IMAGE_ICON_KIND,
 } from "../PlayerIcons";
-import { TransformHandler } from "../TransformHandler";
-import { Controller } from "./Controller";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";

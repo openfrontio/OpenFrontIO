@@ -12,20 +12,20 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import {
   CloseViewEvent,
   MouseDownEvent,
   ShowBuildMenuEvent,
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
+import { UIState } from "../../UIState";
 import { renderNumber } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
-import { Controller } from "./Controller";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");

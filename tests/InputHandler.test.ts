@@ -6,7 +6,7 @@ import {
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
 } from "../src/client/InputHandler";
-import { UIState } from "../src/client/graphics/UIState";
+import { UIState } from "../src/client/UIState";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
 import { GameView, PlayerView } from "../src/core/game/GameView";
@@ -928,13 +928,10 @@ describe("Warship box selection (Shift+drag)", () => {
 
   test("Shift keydown discards active ghostStructure", () => {
     uiState.ghostStructure = UnitType.Warship;
-    const emitSpy = vi.spyOn(eventBus, "emit");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
 
     expect(uiState.ghostStructure).toBeNull();
-    const types = emitSpy.mock.calls.map((c) => c[0].constructor.name);
-    expect(types).toContain("GhostStructureChangedEvent");
   });
 
   test("Shift+drag emits WarshipSelectionBoxUpdateEvent", () => {

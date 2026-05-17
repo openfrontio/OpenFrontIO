@@ -11,13 +11,10 @@ import {
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import {
-  GhostStructureChangedEvent,
-  ToggleStructureEvent,
-} from "../../InputHandler";
+import { Controller } from "../../Controller";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
-import { UIState } from "../UIState";
-import { Controller } from "./Controller";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -268,10 +265,8 @@ export class UnitDisplay extends LitElement implements Controller {
           @click=${() => {
             if (selected) {
               this.uiState.ghostStructure = null;
-              this.eventBus?.emit(new GhostStructureChangedEvent(null));
             } else if (this.canBuild(unitType)) {
               this.uiState.ghostStructure = unitType;
-              this.eventBus?.emit(new GhostStructureChangedEvent(unitType));
             }
             this.requestUpdate();
           }}

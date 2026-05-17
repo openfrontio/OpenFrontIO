@@ -1,5 +1,5 @@
-import { PlayerBuildableUnitType } from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
+import { PlayerBuildableUnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 
 export interface UIState {
   attackRatio: number;

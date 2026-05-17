@@ -2,13 +2,13 @@ import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import { ReplaySpeedChangeEvent } from "../../InputHandler";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
 } from "../../utilities/ReplaySpeedMultiplier";
 import { translateText } from "../../Utils";
-import { Controller } from "./Controller";
 
 export class ShowReplayPanelEvent {
   constructor(

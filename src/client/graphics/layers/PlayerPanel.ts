@@ -15,6 +15,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
+import { Controller } from "../../Controller";
 import {
   CloseViewEvent,
   MouseUpEvent,
@@ -28,15 +29,14 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
+import { UIState } from "../../UIState";
 import {
   renderDuration,
   renderNumber,
   renderTroops,
   translateText,
 } from "../../Utils";
-import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
-import { Controller } from "./Controller";
 import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./SendResourceModal";

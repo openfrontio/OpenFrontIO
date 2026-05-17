@@ -3,8 +3,7 @@ import { EventBus } from "../../core/EventBus";
 import { UnitType } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
 import { GameView, UnitView } from "../../core/game/GameView";
-import { Controller } from "../graphics/layers/Controller";
-import { TransformHandler } from "../graphics/TransformHandler";
+import { Controller } from "../Controller";
 import {
   CloseViewEvent,
   ContextMenuEvent,
@@ -17,6 +16,7 @@ import {
   WarshipSelectionBoxUpdateEvent,
 } from "../InputHandler";
 import { GameView as WebGLGameView } from "../render/gl";
+import { TransformHandler } from "../TransformHandler";
 import { MoveWarshipIntentEvent } from "../Transport";
 
 const WARSHIP_SELECTION_RADIUS = 10;

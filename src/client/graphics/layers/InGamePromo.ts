@@ -1,8 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { Controller } from "./Controller";
 
 const AD_TYPES = [
   { type: "standard_iab_left1", selectorId: "in-game-bottom-left-ad" },

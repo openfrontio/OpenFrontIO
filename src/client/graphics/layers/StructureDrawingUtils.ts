@@ -7,7 +7,7 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { TransformHandler } from "../TransformHandler";
+import { TransformHandler } from "../../TransformHandler";
 const anchorIcon = assetUrl("images/AnchorIcon.v1.png");
 const cityIcon = assetUrl("images/CityIcon.v1.png");
 const factoryIcon = assetUrl("images/FactoryUnit.v1.png");

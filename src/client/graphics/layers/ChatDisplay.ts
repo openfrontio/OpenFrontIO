@@ -10,7 +10,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { Controller } from "./Controller";
+import { Controller } from "../../Controller";
 
 interface ChatEvent {
   description: string;

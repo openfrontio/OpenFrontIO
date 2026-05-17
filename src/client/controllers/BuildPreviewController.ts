@@ -16,21 +16,20 @@ import {
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
 import { GameView } from "../../core/game/GameView";
-import { Controller } from "../graphics/layers/Controller";
-import { TransformHandler } from "../graphics/TransformHandler";
-import { UIState } from "../graphics/UIState";
+import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,
-  GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
 import { GameView as WebGLGameView } from "../render/gl";
 import type { GhostPreviewData } from "../render/types";
+import { TransformHandler } from "../TransformHandler";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
+import { UIState } from "../UIState";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
@@ -314,7 +313,6 @@ export class BuildPreviewController implements Controller {
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
-    this.eventBus.emit(new GhostStructureChangedEvent(null));
   }
 
   private resolveGhostRangeLevel(

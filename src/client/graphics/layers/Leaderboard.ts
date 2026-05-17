@@ -4,9 +4,9 @@ import { repeat } from "lit/directives/repeat.js";
 import { renderTroops, translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
+import { GoToPlayerEvent } from "../../TransformHandler";
 import { formatPercentage, renderNumber } from "../../Utils";
-import { GoToPlayerEvent } from "../TransformHandler";
-import { Controller } from "./Controller";
 
 interface Entry {
   name: string;

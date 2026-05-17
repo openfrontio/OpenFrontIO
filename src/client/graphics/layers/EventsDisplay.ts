@@ -24,21 +24,21 @@ import {
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
+import { Controller } from "../../Controller";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRejectIntentEvent,
   SendAllianceRequestIntentEvent,
 } from "../../Transport";
-import { Controller } from "./Controller";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
+import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { renderNumber } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "../TransformHandler";
 
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { UIState } from "../../UIState";
 import { getMessageTypeClasses, translateText } from "../../Utils";
-import { UIState } from "../UIState";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");

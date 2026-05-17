@@ -6,6 +6,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../../core/game/UserSettings";
+import { Controller } from "../../Controller";
 import {
   TickMetricsEvent,
   TogglePerformanceOverlayEvent,
@@ -13,7 +14,6 @@ import {
 import type { LangSelector } from "../../LangSelector";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
-import { Controller } from "./Controller";
 
 @customElement("performance-overlay")
 export class PerformanceOverlay extends LitElement implements Controller {

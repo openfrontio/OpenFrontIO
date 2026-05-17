@@ -12,6 +12,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticButton";
+import { Controller } from "../../Controller";
 import {
   fetchCosmetics,
   purchaseCosmetic,
@@ -20,7 +21,6 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
 import { SendWinnerEvent } from "../../Transport";
-import { Controller } from "./Controller";
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {

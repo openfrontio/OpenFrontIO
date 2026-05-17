@@ -9,20 +9,20 @@ import {
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "../../TransformHandler";
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
   SendAttackIntentEvent,
 } from "../../Transport";
+import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
 import { getColoredSprite } from "../SpriteLoader";
-import {
-  GoToPlayerEvent,
-  GoToPositionEvent,
-  GoToUnitEvent,
-} from "../TransformHandler";
-import { UIState } from "../UIState";
-import { Controller } from "./Controller";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 

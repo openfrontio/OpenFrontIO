@@ -7,7 +7,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { Controller } from "./Controller";
+import { Controller } from "../../Controller";
 
 // Parameters for the alert animation
 const ALERT_SPEED = 1.6;

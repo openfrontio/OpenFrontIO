@@ -6,8 +6,8 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
-import { TransformHandler } from "../TransformHandler";
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {

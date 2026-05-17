@@ -5,9 +5,9 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
-import { Controller } from "./Controller";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
 const leaderboardRegularIcon = assetUrl(
