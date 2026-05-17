@@ -214,6 +214,7 @@ export class UserSettingModal extends BaseModal {
 
   private toggleAlertFrame() {
     this.userSettings.toggleAlertFrame();
+    this.requestUpdate();
 
     console.log(
       "🚨 Alert frame:",
@@ -223,6 +224,7 @@ export class UserSettingModal extends BaseModal {
 
   private toggleFxLayer() {
     this.userSettings.toggleFxLayer();
+    this.requestUpdate();
 
     console.log(
       "💥 Special effects:",
@@ -325,6 +327,12 @@ export class UserSettingModal extends BaseModal {
     return {
       tabs: [
         { key: "basic", label: translateText("user_setting.tab_basic") },
+        { key: "sounds", label: translateText("user_setting.tab_sounds") },
+        { key: "effects", label: translateText("user_setting.tab_effects") },
+        {
+          key: "notifications",
+          label: translateText("user_setting.tab_notifications"),
+        },
         { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
       ],
     };
@@ -340,10 +348,18 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected renderBody(tab: string) {
-    const body =
-      tab === "keybinds"
-        ? this.renderKeybindSettings()
-        : this.renderBasicSettings();
+    let body;
+    if (tab === "keybinds") {
+      body = this.renderKeybindSettings();
+    } else if (tab === "sounds") {
+      body = this.renderSoundSettings();
+    } else if (tab === "effects") {
+      body = this.renderEffectSettings();
+    } else if (tab === "notifications") {
+      body = this.renderNotificationSettings();
+    } else {
+      body = this.renderBasicSettings();
+    }
     return html`
       <div class="flex flex-col gap-2 p-4 lg:p-[1.4rem]">${body}</div>
     `;
@@ -351,6 +367,455 @@ export class UserSettingModal extends BaseModal {
 
   protected onClose(): void {
     window.removeEventListener("keydown", this.handleEasterEggKey);
+  }
+
+  private sliderBackgroundMusicVolume(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value === "number") {
+      this.userSettings.setBackgroundMusicVolume(value / 100);
+      this.requestUpdate();
+    }
+  }
+
+  private sliderSoundEffectsVolume(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value === "number") {
+      this.userSettings.setSoundEffectsVolume(value / 100);
+      this.requestUpdate();
+    }
+  }
+
+  private async requestNotificationPermission() {
+    if ("Notification" in window && Notification.permission === "default") {
+      await Notification.requestPermission();
+      this.requestUpdate();
+    }
+  }
+
+  private renderNotificationSettings() {
+    const supported = "Notification" in window;
+    const permission = supported ? Notification.permission : "unsupported";
+
+    const permissionLabel = () => {
+      if (!supported)
+        return translateText(
+          "user_setting.notifications_permission_unsupported",
+        );
+      if (permission === "granted")
+        return translateText("user_setting.notifications_permission_granted");
+      if (permission === "denied")
+        return translateText("user_setting.notifications_permission_denied");
+      return translateText("user_setting.notifications_permission_default");
+    };
+
+    return html`
+      <setting-toggle
+        label="${translateText("user_setting.notifications_game_start_label")}"
+        description="${translateText(
+          "user_setting.notifications_game_start_desc",
+        )}"
+        .checked=${this.userSettings.gameStartNotificationsEnabled()}
+        @change=${() => {
+          this.userSettings.toggleGameStartNotifications();
+          this.requestUpdate();
+        }}
+      ></setting-toggle>
+
+      ${supported
+        ? html`
+            <div class="flex flex-col gap-2 mt-4">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-white">
+                  ${translateText(
+                    "user_setting.notifications_permission_label",
+                  )}
+                </span>
+                <span
+                  class="text-sm font-medium ${permission === "granted"
+                    ? "text-green-400"
+                    : permission === "denied"
+                      ? "text-red-400"
+                      : "text-slate-400"}"
+                >
+                  ${permissionLabel()}
+                </span>
+              </div>
+              ${permission === "default"
+                ? html`
+                    <button
+                      class="mt-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-md transition-colors"
+                      @click=${this.requestNotificationPermission}
+                    >
+                      ${translateText(
+                        "user_setting.notifications_permission_request",
+                      )}
+                    </button>
+                  `
+                : null}
+            </div>
+          `
+        : null}
+    `;
+  }
+
+  private toggleSoundEffect(effect: string) {
+    this.userSettings.setSoundEffectEnabled(
+      effect,
+      !this.userSettings.isSoundEffectEnabled(effect),
+    );
+    this.requestUpdate();
+  }
+
+  private renderSoundSettings() {
+    const sectionHeader = (key: string) => html`
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText(key)}
+      </h2>
+    `;
+
+    return html`
+      ${sectionHeader("user_setting.sounds_category_volume")}
+
+      <setting-slider
+        label="${translateText("user_setting.sounds_background_music_label")}"
+        description="${translateText(
+          "user_setting.sounds_background_music_desc",
+        )}"
+        min="0"
+        max="100"
+        .value=${this.userSettings.backgroundMusicVolume() * 100}
+        @change=${this.sliderBackgroundMusicVolume}
+      ></setting-slider>
+
+      <setting-slider
+        label="${translateText("user_setting.sounds_effects_label")}"
+        description="${translateText("user_setting.sounds_effects_desc")}"
+        min="0"
+        max="100"
+        .value=${this.userSettings.soundEffectsVolume() * 100}
+        @change=${this.sliderSoundEffectsVolume}
+      ></setting-slider>
+
+      ${sectionHeader("user_setting.sounds_category_ui")}
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_click_label")}"
+        description="${translateText("user_setting.sounds_effect_click_desc")}"
+        .checked=${this.userSettings.isSoundEffectEnabled("click")}
+        @change=${() => this.toggleSoundEffect("click")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_game_start_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_game_start_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("game-start")}
+        @change=${() => this.toggleSoundEffect("game-start")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_message_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_message_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("message")}
+        @change=${() => this.toggleSoundEffect("message")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_ka_ching_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_ka_ching_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("ka-ching")}
+        @change=${() => this.toggleSoundEffect("ka-ching")}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.sounds_category_weapons")}
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_atom_launch_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_atom_launch_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("atom-launch")}
+        @change=${() => this.toggleSoundEffect("atom-launch")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_atom_hit_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_atom_hit_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("atom-hit")}
+        @change=${() => this.toggleSoundEffect("atom-hit")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText(
+          "user_setting.sounds_effect_hydrogen_launch_label",
+        )}"
+        description="${translateText(
+          "user_setting.sounds_effect_hydrogen_launch_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("hydrogen-launch")}
+        @change=${() => this.toggleSoundEffect("hydrogen-launch")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText(
+          "user_setting.sounds_effect_hydrogen_hit_label",
+        )}"
+        description="${translateText(
+          "user_setting.sounds_effect_hydrogen_hit_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("hydrogen-hit")}
+        @change=${() => this.toggleSoundEffect("hydrogen-hit")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_mirv_launch_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_mirv_launch_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("mirv-launch")}
+        @change=${() => this.toggleSoundEffect("mirv-launch")}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.sounds_category_diplomacy")}
+
+      <setting-toggle
+        label="${translateText(
+          "user_setting.sounds_effect_alliance_suggested_label",
+        )}"
+        description="${translateText(
+          "user_setting.sounds_effect_alliance_suggested_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("alliance-suggested")}
+        @change=${() => this.toggleSoundEffect("alliance-suggested")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText(
+          "user_setting.sounds_effect_alliance_broken_label",
+        )}"
+        description="${translateText(
+          "user_setting.sounds_effect_alliance_broken_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("alliance-broken")}
+        @change=${() => this.toggleSoundEffect("alliance-broken")}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.sounds_category_construction")}
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_build_city_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_build_city_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("build-city")}
+        @change=${() => this.toggleSoundEffect("build-city")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_build_port_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_build_port_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("build-port")}
+        @change=${() => this.toggleSoundEffect("build-port")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText(
+          "user_setting.sounds_effect_build_defense_post_label",
+        )}"
+        description="${translateText(
+          "user_setting.sounds_effect_build_defense_post_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("build-defense-post")}
+        @change=${() => this.toggleSoundEffect("build-defense-post")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText(
+          "user_setting.sounds_effect_build_warship_label",
+        )}"
+        description="${translateText(
+          "user_setting.sounds_effect_build_warship_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("build-warship")}
+        @change=${() => this.toggleSoundEffect("build-warship")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_sam_built_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_sam_built_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("sam-built")}
+        @change=${() => this.toggleSoundEffect("sam-built")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_upgrade_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_upgrade_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("upgrade")}
+        @change=${() => this.toggleSoundEffect("upgrade")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sounds_effect_add_ammo_label")}"
+        description="${translateText(
+          "user_setting.sounds_effect_add_ammo_desc",
+        )}"
+        .checked=${this.userSettings.isSoundEffectEnabled("add-ammo")}
+        @change=${() => this.toggleSoundEffect("add-ammo")}
+      ></setting-toggle>
+    `;
+  }
+
+  private toggleFxEffect(effect: string) {
+    this.userSettings.setFxEnabled(
+      effect,
+      !this.userSettings.isFxEnabled(effect),
+    );
+    this.requestUpdate();
+  }
+
+  private renderEffectSettings() {
+    const sectionHeader = (key: string) => html`
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText(key)}
+      </h2>
+    `;
+
+    const fxOff = !this.userSettings.fxLayer();
+    const alertOff = !this.userSettings.alertFrame();
+
+    return html`
+      <!-- Global toggles -->
+      <setting-toggle
+        label="${translateText("user_setting.special_effects_label")}"
+        description="${translateText("user_setting.special_effects_desc")}"
+        id="special-effect-toggle"
+        .checked=${this.userSettings.fxLayer()}
+        @change=${this.toggleFxLayer}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.alert_frame_label")}"
+        description="${translateText("user_setting.alert_frame_desc")}"
+        id="alert-frame-toggle"
+        .checked=${this.userSettings.alertFrame()}
+        @change=${this.toggleAlertFrame}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.fx_category_environment")}
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_conquest_label")}"
+        description="${translateText("user_setting.fx_conquest_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-conquest")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-conquest")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_dust_label")}"
+        description="${translateText("user_setting.fx_dust_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-dust")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-dust")}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.fx_category_combat")}
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_building_explosion_label")}"
+        description="${translateText(
+          "user_setting.fx_building_explosion_desc",
+        )}"
+        .checked=${this.userSettings.isFxEnabled("fx-building-explosion")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-building-explosion")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_shell_impact_label")}"
+        description="${translateText("user_setting.fx_shell_impact_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-shell-impact")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-shell-impact")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_warship_sinking_label")}"
+        description="${translateText("user_setting.fx_warship_sinking_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-warship-sinking")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-warship-sinking")}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.fx_category_nuclear")}
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_nuke_telegraph_label")}"
+        description="${translateText("user_setting.fx_nuke_telegraph_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-nuke-telegraph")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-nuke-telegraph")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_nuke_explosion_label")}"
+        description="${translateText("user_setting.fx_nuke_explosion_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-nuke-explosion")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-nuke-explosion")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_nuke_debris_label")}"
+        description="${translateText("user_setting.fx_nuke_debris_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-nuke-debris")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-nuke-debris")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_sam_interception_label")}"
+        description="${translateText("user_setting.fx_sam_interception_desc")}"
+        .checked=${this.userSettings.isFxEnabled("fx-sam-interception")}
+        .disabled=${fxOff}
+        @change=${() => this.toggleFxEffect("fx-sam-interception")}
+      ></setting-toggle>
+
+      ${sectionHeader("user_setting.fx_category_alerts")}
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_alert_land_attack_label")}"
+        description="${translateText("user_setting.fx_alert_land_attack_desc")}"
+        .checked=${this.userSettings.isFxEnabled("alert-land-attack")}
+        .disabled=${alertOff}
+        @change=${() => this.toggleFxEffect("alert-land-attack")}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.fx_alert_betrayal_label")}"
+        description="${translateText("user_setting.fx_alert_betrayal_desc")}"
+        .checked=${this.userSettings.isFxEnabled("alert-betrayal")}
+        .disabled=${alertOff}
+        @change=${() => this.toggleFxEffect("alert-betrayal")}
+      ></setting-toggle>
+    `;
   }
 
   private renderKeybindSettings() {
@@ -767,24 +1232,6 @@ export class UserSettingModal extends BaseModal {
         id="emoji-toggle"
         .checked=${this.userSettings.emojis()}
         @change=${this.toggleEmojis}
-      ></setting-toggle>
-
-      <!-- 🚨 Alert frame -->
-      <setting-toggle
-        label="${translateText("user_setting.alert_frame_label")}"
-        description="${translateText("user_setting.alert_frame_desc")}"
-        id="alert-frame-toggle"
-        .checked=${this.userSettings.alertFrame()}
-        @change=${this.toggleAlertFrame}
-      ></setting-toggle>
-
-      <!-- 💥 Special effects -->
-      <setting-toggle
-        label="${translateText("user_setting.special_effects_label")}"
-        description="${translateText("user_setting.special_effects_desc")}"
-        id="special-effect-toggle"
-        .checked=${this.userSettings.fxLayer()}
-        @change=${this.toggleFxLayer}
       ></setting-toggle>
 
       <!-- 🏠 Structure Sprites -->

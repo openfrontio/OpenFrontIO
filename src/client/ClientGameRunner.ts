@@ -61,6 +61,7 @@ import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
+import { PlaySoundEffectEvent } from "./sound/Sounds";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -99,6 +100,7 @@ export function joinLobby(
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
+  const soundManager = new SoundManager(eventBus, userSettings);
 
   let currentGameRunner: ClientGameRunner | null = null;
 
@@ -130,6 +132,23 @@ export function joinLobby(
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       resolvePrestart();
+
+      eventBus.emit(new PlaySoundEffectEvent("game-start"));
+
+      if (
+        "Notification" in window &&
+        Notification.permission === "granted" &&
+        document.hidden &&
+        userSettings.gameStartNotificationsEnabled()
+      ) {
+        try {
+          new Notification(translateText("game_start_notification.title"), {
+            body: translateText("game_start_notification.body"),
+          });
+        } catch (err) {
+          console.warn("Failed to show game start notification:", err);
+        }
+      }
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
@@ -144,6 +163,7 @@ export function joinLobby(
         eventBus,
         transport,
         userSettings,
+        soundManager,
         terrainLoad,
         terrainMapFileLoader,
       )
@@ -231,12 +251,14 @@ async function createClientGame(
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
+  soundManager: SoundManager,
   terrainLoad: Promise<TerrainMapData> | null,
   mapLoader: GameMapLoader,
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
+
   const config = new Config(
     lobbyConfig.gameStartInfo.config,
     userSettings,
@@ -267,7 +289,6 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const soundManager = new SoundManager(eventBus, userSettings);
   try {
     const gameRenderer = createRenderer(
       canvas,

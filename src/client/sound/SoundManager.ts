@@ -26,7 +26,10 @@ export class SoundManager {
   ) => void;
   private onSetSoundEffectsVolume: (e: SetSoundEffectsVolumeEvent) => void;
 
-  constructor(eventBus: EventBus, userSettings: UserSettings) {
+  constructor(
+    eventBus: EventBus,
+    private readonly userSettings: UserSettings,
+  ) {
     this.eventBus = eventBus;
     this.safely("initialize background music", () => {
       this.backgroundMusic = [
@@ -142,6 +145,7 @@ export class SoundManager {
 
   public playSoundEffect(name: SoundEffect): void {
     this.safely(`play sound ${name}`, () => {
+      if (!this.userSettings.isSoundEffectEnabled(name)) return;
       const howl = this.getOrLoadSoundEffect(name);
       if (!howl) return;
 

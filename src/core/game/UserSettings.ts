@@ -398,4 +398,31 @@ export class UserSettings {
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
+
+  isSoundEffectEnabled(effect: string): boolean {
+    return this.getBool(`settings.sound.${effect}`, true);
+  }
+
+  setSoundEffectEnabled(effect: string, enabled: boolean): void {
+    this.setBool(`settings.sound.${effect}`, enabled);
+  }
+
+  isFxEnabled(effect: string): boolean {
+    return this.getBool(`settings.fx.${effect}`, true);
+  }
+
+  setFxEnabled(effect: string, enabled: boolean): void {
+    this.setBool(`settings.fx.${effect}`, enabled);
+  }
+
+  gameStartNotificationsEnabled(): boolean {
+    return this.getBool("settings.notifications.gameStart", true);
+  }
+
+  toggleGameStartNotifications(): void {
+    this.setBool(
+      "settings.notifications.gameStart",
+      !this.gameStartNotificationsEnabled(),
+    );
+  }
 }

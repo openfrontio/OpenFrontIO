@@ -8,6 +8,7 @@ export class SettingToggle extends LitElement {
   @property() id = "";
   @property({ type: Boolean, reflect: true }) checked = false;
   @property({ type: Boolean }) easter = false;
+  @property({ type: Boolean }) disabled = false;
 
   createRenderRoot() {
     return this;
@@ -23,9 +24,13 @@ export class SettingToggle extends LitElement {
       ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
       : "";
 
+    const disabledClass = this.disabled
+      ? "opacity-40 pointer-events-none cursor-not-allowed"
+      : "";
+
     return html`
       <label
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer ${rainbowClass}"
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer ${rainbowClass} ${disabledClass}"
       >
         <div class="flex flex-col flex-1 min-w-0 mr-4">
           <div class="text-white font-bold text-base block mb-1">
@@ -42,6 +47,7 @@ export class SettingToggle extends LitElement {
             class="opacity-0 w-0 h-0 peer"
             id=${this.id}
             ?checked=${this.checked}
+            ?disabled=${this.disabled}
             @change=${this.handleChange}
           />
           <span

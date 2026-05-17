@@ -26,6 +26,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private hasBufferedFrame = false;
+  private unitLevels = new Map<number, number>();
 
   constructor(
     private game: GameView,
@@ -41,6 +42,11 @@ export class FxLayer implements Layer {
 
   private fxEnabled(): boolean {
     return this.game.config().userSettings()?.fxLayer() ?? true;
+  }
+
+  private fxEffectEnabled(effect: string): boolean {
+    if (!this.fxEnabled()) return false;
+    return this.game.config().userSettings()?.isFxEnabled(effect) ?? true;
   }
 
   tick() {
@@ -138,7 +144,7 @@ export class FxLayer implements Layer {
 
   onShellEvent(unit: UnitView) {
     if (!unit.isActive()) {
-      if (unit.reachedTarget() && this.fxEnabled()) {
+      if (unit.reachedTarget() && this.fxEffectEnabled("fx-shell-impact")) {
         const x = this.game.x(unit.lastTile());
         const y = this.game.y(unit.lastTile());
         const explosion = new SpriteFx(
@@ -154,7 +160,7 @@ export class FxLayer implements Layer {
 
   onTrainEvent(unit: UnitView) {
     if (!unit.isActive()) {
-      if (!unit.reachedTarget() && this.fxEnabled()) {
+      if (!unit.reachedTarget() && this.fxEffectEnabled("fx-shell-impact")) {
         const x = this.game.x(unit.lastTile());
         const y = this.game.y(unit.lastTile());
         const explosion = new SpriteFx(
@@ -169,7 +175,7 @@ export class FxLayer implements Layer {
   }
 
   onRailroadEvent(tile: TileRef) {
-    if (!this.fxEnabled()) return;
+    if (!this.fxEffectEnabled("fx-dust")) return;
     // No need for pseudorandom, this is fx
     const chanceFx = Math.floor(Math.random() * 3);
     if (chanceFx === 0) {
@@ -194,7 +200,7 @@ export class FxLayer implements Layer {
 
     this.eventBus.emit(new PlaySoundEffectEvent("ka-ching"));
 
-    if (this.fxEnabled()) {
+    if (this.fxEffectEnabled("fx-conquest")) {
       this.allFx.push(
         conquestFxFactory(this.animatedSpriteLoader, conquest, this.game),
       );
@@ -202,7 +208,7 @@ export class FxLayer implements Layer {
   }
 
   onWarshipEvent(unit: UnitView) {
-    if (!unit.isActive() && this.fxEnabled()) {
+    if (!unit.isActive() && this.fxEffectEnabled("fx-warship-sinking")) {
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
       const shipExplosion = new UnitExplosionFx(
@@ -226,17 +232,41 @@ export class FxLayer implements Layer {
   }
 
   onStructureEvent(unit: UnitView) {
-    if (!unit.isActive() && this.fxEnabled()) {
-      const x = this.game.x(unit.lastTile());
-      const y = this.game.y(unit.lastTile());
-      const explosion = new SpriteFx(
-        this.animatedSpriteLoader,
-        x,
-        y,
-        FxType.BuildingExplosion,
-      );
-      this.allFx.push(explosion);
+    if (!unit.isActive()) {
+      if (this.fxEffectEnabled("fx-building-explosion")) {
+        const x = this.game.x(unit.lastTile());
+        const y = this.game.y(unit.lastTile());
+        const explosion = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.BuildingExplosion,
+        );
+        this.allFx.push(explosion);
+      }
+      this.unitLevels.delete(unit.id());
+      return;
     }
+
+    const prevLevel = this.unitLevels.get(unit.id());
+    const currentLevel = unit.level();
+    if (
+      unit.owner() === this.game.myPlayer() &&
+      prevLevel !== undefined &&
+      currentLevel > prevLevel
+    ) {
+      const type = unit.type();
+      if (type === UnitType.MissileSilo || type === UnitType.SAMLauncher) {
+        this.eventBus.emit(new PlaySoundEffectEvent("add-ammo"));
+      } else if (
+        type === UnitType.City ||
+        type === UnitType.Port ||
+        type === UnitType.Factory
+      ) {
+        this.eventBus.emit(new PlaySoundEffectEvent("upgrade"));
+      }
+    }
+    this.unitLevels.set(unit.id(), currentLevel);
   }
 
   onNukeEvent(unit: UnitView, radius: number) {
@@ -251,7 +281,10 @@ export class FxLayer implements Layer {
   }
 
   handleNukeExplosion(unit: UnitView, radius: number) {
-    if (this.fxEnabled()) {
+    if (
+      this.fxEffectEnabled("fx-nuke-explosion") ||
+      this.fxEffectEnabled("fx-nuke-debris")
+    ) {
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
       const nukeFx = nukeFxFactory(
@@ -260,6 +293,8 @@ export class FxLayer implements Layer {
         y,
         radius,
         this.game,
+        this.fxEffectEnabled("fx-nuke-explosion"),
+        this.fxEffectEnabled("fx-nuke-debris"),
       );
       this.allFx = this.allFx.concat(nukeFx);
     }
@@ -269,7 +304,7 @@ export class FxLayer implements Layer {
   }
 
   handleSAMInterception(unit: UnitView) {
-    if (this.fxEnabled()) {
+    if (this.fxEffectEnabled("fx-sam-interception")) {
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
       const explosion = new SpriteFx(
