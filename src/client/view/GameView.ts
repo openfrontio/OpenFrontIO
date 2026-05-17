@@ -465,7 +465,10 @@ export class GameView implements GameMap {
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
-    f.playerStatus = computePlayerStatus(this._playerStates, this._unitStates);
+    f.playerStatus = computePlayerStatus(this._playerStates, this._unitStates, {
+      localPlayerID: this._myPlayer?.smallID() ?? 0,
+      tileState: this._map.tileStateBuffer(),
+    });
     const rel = buildRelationMatrix(this._playerStates);
     f.relationMatrix = rel.matrix;
     f.relationSize = rel.size;
