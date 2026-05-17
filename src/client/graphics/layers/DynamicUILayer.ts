@@ -122,7 +122,9 @@ export class DynamicUILayer implements Layer {
     }
     if (
       this.createdThisTick(unit) &&
-      (unit.owner() === myPlayer || unit.owner().isOnSameTeam(myPlayer))
+      (unit.owner() === myPlayer || unit.owner().isOnSameTeam(myPlayer)) &&
+      (this.game.config().userSettings()?.isFxEnabled("fx-nuke-telegraph") ??
+        true)
     ) {
       const target = new NukeTelegraph(this.transformHandler, this.game, unit);
       this.uiElements.push(target);

@@ -818,6 +818,13 @@ class Client {
       return;
     }
 
+    if (
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission();
+    }
+
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");

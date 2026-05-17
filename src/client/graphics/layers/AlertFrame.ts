@@ -136,11 +136,13 @@ export class AlertFrame extends LitElement implements Layer {
   }
 
   private activateAlert() {
-    if (this.userSettings.alertFrame()) {
-      this.isActive = true;
-      this.lastAlertTick = this.game.ticks();
-      this.requestUpdate();
-    }
+    if (!this.userSettings.alertFrame()) return;
+    const perTypeKey =
+      this.alertType === "betrayal" ? "alert-betrayal" : "alert-land-attack";
+    if (!this.userSettings.isFxEnabled(perTypeKey)) return;
+    this.isActive = true;
+    this.lastAlertTick = this.game.ticks();
+    this.requestUpdate();
   }
 
   private trackOutgoingAttacks() {

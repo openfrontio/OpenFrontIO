@@ -76,35 +76,41 @@ export function nukeFxFactory(
   y: number,
   radius: number,
   game: GameView,
+  showExplosion: boolean = true,
+  showDebris: boolean = true,
 ): Fx[] {
   const nukeFx: Fx[] = [];
-  // Explosion animation
-  nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.Nuke));
-  // Shockwave animation
-  nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
-  // Ruins and desolation sprites
-  const debrisPlan: Array<{
-    type: FxType;
-    radiusFactor: number;
-    density: number;
-  }> = [
-    { type: FxType.MiniFire, radiusFactor: 1.0, density: 1 / 25 },
-    { type: FxType.MiniSmoke, radiusFactor: 1.0, density: 1 / 28 },
-    { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
-    { type: FxType.MiniSmokeAndFire, radiusFactor: 0.9, density: 1 / 70 },
-  ];
+  if (showExplosion) {
+    // Explosion animation
+    nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.Nuke));
+    // Shockwave animation
+    nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
+  }
+  if (showDebris) {
+    // Ruins and desolation sprites
+    const debrisPlan: Array<{
+      type: FxType;
+      radiusFactor: number;
+      density: number;
+    }> = [
+      { type: FxType.MiniFire, radiusFactor: 1.0, density: 1 / 25 },
+      { type: FxType.MiniSmoke, radiusFactor: 1.0, density: 1 / 28 },
+      { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
+      { type: FxType.MiniSmokeAndFire, radiusFactor: 0.9, density: 1 / 70 },
+    ];
 
-  for (const { type, radiusFactor, density } of debrisPlan) {
-    addSpriteInCircle(
-      animatedSpriteLoader,
-      x,
-      y,
-      radius * radiusFactor,
-      radius * density,
-      type,
-      nukeFx,
-      game,
-    );
+    for (const { type, radiusFactor, density } of debrisPlan) {
+      addSpriteInCircle(
+        animatedSpriteLoader,
+        x,
+        y,
+        radius * radiusFactor,
+        radius * density,
+        type,
+        nukeFx,
+        game,
+      );
+    }
   }
   return nukeFx;
 }
