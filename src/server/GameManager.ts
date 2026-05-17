@@ -130,13 +130,9 @@ export class GameManager {
       }
 
       if (phase === GamePhase.Finished) {
-        try {
-          game.end().catch((error: any) => {
-            this.log.error(`error ending game ${id}: ${error}`);
-          });
-        } catch (error) {
+        game.end().catch((error: any) => {
           this.log.error(`error ending game ${id}: ${error}`);
-        }
+        });
       } else {
         active.set(id, game);
       }
