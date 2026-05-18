@@ -232,12 +232,17 @@ export function getModifierLabels(
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  let time = "";
-  if (minutes > 0) time += `${minutes}min `;
-  time += `${seconds}s`;
-  return time.trim();
+  // Build largest-first, dropping trailing-zero components so 3600s reads
+  // as "1h" rather than "1h 0min 0s", and 60s as "1min" rather than
+  // "1min 0s". Sub-minute durations still surface seconds.
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}min`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+  return parts.join(" ");
 }
 
 export function renderTroops(troops: number): string {
