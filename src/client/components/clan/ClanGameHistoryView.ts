@@ -5,17 +5,12 @@ import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
   type ClanGameFilter,
-  type ClanGamesResponse,
   fetchClanGames,
 } from "../../ClanApi";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../Utils";
 import "../CopyButton";
-import {
-  renderLoadingSpinner,
-  renderServerPagination,
-  showToast,
-} from "./ClanShared";
+import { renderLoadingSpinner, showToast } from "./ClanShared";
 
 type FilterKey = ClanGameFilter | "all";
 
@@ -30,11 +25,14 @@ const FILTER_TABS: { key: FilterKey; labelKey: string }[] = [
   { key: "ranked", labelKey: "clan_modal.history_filter_ranked" },
 ];
 
+// Cache survives a tab switch within the modal: keep the full
+// accumulated list plus the cursor state so re-entering the tab restores
+// the scroll position the user had built up.
 export type ClanGameHistoryCache = {
   tag: string;
-  page: number;
   filter: FilterKey;
-  data: ClanGamesResponse;
+  games: ClanGame[];
+  nextCursor: string | null;
 };
 
 @customElement("clan-game-history-view")
@@ -47,67 +45,128 @@ export class ClanGameHistoryView extends LitElement {
   @property({ type: Object }) cachedState: ClanGameHistoryCache | null = null;
 
   @state() private games: ClanGame[] = [];
-  @state() private total = 0;
-  @state() private page = 1;
-  @state() private limit = 10;
+  @state() private nextCursor: string | null = null;
   @state() private loading = false;
+  // Distinct from `loading` because it controls the inline footer spinner
+  // rather than replacing the whole list with a centred spinner.
+  @state() private loadingMore = false;
   @state() private loadState: "ok" | "failed" | "forbidden" = "ok";
+  @state() private appendFailed = false;
   @state() private filter: FilterKey = "all";
   private asyncGeneration = 0;
+  private sentinel: HTMLElement | null = null;
+  private observer: IntersectionObserver | null = null;
 
   connectedCallback() {
     super.connectedCallback();
     if (this.cachedState && this.cachedState.tag === this.clanTag) {
-      this.games = this.cachedState.data.results;
-      this.total = this.cachedState.data.total;
-      this.page = this.cachedState.page;
-      this.limit = this.cachedState.data.limit;
+      this.games = this.cachedState.games;
+      this.nextCursor = this.cachedState.nextCursor;
       this.filter = this.cachedState.filter;
     } else if (this.clanTag) {
-      this.loadPage(1);
+      this.reload();
     }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.teardownObserver();
+  }
+
+  updated() {
+    // The IntersectionObserver target only exists when there's more to
+    // load AND we're not in the middle of a request — wire it up after
+    // each render so it tracks the current sentinel node.
+    this.ensureObserver();
+  }
+
+  // Hard reset on filter change — drop cached games and start fresh from
+  // the newest game.
+  private async reload() {
+    this.games = [];
+    this.nextCursor = null;
+    this.appendFailed = false;
+    await this.load({ append: false });
   }
 
   private setFilter(filter: FilterKey) {
     if (filter === this.filter) return;
     this.filter = filter;
-    this.loadPage(1);
+    this.reload();
   }
 
-  private async loadPage(page: number) {
+  private async load({ append }: { append: boolean }) {
     if (!this.clanTag) return;
     const gen = ++this.asyncGeneration;
-    this.loading = true;
-    this.loadState = "ok";
+    if (append) {
+      this.loadingMore = true;
+      this.appendFailed = false;
+    } else {
+      this.loading = true;
+      this.loadState = "ok";
+    }
     const filterParam = this.filter === "all" ? undefined : this.filter;
-    const res = await fetchClanGames(
-      this.clanTag,
-      page,
-      this.limit,
-      filterParam,
-    );
+    // Append uses the saved cursor; a fresh load starts from the newest
+    // game (no `before` cap).
+    const before = append ? (this.nextCursor ?? undefined) : undefined;
+    const res = await fetchClanGames(this.clanTag, {
+      filter: filterParam,
+      before,
+    });
     if (gen !== this.asyncGeneration) return;
-    this.loading = false;
+    if (append) this.loadingMore = false;
+    else this.loading = false;
     if ("error" in res) {
-      this.loadState = res.error;
-      this.games = [];
-      this.total = 0;
+      if (append) {
+        // Keep the games we already have; just surface a retry footer.
+        this.appendFailed = true;
+      } else {
+        this.loadState = res.error;
+        this.games = [];
+        this.nextCursor = null;
+      }
       return;
     }
-    if (res.results.length === 0 && page > 1) {
-      await this.loadPage(1);
-      return;
-    }
-    this.games = res.results;
-    this.total = res.total;
-    this.page = page;
+    this.games = append ? [...this.games, ...res.results] : res.results;
+    this.nextCursor = res.nextCursor;
     this.dispatchEvent(
       new CustomEvent<ClanGameHistoryCache>("history-updated", {
-        detail: { tag: this.clanTag, page, filter: this.filter, data: res },
+        detail: {
+          tag: this.clanTag,
+          filter: this.filter,
+          games: this.games,
+          nextCursor: this.nextCursor,
+        },
         bubbles: true,
         composed: true,
       }),
     );
+  }
+
+  private ensureObserver() {
+    const sentinel = this.querySelector<HTMLElement>("[data-scroll-sentinel]");
+    if (sentinel === this.sentinel) return;
+    this.teardownObserver();
+    this.sentinel = sentinel;
+    if (!sentinel) return;
+    this.observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        if (this.loading || this.loadingMore) continue;
+        if (this.nextCursor === null) continue;
+        if (this.appendFailed) continue;
+        void this.load({ append: true });
+      }
+    });
+    this.observer.observe(sentinel);
+  }
+
+  private teardownObserver() {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+    this.sentinel = null;
   }
 
   private async watchReplay(gameId: string) {
@@ -139,8 +198,9 @@ export class ClanGameHistoryView extends LitElement {
       `;
     }
 
-    const body = this.renderBody();
-    return html`<div class="space-y-3">${this.renderFilters()}${body}</div>`;
+    return html`<div class="space-y-3">
+      ${this.renderFilters()}${this.renderBody()}
+    </div>`;
   }
 
   private renderFilters(): TemplateResult {
@@ -188,7 +248,7 @@ export class ClanGameHistoryView extends LitElement {
           </p>
           <button
             type="button"
-            @click=${() => this.loadPage(1)}
+            @click=${() => this.reload()}
             class="text-xs font-bold text-white/60 hover:text-white uppercase tracking-wider px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors"
           >
             ${translateText("leaderboard_modal.try_again")}
@@ -208,17 +268,66 @@ export class ClanGameHistoryView extends LitElement {
       `;
     }
 
-    const totalPages = Math.max(1, Math.ceil(this.total / this.limit));
+    // Group consecutive games by their start day so the user gets a sense
+    // of when each batch was played without us having to render N
+    // standalone date pills.
+    const groups = groupGamesByDay(this.games);
     return html`
-      <div class="space-y-3">
-        <div class="columns-1 lg:columns-2 gap-3">
-          ${this.games.map((game) => this.renderGameRow(game))}
+      <div class="space-y-5">
+        ${groups.map(
+          (group) => html`
+            <div class="space-y-3">
+              <div
+                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5"
+              >
+                <span class="h-px flex-1 bg-white/10"></span>
+                <h3
+                  class="text-xs font-bold uppercase tracking-widest text-white/70 whitespace-nowrap"
+                >
+                  ${formatDayHeader(group.day)}
+                </h3>
+                <span class="h-px flex-1 bg-white/10"></span>
+              </div>
+              <div class="columns-1 lg:columns-2 gap-3">
+                ${group.games.map((game) => this.renderGameRow(game))}
+              </div>
+            </div>
+          `,
+        )}
+        ${this.renderScrollFooter()}
+      </div>
+    `;
+  }
+
+  private renderScrollFooter(): TemplateResult {
+    if (this.nextCursor === null) {
+      return html`
+        <div class="text-center text-[11px] text-white/30 py-3 select-none">
+          ${translateText("clan_modal.history_end_of_history")}
         </div>
-        ${totalPages > 1
-          ? renderServerPagination(this.page, totalPages, (p) =>
-              this.loadPage(p),
-            )
-          : ""}
+      `;
+    }
+    if (this.appendFailed) {
+      return html`
+        <div class="text-center py-3">
+          <p class="text-white/40 text-xs mb-2">
+            ${translateText("clan_modal.history_load_more_failed")}
+          </p>
+          <button
+            type="button"
+            @click=${() => this.load({ append: true })}
+            class="text-xs font-bold text-white/60 hover:text-white uppercase tracking-wider px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors"
+          >
+            ${translateText("leaderboard_modal.try_again")}
+          </button>
+        </div>
+      `;
+    }
+    // Sentinel element drives auto-load; the spinner is only shown when
+    // we're actively fetching to avoid flashing for offscreen sentinels.
+    return html`
+      <div data-scroll-sentinel class="py-3">
+        ${this.loadingMore ? renderLoadingSpinner() : ""}
       </div>
     `;
   }
@@ -480,4 +589,71 @@ function formatAbsoluteTime(iso: string): string {
     return translateText("clan_modal.history_today_at", { time });
   }
   return `${date.toLocaleDateString()} ${time}`;
+}
+
+type DayGroup = { day: string; games: ClanGame[] };
+
+// Groups games by local-day key while preserving server order. Server
+// ordering is already newest-first, so within a group we just keep the
+// arrival order.
+function groupGamesByDay(games: ClanGame[]): DayGroup[] {
+  const groups: DayGroup[] = [];
+  for (const g of games) {
+    const day = dayKey(g.start);
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) {
+      last.games.push(g);
+    } else {
+      groups.push({ day, games: [g] });
+    }
+  }
+  return groups;
+}
+
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return iso;
+  // Use local-time YYYY-MM-DD so headers line up with the user's clock,
+  // not UTC midnight (which would split late-night games into a "next
+  // day" group for most timezones).
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Indexed by Date.getMonth() (0–11). Kept as a const list rather than
+// a switch so the translation pipeline picks up every key from a single
+// place.
+const MONTH_KEYS = [
+  "common.month_jan",
+  "common.month_feb",
+  "common.month_mar",
+  "common.month_apr",
+  "common.month_may",
+  "common.month_jun",
+  "common.month_jul",
+  "common.month_aug",
+  "common.month_sep",
+  "common.month_oct",
+  "common.month_nov",
+  "common.month_dec",
+] as const;
+
+function formatDayHeader(day: string): string {
+  const d = new Date(`${day}T00:00:00`);
+  if (!Number.isFinite(d.getTime())) return day;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round(
+    (today.getTime() - dayStart.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  if (diffDays === 0) return translateText("clan_modal.history_today");
+  if (diffDays === 1) return translateText("clan_modal.history_yesterday");
+  // "17 May 2026" — weekday dropped (no translation coverage) and the
+  // month rendered through our own translation keys instead of
+  // toLocaleDateString so other locales can swap it cleanly.
+  const month = translateText(MONTH_KEYS[d.getMonth()]);
+  return `${d.getDate()} ${month} ${d.getFullYear()}`;
 }

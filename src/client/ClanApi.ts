@@ -480,17 +480,19 @@ export type ClanGamesFetchError = "forbidden" | "failed";
 
 export async function fetchClanGames(
   tag: string,
-  page = 1,
-  limit = 10,
-  filter?: ClanGameFilter,
+  opts: { filter?: ClanGameFilter; before?: string } = {},
 ): Promise<ClanGamesResponse | { error: ClanGamesFetchError }> {
   try {
     const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("limit", String(limit));
-    if (filter) params.set("filter", filter);
+    if (opts.filter) params.set("filter", opts.filter);
+    // `before` is an ISO datetime — either the previous response's
+    // nextCursor (for continuation) or an end-of-day timestamp (for
+    // jump-to-date). The server interprets it as a strict upper bound on
+    // game start time.
+    if (opts.before) params.set("before", opts.before);
+    const qs = params.toString();
     const res = await clanFetch(
-      `/clans/${encodeURIComponent(tag)}/games?${params}`,
+      `/clans/${encodeURIComponent(tag)}/games${qs ? `?${qs}` : ""}`,
     );
     if (res.status === 403) return { error: "forbidden" };
     if (!res.ok) return { error: "failed" };

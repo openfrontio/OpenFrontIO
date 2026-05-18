@@ -27,7 +27,19 @@
     "click_to_copy": "Click to copy",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "map_default": "Map default"
+    "map_default": "Map default",
+    "month_jan": "January",
+    "month_feb": "February",
+    "month_mar": "March",
+    "month_apr": "April",
+    "month_may": "May",
+    "month_jun": "June",
+    "month_jul": "July",
+    "month_aug": "August",
+    "month_sep": "September",
+    "month_oct": "October",
+    "month_nov": "November",
+    "month_dec": "December"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -372,7 +384,11 @@
     "history_players": "Players",
     "history_duration": "Duration",
     "history_game_id": "Game ID",
-    "history_today_at": "Today at {time}"
+    "history_today_at": "Today at {time}",
+    "history_yesterday": "Yesterday",
+    "history_today": "Today",
+    "history_load_more_failed": "Couldn't load more games.",
+    "history_end_of_history": "End of history."
   },
   "account_modal": {
     "title": "Account",

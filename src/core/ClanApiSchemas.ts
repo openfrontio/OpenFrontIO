@@ -190,8 +190,10 @@ export type ClanGame = z.infer<typeof ClanGameSchema>;
 
 export const ClanGamesResponseSchema = z.object({
   results: ClanGameSchema.array(),
-  total: z.number(),
-  page: z.number(),
-  limit: z.number(),
+  // ISO datetime of the last row in `results`, or `null` when the server
+  // has no more rows to serve. Pass back as `before` to load the next
+  // batch. Page size is fixed server-side, so the client never sends a
+  // limit.
+  nextCursor: z.string().nullable(),
 });
 export type ClanGamesResponse = z.infer<typeof ClanGamesResponseSchema>;
