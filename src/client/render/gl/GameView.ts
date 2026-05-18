@@ -321,6 +321,9 @@ export class GameView {
   setLocalPlayerID(id: number): void {
     this.renderer.setLocalPlayerID(id);
   }
+  setAltView(active: boolean): void {
+    this.renderer.setAltView(active);
+  }
   setHighlightOwner(ownerID: number): void {
     this.renderer.setHighlightOwner(ownerID);
   }

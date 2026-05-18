@@ -37,6 +37,7 @@ import {
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
 import {
+  AlternateViewEvent,
   AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
@@ -444,6 +445,11 @@ async function createClientGame(
       `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
       (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
     );
+
+    // Space-hold (and the settings-modal toggle) drives the affiliation
+    // recolor. InputHandler emits AlternateViewEvent; the WebGL view needs
+    // setAltView called to switch passes into alt mode.
+    eventBus.on(AlternateViewEvent, (e) => view.setAltView(e.alternateView));
 
     const gameRenderer = createRenderer(
       inputOverlay,
