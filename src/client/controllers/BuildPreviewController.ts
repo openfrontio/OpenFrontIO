@@ -22,7 +22,8 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "../InputHandler";
-import { GameView as WebGLGameView } from "../render/gl";
+import { GameView as WebGLGameView, buildNukeTrajectory } from "../render/gl";
+import type { SAMInfo } from "../render/gl/utils/nuke-trajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
 import {
@@ -222,9 +223,88 @@ export class BuildPreviewController implements Controller {
     if (data === null) {
       this.lastGhostData = null;
       this.view.updateGhostPreview(null);
+    } else {
+      this.lastGhostData = data;
+    }
+    this.updateNukeTrajectoryPreview(tileRef);
+  }
+
+  /**
+   * For AtomBomb / HydrogenBomb ghosts, push the Bezier trajectory preview
+   * (closest player-owned silo → target, accounting for non-allied SAMs).
+   * Cleared whenever the ghost isn't a nuke, has no target, or the player
+   * has no silos.
+   */
+  private updateNukeTrajectoryPreview(tileRef: TileRef | undefined): void {
+    if (!this.ghostUnit || tileRef === undefined) {
+      this.view.updateNukeTrajectory(null);
       return;
     }
-    this.lastGhostData = data;
+    const type = this.ghostUnit.buildableUnit.type;
+    if (type !== UnitType.AtomBomb && type !== UnitType.HydrogenBomb) {
+      this.view.updateNukeTrajectory(null);
+      return;
+    }
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      this.view.updateNukeTrajectory(null);
+      return;
+    }
+
+    const silos = myPlayer
+      .units(UnitType.MissileSilo)
+      .filter((u) => u.isActive());
+    if (silos.length === 0) {
+      this.view.updateNukeTrajectory(null);
+      return;
+    }
+
+    const dstX = this.game.x(tileRef);
+    const dstY = this.game.y(tileRef);
+    let bestSilo = silos[0];
+    let bestDistSq = Infinity;
+    for (const s of silos) {
+      const sx = this.game.x(s.tile());
+      const sy = this.game.y(s.tile());
+      const dx = sx - dstX;
+      const dy = sy - dstY;
+      const d = dx * dx + dy * dy;
+      if (d < bestDistSq) {
+        bestDistSq = d;
+        bestSilo = s;
+      }
+    }
+    const srcX = this.game.x(bestSilo.tile());
+    const srcY = this.game.y(bestSilo.tile());
+
+    // Non-allied SAMs threaten the trajectory; own + allied SAMs don't.
+    const allyIds = new Set<number>();
+    for (const a of myPlayer.allies()) allyIds.add(a.smallID());
+    const sams: SAMInfo[] = [];
+    for (const s of this.game.units(UnitType.SAMLauncher)) {
+      if (!s.isActive()) continue;
+      const owner = s.owner();
+      if (owner === myPlayer) continue;
+      if (allyIds.has(owner.smallID())) continue;
+      const r = this.game.config().samRange(s.level());
+      sams.push({
+        x: this.game.x(s.tile()),
+        y: this.game.y(s.tile()),
+        rangeSq: r * r,
+      });
+    }
+
+    this.view.updateNukeTrajectory(
+      buildNukeTrajectory(
+        srcX,
+        srcY,
+        dstX,
+        dstY,
+        this.game.height(),
+        this.uiState.rocketDirectionUp,
+        sams,
+      ),
+    );
   }
 
   private buildGhostPreviewData(
@@ -243,11 +323,17 @@ export class BuildPreviewController implements Controller {
       upgradeTargetTile = this.game.unit(u.canUpgrade)?.tile() ?? null;
     }
 
-    // Range circle: only meaningful for SAM placement preview.
+    // Range circle: SAM placement preview shows targetable radius; nuke
+    // previews show the outer blast radius at the target tile.
     let rangeRadius = 0;
     if (u.type === UnitType.SAMLauncher) {
       const level = this.resolveGhostRangeLevel(u) ?? 1;
       rangeRadius = this.game.config().samRange(level);
+    } else if (
+      u.type === UnitType.AtomBomb ||
+      u.type === UnitType.HydrogenBomb
+    ) {
+      rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
     }
 
     return {
@@ -345,6 +431,7 @@ export class BuildPreviewController implements Controller {
     this.uiState.ghostRailPaths = [];
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);
+    this.view.updateNukeTrajectory(null);
   }
 
   private removeGhostStructure() {
