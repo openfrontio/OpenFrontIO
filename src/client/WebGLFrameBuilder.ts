@@ -116,9 +116,18 @@ export class WebGLFrameBuilder {
 
       this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
 
+      let flagCode: string | undefined = p.cosmetics.flag;
+      if (flagCode) {
+        if (flagCode.startsWith("flag:")) flagCode = flagCode.slice(5);
+        else {
+          const match = flagCode.match(/\/flags\/(.+)\.svg/);
+          if (match) flagCode = match[1];
+        }
+      }
+
       newPlayers.push({
         ...p.static,
-        flag: p.cosmetics.flag,
+        flag: flagCode,
         color: p.territoryColor().toHex(),
       });
     }
