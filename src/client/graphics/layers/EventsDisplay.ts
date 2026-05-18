@@ -24,21 +24,21 @@ import {
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
+import { Controller } from "../../Controller";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRejectIntentEvent,
   SendAllianceRequestIntentEvent,
 } from "../../Transport";
-import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
+import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { renderNumber } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "../TransformHandler";
 
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { UIState } from "../../UIState";
 import { getMessageTypeClasses, translateText } from "../../Utils";
-import { UIState } from "../UIState";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
@@ -68,7 +68,7 @@ interface GameEvent {
 }
 
 @customElement("events-display")
-export class EventsDisplay extends LitElement implements Layer {
+export class EventsDisplay extends LitElement implements Controller {
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
@@ -358,12 +358,6 @@ export class EventsDisplay extends LitElement implements Layer {
       ...this.events.slice(index + 1),
     ];
   }
-
-  shouldTransform(): boolean {
-    return false;
-  }
-
-  renderLayer(): void {}
 
   private removeAllianceRenewalEvents(allianceID: number) {
     this.events = this.events.filter(

@@ -15,6 +15,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
+import { Controller } from "../../Controller";
 import {
   CloseViewEvent,
   MouseUpEvent,
@@ -28,16 +29,15 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
+import { UIState } from "../../UIState";
 import {
   renderDuration,
   renderNumber,
   renderTroops,
   translateText,
 } from "../../Utils";
-import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
-import { Layer } from "./Layer";
 import "./PlayerModerationModal";
 import "./SendResourceModal";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
@@ -53,7 +53,7 @@ const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
 @customElement("player-panel")
-export class PlayerPanel extends LitElement implements Layer {
+export class PlayerPanel extends LitElement implements Controller {
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
@@ -410,7 +410,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private getTraitorRemainingSeconds(player: PlayerView): number | null {
-    const ticksLeft = player.data.traitorRemainingTicks ?? 0;
+    const ticksLeft = player.getTraitorRemainingTicks();
     if (!player.isTraitor() || ticksLeft <= 0) return null;
     return Math.ceil(ticksLeft / 10); // 10 ticks = 1 second
   }
@@ -608,7 +608,7 @@ export class PlayerPanel extends LitElement implements Layer {
           <span>${translateText("player_panel.betrayals")}</span>
         </div>
         <div class="text-right text-[14px] font-semibold text-zinc-200">
-          ${other.data.betrayals ?? 0}
+          ${other.betrayals()}
         </div>
       </div>
 

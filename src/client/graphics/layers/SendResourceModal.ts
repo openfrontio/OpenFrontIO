@@ -7,8 +7,8 @@ import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
 } from "../../Transport";
+import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
-import { UIState } from "../UIState";
 
 @customElement("send-resource-modal")
 export class SendResourceModal extends LitElement {

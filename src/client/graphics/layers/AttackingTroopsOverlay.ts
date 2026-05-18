@@ -2,10 +2,10 @@ import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { Controller } from "../../Controller";
 import { AlternateViewEvent } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import { renderTroops } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 
 // Match AttacksDisplay: aquarius for outgoing, red-400 for incoming.
 const OUTGOING_COLOR = "var(--color-aquarius)";
@@ -51,7 +51,7 @@ interface AttackLabel {
   attackerTroops: number;
 }
 
-export class AttackingTroopsOverlay implements Layer {
+export class AttackingTroopsOverlay implements Controller {
   private container: HTMLDivElement;
   private labelTemplate: HTMLDivElement;
   private labels = new Map<string, AttackLabel>();
@@ -70,10 +70,6 @@ export class AttackingTroopsOverlay implements Layer {
     private readonly userSettings: UserSettings,
   ) {}
 
-  shouldTransform(): boolean {
-    return false;
-  }
-
   init() {
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
@@ -91,6 +87,15 @@ export class AttackingTroopsOverlay implements Layer {
       this.container.style.display = this.isVisible ? "" : "none";
     };
     this.eventBus.on(AlternateViewEvent, this.onAlternateView);
+
+    // Self-driven RAF: DOM label positions must update every frame so the
+    // labels track the WebGL camera as the user pans/zooms. (Previously this
+    // ran via the now-deleted canvas2D RAF loop.)
+    const drive = () => {
+      this.updateLabelDOM();
+      requestAnimationFrame(drive);
+    };
+    requestAnimationFrame(drive);
   }
 
   destroy() {
@@ -200,7 +205,7 @@ export class AttackingTroopsOverlay implements Layer {
     }
   }
 
-  renderLayer(_context: CanvasRenderingContext2D) {
+  private updateLabelDOM() {
     const screenPosOld = this.transformHandler.worldToScreenCoordinates(
       new Cell(0, 0),
     );

@@ -9,25 +9,25 @@ import {
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "../../TransformHandler";
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
   SendAttackIntentEvent,
 } from "../../Transport";
+import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
 import { getColoredSprite } from "../SpriteLoader";
-import {
-  GoToPlayerEvent,
-  GoToPositionEvent,
-  GoToUnitEvent,
-} from "../TransformHandler";
-import { UIState } from "../UIState";
-import { Layer } from "./Layer";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("attacks-display")
-export class AttacksDisplay extends LitElement implements Layer {
+export class AttacksDisplay extends LitElement implements Controller {
   public eventBus: EventBus;
   public game: GameView;
   public uiState: UIState;
@@ -109,12 +109,6 @@ export class AttacksDisplay extends LitElement implements Layer {
 
     this.requestUpdate();
   }
-
-  shouldTransform(): boolean {
-    return false;
-  }
-
-  renderLayer(): void {}
 
   private renderButton(options: {
     content: any;

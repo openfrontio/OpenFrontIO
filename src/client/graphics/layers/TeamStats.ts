@@ -3,13 +3,13 @@ import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import {
   formatPercentage,
   renderNumber,
   renderTroops,
   translateText,
 } from "../../Utils";
-import { Layer } from "./Layer";
 
 interface TeamEntry {
   teamName: string;
@@ -26,7 +26,7 @@ interface TeamEntry {
 }
 
 @customElement("team-stats")
-export class TeamStats extends LitElement implements Layer {
+export class TeamStats extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
 
@@ -123,12 +123,6 @@ export class TeamStats extends LitElement implements Layer {
       .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
 
     this.requestUpdate();
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {}
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   render() {

@@ -4,12 +4,12 @@ import { ClientEnv } from "src/client/ClientEnv";
 import { GameEnv } from "../../../core/configuration/Config";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { Controller } from "../../Controller";
 import { MultiTabDetector } from "../../MultiTabDetector";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
 
 @customElement("multi-tab-modal")
-export class MultiTabModal extends LitElement implements Layer {
+export class MultiTabModal extends LitElement implements Controller {
   public game: GameView;
 
   private detector: MultiTabDetector;

@@ -6,6 +6,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../../core/game/UserSettings";
+import { Controller } from "../../Controller";
 import {
   TickMetricsEvent,
   TogglePerformanceOverlayEvent,
@@ -13,10 +14,9 @@ import {
 import type { LangSelector } from "../../LangSelector";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
-import { Layer } from "./Layer";
 
 @customElement("performance-overlay")
-export class PerformanceOverlay extends LitElement implements Layer {
+export class PerformanceOverlay extends LitElement implements Controller {
   @property({ type: Object })
   public eventBus!: EventBus;
 
@@ -82,6 +82,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private fpsHistorySum: number = 0;
   private lastSecondTime: number = 0;
   private framesThisSecond: number = 0;
+  private fpsRafId: number | null = null;
   private tickExecutionTimes: number[] = [];
   private tickExecutionTimesSum: number = 0;
   private tickDelayTimes: number[] = [];
@@ -519,6 +520,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
   disconnectedCallback(): void {
     super.disconnectedCallback();
 
+    this.stopFpsLoop();
+
     if (this.isUserSettingsListenerAttached) {
       globalThis.removeEventListener(
         `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
@@ -561,6 +564,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.isVisible = visible;
     FrameProfiler.setEnabled(visible);
 
+    if (visible) {
+      this.startFpsLoop();
+    } else {
+      this.stopFpsLoop();
+    }
+
     if (!visible && this.resizeState) {
       globalThis.removeEventListener("pointermove", this.onResizePointerMove);
       globalThis.removeEventListener("pointerup", this.onResizePointerUp);
@@ -581,6 +590,27 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const nextVisible = false;
     this.setVisible(nextVisible);
     this.userSettings.setPerformanceOverlay(nextVisible);
+  }
+
+  // FPS measurement runs on its own RAF — the WebGL renderer doesn't expose a
+  // per-frame hook for the overlay, and starting/stopping with visibility
+  // keeps the RAF cost off the hot path when the overlay is hidden.
+  private startFpsLoop(): void {
+    if (this.fpsRafId !== null) return;
+    const tick = () => {
+      this.updateFrameMetrics(0);
+      this.fpsRafId = requestAnimationFrame(tick);
+    };
+    this.fpsRafId = requestAnimationFrame(tick);
+  }
+
+  private stopFpsLoop(): void {
+    if (this.fpsRafId === null) return;
+    cancelAnimationFrame(this.fpsRafId);
+    this.fpsRafId = null;
+    this.lastTime = 0;
+    this.lastSecondTime = 0;
+    this.framesThisSecond = 0;
   }
 
   private onDragPointerMove = (e: PointerEvent) => {
@@ -967,10 +997,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
         this.tickDelayMax = Math.round(max);
       }
     }
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   private getPerformanceColor(fps: number): string {

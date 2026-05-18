@@ -6,16 +6,16 @@ import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
+import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
+import { UIState } from "../../UIState";
 import { renderNumber, renderTroops } from "../../Utils";
-import { UIState } from "../UIState";
-import { Layer } from "./Layer";
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
 @customElement("control-panel")
-export class ControlPanel extends LitElement implements Layer {
+export class ControlPanel extends LitElement implements Controller {
   public game: GameView;
   public clientID: ClientID;
   public eventBus: EventBus;
@@ -109,14 +109,6 @@ export class ControlPanel extends LitElement implements Layer {
 
   onAttackRatioChange(newRatio: number) {
     this.uiState.attackRatio = newRatio;
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {
-    // Render any necessary canvas elements
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   setVisibile(visible: boolean) {

@@ -15,7 +15,7 @@ import {
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { UIState } from "../UIState";
+import { UIState } from "../../UIState";
 
 export class PlayerActionHandler {
   constructor(
