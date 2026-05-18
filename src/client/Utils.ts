@@ -324,6 +324,11 @@ export function formatKeyForDisplay(value: string): string {
     return "Alt+" + formatKeyForDisplay(value.slice(4));
   }
 
+  // Handle mouse buttons
+  if (value === "MouseLeft") return "Left";
+  if (value === "MouseRight") return "Right";
+  if (value === "MouseMiddle") return "Middle";
+
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";
 

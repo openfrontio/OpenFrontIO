@@ -214,6 +214,8 @@ export class InputHandler {
   private selectionBoxActive: boolean = false;
   // True while warships are selected via box (waiting for move target click)
   private multiSelectionActive: boolean = false;
+  // True while the configured shiftKey (box-select hold key) is held down
+  private shiftKeybindHeld: boolean = false;
 
   // Touch long-press state
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -311,8 +313,8 @@ export class InputHandler {
       let deltaX = 0;
       let deltaY = 0;
 
-      // Skip if shift is held down
-      if (this.activeKeys.has(this.keybinds.shiftKey)) {
+      // Skip if box-select key is held down
+      if (this.shiftKeybindHeld) {
         return;
       }
 
@@ -437,7 +439,6 @@ export class InputHandler {
           this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
-          this.keybinds.shiftKey,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -445,7 +446,8 @@ export class InputHandler {
 
       // Shift = warship box selection mode.
       // If a ghost structure is active, discard it first.
-      if (e.code === this.keybinds.shiftKey) {
+      if (this.keybindMatchesEvent(e, this.keybinds.shiftKey)) {
+        this.shiftKeybindHeld = true;
         if (this.uiState.ghostStructure !== null) {
           this.setGhostStructure(null);
         }
@@ -574,13 +576,13 @@ export class InputHandler {
 
       this.activeKeys.delete(e.code);
 
-      // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
-      if (
-        e.code === this.keybinds.shiftKey &&
-        !this.selectionBoxActive &&
-        !this.multiSelectionActive
-      ) {
-        this.canvas.style.cursor = "";
+      // Reset crosshair when box-select key is released (unless selection box or multi-selection still active)
+      const parsedShiftKey = this.parseKeybind(this.keybinds.shiftKey);
+      if (e.code === parsedShiftKey.code) {
+        this.shiftKeybindHeld = false;
+        if (!this.selectionBoxActive && !this.multiSelectionActive) {
+          this.canvas.style.cursor = "";
+        }
       }
     });
   }
@@ -689,6 +691,11 @@ export class InputHandler {
       } else {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
+    }
+
+    if (this.dispatchPointerKeybindActions(event)) {
+      this.suppressNextTap = false;
+      return;
     }
 
     if (this.isModifierKeyPressed(event)) {
@@ -803,7 +810,7 @@ export class InputHandler {
       // started, continue emitting selection box updates
       if (
         this.selectionBoxActive ||
-        this.activeKeys.has(this.keybinds.shiftKey) ||
+        this.shiftKeybindHeld ||
         this.longPressActive
       ) {
         this.selectionBoxActive = true;
@@ -883,6 +890,86 @@ export class InputHandler {
       e.shiftKey === parsed.shift &&
       e.altKey === parsed.alt
     );
+  }
+
+  private static readonly MOUSE_BUTTON_NAMES: Record<number, string> = {
+    0: "MouseLeft",
+    1: "MouseMiddle",
+    2: "MouseRight",
+  };
+
+  private keybindMatchesPointerEvent(
+    e: PointerEvent,
+    keybindValue: string,
+  ): boolean {
+    if (!keybindValue) return false;
+    const parsed = this.parseKeybind(keybindValue);
+    const buttonName = InputHandler.MOUSE_BUTTON_NAMES[e.button];
+    return (
+      parsed.code === buttonName &&
+      e.shiftKey === parsed.shift &&
+      e.altKey === parsed.alt
+    );
+  }
+
+  private dispatchPointerKeybindActions(event: PointerEvent): boolean {
+    const actions: Array<[string, () => void]> = [
+      [
+        this.keybinds.boatAttack,
+        () => this.eventBus.emit(new DoBoatAttackEvent()),
+      ],
+      [
+        this.keybinds.groundAttack,
+        () => this.eventBus.emit(new DoGroundAttackEvent()),
+      ],
+      [
+        this.keybinds.retaliateAttack,
+        () => this.eventBus.emit(new DoRetaliateAttackEvent()),
+      ],
+      [
+        this.keybinds.requestAlliance,
+        () => this.eventBus.emit(new DoRequestAllianceEvent()),
+      ],
+      [
+        this.keybinds.breakAlliance,
+        () => this.eventBus.emit(new DoBreakAllianceEvent()),
+      ],
+      [
+        this.keybinds.swapDirection,
+        () => this.eventBus.emit(new SwapRocketDirectionEvent(true)),
+      ],
+      [
+        this.keybinds.selectAllWarships,
+        () => this.eventBus.emit(new SelectAllWarshipsEvent()),
+      ],
+      [
+        this.keybinds.centerCamera,
+        () => this.eventBus.emit(new CenterCameraEvent()),
+      ],
+      [
+        this.keybinds.pauseGame,
+        () => this.eventBus.emit(new TogglePauseIntentEvent()),
+      ],
+      [
+        this.keybinds.gameSpeedUp,
+        () => this.eventBus.emit(new GameSpeedUpIntentEvent()),
+      ],
+      [
+        this.keybinds.gameSpeedDown,
+        () => this.eventBus.emit(new GameSpeedDownIntentEvent()),
+      ],
+      [
+        this.keybinds.resetGfx ?? "Alt+KeyR",
+        () => this.eventBus.emit(new RefreshGraphicsEvent()),
+      ],
+    ];
+    for (const [keybind, action] of actions) {
+      if (this.keybindMatchesPointerEvent(event, keybind)) {
+        action();
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
