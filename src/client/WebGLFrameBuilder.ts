@@ -122,7 +122,7 @@ export class WebGLFrameBuilder {
         else {
           const match = flagCode.match(/\/flags\/([^?#]+)\.svg/);
           if (match) {
-            flagCode = match[1].replace(/\.[a-f0-9]{8,12}$/i, '');
+            flagCode = match[1].replace(/\.[a-f0-9]{8,12}$/i, "");
             flagCode = decodeURIComponent(flagCode);
           }
         }
