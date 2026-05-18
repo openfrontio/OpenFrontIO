@@ -67,33 +67,31 @@ void main() {
       continue;
     }
 
-    // Static outer ring: radial gradient from minR to maxR
-    float range = maxR - minR;
-    float t = (dist - minR) / range;
-    if (t > 0.0 && t <= 1.0) {
-      float innerEdge = uGradientStops.x;
-      float solidEnd = uGradientStops.y;
-      float alpha;
-      if (t < innerEdge) {
-        alpha = t / innerEdge;
-      } else if (t < solidEnd) {
-        alpha = 1.0;
-      } else {
-        alpha = 1.0 - (t - solidEnd) / (1.0 - solidEnd);
-      }
-
+    // Breathing ring: the gradient halo shrinks/expands in radius AND its
+    // opacity pulses in phase with the breath — both driven by uBreathRadius.
+    // Smooth bell shape: glow ramps up from center to the inner edge, stays
+    // solid through the ring's body, then fades out past solidEnd. No hard
+    // cutoffs at either side.
+    float scale = 0.5 + 0.65 * uBreathRadius;  // 0.5 → 1.15 of base radius
+    float bMinR = minR * scale;
+    float bMaxR = maxR * scale;
+    float range = bMaxR - bMinR;
+    float t = (dist - bMinR) / range;
+    float solidEnd = uGradientStops.y;
+    float alpha = 0.0;
+    if (dist < bMinR) {
+      // Inner glow: linear ramp from 0 at center to 1 at the ring's inner edge.
+      alpha = dist / max(bMinR, 0.001);
+    } else if (t < solidEnd) {
+      alpha = 1.0;
+    } else if (t < 1.0) {
+      alpha = 1.0 - (t - solidEnd) / (1.0 - solidEnd);
+    }
+    if (alpha > 0.0) {
+      // Opacity pulses 35% → 100% in phase with the radius.
+      alpha *= 0.35 + 0.65 * uBreathRadius;
       result.rgb = mix(result.rgb, color, alpha * (1.0 - result.a));
       result.a = result.a + alpha * (1.0 - result.a);
-    }
-
-    // Breathing ring: solid colored disc from minR to breathR
-    float breathR = minR + range * uBreathRadius;
-    if (breathR > minR + 0.01) {
-      if (dist >= minR && dist <= breathR) {
-        float edge = smoothstep(minR, minR + 0.1, dist);
-        result.rgb = color;
-        result.a = max(result.a, edge);
-      }
     }
   }
 

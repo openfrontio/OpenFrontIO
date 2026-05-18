@@ -1,7 +1,12 @@
 import { Colord } from "colord";
+import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
 import { uploadFrameData } from "./render/frame/Upload";
-import { PlayerStatic, GameView as WebGLGameView } from "./render/gl";
+import {
+  PlayerStatic,
+  SpawnCenter,
+  GameView as WebGLGameView,
+} from "./render/gl";
 
 const PALETTE_SIZE = 4096;
 
@@ -31,6 +36,7 @@ export class WebGLFrameBuilder {
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncLocalPlayer(gameView);
+    this.syncSpawnOverlay(gameView);
     uploadFrameData(this.view, gameView.frameData());
   }
 
@@ -39,6 +45,45 @@ export class WebGLFrameBuilder {
     if (sid === this.localPlayerSmallID) return;
     this.localPlayerSmallID = sid;
     this.view.setLocalPlayerID(sid);
+  }
+
+  /**
+   * Spawn-phase highlights: each already-spawned human player gets a colored
+   * ring + tile glow around their starting territory. Pushed every tick
+   * during spawn phase; the pass animates locally from the snapshot.
+   */
+  private syncSpawnOverlay(gameView: GameView): void {
+    const inSpawnPhase = gameView.inSpawnPhase();
+    if (!inSpawnPhase) {
+      this.view.updateSpawnOverlay(false, []);
+      return;
+    }
+    const me = gameView.myPlayer();
+    const myTeam = me?.team() ?? null;
+    const centers: SpawnCenter[] = [];
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.type() !== PlayerType.Human) continue;
+      if (!p.hasSpawned()) continue;
+      const isSelf = me !== null && p.smallID() === me.smallID();
+      // myPlayer reads as plain white so the local-player ring is visually
+      // distinct from any team color; everyone else uses their territory tint.
+      const c = isSelf
+        ? { r: 255, g: 255, b: 255 }
+        : p.territoryColor().toRgb();
+      centers.push({
+        x: p.nameData?.x ?? 0,
+        y: p.nameData?.y ?? 0,
+        r: c.r / 255,
+        g: c.g / 255,
+        b: c.b / 255,
+        isSelf,
+        isTeammate:
+          myTeam !== null &&
+          p.team() === myTeam &&
+          p.smallID() !== me?.smallID(),
+      });
+    }
+    this.view.updateSpawnOverlay(true, centers);
   }
 
   private syncPlayers(gameView: GameView): void {
