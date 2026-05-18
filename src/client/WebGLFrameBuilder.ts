@@ -27,7 +27,7 @@ export class WebGLFrameBuilder {
   private readonly palette: Float32Array;
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
-  
+
   private readonly knownSmallIDs = new Set<number>();
   // The renderer needs to know which player is "me" so affiliation tint,
   // unit colors, and SAM-radius perspective work. Push it once the local
@@ -126,13 +126,16 @@ export class WebGLFrameBuilder {
       const pattern = p.cosmetics.pattern;
       if (pattern && pattern.patternData) {
         try {
-          const decoded = decodePatternData(pattern.patternData, base64url.decode);
+          const decoded = decodePatternData(
+            pattern.patternData,
+            base64url.decode,
+          );
           const metaOff = smallID * 4;
           this.patternMeta[metaOff] = 1.0; // hasPattern = true
           this.patternMeta[metaOff + 1] = decoded.width;
           this.patternMeta[metaOff + 2] = decoded.height;
           this.patternMeta[metaOff + 3] = decoded.scale;
-          
+
           this.patternData.set(decoded.bytes.slice(3), smallID * 1024);
         } catch (e) {
           console.warn("Failed to decode territory pattern", e);
@@ -146,7 +149,12 @@ export class WebGLFrameBuilder {
       });
     }
     if (newPlayers.length > 0) {
-      this.view.addPlayers(newPlayers, this.palette, this.patternMeta, this.patternData);
+      this.view.addPlayers(
+        newPlayers,
+        this.palette,
+        this.patternMeta,
+        this.patternData,
+      );
     }
   }
 

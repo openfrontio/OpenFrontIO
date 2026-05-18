@@ -12,12 +12,12 @@
  * GPU textures on draw.
  */
 
+import { UserSettings } from "../../../../core/game/UserSettings";
 import type { TilePair } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
 import { OWNER_MASK, TILE_DEFINES } from "../utils/TileCodec";
-import { UserSettings } from "../../../../core/game/UserSettings";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";

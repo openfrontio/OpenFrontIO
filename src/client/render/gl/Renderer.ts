@@ -618,10 +618,30 @@ export class GPURenderer {
     const palW = getPaletteSize();
 
     gl.bindTexture(gl.TEXTURE_2D, this.patternMetaTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, palW, 1, gl.RGBA, gl.FLOAT, patternMeta);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      palW,
+      1,
+      gl.RGBA,
+      gl.FLOAT,
+      patternMeta,
+    );
 
     gl.bindTexture(gl.TEXTURE_2D, this.patternDataTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 1024, palW, gl.RED_INTEGER, gl.UNSIGNED_BYTE, patternData);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      1024,
+      palW,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      patternData,
+    );
 
     this.namePass.addPlayers(players, this.paletteData);
     for (const p of players) {
