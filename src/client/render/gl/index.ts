@@ -9,8 +9,6 @@ export type {
   RadialMenuSelectEvent,
 } from "./events";
 export { GameView } from "./game-view";
-export { REPLAY_KEY_BINDINGS } from "./map-interaction";
-export type { MapKeyBindings } from "./map-interaction";
 export type { SpawnCenter } from "./passes/spawn-overlay-pass";
 export { createRenderSettings, dumpSettings } from "./render-settings";
 export type { RenderSettings } from "./render-settings";

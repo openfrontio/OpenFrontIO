@@ -445,13 +445,6 @@ async function createClientGame(
       (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
     );
 
-    // The WebGL canvas has pointer-events: none so input flows through the
-    // overlay div. Forward pointermove to the WebGL view's MapInteraction so
-    // hover-driven features (highlight owner, etc.) still work.
-    inputOverlay.addEventListener("pointermove", (e) =>
-      view.handlePointerMove(e),
-    );
-
     const gameRenderer = createRenderer(
       inputOverlay,
       gameView,

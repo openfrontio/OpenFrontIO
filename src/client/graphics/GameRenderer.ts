@@ -6,6 +6,7 @@ import { GameStartingModal } from "../GameStartingModal";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
+import { HoverHighlightController } from "../controllers/HoverHighlightController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
@@ -261,6 +262,7 @@ export function createRenderer(
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
     new BuildPreviewController(game, eventBus, uiState, transformHandler, view),
+    new HoverHighlightController(game, eventBus, transformHandler, view),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     attacksDisplay,

@@ -29,8 +29,6 @@ import type {
   GameViewEventType,
   RadialMenuItem,
 } from "./events";
-import type { MapKeyBindings } from "./map-interaction";
-import { MapInteraction } from "./map-interaction";
 import type { SpawnCenter } from "./passes/spawn-overlay-pass";
 import type { RenderSettings } from "./render-settings";
 import { GPURenderer } from "./renderer";
@@ -38,7 +36,6 @@ import { GPURenderer } from "./renderer";
 export class GameView {
   private renderer: GPURenderer;
   private resizeObs: ResizeObserver | null = null;
-  private interaction: MapInteraction;
 
   private listeners = new Map<string, Set<(e: unknown) => void>>();
 
@@ -49,7 +46,6 @@ export class GameView {
     paletteData: Float32Array,
     raf?: typeof requestAnimationFrame,
     caf?: typeof cancelAnimationFrame,
-    keyBindings?: MapKeyBindings,
   ) {
     this.renderer = new GPURenderer(
       canvas,
@@ -59,44 +55,6 @@ export class GameView {
       raf,
       caf,
     );
-
-    // Create interaction handler and wire DOM events
-    this.interaction = new MapInteraction({
-      renderer: this.renderer,
-      emit: this.emit.bind(this),
-      raf: raf ?? requestAnimationFrame.bind(window),
-      caf: caf ?? cancelAnimationFrame.bind(window),
-      keyBindings,
-    });
-
-    canvas.addEventListener("pointerdown", (e) =>
-      this.interaction.handlePointerDown(e),
-    );
-    canvas.addEventListener("pointermove", (e) =>
-      this.interaction.handlePointerMove(e),
-    );
-    canvas.addEventListener("pointerup", (e) =>
-      this.interaction.handlePointerUp(e),
-    );
-    canvas.addEventListener("pointercancel", (e) =>
-      this.interaction.handlePointerUp(e),
-    );
-    canvas.addEventListener("wheel", (e) => this.interaction.handleWheel(e), {
-      passive: false,
-    });
-    canvas.addEventListener("contextmenu", (e) =>
-      this.interaction.handleContextMenu(e),
-    );
-    canvas.addEventListener("dblclick", (e) =>
-      this.interaction.handleDblClick(e),
-    );
-    canvas.addEventListener("auxclick", (e) =>
-      this.interaction.handleAuxClick(e),
-    );
-    document.addEventListener("keydown", (e) =>
-      this.interaction.handleKeyDown(e),
-    );
-    document.addEventListener("keyup", (e) => this.interaction.handleKeyUp(e));
 
     this.resizeObs = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -108,18 +66,6 @@ export class GameView {
 
     const rect = canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
-  }
-
-  /**
-   * Forward a pointermove event into the MapInteraction handler. The WebGL
-   * canvas itself has pointer-events: none (input flows through a separate
-   * overlay div in the main client), so the listener bound to `canvas` in
-   * the constructor never actually fires for game-mode input. Callers that
-   * own the active input element forward pointermove events here so hover
-   * tracking + setHighlightOwner still work.
-   */
-  handlePointerMove(e: PointerEvent): void {
-    this.interaction.handlePointerMove(e);
   }
 
   // ---- Event system ----
@@ -161,25 +107,18 @@ export class GameView {
     centerItem?: RadialMenuItem,
   ): void {
     this.renderer.showRadialMenu(screenX, screenY, items, centerItem);
-    // Cursor is at anchor — center starts hovered (synced with RadialMenuPass)
-    this.interaction.setMenuHoveredSeg(
-      this.renderer.radialMenuHitTest(screenX, screenY),
-    );
   }
 
   hideRadialMenu(): void {
     this.renderer.hideRadialMenu();
-    this.interaction.setMenuHoveredSeg(-1);
   }
 
   openRadialSubMenu(subItems: RadialMenuItem[]): void {
     this.renderer.openRadialSubMenu(subItems);
-    this.interaction.setMenuHoveredSeg(-1);
   }
 
   goBackRadialMenu(): void {
     this.renderer.goBackRadialMenu();
-    this.interaction.setMenuHoveredSeg(-1);
   }
 
   get radialMenuVisible(): boolean {
@@ -325,7 +264,6 @@ export class GameView {
 
   /** Update ghost structure preview (build-mode visualization). null = clear. */
   updateGhostPreview(data: GhostPreviewData | null): void {
-    this.interaction.setHasGhostPreview(data !== null);
     this.renderer.updateGhostPreview(data);
   }
 
@@ -380,21 +318,8 @@ export class GameView {
 
   // ---- Other ----
 
-  setFitZoomOnDoubleClick(v: boolean): void {
-    this.interaction.fitZoomOnDoubleClick = v;
-  }
-  setDefaultGridView(v: boolean): void {
-    this.interaction.setDefaultGridView(v);
-  }
   setLocalPlayerID(id: number): void {
     this.renderer.setLocalPlayerID(id);
-    this.interaction.setLocalPlayerID(id);
-  }
-  setPanSpeed(speed: number): void {
-    this.interaction.setPanSpeed(speed);
-  }
-  setZoomSpeed(speed: number): void {
-    this.interaction.setZoomSpeed(speed);
   }
   setHighlightOwner(ownerID: number): void {
     this.renderer.setHighlightOwner(ownerID);
@@ -418,7 +343,6 @@ export class GameView {
   // ---- Lifecycle ----
 
   dispose(): void {
-    this.interaction.dispose();
     this.resizeObs?.disconnect();
     this.resizeObs = null;
     this.listeners.clear();
