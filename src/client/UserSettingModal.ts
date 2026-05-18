@@ -82,7 +82,7 @@ export class UserSettingModal extends BaseModal {
   ) {
     const { action, value, key, prevValue } = e.detail;
 
-    const activeKeybinds = { ...this.defaultKeybinds };
+    const activeKeybinds: Record<string, string> = { ...this.defaultKeybinds };
     for (const [k, v] of Object.entries(this.userKeybinds)) {
       const normalizedValue = v.value;
       if (normalizedValue === "Null") {
@@ -140,7 +140,10 @@ export class UserSettingModal extends BaseModal {
         `setting-keybind[action="${action}"]`,
       );
       if (element) {
-        element.value = prevValue ?? this.defaultKeybinds[action] ?? "";
+        element.value =
+          prevValue ??
+          (this.defaultKeybinds as Record<string, string>)[action] ??
+          "";
         element.requestUpdate();
       }
       return;
@@ -150,7 +153,7 @@ export class UserSettingModal extends BaseModal {
       ...this.userKeybinds,
       [action]: { value: value, key: key },
     };
-    this.userSettings.setKeybinds(this.userKeybinds);
+    this.userSettings.setUserKeybinds(this.userKeybinds);
   }
 
   private getKeyValue(action: string): string | undefined {
@@ -514,22 +517,22 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="modifierKey"
+        action="buildMenuModifier"
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.modifierKey}
-        .value=${this.getKeyValue("modifierKey")}
-        .display=${this.getKeyChar("modifierKey")}
+        .defaultKey=${this.defaultKeybinds.buildMenuModifier}
+        .value=${this.getKeyValue("buildMenuModifier")}
+        .display=${this.getKeyChar("buildMenuModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="altKey"
+        action="emojiMenuModifier"
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.altKey}
-        .value=${this.getKeyValue("altKey")}
-        .display=${this.getKeyChar("altKey")}
+        .defaultKey=${this.defaultKeybinds.emojiMenuModifier}
+        .value=${this.getKeyValue("emojiMenuModifier")}
+        .display=${this.getKeyChar("emojiMenuModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
