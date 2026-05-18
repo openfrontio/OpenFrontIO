@@ -188,6 +188,8 @@
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
     "info_enemy_panel": "Enemy info panel",
     "exit_confirmation": "Are you sure you want to exit the game?",
+    "restart_confirmation": "Are you sure you want to restart the game? Your current progress will be lost.",
+    "restart_game": "Restart Game",
     "bomb_direction": "Atom / Hydrogen bomb arc direction",
     "icon_alt_player_leaderboard": "Player Leaderboard Icon",
     "icon_alt_team_leaderboard": "Team Leaderboard Icon",

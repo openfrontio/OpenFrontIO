@@ -1,3 +1,4 @@
+import { Howler } from "howler";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
@@ -20,6 +21,7 @@ const playIcon = assetUrl("images/PlayIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
+const restartIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
@@ -28,6 +30,9 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   @state()
   private _isSinglePlayer: boolean = false;
+
+  @state()
+  private _canRestart: boolean = false;
 
   @state()
   private _isReplayVisible: boolean = false;
@@ -57,6 +62,9 @@ export class GameRightSidebar extends LitElement implements Layer {
     this._isSinglePlayer =
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
+    this._canRestart =
+      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer &&
+      !this.game.config().isReplay();
     this._isVisible = true;
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
@@ -188,6 +196,35 @@ export class GameRightSidebar extends LitElement implements Layer {
     window.location.href = "/";
   }
 
+  private resumeAudioContext() {
+    if (Howler.ctx?.state === "suspended") {
+      void Howler.ctx.resume();
+    }
+  }
+
+  private onRestartButtonClick() {
+    const isConfirmed = confirm(
+      translateText("help_modal.restart_confirmation"),
+    );
+    if (!isConfirmed) {
+      // The native confirm() dialog asynchronously blurs the window, which
+      // makes Chrome suspend Howler's Web Audio context *after* confirm()
+      // returns (it is still "running" synchronously here). On confirm we
+      // reload so it doesn't matter, but on cancel we must resume it once the
+      // suspend has landed, or music and sound effects stay silent for the
+      // rest of the game. Resume on focus return (fast path) plus a timeout
+      // fallback in case the suspend lands after the focus event.
+      window.addEventListener("focus", () => this.resumeAudioContext(), {
+        once: true,
+      });
+      setTimeout(() => this.resumeAudioContext(), 1000);
+      return;
+    }
+    document.dispatchEvent(
+      new CustomEvent("restart-lobby", { bubbles: true, composed: true }),
+    );
+  }
+
   private onSettingsButtonClick() {
     this.eventBus.emit(
       new ShowSettingsModalEvent(true, this._isSinglePlayer, this.isPaused),
@@ -243,6 +280,20 @@ export class GameRightSidebar extends LitElement implements Layer {
                 alt=${this.isFullscreen
                   ? translateText("fullscreen.exit")
                   : translateText("fullscreen.enter")}
+                width="20"
+                height="20"
+              />
+            </div>`
+          : ""}
+        ${this._canRestart
+          ? html`<div
+              class="cursor-pointer"
+              @click=${this.onRestartButtonClick}
+              title=${translateText("help_modal.restart_game")}
+            >
+              <img
+                src=${restartIcon}
+                alt=${translateText("help_modal.restart_game")}
                 width="20"
                 height="20"
               />
