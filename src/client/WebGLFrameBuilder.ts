@@ -1,6 +1,6 @@
 import { Colord } from "colord";
-import { extractFlagName } from "../core/AssetUrls";
 import { base64url } from "jose";
+import { extractFlagName } from "../core/AssetUrls";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
@@ -128,7 +128,7 @@ export class WebGLFrameBuilder {
       if (flag) {
         flag = extractFlagName(flag);
       }
-      
+
       const pattern = p.cosmetics.pattern;
       if (pattern && pattern.patternData) {
         try {
@@ -150,7 +150,7 @@ export class WebGLFrameBuilder {
 
       newPlayers.push({
         ...p.static,
-        flag: flagCode,
+        flag: flag,
         color: p.territoryColor().toHex(),
       });
     }
