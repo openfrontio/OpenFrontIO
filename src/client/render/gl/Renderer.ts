@@ -1210,6 +1210,8 @@ export class GPURenderer {
     this.barPass.dispose();
     disposeGPUResources(this.gl, this.res);
     this.gl.deleteTexture(this.paletteTex);
+    this.gl.deleteTexture(this.patternMetaTex);
+    this.gl.deleteTexture(this.patternDataTex);
     this.gl.deleteFramebuffer(this.sceneTarget.fbo);
     this.gl.deleteTexture(this.sceneTarget.tex);
     this.lastUnits = new Map();
