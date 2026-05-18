@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { buildAssetUrl, extractFlagName, rewriteAssetsForCdn } from "../src/core/AssetUrls";
+import {
+  buildAssetUrl,
+  extractFlagName,
+  rewriteAssetsForCdn,
+} from "../src/core/AssetUrls";
 
 describe("AssetUrls", () => {
   test("returns hashed URLs for direct asset matches", () => {
@@ -108,8 +112,14 @@ describe("extractFlagName", () => {
   });
 
   test("extracts and decodes from URL", () => {
-    expect(extractFlagName("https://cdn.ofedge.dev/game_assets/_assets/flags/Abbasid%20Caliphate.ed17b262829c.svg")).toBe("Abbasid Caliphate");
-    expect(extractFlagName("/flags/Abbasid%20Caliphate.svg")).toBe("Abbasid Caliphate");
+    expect(
+      extractFlagName(
+        "https://cdn.ofedge.dev/game_assets/_assets/flags/Abbasid%20Caliphate.ed17b262829c.svg",
+      ),
+    ).toBe("Abbasid Caliphate");
+    expect(extractFlagName("/flags/Abbasid%20Caliphate.svg")).toBe(
+      "Abbasid Caliphate",
+    );
   });
 
   test("returns raw string if not matching flag: or /flags/ URL", () => {
@@ -117,11 +127,17 @@ describe("extractFlagName", () => {
   });
 
   test("handles malformed percent-encodings without throwing", () => {
-    expect(extractFlagName("/flags/Bad%C2Encoding.12345678.svg")).toBe("Bad%C2Encoding");
+    expect(extractFlagName("/flags/Bad%C2Encoding.12345678.svg")).toBe(
+      "Bad%C2Encoding",
+    );
   });
 
   test("handles edge cases like names containing colons or URLs with hashes", () => {
-    expect(extractFlagName("/flags/Name%3AWith%3AColons.12345678.svg?query=1#anchor")).toBe("Name:With:Colons");
+    expect(
+      extractFlagName(
+        "/flags/Name%3AWith%3AColons.12345678.svg?query=1#anchor",
+      ),
+    ).toBe("Name:With:Colons");
   });
 });
 
