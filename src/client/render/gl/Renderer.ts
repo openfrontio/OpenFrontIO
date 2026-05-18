@@ -127,6 +127,8 @@ export class GPURenderer {
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
+  private patternMetaTex: WebGLTexture;
+  private patternDataTex: WebGLTexture;
   private canvas: HTMLCanvasElement;
   private settings: RenderSettings;
   private sceneTarget: RenderTarget;
@@ -219,6 +221,26 @@ export class GPURenderer {
       filter: gl.NEAREST,
     });
 
+    this.patternMetaTex = createTexture2D(gl, {
+      width: palW,
+      height: 1,
+      internalFormat: gl.RGBA32F,
+      format: gl.RGBA,
+      type: gl.FLOAT,
+      data: new Float32Array(palW * 4),
+      filter: gl.NEAREST,
+    });
+
+    this.patternDataTex = createTexture2D(gl, {
+      width: 1024,
+      height: palW,
+      internalFormat: gl.R8UI,
+      format: gl.RED_INTEGER,
+      type: gl.UNSIGNED_BYTE,
+      data: new Uint8Array(palW * 1024),
+      filter: gl.NEAREST,
+    });
+
     // --- Border compute (creates its own borderTex) ---
     // Need a temporary tileTex reference for border compute — we'll create
     // GPUResources first, then wire everything.
@@ -259,7 +281,7 @@ export class GPURenderer {
       this.settings,
     );
 
-    // --- Territory (needs tileTex, trailTex, paletteTex) ---
+    // --- Territory (needs tileTex, trailTex, paletteTex, patternTexs) ---
     this.territoryPass = new TerritoryPass(
       gl,
       mapW,
@@ -267,6 +289,8 @@ export class GPURenderer {
       this.res.tileTex,
       this.res.trailTex,
       this.paletteTex,
+      this.patternMetaTex,
+      this.patternDataTex,
       this.settings,
     );
 
@@ -582,8 +606,43 @@ export class GPURenderer {
   }
 
   /** Register late-arriving players (updates palette + NamePass lookup maps). */
-  addPlayers(players: PlayerStatic[], paletteData: Float32Array): void {
+  addPlayers(
+    players: PlayerStatic[],
+    paletteData: Float32Array,
+    patternMeta: Float32Array,
+    patternData: Uint8Array,
+  ): void {
     this.updatePalette(paletteData);
+
+    const gl = this.gl;
+    const palW = getPaletteSize();
+
+    gl.bindTexture(gl.TEXTURE_2D, this.patternMetaTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      palW,
+      1,
+      gl.RGBA,
+      gl.FLOAT,
+      patternMeta,
+    );
+
+    gl.bindTexture(gl.TEXTURE_2D, this.patternDataTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      1024,
+      palW,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      patternData,
+    );
+
     this.namePass.addPlayers(players, this.paletteData);
     for (const p of players) {
       if (p.team !== null) this.playerTeams.set(p.smallID, p.team);
@@ -836,6 +895,10 @@ export class GPURenderer {
     this.unitPass.setAltView(active);
     this.structurePass.setAltView(active);
     this.trailPass.setAltView(active);
+  }
+
+  setShowPatterns(active: boolean): void {
+    this.territoryPass.setShowPatterns(active);
   }
 
   setGridView(active: boolean): void {
@@ -1147,6 +1210,8 @@ export class GPURenderer {
     this.barPass.dispose();
     disposeGPUResources(this.gl, this.res);
     this.gl.deleteTexture(this.paletteTex);
+    this.gl.deleteTexture(this.patternMetaTex);
+    this.gl.deleteTexture(this.patternDataTex);
     this.gl.deleteFramebuffer(this.sceneTarget.fbo);
     this.gl.deleteTexture(this.sceneTarget.tex);
     this.lastUnits = new Map();

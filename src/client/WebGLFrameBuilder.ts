@@ -1,5 +1,7 @@
 import { Colord } from "colord";
 import { extractFlagName } from "../core/AssetUrls";
+import { base64url } from "jose";
+import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
 import { uploadFrameData } from "./render/frame/Upload";
@@ -24,6 +26,9 @@ const PALETTE_SIZE = 4096;
  */
 export class WebGLFrameBuilder {
   private readonly palette: Float32Array;
+  private readonly patternMeta: Float32Array;
+  private readonly patternData: Uint8Array;
+
   private readonly knownSmallIDs = new Set<number>();
   // The renderer needs to know which player is "me" so affiliation tint,
   // unit colors, and SAM-radius perspective work. Push it once the local
@@ -34,6 +39,8 @@ export class WebGLFrameBuilder {
 
   constructor(private readonly view: WebGLGameView) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
+    this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
+    this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
   }
 
   update(gameView: GameView): void {
@@ -117,9 +124,28 @@ export class WebGLFrameBuilder {
 
       this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
 
-      let flagCode = p.cosmetics.flag;
-      if (flagCode) {
-        flagCode = extractFlagName(flagCode);
+      let flag = p.cosmetics.flag;
+      if (flag) {
+        flag = extractFlagName(flag);
+      }
+      
+      const pattern = p.cosmetics.pattern;
+      if (pattern && pattern.patternData) {
+        try {
+          const decoded = decodePatternData(
+            pattern.patternData,
+            base64url.decode,
+          );
+          const metaOff = smallID * 4;
+          this.patternMeta[metaOff] = 1.0; // hasPattern = true
+          this.patternMeta[metaOff + 1] = decoded.width;
+          this.patternMeta[metaOff + 2] = decoded.height;
+          this.patternMeta[metaOff + 3] = decoded.scale;
+
+          this.patternData.set(decoded.bytes.slice(3), smallID * 1024);
+        } catch (e) {
+          console.warn("Failed to decode territory pattern", e);
+        }
       }
 
       newPlayers.push({
@@ -129,7 +155,12 @@ export class WebGLFrameBuilder {
       });
     }
     if (newPlayers.length > 0) {
-      this.view.addPlayers(newPlayers, this.palette);
+      this.view.addPlayers(
+        newPlayers,
+        this.palette,
+        this.patternMeta,
+        this.patternData,
+      );
     }
   }
 

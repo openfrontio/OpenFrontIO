@@ -36,14 +36,18 @@ export class TerritoryPass {
   private uCharcoalAlpha: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
+  private uShowPatterns: WebGLUniformLocation;
   private highlightOwner = 0;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
   private trailTex: WebGLTexture;
   private paletteTex: WebGLTexture;
+  private patternMetaTex: WebGLTexture;
+  private patternDataTex: WebGLTexture;
 
   private altView = false;
+  private showPatterns = true;
 
   /** CPU-side tile state (deltas written here, flushed to GPU before draw). */
   private cpuTileState: Uint16Array;
@@ -72,6 +76,8 @@ export class TerritoryPass {
     tileTex: WebGLTexture,
     trailTex: WebGLTexture,
     paletteTex: WebGLTexture,
+    patternMetaTex: WebGLTexture,
+    patternDataTex: WebGLTexture,
     settings: RenderSettings,
   ) {
     this.gl = gl;
@@ -81,6 +87,8 @@ export class TerritoryPass {
     this.tileTex = tileTex;
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
+    this.patternMetaTex = patternMetaTex;
+    this.patternDataTex = patternDataTex;
     this.cpuTileState = new Uint16Array(mapW * mapH);
     this.cpuTrailState = new Uint8Array(mapW * mapH);
 
@@ -112,10 +120,13 @@ export class TerritoryPass {
       this.program,
       "uHighlightBrighten",
     )!;
+    this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 1);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uPatternMeta"), 2);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uPatternData"), 3);
 
     this.vao = createMapQuad(gl, mapW, mapH);
   }
@@ -330,6 +341,10 @@ export class TerritoryPass {
     this.altView = active;
   }
 
+  setShowPatterns(show: boolean): void {
+    this.showPatterns = show;
+  }
+
   /** Set the hovered player's smallID for territory-fill brightening (0 = off). */
   setHighlightOwner(ownerID: number): void {
     this.highlightOwner = ownerID;
@@ -352,11 +367,19 @@ export class TerritoryPass {
     gl.uniform1f(this.uCharcoalAlpha, mo.charcoalAlpha);
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
+    gl.uniform1i(
+      this.uShowPatterns,
+      this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,
+    );
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.patternMetaTex);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.patternDataTex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -366,6 +389,6 @@ export class TerritoryPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
-    // tileTex, trailTex, paletteTex owned by GPUResources / renderer
+    // tileTex, trailTex, paletteTex, patternMetaTex, patternDataTex owned by GPUResources / renderer
   }
 }

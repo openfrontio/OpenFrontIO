@@ -451,6 +451,12 @@ async function createClientGame(
     // setAltView called to switch passes into alt mode.
     eventBus.on(AlternateViewEvent, (e) => view.setAltView(e.alternateView));
 
+    view.setShowPatterns(userSettings.territoryPatterns());
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
+      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
+    );
+
     const gameRenderer = createRenderer(
       inputOverlay,
       gameView,
