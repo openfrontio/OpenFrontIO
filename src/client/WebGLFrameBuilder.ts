@@ -19,6 +19,10 @@ const PALETTE_SIZE = 4096;
 export class WebGLFrameBuilder {
   private readonly palette: Float32Array;
   private readonly knownSmallIDs = new Set<number>();
+  // The renderer needs to know which player is "me" so affiliation tint,
+  // unit colors, and SAM-radius perspective work. Push it once the local
+  // player's update arrives (may take several ticks during join).
+  private localPlayerSmallID = 0;
 
   constructor(private readonly view: WebGLGameView) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -26,7 +30,15 @@ export class WebGLFrameBuilder {
 
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
+    this.syncLocalPlayer(gameView);
     uploadFrameData(this.view, gameView.frameData());
+  }
+
+  private syncLocalPlayer(gameView: GameView): void {
+    const sid = gameView.myPlayer()?.smallID() ?? 0;
+    if (sid === this.localPlayerSmallID) return;
+    this.localPlayerSmallID = sid;
+    this.view.setLocalPlayerID(sid);
   }
 
   private syncPlayers(gameView: GameView): void {

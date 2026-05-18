@@ -34,6 +34,9 @@ export class TerritoryPass {
   private uCharcoalBase: WebGLUniformLocation;
   private uCharcoalVariation: WebGLUniformLocation;
   private uCharcoalAlpha: WebGLUniformLocation;
+  private uHighlightOwner: WebGLUniformLocation;
+  private uHighlightBrighten: WebGLUniformLocation;
+  private highlightOwner = 0;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
@@ -100,6 +103,14 @@ export class TerritoryPass {
     this.uCharcoalAlpha = gl.getUniformLocation(
       this.program,
       "uCharcoalAlpha",
+    )!;
+    this.uHighlightOwner = gl.getUniformLocation(
+      this.program,
+      "uHighlightOwner",
+    )!;
+    this.uHighlightBrighten = gl.getUniformLocation(
+      this.program,
+      "uHighlightBrighten",
     )!;
 
     gl.useProgram(this.program);
@@ -319,6 +330,11 @@ export class TerritoryPass {
     this.altView = active;
   }
 
+  /** Set the hovered player's smallID for territory-fill brightening (0 = off). */
+  setHighlightOwner(ownerID: number): void {
+    this.highlightOwner = ownerID;
+  }
+
   /** Draw territory fill + fallout charcoal. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
     this.flushTileTexture();
@@ -334,6 +350,8 @@ export class TerritoryPass {
     gl.uniform1f(this.uCharcoalBase, mo.charcoalBase);
     gl.uniform1f(this.uCharcoalVariation, mo.charcoalVariation);
     gl.uniform1f(this.uCharcoalAlpha, mo.charcoalAlpha);
+    gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
+    gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);

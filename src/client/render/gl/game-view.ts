@@ -110,6 +110,18 @@ export class GameView {
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
   }
 
+  /**
+   * Forward a pointermove event into the MapInteraction handler. The WebGL
+   * canvas itself has pointer-events: none (input flows through a separate
+   * overlay div in the main client), so the listener bound to `canvas` in
+   * the constructor never actually fires for game-mode input. Callers that
+   * own the active input element forward pointermove events here so hover
+   * tracking + setHighlightOwner still work.
+   */
+  handlePointerMove(e: PointerEvent): void {
+    this.interaction.handlePointerMove(e);
+  }
+
   // ---- Event system ----
 
   on<K extends GameViewEventType>(

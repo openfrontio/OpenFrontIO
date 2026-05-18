@@ -116,7 +116,16 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
         0,
         1,
         0.01,
-        "Highlight Brighten",
+        "Highlight Brighten (border)",
+      ),
+      slider(
+        s.mapOverlay,
+        "highlightFillBrighten",
+        d.mapOverlay,
+        0,
+        1,
+        0.01,
+        "Highlight Brighten (fill)",
       ),
       slider(
         s.mapOverlay,

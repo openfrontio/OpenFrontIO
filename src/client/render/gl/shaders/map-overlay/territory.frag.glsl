@@ -10,6 +10,8 @@ uniform int uAltView;
 uniform float uCharcoalBase;
 uniform float uCharcoalVariation;
 uniform float uCharcoalAlpha;
+uniform uint uHighlightOwner;      // 0 = no highlight; otherwise smallID of hovered owner
+uniform float uHighlightBrighten;  // mix amount toward white for highlighted tiles
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -38,5 +40,12 @@ void main() {
 
   // --- Territory fill (owned) ---
   float u = (float(owner) + 0.5) / float(PALETTE_SIZE);
-  fragColor = texture(uPalette, vec2(u, 0.25));
+  vec4 color = texture(uPalette, vec2(u, 0.25));
+
+  // Hover highlight: brighten every tile owned by the hovered player.
+  if (uHighlightOwner != 0u && owner == uHighlightOwner) {
+    color.rgb = mix(color.rgb, vec3(1.0), uHighlightBrighten);
+  }
+
+  fragColor = color;
 }

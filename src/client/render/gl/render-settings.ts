@@ -68,6 +68,7 @@ export interface RenderSettings {
     emberColorBrightB: number;
     emberStrengthUnowned: number;
     highlightBrighten: number;
+    highlightFillBrighten: number;
     highlightThicken: number;
     defensePostRange: number;
     embargoTintRatio: number;

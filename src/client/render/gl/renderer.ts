@@ -694,10 +694,6 @@ export class GPURenderer {
     this.railroadPass.updateGhostPreview(data);
     this.rangeCirclePass.updateGhostPreview(data);
     this.crosshairPass.updateGhostPreview(data);
-    if (data) this.localPlayerID = data.ownerID;
-    this.samRadiusPass.setLocalPlayer(this.localPlayerID);
-    this.affiliationPalette.setLocalPlayer(this.localPlayerID);
-    this.unitPass.setLocalPlayer(this.localPlayerID);
     this.samGhostVisible =
       data !== null && SAM_RADIUS_GHOST_TYPES.has(data.ghostType);
     this.samRadiusPass.setVisible(
@@ -723,6 +719,7 @@ export class GPURenderer {
 
   setHighlightOwner(ownerID: number): void {
     this.borderPass.setHighlightOwner(ownerID);
+    this.territoryPass.setHighlightOwner(ownerID);
   }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.structurePass.setHighlightTypes(unitTypes);
