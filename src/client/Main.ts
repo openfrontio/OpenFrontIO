@@ -10,6 +10,7 @@ import {
   GameStartInfo,
   PublicGameInfo,
 } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -82,6 +83,8 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
+
+const SINGLEPLAYER_RESTART_KEY = "openfront:restart-singleplayer";
 
 function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const button = document.getElementById("nav-account-button");
@@ -225,6 +228,7 @@ declare global {
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "leave-lobby": CustomEvent;
     "update-game-config": CustomEvent;
+    "restart-lobby": CustomEvent;
   }
 
   // Fixes the globalThis.addEventListener errors
@@ -246,6 +250,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
+  private lastSingleplayerLobby: JoinLobbyEvent | null = null;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -375,6 +380,10 @@ class Client {
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener(
+      "restart-lobby",
+      this.handleRestartLobby.bind(this),
+    );
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
     document.addEventListener("start-game", this.handleStartGame.bind(this));
     document.addEventListener(
@@ -794,6 +803,8 @@ class Client {
     if (this.consumeRequeueUrl()) {
       document.dispatchEvent(new CustomEvent("open-matchmaking"));
     }
+
+    this.consumeSingleplayerRestart();
   }
 
   private consumeRequeueUrl(): boolean {
@@ -814,6 +825,12 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
+    if (
+      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer &&
+      lobby.gameRecord === undefined
+    ) {
+      this.lastSingleplayerLobby = lobby;
+    }
     if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
     }
@@ -992,6 +1009,71 @@ class Client {
     }
 
     crazyGamesSDK.gameplayStop();
+  }
+
+  private async handleRestartLobby() {
+    const previous = this.lastSingleplayerLobby;
+    if (previous?.gameStartInfo === undefined) {
+      console.warn("restart-lobby: no singleplayer game to restart");
+      return;
+    }
+
+    // The engine assumes a fresh page between games: terrain maps are cached
+    // module-side (loadTerrainMap) and keep the previous game's per-tile
+    // ownership, so an in-session restart crashes the new game's renderer.
+    // Persist the config and full-reload so the next game starts from a clean
+    // slate (restored in consumeSingleplayerRestart).
+    try {
+      sessionStorage.setItem(
+        SINGLEPLAYER_RESTART_KEY,
+        JSON.stringify(previous.gameStartInfo),
+      );
+    } catch (e) {
+      console.warn("restart-lobby: failed to persist config", e);
+      return;
+    }
+
+    await crazyGamesSDK.gameplayStop();
+    window.location.href = "/";
+  }
+
+  private consumeSingleplayerRestart() {
+    let raw: string | null;
+    try {
+      raw = sessionStorage.getItem(SINGLEPLAYER_RESTART_KEY);
+      if (raw === null) return;
+      sessionStorage.removeItem(SINGLEPLAYER_RESTART_KEY);
+    } catch {
+      return;
+    }
+
+    let gameStartInfo: GameStartInfo;
+    try {
+      gameStartInfo = JSON.parse(raw) as GameStartInfo;
+    } catch (e) {
+      console.warn("restart: failed to parse persisted config", e);
+      return;
+    }
+
+    // Fresh game id/timestamp; reuse the original map/mode/settings/cheats.
+    const newGameID = generateID();
+    const detail: JoinLobbyEvent = {
+      gameID: newGameID,
+      gameStartInfo: {
+        ...gameStartInfo,
+        gameID: newGameID,
+        lobbyCreatedAt: Date.now(),
+      },
+      source: "singleplayer",
+    };
+
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private handleOpenMatchmaking(_event: CustomEvent<undefined>) {
