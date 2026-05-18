@@ -102,7 +102,9 @@ export class UserSettingModal extends BaseModal {
     key = key === "Dead" || key === "Unidentified" ? "" : key;
 
     const activeKeybinds = { ...this.defaultKeybinds };
-    for (const [rawIterAction, codeAndKey] of Object.entries(this.userKeybinds)) {
+    for (const [rawIterAction, codeAndKey] of Object.entries(
+      this.userKeybinds,
+    )) {
       const iterAction = rawIterAction as KeybindAction;
       const normalizedCode = codeAndKey.value;
       if (normalizedCode === KeyUnbound) {
@@ -666,7 +668,8 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
-        action==${KeybindAction.retaliateAttack}
+        action=""
+        =${KeybindAction.retaliateAttack}
         label=${translateText("user_setting.retaliate_attack")}
         description=${translateText("user_setting.retaliate_attack_desc")}
         .defaultKey=${this.defaultKeybinds.retaliateAttack}
