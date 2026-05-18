@@ -21,6 +21,7 @@ import {
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
+import { applyStateUpdate } from "../../core/game/GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -50,16 +51,19 @@ function gamePlayerTypeToEnum(t: PlayerType): PlayerTypeEnum {
   }
 }
 
+// First-emission updates from the engine always include every field; these
+// builders assert non-null for that contract. Subsequent diffs are partial
+// and flow through applyStateUpdate() below.
 function staticFromUpdate(pu: PlayerUpdate): PlayerStatic {
   return {
-    smallID: pu.smallID,
+    smallID: pu.smallID!,
     id: pu.id,
-    name: pu.name,
-    displayName: pu.displayName,
-    clientID: pu.clientID,
-    playerType: gamePlayerTypeToEnum(pu.playerType),
+    name: pu.name!,
+    displayName: pu.displayName!,
+    clientID: pu.clientID ?? null,
+    playerType: gamePlayerTypeToEnum(pu.playerType!),
     team: pu.team ?? null,
-    isLobbyCreator: pu.isLobbyCreator,
+    isLobbyCreator: pu.isLobbyCreator!,
   };
 }
 
@@ -68,49 +72,26 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
   // smallIDs (numbers). GameView fills these in via setEmbargoes() because
   // it has the PlayerID → smallID lookup table.
   return {
-    smallID: pu.smallID,
-    isAlive: pu.isAlive,
-    isDisconnected: pu.isDisconnected,
-    tilesOwned: pu.tilesOwned,
-    gold: Number(pu.gold),
-    troops: pu.troops,
-    isTraitor: pu.isTraitor,
+    smallID: pu.smallID!,
+    isAlive: pu.isAlive!,
+    isDisconnected: pu.isDisconnected!,
+    tilesOwned: pu.tilesOwned!,
+    gold: Number(pu.gold!),
+    troops: pu.troops!,
+    isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
-    betrayals: pu.betrayals,
-    hasSpawned: pu.hasSpawned,
-    lastDeleteUnitTick: pu.lastDeleteUnitTick,
-    allies: pu.allies.slice(),
+    betrayals: pu.betrayals!,
+    hasSpawned: pu.hasSpawned!,
+    lastDeleteUnitTick: pu.lastDeleteUnitTick!,
+    allies: pu.allies!.slice(),
     embargoes: [],
-    targets: pu.targets.slice(),
-    outgoingAttacks: pu.outgoingAttacks,
-    incomingAttacks: pu.incomingAttacks,
-    outgoingAllianceRequests: pu.outgoingAllianceRequests.slice(),
-    alliances: pu.alliances,
-    outgoingEmojis: pu.outgoingEmojis,
+    targets: pu.targets!.slice(),
+    outgoingAttacks: pu.outgoingAttacks!,
+    incomingAttacks: pu.incomingAttacks!,
+    outgoingAllianceRequests: pu.outgoingAllianceRequests!.slice(),
+    alliances: pu.alliances!,
+    outgoingEmojis: pu.outgoingEmojis!,
   };
-}
-
-function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
-  // smallID is identity — never changes for a given PlayerView.
-  target.isAlive = pu.isAlive;
-  target.isDisconnected = pu.isDisconnected;
-  target.tilesOwned = pu.tilesOwned;
-  target.gold = Number(pu.gold);
-  target.troops = pu.troops;
-  target.isTraitor = pu.isTraitor;
-  target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks ?? 0);
-  target.betrayals = pu.betrayals;
-  target.hasSpawned = pu.hasSpawned;
-  target.lastDeleteUnitTick = pu.lastDeleteUnitTick;
-  // Slice() to detach from the wire object — accumulated state mustn't share
-  // mutable arrays with per-tick update payloads.
-  target.allies = pu.allies.slice();
-  target.targets = pu.targets.slice();
-  target.outgoingAllianceRequests = pu.outgoingAllianceRequests.slice();
-  target.outgoingAttacks = pu.outgoingAttacks;
-  target.incomingAttacks = pu.incomingAttacks;
-  target.alliances = pu.alliances;
-  target.outgoingEmojis = pu.outgoingEmojis;
 }
 
 export class PlayerView {
@@ -144,10 +125,11 @@ export class PlayerView {
     this.state = stateFromUpdate(data);
     this.static = staticFromUpdate(data);
 
+    // First emission always carries name + playerType (see staticFromUpdate).
     if (data.clientID === game.myClientID()) {
-      this.anonymousName = data.name;
+      this.anonymousName = data.name!;
     } else {
-      this.anonymousName = createRandomName(data.name, data.playerType);
+      this.anonymousName = createRandomName(data.name!, data.playerType!);
     }
 
     const theme = this.game.config().theme();

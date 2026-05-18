@@ -43,6 +43,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import { diffPlayerUpdate } from "./GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -105,6 +106,13 @@ export class PlayerImpl implements Player {
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
+  /**
+   * Last PlayerUpdate emitted for this player on the worker→main channel.
+   * Used by GameImpl's tick loop to compute field-level diffs. Undefined on
+   * first emission (full snapshot sent).
+   */
+  public lastSentUpdate: PlayerUpdate | undefined;
+
   constructor(
     private mg: GameImpl,
     private _smallID: number,
@@ -119,7 +127,24 @@ export class PlayerImpl implements Player {
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
-  toUpdate(): PlayerUpdate {
+  /**
+   * Build a PlayerUpdate for the worker→main wire.
+   *
+   * The first call for a player returns the full snapshot. Subsequent calls
+   * return only fields that changed since the previous call (a partial
+   * `{ type, id, ...changedFields }`), or `null` if nothing changed.
+   *
+   * `lastSentUpdate` is updated to the full snapshot on every call.
+   */
+  toUpdate(): PlayerUpdate | null {
+    const full = this.toFullUpdate();
+    const prev = this.lastSentUpdate;
+    this.lastSentUpdate = full;
+    if (prev === undefined) return full;
+    return diffPlayerUpdate(prev, full);
+  }
+
+  private toFullUpdate(): PlayerUpdate {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );

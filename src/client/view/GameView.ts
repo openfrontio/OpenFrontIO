@@ -304,42 +304,51 @@ export class GameView implements GameMap {
 
     // Pass 1: ensure every player exists with up-to-date PlayerState. We need
     // all smallIDs registered before pass 2 can translate embargo PlayerIDs.
+    // PlayerUpdate is now partial: only `id` is guaranteed; everything else
+    // is present only when its value changed since the last emission.
     gu.updates[GameUpdateType.Player].forEach((pu) => {
+      // First-emission (new player) — must have all static fields populated.
+      // Subsequent emissions for an existing player carry only changed fields.
+      const existing = this._players.get(pu.id);
+
       // Replace the local player's name/displayName with their own stored values.
-      // This way the user does not know they are being censored.
-      if (pu.clientID === this._myClientID) {
+      // This way the user does not know they are being censored. clientID is
+      // static — present only on first emission — so this branch only runs once.
+      if (pu.clientID !== undefined && pu.clientID === this._myClientID) {
         pu.name = this._myUsername;
         pu.displayName = myDisplayName;
       }
 
-      this.smallIDToID.set(pu.smallID, pu.id);
-      let player = this._players.get(pu.id);
-      if (player !== undefined) {
-        player.applyUpdate(pu);
+      if (pu.smallID !== undefined) {
+        this.smallIDToID.set(pu.smallID, pu.id);
+      }
+
+      if (existing !== undefined) {
+        existing.applyUpdate(pu);
         const nextNameData = gu.playerNameViewData[pu.id];
         if (nextNameData !== undefined) {
-          player.nameData = nextNameData;
+          existing.nameData = nextNameData;
         }
       } else {
-        player = new PlayerView(
+        const player = new PlayerView(
           this,
           pu,
           gu.playerNameViewData[pu.id],
           // First check human by clientID, then check nation by name.
           this._cosmetics.get(pu.clientID ?? "") ??
-            this._cosmetics.get(pu.name) ??
+            this._cosmetics.get(pu.name!) ??
             {},
         );
         this._players.set(pu.id, player);
-        this._playerStates.set(pu.smallID, player.state);
+        this._playerStates.set(pu.smallID!, player.state);
       }
     });
 
     // Pass 2: translate engine embargoes (Set<PlayerID>) → renderer-format
-    // stringified smallIDs. We could do this only on changes, but embargo sets
-    // are typically small (<50 entries per player). Pass through all in case
-    // any pu in this tick referenced a player created in this same tick.
+    // smallIDs. Only re-translate when embargoes changed (field present);
+    // unchanged sets stay at the previously-computed renderer-format list.
     gu.updates[GameUpdateType.Player].forEach((pu) => {
+      if (pu.embargoes === undefined) return;
       const player = this._players.get(pu.id);
       if (player === undefined) return;
       const smallIDs: number[] = [];

@@ -455,8 +455,8 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
-      // Players change each to so always add them
-      this.addUpdate(player.toUpdate());
+      const update = player.toUpdate();
+      if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
