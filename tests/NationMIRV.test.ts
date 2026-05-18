@@ -37,9 +37,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const attacker = game.player("attacker_id");
     const nation = game.player("nation_id");
@@ -167,9 +164,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const dominantPlayer = game.player("dominant_id");
     const nation = game.player("nation_id");
@@ -342,9 +336,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const steamroller = game.player("steamroller_id");
     const secondPlayer = game.player("second_id");
@@ -502,9 +493,6 @@ describe("Nation MIRV Retaliation", () => {
     game.addPlayer(nationInfo);
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const steamroller = game.player("steamroller_id");
     const secondPlayer = game.player("second_id");
@@ -637,9 +625,6 @@ describe("Nation MIRV Retaliation", () => {
     // Players already added via setup() with Team mode and shared clan for humans
 
     // Skip spawn phase
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
 
     const teamPlayer1 = game.player("team1_id");
     const teamPlayer2 = game.player("team2_id");

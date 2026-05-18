@@ -3,7 +3,7 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
 import { isAdminRole } from "../core/ApiSchemas";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientID,
@@ -28,6 +28,7 @@ import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { ServerEnv } from "./ServerEnv";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -96,7 +97,6 @@ export class GameServer {
     public readonly id: string,
     readonly log_: Logger,
     public readonly createdAt: number,
-    private config: ServerConfig,
     public gameConfig: GameConfig,
     private creatorPersistentID?: string,
     private startsAt?: number,
@@ -236,7 +236,7 @@ export class GameServer {
       return "rejected";
     }
 
-    if (this.config.env() === GameEnv.Prod) {
+    if (ServerEnv.env() === GameEnv.Prod) {
       // Prevent multiple clients from using the same account in prod
       const conflicting = this.activeClients.find(
         (c) =>
@@ -349,13 +349,10 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         const bytes = Buffer.byteLength(message, "utf8");
-        const intentType =
-          clientMsg.type === "intent" ? clientMsg.intent.type : undefined;
         const rateResult = this.intentRateLimiter.check(
           client.clientID,
           clientMsg.type,
           bytes,
-          intentType,
         );
         if (rateResult === "kick") {
           this.log.warn(`Client rate limit exceeded, kicking`, {
@@ -577,7 +574,7 @@ export class GameServer {
         }
       } catch (error) {
         this.log.info(
-          `error handline websocket request in game server: ${error}`,
+          `error handling websocket request in game server: ${error}`,
           {
             clientID: client.clientID,
           },
@@ -675,7 +672,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(msg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -754,7 +753,7 @@ export class GameServer {
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
-      this.config.turnIntervalMs(),
+      ServerEnv.turnIntervalMs(),
     );
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
@@ -784,6 +783,13 @@ export class GameServer {
     });
 
     try {
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.log.warn(`WebSocket not open, skipping start message`, {
+          clientID: client.clientID,
+          readyState: ws.readyState,
+        });
+        return;
+      }
       ws.send(
         JSON.stringify({
           type: "start",
@@ -794,14 +800,10 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
-      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
-      // eslint-disable-next-line preserve-caught-error
-      throw new Error(
-        `error sending start message for game ${this.id}, ${error}`.substring(
-          0,
-          250,
-        ),
-      );
+      this.log.error(`error sending start message for game ${this.id}`, {
+        clientID: client.clientID,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -826,7 +828,9 @@ export class GameServer {
       turn: pastTurn,
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
-      c.ws.send(msg);
+      if (c.ws.readyState === c.ws.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -1000,13 +1004,15 @@ export class GameServer {
         persistentID: client.persistentID,
         reasonKey,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: reasonKey,
-        } satisfies ServerErrorMessage),
-      );
-      client.ws.close(1000, reasonKey);
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(
+          JSON.stringify({
+            type: "error",
+            error: reasonKey,
+          } satisfies ServerErrorMessage),
+        );
+        client.ws.close(1000, reasonKey);
+      }
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
@@ -1138,7 +1144,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(desyncMsg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(desyncMsg);
+      }
     }
   }
 

@@ -1,12 +1,8 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import {
-  formatKeyForDisplay,
-  translateText,
-  TUTORIAL_VIDEO_URL,
-} from "../client/Utils";
+import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
-import { KeybindAction, UserSettings } from "../core/game/UserSettings";
+import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -15,43 +11,76 @@ import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
-  @state() private keybinds: Record<KeybindAction, string> = this.getKeybinds();
+  protected routerName = "help";
+
+  @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
-  private getKeybinds(): Record<KeybindAction, string> {
+  private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
   }
 
+  private getKeyLabel(code: string): string {
+    if (!code) return "";
+
+    const specialLabels: Record<string, string> = {
+      ShiftLeft: "⇧ Shift",
+      ShiftRight: "⇧ Shift",
+      ControlLeft: "Ctrl",
+      ControlRight: "Ctrl",
+      AltLeft: "Alt",
+      AltRight: "Alt",
+      MetaLeft: "⌘",
+      MetaRight: "⌘",
+      Space: "Space",
+      Escape: "Esc",
+      Enter: "↵ Return",
+      ArrowUp: "↑",
+      ArrowDown: "↓",
+      ArrowLeft: "←",
+      ArrowRight: "→",
+      Period: ">",
+      Comma: "<",
+    };
+
+    if (specialLabels[code]) return specialLabels[code];
+    if (code.startsWith("Key") && code.length === 4) return code.slice(3);
+    if (code.startsWith("Digit")) return code.slice(5);
+    if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
+
+    return code;
+  }
+
   private renderKey(code: string) {
-    const label = formatKeyForDisplay(code);
+    const label = this.getKeyLabel(code);
     return html`<span
       class="inline-block min-w-[32px] text-center px-2 py-1 rounded bg-[#2a2a2a] border-b-2 border-[#1a1a1a] text-white font-mono text-xs font-bold mx-0.5"
       >${label}</span
     >`;
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("main.help"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
     const keybinds = this.keybinds;
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("main.help"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-
-        <div
-          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 py-3 mr-1
-            [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
-            [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
-            [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
-            [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
-            [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
-            [&_li]:text-gray-300 [&_li]:leading-relaxed
-            [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
-            scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-        >
+    return html`
+      <div
+        class="prose prose-invert prose-sm max-w-none px-6 py-3
+          [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
+          [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
+          [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
+          [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
+          [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
+          [&_li]:text-gray-300 [&_li]:leading-relaxed
+          [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold"
+      >
           <!-- Video Tutorial Section -->
           <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">
@@ -256,7 +285,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.buildMenuModifier)}
+                        ${this.renderKey(keybinds.modifierKey)}
                         <span class="text-white/40 font-bold">+</span>
                         <div
                           class="w-5 h-8 border border-white/40 rounded-full relative"
@@ -277,7 +306,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.emojiMenuModifier)}
+                        ${this.renderKey(keybinds.altKey)}
                         <span class="text-white/40 font-bold">+</span>
                         <div
                           class="w-5 h-8 border border-white/40 rounded-full relative"
@@ -384,8 +413,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey("Alt")}
-                        <!-- Listens to e.altKey, either AltLeft or AltRight -->
+                        ${this.renderKey(keybinds.altKey)}
                         <span class="text-white/40 font-bold">+</span>
                         ${this.renderKey(keybinds.resetGfx)}
                       </div>
@@ -1201,22 +1229,6 @@ export class HelpModal extends BaseModal {
           </section>
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        id="helpModal"
-        title="Instructions"
-        ?inline=${this.inline}
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-      >
-        ${content}
-      </o-modal>
     `;
   }
 

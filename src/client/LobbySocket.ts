@@ -1,4 +1,4 @@
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
+import { ClientEnv } from "src/client/ClientEnv";
 import { PublicGames, PublicGamesSchema } from "../core/Schemas";
 
 interface LobbySocketOptions {
@@ -35,8 +35,7 @@ export class PublicLobbySocket {
     this.stopped = false;
     this.wsConnectionAttempts = 0;
     // Get config to determine number of workers, then pick a random one
-    const config = await getRuntimeClientServerConfig();
-    this.workerPath = getRandomWorkerPath(config.numWorkers());
+    this.workerPath = getRandomWorkerPath(ClientEnv.numWorkers());
     this.connectWebSocket();
   }
 

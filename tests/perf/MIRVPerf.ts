@@ -16,10 +16,6 @@ const sparseTerritoryGame = await setup(
   dirname(fileURLToPath(import.meta.url)),
 );
 
-while (sparseTerritoryGame.inSpawnPhase()) {
-  sparseTerritoryGame.executeNextTick();
-}
-
 const sparsePlayer = sparseTerritoryGame.player("player_id");
 
 function claimRow(y: number, length: number) {
@@ -56,10 +52,6 @@ const denseTerritoryGame = await setup(
   dirname(fileURLToPath(import.meta.url)),
 );
 
-while (denseTerritoryGame.inSpawnPhase()) {
-  denseTerritoryGame.executeNextTick();
-}
-
 const densePlayer = denseTerritoryGame.player("player_id");
 
 for (let x = 0; x < 200; x++) {
@@ -83,10 +75,6 @@ const giantMapGame = await setup(
   [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
   dirname(fileURLToPath(import.meta.url)),
 );
-
-while (giantMapGame.inSpawnPhase()) {
-  giantMapGame.executeNextTick();
-}
 
 const giantMapPlayer = giantMapGame.player("player_id");
 

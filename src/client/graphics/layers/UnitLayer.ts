@@ -1,6 +1,6 @@
 import { colord, Colord } from "colord";
+import { Theme } from "src/core/configuration/Theme";
 import { EventBus } from "../../../core/EventBus";
-import { Theme } from "../../../core/configuration/Config";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";

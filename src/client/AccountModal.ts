@@ -1,12 +1,13 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   PlayerGame,
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
+import { Cosmetics } from "../core/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -17,17 +18,22 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
+import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { fetchCosmetics } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
+  protected routerName = "account";
+
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
+  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -60,71 +66,43 @@ export class AccountModal extends BaseModal {
     );
   }
 
-  render() {
-    const content = this.isLoadingUser
-      ? this.renderLoadingSpinner(
-          translateText("account_modal.fetching_account"),
-        )
-      : this.renderInner();
-
-    if (this.inline) {
-      return this.isLoadingUser
-        ? html`<div class="${this.modalContainerClass}">
-            ${modalHeader({
-              title: translateText("account_modal.title"),
-              onBack: () => this.close(),
-              ariaLabel: translateText("common.back"),
-            })}
-            ${content}
-          </div>`
-        : content;
-    }
-
-    return html`
-      <o-modal
-        id="account-modal"
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
-    `;
-  }
-
-  private renderInner() {
+  protected renderHeaderSlot() {
     const isLoggedIn = !!this.userMeResponse?.user;
-    const title = translateText("account_modal.title");
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
+    return modalHeader({
+      title: translateText("account_modal.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      rightContent:
+        isLoggedIn && !this.isLoadingUser
+          ? html`
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
+                  >${translateText("account_modal.public_player_id")}</span
+                >
+                <copy-button
+                  .lobbyId=${publicId}
+                  .copyText=${publicId}
+                  .displayText=${displayId}
+                ></copy-button>
+              </div>
+            `
+          : undefined,
+    });
+  }
 
+  protected renderBody() {
+    if (this.isLoadingUser) {
+      return this.renderLoadingSpinner(
+        translateText("account_modal.fetching_account"),
+      );
+    }
+    const isLoggedIn = !!this.userMeResponse?.user;
     return html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title,
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-          rightContent: isLoggedIn
-            ? html`
-                <div class="flex items-center gap-2">
-                  <span
-                    class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                    >${translateText("account_modal.public_player_id")}</span
-                  >
-                  <copy-button
-                    .lobbyId=${publicId}
-                    .copyText=${publicId}
-                    .displayText=${displayId}
-                  ></copy-button>
-                </div>
-              `
-            : undefined,
-        })}
-
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
-        </div>
+      <div class="custom-scrollbar mr-1">
+        ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
       </div>
     `;
   }
@@ -156,6 +134,8 @@ export class AccountModal extends BaseModal {
               </div>
             </div>
           </div>
+
+          ${this.renderSubscriptionPanel()}
 
           <!-- Middle Row: Stats Section -->
           ${this.hasAnyStats()
@@ -190,6 +170,16 @@ export class AccountModal extends BaseModal {
         </div>
       </div>
     `;
+  }
+
+  private renderSubscriptionPanel(): TemplateResult | "" {
+    const sub = this.userMeResponse?.player?.subscription;
+    if (!sub) return "";
+    const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
+    return html`<subscription-panel
+      .sub=${sub}
+      .cosmetic=${cosmetic}
+    ></subscription-panel>`;
   }
 
   private renderCurrency(): TemplateResult {
@@ -229,9 +219,8 @@ export class AccountModal extends BaseModal {
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const config = await getRuntimeClientServerConfig();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(
@@ -377,6 +366,11 @@ export class AccountModal extends BaseModal {
 
   protected onOpen(): void {
     this.isLoadingUser = true;
+
+    void fetchCosmetics().then((cosmetics) => {
+      this.cosmetics = cosmetics;
+      this.requestUpdate();
+    });
 
     void getUserMe()
       .then((userMe) => {

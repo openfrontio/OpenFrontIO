@@ -4,6 +4,7 @@ import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
 import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
+import { ServerEnv } from "./ServerEnv";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
@@ -141,7 +142,7 @@ export async function buildPreview(
   publicInfo: ExternalGameInfo | null,
 ): Promise<PreviewMeta> {
   const assetManifest = await getRuntimeAssetManifest();
-  const cdnBase = process.env.CDN_BASE ?? "";
+  const cdnBase = ServerEnv.cdnBase();
   const buildAbsoluteAssetUrl = (path: string) =>
     new URL(buildAssetUrl(path, assetManifest, cdnBase), origin).toString();
   const isFinished = !!publicInfo?.info?.end;

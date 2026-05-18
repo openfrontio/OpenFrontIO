@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 877,
-    "num_land_tiles": 84692,
+    "num_land_tiles": 84663,
     "width": 327
   },
   "map4x": {
     "height": 1754,
-    "num_land_tiles": 364566,
+    "num_land_tiles": 363006,
     "width": 654
   },
   "name": "Luna",

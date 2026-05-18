@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getRuntimeClientServerConfig } from "src/core/configuration/ConfigLoader";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   Duos,
   GameMapType,
@@ -59,9 +59,7 @@ export class GameModeSelector extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    getRuntimeClientServerConfig().then((config) => {
-      this.defaultLobbyTime = config.gameCreationRate() / 1000;
-    });
+    this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
   }
 
   disconnectedCallback() {
@@ -120,7 +118,7 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80",
+            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
           )}
         </div>
         <!-- Create/ranked/join: mobile only, below solo -->
@@ -128,71 +126,79 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
         <ios-add-to-home-screen-banner></ios-add-to-home-screen-banner>
 
         <!-- Game cards grid -->
-        <div
-          class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
-        >
-          <!-- Left col: main card (desktop only) -->
-          ${ffa
-            ? html`<div class="hidden sm:block">
-                ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
-              </div>`
-            : nothing}
+        ${this.lobbies === null
+          ? html`<div
+              class="flex items-center justify-center h-44 sm:h-[min(24rem,40vh)]"
+            >
+              <span
+                class="w-24 h-24 border-[6px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+              ></span>
+            </div>`
+          : html`<div
+              class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4 sm:h-[min(24rem,40vh)]"
+            >
+              <!-- Left col: main card (desktop only) -->
+              ${ffa
+                ? html`<div class="hidden sm:block">
+                    ${this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))}
+                  </div>`
+                : nothing}
 
-          <!-- Right col: special + teams (desktop only) -->
-          <div class="hidden sm:flex sm:flex-col sm:gap-4">
-            ${special
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderSpecialLobbyCard(special)}
-                </div>`
-              : nothing}
-            ${teams
-              ? html`<div class="flex-1 min-h-0">
-                  ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-                </div>`
-              : nothing}
-          </div>
+              <!-- Right col: special + teams (desktop only) -->
+              <div class="hidden sm:flex sm:flex-col sm:gap-4">
+                ${special
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderSpecialLobbyCard(special)}
+                    </div>`
+                  : nothing}
+                ${teams
+                  ? html`<div class="flex-1 min-h-0">
+                      ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                    </div>`
+                  : nothing}
+              </div>
 
-          <!-- Mobile: special, ffa, teams inline -->
-          <div class="sm:hidden">
-            ${special ? this.renderSpecialLobbyCard(special) : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${ffa
-              ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-              : nothing}
-          </div>
-          <div class="sm:hidden">
-            ${teams
-              ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
-              : nothing}
-          </div>
-        </div>
+              <!-- Mobile: special, ffa, teams inline -->
+              <div class="sm:hidden">
+                ${special ? this.renderSpecialLobbyCard(special) : nothing}
+              </div>
+              <div class="sm:hidden">
+                ${ffa
+                  ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                  : nothing}
+              </div>
+              <div class="sm:hidden">
+                ${teams
+                  ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
+                  : nothing}
+              </div>
+            </div>`}
 
         <!-- Solo: full width, desktop only -->
         <div class="hidden sm:block h-14">
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80",
+            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
           )}
         </div>
         <!-- Bottom row: create + ranked + join (desktop only) -->
@@ -200,19 +206,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-lobby-card-hover)]",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
         </div>
       </div>

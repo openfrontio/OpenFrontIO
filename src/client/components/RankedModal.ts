@@ -9,6 +9,8 @@ import { modalHeader } from "./ui/ModalHeader";
 
 @customElement("ranked-modal")
 export class RankedModal extends BaseModal {
+  protected routerName = "ranked";
+
   @state() private elo: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
@@ -78,49 +80,40 @@ export class RankedModal extends BaseModal {
     return this;
   }
 
-  render() {
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("mode_selector.ranked_title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            ${this.renderCard(
-              translateText("mode_selector.ranked_1v1_title"),
-              this.errorMessage ??
-                (hasLinkedAccount(this.userMeResponse)
-                  ? translateText("matchmaking_modal.elo", { elo: this.elo })
-                  : translateText("mode_selector.ranked_title")),
-              () => this.handleRanked(),
-            )}
-            ${this.renderDisabledCard(
-              translateText("mode_selector.ranked_2v2_title"),
-              translateText("mode_selector.coming_soon"),
-            )}
-            ${this.renderDisabledCard(
-              translateText("mode_selector.coming_soon"),
-              "",
-            )}
-            ${this.renderDisabledCard(
-              translateText("mode_selector.coming_soon"),
-              "",
-            )}
-          </div>
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("mode_selector.ranked_title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
+    return html`
+      <div class="custom-scrollbar p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          ${this.renderCard(
+            translateText("mode_selector.ranked_1v1_title"),
+            this.errorMessage ??
+              (hasLinkedAccount(this.userMeResponse)
+                ? translateText("matchmaking_modal.elo", { elo: this.elo })
+                : translateText("mode_selector.ranked_title")),
+            () => this.handleRanked(),
+          )}
+          ${this.renderDisabledCard(
+            translateText("mode_selector.ranked_2v2_title"),
+            translateText("mode_selector.coming_soon"),
+          )}
+          ${this.renderDisabledCard(
+            translateText("mode_selector.coming_soon"),
+            "",
+          )}
+          ${this.renderDisabledCard(
+            translateText("mode_selector.coming_soon"),
+            "",
+          )}
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal ?hideHeader=${true} ?hideCloseButton=${true}>
-        ${content}
-      </o-modal>
     `;
   }
 

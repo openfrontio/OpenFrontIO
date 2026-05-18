@@ -18,7 +18,6 @@ import {
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
-import { TestServerConfig } from "./TestServerConfig";
 
 export async function setup(
   mapName: string,
@@ -26,6 +25,7 @@ export async function setup(
   humans: PlayerInfo[] = [],
   currentDir: string = __dirname,
   ConfigClass: typeof TestConfig = TestConfig,
+  autoEndSpawnPhase: boolean = true,
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -53,8 +53,6 @@ export async function setup(
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
-  // Configure the game
-  const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
@@ -71,14 +69,11 @@ export async function setup(
     randomSpawn: false,
     ..._gameConfig,
   };
-  const config = new ConfigClass(
-    serverConfig,
-    gameConfig,
-    new UserSettings(),
-    false,
-  );
+  const config = new ConfigClass(gameConfig, new UserSettings(), false);
 
-  return createGame(humans, [], gameMap, miniGameMap, config);
+  const game = createGame(humans, [], gameMap, miniGameMap, config);
+  if (autoEndSpawnPhase) game.endSpawnPhase();
+  return game;
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {

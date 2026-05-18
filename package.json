@@ -5,7 +5,7 @@
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\"",
     "start:client": "vite",
     "start:server": "tsx src/server/Server.ts",
-    "start:server-dev": "cross-env GAME_ENV=dev tsx src/server/Server.ts",
+    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:staging": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:prod": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.io concurrently \"npm run start:client\" \"npm run start:server-dev\"",
@@ -97,7 +97,7 @@
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.4.1",
+    "express-rate-limit": "^8.5.1",
     "fastpriorityqueue": "^0.8.0",
     "howler": "^2.2.4",
     "intl-messageformat": "^11.2.3",
@@ -114,6 +114,9 @@
     "winston": "^3.19.0",
     "ws": "^8.20.0",
     "zod": "^4.4.2"
+  },
+  "overrides": {
+    "sanitize-html": ">=2.17.4"
   },
   "type": "module"
 }
