@@ -107,11 +107,11 @@ export class ClanGameHistoryView extends LitElement {
     }
     const filterParam = this.filter === "all" ? undefined : this.filter;
     // Append uses the saved cursor; a fresh load starts from the newest
-    // game (no `before` cap).
-    const before = append ? (this.nextCursor ?? undefined) : undefined;
+    // game (no cursor).
+    const cursor = append ? (this.nextCursor ?? undefined) : undefined;
     const res = await fetchClanGames(this.clanTag, {
       filter: filterParam,
-      before,
+      cursor,
     });
     if (gen !== this.asyncGeneration) return;
     if (append) this.loadingMore = false;
