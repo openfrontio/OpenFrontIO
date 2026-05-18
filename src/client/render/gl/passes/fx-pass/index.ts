@@ -8,17 +8,17 @@
  * interceptions) are coordinated here so each sub-pass stays self-contained.
  */
 
-import { MS_PER_TICK, NUKE_EXPLOSION_RADII } from "../../../game-constants";
+import { MS_PER_TICK, NUKE_EXPLOSION_RADII } from "../../../GameConstants";
 import type {
   AttackRingInput,
   ConquestFx,
   DeadUnitFx,
   RendererConfig,
 } from "../../../types";
-import type { RenderSettings } from "../../render-settings";
-import { FxAttackRingPass } from "./fx-attack-ring-pass";
-import { FxShockwavePass } from "./fx-shockwave-pass";
-import { FxSpritePass } from "./fx-sprite-pass";
+import type { RenderSettings } from "../../RenderSettings";
+import { FxAttackRingPass } from "./FxAttackRingPass";
+import { FxShockwavePass } from "./FxShockwavePass";
+import { FxSpritePass } from "./FxSpritePass";
 
 export type { AttackRingInput } from "../../../types";
 

@@ -13,7 +13,7 @@ import { GameView } from "../../core/game/GameView";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { GameView as WebGLGameView } from "../render/gl";
-import { OWNER_MASK } from "../render/gl/utils/tile-codec";
+import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 
 export class HoverHighlightController implements Controller {

@@ -1,5 +1,5 @@
 // Renderer types (units, players, tiles, names, config)
-export { PlayerTypeEnum, TrainType } from "./renderer";
+export { PlayerTypeEnum, TrainType } from "./Renderer";
 export type {
   AllianceData,
   AttackData,
@@ -17,13 +17,13 @@ export type {
   RendererConfig,
   TilePair,
   UnitState,
-} from "./renderer";
+} from "./Renderer";
 
 // Frame data — boundary contract between game integration and features
-export type { FrameData } from "./frame-data";
+export type { FrameData } from "./FrameData";
 
 // Frame events — per-frame ephemeral events (rendering FX + stats events)
-export { EMPTY_FRAME_EVENTS } from "./frame-events";
+export { EMPTY_FRAME_EVENTS } from "./FrameEvents";
 export type {
   AllianceBrokenEvent,
   AllianceExpiredEvent,
@@ -36,13 +36,13 @@ export type {
   NukeIncomingEvent,
   TargetEvent,
   WinEvent,
-} from "./frame-events";
+} from "./FrameEvents";
 
 // Frame source — mode-agnostic subscription interface
-export type { FrameSource, GameStartConfig } from "./frame-source";
+export type { FrameSource, GameStartConfig } from "./FrameSource";
 
 // Game update types
-export type { GameStartInfo, GameUpdateViewData } from "./game";
+export type { GameStartInfo, GameUpdateViewData } from "./Game";
 
 // Replay types (header, frames, codec helpers)
 export type {
@@ -58,10 +58,10 @@ export type {
   ReplayHeader,
   StreamableReplayInfo,
   TrainPlanRecord,
-} from "./replay";
+} from "./Replay";
 
 // Game update type constants and event payloads (shared between shim + codec)
-export { GameUpdateType, MessageType } from "./game-updates";
+export { GameUpdateType, MessageType } from "./GameUpdates";
 export type {
   AllianceExpiredUpdate,
   AllianceReplyUpdate,
@@ -81,7 +81,7 @@ export type {
   UnitEventUpdate,
   UnitIncomingUpdate,
   WinUpdate,
-} from "./game-updates";
+} from "./GameUpdates";
 
 // Unit type string constants and derived sets
 export {
@@ -105,4 +105,4 @@ export {
   UT_TRAIN,
   UT_TRANSPORT,
   UT_WARSHIP,
-} from "./unit-type";
+} from "./UnitType";

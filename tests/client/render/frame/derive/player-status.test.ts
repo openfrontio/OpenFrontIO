@@ -12,7 +12,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { computePlayerStatus } from "../../../../../src/client/render/frame/derive/player-status";
+import { computePlayerStatus } from "../../../../../src/client/render/frame/derive/PlayerStatus";
 import type {
   PlayerState,
   UnitState,

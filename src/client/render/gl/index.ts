@@ -7,15 +7,15 @@ export type {
   MapScrollEvent,
   RadialMenuItem,
   RadialMenuSelectEvent,
-} from "./events";
-export { GameView } from "./game-view";
-export type { SpawnCenter } from "./passes/spawn-overlay-pass";
-export { createRenderSettings, dumpSettings } from "./render-settings";
-export type { RenderSettings } from "./render-settings";
-export { deepAssign, deepDiff } from "./settings-utils";
-export { buildTerrainRGBA, getPaletteSize } from "./utils/color-utils";
-export { buildNukeTrajectory, samRange } from "./utils/nuke-trajectory";
-export type { SAMInfo } from "./utils/nuke-trajectory";
+} from "./Events";
+export { GameView } from "./GameView";
+export type { SpawnCenter } from "./passes/SpawnOverlayPass";
+export { createRenderSettings, dumpSettings } from "./RenderSettings";
+export type { RenderSettings } from "./RenderSettings";
+export { deepAssign, deepDiff } from "./SettingsUtils";
+export { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
+export { buildNukeTrajectory, samRange } from "./utils/NukeTrajectory";
+export type { SAMInfo } from "./utils/NukeTrajectory";
 
 // Re-export shared types used in the public API
 export type {

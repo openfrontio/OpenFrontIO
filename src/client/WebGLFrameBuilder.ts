@@ -1,6 +1,6 @@
 import { Colord } from "colord";
 import { GameView } from "../core/game/GameView";
-import { uploadFrameData } from "./render/frame/upload";
+import { uploadFrameData } from "./render/frame/Upload";
 import { PlayerStatic, GameView as WebGLGameView } from "./render/gl";
 
 const PALETTE_SIZE = 4096;

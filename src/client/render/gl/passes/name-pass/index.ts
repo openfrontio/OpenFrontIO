@@ -24,30 +24,30 @@ import type {
   RendererConfig,
 } from "../../../types";
 import { PlayerTypeEnum } from "../../../types";
-import type { RenderSettings } from "../../render-settings";
-import { createFullscreenQuad } from "../../utils/gl-utils";
+import type { RenderSettings } from "../../RenderSettings";
+import { createFullscreenQuad } from "../../utils/GlUtils";
 
-import type { GlyphTables } from "./atlas-data";
+import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
   buildFlagLookup,
   buildGlyphTables,
   buildKernTable,
   parseAtlasData,
-} from "./atlas-data";
+} from "./AtlasData";
 import {
   buildCursorTex,
   buildGlyphMetricsTex,
   buildPlayerDataTex,
   buildStringTex,
-} from "./data-textures";
-import { DebugProgram } from "./debug-program";
-import { IconProgram } from "./icon-program";
-import { StatusIconProgram } from "./status-icon-program";
-import { formatTroops, layoutString } from "./text-layout";
-import { TextProgram } from "./text-program";
-import type { PlayerSlot } from "./types";
-import { LINES_PER_PLAYER, MAX_CHARS } from "./types";
+} from "./DataTextures";
+import { DebugProgram } from "./DebugProgram";
+import { IconProgram } from "./IconProgram";
+import { StatusIconProgram } from "./StatusIconProgram";
+import { formatTroops, layoutString } from "./TextLayout";
+import { TextProgram } from "./TextProgram";
+import type { PlayerSlot } from "./Types";
+import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 
 export class NamePass {
   private gl: WebGL2RenderingContext;

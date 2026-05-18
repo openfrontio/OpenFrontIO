@@ -1,9 +1,9 @@
 import GUI from "lil-gui";
-import type { RenderSettings } from "../render-settings";
-import { createRenderSettings } from "../render-settings";
-import { buildTree } from "./layout";
-import { walkTree } from "./tree";
-import { makeDraggable, wireActions, wireModifiedIndicators } from "./wiring";
+import type { RenderSettings } from "../RenderSettings";
+import { createRenderSettings } from "../RenderSettings";
+import { buildTree } from "./Layout";
+import { walkTree } from "./Tree";
+import { makeDraggable, wireActions, wireModifiedIndicators } from "./Wiring";
 
 export function createDebugGui(
   settings: RenderSettings,

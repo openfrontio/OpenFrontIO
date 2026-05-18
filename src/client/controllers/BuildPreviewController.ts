@@ -23,7 +23,7 @@ import {
   MouseUpEvent,
 } from "../InputHandler";
 import { GameView as WebGLGameView, buildNukeTrajectory } from "../render/gl";
-import type { SAMInfo } from "../render/gl/utils/nuke-trajectory";
+import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
 import {
