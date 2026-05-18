@@ -375,7 +375,7 @@ export function formatKeyForDisplay(value: string): string {
     Equal: "=",
     Semicolon: ";",
     Comma: ",", // old getKeyLabel in HelpModal, had this as "<", but not every keyboard layout has it that way?
-    Period: ".",// old getKeyLabel in HelpModal, had this as ">", but not every keyboard layout has it that way?
+    Period: ".", // old getKeyLabel in HelpModal, had this as ">", but not every keyboard layout has it that way?
     Slash: "/",
     Backslash: "\\",
     Shift: "Shift ⇧",
