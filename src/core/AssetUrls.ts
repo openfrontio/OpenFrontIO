@@ -111,7 +111,7 @@ export function extractFlagName(flagData: string): string {
   const match = flagData.match(/\/flags\/([^?#]+)\.svg/);
   if (match) {
     const raw = match[1].replace(/\.[a-f0-9]{8,12}$/i, "");
-    return decodeURIComponent(raw);
+    return safeDecodeAssetSegment(raw);
   }
   return flagData;
 }
