@@ -156,7 +156,7 @@ export type ClanStats = z.infer<typeof ClanStatsSchema>;
 
 export const ClanGamePlayerSchema = z.object({
   publicId: z.string(),
-  username: z.string().optional(),
+  username: z.string(),
   won: z.boolean(),
 });
 export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;
