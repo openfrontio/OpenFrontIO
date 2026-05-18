@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
 // Mock BuildMenu to avoid importing lit and other ESM-heavy deps in this unit test
-vi.mock("../src/client/graphics/layers/BuildMenu", () => ({
+vi.mock("../src/client/hud/layers/BuildMenu", () => ({
   BuildMenu: class {},
   flattenedBuildTable: [],
 }));
@@ -16,7 +16,7 @@ import {
   COLORS,
   rootMenuElement,
   type MenuElementParams,
-} from "../src/client/graphics/layers/RadialMenuElements";
+} from "../src/client/hud/layers/RadialMenuElements";
 
 // Minimal stubs to satisfy types used in rootMenuElement.subMenu and allyBreak actions
 const makePlayer = (

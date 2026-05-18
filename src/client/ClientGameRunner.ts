@@ -66,7 +66,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameView as WebGLGameView } from "./render/gl";
 import { ALL_UNIT_TYPES } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
