@@ -1,3 +1,4 @@
+import { Howler } from "howler";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
@@ -174,13 +175,32 @@ export class GameRightSidebar extends LitElement implements Layer {
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
+  private resumeAudioContext() {
+    if (Howler.ctx?.state === "suspended") {
+      void Howler.ctx.resume();
+    }
+  }
+
   private async onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
       const isConfirmed = confirm(
         translateText("help_modal.exit_confirmation"),
       );
-      if (!isConfirmed) return;
+      if (!isConfirmed) {
+        // The native confirm() dialog asynchronously blurs the window, which
+        // makes Chrome suspend Howler's Web Audio context *after* confirm()
+        // returns (it is still "running" synchronously here). On confirm we
+        // reload so it doesn't matter, but on cancel we must resume it once
+        // the suspend has landed, or music and sound effects stay silent for
+        // the rest of the game. Resume on focus return (fast path) plus a
+        // timeout fallback in case the suspend lands after the focus event.
+        window.addEventListener("focus", () => this.resumeAudioContext(), {
+          once: true,
+        });
+        setTimeout(() => this.resumeAudioContext(), 1000);
+        return;
+      }
     }
     await crazyGamesSDK.requestMidgameAd();
     await crazyGamesSDK.gameplayStop();
