@@ -183,7 +183,9 @@ export const ClanGameSchema = z.object({
   playerTeams: z.string().nullish(),
   rankedType: z.string().optional(),
   result: ClanGameResultSchema.optional(),
-  totalPlayers: z.number().nonnegative(),
+  // Mirrors games.num_players nullability — historical rows may not
+  // carry a value. Use `.nullish()` so wire `null` parses cleanly.
+  totalPlayers: z.number().nonnegative().nullish(),
   clanPlayers: ClanGamePlayerSchema.array(),
 });
 export type ClanGame = z.infer<typeof ClanGameSchema>;

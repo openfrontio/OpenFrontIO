@@ -525,23 +525,28 @@ export class ClanGameHistoryView extends LitElement {
 
   // FFA + Ranked 1v1 cap clan participation at a single player, so
   // "1 / N total" is noise — just show the total. Team/HvN keep the
-  // clan-vs-total breakdown.
+  // clan-vs-total breakdown. Historical rows may carry a null
+  // totalPlayers (games.num_players is nullable on the schema); render
+  // "—" rather than "null".
   private renderPlayersField(game: ClanGame): TemplateResult {
     const isSingleClanSlot =
       game.mode === "Free For All" ||
       (game.rankedType !== undefined && game.rankedType !== "unranked");
+    const total = game.totalPlayers ?? null;
     if (isSingleClanSlot) {
       return this.renderField(
         translateText("clan_modal.history_players"),
-        `${game.totalPlayers}`,
+        total === null ? "—" : `${total}`,
       );
     }
     return this.renderField(
       translateText("clan_modal.history_clan_players"),
-      translateText("clan_modal.history_clan_players_value", {
-        clanCount: game.clanPlayers.length,
-        total: game.totalPlayers,
-      }),
+      total === null
+        ? `${game.clanPlayers.length}`
+        : translateText("clan_modal.history_clan_players_value", {
+            clanCount: game.clanPlayers.length,
+            total,
+          }),
     );
   }
 
