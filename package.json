@@ -104,6 +104,7 @@
     "ip-anonymize": "^0.1.0",
     "jose": "^6.2.3",
     "js-yaml": "^4.1.1",
+    "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
     "nanoid": "^5.1.11",
     "node-html-parser": "^7.1.0",

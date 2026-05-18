@@ -72,6 +72,20 @@ export interface GameMap {
    */
   updateTile(tile: TileRef, state: number): boolean;
 
+  /**
+   * Direct access to the per-tile state buffer for zero-copy consumers
+   * (e.g. WebGL renderer uploading to a R16UI texture).
+   *
+   * The returned array is a live reference — it is mutated by `updateTile()`
+   * each tick. Callers must not write to it.
+   *
+   * The bit layout of each `uint16` matches the renderer's tile state:
+   *   bits  0-11: ownerID
+   *   bit   13:  fallout
+   *   bit   14:  defense bonus
+   */
+  tileStateBuffer(): Uint16Array;
+
   numTilesWithFallout(): number;
 }
 
@@ -399,6 +413,10 @@ export class GameMapImpl implements GameMap {
 
   tileState(tile: TileRef): number {
     return this.state[tile];
+  }
+
+  tileStateBuffer(): Uint16Array {
+    return this.state;
   }
 
   /**

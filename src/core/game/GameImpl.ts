@@ -1174,6 +1174,9 @@ export class GameImpl implements Game {
   tileState(tile: TileRef): number {
     return this._map.tileState(tile);
   }
+  tileStateBuffer(): Uint16Array {
+    return this._map.tileStateBuffer();
+  }
   updateTile(tile: TileRef, state: number): boolean {
     return this._map.updateTile(tile, state);
   }

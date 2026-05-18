@@ -1,5 +1,5 @@
 import { Cell } from "src/core/game/Game";
-import { TransformHandler } from "../TransformHandler";
+import { TransformHandler } from "../../TransformHandler";
 import { UIElement } from "./UIElement";
 
 const MIN_TEXT_ZOOM = 1.1;

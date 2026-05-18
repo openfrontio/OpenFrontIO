@@ -1,10 +1,10 @@
 import * as d3 from "d3";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
+import { Controller } from "../../Controller";
 import { CloseViewEvent } from "../../InputHandler";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getSvgAspectRatio, translateText } from "../../Utils";
-import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
@@ -51,7 +51,7 @@ type CenterButtonState = "default" | "back";
 
 type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 
-export class RadialMenu implements Layer {
+export class RadialMenu implements Controller {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private tooltipElement: HTMLDivElement | null = null;
   private isVisible: boolean = false;
@@ -1339,14 +1339,6 @@ export class RadialMenu implements Layer {
 
       content.appendChild(rightImg);
     });
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {
-    // No need to render anything on the canvas
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   private isReopeningAllowed(): boolean {

@@ -11,8 +11,8 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
+import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
-import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";

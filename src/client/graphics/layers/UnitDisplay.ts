@@ -11,13 +11,10 @@ import {
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import {
-  GhostStructureChangedEvent,
-  ToggleStructureEvent,
-} from "../../InputHandler";
+import { Controller } from "../../Controller";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { UIState } from "../../UIState";
 import { renderNumber, translateText } from "../../Utils";
-import { UIState } from "../UIState";
-import { Layer } from "./Layer";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -31,7 +28,7 @@ const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
 
 @customElement("unit-display")
-export class UnitDisplay extends LitElement implements Layer {
+export class UnitDisplay extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
@@ -268,10 +265,8 @@ export class UnitDisplay extends LitElement implements Layer {
           @click=${() => {
             if (selected) {
               this.uiState.ghostStructure = null;
-              this.eventBus?.emit(new GhostStructureChangedEvent(null));
             } else if (this.canBuild(unitType)) {
               this.uiState.ghostStructure = unitType;
-              this.eventBus?.emit(new GhostStructureChangedEvent(unitType));
             }
             this.requestUpdate();
           }}

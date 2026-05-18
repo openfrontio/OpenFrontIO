@@ -12,6 +12,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticButton";
+import { Controller } from "../../Controller";
 import {
   fetchCosmetics,
   purchaseCosmetic,
@@ -20,10 +21,9 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { Platform } from "../../Platform";
 import { SendWinnerEvent } from "../../Transport";
-import { Layer } from "./Layer";
 
 @customElement("win-modal")
-export class WinModal extends LitElement implements Layer {
+export class WinModal extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
 
@@ -320,11 +320,5 @@ export class WinModal extends LitElement implements Layer {
         this.show();
       }
     });
-  }
-
-  renderLayer(/* context: CanvasRenderingContext2D */) {}
-
-  shouldTransform(): boolean {
-    return false;
   }
 }

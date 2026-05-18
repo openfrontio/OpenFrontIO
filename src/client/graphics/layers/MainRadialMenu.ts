@@ -5,12 +5,12 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
+import { Controller } from "../../Controller";
+import { TransformHandler } from "../../TransformHandler";
+import { UIState } from "../../UIState";
 import { BuildMenu } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
-import { Layer } from "./Layer";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
@@ -26,7 +26,7 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 import { ContextMenuEvent } from "../../InputHandler";
 
 @customElement("main-radial-menu")
-export class MainRadialMenu extends LitElement implements Layer {
+export class MainRadialMenu extends LitElement implements Controller {
   private radialMenu: RadialMenu;
 
   private playerActionHandler: PlayerActionHandler;
@@ -171,14 +171,6 @@ export class MainRadialMenu extends LitElement implements Layer {
           this.clickedTile!,
         );
       });
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {
-    this.radialMenu.renderLayer(context);
-  }
-
-  shouldTransform(): boolean {
-    return this.radialMenu.shouldTransform();
   }
 
   closeMenu() {
