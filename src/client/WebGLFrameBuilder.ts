@@ -1,4 +1,5 @@
 import { Colord } from "colord";
+import { extractFlagName } from "../core/AssetUrls";
 import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
 import { uploadFrameData } from "./render/frame/Upload";
@@ -116,16 +117,9 @@ export class WebGLFrameBuilder {
 
       this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
 
-      let flagCode: string | undefined = p.cosmetics.flag;
+      let flagCode = p.cosmetics.flag;
       if (flagCode) {
-        if (flagCode.startsWith("flag:")) flagCode = flagCode.slice(5);
-        else {
-          const match = flagCode.match(/\/flags\/([^?#]+)\.svg/);
-          if (match) {
-            flagCode = match[1].replace(/\.[a-f0-9]{8,12}$/i, "");
-            flagCode = decodeURIComponent(flagCode);
-          }
-        }
+        flagCode = extractFlagName(flagCode);
       }
 
       newPlayers.push({
