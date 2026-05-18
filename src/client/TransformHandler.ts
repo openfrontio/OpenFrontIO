@@ -115,17 +115,25 @@ export class TransformHandler {
   }
 
   screenToWorldCoordinates(screenX: number, screenY: number): Cell {
+    const f = this.screenToWorldCoordinatesFloat(screenX, screenY);
+    return new Cell(Math.floor(f.x), Math.floor(f.y));
+  }
+
+  /** Like screenToWorldCoordinates but returns sub-tile precision. */
+  screenToWorldCoordinatesFloat(
+    screenX: number,
+    screenY: number,
+  ): { x: number; y: number } {
     const canvasCoords = this.screenToCanvasCoordinates(screenX, screenY);
-
-    const centerX =
-      (canvasCoords.x - this.game.width() / 2) / this.scale + this.offsetX;
-    const centerY =
-      (canvasCoords.y - this.game.height() / 2) / this.scale + this.offsetY;
-
-    const gameX = centerX + this.game.width() / 2;
-    const gameY = centerY + this.game.height() / 2;
-
-    return new Cell(Math.floor(gameX), Math.floor(gameY));
+    const gameX =
+      (canvasCoords.x - this.game.width() / 2) / this.scale +
+      this.offsetX +
+      this.game.width() / 2;
+    const gameY =
+      (canvasCoords.y - this.game.height() / 2) / this.scale +
+      this.offsetY +
+      this.game.height() / 2;
+    return { x: gameX, y: gameY };
   }
 
   canvasToScreenCoordinates(

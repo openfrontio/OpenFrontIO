@@ -44,6 +44,12 @@ export class BuildPreviewController implements Controller {
   private lastGhostQueryAt: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
 
+  // Buildable validation runs on the snapped tile under the cursor, but the
+  // rendered icon follows the cursor at sub-tile precision so motion is
+  // continuous instead of stepping tile-to-tile. cursorLoop re-emits each
+  // frame with the current cursor world position.
+  private lastGhostData: GhostPreviewData | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
@@ -60,6 +66,29 @@ export class BuildPreviewController implements Controller {
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
       ),
     );
+
+    // Re-emit the ghost each render frame at the cursor's current world
+    // position (sub-tile). Buildable validation still runs on the snapped
+    // tile in renderGhost(); this loop just keeps the icon under the cursor
+    // so motion is continuous instead of stepping tile-to-tile.
+    // The shader treats (tileX + 0.5, tileY + 0.5) as the icon center (so an
+    // integer tile coord centers on that tile), so we subtract 0.5 here to
+    // place the icon exactly under the cursor.
+    const cursorLoop = () => {
+      if (this.lastGhostData !== null) {
+        const w = this.transformHandler.screenToWorldCoordinatesFloat(
+          this.mousePos.x,
+          this.mousePos.y,
+        );
+        this.view.updateGhostPreview({
+          ...this.lastGhostData,
+          tileX: w.x - 0.5,
+          tileY: w.y - 0.5,
+        });
+      }
+      requestAnimationFrame(cursorLoop);
+    };
+    requestAnimationFrame(cursorLoop);
   }
 
   tick() {
@@ -185,10 +214,17 @@ export class BuildPreviewController implements Controller {
   /**
    * Push a GhostPreviewData snapshot to the WebGL view (StructurePass /
    * RangeCirclePass / RailroadPass / CrosshairPass all read it). null when
-   * the ghost can't be placed.
+   * the ghost can't be placed. smoothLoop interpolates displayed position
+   * toward the target tile each frame.
    */
   private emitGhostPreview(tileRef: TileRef | undefined): void {
-    this.view.updateGhostPreview(this.buildGhostPreviewData(tileRef));
+    const data = this.buildGhostPreviewData(tileRef);
+    if (data === null) {
+      this.lastGhostData = null;
+      this.view.updateGhostPreview(null);
+      return;
+    }
+    this.lastGhostData = data;
   }
 
   private buildGhostPreviewData(
@@ -307,6 +343,7 @@ export class BuildPreviewController implements Controller {
     this.pendingConfirm = null;
     this.ghostUnit = null;
     this.uiState.ghostRailPaths = [];
+    this.lastGhostData = null;
     this.view.updateGhostPreview(null);
   }
 
