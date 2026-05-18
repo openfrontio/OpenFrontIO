@@ -12,7 +12,6 @@
  * GPU textures on draw.
  */
 
-import { UserSettings } from "../../../../core/game/UserSettings";
 import type { TilePair } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
@@ -25,7 +24,6 @@ import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
 export class TerritoryPass {
   private gl: WebGL2RenderingContext;
   private settings: RenderSettings;
-  private userSettings = new UserSettings();
   private mapW: number;
   private mapH: number;
 
@@ -49,6 +47,7 @@ export class TerritoryPass {
   private patternDataTex: WebGLTexture;
 
   private altView = false;
+  private showPatterns = true;
 
   /** CPU-side tile state (deltas written here, flushed to GPU before draw). */
   private cpuTileState: Uint16Array;
@@ -342,6 +341,10 @@ export class TerritoryPass {
     this.altView = active;
   }
 
+  setShowPatterns(show: boolean): void {
+    this.showPatterns = show;
+  }
+
   /** Set the hovered player's smallID for territory-fill brightening (0 = off). */
   setHighlightOwner(ownerID: number): void {
     this.highlightOwner = ownerID;
@@ -366,10 +369,7 @@ export class TerritoryPass {
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
     gl.uniform1i(
       this.uShowPatterns,
-      this.settings.passEnabled.territoryPatterns &&
-        this.userSettings.territoryPatterns()
-        ? 1
-        : 0,
+      this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,
     );
 
     gl.activeTexture(gl.TEXTURE0);
@@ -389,6 +389,6 @@ export class TerritoryPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
-    // tileTex, trailTex, paletteTex owned by GPUResources / renderer
+    // tileTex, trailTex, paletteTex, patternMetaTex, patternDataTex owned by GPUResources / renderer
   }
 }

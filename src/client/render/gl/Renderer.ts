@@ -897,6 +897,10 @@ export class GPURenderer {
     this.trailPass.setAltView(active);
   }
 
+  setShowPatterns(active: boolean): void {
+    this.territoryPass.setShowPatterns(active);
+  }
+
   setGridView(active: boolean): void {
     this.gridView = active;
   }

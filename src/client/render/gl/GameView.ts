@@ -333,6 +333,9 @@ export class GameView {
   setAltView(active: boolean): void {
     this.renderer.setAltView(active);
   }
+  setShowPatterns(active: boolean): void {
+    this.renderer.setShowPatterns(active);
+  }
   setHighlightOwner(ownerID: number): void {
     this.renderer.setHighlightOwner(ownerID);
   }
