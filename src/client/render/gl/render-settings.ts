@@ -11,7 +11,6 @@ export interface RenderSettings {
     railroad: boolean;
     fx: boolean;
     bar: boolean;
-    dayNight: boolean;
     nameDebug: boolean;
   };
   falloutBloom: {
@@ -36,11 +35,7 @@ export interface RenderSettings {
     heatDecayPerTick: number;
   };
   dayNight: {
-    mode: "light" | "dark" | "cycle";
-    cycleTicks: number;
-    startPhase: number; // 0–1, where 0 = noon, 0.25 = dusk, 0.5 = midnight, 0.75 = dawn
-    noonHold: number; // fraction of cycle held at full brightness (0–1)
-    nightHold: number; // fraction of cycle held at full darkness  (0–1); noonHold+nightHold ≤ 1
+    mode: "light" | "dark";
     nightAmbient: number;
     dayAmbient: number;
     falloffPower: number;

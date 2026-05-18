@@ -29,7 +29,11 @@ import {
 } from "../core/game/GameUpdates";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  DARK_MODE_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
 import {
@@ -428,6 +432,18 @@ async function createClientGame(
   try {
     const { view, glCanvas, cachedWebGLFrameCallback } =
       createWebGLView(gameMap);
+
+    // Bind the WebGL renderer's day/night mode to the existing darkMode
+    // UserSetting so the in-game map matches the rest of the UI. Initial
+    // apply + live updates via the per-key settings-changed event.
+    const applyDayNightMode = (isDark: boolean): void => {
+      view.getSettings().dayNight.mode = isDark ? "dark" : "light";
+    };
+    applyDayNightMode(userSettings.darkMode());
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
+      (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
+    );
 
     const gameRenderer = createRenderer(
       inputOverlay,

@@ -9,7 +9,6 @@
     "railroad": true,
     "fx": true,
     "bar": true,
-    "dayNight": true,
     "nameDebug": false
   },
   "falloutBloom": {
@@ -34,11 +33,7 @@
     "heatDecayPerTick": 1
   },
   "dayNight": {
-    "mode": "cycle",
-    "cycleTicks": 6000,
-    "startPhase": 0,
-    "noonHold": 0.25,
-    "nightHold": 0.1,
+    "mode": "light",
     "nightAmbient": 0.15,
     "dayAmbient": 1,
     "falloffPower": 2,

@@ -18,7 +18,6 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       toggle(s.passEnabled, "railroad", d.passEnabled),
       toggle(s.passEnabled, "fx", d.passEnabled),
       toggle(s.passEnabled, "bar", d.passEnabled),
-      toggle(s.passEnabled, "dayNight", d.passEnabled),
       toggle(s.passEnabled, "nameDebug", d.passEnabled, "Name Debug Boxes"),
     ]),
 
@@ -50,25 +49,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
     ]),
 
     folder("Day / Night", [
-      select(
-        s.dayNight,
-        "mode",
-        d.dayNight,
-        ["light", "dark", "cycle"],
-        "Mode",
-      ),
-      slider(s.dayNight, "cycleTicks", d.dayNight, 60, 6000, 10),
-      slider(
-        s.dayNight,
-        "startPhase",
-        d.dayNight,
-        0,
-        1,
-        0.01,
-        "Start Phase (0=noon)",
-      ),
-      slider(s.dayNight, "noonHold", d.dayNight, 0, 1, 0.01, "Noon Hold"),
-      slider(s.dayNight, "nightHold", d.dayNight, 0, 1, 0.01, "Night Hold"),
+      select(s.dayNight, "mode", d.dayNight, ["light", "dark"], "Mode"),
       slider(s.dayNight, "nightAmbient", d.dayNight, 0, 1, 0.01),
       slider(s.dayNight, "dayAmbient", d.dayNight, 0, 1, 0.01),
       slider(s.dayNight, "falloffPower", d.dayNight, 0.5, 5, 0.1),

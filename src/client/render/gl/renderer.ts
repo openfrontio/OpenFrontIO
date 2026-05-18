@@ -135,7 +135,6 @@ export class GPURenderer {
 
   private animId: number | null = null;
   private frameTick = 0;
-  private gameTick = 0;
   private mapW = 0;
   private mapH = 0;
 
@@ -598,7 +597,6 @@ export class GPURenderer {
   updateUnits(units: Map<number, UnitState>, gameTick: number): void {
     this.lastUnits = units;
     this.frameTick++;
-    this.gameTick = gameTick;
     this.unitPass.updateUnits(units, this.frameTick);
     this.barPass.updateBars(units, this.lastStructures, gameTick);
     this.pointLightPass.updateLights(units);
@@ -1015,7 +1013,7 @@ export class GPURenderer {
       );
       const lightTex = this.lightmapPass.draw(cam, cw, ch);
       toScreen(this.gl, cw, ch, () =>
-        this.nightCompositePass.draw(this.gameTick, sceneTex, lightTex),
+        this.nightCompositePass.draw(sceneTex, lightTex),
       );
     } else {
       toScreen(this.gl, cw, ch, () => this.drawBaseLayer(cam));
@@ -1025,11 +1023,7 @@ export class GPURenderer {
   }
 
   private isNightActive(): boolean {
-    const mode = this.settings.dayNight.mode;
-    return (
-      mode === "dark" ||
-      (mode === "cycle" && this.settings.passEnabled.dayNight)
-    );
+    return this.settings.dayNight.mode === "dark";
   }
 
   private resizeSceneTargetIfNeeded(cw: number, ch: number): void {
@@ -1099,10 +1093,7 @@ export class GPURenderer {
 
     if (this.gridView) this.coordinateGridPass.draw(cam, zoom);
     if (pe.name && !this.gridView)
-      this.namePass.draw(
-        cam,
-        this.nightCompositePass.getAmbient(this.gameTick),
-      );
+      this.namePass.draw(cam, this.nightCompositePass.getAmbient());
 
     this.radialMenuPass.draw();
 
