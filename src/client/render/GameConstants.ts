@@ -6,7 +6,7 @@
  *
  * Primary sources:
  *   - vendor/openfront/src/core/configuration/DefaultConfig.ts  (DefaultConfig, DefaultServerConfig)
- *   - vendor/openfront/src/client/graphics/layers/FxLayer.ts    (visual-only constants)
+ *   - vendor/openfront/src/client/hud/layers/FxLayer.ts    (visual-only constants)
  */
 
 import {
