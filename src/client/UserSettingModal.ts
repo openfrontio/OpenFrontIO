@@ -91,7 +91,6 @@ export class UserSettingModal extends BaseModal {
         activeKeybinds[k] = normalizedValue;
       }
     }
-
     const values = Object.entries(activeKeybinds)
       .filter(([k]) => k !== action)
       .map(([, v]) => v);
@@ -401,6 +400,16 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="resetGfx"
+        label=${translateText("user_setting.reset_gfx")}
+        description=${translateText("user_setting.reset_gfx_desc")}
+        .defaultKey=${this.defaultKeybinds.resetGfx}
+        .value=${this.getKeyValue("resetGfx")}
+        .display=${this.getKeyChar("resetGfx")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -636,6 +645,26 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.swapDirection}
         .value=${this.getKeyValue("swapDirection")}
         .display=${this.getKeyChar("swapDirection")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="selectAllWarships"
+        label=${translateText("user_setting.select_all_warships")}
+        description=${translateText("user_setting.select_all_warships_desc")}
+        .defaultKey=${this.defaultKeybinds.selectAllWarships}
+        .value=${this.getKeyValue("selectAllWarships")}
+        .display=${this.getKeyChar("selectAllWarships")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="shiftKey"
+        label=${translateText("user_setting.shift_key")}
+        description=${translateText("user_setting.shift_key_desc")}
+        .defaultKey=${this.defaultKeybinds.shiftKey}
+        .value=${this.getKeyValue("shiftKey")}
+        .display=${this.getKeyChar("shiftKey")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

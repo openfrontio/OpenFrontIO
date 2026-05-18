@@ -482,8 +482,7 @@ export class InputHandler {
         this.eventBus.emit(new AlternateViewEvent(false));
       }
 
-      const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      if (e.code === resetKey && this.isAltKeyHeld(e)) {
+      if (this.keybindMatchesEvent(e, this.keybinds.resetGfx ?? "Alt+KeyR")) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
@@ -854,24 +853,36 @@ export class InputHandler {
   }
 
   /**
-   * Parses a keybind value that may include a "Shift+" prefix.
-   * e.g. "Shift+KeyB" → { shift: true, code: "KeyB" }
-   *      "KeyB"       → { shift: false, code: "KeyB" }
+   * Parses a keybind value that may include a "Shift+" or "Alt+" prefix.
+   * e.g. "Shift+KeyB" → { shift: true, alt: false, code: "KeyB" }
+   *      "Alt+KeyR"   → { shift: false, alt: true, code: "KeyR" }
+   *      "KeyB"       → { shift: false, alt: false, code: "KeyB" }
    */
-  private parseKeybind(value: string): { shift: boolean; code: string } {
+  private parseKeybind(value: string): {
+    shift: boolean;
+    alt: boolean;
+    code: string;
+  } {
     if (value?.startsWith("Shift+")) {
-      return { shift: true, code: value.slice(6) };
+      return { shift: true, alt: false, code: value.slice(6) };
     }
-    return { shift: false, code: value };
+    if (value?.startsWith("Alt+")) {
+      return { shift: false, alt: true, code: value.slice(4) };
+    }
+    return { shift: false, alt: false, code: value };
   }
 
   /**
    * Returns true if the keyboard event matches the given keybind value,
-   * including optional Shift+ prefix support.
+   * including optional Shift+ and Alt+ prefix support.
    */
   private keybindMatchesEvent(e: KeyboardEvent, keybindValue: string): boolean {
     const parsed = this.parseKeybind(keybindValue);
-    return e.code === parsed.code && e.shiftKey === parsed.shift;
+    return (
+      e.code === parsed.code &&
+      e.shiftKey === parsed.shift &&
+      e.altKey === parsed.alt
+    );
   }
 
   /**
