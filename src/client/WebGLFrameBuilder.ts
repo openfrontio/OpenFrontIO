@@ -120,8 +120,11 @@ export class WebGLFrameBuilder {
       if (flagCode) {
         if (flagCode.startsWith("flag:")) flagCode = flagCode.slice(5);
         else {
-          const match = flagCode.match(/\/flags\/(.+)\.svg/);
-          if (match) flagCode = match[1];
+          const match = flagCode.match(/\/flags\/([^?#]+)\.svg/);
+          if (match) {
+            flagCode = match[1].replace(/\.[a-f0-9]{8,12}$/i, '');
+            flagCode = decodeURIComponent(flagCode);
+          }
         }
       }
 
