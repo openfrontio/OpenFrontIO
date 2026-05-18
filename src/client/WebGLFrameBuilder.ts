@@ -28,6 +28,8 @@ export class WebGLFrameBuilder {
   // unit colors, and SAM-radius perspective work. Push it once the local
   // player's update arrives (may take several ticks during join).
   private localPlayerSmallID = 0;
+  // Scratch buffer for terrain-delta uploads (parallel to the refs list).
+  private terrainDeltaBytes: Uint8Array = new Uint8Array(0);
 
   constructor(private readonly view: WebGLGameView) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -37,7 +39,26 @@ export class WebGLFrameBuilder {
     this.syncPlayers(gameView);
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
+    this.syncTerrainDeltas(gameView);
     uploadFrameData(this.view, gameView.frameData());
+  }
+
+  /**
+   * Water-nuke conversions (land → water) mutate the underlying terrain.
+   * Forward this tick's terrain-changed refs to the renderer so it can
+   * re-upload those texels in both the RGBA color texture and the R8UI
+   * water-detection texture used by railroads/bridges.
+   */
+  private syncTerrainDeltas(gameView: GameView): void {
+    const refs = gameView.recentlyUpdatedTerrainTiles();
+    if (refs.length === 0) return;
+    if (this.terrainDeltaBytes.length < refs.length) {
+      this.terrainDeltaBytes = new Uint8Array(refs.length);
+    }
+    for (let i = 0; i < refs.length; i++) {
+      this.terrainDeltaBytes[i] = gameView.terrainByte(refs[i]);
+    }
+    this.view.applyTerrainDelta(refs, this.terrainDeltaBytes);
   }
 
   private syncLocalPlayer(gameView: GameView): void {

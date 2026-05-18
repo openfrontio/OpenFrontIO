@@ -197,6 +197,36 @@ export class RailroadPass {
     this.railroadDirty = true;
   }
 
+  /**
+   * Sub-upload terrain bytes for tiles that changed (water-nuke conversions).
+   * Keeps the R8UI water-detection texture in sync with the simulation.
+   * `bytes[i]` is the new terrain byte for `refs[i]` (parallel arrays).
+   */
+  applyTerrainDelta(refs: readonly number[], bytes: Uint8Array): void {
+    if (refs.length === 0) return;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.terrainTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    const scratch = new Uint8Array(1);
+    for (let i = 0; i < refs.length; i++) {
+      const ref = refs[i];
+      const x = ref % this.mapW;
+      const y = (ref - x) / this.mapW;
+      scratch[0] = bytes[i];
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        x,
+        y,
+        1,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        scratch,
+      );
+    }
+  }
+
   updateGhostPreview(data: GhostPreviewData | null): void {
     this.cpuGhostRailState.fill(0);
 

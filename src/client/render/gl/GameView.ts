@@ -252,6 +252,10 @@ export class GameView {
   applyRailroadDust(tileRefs: number[]): void {
     this.renderer.applyRailroadDust(tileRefs);
   }
+  /** Refresh terrain texels whose underlying terrain byte changed (water nukes). */
+  applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
+    this.renderer.applyTerrainDelta(refs, terrainBytes);
+  }
   updateAttackRings(rings: AttackRingInput[]): void {
     this.renderer.updateAttackRings(rings);
   }

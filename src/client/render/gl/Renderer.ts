@@ -659,6 +659,18 @@ export class GPURenderer {
     if (tileRefs.length > 0) this.fxPass.applyRailroadDust(tileRefs);
   }
 
+  /**
+   * Update terrain texels for tiles whose terrain byte changed (e.g. water
+   * nukes converting land → water). `terrainBytes[i]` is the new byte for
+   * `refs[i]`. Forwards to both TerrainPass (RGBA color) and RailroadPass
+   * (R8UI water-detection for bridges).
+   */
+  applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
+    if (refs.length === 0) return;
+    this.terrainPass.applyTerrainDelta(refs, terrainBytes);
+    this.railroadPass.applyTerrainDelta(refs, terrainBytes);
+  }
+
   applyConquestEvents(events: ConquestFx[]): void {
     if (events.length > 0) {
       this.fxPass.applyConquestEvents(events);

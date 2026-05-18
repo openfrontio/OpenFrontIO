@@ -27,64 +27,69 @@ export function getPaletteSize(): number {
  *   bit 5: isOcean  (water only)
  *   bits 0-4: magnitude (0-31)
  */
+/** Encode one terrain byte → RGBA, writing into `out[offset..offset+3]`. */
+export function encodeTerrainTile(
+  tb: number,
+  out: Uint8Array,
+  offset: number,
+): void {
+  const isLand = (tb & 0x80) !== 0;
+  const isShoreline = (tb & 0x40) !== 0;
+  const magnitude = tb & 0x1f;
+
+  let r: number, g: number, b: number;
+
+  if (isLand && isShoreline) {
+    // Shore (sand)
+    r = 204;
+    g = 203;
+    b = 158;
+  } else if (isLand) {
+    if (magnitude < 10) {
+      // Plains
+      r = 190;
+      g = 220 - 2 * magnitude;
+      b = 138;
+    } else if (magnitude < 20) {
+      // Highland
+      r = 200 + 2 * magnitude;
+      g = 183 + 2 * magnitude;
+      b = 138 + 2 * magnitude;
+    } else {
+      // Mountain
+      const v = Math.min(255, 230 + Math.floor(magnitude / 2));
+      r = v;
+      g = v;
+      b = v;
+    }
+  } else if (isShoreline) {
+    // Shoreline water
+    r = 100;
+    g = 143;
+    b = 255;
+  } else {
+    // Deep water
+    const m = Math.min(magnitude, 10);
+    const off = 11 - m;
+    r = Math.max(0, 70 - 10 + off);
+    g = Math.max(0, 132 - 10 + off);
+    b = Math.max(0, 180 - 10 + off);
+  }
+
+  out[offset] = r;
+  out[offset + 1] = g;
+  out[offset + 2] = b;
+  out[offset + 3] = 255;
+}
+
 export function buildTerrainRGBA(
   terrainBytes: Uint8Array,
   w: number,
   h: number,
 ): Uint8Array {
   const pixels = new Uint8Array(w * h * 4);
-
   for (let i = 0; i < w * h; i++) {
-    const tb = terrainBytes[i];
-    const isLand = (tb & 0x80) !== 0;
-    const isShoreline = (tb & 0x40) !== 0;
-    const magnitude = tb & 0x1f;
-
-    let r: number, g: number, b: number;
-
-    if (isLand && isShoreline) {
-      // Shore (sand)
-      r = 204;
-      g = 203;
-      b = 158;
-    } else if (isLand) {
-      if (magnitude < 10) {
-        // Plains
-        r = 190;
-        g = 220 - 2 * magnitude;
-        b = 138;
-      } else if (magnitude < 20) {
-        // Highland
-        r = 200 + 2 * magnitude;
-        g = 183 + 2 * magnitude;
-        b = 138 + 2 * magnitude;
-      } else {
-        // Mountain
-        const v = Math.min(255, 230 + Math.floor(magnitude / 2));
-        r = v;
-        g = v;
-        b = v;
-      }
-    } else if (isShoreline) {
-      // Shoreline water
-      r = 100;
-      g = 143;
-      b = 255;
-    } else {
-      // Deep water
-      const m = Math.min(magnitude, 10);
-      const offset = 11 - m;
-      r = Math.max(0, 70 - 10 + offset);
-      g = Math.max(0, 132 - 10 + offset);
-      b = Math.max(0, 180 - 10 + offset);
-    }
-
-    const off = i * 4;
-    pixels[off] = r;
-    pixels[off + 1] = g;
-    pixels[off + 2] = b;
-    pixels[off + 3] = 255;
+    encodeTerrainTile(terrainBytes[i], pixels, i * 4);
   }
-
   return pixels;
 }
