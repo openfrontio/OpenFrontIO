@@ -521,7 +521,7 @@ export class InputHandler {
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (e.code === this.keybinds.selectAllWarships) {
+      if (this.keybindMatchesEvent(e, this.keybinds.selectAllWarships)) {
         e.preventDefault();
         this.eventBus.emit(new SelectAllWarshipsEvent());
       }
@@ -879,17 +879,34 @@ export class InputHandler {
     return { shift: false, alt: false, code: value };
   }
 
+  private static readonly MODIFIER_KEY_CODES = new Set([
+    "ShiftLeft",
+    "ShiftRight",
+    "AltLeft",
+    "AltRight",
+    "ControlLeft",
+    "ControlRight",
+    "MetaLeft",
+    "MetaRight",
+  ]);
+
   /**
    * Returns true if the keyboard event matches the given keybind value,
    * including optional Shift+ and Alt+ prefix support.
    */
   private keybindMatchesEvent(e: KeyboardEvent, keybindValue: string): boolean {
     const parsed = this.parseKeybind(keybindValue);
-    return (
-      e.code === parsed.code &&
-      e.shiftKey === parsed.shift &&
-      e.altKey === parsed.alt
-    );
+    if (e.code !== parsed.code) return false;
+    // A bare modifier-key bind (e.g. "ShiftLeft") can't be matched on flag
+    // state: pressing the key itself sets its own modifier flag to true.
+    if (
+      !parsed.shift &&
+      !parsed.alt &&
+      InputHandler.MODIFIER_KEY_CODES.has(parsed.code)
+    ) {
+      return true;
+    }
+    return e.shiftKey === parsed.shift && e.altKey === parsed.alt;
   }
 
   private static readonly MOUSE_BUTTON_NAMES: Record<number, string> = {

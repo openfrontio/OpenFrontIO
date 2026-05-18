@@ -949,7 +949,7 @@ describe("Warship box selection (Shift+drag)", () => {
         pointerId: 1,
       }),
     );
-    inputHandler["activeKeys"].add("ShiftLeft");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
     inputHandler["onPointerMove"](
       new PointerEvent("pointermove", {
         button: 0,
@@ -981,7 +981,7 @@ describe("Warship box selection (Shift+drag)", () => {
         pointerId: 1,
       }),
     );
-    inputHandler["activeKeys"].add("ShiftLeft");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
     inputHandler["onPointerMove"](
       new PointerEvent("pointermove", {
         button: 0,
@@ -1032,7 +1032,7 @@ describe("Warship box selection (Shift+drag)", () => {
         pointerId: 1,
       }),
     );
-    inputHandler["activeKeys"].add("ShiftLeft");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "ShiftLeft" }));
     inputHandler["onPointerMove"](
       new PointerEvent("pointermove", {
         button: 0,
