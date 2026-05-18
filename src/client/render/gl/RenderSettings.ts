@@ -4,6 +4,7 @@ export interface RenderSettings {
   passEnabled: {
     terrain: boolean;
     mapOverlay: boolean;
+    territoryPatterns: boolean;
     structure: boolean;
     unit: boolean;
     name: boolean;

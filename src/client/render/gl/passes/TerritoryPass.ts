@@ -17,6 +17,7 @@ import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
 import { OWNER_MASK, TILE_DEFINES } from "../utils/TileCodec";
+import { UserSettings } from "../../../../core/game/UserSettings";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
@@ -24,6 +25,7 @@ import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
 export class TerritoryPass {
   private gl: WebGL2RenderingContext;
   private settings: RenderSettings;
+  private userSettings = new UserSettings();
   private mapW: number;
   private mapH: number;
 
@@ -36,12 +38,15 @@ export class TerritoryPass {
   private uCharcoalAlpha: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
+  private uShowPatterns: WebGLUniformLocation;
   private highlightOwner = 0;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
   private trailTex: WebGLTexture;
   private paletteTex: WebGLTexture;
+  private patternMetaTex: WebGLTexture;
+  private patternDataTex: WebGLTexture;
 
   private altView = false;
 
@@ -72,6 +77,8 @@ export class TerritoryPass {
     tileTex: WebGLTexture,
     trailTex: WebGLTexture,
     paletteTex: WebGLTexture,
+    patternMetaTex: WebGLTexture,
+    patternDataTex: WebGLTexture,
     settings: RenderSettings,
   ) {
     this.gl = gl;
@@ -81,6 +88,8 @@ export class TerritoryPass {
     this.tileTex = tileTex;
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
+    this.patternMetaTex = patternMetaTex;
+    this.patternDataTex = patternDataTex;
     this.cpuTileState = new Uint16Array(mapW * mapH);
     this.cpuTrailState = new Uint8Array(mapW * mapH);
 
@@ -112,10 +121,13 @@ export class TerritoryPass {
       this.program,
       "uHighlightBrighten",
     )!;
+    this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 1);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uPatternMeta"), 2);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uPatternData"), 3);
 
     this.vao = createMapQuad(gl, mapW, mapH);
   }
@@ -352,11 +364,22 @@ export class TerritoryPass {
     gl.uniform1f(this.uCharcoalAlpha, mo.charcoalAlpha);
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
+    gl.uniform1i(
+      this.uShowPatterns,
+      this.settings.passEnabled.territoryPatterns &&
+        this.userSettings.territoryPatterns()
+        ? 1
+        : 0,
+    );
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.patternMetaTex);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.patternDataTex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);

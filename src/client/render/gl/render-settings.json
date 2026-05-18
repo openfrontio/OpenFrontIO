@@ -2,6 +2,7 @@
   "passEnabled": {
     "terrain": true,
     "mapOverlay": true,
+    "territoryPatterns": true,
     "structure": true,
     "unit": true,
     "name": true,

@@ -217,8 +217,13 @@ export class GameView {
   updatePalette(paletteData: Float32Array): void {
     this.renderer.updatePalette(paletteData);
   }
-  addPlayers(players: PlayerStatic[], paletteData: Float32Array): void {
-    this.renderer.addPlayers(players, paletteData);
+  addPlayers(
+    players: PlayerStatic[],
+    paletteData: Float32Array,
+    patternMeta: Float32Array,
+    patternData: Uint8Array,
+  ): void {
+    this.renderer.addPlayers(players, paletteData, patternMeta, patternData);
   }
   uploadRailroadState(data: Uint8Array): void {
     this.renderer.uploadRailroadState(data);
