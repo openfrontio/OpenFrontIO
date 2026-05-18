@@ -52,7 +52,8 @@ export class UserSettingModal extends BaseModal {
       Record<KeybindAction, { value: string; key: string }>
     > = {};
 
-    for (const [action, entry] of Object.entries(parsed)) {
+    for (const [rawAction, entry] of Object.entries(parsed)) {
+      const action = rawAction as KeybindAction;
       if (typeof entry === "string") {
         validated[action] = { value: entry, key: entry };
       } else if (
@@ -101,12 +102,13 @@ export class UserSettingModal extends BaseModal {
     key = key === "Dead" || key === "Unidentified" ? "" : key;
 
     const activeKeybinds = { ...this.defaultKeybinds };
-    for (const [action, codeAndKey] of Object.entries(this.userKeybinds)) {
+    for (const [rawIterAction, codeAndKey] of Object.entries(this.userKeybinds)) {
+      const iterAction = rawIterAction as KeybindAction;
       const normalizedCode = codeAndKey.value;
       if (normalizedCode === KeyUnbound) {
-        delete activeKeybinds[action];
+        delete activeKeybinds[iterAction];
       } else {
-        activeKeybinds[action] = normalizedCode;
+        activeKeybinds[iterAction] = normalizedCode;
       }
     }
 
@@ -667,14 +669,14 @@ export class UserSettingModal extends BaseModal {
         action==${KeybindAction.retaliateAttack}
         label=${translateText("user_setting.retaliate_attack")}
         description=${translateText("user_setting.retaliate_attack_desc")}
-        defaultKey=${this.defaultKeybinds.retaliateAttack}
-        .value=${this.getKeyValue("retaliateAttack")}
-        .display=${this.getKeyChar("retaliateAttack")}
+        .defaultKey=${this.defaultKeybinds.retaliateAttack}
+        .value=${this.getKeyValue(KeybindAction.retaliateAttack)}
+        .display=${this.getKeyChar(KeybindAction.retaliateAttack)}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="swapDirection"
+        action=${KeybindAction.swapDirection}
         label=${translateText("user_setting.swap_direction")}
         description=${translateText("user_setting.swap_direction_desc")}
         .defaultKey=${this.defaultKeybinds.swapDirection}

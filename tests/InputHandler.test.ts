@@ -513,7 +513,7 @@ describe("InputHandler AutoUpgrade", () => {
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyX");
     });
 
-    test("ignores non-string values and preserves defaults, removes KeyUnbound keys", () => {
+    test("ignores non-string values and preserves defaults, removes 'Null' keys", () => {
       const mixed = {
         moveUp: { key: "moveUp", value: null },
         moveLeft: KeyUnbound,
@@ -523,7 +523,7 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler.initialize();
 
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
-      // KeyUnbound entries are removed entirely to indicate unbound keybind
+      // "Null" entries are removed entirely to indicate unbound keybind
       expect((inputHandler as any).keybinds.moveLeft).toBeUndefined();
     });
 

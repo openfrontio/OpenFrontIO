@@ -417,9 +417,10 @@ export class UserSettings {
       ...this.normalizedUserKeybinds(),
     };
     // Actually unbind key: if Unbind is clicked in UserSettingsModal, eg. for Attack Ratio Up,
-    // keybind is KeyUnbound. Even if it is in default kindbinds (Y), it should not work anymore.
+    // keybind is "Null". Even if it is in default kindbinds (Y), it should not work anymore.
     // The key (Y) can now be bound to another action like Boat Attack, and no two actions listen to the same key.
-    for (const action in mergedKeybinds) {
+    for (const rawAction in mergedKeybinds) {
+      const action = rawAction as KeybindAction;
       if (mergedKeybinds[action] === KeyUnbound) {
         delete mergedKeybinds[action];
       }
