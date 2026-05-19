@@ -82,7 +82,8 @@ export function computePlayerStatus(
     const disconnected = ps.isDisconnected;
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
-    // Relative flags — only meaningful when there's a local player
+    // Relative flags — only meaningful when there's a local player,
+    // and we're not looking at the local player itself.
     let nukeActive = false;
     let nukeTargetsMe = false;
     let alliance = false;
@@ -91,8 +92,15 @@ export function computePlayerStatus(
     let allianceReq = false;
     let allianceFraction = 0;
 
-    if (localPlayer !== undefined) {
-      // Nukes targeted at local player
+    if (localPlayer !== undefined && sid !== localPlayerSmallID) {
+      alliance = localPlayer.allies.includes(sid);
+      allianceReq = ps.outgoingAllianceRequests.includes(localPlayerID);
+      target = opts.isTransitiveTarget ? opts.isTransitiveTarget(sid) : false;
+      // Embargo is bilateral: either side embargoes the other.
+      embargo =
+        localPlayer.embargoes.includes(sid) ||
+        ps.embargoes.includes(localPlayerSmallID);
+
       for (const u of units.values()) {
         if (
           u.ownerID === sid &&
@@ -114,17 +122,6 @@ export function computePlayerStatus(
             break;
           }
         }
-      }
-
-      // Other flags - not looking at the local player itself.
-      if (sid !== localPlayerSmallID) {
-        alliance = localPlayer.allies.includes(sid);
-        allianceReq = ps.outgoingAllianceRequests.includes(localPlayerID);
-        target = opts.isTransitiveTarget ? opts.isTransitiveTarget(sid) : false;
-        // Embargo is bilateral: either side embargoes the other.
-        embargo =
-          localPlayer.embargoes.includes(sid) ||
-          ps.embargoes.includes(localPlayerSmallID);
       }
 
       if (
