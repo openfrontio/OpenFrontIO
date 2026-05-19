@@ -1,9 +1,9 @@
 /**
  * computePlayerStatus has two modes:
  *
- *   - Replay mode (no localPlayerID): only crown / traitor / disconnected /
+ *   - Replay mode (no localPlayerSmallID): only crown / traitor / disconnected /
  *     nukeActive flags are populated. All relative flags are false.
- *   - Live mode (localPlayerID set): also fills alliance / target / embargo,
+ *   - Live mode (localPlayerSmallID set): also fills alliance / target / embargo,
  *     and nukeTargetsMe if a tileState buffer is supplied.
  *
  * The function only emits an entry per player when at least one flag is true
@@ -83,7 +83,7 @@ function unitsMap(...us: UnitState[]): Map<number, UnitState> {
   return new Map(us.map((u) => [u.id, u]));
 }
 
-describe("computePlayerStatus — replay mode (no localPlayerID)", () => {
+describe("computePlayerStatus — replay mode (no localPlayerSmallID)", () => {
   it("returns empty map when no flags are set", () => {
     const players = playersMap(ps({ smallID: 1 }));
     const status = computePlayerStatus(players, unitsMap());
@@ -160,7 +160,7 @@ describe("computePlayerStatus — replay mode (no localPlayerID)", () => {
   });
 });
 
-describe("computePlayerStatus — live mode (localPlayerID set)", () => {
+describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
   it("alliance: local has them as ally → alliance true", () => {
     const players = playersMap(
       ps({ smallID: 1, allies: [2] }), // me

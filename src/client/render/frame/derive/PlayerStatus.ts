@@ -82,8 +82,7 @@ export function computePlayerStatus(
     const disconnected = ps.isDisconnected;
     const traitorRemainingTicks = ps.traitorRemainingTicks;
 
-    // Relative flags — only meaningful when there's a local player,
-    // and we're not looking at the local player itself.
+    // Relative flags
     let nukeActive = false;
     let nukeTargetsMe = false;
     let alliance = false;
@@ -92,37 +91,42 @@ export function computePlayerStatus(
     let allianceReq = false;
     let allianceFraction = 0;
 
+    // Nukes: show during replay too, except the nukeTargetsMe flag
+    for (const u of units.values()) {
+      if (
+        u.ownerID === sid &&
+        u.isActive &&
+        NUKE_ACTIVE_TYPES.has(u.unitType)
+      ) {
+        nukeActive = true;
+        if (
+          localPlayerSmallID > 0 &&
+          tileState !== undefined &&
+          u.targetTile !== null
+        ) {
+          const tileOwner = tileState[u.targetTile] & OWNER_MASK;
+          if (tileOwner === localPlayerSmallID) {
+            nukeTargetsMe = true;
+          }
+        }
+        if (nukeActive && nukeTargetsMe) {
+          break;
+        }
+      }
+    }
+
+    // Flags which are only meaningful when there's a local player,
+    // and we're not looking at the local player itself.
     if (localPlayer !== undefined && sid !== localPlayerSmallID) {
       alliance = localPlayer.allies.includes(sid);
       allianceReq = ps.outgoingAllianceRequests.includes(localPlayerID);
-      target = opts.isTransitiveTarget ? opts.isTransitiveTarget(sid) : false;
+      target = opts.isTransitiveTarget
+        ? opts.isTransitiveTarget(sid)
+        : localPlayer.targets.includes(sid);
       // Embargo is bilateral: either side embargoes the other.
       embargo =
         localPlayer.embargoes.includes(sid) ||
         ps.embargoes.includes(localPlayerSmallID);
-
-      for (const u of units.values()) {
-        if (
-          u.ownerID === sid &&
-          u.isActive &&
-          NUKE_ACTIVE_TYPES.has(u.unitType)
-        ) {
-          nukeActive = true;
-          if (
-            localPlayerSmallID > 0 &&
-            tileState !== undefined &&
-            u.targetTile !== null
-          ) {
-            const tileOwner = tileState[u.targetTile] & OWNER_MASK;
-            if (tileOwner === localPlayerSmallID) {
-              nukeTargetsMe = true;
-            }
-          }
-          if (nukeActive && nukeTargetsMe) {
-            break;
-          }
-        }
-      }
 
       if (
         alliance &&
