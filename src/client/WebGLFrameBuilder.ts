@@ -91,7 +91,8 @@ export class WebGLFrameBuilder {
     const centers: SpawnCenter[] = [];
     for (const p of gameView.players()) {
       if (!p.isPlayer() || p.type() !== PlayerType.Human) continue;
-      if (!p.hasSpawned()) continue;
+      const spawnTile = p.state.spawnTile;
+      if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
       // myPlayer reads as plain white so the local-player ring is visually
       // distinct from any team color; everyone else uses their territory tint.
@@ -99,8 +100,11 @@ export class WebGLFrameBuilder {
         ? { r: 255, g: 255, b: 255 }
         : p.territoryColor().toRgb();
       centers.push({
-        x: p.nameData?.x ?? 0,
-        y: p.nameData?.y ?? 0,
+        // spawnTile tracks the player's currently-selected spawn directly —
+        // updates the same tick the player picks a new location (faster than
+        // the nameData centroid which only refreshes every 2 ticks).
+        x: gameView.x(spawnTile),
+        y: gameView.y(spawnTile),
         r: c.r / 255,
         g: c.g / 255,
         b: c.b / 255,

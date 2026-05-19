@@ -82,6 +82,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
     betrayals: pu.betrayals!,
     hasSpawned: pu.hasSpawned!,
+    spawnTile: pu.spawnTile,
     lastDeleteUnitTick: pu.lastDeleteUnitTick!,
     allies: pu.allies!.slice(),
     embargoes: [],
