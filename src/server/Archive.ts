@@ -1,5 +1,5 @@
 import z from "zod";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import {
   GameID,
   GameRecord,
@@ -9,13 +9,19 @@ import {
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
 import { logger } from "./Logger";
-
-const config = getServerConfigFromServer();
+import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({ component: "Archive" });
 
-export async function archive(gameRecord: GameRecord) {
+export async function archive(
+  gameRecord: GameRecord,
+  trustedCosmeticFlagUrls: Set<string> = new Set(),
+) {
   try {
+    if (gameRecord.info.config.gameType === GameType.Singleplayer) {
+      stripUntrustedFlagUrls(gameRecord, trustedCosmeticFlagUrls);
+    }
+
     const parsed = GameRecordSchema.safeParse(gameRecord);
     if (!parsed.success) {
       log.error(`invalid game record: ${z.prettifyError(parsed.error)}`, {
@@ -23,13 +29,13 @@ export async function archive(gameRecord: GameRecord) {
       });
       return;
     }
-    const url = `${config.jwtIssuer()}/game/${gameRecord.info.gameID}`;
+    const url = `${ServerEnv.jwtIssuer()}/game/${gameRecord.info.gameID}`;
     const response = await fetch(url, {
       method: "POST",
       body: JSON.stringify(gameRecord, replacer),
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
+        "x-api-key": ServerEnv.apiKey(),
       },
     });
     if (!response.ok) {
@@ -54,12 +60,12 @@ export async function readGameRecord(
       log.error(`invalid game ID: ${gameId}`);
       return null;
     }
-    const url = `${config.jwtIssuer()}/game/${gameId}`;
+    const url = `${ServerEnv.jwtIssuer()}/game/${gameId}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
+        "x-api-key": ServerEnv.apiKey(),
       },
     });
     const record = await response.json();
@@ -83,8 +89,29 @@ export function finalizeGameRecord(
 ): GameRecord {
   return {
     ...clientRecord,
-    gitCommit: config.gitCommit(),
-    subdomain: config.subdomain(),
-    domain: config.domain(),
+    gitCommit: ServerEnv.gitCommit(),
+    subdomain: ServerEnv.subdomain(),
+    domain: ServerEnv.domain(),
   };
+}
+
+function stripUntrustedFlagUrls(
+  gameRecord: GameRecord,
+  trustedCosmeticFlagUrls: Set<string>,
+): void {
+  for (const player of gameRecord.info.players) {
+    const flag = player.cosmetics?.flag;
+    if (
+      flag === undefined ||
+      !/^https?:\/\//i.test(flag) ||
+      trustedCosmeticFlagUrls.has(flag)
+    ) {
+      continue;
+    }
+    log.warn("dropping untrusted singleplayer replay flag", {
+      gameID: gameRecord.info.gameID,
+      clientID: player.clientID,
+    });
+    player.cosmetics!.flag = undefined;
+  }
 }

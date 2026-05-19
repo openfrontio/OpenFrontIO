@@ -69,10 +69,8 @@ describe("Attack", () => {
         defenderSpawn,
       ),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
 
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
@@ -139,7 +137,7 @@ describe("Attack", () => {
     expect(ship.troops()).toBe(boat_troops);
     expect(ship.isActive()).toBe(true);
 
-    ship.orderBoatRetreat();
+    ship.updateTransportShipState({ isRetreating: true });
     game.executeNextTick();
 
     expect(ship.isActive()).toBe(false);
@@ -184,10 +182,8 @@ describe("Attack race condition with alliance requests", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   it("Should not mark attacker as traitor when alliance is formed after attack starts", async () => {
@@ -302,6 +298,8 @@ describe("Attack race condition with alliance requests", () => {
       "playerB_id",
     );
     const playerC = addPlayerToGame(playerCInfo, game, game.ref(10, 10));
+    game.executeNextTick();
+    game.executeNextTick();
 
     // Player A sends alliance request to Player B
     const allianceRequestAtoB = playerA.createAllianceRequest(playerB);
@@ -357,10 +355,8 @@ describe("Transport ship alliance rejection", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   test("Should cancel alliance requests if the recipient sends a transport ship", async () => {
@@ -383,11 +379,18 @@ describe("Transport ship alliance rejection", () => {
 
 describe("Attack immunity", () => {
   beforeEach(async () => {
-    game = await setup("ocean_and_land", {
-      infiniteGold: true,
-      instantBuild: true,
-      infiniteTroops: true,
-    });
+    game = await setup(
+      "ocean_and_land",
+      {
+        infiniteGold: true,
+        instantBuild: true,
+        infiniteTroops: true,
+      },
+      [],
+      undefined,
+      undefined,
+      false,
+    );
 
     (game.config() as TestConfig).setSpawnImmunityDuration(immunityPhaseTicks);
 
@@ -407,10 +410,8 @@ describe("Attack immunity", () => {
       "playerB_id",
     );
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
+    game.executeNextTick();
   });
 
   test("Should not be able to attack during immunity phase", async () => {

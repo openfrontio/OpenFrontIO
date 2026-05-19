@@ -101,11 +101,12 @@ export function getAdapter(
         originalGame._stats,
       );
 
-      (clonedGame as any)._miniWaterHPA = new AStarWaterHierarchical(
-        clonedGame.miniMap(),
-        (clonedGame as any)._miniWaterGraph!,
-        { cachePaths: false },
-      );
+      (clonedGame as any)._waterManager._miniWaterHPA =
+        new AStarWaterHierarchical(
+          clonedGame.miniMap(),
+          (clonedGame as any)._waterManager._miniWaterGraph!,
+          { cachePaths: false },
+        );
 
       return PathFinding.Water(clonedGame);
     }
@@ -254,9 +255,7 @@ export async function setupFromPath(
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
-  // Configure the game
   const config = new TestConfig(
-    new (await import("../util/TestServerConfig")).TestServerConfig(),
     {
       gameMap: GameMapType.Asia,
       gameMapSize: GameMapSize.Normal,

@@ -2,6 +2,7 @@ import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
+import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -10,60 +11,13 @@ import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
+  protected routerName = "help";
+
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
-  private isKeybindObject(v: unknown): v is { value: string } {
-    return (
-      typeof v === "object" &&
-      v !== null &&
-      "value" in v &&
-      typeof (v as any).value === "string"
-    );
-  }
-
   private getKeybinds(): Record<string, string> {
-    let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            if (this.isKeybindObject(v)) return [k, v.value];
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
-          })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
-
-    const isMac = Platform.isMac;
-    return {
-      toggleView: "Space",
-      coordinateGrid: "KeyM",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      swapDirection: "KeyU",
-      shiftKey: "ShiftLeft",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      resetGfx: "KeyR",
-      pauseGame: "KeyP",
-      gameSpeedUp: "Period",
-      gameSpeedDown: "Comma",
-      ...saved,
-    };
+    return new UserSettings().keybinds(Platform.isMac);
   }
 
   private getKeyLabel(code: string): string {
@@ -105,28 +59,28 @@ export class HelpModal extends BaseModal {
     >`;
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("main.help"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
     const keybinds = this.keybinds;
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("main.help"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-
-        <div
-          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 py-3 mr-1
-            [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
-            [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
-            [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
-            [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
-            [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
-            [&_li]:text-gray-300 [&_li]:leading-relaxed
-            [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
-            scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-        >
+    return html`
+      <div
+        class="prose prose-invert prose-sm max-w-none px-6 py-3
+          [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
+          [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
+          [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
+          [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
+          [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
+          [&_li]:text-gray-300 [&_li]:leading-relaxed
+          [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold"
+      >
           <!-- Video Tutorial Section -->
           <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">
@@ -203,7 +157,7 @@ export class HelpModal extends BaseModal {
               </p>
               <button
                 id="troubleshooting-button"
-                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
                 data-page="page-troubleshooting"
                 @click="${this.openTroubleshooting}"
                 data-i18n="main.go_to_troubleshooting"
@@ -480,6 +434,28 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_auto_upgrade")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      <div class="inline-flex items-center gap-2">
+                        ${this.renderKey(keybinds.shiftKey)}
+                        <span class="text-white/40 font-bold">+</span>
+                        <span class="text-white/50 text-xs"
+                          >${translateText("help_modal.drag")}</span
+                        >
+                      </div>
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_warship_multiselect")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.selectAllWarships)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_warship_selectall")}
                     </td>
                   </tr>
                 </tbody>
@@ -1253,22 +1229,6 @@ export class HelpModal extends BaseModal {
           </section>
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        id="helpModal"
-        title="Instructions"
-        ?inline=${this.inline}
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-      >
-        ${content}
-      </o-modal>
     `;
   }
 

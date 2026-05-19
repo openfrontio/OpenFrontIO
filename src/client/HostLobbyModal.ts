@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { translateText } from "../client/Utils";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -10,6 +10,7 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -22,7 +23,7 @@ import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
+import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
@@ -72,11 +73,19 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
+  @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
+  @state() private hostCheatsEnabled: boolean = false;
+  @state() private hostCheatInfiniteGold: boolean = false;
+  @state() private hostCheatInfiniteTroops: boolean = false;
+  @state() private hostCheatGoldMultiplier: boolean = false;
+  @state() private hostCheatGoldMultiplierValue: number | undefined = undefined;
+  @state() private hostCheatStartingGold: boolean = false;
+  @state() private hostCheatStartingGoldValue: number | undefined = undefined;
   @state() private lobbyCreatorClientID: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
@@ -84,6 +93,7 @@ export class HostLobbyModal extends BaseModal {
   private botsUpdateTimer: number | null = null;
   private nationsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
+  private userSettings = new UserSettings();
 
   private leaveLobbyOnClose = true;
 
@@ -113,8 +123,7 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
-    const config = await getRuntimeClientServerConfig();
-    return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
+    return `${window.location.origin}/${ClientEnv.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
   private async constructUrl(): Promise<string> {
@@ -123,9 +132,18 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    if (!crazyGamesSDK.isOnCrazyGames()) {
-      history.replaceState(null, "", url);
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return;
     }
+    history.replaceState(null, "", url);
+  }
+
+  private updateLobbyHistory(lobbyUrl: string): void {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return;
+    }
+    const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
+    history.replaceState(null, "", lobbyIdHidden ? "/streamer-mode" : lobbyUrl);
   }
 
   private startLobbyUpdates() {
@@ -143,7 +161,25 @@ export class HostLobbyModal extends BaseModal {
     this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("host_modal.title"),
+      onBack: () => {
+        this.leaveLobbyOnClose = true;
+        this.close();
+      },
+      ariaLabel: translateText("common.back"),
+      rightContent: html`
+        <copy-button
+          .lobbyId=${this.lobbyId}
+          .lobbySuffix=${this.lobbyUrlSuffix}
+          include-lobby-query
+        ></copy-button>
+      `,
+    });
+  }
+
+  protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
         .labelKey=${"host_modal.max_timer"}
@@ -212,28 +248,48 @@ export class HostLobbyModal extends BaseModal {
       ></toggle-input-card>`,
     ];
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <!-- Header -->
-        ${modalHeader({
-          title: translateText("host_modal.title"),
-          onBack: () => {
-            this.leaveLobbyOnClose = true;
-            this.close();
-          },
-          ariaLabel: translateText("common.back"),
-          rightContent: html`
-            <copy-button
-              .lobbyId=${this.lobbyId}
-              .lobbySuffix=${this.lobbyUrlSuffix}
-              include-lobby-query
-            ></copy-button>
-          `,
-        })}
+    const hostCheatInputCards = [
+      html`<toggle-input-card
+        .labelKey=${"host_modal.gold_multiplier"}
+        .checked=${this.hostCheatGoldMultiplier}
+        .inputId=${"host-cheat-gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.hostCheatGoldMultiplierValue}
+        .inputAriaLabel=${translateText("host_modal.gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "host_modal.gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleHostCheatGoldMultiplierToggle}
+        .onChange=${this.handleHostCheatGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleHostCheatGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.starting_gold"}
+        .checked=${this.hostCheatStartingGold}
+        .inputId=${"host-cheat-starting-gold-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.hostCheatStartingGoldValue}
+        .inputAriaLabel=${translateText("host_modal.starting_gold")}
+        .inputPlaceholder=${translateText(
+          "host_modal.starting_gold_placeholder",
+        )}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleHostCheatStartingGoldToggle}
+        .onChange=${this.handleHostCheatStartingGoldValueChanges}
+        .onKeyDown=${this.handleHostCheatStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
+    ];
 
-        <div
-          class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
-        >
+    return html`
+      <div class="flex flex-col h-full">
+        <div class="flex-1 p-6 mx-auto w-full max-w-5xl">
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-10"}
@@ -299,8 +355,31 @@ export class HostLobbyModal extends BaseModal {
                     labelKey: "host_modal.disable_alliances",
                     checked: this.disableAlliances,
                   },
+                  {
+                    labelKey: "host_modal.water_nukes",
+                    checked: this.waterNukes,
+                  },
+                  {
+                    labelKey: "host_modal.host_cheats",
+                    checked: this.hostCheatsEnabled,
+                  },
                 ],
                 inputCards,
+              },
+              hostCheats: {
+                titleKey: "host_modal.host_cheats",
+                visible: this.hostCheatsEnabled,
+                toggles: [
+                  {
+                    labelKey: "host_modal.infinite_gold",
+                    checked: this.hostCheatInfiniteGold,
+                  },
+                  {
+                    labelKey: "host_modal.infinite_troops",
+                    checked: this.hostCheatInfiniteTroops,
+                  },
+                ],
+                inputCards: hostCheatInputCards,
               },
               unitTypes: {
                 titleKey: "host_modal.enables_title",
@@ -315,6 +394,8 @@ export class HostLobbyModal extends BaseModal {
             @bots-changed=${this.handleBotsChange}
             @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
+            @host-cheat-toggle-changed=${this
+              .handleConfigHostCheatToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
@@ -332,32 +413,18 @@ export class HostLobbyModal extends BaseModal {
 
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
-          <button
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
-            @click=${this.startGame}
-            ?disabled=${this.clients.length < 2}
-          >
-            ${this.clients.length === 1
+          <o-button
+            variant="primary"
+            width="block"
+            size="lg"
+            .title=${this.clients.length === 1
               ? translateText("host_modal.waiting")
               : translateText("host_modal.start")}
-          </button>
+            ?disable=${this.clients.length < 2}
+            @click=${this.startGame}
+          ></o-button>
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
     `;
   }
 
@@ -367,6 +434,14 @@ export class HostLobbyModal extends BaseModal {
     // Note: clientID will be assigned by server when we join the lobby
     // lobbyCreatorClientID stays empty until then
 
+    // Copy immediately so the host can share the link without waiting for the
+    // server. If lobby creation fails, clear the clipboard to avoid a dead link.
+    void this.constructUrl().then(async (url) => {
+      this.updateLobbyHistory(url);
+      await this.updateComplete;
+      void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+    });
+
     // Pass auth token for creator identification (server extracts persistentID from it)
     createLobby(this.lobbyId)
       .then(async (lobby) => {
@@ -375,8 +450,6 @@ export class HostLobbyModal extends BaseModal {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
         crazyGamesSDK.showInviteButton(this.lobbyId);
-        const url = await this.constructUrl();
-        this.updateHistory(url);
       })
       .then(() => {
         this.dispatchEvent(
@@ -389,6 +462,10 @@ export class HostLobbyModal extends BaseModal {
             composed: true,
           }),
         );
+      })
+      .catch(() => {
+        // Clear clipboard so the host doesn't accidentally share a dead link
+        void navigator.clipboard.writeText("").catch(() => {});
       });
     if (this.modalEl) {
       this.modalEl.onClose = () => {
@@ -463,6 +540,14 @@ export class HostLobbyModal extends BaseModal {
     this.startingGold = false;
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
+    this.waterNukes = false;
+    this.hostCheatsEnabled = false;
+    this.hostCheatInfiniteGold = false;
+    this.hostCheatInfiniteTroops = false;
+    this.hostCheatGoldMultiplier = false;
+    this.hostCheatGoldMultiplierValue = undefined;
+    this.hostCheatStartingGold = false;
+    this.hostCheatStartingGoldValue = undefined;
 
     this.leaveLobbyOnClose = true;
   }
@@ -541,6 +626,35 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.disable_alliances":
         this.disableAlliances = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.water_nukes":
+        this.waterNukes = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.host_cheats":
+        this.hostCheatsEnabled = checked;
+        this.putGameConfig();
+        break;
+      default:
+        break;
+    }
+  };
+
+  private handleConfigHostCheatToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{
+      labelKey: string;
+      checked: boolean;
+    }>;
+    const { labelKey, checked } = customEvent.detail;
+
+    switch (labelKey) {
+      case "host_modal.infinite_gold":
+        this.hostCheatInfiniteGold = checked;
+        this.putGameConfig();
+        break;
+      case "host_modal.infinite_troops":
+        this.hostCheatInfiniteTroops = checked;
         this.putGameConfig();
         break;
       default:
@@ -674,6 +788,61 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleHostCheatGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.hostCheatGoldMultiplier = checked;
+    this.hostCheatGoldMultiplierValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleHostCheatGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
+
+  private handleHostCheatGoldMultiplierValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
+
+    if (value === undefined) {
+      this.hostCheatGoldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.hostCheatGoldMultiplierValue = value;
+    }
+    this.putGameConfig();
+  };
+
+  private handleHostCheatStartingGoldToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.hostCheatStartingGold = checked;
+    this.hostCheatStartingGoldValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleHostCheatStartingGoldValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleHostCheatStartingGoldValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, {
+      min: 0.1,
+      max: 1000,
+    });
+
+    if (value === undefined) {
+      this.hostCheatStartingGoldValue = undefined;
+      input.value = "";
+    } else {
+      this.hostCheatStartingGoldValue = value;
+    }
+    this.putGameConfig();
+  };
+
   private handleRandomSpawnChange = (val: boolean) => {
     this.randomSpawn = val;
     this.putGameConfig();
@@ -768,7 +937,7 @@ export class HostLobbyModal extends BaseModal {
       ? this.spawnImmunityDurationMinutes * 60 * 10
       : 0;
     const url = await this.constructUrl();
-    this.updateHistory(url);
+    this.updateLobbyHistory(url);
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {
@@ -789,23 +958,36 @@ export class HostLobbyModal extends BaseModal {
             disabledUnits: this.disabledUnits,
             spawnImmunityDuration: this.spawnImmunity
               ? spawnImmunityTicks
-              : undefined,
+              : null,
             playerTeams: this.teamCount,
             nations: sliderToNationsConfig(
               this.nations,
               this.defaultNationCount,
             ),
-            maxTimerValue:
-              this.maxTimer === true ? this.maxTimerValue : undefined,
+            maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
             goldMultiplier:
-              this.goldMultiplier === true
-                ? this.goldMultiplierValue
-                : undefined,
+              this.goldMultiplier === true ? this.goldMultiplierValue : null,
             startingGold:
               this.startingGold === true && this.startingGoldValue !== undefined
                 ? Math.round(this.startingGoldValue * 1_000_000)
-                : undefined,
-            disableAlliances: this.disableAlliances || undefined,
+                : null,
+            disableAlliances: this.disableAlliances || null,
+            waterNukes: this.waterNukes ? true : null,
+            hostCheats: this.hostCheatsEnabled
+              ? {
+                  infiniteGold: this.hostCheatInfiniteGold || undefined,
+                  infiniteTroops: this.hostCheatInfiniteTroops || undefined,
+                  goldMultiplier:
+                    this.hostCheatGoldMultiplier === true
+                      ? this.hostCheatGoldMultiplierValue
+                      : null,
+                  startingGold:
+                    this.hostCheatStartingGold === true &&
+                    this.hostCheatStartingGoldValue !== undefined
+                      ? Math.round(this.hostCheatStartingGoldValue * 1_000_000)
+                      : null,
+                }
+              : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
@@ -823,21 +1005,12 @@ export class HostLobbyModal extends BaseModal {
     // If the modal closes as part of starting the game, do not leave the lobby
     this.leaveLobbyOnClose = false;
 
-    const config = await getRuntimeClientServerConfig();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
+    this.dispatchEvent(
+      new CustomEvent("start-game", {
+        bubbles: true,
+        composed: true,
+      }),
     );
-
-    if (!response.ok) {
-      this.leaveLobbyOnClose = true;
-    }
-    return response;
   }
 
   private kickPlayer(clientID: string) {
@@ -871,13 +1044,12 @@ export class HostLobbyModal extends BaseModal {
 }
 
 async function createLobby(gameID: string): Promise<GameInfo> {
-  const config = await getRuntimeClientServerConfig();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
   try {
     const response = await fetch(
-      `/${config.workerPath(gameID)}/api/create_game/${gameID}`,
+      `/${ClientEnv.workerPath(gameID)}/api/create_game/${gameID}`,
       {
         method: "POST",
         headers: {

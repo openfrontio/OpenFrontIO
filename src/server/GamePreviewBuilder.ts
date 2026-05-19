@@ -4,6 +4,7 @@ import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
 import { formatPlayerDisplayName } from "../core/Util";
 import { GameMode } from "../core/game/Game";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
+import { ServerEnv } from "./ServerEnv";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
@@ -141,8 +142,9 @@ export async function buildPreview(
   publicInfo: ExternalGameInfo | null,
 ): Promise<PreviewMeta> {
   const assetManifest = await getRuntimeAssetManifest();
+  const cdnBase = ServerEnv.cdnBase();
   const buildAbsoluteAssetUrl = (path: string) =>
-    new URL(buildAssetUrl(path, assetManifest), origin).toString();
+    new URL(buildAssetUrl(path, assetManifest, cdnBase), origin).toString();
   const isFinished = !!publicInfo?.info?.end;
   const isPrivate = lobby?.gameConfig?.gameType === "Private";
 
@@ -209,7 +211,7 @@ export async function buildPreview(
       ? `${mode} on ${map}${gameTypeLabel}`
       : "OpenFront Game";
 
-  let description = "";
+  let description: string;
   if (isFinished) {
     const parts: string[] = [];
     if (winner) {

@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import { buildAssetUrl } from "../core/AssetUrls";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
+import { ServerEnv } from "./ServerEnv";
 
 const APP_SHELL_CACHE_CONTROL =
   "public, max-age=0, s-maxage=300, stale-while-revalidate=86400";
@@ -13,19 +14,39 @@ const appShellContentCache = new Map<string, Promise<string>>();
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
   const assetManifest = await getRuntimeAssetManifest();
+  const cdnBase = ServerEnv.cdnBase();
   return ejs.render(htmlContent, {
-    gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
+    gitCommit: JSON.stringify(ServerEnv.gitCommit()),
     assetManifest: JSON.stringify(assetManifest),
-    gameEnv: JSON.stringify(process.env.GAME_ENV ?? "dev"),
-    manifestHref: buildAssetUrl("manifest.json", assetManifest),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
+    cdnBase: JSON.stringify(cdnBase),
+    // Raw (unquoted) value for use as a URL prefix in the index.html template,
+    // e.g. <script src="<%- cdnBaseRaw %>/assets/index-XXX.js">. The Vite
+    // build plugin inject-cdn-base-template rewrites Vite's emitted /assets/
+    // refs to use this placeholder.
+    cdnBaseRaw: cdnBase,
+    gameEnv: JSON.stringify(ServerEnv.gameEnvName()),
+    numWorkers: JSON.stringify(ServerEnv.numWorkers()),
+    turnstileSiteKey: JSON.stringify(ServerEnv.turnstileSiteKey()),
+    jwtAudience: JSON.stringify(ServerEnv.jwtAudience()),
+    instanceId: JSON.stringify(ServerEnv.instanceId()),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(
       "images/GameplayScreenshot.png",
       assetManifest,
+      cdnBase,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+    backgroundImageUrl: buildAssetUrl(
+      "images/background.webp",
+      assetManifest,
+      cdnBase,
+    ),
+    desktopLogoImageUrl: buildAssetUrl(
+      "images/OpenFront.png",
+      assetManifest,
+      cdnBase,
+    ),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest, cdnBase),
   });
 }
 

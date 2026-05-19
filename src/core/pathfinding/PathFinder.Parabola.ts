@@ -11,9 +11,7 @@ export interface ParabolaOptions {
 
 const PARABOLA_MIN_HEIGHT = 50;
 
-export class ParabolaUniversalPathFinder
-  implements SteppingPathFinder<TileRef>
-{
+export class ParabolaUniversalPathFinder implements SteppingPathFinder<TileRef> {
   private curve: DistanceBasedBezierCurve | null = null;
   private lastTo: TileRef | null = null;
 

@@ -1,11 +1,14 @@
 import { assetUrl } from "src/core/AssetUrls";
 import { UserMeResponse } from "../core/ApiSchemas";
 import {
+  ColorPalette,
   Cosmetics,
   CosmeticsSchema,
   Flag,
+  Pack,
   Pattern,
   Product,
+  Subscription,
 } from "../core/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
@@ -13,7 +16,14 @@ import {
   PlayerPattern,
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
-import { createCheckoutSession, getApiBase, getUserMe } from "./Api";
+import {
+  changeSubscriptionTier,
+  createCheckoutSession,
+  getApiBase,
+  getUserMe,
+  invalidateUserMe,
+  purchaseWithCurrency,
+} from "./Api";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -21,17 +31,117 @@ export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 
-export async function handlePurchase(
-  product: Product,
-  colorPaletteName?: string,
-) {
-  const url = await createCheckoutSession(product.priceId, colorPaletteName);
-  if (url === false) {
-    alert("Failed to create checkout session.");
+export type PaymentMethod = "dollar" | "hard" | "soft";
+
+export async function purchaseCosmetic(
+  resolved: ResolvedCosmetic,
+  method: PaymentMethod,
+): Promise<void> {
+  if (!resolved.cosmetic) return;
+  const c = resolved.cosmetic;
+  const colorPaletteName = resolved.colorPalette?.name;
+
+  if (resolved.type === "subscription") {
+    const sub = c as Subscription;
+    const userMe = await getUserMe();
+    const currentSub =
+      userMe === false ? null : (userMe.player.subscription ?? null);
+
+    if (currentSub) {
+      if (currentSub.tier === sub.name) {
+        alert(translateText("store.already_subscribed"));
+        return;
+      }
+
+      // Direction-aware confirm based on priceMonthly. We don't have the
+      // server's sortOrder client-side — priceMonthly is a good proxy.
+      const currentCosmetic =
+        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const isUpgrade =
+        currentCosmetic !== null
+          ? sub.priceMonthly > currentCosmetic.priceMonthly
+          : true;
+      const targetName = translateCosmetic("subscriptions", sub.name);
+      const confirmKey = isUpgrade
+        ? "store.confirm_upgrade"
+        : "store.confirm_downgrade";
+      const confirmed = window.confirm(
+        translateText(confirmKey, { tier: targetName }),
+      );
+      if (!confirmed) return;
+
+      const ok = await changeSubscriptionTier(sub.name);
+      if (!ok) {
+        alert(translateText("store.change_tier_failed"));
+        return;
+      }
+      alert(translateText("store.change_tier_success", { tier: targetName }));
+      window.location.reload();
+      return;
+    }
+  }
+
+  if (method === "dollar") {
+    if (!c.product) {
+      alert(translateText("store.checkout_failed"));
+      return;
+    }
+    const url = await createCheckoutSession(
+      c.product.priceId,
+      colorPaletteName,
+    );
+    if (url === false) {
+      alert(translateText("store.checkout_failed"));
+      return;
+    }
+    window.location.href = url;
     return;
   }
 
-  window.location.href = url;
+  // Currency purchase (hard or soft) — not valid for subscriptions.
+  if (resolved.type === "subscription") {
+    console.error(
+      "purchaseCosmetic: currency purchase not supported for subscriptions",
+    );
+    return;
+  }
+  // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
+  // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
+  const priced = c as Pattern | Flag | Pack;
+  const price =
+    method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
+  const userMe = await getUserMe();
+  if (userMe === false) {
+    alert(translateText("store.login_required"));
+    return;
+  }
+  const balance =
+    method === "hard"
+      ? (userMe.player.currency?.hard ?? 0)
+      : (userMe.player.currency?.soft ?? 0);
+  if (balance < price) {
+    alert(translateText("store.not_enough_currency"));
+    if (method === "hard") {
+      // Send the user to the packs tab so they can top up plutonium.
+      window.location.hash = "#modal=store&tab=packs";
+    }
+    return;
+  }
+
+  const cosmeticType = resolved.type as "pattern" | "skin" | "flag";
+  const success = await purchaseWithCurrency(
+    cosmeticType,
+    c.name,
+    method,
+    colorPaletteName,
+  );
+  if (!success) {
+    alert(translateText("store.purchase_failed"));
+    return;
+  }
+  alert(translateText("store.purchase_success", { name: c.name }));
+  invalidateUserMe();
+  window.location.reload();
 }
 
 function simpleHash(str: string): string {
@@ -100,6 +210,8 @@ export function cosmeticRelationship(
     wildcardFlare: string;
     requiredFlare: string;
     product: Product | null;
+    priceSoft?: number;
+    priceHard?: number;
     affiliateCode: string | null;
     itemAffiliateCode: string | null;
   },
@@ -116,11 +228,16 @@ export function cosmeticRelationship(
     return "owned";
   }
 
-  if (opts.product === null) {
+  if (opts.affiliateCode !== opts.itemAffiliateCode) {
     return "blocked";
   }
 
-  if (opts.affiliateCode !== opts.itemAffiliateCode) {
+  // Purchasable if any purchase method is available
+  if (opts.priceSoft !== undefined || opts.priceHard !== undefined) {
+    return "purchasable";
+  }
+
+  if (opts.product === null) {
     return "blocked";
   }
 
@@ -164,8 +281,10 @@ export function patternRelationship(
       wildcardFlare: "pattern:*",
       requiredFlare: `pattern:${pattern.name}:${colorPalette.name}`,
       product: pattern.product,
+      priceSoft: pattern.priceSoft,
+      priceHard: pattern.priceHard,
       affiliateCode,
-      itemAffiliateCode: pattern.affiliateCode,
+      itemAffiliateCode: pattern.affiliateCode ?? null,
     },
     userMeResponse,
   );
@@ -181,11 +300,133 @@ export function flagRelationship(
       wildcardFlare: "flag:*",
       requiredFlare: `flag:${flag.name}`,
       product: flag.product,
+      priceSoft: flag.priceSoft,
+      priceHard: flag.priceHard,
       affiliateCode,
-      itemAffiliateCode: flag.affiliateCode,
+      itemAffiliateCode: flag.affiliateCode ?? null,
     },
     userMeResponse,
   );
+}
+
+export type ResolvedCosmetic = {
+  type: "pattern" | "flag" | "pack" | "subscription";
+  cosmetic: Pattern | Flag | Pack | Subscription | null;
+  colorPalette: ColorPalette | null;
+  relationship: "owned" | "purchasable" | "blocked";
+  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
+  key: string;
+};
+
+/**
+ * Resolves all cosmetics into a flat display-ready list with relationship
+ * status and resolved color palettes. Callers can filter by relationship.
+ */
+export function resolveCosmetics(
+  cosmetics: Cosmetics | null,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): ResolvedCosmetic[] {
+  if (!cosmetics) return [];
+  const result: ResolvedCosmetic[] = [];
+
+  // Default pattern (always owned)
+  result.push({
+    type: "pattern",
+    cosmetic: null,
+    colorPalette: null,
+    relationship: "owned",
+    key: "pattern:default",
+  });
+
+  // Patterns × color palettes
+  for (const [patternKey, pattern] of Object.entries(cosmetics.patterns)) {
+    const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+    for (const cp of colorPalettes) {
+      const rel = patternRelationship(
+        pattern,
+        cp,
+        userMeResponse,
+        affiliateCode,
+      );
+      const resolvedPalette = cp
+        ? (cosmetics.colorPalettes?.[cp.name] ?? null)
+        : null;
+      const key = cp
+        ? `pattern:${patternKey}:${cp.name}`
+        : `pattern:${patternKey}`;
+      result.push({
+        type: "pattern",
+        cosmetic: pattern,
+        colorPalette: resolvedPalette,
+        relationship: rel,
+        key,
+      });
+    }
+  }
+
+  // Flags
+  for (const [flagKey, flag] of Object.entries(cosmetics.flags)) {
+    const rel = flagRelationship(flag, userMeResponse, affiliateCode);
+    result.push({
+      type: "flag",
+      cosmetic: flag,
+      colorPalette: null,
+      relationship: rel,
+      key: `flag:${flagKey}`,
+    });
+  }
+
+  // Packs
+  for (const [packKey, pack] of Object.entries(cosmetics.currencyPacks ?? {})) {
+    const rel = pack.product ? "purchasable" : "blocked";
+    result.push({
+      type: "pack",
+      cosmetic: pack,
+      colorPalette: null,
+      relationship: rel,
+      key: `pack:${packKey}`,
+    });
+  }
+
+  // Subscriptions
+  const flares =
+    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  const currentSubTier =
+    userMeResponse === false
+      ? null
+      : (userMeResponse.player.subscription?.tier ?? null);
+  for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
+    const key = `subscription:${subKey}`;
+    const isCurrent = subKey === currentSubTier || flares.includes(key);
+    const rel: ResolvedCosmetic["relationship"] = isCurrent
+      ? "owned"
+      : sub.product
+        ? "purchasable"
+        : "blocked";
+    result.push({
+      type: "subscription",
+      cosmetic: sub,
+      colorPalette: null,
+      relationship: rel,
+      key,
+    });
+  }
+
+  return result;
+}
+
+export function resolvedToPlayerPattern(
+  resolved: ResolvedCosmetic,
+): PlayerPattern | null {
+  if (resolved.type !== "pattern") return null;
+  const c = resolved.cosmetic;
+  if (c === null) return null;
+  return {
+    name: c.name,
+    patternData: (c as Pattern).pattern,
+    colorPalette: resolved.colorPalette ?? undefined,
+  };
 }
 
 export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
@@ -240,7 +481,6 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
 
   return {
     flag: flag ?? undefined,
-    color: userSettings.getSelectedColor() ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
   };
@@ -254,10 +494,6 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
 
   if (refs.flag) {
     result.flag = await resolveFlagUrl(refs.flag);
-  }
-
-  if (refs.color) {
-    result.color = { color: refs.color };
   }
 
   if (refs.patternName && cosmetics) {

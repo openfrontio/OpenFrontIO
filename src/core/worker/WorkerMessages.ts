@@ -7,7 +7,7 @@ import {
   PlayerProfile,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
@@ -16,6 +16,7 @@ export type WorkerMessageType =
   | "turn"
   | "game_update"
   | "game_update_batch"
+  | "game_error"
   | "player_actions"
   | "player_actions_result"
   | "player_buildables"
@@ -40,6 +41,7 @@ export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID | undefined;
+  cdnBase: string;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -60,6 +62,11 @@ export interface GameUpdateMessage extends BaseWorkerMessage {
 export interface GameUpdateBatchMessage extends BaseWorkerMessage {
   type: "game_update_batch";
   gameUpdates: GameUpdateViewData[];
+}
+
+export interface GameErrorMessage extends BaseWorkerMessage {
+  type: "game_error";
+  error: ErrorUpdate;
 }
 
 export interface PlayerActionsMessage extends BaseWorkerMessage {
@@ -114,8 +121,7 @@ export interface AttackClusteredPositionsMessage extends BaseWorkerMessage {
   attackID?: string;
 }
 
-export interface AttackClusteredPositionsResultMessage
-  extends BaseWorkerMessage {
+export interface AttackClusteredPositionsResultMessage extends BaseWorkerMessage {
   type: "attack_clustered_positions_result";
   attacks: { id: string; positions: { x: number; y: number }[] }[];
 }
@@ -147,6 +153,7 @@ export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
   | GameUpdateBatchMessage
+  | GameErrorMessage
   | PlayerActionsResultMessage
   | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage

@@ -47,31 +47,58 @@ export const shadowNames = [
   "AlmostPottyTrained",
 ];
 
-export function createMatcher(bannedWords: string[]): RegExpMatcher {
-  const customDataset = new DataSet<{ originalWord: string }>().addAll(
+function buildDataset(bannedWords: string[], dedup: boolean) {
+  const dataset = new DataSet<{ originalWord: string }>().addAll(
     englishDataset,
   );
-
   for (const word of bannedWords) {
     try {
-      customDataset.addPhrase((phrase) =>
-        phrase.setMetadata({ originalWord: word }).addPattern(pattern`${word}`),
+      const w = dedup ? word.toLowerCase().replace(/(.)\1+/g, "$1") : word;
+      dataset.addPhrase((phrase) =>
+        phrase.setMetadata({ originalWord: word }).addPattern(pattern`${w}`),
       );
     } catch (e) {
       console.error(`Invalid banned word pattern "${word}": ${e}`);
     }
   }
+  return dataset.build();
+}
 
-  return new RegExpMatcher({
-    ...customDataset.build(),
+export function createMatcher(bannedWords: string[]): RegExpMatcher {
+  const baseTransformers = [
+    toAsciiLowerCaseTransformer(),
+    resolveConfusablesTransformer(),
+    resolveLeetSpeakTransformer(),
+  ];
+  // substringMatcher: literal patterns, no collapse — catches "niggertesting" as a substring
+  // collapseMatcher: deduped patterns + collapse transformer — catches "niiiigger", "hiiitler"
+  // skipNonAlphabeticTransformer is applied last to catch punctuation-separated bypasses
+  // like "n.i.g.g.e.r".
+  const substringMatcher = new RegExpMatcher({
+    ...buildDataset(bannedWords, false),
     blacklistMatcherTransformers: [
-      toAsciiLowerCaseTransformer(),
-      resolveConfusablesTransformer(),
-      resolveLeetSpeakTransformer(),
+      ...baseTransformers,
+      skipNonAlphabeticTransformer(),
+    ],
+  });
+  const collapseMatcher = new RegExpMatcher({
+    ...buildDataset(bannedWords, true),
+    blacklistMatcherTransformers: [
+      ...baseTransformers,
       collapseDuplicatesTransformer(),
       skipNonAlphabeticTransformer(),
     ],
   });
+  return {
+    hasMatch: (input: string) =>
+      input.toLowerCase().includes("kkk") ||
+      substringMatcher.hasMatch(input) ||
+      collapseMatcher.hasMatch(input),
+    getAllMatches: (input: string, sorted?: boolean) => [
+      ...substringMatcher.getAllMatches(input, sorted),
+      ...collapseMatcher.getAllMatches(input, sorted),
+    ],
+  } as unknown as RegExpMatcher;
 }
 
 /**
@@ -96,13 +123,29 @@ function censorWithMatcher(
   matcher: RegExpMatcher,
 ): { username: string; clanTag: string | null } {
   const usernameIsProfane = matcher.hasMatch(username);
-  const censoredName = usernameIsProfane
-    ? shadowNames[simpleHash(username) % shadowNames.length]
-    : username;
+  const clanTagIsProfane = clanTag
+    ? matcher.hasMatch(clanTag) || clanTag.toLowerCase() === "ss"
+    : false;
+  // Catch slurs split across clan tag and username (e.g. clanTag="HIT", username="LER")
+  // by looking for a match that spans the clan/name boundary.
+  const combinedSlurAcrossBoundary = clanTag
+    ? matcher.getAllMatches(clanTag + username).some(
+        (match) =>
+          // Match must start in the clan and extend into the name — otherwise
+          // it's already handled by the clan-only or name-only checks above.
+          match.startIndex < clanTag.length && match.endIndex >= clanTag.length,
+      )
+    : false;
 
-  const clanTagIsProfane = clanTag ? matcher.hasMatch(clanTag) : false;
+  const censoredName =
+    usernameIsProfane || combinedSlurAcrossBoundary
+      ? shadowNames[simpleHash(username) % shadowNames.length]
+      : username;
+
   const censoredClanTag =
-    clanTag && !clanTagIsProfane ? clanTag.toUpperCase() : null;
+    clanTag && !clanTagIsProfane && !combinedSlurAcrossBoundary
+      ? clanTag.toUpperCase()
+      : null;
 
   return { username: censoredName, clanTag: censoredClanTag };
 }
@@ -140,21 +183,24 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
           refs.patternColorPaletteName ?? null,
         );
       } catch (e) {
-        return { type: "forbidden", reason: "invalid pattern: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid pattern: " + message };
       }
     }
     if (refs.color) {
       try {
         cosmetics.color = this.isColorAllowed(flares, refs.color);
       } catch (e) {
-        return { type: "forbidden", reason: "invalid color: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid color: " + message };
       }
     }
     if (refs.flag) {
       try {
         cosmetics.flag = this.isFlagAllowed(flares, refs.flag);
       } catch (e) {
-        return { type: "forbidden", reason: "invalid flag: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid flag: " + message };
       }
     }
 
@@ -173,6 +219,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     try {
       decodePatternData(found.pattern, this.b64urlDecode);
     } catch (e) {
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(`Invalid pattern ${name}`);
     }
 
@@ -242,8 +290,11 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
   }
 }
 
-// Default matcher with no custom banned words (just englishDataset)
-const defaultMatcher = createMatcher([]);
+// Words the englishDataset misses or only catches as standalone tokens.
+// These are always enforced even when the remote banned-words list is unavailable.
+const baselineBannedWords = ["nigger", "nigga", "chink", "spic", "kike"];
+
+const defaultMatcher = createMatcher(baselineBannedWords);
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {

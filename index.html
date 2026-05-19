@@ -26,6 +26,11 @@
         padding-left: env(safe-area-inset-left);
       }
 
+      /* Prevent Playwire bottom rail from affecting flex layout */
+      [id^="pw-oop-bottom_rail"] {
+        position: fixed !important;
+      }
+
       /* Ensure full viewport height on iOS */
       html,
       body {
@@ -55,19 +60,24 @@
 
     <!-- Injected from Server env -->
     <script>
-      window.GIT_COMMIT = <%- gitCommit %>;
-      window.ASSET_MANIFEST = <%- assetManifest %>;
       window.BOOTSTRAP_CONFIG = {
+        gitCommit: <%- gitCommit %>,
+        assetManifest: <%- assetManifest %>,
+        cdnBase: <%- cdnBase %>,
         gameEnv: <%- gameEnv %>,
+        numWorkers: <%- numWorkers %>,
+        turnstileSiteKey: <%- turnstileSiteKey %>,
+        jwtAudience: <%- jwtAudience %>,
+        instanceId: <%- instanceId %>,
       };
       document.documentElement.style.setProperty(
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
       );
-      document.documentElement.style.setProperty(
-        "--desktop-logo-image-url",
-        `url("<%- desktopLogoImageUrl %>")`,
-      );
+      // document.documentElement.style.setProperty(
+      //   "--desktop-logo-image-url",
+      //   `url("<%- desktopLogoImageUrl %>")`,
+      // );
       document.documentElement.style.setProperty(
         "--mobile-logo-image-url",
         `url("<%- mobileLogoImageUrl %>")`,
@@ -138,7 +148,10 @@
       <div
         id="background-layer"
         class="absolute inset-0 bg-cover bg-center opacity-30 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
-        style="background-image: var(--background-image-url)"
+        style="
+          background-image: var(--background-image-url);
+          background-position: center calc(50% + 2cm);
+        "
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
@@ -178,7 +191,7 @@
         class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
       ></div>
 
-      <gutter-ads></gutter-ads>
+      <homepage-promos></homepage-promos>
 
       <!-- Main container with responsive padding -->
       <main-layout class="contents">
@@ -229,6 +242,11 @@
           class="hidden w-full h-full page-content relative z-50"
         ></troubleshooting-modal>
 
+        <clan-modal
+          id="page-clan"
+          inline
+          class="hidden w-full h-full page-content relative z-50"
+        ></clan-modal>
         <account-modal
           id="page-account"
           inline
@@ -261,9 +279,7 @@
         ></ranked-modal>
       </main-layout>
 
-      <!-- Ad above footer -->
       <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
-        <home-footer-ad></home-footer-ad>
         <page-footer></page-footer>
       </div>
 

@@ -1,0 +1,70 @@
+{
+  "name": "Strait Of Malacca",
+  "nations": [
+    {
+      "coordinates": [1268, 730],
+      "name": "Singapore",
+      "flag": "sg"
+    },
+    {
+      "coordinates": [862, 41],
+      "name": "Thailand",
+      "flag": "th"
+    },
+    {
+      "coordinates": [210, 243],
+      "name": "Aceh",
+      "flag": "Aceh"
+    },
+    {
+      "coordinates": [1053, 333],
+      "name": "Malaysia",
+      "flag": "my"
+    },
+    {
+      "coordinates": [596, 573],
+      "name": "North Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [797, 1002],
+      "name": "West Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [956, 743],
+      "name": "Riau",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1644, 1265],
+      "name": "Bangka Belitung",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1419, 1636],
+      "name": "Lampung",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1084, 1414],
+      "name": "Bengkulu",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1366, 1303],
+      "name": "South Sumatra",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1167, 1071],
+      "name": "Jambi",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1383, 938],
+      "name": "Riau Islands",
+      "flag": "id"
+    }
+  ]
+}

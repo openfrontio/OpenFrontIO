@@ -39,6 +39,14 @@ fi
 echo "🔄 Updating system..."
 apt update && apt upgrade -y
 
+# Install jq (used by update.sh for asset upload)
+if command -v jq &> /dev/null; then
+    echo "jq is already installed"
+else
+    echo "📦 Installing jq..."
+    apt install -y jq
+fi
+
 # Check if Docker is already installed
 if command -v docker &> /dev/null; then
     echo "Docker is already installed"

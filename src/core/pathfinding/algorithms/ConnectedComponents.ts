@@ -194,10 +194,6 @@ export class ConnectedComponents {
     }
   }
 
-  /**
-   * Get the component ID for a tile.
-   * Returns 0 for land tiles or if not initialized.
-   */
   getComponentId(tile: TileRef): number {
     if (!this.componentIds) return 0;
     return this.componentIds[tile] ?? 0;

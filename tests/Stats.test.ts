@@ -23,10 +23,6 @@ describe("Stats", () => {
       new PlayerInfo("boat dude", PlayerType.Human, "client2", "player_2_id"),
     ]);
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     player1 = game.player("player_1_id");
     player2 = game.player("player_2_id");
   });
@@ -178,6 +174,15 @@ describe("Stats", () => {
     stats.goldWork(player1, 1);
     expect(stats.stats()).toStrictEqual({
       client1: { gold: [1n] },
+    });
+  });
+
+  test("train trade gold", () => {
+    stats.trainSelfTrade(player1, 2);
+    stats.trainExternalTrade(player2, 1);
+    expect(stats.stats()).toStrictEqual({
+      client1: { gold: [0n, 0n, 0n, 0n, 2n] },
+      client2: { gold: [0n, 0n, 0n, 0n, 0n, 1n] },
     });
   });
 

@@ -1,3 +1,4 @@
+import { ClientEnv } from "src/client/ClientEnv";
 import { z } from "zod";
 import { EventBus } from "../core/EventBus";
 import {
@@ -81,8 +82,7 @@ export class LocalServer {
     console.log("local server starting");
     this.turnCheckInterval = setInterval(() => {
       const turnIntervalMs =
-        this.lobbyConfig.serverConfig.turnIntervalMs() *
-        this.replaySpeedMultiplier;
+        ClientEnv.turnIntervalMs() * this.replaySpeedMultiplier;
       const backlog = Math.max(0, this.turns.length - this.turnsExecuted);
       const allowReplayBacklog =
         this.replaySpeedMultiplier === ReplaySpeedMultiplier.fastest &&
@@ -297,7 +297,7 @@ export class LocalServer {
       console.error("Error parsing game record", error);
       return;
     }
-    const workerPath = this.lobbyConfig.serverConfig.workerPath(
+    const workerPath = ClientEnv.workerPath(
       this.lobbyConfig.gameStartInfo.gameID,
     );
 

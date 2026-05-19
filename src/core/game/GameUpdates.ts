@@ -10,7 +10,9 @@ import {
   Team,
   Tick,
   TrainType,
+  TransportShipState,
   UnitType,
+  WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
 
@@ -64,6 +66,7 @@ export enum GameUpdateType {
   RailroadSnapEvent,
   ConquestEvent,
   EmbargoEvent,
+  SpawnPhaseEnd,
   GamePaused,
 }
 
@@ -88,6 +91,7 @@ export type GameUpdate =
   | RailroadSnapUpdate
   | ConquestUpdate
   | EmbargoUpdate
+  | SpawnPhaseEndUpdate
   | GamePausedUpdate;
 
 export interface BonusEventUpdate {
@@ -137,7 +141,8 @@ export interface UnitUpdate {
   lastPos: TileRef;
   isActive: boolean;
   reachedTarget: boolean;
-  retreating: boolean;
+  warshipState?: WarshipState;
+  transportShipState?: TransportShipState;
   targetable: boolean;
   markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships
@@ -159,35 +164,44 @@ export interface AttackUpdate {
   retreating: boolean;
 }
 
+/**
+ * Player snapshot delivered worker -> main thread.
+ *
+ * Only `type` and `id` are guaranteed. Every other field is omitted when its
+ * value matches the previous emission for the same player. The first emission
+ * for a player always includes all fields; consumers must handle subsequent
+ * partial updates by merging into local state, not overwriting.
+ */
 export interface PlayerUpdate {
   type: GameUpdateType.Player;
-  nameViewData?: NameViewData;
-  clientID: ClientID | null;
-  name: string;
-  displayName: string;
   id: PlayerID;
+  nameViewData?: NameViewData;
+  clientID?: ClientID | null;
+  name?: string;
+  displayName?: string;
   team?: Team;
-  smallID: number;
-  playerType: PlayerType;
-  isAlive: boolean;
-  isDisconnected: boolean;
-  tilesOwned: number;
-  gold: Gold;
-  troops: number;
-  allies: number[];
-  embargoes: Set<PlayerID>;
-  isTraitor: boolean;
+  smallID?: number;
+  playerType?: PlayerType;
+  isAlive?: boolean;
+  isDisconnected?: boolean;
+  tilesOwned?: number;
+  gold?: Gold;
+  troops?: number;
+  allies?: number[];
+  embargoes?: Set<PlayerID>;
+  isTraitor?: boolean;
   traitorRemainingTicks?: number;
-  targets: number[];
-  outgoingEmojis: EmojiMessage[];
-  outgoingAttacks: AttackUpdate[];
-  incomingAttacks: AttackUpdate[];
-  outgoingAllianceRequests: PlayerID[];
-  alliances: AllianceView[];
-  hasSpawned: boolean;
-  betrayals: number;
-  lastDeleteUnitTick: Tick;
-  isLobbyCreator: boolean;
+  targets?: number[];
+  outgoingEmojis?: EmojiMessage[];
+  outgoingAttacks?: AttackUpdate[];
+  incomingAttacks?: AttackUpdate[];
+  outgoingAllianceRequests?: PlayerID[];
+  alliances?: AllianceView[];
+  hasSpawned?: boolean;
+  spawnTile?: TileRef;
+  betrayals?: number;
+  lastDeleteUnitTick?: Tick;
+  isLobbyCreator?: boolean;
 }
 
 export interface AllianceView {
@@ -285,6 +299,11 @@ export interface EmbargoUpdate {
   event: "start" | "stop";
   playerID: number;
   embargoedID: number;
+}
+
+export interface SpawnPhaseEndUpdate {
+  type: GameUpdateType.SpawnPhaseEnd;
+  startTick: Tick;
 }
 
 export interface GamePausedUpdate {

@@ -3,18 +3,34 @@ import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { UserMeResponse } from "src/core/ApiSchemas";
 import { assetUrl } from "src/core/AssetUrls";
-import { Cosmetics } from "src/core/CosmeticSchemas";
+import { Cosmetics, Flag } from "src/core/CosmeticSchemas";
 import { UserSettings } from "src/core/game/UserSettings";
 import { getUserMe } from "./Api";
-import { fetchCosmetics, flagRelationship } from "./Cosmetics";
+import {
+  fetchCosmetics,
+  flagRelationship,
+  ResolvedCosmetic,
+} from "./Cosmetics";
 import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
-import "./components/FlagButton";
+import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
 import { modalHeader } from "./components/ui/ModalHeader";
 
+function countryFlag(name: string, code: string): Flag {
+  return {
+    name,
+    url: assetUrl(`/flags/${code}.svg`),
+    product: null,
+    rarity: "common",
+    affiliateCode: null,
+  };
+}
+
 @customElement("flag-input-modal")
 export class FlagInputModal extends BaseModal {
+  protected routerName = "flag-input";
+
   @state() private search = "";
   @state() private cosmetics: Cosmetics | null = null;
   @state() private userMe: UserMeResponse | false = false;
@@ -27,10 +43,6 @@ export class FlagInputModal extends BaseModal {
   private renderFlags() {
     const userSettings = new UserSettings();
     const selectedFlag = userSettings.getFlag() ?? "";
-    const onSelect = (flagKey: string) => {
-      this.setFlag(flagKey);
-      this.close();
-    };
 
     const cosmeticFlags = Object.entries(this.cosmetics?.flags ?? {})
       .filter(([, flag]) => {
@@ -38,33 +50,44 @@ export class FlagInputModal extends BaseModal {
           return false;
         return flagRelationship(flag, this.userMe, null) === "owned";
       })
-      .map(
-        ([key, flag]) => html`
-          <flag-button
-            .flag=${{
-              key: `flag:${key}`,
-              name: flag.name,
-              url: flag.url,
-              artist: flag.artist,
-            }}
+      .map(([key, flag]) => {
+        const r: ResolvedCosmetic = {
+          type: "flag",
+          cosmetic: flag,
+          colorPalette: null,
+          relationship: "owned",
+          key: `flag:${key}`,
+        };
+        return html`
+          <cosmetic-button
+            .resolved=${r}
             .selected=${selectedFlag === `flag:${key}`}
-            .onSelect=${onSelect}
-          ></flag-button>
-        `,
-      );
+            .onSelect=${() => {
+              this.setFlag(`flag:${key}`);
+              this.close();
+            }}
+          ></cosmetic-button>
+        `;
+      });
 
+    const noFlagResolved: ResolvedCosmetic = {
+      type: "flag",
+      cosmetic: countryFlag("None", "xx"),
+      colorPalette: null,
+      relationship: "owned",
+      key: "country:xx",
+    };
     const noFlag = this.search
       ? null
       : html`
-          <flag-button
-            .flag=${{
-              key: "country:xx",
-              name: "None",
-              url: assetUrl("/flags/xx.svg"),
-            }}
+          <cosmetic-button
+            .resolved=${noFlagResolved}
             .selected=${selectedFlag === "" || selectedFlag === "country:xx"}
-            .onSelect=${onSelect}
-          ></flag-button>
+            .onSelect=${() => {
+              this.setFlag("country:xx");
+              this.close();
+            }}
+          ></cosmetic-button>
         `;
 
     const countryFlags = Countries.filter(
@@ -72,89 +95,78 @@ export class FlagInputModal extends BaseModal {
         country.code !== "xx" &&
         !country.restricted &&
         this.includedInSearch(country),
-    ).map(
-      (country) => html`
-        <flag-button
-          .flag=${{
-            key: `country:${country.code}`,
-            name: country.name,
-            url: assetUrl(`/flags/${country.code}.svg`),
-          }}
+    ).map((country) => {
+      const r: ResolvedCosmetic = {
+        type: "flag",
+        cosmetic: countryFlag(country.name, country.code),
+        colorPalette: null,
+        relationship: "owned",
+        key: `country:${country.code}`,
+      };
+      return html`
+        <cosmetic-button
+          .resolved=${r}
           .selected=${selectedFlag === `country:${country.code}`}
-          .onSelect=${onSelect}
-        ></flag-button>
-      `,
-    );
+          .onSelect=${() => {
+            this.setFlag(`country:${country.code}`);
+            this.close();
+          }}
+        ></cosmetic-button>
+      `;
+    });
 
     return html`
       <div
-        class="pt-1 flex flex-wrap gap-1.5 justify-center items-stretch content-start"
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
         ${noFlag} ${cosmeticFlags} ${countryFlags}
       </div>
     `;
   }
 
-  render() {
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <div
-          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
-        >
-          ${modalHeader({
-            title: translateText("flag_input.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-            rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
-          })}
+  protected renderHeaderSlot() {
+    return html`
+      <div
+        class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
+      >
+        ${modalHeader({
+          title: translateText("flag_input.title"),
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+          rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+        })}
 
-          <div class="md:flex items-center gap-2 justify-center mt-4">
-            <input
-              class="h-12 w-full max-w-md border border-white/10 bg-black/60
+        <div class="md:flex items-center gap-2 justify-center mt-4">
+          <input
+            class="h-12 w-full max-w-md border border-white/10 bg-black/60
               rounded-xl shadow-inner text-xl text-center focus:outline-none
               focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-white/30 transition-all"
-              type="text"
-              placeholder=${translateText("flag_input.search_flag")}
-              .value=${this.search}
-              @change=${this.handleSearch}
-              @keyup=${this.handleSearch}
-            />
-          </div>
-        </div>
-        <div class="flex justify-center py-3 shrink-0">
-          <button
-            class="px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors"
-            @click=${() => {
-              this.close();
-              window.showPage?.("page-item-store");
-            }}
-          >
-            ${translateText("main.store")}
-          </button>
-        </div>
-
-        <div
-          class="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
-        >
-          ${this.renderFlags()}
+            type="text"
+            placeholder=${translateText("flag_input.search_flag")}
+            .value=${this.search}
+            @change=${this.handleSearch}
+            @keyup=${this.handleSearch}
+          />
         </div>
       </div>
     `;
+  }
 
-    if (this.inline) {
-      return content;
-    }
-
+  protected renderBody() {
     return html`
-      <o-modal
-        id="flag-input-modal"
-        title=${translateText("flag_input.title")}
-        ?inline=${this.inline}
-        hideHeader
-        hideCloseButton
-      >
-        ${content}
-      </o-modal>
+      <div class="flex justify-center py-3 shrink-0">
+        <o-button
+          class="no-crazygames"
+          variant="primary"
+          size="sm"
+          translationKey="main.store"
+          @click=${() => {
+            this.close();
+            window.showPage?.("page-item-store");
+          }}
+        ></o-button>
+      </div>
+      <div class="px-3 pb-3">${this.renderFlags()}</div>
     `;
   }
 

@@ -1,5 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   calculateServerTimeOffset,
   getMapName,
@@ -19,7 +20,6 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -77,7 +77,26 @@ export class JoinLobbyModal extends BaseModal {
     });
   };
 
-  render() {
+  protected renderHeaderSlot() {
+    if (!this.currentLobbyId) {
+      return modalHeader({
+        title: translateText("private_lobby.title"),
+        onBack: () => this.closeAndLeave(),
+        ariaLabel: translateText("common.close"),
+      });
+    }
+    return modalHeader({
+      title: translateText("public_lobby.title"),
+      onBack: () => this.closeAndLeave(),
+      ariaLabel: translateText("common.close"),
+      rightContent:
+        this.currentLobbyId && this.isPrivateLobby()
+          ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+          : undefined,
+    });
+  }
+
+  protected renderBody() {
     // Pre-join state: show lobby ID input form
     if (!this.currentLobbyId) {
       return this.renderJoinForm();
@@ -104,20 +123,9 @@ export class JoinLobbyModal extends BaseModal {
     const hostClientID = this.isPrivateLobby()
       ? (this.lobbyCreatorClientID ?? "")
       : "";
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("public_lobby.title"),
-          onBack: () => this.closeAndLeave(),
-          ariaLabel: translateText("common.close"),
-          rightContent:
-            this.currentLobbyId && this.isPrivateLobby()
-              ? html`
-                  <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
-                `
-              : undefined,
-        })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+    return html`
+      <div class="flex flex-col h-full">
+        <div class="flex-1 custom-scrollbar p-6 space-y-4 mr-1">
           ${this.isConnecting
             ? html`
                 <div
@@ -160,7 +168,7 @@ export class JoinLobbyModal extends BaseModal {
                 class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <button
-                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
                   disabled
                 >
                   ${translateText("private_lobby.joined_waiting")}
@@ -206,31 +214,11 @@ export class JoinLobbyModal extends BaseModal {
             `}
       </div>
     `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-      >
-        ${content}
-      </o-modal>
-    `;
   }
 
   private renderJoinForm() {
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("private_lobby.title"),
-          onBack: () => this.closeAndLeave(),
-          ariaLabel: translateText("common.close"),
-        })}
-        <form @submit=${this.joinLobbyFromInput} class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+    return html`
+      <form @submit=${this.joinLobbyFromInput} class="custom-scrollbar p-6 space-y-4 mr-1">
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -240,13 +228,12 @@ export class JoinLobbyModal extends BaseModal {
                 @keyup=${this.handleChange}
                 class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm tracking-wider"
               />
-              <button
-                @click=${this.pasteFromClipboard}
-                class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all group"
-                title=${translateText("common.paste")}
-              >
-                <svg
-                  class="text-white/60 group-hover:text-white transition-colors"
+              <o-button
+                variant="ghost"
+                size="md"
+                iconPosition="only"
+                .title=${translateText("common.paste")}
+                .icon=${html`<svg
                   stroke="currentColor"
                   fill="currentColor"
                   stroke-width="0"
@@ -258,36 +245,24 @@ export class JoinLobbyModal extends BaseModal {
                   <path
                     d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
                   ></path>
-                </svg>
-              </button>
+                </svg>`}
+                @click=${this.pasteFromClipboard}
+              ></o-button>
             </div>
             <o-button
               title=${translateText("private_lobby.join_lobby")}
-              block
+              width="block"
               submit
             ></o-button>
           </div>
         </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-      >
-        ${content}
-      </o-modal>
+      </form>
     `;
   }
 
-  public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
-    super.open();
+  protected onOpen(args?: Record<string, unknown>): void {
+    const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
+    const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
     if (lobbyId) {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
@@ -552,6 +527,13 @@ export class JoinLobbyModal extends BaseModal {
           .value=${translateText("common.disabled")}
         ></lobby-config-item>`,
       );
+    if (c.waterNukes)
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText("public_game_modifier.water_nukes_label")}
+          .value=${translateText("common.enabled")}
+        ></lobby-config-item>`,
+      );
     if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
       cards.push(
         html`<lobby-config-item
@@ -629,7 +611,7 @@ export class JoinLobbyModal extends BaseModal {
             ${cards}
           </div>`
         : html``}
-      ${this.renderDisabledUnits()}
+      ${this.renderDisabledUnits()} ${this.renderHostCheats()}
     `;
   }
 
@@ -680,6 +662,64 @@ export class JoinLobbyModal extends BaseModal {
             `;
           })}
         </div>
+      </div>
+    `;
+  }
+
+  private renderHostCheats(): TemplateResult {
+    if (!this.gameConfig?.hostCheats) {
+      return html``;
+    }
+
+    const hc = this.gameConfig.hostCheats;
+    const items: TemplateResult[] = [];
+
+    if (hc.infiniteGold)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("host_modal.infinite_gold")}
+        </span>`,
+      );
+    if (hc.infiniteTroops)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("host_modal.infinite_troops")}
+        </span>`,
+      );
+    if (hc.goldMultiplier)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("host_modal.gold_multiplier")}: x${hc.goldMultiplier}
+        </span>`,
+      );
+    if (hc.startingGold)
+      items.push(
+        html`<span
+          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+        >
+          ${translateText("private_lobby.starting_gold")}:
+          ${parseFloat((hc.startingGold / 1_000_000).toPrecision(12))}M
+        </span>`,
+      );
+
+    if (items.length === 0) return html``;
+
+    return html`
+      <div
+        class="mt-4 mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
+      >
+        <div
+          class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2"
+        >
+          ${translateText("private_lobby.host_cheats")}
+        </div>
+        <div class="flex flex-wrap gap-2">${items}</div>
       </div>
     `;
   }
@@ -902,8 +942,7 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const config = await getRuntimeClientServerConfig();
-    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+    const url = `/${ClientEnv.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -972,10 +1011,8 @@ export class JoinLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
-    if (
-      window.GIT_COMMIT !== "DEV" &&
-      parsed.data.gitCommit !== window.GIT_COMMIT
-    ) {
+    const gitCommit = ClientEnv.gitCommit();
+    if (gitCommit !== "DEV" && parsed.data.gitCommit !== gitCommit) {
       const safeLobbyId = this.sanitizeForLog(lobbyId);
       console.warn(
         `Git commit hash mismatch for game ${safeLobbyId}`,

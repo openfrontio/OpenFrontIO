@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 337,
-    "num_land_tiles": 50860,
+    "num_land_tiles": 50845,
     "width": 405
   },
   "map4x": {
     "height": 674,
-    "num_land_tiles": 213053,
+    "num_land_tiles": 212526,
     "width": 810
   },
   "name": "Gulf of St. Lawrence",

@@ -63,7 +63,7 @@ describe("username.ts functions", () => {
     test("rejects too long clan tag", () => {
       const res = validateClanTag("A".repeat(MAX_CLAN_TAG_LENGTH + 1));
       expect(res.isValid).toBe(false);
-      expect(res.error).toBe("username.tag_too_short");
+      expect(res.error).toBe("username.tag_too_long");
     });
 
     test("accepts valid clan tag", () => {

@@ -3,8 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import {
   ClanLeaderboardEntry,
   ClanLeaderboardResponse,
-} from "../../../core/ApiSchemas";
-import { fetchClanLeaderboard } from "../../Api";
+} from "../../../core/ClanApiSchemas";
+import { fetchClanLeaderboard } from "../../ClanApi";
 import { translateText } from "../../Utils";
 
 export type ClanSortColumn =

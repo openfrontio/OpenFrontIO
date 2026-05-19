@@ -88,11 +88,11 @@ export class NationMIRVBehavior {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return 1.5; // Needs larger gap to trigger
+        return 2; // Needs larger gap to trigger
       case Difficulty.Medium:
-        return 1.3;
+        return 1.5;
       case Difficulty.Hard:
-        return 1.2;
+        return 1.25;
       case Difficulty.Impossible:
         return 1.15; // Reacts to smaller gaps
       default:
@@ -104,7 +104,7 @@ export class NationMIRVBehavior {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return 15; // Needs more cities to trigger
+        return 20; // Needs more cities to trigger
       case Difficulty.Medium:
       case Difficulty.Hard:
         return 10;
@@ -117,6 +117,9 @@ export class NationMIRVBehavior {
 
   considerMIRV(): boolean {
     if (this.player === null) throw new Error("not initialized");
+    if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
+      return false;
+    }
     if (this.player.units(UnitType.MissileSilo).length === 0) {
       return false;
     }

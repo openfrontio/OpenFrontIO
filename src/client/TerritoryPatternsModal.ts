@@ -2,22 +2,29 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics, Pattern } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+import { Cosmetics } from "../core/CosmeticSchemas";
+import {
+  PATTERN_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
-import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   getPlayerCosmetics,
-  patternRelationship,
+  resolveCosmetics,
+  ResolvedCosmetic,
+  resolvedToPlayerPattern,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends BaseModal {
+  protected routerName = "territory-patterns";
   public previewButton: HTMLElement | null = null;
 
   @state() private selectedPattern: PlayerPattern | null;
@@ -42,7 +49,7 @@ export class TerritoryPatternsModal extends BaseModal {
       },
     );
     window.addEventListener(
-      "event:user-settings-changed:pattern",
+      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onPatternSelected,
     );
   }
@@ -50,7 +57,7 @@ export class TerritoryPatternsModal extends BaseModal {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener(
-      "event:user-settings-changed:pattern",
+      `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onPatternSelected,
     );
   }
@@ -78,126 +85,87 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private renderPatternGrid(): TemplateResult {
-    const buttons: TemplateResult[] = [];
-    const patterns: (Pattern | null)[] = [
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
       null,
-      ...Object.values(this.cosmetics?.patterns ?? {}),
-    ];
-    for (const pattern of patterns) {
-      if (pattern === null && this.search) {
-        continue;
-      }
-      if (pattern !== null && !this.includedInSearch(pattern.name)) {
-        continue;
-      }
-      const colorPalettes = pattern
-        ? [...(pattern.colorPalettes ?? []), null]
-        : [null];
-      for (const colorPalette of colorPalettes) {
-        let rel = "owned";
-        if (pattern) {
-          rel = patternRelationship(
-            pattern,
-            colorPalette,
-            this.userMeResponse,
-            null,
-          );
-        }
-        if (rel !== "owned") {
-          continue;
-        }
-        const isDefaultPattern = pattern === null;
-        const isSelected =
-          (isDefaultPattern && this.selectedPattern === null) ||
-          (!isDefaultPattern &&
-            this.selectedPattern &&
-            this.selectedPattern.name === pattern?.name &&
-            (this.selectedPattern.colorPalette?.name ?? null) ===
-              (colorPalette?.name ?? null));
-        buttons.push(html`
-          <pattern-button
-            .pattern=${pattern}
-            .colorPalette=${this.cosmetics?.colorPalettes?.[
-              colorPalette?.name ?? ""
-            ] ?? null}
-            .requiresPurchase=${false}
-            .selected=${isSelected}
-            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
-          ></pattern-button>
-        `);
-      }
-    }
+    ).filter(
+      (r) =>
+        r.type === "pattern" &&
+        r.relationship === "owned" &&
+        (r.cosmetic === null
+          ? !this.search
+          : this.includedInSearch(r.cosmetic.name)),
+    );
 
     return html`
       <div class="flex flex-col">
         <div
-          class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+          class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
         >
-          ${buttons}
+          ${items.map((r) => {
+            const isSelected =
+              (r.cosmetic === null && this.selectedPattern === null) ||
+              (r.cosmetic !== null &&
+                this.selectedPattern?.name === r.cosmetic.name &&
+                (this.selectedPattern?.colorPalette?.name ?? null) ===
+                  (r.colorPalette?.name ?? null));
+            return html`
+              <cosmetic-button
+                .resolved=${r}
+                .selected=${isSelected}
+                .onSelect=${(rc: ResolvedCosmetic) => this.selectCosmetic(rc)}
+              ></cosmetic-button>
+            `;
+          })}
         </div>
       </div>
     `;
   }
 
-  render() {
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <div
-          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
-        >
-          ${modalHeader({
-            title: translateText("territory_patterns.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-            rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
-          })}
+  protected renderHeaderSlot() {
+    return html`
+      <div
+        class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
+      >
+        ${modalHeader({
+          title: translateText("territory_patterns.title"),
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+          rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+        })}
 
-          <div class="md:flex items-center gap-2 justify-center mt-4">
-            <input
-              class="h-12 w-full max-w-md border border-white/10 bg-black/60
+        <div class="md:flex items-center gap-2 justify-center mt-4">
+          <input
+            class="h-12 w-full max-w-md border border-white/10 bg-black/60
               rounded-xl shadow-inner text-xl text-center focus:outline-none
               focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-white/30 transition-all"
-              type="text"
-              placeholder=${translateText("territory_patterns.search")}
-              .value=${this.search}
-              @change=${this.handleSearch}
-              @keyup=${this.handleSearch}
-            />
-          </div>
-        </div>
-        <div class="flex justify-center py-3 shrink-0">
-          <button
-            class="px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors"
-            @click=${() => {
-              this.close();
-              window.showPage?.("page-item-store");
-            }}
-          >
-            ${translateText("main.store")}
-          </button>
-        </div>
-        <div
-          class="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
-        >
-          ${this.renderPatternGrid()}
+            type="text"
+            placeholder=${translateText("territory_patterns.search")}
+            .value=${this.search}
+            @change=${this.handleSearch}
+            @keyup=${this.handleSearch}
+          />
         </div>
       </div>
     `;
+  }
 
-    if (this.inline) {
-      return content;
-    }
-
+  protected renderBody() {
     return html`
-      <o-modal
-        id="territoryPatternsModal"
-        title="${translateText("territory_patterns.title")}"
-        ?inline=${this.inline}
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-      >
-        ${content}
-      </o-modal>
+      <div class="flex justify-center py-3 shrink-0">
+        <o-button
+          class="no-crazygames"
+          variant="primary"
+          size="sm"
+          translationKey="main.store"
+          @click=${() => {
+            this.close();
+            window.showPage?.("page-item-store");
+          }}
+        ></o-button>
+      </div>
+      <div class="px-3 pb-3">${this.renderPatternGrid()}</div>
     `;
   }
 
@@ -209,9 +177,13 @@ export class TerritoryPatternsModal extends BaseModal {
     this.search = "";
   }
 
+  private selectCosmetic(resolved: ResolvedCosmetic) {
+    if (resolved.type !== "pattern") return;
+    this.selectPattern(resolvedToPlayerPattern(resolved));
+  }
+
   private selectPattern(pattern: PlayerPattern | null) {
     this.selectedColor = null;
-    this.userSettings.setSelectedColor(undefined);
     if (pattern === null) {
       this.userSettings.setSelectedPatternName(undefined);
     } else {

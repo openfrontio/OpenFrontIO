@@ -2,7 +2,8 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { isAdminRole } from "../core/ApiSchemas";
+import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientID,
@@ -27,6 +28,7 @@ import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { ServerEnv } from "./ServerEnv";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -35,6 +37,7 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_ADMIN = "kick_reason.admin";
 const KICK_REASON_HOST_LEFT = "kick_reason.host_left";
 const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
@@ -94,7 +97,6 @@ export class GameServer {
     public readonly id: string,
     readonly log_: Logger,
     public readonly createdAt: number,
-    private config: ServerConfig,
     public gameConfig: GameConfig,
     private creatorPersistentID?: string,
     private startsAt?: number,
@@ -141,7 +143,7 @@ export class GameServer {
       this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
     if (gameConfig.maxTimerValue !== undefined) {
-      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
@@ -150,7 +152,8 @@ export class GameServer {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
     if (gameConfig.spawnImmunityDuration !== undefined) {
-      this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
+      this.gameConfig.spawnImmunityDuration =
+        gameConfig.spawnImmunityDuration ?? undefined;
     }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
@@ -162,14 +165,19 @@ export class GameServer {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
     if (gameConfig.goldMultiplier !== undefined) {
-      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
+      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier ?? undefined;
     }
     if (gameConfig.startingGold !== undefined) {
-      this.gameConfig.startingGold = gameConfig.startingGold;
+      this.gameConfig.startingGold = gameConfig.startingGold ?? undefined;
     }
     if (gameConfig.disableAlliances !== undefined) {
-      this.gameConfig.disableAlliances = gameConfig.disableAlliances;
+      this.gameConfig.disableAlliances =
+        gameConfig.disableAlliances ?? undefined;
     }
+    if (gameConfig.waterNukes !== undefined) {
+      this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
+    }
+    this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 
   private isKicked(clientID: ClientID): boolean {
@@ -228,7 +236,7 @@ export class GameServer {
       return "rejected";
     }
 
-    if (this.config.env() === GameEnv.Prod) {
+    if (ServerEnv.env() === GameEnv.Prod) {
       // Prevent multiple clients from using the same account in prod
       const conflicting = this.activeClients.find(
         (c) =>
@@ -385,18 +393,24 @@ export class GameServer {
 
               // Handle kick_player intent via WebSocket
               case "kick_player": {
-                // Check if the authenticated client is the lobby creator
-                if (client.clientID !== this.lobbyCreatorID) {
-                  this.log.warn(`Only lobby creator can kick players`, {
-                    clientID: client.clientID,
-                    creatorID: this.lobbyCreatorID,
-                    target: stampedIntent.target,
-                    gameID: this.id,
-                  });
+                const isLobbyCreator = client.clientID === this.lobbyCreatorID;
+                const isAdmin = isAdminRole(client.role);
+
+                // Check if the authenticated client is the lobby creator or admin
+                if (!isLobbyCreator && !isAdmin) {
+                  this.log.warn(
+                    `Only lobby creator or admin can kick players`,
+                    {
+                      clientID: client.clientID,
+                      creatorID: this.lobbyCreatorID,
+                      target: stampedIntent.target,
+                      gameID: this.id,
+                    },
+                  );
                   return;
                 }
 
-                // Don't allow lobby creator to kick themselves
+                // Don't allow kicking yourself
                 if (client.clientID === stampedIntent.target) {
                   this.log.warn(`Cannot kick yourself`, {
                     clientID: client.clientID,
@@ -405,8 +419,9 @@ export class GameServer {
                 }
 
                 // Log and execute the kick
-                this.log.info(`Lobby creator initiated kick of player`, {
-                  creatorID: client.clientID,
+                this.log.info(`Player initiated kick`, {
+                  kickerID: client.clientID,
+                  isAdmin,
                   target: stampedIntent.target,
                   gameID: this.id,
                   kickMethod: "websocket",
@@ -414,7 +429,9 @@ export class GameServer {
 
                 this.kickClient(
                   stampedIntent.target,
-                  KICK_REASON_LOBBY_CREATOR,
+                  isAdmin && !isLobbyCreator
+                    ? KICK_REASON_ADMIN
+                    : KICK_REASON_LOBBY_CREATOR,
                 );
                 return;
               }
@@ -465,6 +482,35 @@ export class GameServer {
                 );
 
                 this.updateGameConfig(stampedIntent.config);
+                return;
+              }
+              case "start_game": {
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can start game`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot start public game via WebSocket`, {
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.hasStarted()) {
+                  this.log.warn(`Cannot start game that has already started`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+                this.log.info(`Lobby creator starting game via WebSocket`, {
+                  creatorID: client.clientID,
+                  gameID: this.id,
+                });
+                this.start();
                 return;
               }
               case "toggle_pause": {
@@ -528,7 +574,7 @@ export class GameServer {
         }
       } catch (error) {
         this.log.info(
-          `error handline websocket request in game server: ${error}`,
+          `error handling websocket request in game server: ${error}`,
           {
             clientID: client.clientID,
           },
@@ -543,19 +589,23 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
-      // Close lobby when host leaves before game starts
-      if (
-        !this._hasStarted &&
-        !this.isPublic() &&
-        client.persistentID === this.creatorPersistentID
-      ) {
-        this.log.info("Host left, closing lobby", {
-          gameID: this.id,
-        });
-        for (const c of [...this.activeClients]) {
-          this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+
+      if (!this._hasStarted) {
+        // Remove persistentId if the game has not started to prevent going over max players
+        this.persistentIdToClientId.delete(client.persistentID);
+        // Close lobby when host leaves before game starts
+        if (
+          !this.isPublic() &&
+          client.persistentID === this.creatorPersistentID
+        ) {
+          this.log.info("Host left, closing lobby", {
+            gameID: this.id,
+          });
+          for (const c of [...this.activeClients]) {
+            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+          }
+          this._hasEnded = true;
         }
-        this._hasEnded = true;
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -573,6 +623,10 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Remove persistentId if the game has not started to prevent going over max players
+      if (!this._hasStarted) {
+        this.persistentIdToClientId.delete(client.persistentID);
+      }
     }
   }
 
@@ -618,7 +672,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(msg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -697,7 +753,7 @@ export class GameServer {
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
-      this.config.turnIntervalMs(),
+      ServerEnv.turnIntervalMs(),
     );
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
@@ -727,6 +783,13 @@ export class GameServer {
     });
 
     try {
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.log.warn(`WebSocket not open, skipping start message`, {
+          clientID: client.clientID,
+          readyState: ws.readyState,
+        });
+        return;
+      }
       ws.send(
         JSON.stringify({
           type: "start",
@@ -737,12 +800,10 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
-      throw new Error(
-        `error sending start message for game ${this.id}, ${error}`.substring(
-          0,
-          250,
-        ),
-      );
+      this.log.error(`error sending start message for game ${this.id}`, {
+        clientID: client.clientID,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -767,7 +828,9 @@ export class GameServer {
       turn: pastTurn,
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
-      c.ws.send(msg);
+      if (c.ws.readyState === c.ws.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -941,13 +1004,15 @@ export class GameServer {
         persistentID: client.persistentID,
         reasonKey,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: reasonKey,
-        } satisfies ServerErrorMessage),
-      );
-      client.ws.close(1000, reasonKey);
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(
+          JSON.stringify({
+            type: "error",
+            error: reasonKey,
+          } satisfies ServerErrorMessage),
+        );
+        client.ws.close(1000, reasonKey);
+      }
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
@@ -1079,7 +1144,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(desyncMsg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(desyncMsg);
+      }
     }
   }
 

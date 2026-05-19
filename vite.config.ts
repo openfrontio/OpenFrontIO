@@ -1,52 +1,132 @@
 import tailwindcss from "@tailwindcss/vite";
+import fs from "fs";
+import { lookup as lookupMime } from "mrmime";
 import path from "path";
 import { fileURLToPath } from "url";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import { viteStaticCopy } from "vite-plugin-static-copy";
-import tsconfigPaths from "vite-tsconfig-paths";
-import { type AssetManifest, buildAssetUrl } from "./src/core/AssetUrls";
+import {
+  type AssetManifest,
+  buildAssetUrl,
+  rewriteAssetsForCdn,
+} from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
+  getProprietaryDir,
   getResourcesDir,
-  writePublicAssetManifestModule,
+  writePublicAssetManifest,
 } from "./src/server/PublicAssetManifest";
 
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function serveProprietaryDir(
+  proprietaryDir: string,
+  resourcesDir: string,
+): Plugin {
+  return {
+    name: "serve-proprietary-dir",
+    configureServer(server) {
+      // Must run before Vite's htmlFallback; skip when resources/ has the file
+      // so publicDir keeps precedence.
+      server.middlewares.use((req, res, next) => {
+        if (!req.url) return next();
+        const rel = decodeURIComponent(
+          new URL(req.url, "http://x").pathname,
+        ).replace(/^\//, "");
+        if (rel.includes("..")) return next();
+        if (fs.existsSync(path.join(resourcesDir, rel))) return next();
+        const filePath = path.join(proprietaryDir, rel);
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+          return next();
+        const mime = lookupMime(filePath);
+        if (mime) res.setHeader("Content-Type", mime);
+        res.setHeader("Cache-Control", "no-store");
+        fs.createReadStream(filePath).pipe(res);
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
   const resourcesDir = getResourcesDir(__dirname);
+  const proprietaryDir = getProprietaryDir(__dirname);
+  const sourceDirs = [resourcesDir, proprietaryDir];
   const assetManifest: AssetManifest = isProduction
-    ? buildPublicAssetManifest(resourcesDir)
+    ? buildPublicAssetManifest(sourceDirs)
     : {};
+  const cdnBase = env.CDN_BASE ?? "";
   const htmlAssetData = {
     assetManifest: JSON.stringify(assetManifest),
+    cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
-    manifestHref: buildAssetUrl("manifest.json", assetManifest),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest),
+    numWorkers: JSON.stringify(parseInt(env.NUM_WORKERS ?? "2", 10)),
+    turnstileSiteKey: JSON.stringify(
+      env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
+    ),
+    jwtAudience: JSON.stringify(env.DOMAIN ?? "localhost"),
+    instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
+    manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
+    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
     gameplayScreenshotUrl: buildAssetUrl(
       "images/GameplayScreenshot.png",
       assetManifest,
+      cdnBase,
     ),
-    backgroundImageUrl: buildAssetUrl("images/background.webp", assetManifest),
-    desktopLogoImageUrl: buildAssetUrl("images/OpenFront.webp", assetManifest),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.webp", assetManifest),
+    backgroundImageUrl: buildAssetUrl(
+      "images/background.webp",
+      assetManifest,
+      cdnBase,
+    ),
+    desktopLogoImageUrl: buildAssetUrl(
+      "images/OpenFront.png",
+      assetManifest,
+      cdnBase,
+    ),
+    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest, cdnBase),
   };
 
-  const syncHashedPublicAssets = () => ({
+  // Vite's HTML transform replaces the source <script src="/src/client/Main.ts">
+  // with the hashed bundle URL and injects <link rel="modulepreload"> /
+  // <link rel="stylesheet"> tags. rewriteAssetsForCdn rewrites those refs to
+  // an EJS placeholder so RenderHtml.ts can prefix them with CDN_BASE at
+  // request time.
+  const injectCdnBaseTemplate = (): Plugin => ({
+    name: "inject-cdn-base-template",
+    apply: "build" as const,
+    enforce: "post",
+    transformIndexHtml: rewriteAssetsForCdn,
+  });
+
+  let viteBundleFiles: string[] = [];
+  const syncHashedPublicAssets = (): Plugin => ({
     name: "sync-hashed-public-assets",
     apply: "build" as const,
+    writeBundle(_options, bundle) {
+      viteBundleFiles = Object.keys(bundle);
+    },
     closeBundle() {
       const outDir = path.join(__dirname, "static");
       copyRootPublicFiles(resourcesDir, outDir);
-      writePublicAssetManifestModule(outDir, assetManifest);
-      createHashedPublicAssetFiles(resourcesDir, outDir, assetManifest);
+      // Run the source→hashed copy first; createHashedPublicAssetFiles iterates
+      // assetManifest and expects every key to resolve to a file in resources/
+      // or proprietary/. Vite's bundle output (assets/...) doesn't, so it's
+      // merged in after.
+      createHashedPublicAssetFiles(sourceDirs, outDir, assetManifest);
+      // Track Vite's own bundle output (vendor chunks, JS, CSS, workers under
+      // static/assets/) in the manifest so the deploy-time R2 upload covers
+      // them alongside the hashed source assets. Skip non-assets/ emits like
+      // index.html — those are served by the app, not from R2.
+      for (const fileName of viteBundleFiles) {
+        if (!fileName.startsWith("assets/")) continue;
+        assetManifest[fileName] = `/${fileName}`;
+      }
+      writePublicAssetManifest(outDir, assetManifest);
     },
   });
 
@@ -80,17 +160,16 @@ export default defineConfig(({ mode }) => {
     publicDir: isProduction ? false : "resources",
 
     resolve: {
+      tsconfigPaths: true,
       alias: {
-        "protobufjs/minimal": path.resolve(
-          __dirname,
-          "node_modules/protobufjs/minimal.js",
-        ),
         resources: path.resolve(__dirname, "resources"),
       },
     },
 
     plugins: [
-      tsconfigPaths(),
+      ...(!isProduction
+        ? [serveProprietaryDir(proprietaryDir, resourcesDir)]
+        : []),
       ...(isProduction
         ? []
         : [
@@ -106,15 +185,9 @@ export default defineConfig(({ mode }) => {
               },
             }),
           ]),
-      viteStaticCopy({
-        targets: [
-          {
-            src: "proprietary/*",
-            dest: ".",
-          },
-        ],
-      }),
-      ...(isProduction ? [syncHashedPublicAssets()] : []),
+      ...(isProduction
+        ? [injectCdnBaseTemplate(), syncHashedPublicAssets()]
+        : []),
       tailwindcss(),
     ],
 
@@ -137,8 +210,11 @@ export default defineConfig(({ mode }) => {
       assetsDir: "assets", // Sub-directory for assets
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ["pixi.js", "howler", "zod", "protobufjs"],
+          manualChunks: (id) => {
+            const vendorModules = ["pixi.js", "howler", "zod"];
+            if (vendorModules.some((module) => id.includes(module))) {
+              return "vendor";
+            }
           },
         },
       },

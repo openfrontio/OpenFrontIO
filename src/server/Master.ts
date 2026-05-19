@@ -6,15 +6,14 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { renderAppShell } from "./RenderHtml";
+import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 
-const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
 let lobbyService: MasterLobbyService;
 
@@ -79,16 +78,16 @@ export async function startMaster() {
   }
 
   log.info(`Primary ${process.pid} is running`);
-  log.info(`Setting up ${config.numWorkers()} workers...`);
+  log.info(`Setting up ${ServerEnv.numWorkers()} workers...`);
 
-  lobbyService = new MasterLobbyService(config, playlist, log);
+  lobbyService = new MasterLobbyService(playlist, log);
 
   // Generate admin token for worker authentication
   const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
   process.env.ADMIN_TOKEN = ADMIN_TOKEN;
 
   const INSTANCE_ID =
-    config.env() === GameEnv.Dev
+    ServerEnv.env() === GameEnv.Dev
       ? "DEV_ID"
       : crypto.randomBytes(4).toString("hex");
   process.env.INSTANCE_ID = INSTANCE_ID;
@@ -96,7 +95,7 @@ export async function startMaster() {
   log.info(`Instance ID: ${INSTANCE_ID}`);
 
   // Fork workers
-  for (let i = 0; i < config.numWorkers(); i++) {
+  for (let i = 0; i < ServerEnv.numWorkers(); i++) {
     const worker = cluster.fork({
       WORKER_ID: i,
       ADMIN_TOKEN,
@@ -149,12 +148,6 @@ app.get("/api/health", (_req, res) => {
   } else {
     res.status(503).json({ status: "unavailable" });
   }
-});
-
-app.get("/api/instance", (_req, res) => {
-  res.json({
-    instanceId: process.env.INSTANCE_ID ?? "undefined",
-  });
 });
 
 // SPA fallback route

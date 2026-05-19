@@ -59,10 +59,6 @@ describe("DeleteUnitExecution Security Tests", () => {
       ),
     );
 
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     executeTicks(game, game.config().deleteUnitCooldown() + 1);
 
     player = game.player(player1Info.id);

@@ -1,7 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { FlagName } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  FLAG_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { resolveFlagUrl } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -17,12 +21,13 @@ export class FlagInput extends LitElement {
   }
 
   private updateFlag = (e: CustomEvent) => {
-    const parsed = FlagName.safeParse(e.detail);
+    const val = e.detail ?? "";
+    const parsed = FlagName.safeParse(val);
     if (!parsed.success) {
-      console.warn(`error parsing flag ${e.detail.value}, ${parsed.error}`);
+      console.warn(`error parsing flag ${val}, ${parsed.error}`);
     }
-    if (this.flag !== e.detail) {
-      this.flag = e.detail;
+    if (this.flag !== val) {
+      this.flag = val;
     }
   };
 
@@ -41,7 +46,7 @@ export class FlagInput extends LitElement {
     super.connectedCallback();
     this.flag = new UserSettings().getFlag() ?? "";
     window.addEventListener(
-      "event:user-settings-changed:flag",
+      `${USER_SETTINGS_CHANGED_EVENT}:${FLAG_KEY}`,
       this.updateFlag as EventListener,
     );
   }
@@ -49,7 +54,7 @@ export class FlagInput extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener(
-      "event:user-settings-changed:flag",
+      `${USER_SETTINGS_CHANGED_EVENT}:${FLAG_KEY}`,
       this.updateFlag as EventListener,
     );
   }
@@ -68,7 +73,7 @@ export class FlagInput extends LitElement {
     return html`
       <button
         id="flag-input"
-        class="flag-btn p-0 m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] hover:brightness-[1.08] active:brightness-[0.95] rounded-lg overflow-hidden"
+        class="flag-btn p-0 m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:shadow-[var(--shadow-action-card-hover)] rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
       >

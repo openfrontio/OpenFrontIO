@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
+import { getDefaultKeybinds, UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -12,52 +12,18 @@ import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
 
-const isMac = Platform.isMac;
-
-const DefaultKeybinds: Record<string, string> = {
-  toggleView: "Space",
-  coordinateGrid: "KeyM",
-  buildCity: "Digit1",
-  buildFactory: "Digit2",
-  buildPort: "Digit3",
-  buildDefensePost: "Digit4",
-  buildMissileSilo: "Digit5",
-  buildSamLauncher: "Digit6",
-  buildWarship: "Digit7",
-  buildAtomBomb: "Digit8",
-  buildHydrogenBomb: "Digit9",
-  buildMIRV: "Digit0",
-  attackRatioDown: "KeyT",
-  attackRatioUp: "KeyY",
-  boatAttack: "KeyB",
-  groundAttack: "KeyG",
-  swapDirection: "KeyU",
-  zoomOut: "KeyQ",
-  zoomIn: "KeyE",
-  centerCamera: "KeyC",
-  moveUp: "KeyW",
-  moveLeft: "KeyA",
-  moveDown: "KeyS",
-  moveRight: "KeyD",
-  modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-  altKey: "AltLeft",
-  pauseGame: "KeyP",
-  gameSpeedUp: "Period",
-  gameSpeedDown: "Comma",
-};
-
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  protected routerName = "settings";
   private userSettings: UserSettings = new UserSettings();
-
-  @state() private activeTab: "basic" | "keybinds" = "basic";
+  private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
 
-  @state() private keybinds: Record<
+  @state() private userKeybinds: Record<
     string,
-    { value: string | string[]; key: string }
+    { value: string; key: string }
   > = {};
 
   connectedCallback() {
@@ -71,55 +37,39 @@ export class UserSettingModal extends BaseModal {
   }
 
   private loadKeybindsFromStorage() {
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
-    if (!savedKeybinds) return;
-
-    try {
-      const parsed = JSON.parse(savedKeybinds);
-      if (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        !Array.isArray(parsed)
-      ) {
-        const isValid = Object.values(parsed).every((entry) => {
-          if (
-            typeof entry !== "object" ||
-            entry === null ||
-            Array.isArray(entry)
-          ) {
-            return false;
-          }
-          if (!("key" in entry) || typeof (entry as any).key !== "string") {
-            return false;
-          }
-          if (!("value" in entry)) {
-            return false;
-          }
-          const value = (entry as any).value;
-          if (typeof value === "string") {
-            return true;
-          }
-          if (Array.isArray(value)) {
-            return value.every((v) => typeof v === "string");
-          }
-          return false;
-        });
-
-        if (isValid) {
-          this.keybinds = parsed;
-        } else {
-          console.warn(
-            "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
-          );
-        }
-      } else {
-        console.warn(
-          "Invalid keybinds data: expected non-array object. Ignoring saved data.",
-        );
-      }
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
+    const parsed = this.userSettings.parsedUserKeybinds();
+    if (Object.keys(parsed).length === 0) {
+      this.userKeybinds = {};
+      return;
     }
+
+    const validated: Record<string, { value: string; key: string }> = {};
+
+    for (const [action, entry] of Object.entries(parsed)) {
+      if (typeof entry === "string") {
+        validated[action] = { value: entry, key: entry };
+      } else if (
+        typeof entry === "object" &&
+        entry !== null &&
+        !Array.isArray(entry)
+      ) {
+        const rawValue = (entry as any).value ?? "Null";
+        const value = Array.isArray(rawValue)
+          ? rawValue.find((v) => typeof v === "string")
+          : rawValue;
+
+        const rawKey = (entry as any).key ?? value;
+        const key = Array.isArray(rawKey)
+          ? rawKey.find((v) => typeof v === "string")
+          : rawKey;
+
+        if (typeof value === "string" && typeof key === "string") {
+          validated[action] = { value, key };
+        }
+      }
+    }
+
+    this.userKeybinds = validated;
   }
 
   private handleKeybindChange(
@@ -132,11 +82,9 @@ export class UserSettingModal extends BaseModal {
   ) {
     const { action, value, key, prevValue } = e.detail;
 
-    const activeKeybinds: Record<string, string> = { ...DefaultKeybinds };
-    for (const [k, v] of Object.entries(this.keybinds)) {
-      const normalizedValue = Array.isArray(v.value)
-        ? v.value[0] || ""
-        : v.value;
+    const activeKeybinds = { ...this.defaultKeybinds };
+    for (const [k, v] of Object.entries(this.userKeybinds)) {
+      const normalizedValue = v.value;
       if (normalizedValue === "Null") {
         delete activeKeybinds[k];
       } else {
@@ -188,32 +136,33 @@ export class UserSettingModal extends BaseModal {
         }),
       );
 
-      const element = this.renderRoot.querySelector(
+      const element = this.renderRoot.querySelector<SettingKeybind>(
         `setting-keybind[action="${action}"]`,
-      ) as SettingKeybind;
+      );
       if (element) {
-        element.value = prevValue ?? DefaultKeybinds[action] ?? "";
+        element.value = prevValue ?? this.defaultKeybinds[action] ?? "";
         element.requestUpdate();
       }
       return;
     }
 
-    this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
-    localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
+    this.userKeybinds = {
+      ...this.userKeybinds,
+      [action]: { value: value, key: key },
+    };
+    this.userSettings.setKeybinds(this.userKeybinds);
   }
 
   private getKeyValue(action: string): string | undefined {
-    const entry = this.keybinds[action];
+    const entry = this.userKeybinds[action];
     if (!entry) return undefined;
-    const normalizedValue = Array.isArray(entry.value)
-      ? entry.value[0] || ""
-      : entry.value;
+    const normalizedValue = entry.value;
     if (normalizedValue === "Null") return "";
     return normalizedValue || undefined;
   }
 
   private getKeyChar(action: string): string {
-    const entry = this.keybinds[action];
+    const entry = this.userKeybinds[action];
     if (!entry) return "";
     return entry.key || "";
   }
@@ -251,101 +200,77 @@ export class UserSettingModal extends BaseModal {
     }, 5000);
   }
 
-  toggleDarkMode(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
+  toggleDarkMode() {
+    this.userSettings.toggleDarkMode();
 
-    if (typeof enabled !== "boolean") {
-      console.warn("Unexpected toggle event payload", e);
-      return;
-    }
+    console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
+  }
 
-    this.userSettings.set("settings.darkMode", enabled);
+  private toggleEmojis() {
+    this.userSettings.toggleEmojis();
 
-    if (enabled) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    console.log("🤡 Emojis:", this.userSettings.emojis() ? "ON" : "OFF");
+  }
 
-    this.dispatchEvent(
-      new CustomEvent("dark-mode-changed", {
-        detail: { darkMode: enabled },
-        bubbles: true,
-        composed: true,
-      }),
+  private toggleAlertFrame() {
+    this.userSettings.toggleAlertFrame();
+
+    console.log(
+      "🚨 Alert frame:",
+      this.userSettings.alertFrame() ? "ON" : "OFF",
     );
-
-    console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
-  private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleFxLayer() {
+    this.userSettings.toggleFxLayer();
 
-    this.userSettings.set("settings.emojis", enabled);
-
-    console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
+    console.log(
+      "💥 Special effects:",
+      this.userSettings.fxLayer() ? "ON" : "OFF",
+    );
   }
 
-  private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleStructureSprites() {
+    this.userSettings.toggleStructureSprites();
 
-    this.userSettings.set("settings.alertFrame", enabled);
-
-    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
+    console.log(
+      "🏠 Structure sprites:",
+      this.userSettings.structureSprites() ? "ON" : "OFF",
+    );
   }
 
-  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleCursorCostLabel() {
+    this.userSettings.toggleCursorCostLabel();
 
-    this.userSettings.set("settings.specialEffects", enabled);
-
-    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+    console.log(
+      "💰 Cursor build cost:",
+      this.userSettings.cursorCostLabel() ? "ON" : "OFF",
+    );
   }
 
-  private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleAnonymousNames() {
+    this.userSettings.toggleRandomName();
 
-    this.userSettings.set("settings.structureSprites", enabled);
-
-    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
+    console.log(
+      "🙈 Anonymous Names:",
+      this.userSettings.anonymousNames() ? "ON" : "OFF",
+    );
   }
 
-  private toggleCursorCostLabel(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.cursorCostLabel", enabled);
-
-    console.log("💰 Cursor build cost:", enabled ? "ON" : "OFF");
+  private toggleLobbyIdVisibility() {
+    this.userSettings.toggleLobbyIdVisibility();
+    console.log(
+      "👁️ Hidden Lobby IDs:",
+      !this.userSettings.lobbyIdVisibility() ? "ON" : "OFF",
+    );
   }
 
-  private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.anonymousNames", enabled);
-
-    console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
-  }
-
-  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
-    const hideIds = e.detail?.checked;
-    if (typeof hideIds !== "boolean") return;
-
-    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
-    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
-  }
-
-  private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.leftClickOpensMenu", enabled);
-    console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
+  private toggleLeftClickOpensMenu() {
+    this.userSettings.toggleLeftClickOpenMenu();
+    console.log(
+      "🖱️ Left Click Opens Menu:",
+      this.userSettings.leftClickOpensMenu() ? "ON" : "OFF",
+    );
 
     this.requestUpdate();
   }
@@ -354,7 +279,7 @@ export class UserSettingModal extends BaseModal {
     const value = e.detail?.value;
     if (typeof value === "number") {
       const ratio = value / 100;
-      localStorage.setItem("settings.attackRatio", ratio.toString());
+      this.userSettings.setAttackRatio(ratio);
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -370,90 +295,57 @@ export class UserSettingModal extends BaseModal {
       console.warn("Select event missing detail.value", e);
       return;
     }
-    this.userSettings.setFloat(
-      "settings.attackRatioIncrement",
-      Math.round(value),
-    );
+    this.userSettings.setAttackRatioIncrement(Math.round(value));
     this.requestUpdate();
   }
 
-  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
 
-    this.userSettings.set("settings.territoryPatterns", enabled);
-
-    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+    console.log(
+      "🏳️ Territory Patterns:",
+      this.userSettings.territoryPatterns() ? "ON" : "OFF",
+    );
   }
 
-  private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+  private toggleGoToPlayer() {
+    this.userSettings.toggleGoToPlayer();
 
-    this.userSettings.set("settings.performanceOverlay", enabled);
+    console.log(
+      "🔍 Go to player:",
+      this.userSettings.goToPlayer() ? "ON" : "OFF",
+    );
   }
 
-  render() {
-    const activeContent =
-      this.activeTab === "basic"
-        ? this.renderBasicSettings()
-        : this.renderKeybindSettings();
+  private togglePerformanceOverlay() {
+    this.userSettings.togglePerformanceOverlay();
+  }
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <div
-          class="relative flex flex-col border-b border-white/10 lg:pb-4 shrink-0"
-        >
-          ${modalHeader({
-            title: translateText("user_setting.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-            showDivider: true,
-          })}
+  protected modalConfig() {
+    return {
+      tabs: [
+        { key: "basic", label: translateText("user_setting.tab_basic") },
+        { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
+      ],
+    };
+  }
 
-          <div class="hidden lg:flex items-center gap-2 justify-center mt-4">
-            <button
-              class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-                .activeTab === "basic"
-                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-              @click=${() => (this.activeTab = "basic")}
-            >
-              ${translateText("user_setting.tab_basic")}
-            </button>
-            <button
-              class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-                .activeTab === "keybinds"
-                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-              @click=${() => (this.activeTab = "keybinds")}
-            >
-              ${translateText("user_setting.tab_keybinds")}
-            </button>
-          </div>
-        </div>
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("user_setting.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      showDivider: true,
+    });
+  }
 
-        <div
-          class="pt-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
-        >
-          <div class="flex flex-col gap-2">${activeContent}</div>
-        </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
+  protected renderBody(tab: string) {
+    const body =
+      tab === "keybinds"
+        ? this.renderKeybindSettings()
+        : this.renderBasicSettings();
     return html`
-      <o-modal
-        title="${translateText("user_setting.title")}"
-        ?inline=${this.inline}
-        hideCloseButton
-        hideHeader
-      >
-        ${content}
-      </o-modal>
+      <div class="flex flex-col gap-2 p-4 lg:p-[1.4rem]">${body}</div>
     `;
   }
 
@@ -463,6 +355,26 @@ export class UserSettingModal extends BaseModal {
 
   private renderKeybindSettings() {
     return html`
+      <div
+        class="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300/70 text-xs"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-3.5 w-3.5 shrink-0 opacity-70"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        ${translateText("user_setting.keybinds_hint")}
+      </div>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"
       >
@@ -473,7 +385,7 @@ export class UserSettingModal extends BaseModal {
         action="toggleView"
         label=${translateText("user_setting.toggle_view")}
         description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
+        defaultKey=${this.defaultKeybinds.toggleView}
         .value=${this.getKeyValue("toggleView")}
         .display=${this.getKeyChar("toggleView")}
         @change=${this.handleKeybindChange}
@@ -483,7 +395,7 @@ export class UserSettingModal extends BaseModal {
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
-        defaultKey=${DefaultKeybinds.coordinateGrid}
+        defaultKey=${this.defaultKeybinds.coordinateGrid}
         .value=${this.getKeyValue("coordinateGrid")}
         .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
@@ -499,7 +411,7 @@ export class UserSettingModal extends BaseModal {
         action="buildCity"
         label=${translateText("user_setting.build_city")}
         description=${translateText("user_setting.build_city_desc")}
-        defaultKey="Digit1"
+        defaultKey=${this.defaultKeybinds.buildCity}
         .value=${this.getKeyValue("buildCity")}
         .display=${this.getKeyChar("buildCity")}
         @change=${this.handleKeybindChange}
@@ -509,7 +421,7 @@ export class UserSettingModal extends BaseModal {
         action="buildFactory"
         label=${translateText("user_setting.build_factory")}
         description=${translateText("user_setting.build_factory_desc")}
-        defaultKey="Digit2"
+        defaultKey=${this.defaultKeybinds.buildFactory}
         .value=${this.getKeyValue("buildFactory")}
         .display=${this.getKeyChar("buildFactory")}
         @change=${this.handleKeybindChange}
@@ -519,7 +431,7 @@ export class UserSettingModal extends BaseModal {
         action="buildPort"
         label=${translateText("user_setting.build_port")}
         description=${translateText("user_setting.build_port_desc")}
-        defaultKey="Digit3"
+        defaultKey=${this.defaultKeybinds.buildPort}
         .value=${this.getKeyValue("buildPort")}
         .display=${this.getKeyChar("buildPort")}
         @change=${this.handleKeybindChange}
@@ -529,7 +441,7 @@ export class UserSettingModal extends BaseModal {
         action="buildDefensePost"
         label=${translateText("user_setting.build_defense_post")}
         description=${translateText("user_setting.build_defense_post_desc")}
-        defaultKey="Digit4"
+        defaultKey=${this.defaultKeybinds.buildDefensePost}
         .value=${this.getKeyValue("buildDefensePost")}
         .display=${this.getKeyChar("buildDefensePost")}
         @change=${this.handleKeybindChange}
@@ -539,7 +451,7 @@ export class UserSettingModal extends BaseModal {
         action="buildMissileSilo"
         label=${translateText("user_setting.build_missile_silo")}
         description=${translateText("user_setting.build_missile_silo_desc")}
-        defaultKey="Digit5"
+        defaultKey=${this.defaultKeybinds.buildMissileSilo}
         .value=${this.getKeyValue("buildMissileSilo")}
         .display=${this.getKeyChar("buildMissileSilo")}
         @change=${this.handleKeybindChange}
@@ -549,7 +461,7 @@ export class UserSettingModal extends BaseModal {
         action="buildSamLauncher"
         label=${translateText("user_setting.build_sam_launcher")}
         description=${translateText("user_setting.build_sam_launcher_desc")}
-        defaultKey="Digit6"
+        defaultKey=${this.defaultKeybinds.buildSamLauncher}
         .value=${this.getKeyValue("buildSamLauncher")}
         .display=${this.getKeyChar("buildSamLauncher")}
         @change=${this.handleKeybindChange}
@@ -559,7 +471,7 @@ export class UserSettingModal extends BaseModal {
         action="buildWarship"
         label=${translateText("user_setting.build_warship")}
         description=${translateText("user_setting.build_warship_desc")}
-        defaultKey="Digit7"
+        defaultKey=${this.defaultKeybinds.buildWarship}
         .value=${this.getKeyValue("buildWarship")}
         .display=${this.getKeyChar("buildWarship")}
         @change=${this.handleKeybindChange}
@@ -569,7 +481,7 @@ export class UserSettingModal extends BaseModal {
         action="buildAtomBomb"
         label=${translateText("user_setting.build_atom_bomb")}
         description=${translateText("user_setting.build_atom_bomb_desc")}
-        defaultKey="Digit8"
+        defaultKey=${this.defaultKeybinds.buildAtomBomb}
         .value=${this.getKeyValue("buildAtomBomb")}
         .display=${this.getKeyChar("buildAtomBomb")}
         @change=${this.handleKeybindChange}
@@ -579,7 +491,7 @@ export class UserSettingModal extends BaseModal {
         action="buildHydrogenBomb"
         label=${translateText("user_setting.build_hydrogen_bomb")}
         description=${translateText("user_setting.build_hydrogen_bomb_desc")}
-        defaultKey="Digit9"
+        defaultKey=${this.defaultKeybinds.buildHydrogenBomb}
         .value=${this.getKeyValue("buildHydrogenBomb")}
         .display=${this.getKeyChar("buildHydrogenBomb")}
         @change=${this.handleKeybindChange}
@@ -589,7 +501,7 @@ export class UserSettingModal extends BaseModal {
         action="buildMIRV"
         label=${translateText("user_setting.build_mirv")}
         description=${translateText("user_setting.build_mirv_desc")}
-        defaultKey="Digit0"
+        defaultKey=${this.defaultKeybinds.buildMIRV}
         .value=${this.getKeyValue("buildMIRV")}
         .display=${this.getKeyChar("buildMIRV")}
         @change=${this.handleKeybindChange}
@@ -605,7 +517,7 @@ export class UserSettingModal extends BaseModal {
         action="modifierKey"
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
-        .defaultKey=${DefaultKeybinds.modifierKey}
+        .defaultKey=${this.defaultKeybinds.modifierKey}
         .value=${this.getKeyValue("modifierKey")}
         .display=${this.getKeyChar("modifierKey")}
         @change=${this.handleKeybindChange}
@@ -615,7 +527,7 @@ export class UserSettingModal extends BaseModal {
         action="altKey"
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
-        .defaultKey=${DefaultKeybinds.altKey}
+        .defaultKey=${this.defaultKeybinds.altKey}
         .value=${this.getKeyValue("altKey")}
         .display=${this.getKeyChar("altKey")}
         @change=${this.handleKeybindChange}
@@ -625,7 +537,7 @@ export class UserSettingModal extends BaseModal {
         action="pauseGame"
         label=${translateText("user_setting.pause_game")}
         description=${translateText("user_setting.pause_game_desc")}
-        .defaultKey=${DefaultKeybinds.pauseGame}
+        .defaultKey=${this.defaultKeybinds.pauseGame}
         .value=${this.getKeyValue("pauseGame")}
         .display=${this.getKeyChar("pauseGame")}
         @change=${this.handleKeybindChange}
@@ -635,7 +547,7 @@ export class UserSettingModal extends BaseModal {
         action="gameSpeedUp"
         label=${translateText("user_setting.game_speed_up")}
         description=${translateText("user_setting.game_speed_up_desc")}
-        .defaultKey=${DefaultKeybinds.gameSpeedUp}
+        .defaultKey=${this.defaultKeybinds.gameSpeedUp}
         .value=${this.getKeyValue("gameSpeedUp")}
         .display=${this.getKeyChar("gameSpeedUp")}
         @change=${this.handleKeybindChange}
@@ -645,7 +557,7 @@ export class UserSettingModal extends BaseModal {
         action="gameSpeedDown"
         label=${translateText("user_setting.game_speed_down")}
         description=${translateText("user_setting.game_speed_down_desc")}
-        .defaultKey=${DefaultKeybinds.gameSpeedDown}
+        .defaultKey=${this.defaultKeybinds.gameSpeedDown}
         .value=${this.getKeyValue("gameSpeedDown")}
         .display=${this.getKeyChar("gameSpeedDown")}
         @change=${this.handleKeybindChange}
@@ -663,7 +575,7 @@ export class UserSettingModal extends BaseModal {
         description=${translateText("user_setting.attack_ratio_down_desc", {
           amount: this.userSettings.attackRatioIncrement(),
         })}
-        defaultKey="KeyT"
+        defaultKey=${this.defaultKeybinds.attackRatioDown}
         .value=${this.getKeyValue("attackRatioDown")}
         .display=${this.getKeyChar("attackRatioDown")}
         @change=${this.handleKeybindChange}
@@ -675,7 +587,7 @@ export class UserSettingModal extends BaseModal {
         description=${translateText("user_setting.attack_ratio_up_desc", {
           amount: this.userSettings.attackRatioIncrement(),
         })}
-        defaultKey="KeyY"
+        defaultKey=${this.defaultKeybinds.attackRatioUp}
         .value=${this.getKeyValue("attackRatioUp")}
         .display=${this.getKeyChar("attackRatioUp")}
         @change=${this.handleKeybindChange}
@@ -691,7 +603,7 @@ export class UserSettingModal extends BaseModal {
         action="boatAttack"
         label=${translateText("user_setting.boat_attack")}
         description=${translateText("user_setting.boat_attack_desc")}
-        defaultKey="KeyB"
+        defaultKey=${this.defaultKeybinds.boatAttack}
         .value=${this.getKeyValue("boatAttack")}
         .display=${this.getKeyChar("boatAttack")}
         @change=${this.handleKeybindChange}
@@ -701,9 +613,19 @@ export class UserSettingModal extends BaseModal {
         action="groundAttack"
         label=${translateText("user_setting.ground_attack")}
         description=${translateText("user_setting.ground_attack_desc")}
-        defaultKey="KeyG"
+        defaultKey=${this.defaultKeybinds.groundAttack}
         .value=${this.getKeyValue("groundAttack")}
         .display=${this.getKeyChar("groundAttack")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="retaliateAttack"
+        label=${translateText("user_setting.retaliate_attack")}
+        description=${translateText("user_setting.retaliate_attack_desc")}
+        defaultKey=${this.defaultKeybinds.retaliateAttack}
+        .value=${this.getKeyValue("retaliateAttack")}
+        .display=${this.getKeyChar("retaliateAttack")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -711,9 +633,35 @@ export class UserSettingModal extends BaseModal {
         action="swapDirection"
         label=${translateText("user_setting.swap_direction")}
         description=${translateText("user_setting.swap_direction_desc")}
-        .defaultKey=${DefaultKeybinds.swapDirection}
+        .defaultKey=${this.defaultKeybinds.swapDirection}
         .value=${this.getKeyValue("swapDirection")}
         .display=${this.getKeyChar("swapDirection")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.ally_keybinds")}
+      </h2>
+
+      <setting-keybind
+        action="requestAlliance"
+        label=${translateText("user_setting.request_alliance")}
+        description=${translateText("user_setting.request_alliance_desc")}
+        defaultKey=${this.defaultKeybinds.requestAlliance}
+        .value=${this.getKeyValue("requestAlliance")}
+        .display=${this.getKeyChar("requestAlliance")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="breakAlliance"
+        label=${translateText("user_setting.break_alliance")}
+        description=${translateText("user_setting.break_alliance_desc")}
+        defaultKey=${this.defaultKeybinds.breakAlliance}
+        .value=${this.getKeyValue("breakAlliance")}
+        .display=${this.getKeyChar("breakAlliance")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -727,7 +675,7 @@ export class UserSettingModal extends BaseModal {
         action="zoomOut"
         label=${translateText("user_setting.zoom_out")}
         description=${translateText("user_setting.zoom_out_desc")}
-        defaultKey="KeyQ"
+        defaultKey=${this.defaultKeybinds.zoomOut}
         .value=${this.getKeyValue("zoomOut")}
         .display=${this.getKeyChar("zoomOut")}
         @change=${this.handleKeybindChange}
@@ -737,7 +685,7 @@ export class UserSettingModal extends BaseModal {
         action="zoomIn"
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
-        defaultKey="KeyE"
+        defaultKey=${this.defaultKeybinds.zoomIn}
         .value=${this.getKeyValue("zoomIn")}
         .display=${this.getKeyChar("zoomIn")}
         @change=${this.handleKeybindChange}
@@ -753,7 +701,7 @@ export class UserSettingModal extends BaseModal {
         action="centerCamera"
         label=${translateText("user_setting.center_camera")}
         description=${translateText("user_setting.center_camera_desc")}
-        defaultKey="KeyC"
+        defaultKey=${this.defaultKeybinds.centerCamera}
         .value=${this.getKeyValue("centerCamera")}
         .display=${this.getKeyChar("centerCamera")}
         @change=${this.handleKeybindChange}
@@ -763,7 +711,7 @@ export class UserSettingModal extends BaseModal {
         action="moveUp"
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        defaultKey="KeyW"
+        defaultKey=${this.defaultKeybinds.moveUp}
         .value=${this.getKeyValue("moveUp")}
         .display=${this.getKeyChar("moveUp")}
         @change=${this.handleKeybindChange}
@@ -773,7 +721,7 @@ export class UserSettingModal extends BaseModal {
         action="moveLeft"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        defaultKey="KeyA"
+        defaultKey=${this.defaultKeybinds.moveLeft}
         .value=${this.getKeyValue("moveLeft")}
         .display=${this.getKeyChar("moveLeft")}
         @change=${this.handleKeybindChange}
@@ -783,7 +731,7 @@ export class UserSettingModal extends BaseModal {
         action="moveDown"
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        defaultKey="KeyS"
+        defaultKey=${this.defaultKeybinds.moveDown}
         .value=${this.getKeyValue("moveDown")}
         .display=${this.getKeyChar("moveDown")}
         @change=${this.handleKeybindChange}
@@ -793,7 +741,7 @@ export class UserSettingModal extends BaseModal {
         action="moveRight"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        defaultKey="KeyD"
+        defaultKey=${this.defaultKeybinds.moveRight}
         .value=${this.getKeyValue("moveRight")}
         .display=${this.getKeyChar("moveRight")}
         @change=${this.handleKeybindChange}
@@ -809,8 +757,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.dark_mode_desc")}"
         id="dark-mode-toggle"
         .checked=${this.userSettings.darkMode()}
-        @change=${(e: CustomEvent<{ checked: boolean }>) =>
-          this.toggleDarkMode(e)}
+        @change=${this.toggleDarkMode}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
@@ -881,7 +828,7 @@ export class UserSettingModal extends BaseModal {
         label="${translateText("user_setting.lobby_id_visibility_label")}"
         description="${translateText("user_setting.lobby_id_visibility_desc")}"
         id="lobby-id-visibility-toggle"
-        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
 
@@ -892,6 +839,15 @@ export class UserSettingModal extends BaseModal {
         id="territory-patterns-toggle"
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 🔍 Go to player -->
+      <setting-toggle
+        label="${translateText("user_setting.go_to_player_label")}"
+        description="${translateText("user_setting.go_to_player_desc")}"
+        id="go-to-player-toggle"
+        .checked=${this.userSettings.goToPlayer()}
+        @change=${this.toggleGoToPlayer}
       ></setting-toggle>
 
       <!-- 📱 Performance Overlay -->
@@ -909,8 +865,7 @@ export class UserSettingModal extends BaseModal {
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
-        100}
+        .value=${this.userSettings.attackRatio() * 100}
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
@@ -978,9 +933,5 @@ export class UserSettingModal extends BaseModal {
   protected onOpen(): void {
     window.addEventListener("keydown", this.handleEasterEggKey);
     this.loadKeybindsFromStorage();
-  }
-
-  public open() {
-    super.open();
   }
 }

@@ -51,10 +51,6 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
       player,
       new NationEmojiBehavior(random, game, player),
     );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
   });
 
   function setupAllianceRequest({
@@ -63,7 +59,7 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     numTilesPlayer = 10,
     numTilesRequestor = 10,
     alliancesCount = 0,
-    createdAtTick = game.ticks() + 1,
+    createdAtTick = game.config().numSpawnPhaseTurns() + 2,
   } = {}) {
     if (isTraitor) requestor.markTraitor();
 
@@ -164,7 +160,10 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
   let allianceBehavior: NationAllianceBehavior;
 
   beforeEach(() => {
-    mockGame = { addExecution: vi.fn() };
+    mockGame = {
+      addExecution: vi.fn(),
+      config: vi.fn(() => ({ disableAlliances: vi.fn(() => false) })),
+    };
     mockHuman = { id: vi.fn(() => "human_id") };
     mockAlliance = {
       onlyOneAgreedToExtend: vi.fn(() => true),
