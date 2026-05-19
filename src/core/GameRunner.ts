@@ -1,4 +1,4 @@
-import { placeName } from "../client/graphics/NameBoxCalculator";
+import { placeName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
