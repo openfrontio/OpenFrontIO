@@ -379,7 +379,7 @@ function mountWebGLFrameLoop(
   view.on("contextrestored", () => {
     builder.clearCaches();
 
-    // Force full terrain upload. By passing all tiles, renderer gets full state again.
+    // Full upload of terrain, territory & trail state
     const mapSize = mapWidth * mapHeight;
     const allRefs = new Array(mapSize);
     const allTerrain = new Uint8Array(mapSize);
@@ -389,17 +389,13 @@ function mountWebGLFrameLoop(
     }
     view.applyTerrainDelta(allRefs, allTerrain);
 
-    // Give WebGL the full trail & territory state
-    // FrameData provides 100% of units/structures/trails, which WebGL sweeps over.
     const frameData = gameView.frameData();
     view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
 
-    // Structures and railroads normally skip GPU upload unless a diff marks them
-    // dirty. Since GPU memory was wiped, we must manually force their initial upload.
+    // Structures and railroads normally skip GPU upload unless marked dirty, now force
     view.updateStructures(frameData.units as Map<number, UnitState>);
     view.uploadRailroadState(frameData.railroadState);
 
-    // Flush FrameBuilder (which sends units/relations/names via update)
     builder.update(gameView);
   });
 
