@@ -126,5 +126,21 @@
       "name": "Lanyu",
       "flag": "tw"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1600,
+        "width": 800,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1600,
+        "width": 800,
+        "x": 800,
+        "y": 0
+      }
+    ]
+  }
 }
