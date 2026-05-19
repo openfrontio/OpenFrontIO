@@ -102,16 +102,12 @@ export function computePlayerStatus(
         if (
           localPlayerSmallID > 0 &&
           tileState !== undefined &&
-          u.targetTile !== null
+          u.targetTile !== null &&
+          (tileState[u.targetTile] & OWNER_MASK) === localPlayerSmallID
         ) {
-          const tileOwner = tileState[u.targetTile] & OWNER_MASK;
-          if (tileOwner === localPlayerSmallID) {
-            nukeTargetsMe = true;
-          }
+          nukeTargetsMe = true;
         }
-        if (nukeActive && nukeTargetsMe) {
-          break;
-        }
+        if (nukeTargetsMe) break;
       }
     }
 
