@@ -171,8 +171,11 @@ export class TerritoryPass {
       if (row > maxRow) maxRow = row;
     }
     if (maxRow >= 0) {
-      this.dirtyRowMin = Math.min(this.dirtyRowMin, minRow);
-      this.dirtyRowMax = Math.max(this.dirtyRowMax, maxRow);
+      // If a full upload is already pending, don't constrain the bounding box to the delta.
+      if (!this.tilesDirty || this.dirtyRowMax >= 0) {
+        this.dirtyRowMin = Math.min(this.dirtyRowMin, minRow);
+        this.dirtyRowMax = Math.max(this.dirtyRowMax, maxRow);
+      }
     }
     this.tilesDirty = true;
   }
@@ -185,8 +188,11 @@ export class TerritoryPass {
   ): void {
     this.liveTrailRef = trailState;
     if (dirtyRowMax >= 0) {
-      this.trailDirtyRowMin = Math.min(this.trailDirtyRowMin, dirtyRowMin);
-      this.trailDirtyRowMax = Math.max(this.trailDirtyRowMax, dirtyRowMax);
+      // If a full upload is already pending, don't constrain the bounding box to the delta.
+      if (!this.trailsDirty || this.trailDirtyRowMax >= 0) {
+        this.trailDirtyRowMin = Math.min(this.trailDirtyRowMin, dirtyRowMin);
+        this.trailDirtyRowMax = Math.max(this.trailDirtyRowMax, dirtyRowMax);
+      }
     }
     this.trailsDirty = true;
   }

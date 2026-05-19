@@ -68,7 +68,7 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameView as WebGLGameView } from "./render/gl";
-import { ALL_UNIT_TYPES } from "./render/types";
+import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -372,7 +372,38 @@ function mountWebGLFrameLoop(
   };
   requestAnimationFrame(driveFrame);
 
-  return { builder: new WebGLFrameBuilder(view) };
+  const builder = new WebGLFrameBuilder(view);
+
+  // When context is lost and restored, WebGL loses all textures and geometry.
+  // Force a full re-upload of the simulation state.
+  view.on("contextrestored", () => {
+    builder.clearCaches();
+
+    // Force full terrain upload. By passing all tiles, renderer gets full state again.
+    const mapSize = mapWidth * mapHeight;
+    const allRefs = new Array(mapSize);
+    const allTerrain = new Uint8Array(mapSize);
+    for (let i = 0; i < mapSize; i++) {
+      allRefs[i] = i;
+      allTerrain[i] = gameView.terrainByte(i);
+    }
+    view.applyTerrainDelta(allRefs, allTerrain);
+
+    // Give WebGL the full trail & territory state
+    // FrameData provides 100% of units/structures/trails, which WebGL sweeps over.
+    const frameData = gameView.frameData();
+    view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
+
+    // Structures and railroads normally skip GPU upload unless a diff marks them
+    // dirty. Since GPU memory was wiped, we must manually force their initial upload.
+    view.updateStructures(frameData.units as Map<number, UnitState>);
+    view.uploadRailroadState(frameData.railroadState);
+
+    // Flush FrameBuilder (which sends units/relations/names via update)
+    builder.update(gameView);
+  });
+
+  return { builder };
 }
 
 async function createClientGame(
