@@ -828,7 +828,7 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  toUpdate(): PlayerUpdate;
+  toUpdate(): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;

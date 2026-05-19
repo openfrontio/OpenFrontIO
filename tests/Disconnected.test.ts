@@ -80,7 +80,7 @@ describe("Disconnected", () => {
     test("should include disconnected state in player update", () => {
       player1.markDisconnected(true);
       const update = player1.toUpdate();
-      expect(update.isDisconnected).toBe(true);
+      expect(update?.isDisconnected).toBe(true);
     });
   });
 
@@ -153,8 +153,9 @@ describe("Disconnected", () => {
     test("should maintain disconnected state in player updates across ticks", () => {
       player1.markDisconnected(true);
       executeTicks(game, 3);
-      const update = player1.toUpdate();
-      expect(update.isDisconnected).toBe(true);
+      // toUpdate() returns diffs after the first call, so query engine state
+      // directly rather than the wire payload (which only carries changed fields).
+      expect(player1.isDisconnected()).toBe(true);
     });
   });
 
