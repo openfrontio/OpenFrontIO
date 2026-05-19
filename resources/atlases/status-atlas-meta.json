@@ -1,0 +1,19 @@
+{
+  "width": 768,
+  "height": 1024,
+  "cellSize": 256,
+  "cols": 3,
+  "pad": 16,
+  "icons": {
+    "crown": 0,
+    "traitor": 1,
+    "disconnected": 2,
+    "alliance": 3,
+    "allianceRequest": 4,
+    "target": 5,
+    "embargo": 6,
+    "nukeRed": 7,
+    "nukeWhite": 8,
+    "allianceFaded": 9
+  }
+}
