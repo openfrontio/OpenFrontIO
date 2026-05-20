@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
-type ButtonSize = "sm" | "md" | "lg";
+type ButtonSize = "xs" | "sm" | "md" | "lg";
 type ButtonWidth = "auto" | "block" | "blockDesktop" | "fill";
 type IconPosition = "left" | "right" | "only";
 
@@ -45,6 +45,8 @@ export class OButton extends LitElement {
   private sizeClasses(): string {
     if (this.iconPosition === "only") {
       switch (this.size) {
+        case "xs":
+          return "w-6 h-6 text-xs";
         case "sm":
           return "w-8 h-8 text-sm";
         case "md":
@@ -54,6 +56,8 @@ export class OButton extends LitElement {
       }
     }
     switch (this.size) {
+      case "xs":
+        return "py-1 px-2 text-xs";
       case "sm":
         return "py-1.5 px-3 text-sm";
       case "md":

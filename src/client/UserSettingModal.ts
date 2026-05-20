@@ -14,10 +14,9 @@ import { Platform } from "./Platform";
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  protected routerName = "settings";
   private userSettings: UserSettings = new UserSettings();
   private readonly defaultKeybinds = getDefaultKeybinds(Platform.isMac);
-
-  @state() private activeTab: "basic" | "keybinds" = "basic";
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
@@ -322,40 +321,31 @@ export class UserSettingModal extends BaseModal {
     this.userSettings.togglePerformanceOverlay();
   }
 
-  render() {
-    const activeContent =
-      this.activeTab === "basic"
-        ? this.renderBasicSettings()
-        : this.renderKeybindSettings();
+  protected modalConfig() {
+    return {
+      tabs: [
+        { key: "basic", label: translateText("user_setting.tab_basic") },
+        { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
+      ],
+    };
+  }
 
-    const tabs = [
-      { key: "basic", label: translateText("user_setting.tab_basic") },
-      { key: "keybinds", label: translateText("user_setting.tab_keybinds") },
-    ];
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("user_setting.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      showDivider: true,
+    });
+  }
 
+  protected renderBody(tab: string) {
+    const body =
+      tab === "keybinds"
+        ? this.renderKeybindSettings()
+        : this.renderBasicSettings();
     return html`
-      <o-modal
-        title="${translateText("user_setting.title")}"
-        ?inline=${this.inline}
-        hideCloseButton
-        hideHeader
-        .tabs=${tabs}
-        .activeTab=${this.activeTab}
-        .onTabChange=${(key: string) =>
-          (this.activeTab = key as "basic" | "keybinds")}
-      >
-        <div slot="header">
-          ${modalHeader({
-            title: translateText("user_setting.title"),
-            onBack: () => this.close(),
-            ariaLabel: translateText("common.back"),
-            showDivider: true,
-          })}
-        </div>
-        <div class="flex flex-col gap-2 p-4 lg:p-[1.4rem]">
-          ${activeContent}
-        </div>
-      </o-modal>
+      <div class="flex flex-col gap-2 p-4 lg:p-[1.4rem]">${body}</div>
     `;
   }
 
@@ -943,9 +933,5 @@ export class UserSettingModal extends BaseModal {
   protected onOpen(): void {
     window.addEventListener("keydown", this.handleEasterEggKey);
     this.loadKeybindsFromStorage();
-  }
-
-  public open() {
-    super.open();
   }
 }

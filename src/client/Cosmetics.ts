@@ -8,6 +8,7 @@ import {
   Pack,
   Pattern,
   Product,
+  Subscription,
 } from "../core/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
@@ -16,6 +17,7 @@ import {
 } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
 import {
+  changeSubscriptionTier,
   createCheckoutSession,
   getApiBase,
   getUserMe,
@@ -39,6 +41,46 @@ export async function purchaseCosmetic(
   const c = resolved.cosmetic;
   const colorPaletteName = resolved.colorPalette?.name;
 
+  if (resolved.type === "subscription") {
+    const sub = c as Subscription;
+    const userMe = await getUserMe();
+    const currentSub =
+      userMe === false ? null : (userMe.player.subscription ?? null);
+
+    if (currentSub) {
+      if (currentSub.tier === sub.name) {
+        alert(translateText("store.already_subscribed"));
+        return;
+      }
+
+      // Direction-aware confirm based on priceMonthly. We don't have the
+      // server's sortOrder client-side — priceMonthly is a good proxy.
+      const currentCosmetic =
+        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const isUpgrade =
+        currentCosmetic !== null
+          ? sub.priceMonthly > currentCosmetic.priceMonthly
+          : true;
+      const targetName = translateCosmetic("subscriptions", sub.name);
+      const confirmKey = isUpgrade
+        ? "store.confirm_upgrade"
+        : "store.confirm_downgrade";
+      const confirmed = window.confirm(
+        translateText(confirmKey, { tier: targetName }),
+      );
+      if (!confirmed) return;
+
+      const ok = await changeSubscriptionTier(sub.name);
+      if (!ok) {
+        alert(translateText("store.change_tier_failed"));
+        return;
+      }
+      alert(translateText("store.change_tier_success", { tier: targetName }));
+      window.location.reload();
+      return;
+    }
+  }
+
   if (method === "dollar") {
     if (!c.product) {
       alert(translateText("store.checkout_failed"));
@@ -56,8 +98,18 @@ export async function purchaseCosmetic(
     return;
   }
 
-  // Currency purchase (hard or soft)
-  const price = method === "hard" ? (c.priceHard ?? 0) : (c.priceSoft ?? 0);
+  // Currency purchase (hard or soft) — not valid for subscriptions.
+  if (resolved.type === "subscription") {
+    console.error(
+      "purchaseCosmetic: currency purchase not supported for subscriptions",
+    );
+    return;
+  }
+  // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
+  // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
+  const priced = c as Pattern | Flag | Pack;
+  const price =
+    method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
   const userMe = await getUserMe();
   if (userMe === false) {
     alert(translateText("store.login_required"));
@@ -69,6 +121,10 @@ export async function purchaseCosmetic(
       : (userMe.player.currency?.soft ?? 0);
   if (balance < price) {
     alert(translateText("store.not_enough_currency"));
+    if (method === "hard") {
+      // Send the user to the packs tab so they can top up plutonium.
+      window.location.hash = "#modal=store&tab=packs";
+    }
     return;
   }
 
@@ -228,7 +284,7 @@ export function patternRelationship(
       priceSoft: pattern.priceSoft,
       priceHard: pattern.priceHard,
       affiliateCode,
-      itemAffiliateCode: pattern.affiliateCode,
+      itemAffiliateCode: pattern.affiliateCode ?? null,
     },
     userMeResponse,
   );
@@ -247,15 +303,15 @@ export function flagRelationship(
       priceSoft: flag.priceSoft,
       priceHard: flag.priceHard,
       affiliateCode,
-      itemAffiliateCode: flag.affiliateCode,
+      itemAffiliateCode: flag.affiliateCode ?? null,
     },
     userMeResponse,
   );
 }
 
 export type ResolvedCosmetic = {
-  type: "pattern" | "flag" | "pack";
-  cosmetic: Pattern | Flag | Pack | null;
+  type: "pattern" | "flag" | "pack" | "subscription";
+  cosmetic: Pattern | Flag | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
   /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
@@ -330,6 +386,30 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `pack:${packKey}`,
+    });
+  }
+
+  // Subscriptions
+  const flares =
+    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  const currentSubTier =
+    userMeResponse === false
+      ? null
+      : (userMeResponse.player.subscription?.tier ?? null);
+  for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
+    const key = `subscription:${subKey}`;
+    const isCurrent = subKey === currentSubTier || flares.includes(key);
+    const rel: ResolvedCosmetic["relationship"] = isCurrent
+      ? "owned"
+      : sub.product
+        ? "purchasable"
+        : "blocked";
+    result.push({
+      type: "subscription",
+      cosmetic: sub,
+      colorPalette: null,
+      relationship: rel,
+      key,
     });
   }
 

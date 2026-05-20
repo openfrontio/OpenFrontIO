@@ -39,6 +39,7 @@
     "join": "Join Lobby",
     "solo": "Solo",
     "game_info": "Game info",
+    "github": "GitHub",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
@@ -56,7 +57,6 @@
     "go_to_troubleshooting": "Go to our troubleshooting page"
   },
   "news": {
-    "github_link": "on GitHub",
     "title": "Release Notes"
   },
   "troubleshooting": {
@@ -345,6 +345,27 @@
   "account_modal": {
     "title": "Account",
     "connected_as": "Connected as",
+    "your_subscription": "Your Subscription",
+    "manage_subscription": "Manage",
+    "change_tier": "Change Tier",
+    "reactivate_subscription": "Reactivate",
+    "cancel_subscription": "Cancel",
+    "cancel_subscription_confirm": "Cancel your subscription? It will stay active until the end of the current billing period.",
+    "cancel_subscription_success": "Subscription canceled. Access continues until the end of the billing period.",
+    "cancel_subscription_failed": "Failed to cancel subscription. Please try again or use Manage.",
+    "subscription_portal_failed": "Failed to open the subscription management portal.",
+    "sub_status_active": "Active",
+    "sub_status_trialing": "Trial",
+    "sub_status_past_due": "Past Due",
+    "sub_status_unpaid": "Unpaid",
+    "sub_status_incomplete": "Incomplete",
+    "sub_status_incomplete_expired": "Expired",
+    "sub_status_canceled": "Canceled",
+    "sub_status_paused": "Paused",
+    "sub_status_canceling": "Canceling",
+    "sub_status_canceling_on": "Cancels {date}",
+    "sub_renews_on": "Renews {date}",
+    "sub_price_monthly": "{price}/mo",
     "stats_overview": "Stats Overview",
     "link_discord": "Link Discord Account",
     "log_out": "Log Out",
@@ -492,7 +513,9 @@
     "archipelagosea": "Archipelago Sea",
     "bajacalifornia": "Baja California",
     "taiwanstrait": "Taiwan Strait",
-    "thestraits": "The Straits"
+    "danishstraits": "Danish Straits",
+    "northwestpassage": "Northwest Passage",
+    "venice": "Venice"
   },
   "map_categories": {
     "featured": "Featured",
@@ -551,6 +574,7 @@
     "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
     "tag": "TAG",
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
+    "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers."
   },
   "host_modal": {
@@ -1093,10 +1117,22 @@
     "patterns": "Skins",
     "flags": "Flags",
     "packs": "Packs",
+    "subscriptions": "Subscriptions",
     "no_flags": "No flags available. Check back later for new items.",
     "no_skins": "No skins available. Check back later for new items.",
     "no_packs": "No packs available. Check back later for new items.",
+    "no_subscriptions": "No subscriptions available. Check back later for new items.",
+    "already_subscribed": "Already subscribed.",
+    "current_plan": "Current Plan",
+    "subscribe_button": "Subscribe",
+    "switch_button": "Switch",
+    "price_per_month": "/mo",
+    "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
+    "confirm_downgrade": "Downgrade to {tier}? You'll get account credit for the unused portion of your current plan.",
+    "change_tier_success": "Switched to {tier}.",
+    "change_tier_failed": "Couldn't update your subscription. Please try again.",
     "currency_pack_purchase_success": "Currency pack purchase successful!",
+    "subscription_purchase_success": "Subscription activated!",
     "checkout_failed": "Failed to create checkout session.",
     "login_required": "You must be logged in to purchase with currency.",
     "not_enough_currency": "Not enough currency for this purchase.",
@@ -1123,7 +1159,8 @@
     "legendary": "Legendary",
     "adfree": "ad-free for life!",
     "hard": "Plutonium",
-    "soft": "Caps"
+    "soft": "Caps",
+    "per_day": "/day"
   },
   "flag_input": {
     "title": "Select Flag",

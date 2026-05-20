@@ -117,9 +117,20 @@ export const UserMeResponseSchema = z.object({
         }),
       )
       .optional(),
+    subscription: z
+      .object({
+        tier: z.string(),
+        status: z.string(),
+        currentPeriodEnd: z.coerce.date().nullable(),
+        cancelAtPeriodEnd: z.boolean(),
+      })
+      .nullable(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+export type UserSubscription = NonNullable<
+  NonNullable<UserMeResponse["player"]["subscription"]>
+>;
 
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,

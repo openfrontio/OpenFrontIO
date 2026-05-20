@@ -77,7 +77,26 @@ export class JoinLobbyModal extends BaseModal {
     });
   };
 
-  render() {
+  protected renderHeaderSlot() {
+    if (!this.currentLobbyId) {
+      return modalHeader({
+        title: translateText("private_lobby.title"),
+        onBack: () => this.closeAndLeave(),
+        ariaLabel: translateText("common.close"),
+      });
+    }
+    return modalHeader({
+      title: translateText("public_lobby.title"),
+      onBack: () => this.closeAndLeave(),
+      ariaLabel: translateText("common.close"),
+      rightContent:
+        this.currentLobbyId && this.isPrivateLobby()
+          ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+          : undefined,
+    });
+  }
+
+  protected renderBody() {
     // Pre-join state: show lobby ID input form
     if (!this.currentLobbyId) {
       return this.renderJoinForm();
@@ -104,20 +123,9 @@ export class JoinLobbyModal extends BaseModal {
     const hostClientID = this.isPrivateLobby()
       ? (this.lobbyCreatorClientID ?? "")
       : "";
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("public_lobby.title"),
-          onBack: () => this.closeAndLeave(),
-          ariaLabel: translateText("common.close"),
-          rightContent:
-            this.currentLobbyId && this.isPrivateLobby()
-              ? html`
-                  <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
-                `
-              : undefined,
-        })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+    return html`
+      <div class="flex flex-col h-full">
+        <div class="flex-1 custom-scrollbar p-6 space-y-4 mr-1">
           ${this.isConnecting
             ? html`
                 <div
@@ -206,31 +214,11 @@ export class JoinLobbyModal extends BaseModal {
             `}
       </div>
     `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-      >
-        ${content}
-      </o-modal>
-    `;
   }
 
   private renderJoinForm() {
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("private_lobby.title"),
-          onBack: () => this.closeAndLeave(),
-          ariaLabel: translateText("common.close"),
-        })}
-        <form @submit=${this.joinLobbyFromInput} class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+    return html`
+      <form @submit=${this.joinLobbyFromInput} class="custom-scrollbar p-6 space-y-4 mr-1">
           <div class="flex flex-col gap-3">
             <div class="flex gap-2">
               <input
@@ -268,26 +256,13 @@ export class JoinLobbyModal extends BaseModal {
             ></o-button>
           </div>
         </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-      >
-        ${content}
-      </o-modal>
+      </form>
     `;
   }
 
-  public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
-    super.open();
+  protected onOpen(args?: Record<string, unknown>): void {
+    const lobbyId = typeof args?.lobbyId === "string" ? args.lobbyId : "";
+    const lobbyInfo = args?.lobbyInfo as GameInfo | PublicGameInfo | undefined;
     if (lobbyId) {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby

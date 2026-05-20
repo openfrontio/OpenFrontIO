@@ -82,8 +82,8 @@
     "@lit-labs/virtualizer": "^2.1.1",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.216.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.216.0",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.216.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.218.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.218.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-logs": "^0.216.0",
     "@opentelemetry/sdk-metrics": "^2.7.1",
@@ -104,6 +104,7 @@
     "ip-anonymize": "^0.1.0",
     "jose": "^6.2.3",
     "js-yaml": "^4.1.1",
+    "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
     "nanoid": "^5.1.11",
     "node-html-parser": "^7.1.0",
@@ -114,6 +115,9 @@
     "winston": "^3.19.0",
     "ws": "^8.20.0",
     "zod": "^4.4.2"
+  },
+  "overrides": {
+    "sanitize-html": ">=2.17.4"
   },
   "type": "module"
 }

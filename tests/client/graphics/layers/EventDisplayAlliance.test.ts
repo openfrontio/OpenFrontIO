@@ -21,7 +21,7 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
   UnsafeHTMLDirective: class {},
 }));
 
-import { EventsDisplay } from "../../../../src/client/graphics/layers/EventsDisplay";
+import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
 import { MessageType } from "../../../../src/core/game/Game";
 
 describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {

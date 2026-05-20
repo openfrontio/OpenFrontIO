@@ -29,10 +29,15 @@ import {
 } from "../core/game/GameUpdates";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
-import { UserSettings } from "../core/game/UserSettings";
+import {
+  DARK_MODE_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
 import {
+  AlternateViewEvent,
   AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
@@ -46,7 +51,9 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { GoToPlayerEvent } from "./TransformHandler";
 import {
+  MoveWarshipIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -58,8 +65,10 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { GoToPlayerEvent } from "./graphics/TransformHandler";
+import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { GameView as WebGLGameView } from "./render/gl";
+import { ALL_UNIT_TYPES } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -225,6 +234,147 @@ export function joinLobby(
   };
 }
 
+// Build the WebGL view + its glCanvas. Must run before createRenderer so the
+// controllers can be wired directly to the view.
+function createWebGLView(terrainMap: TerrainMapData): {
+  view: WebGLGameView;
+  glCanvas: HTMLCanvasElement;
+  cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
+} {
+  const gameMap = terrainMap.gameMap;
+  const mapWidth = gameMap.width();
+  const mapHeight = gameMap.height();
+
+  const terrainBytes = new Uint8Array(mapWidth * mapHeight);
+  for (let y = 0; y < mapHeight; y++) {
+    for (let x = 0; x < mapWidth; x++) {
+      terrainBytes[y * mapWidth + x] = gameMap.terrainByte(gameMap.ref(x, y));
+    }
+  }
+
+  const glCanvas = createCanvas();
+  glCanvas.id = "webgl-debug-canvas";
+  glCanvas.style.pointerEvents = "none";
+  document.body.insertBefore(glCanvas, document.body.firstChild);
+
+  // Capture the WebGL renderer's animation-frame callback rather than letting
+  // it run its own RAF loop. Two independent RAF loops race: when the user
+  // pans, the WebGL renderer can draw with one-frame-stale camera state
+  // because its RAF fires before canvas2D's RAF (which would have synced the
+  // camera). Driving WebGL's draw synchronously from canvas2D's onPreRender
+  // hook locks them to the same frame.
+  const cachedWebGLFrameCallback: { current: FrameRequestCallback | null } = {
+    current: null,
+  };
+  const captureRaf = (cb: FrameRequestCallback): number => {
+    cachedWebGLFrameCallback.current = cb;
+    return 0;
+  };
+  const captureCaf = (_id: number): void => {
+    cachedWebGLFrameCallback.current = null;
+  };
+
+  const palette = new Float32Array(4096 * 2 * 4);
+  const view = new WebGLGameView(
+    glCanvas,
+    {
+      mapWidth,
+      mapHeight,
+      unitTypes: [...ALL_UNIT_TYPES],
+      players: [],
+      // Pre-allocate renderer textures for up to 1024 players. We add players
+      // dynamically via view.addPlayers() as they come in from the simulation,
+      // but the NamePass / palette / relation matrix all need a static upper
+      // bound at construction time.
+      maxPlayers: 1024,
+    },
+    terrainBytes,
+    palette,
+    captureRaf,
+    captureCaf,
+  );
+
+  (window as unknown as { __webglView?: unknown }).__webglView = view;
+
+  return { view, glCanvas, cachedWebGLFrameCallback };
+}
+
+function mountWebGLFrameLoop(
+  terrainMap: TerrainMapData,
+  view: WebGLGameView,
+  glCanvas: HTMLCanvasElement,
+  cachedWebGLFrameCallback: { current: FrameRequestCallback | null },
+  transformHandler: import("./TransformHandler").TransformHandler,
+  gameView: GameView,
+  eventBus: EventBus,
+): { builder: WebGLFrameBuilder } {
+  const gameMap = terrainMap.gameMap;
+  const mapWidth = gameMap.width();
+  const mapHeight = gameMap.height();
+
+  // Cache canvas dimensions to avoid forced reflows every frame. Reading
+  // clientWidth/clientHeight flushes pending layout — at 60fps that's a
+  // measurable cost. Only update on resize events from the observer.
+  let cachedCanvasW = glCanvas.clientWidth;
+  let cachedCanvasH = glCanvas.clientHeight;
+  const resizeObs = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        cachedCanvasW = width;
+        cachedCanvasH = height;
+      }
+    }
+  });
+  resizeObs.observe(glCanvas);
+
+  const syncCamera = (): void => {
+    const scale = transformHandler.scale;
+    const dpr = window.devicePixelRatio || 1;
+    const centerX =
+      transformHandler.offsetX +
+      mapWidth / 2 +
+      (cachedCanvasW - mapWidth) / (2 * scale);
+    const centerY =
+      transformHandler.offsetY +
+      mapHeight / 2 +
+      (cachedCanvasH - mapHeight) / (2 * scale);
+    view.setCameraState(centerX, centerY, scale * dpr);
+    // Invoke the WebGL renderer's frame callback synchronously, with the just-
+    // updated camera state. The callback re-arms itself via captureRaf, so
+    // we'll get a fresh callback ready for the next canvas2D frame.
+    const cb = cachedWebGLFrameCallback.current;
+    cachedWebGLFrameCallback.current = null;
+    cb?.(performance.now());
+  };
+
+  // Move-target chevrons: when the player issues a warship move, show the
+  // animated chevron pass at the target tile. The renderer needs the target's
+  // tile x/y and the warship's owner smallID (so the chevrons use the right
+  // color).
+  eventBus.on(MoveWarshipIntentEvent, (e) => {
+    const tile = e.tile;
+    const tx = gameView.x(tile);
+    const ty = gameView.y(tile);
+    // Resolve owner via the first unit in the move set.
+    const firstUnit = gameView.unit(e.unitIds[0]);
+    if (firstUnit === undefined) return;
+    view.showMoveIndicator(tx, ty, firstUnit.owner().smallID());
+  });
+
+  // Self-driving RAF: syncCamera reads the latest camera state from
+  // TransformHandler, pushes it to WebGL, and synchronously invokes the
+  // renderer's captured frame callback (which draws). One RAF = one
+  // synchronized camera-update + WebGL render.
+  const driveFrame = (): void => {
+    syncCamera();
+    requestAnimationFrame(driveFrame);
+  };
+  requestAnimationFrame(driveFrame);
+
+  return { builder: new WebGLFrameBuilder(view) };
+}
+
 async function createClientGame(
   lobbyConfig: LobbyConfig,
   clientID: ClientID | undefined,
@@ -266,14 +416,63 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.players,
   );
 
-  const canvas = createCanvas();
+  // Transparent fullscreen overlay used purely as the pointer-event /
+  // bounding-rect target for InputHandler + TransformHandler. The actual
+  // map drawing happens on the WebGL canvas created in createWebGLView.
+  const inputOverlay = document.createElement("div");
+  inputOverlay.id = "game-input-overlay";
+  inputOverlay.style.position = "fixed";
+  inputOverlay.style.left = "0";
+  inputOverlay.style.top = "0";
+  inputOverlay.style.width = "100%";
+  inputOverlay.style.height = "100%";
+  inputOverlay.style.touchAction = "none";
+  document.body.appendChild(inputOverlay);
+
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
+    const { view, glCanvas, cachedWebGLFrameCallback } =
+      createWebGLView(gameMap);
+
+    // Bind the WebGL renderer's day/night mode to the existing darkMode
+    // UserSetting so the in-game map matches the rest of the UI. Initial
+    // apply + live updates via the per-key settings-changed event.
+    const applyDayNightMode = (isDark: boolean): void => {
+      view.getSettings().dayNight.mode = isDark ? "dark" : "light";
+    };
+    applyDayNightMode(userSettings.darkMode());
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
+      (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
+    );
+
+    // Space-hold (and the settings-modal toggle) drives the affiliation
+    // recolor. InputHandler emits AlternateViewEvent; the WebGL view needs
+    // setAltView called to switch passes into alt mode.
+    eventBus.on(AlternateViewEvent, (e) => view.setAltView(e.alternateView));
+
+    view.setShowPatterns(userSettings.territoryPatterns());
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
+      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
+    );
+
     const gameRenderer = createRenderer(
-      canvas,
+      inputOverlay,
       gameView,
       eventBus,
       lobbyConfig.playerRole,
+      view,
+    );
+
+    const { builder: webglBuilder } = mountWebGLFrameLoop(
+      gameMap,
+      view,
+      glCanvas,
+      cachedWebGLFrameCallback,
+      gameRenderer.transformHandler,
+      gameView,
+      eventBus,
     );
 
     console.log(
@@ -285,12 +484,13 @@ async function createClientGame(
       clientID,
       eventBus,
       gameRenderer,
-      new InputHandler(gameView, gameRenderer.uiState, canvas, eventBus),
+      new InputHandler(gameView, gameRenderer.uiState, inputOverlay, eventBus),
       transport,
       worker,
       gameView,
       soundManager,
       userSettings,
+      webglBuilder,
     );
   } catch (err) {
     soundManager.dispose();
@@ -323,6 +523,7 @@ export class ClientGameRunner {
     private gameView: GameView,
     private soundManager: SoundManager,
     private userSettings: UserSettings,
+    private webglBuilder: WebGLFrameBuilder | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -433,6 +634,7 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
 
       // Emit tick metrics event for performance overlay

@@ -28,39 +28,24 @@ export class MatchmakingModal extends BaseModal {
     return this;
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("matchmaking_modal.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+    });
+  }
+
+  protected renderBody() {
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
         ${translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
-
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title: translateText("matchmaking_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-        })}
-        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-          ${eloDisplay} ${this.renderInner()}
-        </div>
-      </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
     return html`
-      <o-modal
-        id="matchmaking-modal"
-        title="${translateText("matchmaking_modal.title")}"
-        hideCloseButton
-        hideHeader
-      >
-        ${content}
-      </o-modal>
+      <div class="flex flex-col items-center justify-center gap-6 p-6">
+        ${eloDisplay} ${this.renderInner()}
+      </div>
     `;
   }
 
