@@ -8,8 +8,8 @@
  * No borders, embers, trails, or defense checkerboard — those are
  * handled by BorderStampPass and TrailPass at full brightness.
  *
- * Also owns the CPU-side tile and trail state, flushing to shared
- * GPU textures on draw.
+ * Owns the CPU-side tile state and the drip queue that staggers tile
+ * uploads across render frames.
  */
 
 import type { TilePair } from "../../types";
@@ -41,7 +41,6 @@ export class TerritoryPass {
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
-  private trailTex: WebGLTexture;
   private paletteTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
@@ -49,32 +48,32 @@ export class TerritoryPass {
   private altView = false;
   private showPatterns = true;
 
-  /** CPU-side tile state (deltas written here, flushed to GPU before draw). */
+  /** CPU-side tile state — what is currently on the GPU (display state). */
   private cpuTileState: Uint16Array;
   private tilesDirty = false;
-
-  /** CPU-side trail state (R8UI, 0=none, 1–255=ownerID). */
-  private cpuTrailState: Uint8Array;
-  private trailsDirty = false;
-
-  /** Live-game references — bypasses memcpy. Null for replay path. */
-  private liveTileRef: Uint16Array | null = null;
-  private liveTrailRef: Uint8Array | null = null;
 
   /** Dirty row range for partial tile upload. Infinity/-1 = full upload. */
   private dirtyRowMin = Infinity;
   private dirtyRowMax = -1;
 
-  /** Dirty row range for partial trail upload. Infinity/-1 = full upload. */
-  private trailDirtyRowMin = Infinity;
-  private trailDirtyRowMax = -1;
+  /**
+   * Drip buckets — round-robin staggering of tile updates across render frames.
+   * Each incoming change is hashed by tile ref to a fixed bucket (stable hash
+   * preserves per-tile ordering across ticks). One bucket drains per render
+   * frame, giving a ~bucketCount-frame buffer that smooths over network jitter.
+   *
+   * Each bucket is a flat number[] with interleaved [ref, state, ref, state, …]
+   * pairs — avoids per-tile object allocation on the hot push path.
+   */
+  private readonly nBuckets: number;
+  private dripBuckets: number[][] = [];
+  private currentBucket = 0;
 
   constructor(
     gl: WebGL2RenderingContext,
     mapW: number,
     mapH: number,
     tileTex: WebGLTexture,
-    trailTex: WebGLTexture,
     paletteTex: WebGLTexture,
     patternMetaTex: WebGLTexture,
     patternDataTex: WebGLTexture,
@@ -85,12 +84,13 @@ export class TerritoryPass {
     this.mapW = mapW;
     this.mapH = mapH;
     this.tileTex = tileTex;
-    this.trailTex = trailTex;
     this.paletteTex = paletteTex;
     this.patternMetaTex = patternMetaTex;
     this.patternDataTex = patternDataTex;
     this.cpuTileState = new Uint16Array(mapW * mapH);
-    this.cpuTrailState = new Uint8Array(mapW * mapH);
+
+    this.nBuckets = Math.max(1, settings.tileDrip.bucketCount | 0);
+    for (let i = 0; i < this.nBuckets; i++) this.dripBuckets.push([]);
 
     this.program = createProgram(
       gl,
@@ -137,86 +137,117 @@ export class TerritoryPass {
 
   /** Full tile state upload (on seek). */
   uploadFullTileState(tileState: Uint16Array): void {
-    this.liveTileRef = null;
     this.cpuTileState.set(tileState);
+    this.clearDripBuckets();
+    this.dirtyRowMin = Infinity;
+    this.dirtyRowMax = -1;
     this.tilesDirty = true;
   }
 
-  /** Live-game path: reference the game's own arrays directly. */
-  setLiveRefs(tileState: Uint16Array, trailState: Uint8Array): void {
-    this.liveTileRef = tileState;
-    this.liveTrailRef = trailState;
+  /** Live-game path: snapshot the initial tile state and clear pending drip. */
+  setLiveRef(tileState: Uint16Array): void {
+    this.cpuTileState.set(tileState);
+    this.clearDripBuckets();
+    this.dirtyRowMin = Infinity;
+    this.dirtyRowMax = -1;
     this.tilesDirty = true;
-    this.trailsDirty = true;
   }
 
   /** Apply tile deltas (during playback). */
   uploadDeltaTiles(changedTiles: TilePair[]): void {
     const ts = this.cpuTileState;
+    const w = this.mapW;
     for (let i = 0; i < changedTiles.length; i++) {
       const tp = changedTiles[i];
       ts[tp.ref] = tp.state;
+      const row = (tp.ref / w) | 0;
+      if (row < this.dirtyRowMin) this.dirtyRowMin = row;
+      if (row > this.dirtyRowMax) this.dirtyRowMax = row;
     }
     this.tilesDirty = true;
   }
 
-  /** Live delta: update live ref + compute dirty row range from deltas. */
+  /**
+   * Live delta: dispatch each changed tile into a round-robin drip bucket.
+   * Stable per-ref hash means repeated updates to the same tile stay in
+   * arrival order in the same bucket — last write wins when drained.
+   */
   applyLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
-    this.liveTileRef = tileState;
-    let minRow = Infinity,
-      maxRow = -1;
+    const N = this.nBuckets;
+    const buckets = this.dripBuckets;
     for (let i = 0; i < changedTiles.length; i++) {
-      const row = (changedTiles[i].ref / this.mapW) | 0;
-      if (row < minRow) minRow = row;
-      if (row > maxRow) maxRow = row;
+      const ref = changedTiles[i].ref;
+      const b = ((ref * 2654435761) >>> 0) % N;
+      buckets[b].push(ref, tileState[ref]);
     }
-    if (maxRow >= 0) {
-      this.dirtyRowMin = Math.min(this.dirtyRowMin, minRow);
-      this.dirtyRowMax = Math.max(this.dirtyRowMax, maxRow);
+  }
+
+  /** Drain one drip bucket into cpuTileState. Called once per render frame. */
+  drainDripBucket(): void {
+    const bucket = this.dripBuckets[this.currentBucket];
+    if (bucket.length > 0) {
+      const w = this.mapW;
+      let minRow = this.dirtyRowMin;
+      let maxRow = this.dirtyRowMax;
+      for (let i = 0; i < bucket.length; i += 2) {
+        const ref = bucket[i];
+        this.cpuTileState[ref] = bucket[i + 1];
+        const row = (ref / w) | 0;
+        if (row < minRow) minRow = row;
+        if (row > maxRow) maxRow = row;
+      }
+      this.dirtyRowMin = minRow;
+      this.dirtyRowMax = maxRow;
+      bucket.length = 0;
+      this.tilesDirty = true;
     }
-    this.tilesDirty = true;
+    this.currentBucket = (this.currentBucket + 1) % this.nBuckets;
   }
 
-  /** Live trail delta: update live ref + accept dirty row range from TrailManager. */
-  applyLiveTrailDelta(
-    trailState: Uint8Array,
-    dirtyRowMin: number,
-    dirtyRowMax: number,
-  ): void {
-    this.liveTrailRef = trailState;
-    if (dirtyRowMax >= 0) {
-      this.trailDirtyRowMin = Math.min(this.trailDirtyRowMin, dirtyRowMin);
-      this.trailDirtyRowMax = Math.max(this.trailDirtyRowMax, dirtyRowMax);
+  /**
+   * Drain every drip bucket immediately. Used during spawn phase and after
+   * seek so tile state pops to current sim state without the 60Hz stagger.
+   */
+  flushAllDripBuckets(): void {
+    const w = this.mapW;
+    let minRow = this.dirtyRowMin;
+    let maxRow = this.dirtyRowMax;
+    let any = false;
+    for (let b = 0; b < this.nBuckets; b++) {
+      const bucket = this.dripBuckets[b];
+      if (bucket.length === 0) continue;
+      any = true;
+      for (let i = 0; i < bucket.length; i += 2) {
+        const ref = bucket[i];
+        this.cpuTileState[ref] = bucket[i + 1];
+        const row = (ref / w) | 0;
+        if (row < minRow) minRow = row;
+        if (row > maxRow) maxRow = row;
+      }
+      bucket.length = 0;
     }
-    this.trailsDirty = true;
+    if (any) {
+      this.dirtyRowMin = minRow;
+      this.dirtyRowMax = maxRow;
+      this.tilesDirty = true;
+    }
   }
 
-  /** Full trail state upload (on seek). */
-  uploadFullTrailState(trailState: Uint8Array): void {
-    this.liveTrailRef = null;
-    this.cpuTrailState.set(trailState);
-    this.trailsDirty = true;
-  }
-
-  /** Set a single trail tile (during playback advance). */
-  setTrailTile(ref: number, ownerID: number): void {
-    this.cpuTrailState[ref] = ownerID;
-    this.trailsDirty = true;
-  }
-
-  /** Clear all trails (on seek before rebuilding). */
-  clearTrails(): void {
-    this.cpuTrailState.fill(0);
-    this.trailsDirty = true;
+  private clearDripBuckets(): void {
+    for (let b = 0; b < this.nBuckets; b++) this.dripBuckets[b].length = 0;
+    this.currentBucket = 0;
   }
 
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
 
-  /** Get ownerID at a tile reference. Returns 0 for unowned. */
+  /**
+   * Get ownerID at a tile reference. Returns 0 for unowned.
+   * Reads display state (post-drip), so queries match what's visible.
+   */
   getOwnerAt(tileRef: number): number {
-    const ts = this.liveTileRef ?? this.cpuTileState;
+    const ts = this.cpuTileState;
     if (tileRef < 0 || tileRef >= ts.length) return 0;
     return ts[tileRef] & OWNER_MASK;
   }
@@ -230,7 +261,7 @@ export class TerritoryPass {
       maxX = -Infinity,
       maxY = -Infinity;
     const w = this.mapW;
-    const ts = this.liveTileRef ?? this.cpuTileState;
+    const ts = this.cpuTileState;
     for (let i = 0; i < ts.length; i++) {
       if ((ts[i] & OWNER_MASK) === ownerID) {
         const x = i % w;
@@ -252,7 +283,7 @@ export class TerritoryPass {
   flushTileTexture(): boolean {
     if (!this.tilesDirty) return false;
     const gl = this.gl;
-    const src = this.liveTileRef ?? this.cpuTileState;
+    const src = this.cpuTileState;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
 
@@ -293,50 +324,6 @@ export class TerritoryPass {
     return true;
   }
 
-  /** Flush trail texture to GPU (called before TrailPass draws). */
-  flushTrailTexture(): void {
-    if (!this.trailsDirty) return;
-    const gl = this.gl;
-    const src = this.liveTrailRef ?? this.cpuTrailState;
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.trailTex);
-
-    if (this.trailDirtyRowMax >= 0) {
-      // Partial upload — only dirty rows
-      const minRow = this.trailDirtyRowMin;
-      const rowCount = this.trailDirtyRowMax - minRow + 1;
-      const offset = minRow * this.mapW;
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        minRow,
-        this.mapW,
-        rowCount,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        src.subarray(offset, offset + rowCount * this.mapW),
-      );
-    } else {
-      // Full upload (first tick, seek, replay, etc.)
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        this.mapW,
-        this.mapH,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        src,
-      );
-    }
-
-    this.trailDirtyRowMin = Infinity;
-    this.trailDirtyRowMax = -1;
-    this.trailsDirty = false;
-  }
-
   setAltView(active: boolean): void {
     this.altView = active;
   }
@@ -353,7 +340,6 @@ export class TerritoryPass {
   /** Draw territory fill + fallout charcoal. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
     this.flushTileTexture();
-    this.flushTrailTexture();
 
     const gl = this.gl;
     const mo = this.settings.mapOverlay;
@@ -389,6 +375,6 @@ export class TerritoryPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
-    // tileTex, trailTex, paletteTex, patternMetaTex, patternDataTex owned by GPUResources / renderer
+    // tileTex, paletteTex, patternMetaTex, patternDataTex owned by GPUResources / renderer
   }
 }
