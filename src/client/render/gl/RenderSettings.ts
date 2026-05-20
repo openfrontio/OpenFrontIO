@@ -238,6 +238,15 @@ export interface RenderSettings {
     gridFontSize: number;
     recolorStructures: boolean;
   };
+  tileDrip: {
+    /**
+     * Round-robin bucket count for staggering territory tile uploads across
+     * render frames. One bucket drains per frame at 60Hz. 12 ≈ 200ms max
+     * latency, which absorbs a 100ms tick delay without a visible freeze.
+     * Changing at runtime requires reload.
+     */
+    bucketCount: number;
+  };
   lightConfigs: Record<string, { radius: number; intensity: number }>;
 }
 
