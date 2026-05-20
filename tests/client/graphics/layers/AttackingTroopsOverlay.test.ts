@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   alignClusterOrder,
   computeLabelScale,
-} from "../../../../src/client/graphics/layers/AttackingTroopsOverlay";
+} from "../../../../src/client/hud/layers/AttackingTroopsOverlay";
 import { Cell } from "../../../../src/core/game/Game";
 
 describe("computeLabelScale", () => {

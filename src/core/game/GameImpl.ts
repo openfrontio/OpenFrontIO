@@ -455,8 +455,8 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
-      // Players change each to so always add them
-      this.addUpdate(player.toUpdate());
+      const update = player.toUpdate();
+      if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
@@ -1173,6 +1173,9 @@ export class GameImpl implements Game {
   }
   tileState(tile: TileRef): number {
     return this._map.tileState(tile);
+  }
+  tileStateBuffer(): Uint16Array {
+    return this._map.tileStateBuffer();
   }
   updateTile(tile: TileRef, state: number): boolean {
     return this._map.updateTile(tile, state);
