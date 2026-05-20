@@ -1,0 +1,351 @@
+{
+  "map": {
+    "height": 2148,
+    "num_land_tiles": 1194108,
+    "width": 1092
+  },
+  "map16x": {
+    "height": 537,
+    "num_land_tiles": 71937,
+    "width": 273
+  },
+  "map4x": {
+    "height": 1074,
+    "num_land_tiles": 294112,
+    "width": 546
+  },
+  "mapInfoState": {
+    "colorMappings": [],
+    "cropData": {
+      "cropHeight": 0,
+      "cropWidth": 0,
+      "cropX": 0,
+      "cropY": 0,
+      "isCropped": false,
+      "originalHeight": 0,
+      "originalWidth": 0
+    },
+    "height": 2149,
+    "originalHeight": 2149,
+    "originalWidth": 1092,
+    "width": 1092
+  },
+  "name": "korea",
+  "nations": [
+    {
+      "coordinates": [
+        849,
+        1523
+      ],
+      "flag": "kr",
+      "name": "Ulsan",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        815,
+        1645
+      ],
+      "flag": "kr",
+      "name": "Busan",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        392,
+        2008
+      ],
+      "flag": "kr",
+      "name": "Jeju",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        963,
+        2093
+      ],
+      "flag": "Empire of Japan",
+      "name": "Nagasaki",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1039,
+        1970
+      ],
+      "flag": "jp",
+      "name": "Fukuoka",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        735,
+        1564
+      ],
+      "flag": "kr",
+      "name": "Daegu",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        602,
+        1619
+      ],
+      "flag": "kr",
+      "name": "South Gyeongsang",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        738,
+        1419
+      ],
+      "flag": "kr",
+      "name": "North Gyeongsang",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        408,
+        1770
+      ],
+      "flag": "kr",
+      "name": "South Jeolla",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        435,
+        1605
+      ],
+      "flag": "kr",
+      "name": "North Jeolla",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        456,
+        1158
+      ],
+      "flag": "kr",
+      "name": "Seoul",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        529,
+        1500
+      ],
+      "flag": "kr",
+      "name": "Daejeon",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        507,
+        1456
+      ],
+      "flag": "kr",
+      "name": "Sejong",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        572,
+        1396
+      ],
+      "flag": "kr",
+      "name": "North Chungcheong",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        418,
+        1415
+      ],
+      "flag": "kr",
+      "name": "South Chungcheong",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        384,
+        1163
+      ],
+      "flag": "kr",
+      "name": "Incheon",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        684,
+        1228
+      ],
+      "flag": "kr",
+      "name": "Gangwon",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        471,
+        1254
+      ],
+      "flag": "kr",
+      "name": "Gyeonggi",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        301,
+        1093
+      ],
+      "flag": "kp",
+      "name": "Kaesong",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        294,
+        986
+      ],
+      "flag": "kp",
+      "name": "P'yongyang",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        416,
+        997
+      ],
+      "flag": "kp",
+      "name": "North Hwanghae",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        166,
+        1093
+      ],
+      "flag": "kp",
+      "name": "South Hwanghae",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        188,
+        980
+      ],
+      "flag": "kp",
+      "name": "Nampo",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        599,
+        1062
+      ],
+      "flag": "kp",
+      "name": "Kangwon",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        564,
+        642
+      ],
+      "flag": "kp",
+      "name": "South Hamgyong",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        817,
+        384
+      ],
+      "flag": "kp",
+      "name": "North Hamgyong",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        540,
+        448
+      ],
+      "flag": "kp",
+      "name": "Ryanggang",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        283,
+        794
+      ],
+      "flag": "kp",
+      "name": "South Pyongan",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        151,
+        639
+      ],
+      "flag": "kp",
+      "name": "North Pyongan",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        336,
+        571
+      ],
+      "flag": "kp",
+      "name": "Chagang",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        402,
+        198
+      ],
+      "flag": "cn",
+      "name": "Jilin",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        34,
+        533
+      ],
+      "flag": "cn",
+      "name": "Liaoning",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1045,
+        43
+      ],
+      "flag": "ru",
+      "name": "Primorsky",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        820,
+        50
+      ],
+      "flag": "cn",
+      "name": "Heilongjiang",
+      "strength": 1
+    },
+    {
+      "coordinates": [
+        1057,
+        2090
+      ],
+      "flag": "jp",
+      "name": "Saga",
+      "strength": 1
+    }
+  ]
+}
