@@ -522,6 +522,32 @@ export class PlayerView {
     return result;
   }
 
+  hasTransitiveTarget(sid: number): boolean {
+    if (this.state.targets.includes(sid)) return true;
+
+    for (const allyID of this.state.allies) {
+      const ally = this.game.playerBySmallID(allyID) as PlayerView;
+      if (ally && ally.state.targets.includes(sid)) {
+        return true;
+      }
+    }
+
+    const myTeam = this.static.team;
+    if (myTeam !== null) {
+      for (const p of this.game.playerViews()) {
+        if (
+          p !== this &&
+          p.static.team === myTeam &&
+          p.state.targets.includes(sid)
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   isTraitor(): boolean {
     return this.state.isTraitor;
   }

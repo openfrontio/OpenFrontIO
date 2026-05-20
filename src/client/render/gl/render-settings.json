@@ -254,6 +254,9 @@
     "gridFontSize": 16,
     "recolorStructures": true
   },
+  "tileDrip": {
+    "bucketCount": 9
+  },
   "lightConfigs": {
     "City": {
       "radius": 18,

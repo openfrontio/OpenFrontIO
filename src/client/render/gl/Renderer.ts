@@ -124,6 +124,7 @@ export class GPURenderer {
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
   private spawnOverlayPass: SpawnOverlayPass;
+  private inSpawnPhase = false;
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
@@ -281,13 +282,12 @@ export class GPURenderer {
       this.settings,
     );
 
-    // --- Territory (needs tileTex, trailTex, paletteTex, patternTexs) ---
+    // --- Territory (needs tileTex, paletteTex, patternTexs) ---
     this.territoryPass = new TerritoryPass(
       gl,
       mapW,
       mapH,
       this.res.tileTex,
-      this.res.trailTex,
       this.paletteTex,
       this.patternMetaTex,
       this.patternDataTex,
@@ -545,25 +545,26 @@ export class GPURenderer {
     currentTick?: number,
   ): void {
     this.territoryPass.uploadFullTileState(tileState);
-    this.territoryPass.uploadFullTrailState(trailState);
+    this.trailPass.uploadFullState(trailState);
     this.heatManager.resetForSeek(tileState, nukeEvents, currentTick);
   }
 
   applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
     this.territoryPass.uploadFullTileState(tileState);
-    this.territoryPass.uploadFullTrailState(trailState);
+    this.trailPass.uploadFullState(trailState);
   }
 
   applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
     this.territoryPass.uploadDeltaTiles(changedTiles);
-    this.territoryPass.uploadFullTrailState(trailState);
+    this.trailPass.uploadFullState(trailState);
   }
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
     trailState: Uint8Array,
   ): void {
-    this.territoryPass.setLiveRefs(tileState, trailState);
+    this.territoryPass.setLiveRef(tileState);
+    this.trailPass.setLiveRef(trailState);
   }
 
   uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
@@ -575,11 +576,7 @@ export class GPURenderer {
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
-    this.territoryPass.applyLiveTrailDelta(
-      trailState,
-      dirtyRowMin,
-      dirtyRowMax,
-    );
+    this.trailPass.applyLiveDelta(trailState, dirtyRowMin, dirtyRowMax);
   }
 
   /** Re-upload palette data to the GPU texture (e.g. when players appear after initial startup). */
@@ -781,6 +778,7 @@ export class GPURenderer {
   }
 
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
+    this.inSpawnPhase = inSpawnPhase;
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
 
@@ -1060,9 +1058,14 @@ export class GPURenderer {
 
   private uploadTextures(): void {
     if (this.altView) this.affiliationPalette.flush();
+    if (this.inSpawnPhase) {
+      this.territoryPass.flushAllDripBuckets();
+    } else {
+      this.territoryPass.drainDripBucket();
+    }
     if (this.territoryPass.flushTileTexture())
       this.borderPass.notifyTilesChanged();
-    this.territoryPass.flushTrailTexture();
+    this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }
 
