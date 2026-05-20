@@ -17,47 +17,74 @@
   "name": "Sierpinski",
   "nations": [
     {
-      "coordinates": [216, 701],
+      "coordinates": [
+        216,
+        701
+      ],
       "flag": "",
       "name": "West"
     },
     {
-      "coordinates": [226, 240],
+      "coordinates": [
+        226,
+        240
+      ],
       "flag": "",
       "name": "North West"
     },
     {
-      "coordinates": [679, 238],
+      "coordinates": [
+        679,
+        238
+      ],
       "flag": "",
       "name": "North"
     },
     {
-      "coordinates": [1160, 229],
+      "coordinates": [
+        1160,
+        229
+      ],
       "flag": "",
       "name": "North East"
     },
     {
-      "coordinates": [1163, 711],
+      "coordinates": [
+        1163,
+        711
+      ],
       "flag": "",
       "name": "East"
     },
     {
-      "coordinates": [1146, 1162],
+      "coordinates": [
+        1146,
+        1162
+      ],
       "flag": "",
       "name": "South East"
     },
     {
-      "coordinates": [684, 1175],
+      "coordinates": [
+        684,
+        1175
+      ],
       "flag": "",
       "name": "South"
     },
     {
-      "coordinates": [228, 1183],
+      "coordinates": [
+        228,
+        1183
+      ],
       "flag": "",
       "name": "South West"
     },
     {
-      "coordinates": [700, 694],
+      "coordinates": [
+        700,
+        694
+      ],
       "flag": "",
       "name": "Center"
     }

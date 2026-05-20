@@ -17,11 +17,17 @@
   "name": "Tourney1",
   "nations": [
     {
-      "coordinates": [177, 510],
+      "coordinates": [
+        177,
+        510
+      ],
       "name": "Left"
     },
     {
-      "coordinates": [847, 511],
+      "coordinates": [
+        847,
+        511
+      ],
       "name": "Right"
     }
   ]

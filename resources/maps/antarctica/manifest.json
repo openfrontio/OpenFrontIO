@@ -17,52 +17,82 @@
   "name": "antarctica",
   "nations": [
     {
-      "coordinates": [1159, 1261],
+      "coordinates": [
+        1159,
+        1261
+      ],
       "flag": "nz",
       "name": "New Zealand Claim"
     },
     {
-      "coordinates": [1409, 1571],
+      "coordinates": [
+        1409,
+        1571
+      ],
       "flag": "tf",
       "name": "French Claim"
     },
     {
-      "coordinates": [1681, 1093],
+      "coordinates": [
+        1681,
+        1093
+      ],
       "flag": "hm",
       "name": "Australian Claim"
     },
     {
-      "coordinates": [1260, 510],
+      "coordinates": [
+        1260,
+        510
+      ],
       "flag": "bv",
       "name": "Norway Claim"
     },
     {
-      "coordinates": [900, 686],
+      "coordinates": [
+        900,
+        686
+      ],
       "flag": "gb",
       "name": "United Kingdom Claim"
     },
     {
-      "coordinates": [351, 703],
+      "coordinates": [
+        351,
+        703
+      ],
       "flag": "ar",
       "name": "Argentina Claim"
     },
     {
-      "coordinates": [506, 939],
+      "coordinates": [
+        506,
+        939
+      ],
       "flag": "cl",
       "name": "Chile Claim"
     },
     {
-      "coordinates": [705, 1264],
+      "coordinates": [
+        705,
+        1264
+      ],
       "flag": "aq",
       "name": "Marie Byrd Land"
     },
     {
-      "coordinates": [1532, 716],
+      "coordinates": [
+        1532,
+        716
+      ],
       "flag": "aq",
       "name": "Penguins"
     },
     {
-      "coordinates": [1100, 954],
+      "coordinates": [
+        1100,
+        954
+      ],
       "flag": "Cthulhu Republic",
       "name": "Ancient Aliens"
     }

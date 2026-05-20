@@ -17,127 +17,202 @@
   "name": "Asia",
   "nations": [
     {
-      "coordinates": [165, 422],
+      "coordinates": [
+        165,
+        422
+      ],
       "flag": "ru",
       "name": "Russia"
     },
     {
-      "coordinates": [83, 612],
+      "coordinates": [
+        83,
+        612
+      ],
       "flag": "tr",
       "name": "Türkiye"
     },
     {
-      "coordinates": [278, 789],
+      "coordinates": [
+        278,
+        789
+      ],
       "flag": "sa",
       "name": "Saudi Arabia"
     },
     {
-      "coordinates": [238, 907],
+      "coordinates": [
+        238,
+        907
+      ],
       "flag": "ye",
       "name": "Yemen"
     },
     {
-      "coordinates": [126, 710],
+      "coordinates": [
+        126,
+        710
+      ],
       "flag": "jo",
       "name": "Jordan"
     },
     {
-      "coordinates": [239, 689],
+      "coordinates": [
+        239,
+        689
+      ],
       "flag": "iq",
       "name": "Iraq"
     },
     {
-      "coordinates": [327, 655],
+      "coordinates": [
+        327,
+        655
+      ],
       "flag": "ir",
       "name": "Iran"
     },
     {
-      "coordinates": [594, 675],
+      "coordinates": [
+        594,
+        675
+      ],
       "flag": "pk",
       "name": "Pakistan"
     },
     {
-      "coordinates": [654, 745],
+      "coordinates": [
+        654,
+        745
+      ],
       "flag": "in",
       "name": "India"
     },
     {
-      "coordinates": [830, 808],
+      "coordinates": [
+        830,
+        808
+      ],
       "flag": "bd",
       "name": "Bangladesh"
     },
     {
-      "coordinates": [909, 845],
+      "coordinates": [
+        909,
+        845
+      ],
       "flag": "mm",
       "name": "Myanmar"
     },
     {
-      "coordinates": [1035, 845],
+      "coordinates": [
+        1035,
+        845
+      ],
       "flag": "vn",
       "name": "Vietnam"
     },
     {
-      "coordinates": [980, 1055],
+      "coordinates": [
+        980,
+        1055
+      ],
       "flag": "my",
       "name": "Malaysia"
     },
     {
-      "coordinates": [1046, 1170],
+      "coordinates": [
+        1046,
+        1170
+      ],
       "flag": "id",
       "name": "Indonesia"
     },
     {
-      "coordinates": [1129, 909],
+      "coordinates": [
+        1129,
+        909
+      ],
       "flag": "ph",
       "name": "Philippines"
     },
     {
-      "coordinates": [1237, 791],
+      "coordinates": [
+        1237,
+        791
+      ],
       "flag": "tw",
       "name": "Taiwan"
     },
     {
-      "coordinates": [1166, 661],
+      "coordinates": [
+        1166,
+        661
+      ],
       "flag": "cn",
       "name": "China"
     },
     {
-      "coordinates": [1314, 639],
+      "coordinates": [
+        1314,
+        639
+      ],
       "flag": "kr",
       "name": "South Korea"
     },
     {
-      "coordinates": [1485, 659],
+      "coordinates": [
+        1485,
+        659
+      ],
       "flag": "jp",
       "name": "Japan"
     },
     {
-      "coordinates": [591, 492],
+      "coordinates": [
+        591,
+        492
+      ],
       "flag": "kz",
       "name": "Kazakhstan"
     },
     {
-      "coordinates": [546, 629],
+      "coordinates": [
+        546,
+        629
+      ],
       "flag": "tj",
       "name": "Tajikistan"
     },
     {
-      "coordinates": [1053, 528],
+      "coordinates": [
+        1053,
+        528
+      ],
       "flag": "mn",
       "name": "Mongolia"
     },
     {
-      "coordinates": [243, 1067],
+      "coordinates": [
+        243,
+        1067
+      ],
       "flag": "so",
       "name": "Somalia"
     },
     {
-      "coordinates": [61, 733],
+      "coordinates": [
+        61,
+        733
+      ],
       "flag": "eg",
       "name": "Egypt"
     },
     {
-      "coordinates": [59, 490],
+      "coordinates": [
+        59,
+        490
+      ],
       "flag": "ua",
       "name": "Ukraine"
     }

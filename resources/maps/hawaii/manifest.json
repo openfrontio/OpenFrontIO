@@ -17,47 +17,74 @@
   "name": "Hawaii",
   "nations": [
     {
-      "coordinates": [283, 281],
+      "coordinates": [
+        283,
+        281
+      ],
       "flag": "us",
       "name": "Niihau"
     },
     {
-      "coordinates": [613, 189],
+      "coordinates": [
+        613,
+        189
+      ],
       "flag": "us",
       "name": "Kauai"
     },
     {
-      "coordinates": [1424, 525],
+      "coordinates": [
+        1424,
+        525
+      ],
       "flag": "us",
       "name": "Oahu"
     },
     {
-      "coordinates": [1930, 708],
+      "coordinates": [
+        1930,
+        708
+      ],
       "flag": "us",
       "name": "Molokai"
     },
     {
-      "coordinates": [1977, 874],
+      "coordinates": [
+        1977,
+        874
+      ],
       "flag": "us",
       "name": "Lanai"
     },
     {
-      "coordinates": [2145, 1036],
+      "coordinates": [
+        2145,
+        1036
+      ],
       "flag": "us",
       "name": "Kahoolawe"
     },
     {
-      "coordinates": [2287, 900],
+      "coordinates": [
+        2287,
+        900
+      ],
       "flag": "us",
       "name": "Maui"
     },
     {
-      "coordinates": [2550, 1550],
+      "coordinates": [
+        2550,
+        1550
+      ],
       "flag": "us",
       "name": "Kona"
     },
     {
-      "coordinates": [2900, 1500],
+      "coordinates": [
+        2900,
+        1500
+      ],
       "flag": "us",
       "name": "Hilo"
     }

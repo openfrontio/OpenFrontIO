@@ -17,37 +17,58 @@
   "name": "Australia",
   "nations": [
     {
-      "coordinates": [460, 720],
+      "coordinates": [
+        460,
+        720
+      ],
       "flag": "aus_wesaus",
       "name": "Western Australia"
     },
     {
-      "coordinates": [965, 340],
+      "coordinates": [
+        965,
+        340
+      ],
       "flag": "aus_norter",
       "name": "Northern Territory"
     },
     {
-      "coordinates": [920, 915],
+      "coordinates": [
+        920,
+        915
+      ],
       "flag": "aus_souaus",
       "name": "South Australia"
     },
     {
-      "coordinates": [1435, 1220],
+      "coordinates": [
+        1435,
+        1220
+      ],
       "flag": "aus_vic",
       "name": "Victoria"
     },
     {
-      "coordinates": [1490, 555],
+      "coordinates": [
+        1490,
+        555
+      ],
       "flag": "aus_quelan",
       "name": "Queensland"
     },
     {
-      "coordinates": [1605, 1025],
+      "coordinates": [
+        1605,
+        1025
+      ],
       "flag": "aus_nsw",
       "name": "New South Wales"
     },
     {
-      "coordinates": [1595, 1380],
+      "coordinates": [
+        1595,
+        1380
+      ],
       "flag": "aus_tas",
       "name": "Tasmania"
     }

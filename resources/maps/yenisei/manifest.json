@@ -17,32 +17,50 @@
   "name": "Yenisei",
   "nations": [
     {
-      "coordinates": [1050, 535],
+      "coordinates": [
+        1050,
+        535
+      ],
       "flag": "ru",
       "name": "Baikalovsk"
     },
     {
-      "coordinates": [1120, 1315],
+      "coordinates": [
+        1120,
+        1315
+      ],
       "flag": "ru",
       "name": "Mungui"
     },
     {
-      "coordinates": [345, 1190],
+      "coordinates": [
+        345,
+        1190
+      ],
       "flag": "ru",
       "name": "Polykarpovsk"
     },
     {
-      "coordinates": [335, 800],
+      "coordinates": [
+        335,
+        800
+      ],
       "flag": "ru",
       "name": "Central Island"
     },
     {
-      "coordinates": [75, 390],
+      "coordinates": [
+        75,
+        390
+      ],
       "flag": "ru",
       "name": "West Coast"
     },
     {
-      "coordinates": [420, 440],
+      "coordinates": [
+        420,
+        440
+      ],
       "flag": "ru",
       "name": "Northern Island"
     }

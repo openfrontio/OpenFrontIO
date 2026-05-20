@@ -17,22 +17,34 @@
   "name": "Four Islands",
   "nations": [
     {
-      "coordinates": [403, 1296],
+      "coordinates": [
+        403,
+        1296
+      ],
       "flag": "",
       "name": "Korinthal"
     },
     {
-      "coordinates": [1152, 1251],
+      "coordinates": [
+        1152,
+        1251
+      ],
       "flag": "",
       "name": "Lunareth"
     },
     {
-      "coordinates": [1328, 322],
+      "coordinates": [
+        1328,
+        322
+      ],
       "flag": "",
       "name": "Sylvoria"
     },
     {
-      "coordinates": [114, 121],
+      "coordinates": [
+        114,
+        121
+      ],
       "flag": "",
       "name": "Myrkwind"
     }

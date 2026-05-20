@@ -17,67 +17,106 @@
   "name": "Strait Of Malacca",
   "nations": [
     {
-      "coordinates": [1268, 730],
+      "coordinates": [
+        1268,
+        730
+      ],
       "flag": "sg",
       "name": "Singapore"
     },
     {
-      "coordinates": [862, 41],
+      "coordinates": [
+        862,
+        41
+      ],
       "flag": "th",
       "name": "Thailand"
     },
     {
-      "coordinates": [210, 243],
+      "coordinates": [
+        210,
+        243
+      ],
       "flag": "Aceh",
       "name": "Aceh"
     },
     {
-      "coordinates": [1053, 333],
+      "coordinates": [
+        1053,
+        333
+      ],
       "flag": "my",
       "name": "Malaysia"
     },
     {
-      "coordinates": [596, 573],
+      "coordinates": [
+        596,
+        573
+      ],
       "flag": "id",
       "name": "North Sumatra"
     },
     {
-      "coordinates": [797, 1002],
+      "coordinates": [
+        797,
+        1002
+      ],
       "flag": "id",
       "name": "West Sumatra"
     },
     {
-      "coordinates": [956, 743],
+      "coordinates": [
+        956,
+        743
+      ],
       "flag": "id",
       "name": "Riau"
     },
     {
-      "coordinates": [1644, 1265],
+      "coordinates": [
+        1644,
+        1265
+      ],
       "flag": "id",
       "name": "Bangka Belitung"
     },
     {
-      "coordinates": [1419, 1636],
+      "coordinates": [
+        1419,
+        1636
+      ],
       "flag": "id",
       "name": "Lampung"
     },
     {
-      "coordinates": [1084, 1414],
+      "coordinates": [
+        1084,
+        1414
+      ],
       "flag": "id",
       "name": "Bengkulu"
     },
     {
-      "coordinates": [1366, 1303],
+      "coordinates": [
+        1366,
+        1303
+      ],
       "flag": "id",
       "name": "South Sumatra"
     },
     {
-      "coordinates": [1167, 1071],
+      "coordinates": [
+        1167,
+        1071
+      ],
       "flag": "id",
       "name": "Jambi"
     },
     {
-      "coordinates": [1383, 938],
+      "coordinates": [
+        1383,
+        938
+      ],
       "flag": "id",
       "name": "Riau Islands"
     }

@@ -17,42 +17,66 @@
   "name": "bajacalifornia",
   "nations": [
     {
-      "coordinates": [513, 44],
+      "coordinates": [
+        513,
+        44
+      ],
       "flag": "California",
       "name": "California"
     },
     {
-      "coordinates": [791, 699],
+      "coordinates": [
+        791,
+        699
+      ],
       "flag": "mx",
       "name": "Baja California"
     },
     {
-      "coordinates": [1312, 1426],
+      "coordinates": [
+        1312,
+        1426
+      ],
       "flag": "mx",
       "name": "Baja California Sur"
     },
     {
-      "coordinates": [1364, 679],
+      "coordinates": [
+        1364,
+        679
+      ],
       "flag": "mx",
       "name": "Sonora"
     },
     {
-      "coordinates": [1767, 1243],
+      "coordinates": [
+        1767,
+        1243
+      ],
       "flag": "mx",
       "name": "Sinaloa"
     },
     {
-      "coordinates": [1733, 578],
+      "coordinates": [
+        1733,
+        578
+      ],
       "flag": "mx",
       "name": "Chihuahua"
     },
     {
-      "coordinates": [969, 62],
+      "coordinates": [
+        969,
+        62
+      ],
       "flag": "Arizona",
       "name": "Arizona"
     },
     {
-      "coordinates": [1534, 60],
+      "coordinates": [
+        1534,
+        60
+      ],
       "flag": "New_Mexico",
       "name": "New Mexico"
     }

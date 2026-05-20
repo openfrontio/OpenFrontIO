@@ -17,35 +17,59 @@
   "name": "Tourney4",
   "nations": [
     {
-      "coordinates": [568, 309],
+      "coordinates": [
+        568,
+        309
+      ],
       "name": "North North West"
     },
     {
-      "coordinates": [308, 562],
+      "coordinates": [
+        308,
+        562
+      ],
       "name": "West North West"
     },
     {
-      "coordinates": [945, 303],
+      "coordinates": [
+        945,
+        303
+      ],
       "name": "North North East"
     },
     {
-      "coordinates": [1188, 556],
+      "coordinates": [
+        1188,
+        556
+      ],
       "name": "East North East"
     },
     {
-      "coordinates": [1196, 931],
+      "coordinates": [
+        1196,
+        931
+      ],
       "name": "East South East"
     },
     {
-      "coordinates": [941, 1178],
+      "coordinates": [
+        941,
+        1178
+      ],
       "name": "South South East"
     },
     {
-      "coordinates": [564, 1185],
+      "coordinates": [
+        564,
+        1185
+      ],
       "name": "South South West"
     },
     {
-      "coordinates": [315, 927],
+      "coordinates": [
+        315,
+        927
+      ],
       "name": "West South West"
     }
   ]

@@ -69,6 +69,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Iceland: 4,
   Italia: 6,
   Japan: 6,
+  Korea:5,
   Lemnos: 3,
   Lisbon: 4,
   LosAngeles: 8,
@@ -101,6 +102,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   TwoLakes: 6,
   World: 20,
   Yenisei: 6,
+  
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [

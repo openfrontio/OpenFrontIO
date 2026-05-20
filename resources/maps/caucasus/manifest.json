@@ -17,107 +17,170 @@
   "name": "Caucasus",
   "nations": [
     {
-      "coordinates": [624, 581],
+      "coordinates": [
+        624,
+        581
+      ],
       "flag": "ge",
       "name": "Georgia"
     },
     {
-      "coordinates": [455, 463],
+      "coordinates": [
+        455,
+        463
+      ],
       "flag": "",
       "name": "Abkhazia"
     },
     {
-      "coordinates": [663, 448],
+      "coordinates": [
+        663,
+        448
+      ],
       "flag": "",
       "name": "South Ossetia"
     },
     {
-      "coordinates": [626, 347],
+      "coordinates": [
+        626,
+        347
+      ],
       "flag": "ru",
       "name": "North Ossetia"
     },
     {
-      "coordinates": [1023, 728],
+      "coordinates": [
+        1023,
+        728
+      ],
       "flag": "az",
       "name": "Azerbaijan"
     },
     {
-      "coordinates": [682, 761],
+      "coordinates": [
+        682,
+        761
+      ],
       "flag": "am",
       "name": "Armenia"
     },
     {
-      "coordinates": [924, 982],
+      "coordinates": [
+        924,
+        982
+      ],
       "flag": "ir",
       "name": "Iran"
     },
     {
-      "coordinates": [161, 728],
+      "coordinates": [
+        161,
+        728
+      ],
       "flag": "tr",
       "name": "Black Sea Region"
     },
     {
-      "coordinates": [924, 479],
+      "coordinates": [
+        924,
+        479
+      ],
       "flag": "ru",
       "name": "Dagestan"
     },
     {
-      "coordinates": [830, 309],
+      "coordinates": [
+        830,
+        309
+      ],
       "flag": "ru",
       "name": "Chechnya"
     },
     {
-      "coordinates": [724, 365],
+      "coordinates": [
+        724,
+        365
+      ],
       "flag": "ru",
       "name": "Ingushetia"
     },
     {
-      "coordinates": [551, 313],
+      "coordinates": [
+        551,
+        313
+      ],
       "flag": "ru",
       "name": "Kabardino-Balkaria"
     },
     {
-      "coordinates": [405, 300],
+      "coordinates": [
+        405,
+        300
+      ],
       "flag": "ru",
       "name": "Karachay-Cherkessia"
     },
     {
-      "coordinates": [275, 202],
+      "coordinates": [
+        275,
+        202
+      ],
       "flag": "ru",
       "name": "Adygea"
     },
     {
-      "coordinates": [275, 186],
+      "coordinates": [
+        275,
+        186
+      ],
       "flag": "ru",
       "name": "Krasnodar Krai"
     },
     {
-      "coordinates": [524, 16],
+      "coordinates": [
+        524,
+        16
+      ],
       "flag": "ru",
       "name": "Stavropol Krai"
     },
     {
-      "coordinates": [805, 24],
+      "coordinates": [
+        805,
+        24
+      ],
       "flag": "ru",
       "name": "Kalmykia"
     },
     {
-      "coordinates": [164, 16],
+      "coordinates": [
+        164,
+        16
+      ],
       "flag": "ru",
       "name": "Rostov Oblast"
     },
     {
-      "coordinates": [1230, 271],
+      "coordinates": [
+        1230,
+        271
+      ],
       "flag": "kz",
       "name": "Kazakhstan"
     },
     {
-      "coordinates": [1083, 20],
+      "coordinates": [
+        1083,
+        20
+      ],
       "flag": "ru",
       "name": "Astrakhan Oblast"
     },
     {
-      "coordinates": [507, 863],
+      "coordinates": [
+        507,
+        863
+      ],
       "flag": "tr",
       "name": "Eastern Anatolia"
     }

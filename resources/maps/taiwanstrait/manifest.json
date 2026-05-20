@@ -17,137 +17,218 @@
   "name": "Taiwan Strait",
   "nations": [
     {
-      "coordinates": [900, 32],
+      "coordinates": [
+        900,
+        32
+      ],
       "flag": "cn",
       "name": "Fuzhou"
     },
     {
-      "coordinates": [789, 282],
+      "coordinates": [
+        789,
+        282
+      ],
       "flag": "cn",
       "name": "Putian"
     },
     {
-      "coordinates": [641, 447],
+      "coordinates": [
+        641,
+        447
+      ],
       "flag": "cn",
       "name": "Quanzhou"
     },
     {
-      "coordinates": [430, 275],
+      "coordinates": [
+        430,
+        275
+      ],
       "flag": "cn",
       "name": "Chinese Military Base"
     },
     {
-      "coordinates": [499, 590],
+      "coordinates": [
+        499,
+        590
+      ],
       "flag": "cn",
       "name": "Xiamen"
     },
     {
-      "coordinates": [340, 550],
+      "coordinates": [
+        340,
+        550
+      ],
       "flag": "cn",
       "name": "Zhangzhou"
     },
     {
-      "coordinates": [206, 449],
+      "coordinates": [
+        206,
+        449
+      ],
       "flag": "cn",
       "name": "Longyan"
     },
     {
-      "coordinates": [107, 898],
+      "coordinates": [
+        107,
+        898
+      ],
       "flag": "cn",
       "name": "Shantou"
     },
     {
-      "coordinates": [7, 836],
+      "coordinates": [
+        7,
+        836
+      ],
       "flag": "cn",
       "name": "Chaozhou"
     },
     {
-      "coordinates": [21, 319],
+      "coordinates": [
+        21,
+        319
+      ],
       "flag": "cn",
       "name": "Giant Pandas"
     },
     {
-      "coordinates": [593, 607],
+      "coordinates": [
+        593,
+        607
+      ],
       "flag": "tw",
       "name": "Kinmen Island"
     },
     {
-      "coordinates": [975, 913],
+      "coordinates": [
+        975,
+        913
+      ],
       "flag": "tw",
       "name": "Penghu"
     },
     {
-      "coordinates": [1252, 1244],
+      "coordinates": [
+        1252,
+        1244
+      ],
       "flag": "tw",
       "name": "Kaohsiung"
     },
     {
-      "coordinates": [1210, 1079],
+      "coordinates": [
+        1210,
+        1079
+      ],
       "flag": "tw",
       "name": "Tainan"
     },
     {
-      "coordinates": [1491, 1152],
+      "coordinates": [
+        1491,
+        1152
+      ],
       "flag": "tw",
       "name": "Taitung"
     },
     {
-      "coordinates": [1643, 702],
+      "coordinates": [
+        1643,
+        702
+      ],
       "flag": "tw",
       "name": "Hualien"
     },
     {
-      "coordinates": [1249, 911],
+      "coordinates": [
+        1249,
+        911
+      ],
       "flag": "tw",
       "name": "Chiayi"
     },
     {
-      "coordinates": [1272, 697],
+      "coordinates": [
+        1272,
+        697
+      ],
       "flag": "tw",
       "name": "Taichung City"
     },
     {
-      "coordinates": [1752, 284],
+      "coordinates": [
+        1752,
+        284
+      ],
       "flag": "tw",
       "name": "Keelung"
     },
     {
-      "coordinates": [1655, 255],
+      "coordinates": [
+        1655,
+        255
+      ],
       "flag": "tw",
       "name": "Taipei"
     },
     {
-      "coordinates": [1542, 290],
+      "coordinates": [
+        1542,
+        290
+      ],
       "flag": "tw",
       "name": "Taoyuan"
     },
     {
-      "coordinates": [1464, 353],
+      "coordinates": [
+        1464,
+        353
+      ],
       "flag": "tw",
       "name": "Hsinchu"
     },
     {
-      "coordinates": [1351, 473],
+      "coordinates": [
+        1351,
+        473
+      ],
       "flag": "tw",
       "name": "Miaoli"
     },
     {
-      "coordinates": [1629, 1433],
+      "coordinates": [
+        1629,
+        1433
+      ],
       "flag": "tw",
       "name": "Lanyu"
     },
     {
-      "coordinates": [41, 602],
+      "coordinates": [
+        41,
+        602
+      ],
       "flag": "cn",
       "name": "Meizhou"
     },
     {
-      "coordinates": [619, 89],
+      "coordinates": [
+        619,
+        89
+      ],
       "flag": "cn",
       "name": "Sanming"
     },
     {
-      "coordinates": [225, 84],
+      "coordinates": [
+        225,
+        84
+      ],
       "flag": "cn",
       "name": "Tea Plantations"
     }

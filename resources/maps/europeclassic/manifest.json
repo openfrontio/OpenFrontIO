@@ -17,187 +17,298 @@
   "name": "Europe",
   "nations": [
     {
-      "coordinates": [171, 171],
+      "coordinates": [
+        171,
+        171
+      ],
       "flag": "is",
       "name": "Iceland"
     },
     {
-      "coordinates": [477, 473],
+      "coordinates": [
+        477,
+        473
+      ],
       "flag": "ie",
       "name": "Ireland"
     },
     {
-      "coordinates": [650, 477],
+      "coordinates": [
+        650,
+        477
+      ],
       "flag": "gb",
       "name": "United Kingdom"
     },
     {
-      "coordinates": [612, 809],
+      "coordinates": [
+        612,
+        809
+      ],
       "flag": "es",
       "name": "Spain"
     },
     {
-      "coordinates": [729, 648],
+      "coordinates": [
+        729,
+        648
+      ],
       "flag": "fr",
       "name": "France"
     },
     {
-      "coordinates": [1050, 745],
+      "coordinates": [
+        1050,
+        745
+      ],
       "flag": "it",
       "name": "Italy"
     },
     {
-      "coordinates": [895, 641],
+      "coordinates": [
+        895,
+        641
+      ],
       "flag": "ch",
       "name": "Switzerland"
     },
     {
-      "coordinates": [935, 259],
+      "coordinates": [
+        935,
+        259
+      ],
       "flag": "no",
       "name": "Norway"
     },
     {
-      "coordinates": [1105, 286],
+      "coordinates": [
+        1105,
+        286
+      ],
       "flag": "se",
       "name": "Sweden"
     },
     {
-      "coordinates": [1438, 209],
+      "coordinates": [
+        1438,
+        209
+      ],
       "flag": "fi",
       "name": "Finland"
     },
     {
-      "coordinates": [819, 534],
+      "coordinates": [
+        819,
+        534
+      ],
       "flag": "be",
       "name": "Belgium"
     },
     {
-      "coordinates": [868, 485],
+      "coordinates": [
+        868,
+        485
+      ],
       "flag": "nl",
       "name": "Netherlands"
     },
     {
-      "coordinates": [1000, 480],
+      "coordinates": [
+        1000,
+        480
+      ],
       "flag": "de",
       "name": "Germany"
     },
     {
-      "coordinates": [1017, 628],
+      "coordinates": [
+        1017,
+        628
+      ],
       "flag": "at",
       "name": "Austria"
     },
     {
-      "coordinates": [1220, 491],
+      "coordinates": [
+        1220,
+        491
+      ],
       "flag": "pl",
       "name": "Poland"
     },
     {
-      "coordinates": [1078, 564],
+      "coordinates": [
+        1078,
+        564
+      ],
       "flag": "cz",
       "name": "Czechia"
     },
     {
-      "coordinates": [1540, 602],
+      "coordinates": [
+        1540,
+        602
+      ],
       "flag": "ua",
       "name": "Ukraine"
     },
     {
-      "coordinates": [1517, 424],
+      "coordinates": [
+        1517,
+        424
+      ],
       "flag": "by",
       "name": "Belarus"
     },
     {
-      "coordinates": [1414, 667],
+      "coordinates": [
+        1414,
+        667
+      ],
       "flag": "ro",
       "name": "Romania"
     },
     {
-      "coordinates": [1614, 834],
+      "coordinates": [
+        1614,
+        834
+      ],
       "flag": "tr",
       "name": "Türkiye"
     },
     {
-      "coordinates": [525, 955],
+      "coordinates": [
+        525,
+        955
+      ],
       "flag": "ma",
       "name": "Morocco"
     },
     {
-      "coordinates": [1771, 413],
+      "coordinates": [
+        1771,
+        413
+      ],
       "flag": "ru",
       "name": "Russia"
     },
     {
-      "coordinates": [1750, 950],
+      "coordinates": [
+        1750,
+        950
+      ],
       "flag": "sy",
       "name": "Syria"
     },
     {
-      "coordinates": [1930, 950],
+      "coordinates": [
+        1930,
+        950
+      ],
       "flag": "iq",
       "name": "Iraq"
     },
     {
-      "coordinates": [1900, 720],
+      "coordinates": [
+        1900,
+        720
+      ],
       "flag": "ge",
       "name": "Georgia"
     },
     {
-      "coordinates": [950, 930],
+      "coordinates": [
+        950,
+        930
+      ],
       "flag": "tn",
       "name": "Tunisia"
     },
     {
-      "coordinates": [740, 940],
+      "coordinates": [
+        740,
+        940
+      ],
       "flag": "dz",
       "name": "Algeria"
     },
     {
-      "coordinates": [460, 830],
+      "coordinates": [
+        460,
+        830
+      ],
       "flag": "pt",
       "name": "Portugal"
     },
     {
-      "coordinates": [1300, 830],
+      "coordinates": [
+        1300,
+        830
+      ],
       "flag": "gr",
       "name": "Greece"
     },
     {
-      "coordinates": [1270, 700],
+      "coordinates": [
+        1270,
+        700
+      ],
       "flag": "rs",
       "name": "Serbia"
     },
     {
-      "coordinates": [1218, 602],
+      "coordinates": [
+        1218,
+        602
+      ],
       "flag": "hu",
       "name": "Hungary"
     },
     {
-      "coordinates": [1277, 90],
+      "coordinates": [
+        1277,
+        90
+      ],
       "flag": "Sami flag",
       "name": "Sápmi"
     },
     {
-      "coordinates": [1406, 324],
+      "coordinates": [
+        1406,
+        324
+      ],
       "flag": "ee",
       "name": "Estonia"
     },
     {
-      "coordinates": [1380, 384],
+      "coordinates": [
+        1380,
+        384
+      ],
       "flag": "lv",
       "name": "Latvia"
     },
     {
-      "coordinates": [1355, 444],
+      "coordinates": [
+        1355,
+        444
+      ],
       "flag": "lt",
       "name": "Lithuania"
     },
     {
-      "coordinates": [1121, 668],
+      "coordinates": [
+        1121,
+        668
+      ],
       "flag": "hr",
       "name": "Croatia"
     },
     {
-      "coordinates": [959, 394],
+      "coordinates": [
+        959,
+        394
+      ],
       "flag": "dk",
       "name": "Denmark"
     }
