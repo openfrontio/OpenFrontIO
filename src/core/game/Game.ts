@@ -173,7 +173,8 @@ export enum GameMapType {
   TaiwanStrait = "Taiwan Strait",
   DanishStraits = "Danish Straits",
   NorthwestPassage = "Northwest Passage",
-  Korea = "Korea"
+  Korea = "Korea",
+  Venice = "Venice",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -240,6 +241,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.DanishStraits,
     GameMapType.NorthwestPassage,
     GameMapType.Korea,
+    GameMapType.Venice,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -830,7 +832,7 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  toUpdate(): PlayerUpdate;
+  toUpdate(): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;

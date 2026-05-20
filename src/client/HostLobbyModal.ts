@@ -10,6 +10,7 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -92,6 +93,7 @@ export class HostLobbyModal extends BaseModal {
   private botsUpdateTimer: number | null = null;
   private nationsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
+  private userSettings = new UserSettings();
 
   private leaveLobbyOnClose = true;
 
@@ -130,9 +132,18 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    if (!crazyGamesSDK.isOnCrazyGames()) {
-      history.replaceState(null, "", url);
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return;
     }
+    history.replaceState(null, "", url);
+  }
+
+  private updateLobbyHistory(lobbyUrl: string): void {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return;
+    }
+    const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
+    history.replaceState(null, "", lobbyIdHidden ? "/streamer-mode" : lobbyUrl);
   }
 
   private startLobbyUpdates() {
@@ -426,7 +437,7 @@ export class HostLobbyModal extends BaseModal {
     // Copy immediately so the host can share the link without waiting for the
     // server. If lobby creation fails, clear the clipboard to avoid a dead link.
     void this.constructUrl().then(async (url) => {
-      this.updateHistory(url);
+      this.updateLobbyHistory(url);
       await this.updateComplete;
       void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
     });
@@ -926,7 +937,7 @@ export class HostLobbyModal extends BaseModal {
       ? this.spawnImmunityDurationMinutes * 60 * 10
       : 0;
     const url = await this.constructUrl();
-    this.updateHistory(url);
+    this.updateLobbyHistory(url);
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {

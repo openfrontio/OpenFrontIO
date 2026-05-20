@@ -1,18 +1,18 @@
 {
   "map": {
-    "height": 1508,
-    "num_land_tiles": 1107518,
-    "width": 1800
+    "height": 1600,
+    "num_land_tiles": 907469,
+    "width": 1600
   },
   "map16x": {
-    "height": 377,
-    "num_land_tiles": 67799,
-    "width": 450
+    "height": 400,
+    "num_land_tiles": 55147,
+    "width": 400
   },
   "map4x": {
-    "height": 754,
-    "num_land_tiles": 274583,
-    "width": 900
+    "height": 800,
+    "num_land_tiles": 224367,
+    "width": 800
   },
   "name": "Taiwan Strait",
   "nations": [
@@ -21,6 +21,7 @@
         900,
         32
       ],
+      "coordinates": [694, 26],
       "flag": "cn",
       "name": "Fuzhou"
     },
@@ -29,6 +30,7 @@
         789,
         282
       ],
+      "coordinates": [720, 222],
       "flag": "cn",
       "name": "Putian"
     },
@@ -37,6 +39,7 @@
         641,
         447
       ],
+      "coordinates": [538, 432],
       "flag": "cn",
       "name": "Quanzhou"
     },
@@ -53,6 +56,7 @@
         499,
         590
       ],
+      "coordinates": [303, 593],
       "flag": "cn",
       "name": "Xiamen"
     },
@@ -61,6 +65,7 @@
         340,
         550
       ],
+      "coordinates": [259, 678],
       "flag": "cn",
       "name": "Zhangzhou"
     },
@@ -69,6 +74,7 @@
         206,
         449
       ],
+      "coordinates": [26, 345],
       "flag": "cn",
       "name": "Longyan"
     },
@@ -101,6 +107,7 @@
         593,
         607
       ],
+      "coordinates": [386, 606],
       "flag": "tw",
       "name": "Kinmen Island"
     },
@@ -109,6 +116,7 @@
         975,
         913
       ],
+      "coordinates": [773, 912],
       "flag": "tw",
       "name": "Penghu"
     },
@@ -117,6 +125,7 @@
         1252,
         1244
       ],
+      "coordinates": [1057, 1252],
       "flag": "tw",
       "name": "Kaohsiung"
     },
@@ -125,6 +134,7 @@
         1210,
         1079
       ],
+      "coordinates": [981, 1131],
       "flag": "tw",
       "name": "Tainan"
     },
@@ -133,6 +143,7 @@
         1491,
         1152
       ],
+      "coordinates": [1230, 1193],
       "flag": "tw",
       "name": "Taitung"
     },
@@ -141,6 +152,7 @@
         1643,
         702
       ],
+      "coordinates": [1416, 789],
       "flag": "tw",
       "name": "Hualien"
     },
@@ -149,6 +161,7 @@
         1249,
         911
       ],
+      "coordinates": [1018, 936],
       "flag": "tw",
       "name": "Chiayi"
     },
@@ -157,6 +170,7 @@
         1272,
         697
       ],
+      "coordinates": [1007, 710],
       "flag": "tw",
       "name": "Taichung City"
     },
@@ -165,6 +179,7 @@
         1752,
         284
       ],
+      "coordinates": [1489, 235],
       "flag": "tw",
       "name": "Keelung"
     },
@@ -173,6 +188,7 @@
         1655,
         255
       ],
+      "coordinates": [1424, 254],
       "flag": "tw",
       "name": "Taipei"
     },
@@ -181,6 +197,7 @@
         1542,
         290
       ],
+      "coordinates": [1341, 284],
       "flag": "tw",
       "name": "Taoyuan"
     },
@@ -189,6 +206,7 @@
         1464,
         353
       ],
+      "coordinates": [1247, 415],
       "flag": "tw",
       "name": "Hsinchu"
     },
@@ -213,24 +231,65 @@
         41,
         602
       ],
+      "coordinates": [73, 859],
       "flag": "cn",
-      "name": "Meizhou"
+      "name": "Dongshan"
+    },
+    {
+      "coordinates": [397, 335],
+      "flag": "cn",
+      "name": "Anxi"
+    },
+    {
+      "coordinates": [22, 11],
+      "flag": "cn",
+      "name": "Sanming"
     },
     {
       "coordinates": [
         619,
         89
       ],
+      "coordinates": [267, 134],
       "flag": "cn",
-      "name": "Sanming"
+      "name": "Dehua"
     },
     {
       "coordinates": [
         225,
         84
       ],
+      "coordinates": [522, 220],
       "flag": "cn",
-      "name": "Tea Plantations"
+      "name": "Xianyou"
+    },
+    {
+      "coordinates": [1097, 592],
+      "flag": "tw",
+      "name": "Miaoli"
+    },
+    {
+      "coordinates": [1426, 1431],
+      "flag": "tw",
+      "name": "Lanyu"
     }
   ]
+}
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1600,
+        "width": 800,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1600,
+        "width": 800,
+        "x": 800,
+        "y": 0
+      }
+    ]
+  }
 }
