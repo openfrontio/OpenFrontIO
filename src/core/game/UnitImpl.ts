@@ -219,6 +219,7 @@ export class UnitImpl implements Unit {
       this._lastOwner.id(),
       undefined,
       { unit: this.type(), name: newOwner.displayName() },
+      this.id(),
     );
     this.mg.displayMessage(
       "events_display.captured_enemy_unit",
@@ -226,6 +227,7 @@ export class UnitImpl implements Unit {
       newOwner.id(),
       undefined,
       { unit: this.type(), name: this._lastOwner.displayName() },
+      this.id(),
     );
   }
 
@@ -336,6 +338,7 @@ export class UnitImpl implements Unit {
       this.owner().id(),
       undefined,
       { unit: this._type },
+      this.id(),
     );
   }
 
