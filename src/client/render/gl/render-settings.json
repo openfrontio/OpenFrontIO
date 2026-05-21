@@ -74,8 +74,8 @@
     "friendlyTintRatio": 0.35
   },
   "railroad": {
-    "railMinZoom": 2,
-    "railDetailZoom": 4,
+    "railMinZoom": 4,
+    "railDetailZoom": 6,
     "railAlpha": 1
   },
   "structure": {
