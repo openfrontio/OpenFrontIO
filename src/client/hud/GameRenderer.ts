@@ -10,6 +10,7 @@ import { HoverHighlightController } from "../controllers/HoverHighlightControlle
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
+import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
 import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
@@ -119,6 +120,16 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const actionableEvents = document.querySelector(
+    "actionable-events",
+  ) as ActionableEvents;
+  if (!(actionableEvents instanceof ActionableEvents)) {
+    console.error("actionable events not found");
+  }
+  actionableEvents.eventBus = eventBus;
+  actionableEvents.game = game;
+  actionableEvents.uiState = uiState;
 
   const attacksDisplay = document.querySelector(
     "attacks-display",
@@ -265,6 +276,7 @@ export function createRenderer(
     new HoverHighlightController(game, eventBus, transformHandler, view),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
+    actionableEvents,
     attacksDisplay,
     chatDisplay,
     buildMenu,
