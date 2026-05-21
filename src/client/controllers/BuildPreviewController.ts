@@ -326,18 +326,22 @@ export class BuildPreviewController implements Controller {
     // Range circle: SAM placement preview shows targetable radius; nuke
     // previews show the outer blast radius at the target tile.
     let rangeRadius = 0;
-    if (u.type === UnitType.SAMLauncher) {
-      const level = this.resolveGhostRangeLevel(u) ?? 1;
-      rangeRadius = this.game.config().samRange(level);
-    } else if (
-      u.type === UnitType.AtomBomb ||
-      u.type === UnitType.HydrogenBomb
-    ) {
-      rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
-    } else if (u.type === UnitType.Factory) {
-      rangeRadius = this.game.config().trainStationMaxRange();
-    } else if (u.type === UnitType.DefensePost) {
-      rangeRadius = this.game.config().defensePostRange();
+    switch (u.type) {
+      case UnitType.SAMLauncher: {
+        const level = this.resolveGhostRangeLevel(u) ?? 1;
+        rangeRadius = this.game.config().samRange(level);
+        break;
+      }
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
+        break;
+      case UnitType.Factory:
+        rangeRadius = this.game.config().trainStationMaxRange();
+        break;
+      case UnitType.DefensePost:
+        rangeRadius = this.game.config().defensePostRange();
+        break;
     }
 
     return {
