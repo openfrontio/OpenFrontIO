@@ -224,7 +224,7 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   overlappingRailroads(tile: TileRef): TileRef[] {
-    const tiles: TileRef[] = [];
+    const tiles = [];
     for (const railroad of this.railGrid.query(tile, this.stationRadius)) {
       tiles.push(...railroad.tiles);
     }
