@@ -1,8 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { keyed } from "lit/directives/keyed.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
@@ -42,13 +44,15 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _attackingTroops: number = 0;
 
+  @state()
+  private _goldGain: bigint | null = null;
+  @state()
+  private _goldGainPulseId: number = 0;
+  private _goldGainTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
-
-  getTickIntervalMs() {
-    return 100;
-  }
 
   init() {
     this.attackRatio = new UserSettings().attackRatio();
@@ -95,7 +99,64 @@ export class ControlPanel extends LitElement implements Controller {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+
+    const updates = this.game.updatesSinceLastTick();
+    if (updates) {
+      const myID = player.id();
+      const bonusEvents = updates[GameUpdateType.BonusEvent];
+      if (bonusEvents) {
+        for (const ev of bonusEvents) {
+          if (ev.player === myID && ev.gold > 0) {
+            this.addGoldGain(BigInt(ev.gold));
+          }
+        }
+      }
+      const conquestEvents = updates[GameUpdateType.ConquestEvent];
+      if (conquestEvents) {
+        for (const ev of conquestEvents) {
+          if (ev.conquerorId === myID && ev.gold > 0n) {
+            this.addGoldGain(ev.gold);
+          }
+        }
+      }
+      const donateEvents = updates[GameUpdateType.DonateEvent];
+      if (donateEvents) {
+        for (const ev of donateEvents) {
+          if (
+            ev.donationType === "gold" &&
+            ev.recipientId === myID &&
+            ev.amount > 0n
+          ) {
+            this.addGoldGain(ev.amount);
+          }
+        }
+      }
+    }
+
     this.requestUpdate();
+  }
+
+  // Last-wins: when multiple gold events arrive in one tick, the pip shows
+  // only the most recent amount (not a sum) — each gain restarts the pulse.
+  private addGoldGain(amount: bigint) {
+    this._goldGain = amount;
+    this._goldGainPulseId++;
+    if (this._goldGainTimeoutId !== null) {
+      clearTimeout(this._goldGainTimeoutId);
+    }
+    this._goldGainTimeoutId = setTimeout(() => {
+      this._goldGain = null;
+      this._goldGainTimeoutId = null;
+      this.requestUpdate();
+    }, 2000);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._goldGainTimeoutId !== null) {
+      clearTimeout(this._goldGainTimeoutId);
+      this._goldGainTimeoutId = null;
+    }
   }
 
   private updateTroopIncrease() {
@@ -284,9 +345,18 @@ export class ControlPanel extends LitElement implements Controller {
         <div class="flex-1">${this.renderDesktopTroopBar()}</div>
         <!-- Gold -->
         <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 w-[4.5rem]"
+          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 w-[4.5rem] relative"
           translate="no"
         >
+          ${this._goldGain !== null
+            ? keyed(
+                this._goldGainPulseId,
+                html`<span
+                  class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+                  >+${renderNumber(this._goldGain)}</span
+                >`,
+              )
+            : ""}
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
           <span class="tabular-nums">${renderNumber(this._gold)}</span>
         </div>
@@ -329,9 +399,18 @@ export class ControlPanel extends LitElement implements Controller {
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div
-          class="flex items-center justify-center p-1 gap-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-1/5 shrink-0"
+          class="flex items-center justify-center p-1 gap-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-1/5 shrink-0 relative"
           translate="no"
         >
+          ${this._goldGain !== null
+            ? keyed(
+                this._goldGainPulseId,
+                html`<span
+                  class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+                  >+${renderNumber(this._goldGain)}</span
+                >`,
+              )
+            : ""}
           <img src=${goldCoinIcon} width="13" height="13" />
           <span class="px-0.5">${renderNumber(this._gold)}</span>
         </div>
@@ -374,6 +453,21 @@ export class ControlPanel extends LitElement implements Controller {
 
   render() {
     return html`
+      <style>
+        @keyframes gold-gain-pop {
+          0% {
+            transform: translateY(4px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .gold-gain-pop {
+          animation: gold-gain-pop 0.25s ease-out;
+        }
+      </style>
       <div
         class="relative pointer-events-auto ${this._isVisible
           ? "relative w-full text-sm px-2 py-1"

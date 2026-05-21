@@ -1,4 +1,3 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -23,7 +22,6 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
-  MessageType,
   MutableAlliance,
   Player,
   PlayerBuildable,
@@ -822,20 +820,13 @@ export class PlayerImpl implements Player {
     recipient.addTroops(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    this.mg.displayMessage(
-      "events_display.sent_troops_to_player",
-      MessageType.SENT_TROOPS_TO_PLAYER,
-      this.id(),
-      undefined,
-      { troops: renderTroops(troops), name: recipient.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.received_troops_from_player",
-      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
-      recipient.id(),
-      undefined,
-      { troops: renderTroops(troops), name: this.displayName() },
-    );
+    this.mg.addUpdate({
+      type: GameUpdateType.DonateEvent,
+      donationType: "troops",
+      senderId: this.id(),
+      recipientId: recipient.id(),
+      amount: BigInt(removed),
+    });
     return true;
   }
 
@@ -846,20 +837,13 @@ export class PlayerImpl implements Player {
     recipient.addGold(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    this.mg.displayMessage(
-      "events_display.sent_gold_to_player",
-      MessageType.SENT_GOLD_TO_PLAYER,
-      this.id(),
-      undefined,
-      { gold: renderNumber(gold), name: recipient.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.received_gold_from_player",
-      MessageType.RECEIVED_GOLD_FROM_PLAYER,
-      recipient.id(),
-      gold,
-      { gold: renderNumber(gold), name: this.displayName() },
-    );
+    this.mg.addUpdate({
+      type: GameUpdateType.DonateEvent,
+      donationType: "gold",
+      senderId: this.id(),
+      recipientId: recipient.id(),
+      amount: removed,
+    });
     return true;
   }
 
