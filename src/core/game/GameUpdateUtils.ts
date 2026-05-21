@@ -43,6 +43,7 @@ export function diffPlayerUpdate(
     prev.traitorRemainingTicks === next.traitorRemainingTicks,
   );
   setIfDifferent("hasSpawned", prev.hasSpawned === next.hasSpawned);
+  setIfDifferent("spawnTile", prev.spawnTile === next.spawnTile);
   setIfDifferent("betrayals", prev.betrayals === next.betrayals);
   setIfDifferent(
     "lastDeleteUnitTick",
@@ -97,6 +98,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   }
   if (pu.betrayals !== undefined) target.betrayals = pu.betrayals;
   if (pu.hasSpawned !== undefined) target.hasSpawned = pu.hasSpawned;
+  if (pu.spawnTile !== undefined) target.spawnTile = pu.spawnTile;
   if (pu.lastDeleteUnitTick !== undefined) {
     target.lastDeleteUnitTick = pu.lastDeleteUnitTick;
   }

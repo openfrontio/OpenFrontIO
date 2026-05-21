@@ -61,6 +61,8 @@ export interface PlayerState {
   traitorRemainingTicks: number;
   betrayals: number;
   hasSpawned: boolean;
+  /** TileRef the player picked as their spawn (undefined if not yet spawned). */
+  spawnTile?: number;
   lastDeleteUnitTick: number;
   allies: number[];
   embargoes: number[];

@@ -1,5 +1,6 @@
 import { Colord } from "colord";
 import { base64url } from "jose";
+import { extractFlagName } from "../core/AssetUrls";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
@@ -97,7 +98,8 @@ export class WebGLFrameBuilder {
     const centers: SpawnCenter[] = [];
     for (const p of gameView.players()) {
       if (!p.isPlayer() || p.type() !== PlayerType.Human) continue;
-      if (!p.hasSpawned()) continue;
+      const spawnTile = p.state.spawnTile;
+      if (spawnTile === undefined) continue;
       const isSelf = me !== null && p.smallID() === me.smallID();
       // myPlayer reads as plain white so the local-player ring is visually
       // distinct from any team color; everyone else uses their territory tint.
@@ -105,8 +107,11 @@ export class WebGLFrameBuilder {
         ? { r: 255, g: 255, b: 255 }
         : p.territoryColor().toRgb();
       centers.push({
-        x: p.nameData?.x ?? 0,
-        y: p.nameData?.y ?? 0,
+        // spawnTile tracks the player's currently-selected spawn directly —
+        // updates the same tick the player picks a new location (faster than
+        // the nameData centroid which only refreshes every 2 ticks).
+        x: gameView.x(spawnTile),
+        y: gameView.y(spawnTile),
         r: c.r / 255,
         g: c.g / 255,
         b: c.b / 255,
@@ -129,6 +134,11 @@ export class WebGLFrameBuilder {
 
       this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
 
+      let flag = p.cosmetics.flag;
+      if (flag) {
+        flag = extractFlagName(flag);
+      }
+
       const pattern = p.cosmetics.pattern;
       if (pattern && pattern.patternData) {
         try {
@@ -150,7 +160,7 @@ export class WebGLFrameBuilder {
 
       newPlayers.push({
         ...p.static,
-        flag: p.cosmetics.flag,
+        flag: flag,
         color: p.territoryColor().toHex(),
       });
     }
