@@ -888,7 +888,7 @@ class Client {
           if (seconds > 0) {
             setTitle(translateText("main.title_starting", {
               time: renderDuration(seconds),
-            }))
+            }));
             lobbyTitleTimer = setTimeout(updateTitle, 1000);
           } else {
             setTitle(translateText("main.title_game_in_progress"));
