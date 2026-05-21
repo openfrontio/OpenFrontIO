@@ -68,7 +68,7 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameView as WebGLGameView } from "./render/gl";
-import { ALL_UNIT_TYPES } from "./render/types";
+import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -372,7 +372,34 @@ function mountWebGLFrameLoop(
   };
   requestAnimationFrame(driveFrame);
 
-  return { builder: new WebGLFrameBuilder(view) };
+  const builder = new WebGLFrameBuilder(view);
+
+  // When context is lost and restored, WebGL loses all textures and geometry.
+  // Force a full re-upload of the simulation state.
+  view.on("contextrestored", () => {
+    builder.clearCaches();
+
+    // Full upload of terrain, territory & trail state
+    const mapSize = mapWidth * mapHeight;
+    const allRefs = new Array(mapSize);
+    const allTerrain = new Uint8Array(mapSize);
+    for (let i = 0; i < mapSize; i++) {
+      allRefs[i] = i;
+      allTerrain[i] = gameView.terrainByte(i);
+    }
+    view.applyTerrainDelta(allRefs, allTerrain);
+
+    const frameData = gameView.frameData();
+    view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
+
+    // Structures and railroads normally skip GPU upload unless marked dirty, now force
+    view.updateStructures(frameData.units as Map<number, UnitState>);
+    view.uploadRailroadState(frameData.railroadState);
+
+    builder.update(gameView);
+  });
+
+  return { builder };
 }
 
 async function createClientGame(
