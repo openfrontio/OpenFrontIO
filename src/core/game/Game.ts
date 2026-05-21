@@ -191,7 +191,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Africa,
     GameMapType.Oceania,
     GameMapType.Antarctica,
-  
   ],
   regional: [
     GameMapType.BritanniaClassic,
