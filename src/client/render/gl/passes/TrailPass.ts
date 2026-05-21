@@ -105,8 +105,9 @@ export class TrailPass {
   ): void {
     this.liveTrailRef = trailState;
     if (dirtyRowMax >= 0) {
-      // If a full upload is already pending, don't constrain the bounding box to the delta.
-      if (!this.trailsDirty || this.dirtyRowMax >= 0) {
+      const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
+      // If a full upload is already pending, don't narrow the bounds to the delta
+      if (!isFullUploadPending) {
         this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
         this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);
       }
