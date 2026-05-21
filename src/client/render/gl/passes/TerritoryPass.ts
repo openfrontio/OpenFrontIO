@@ -207,7 +207,7 @@ export class TerritoryPass {
         this.dirtyRowMin = minRow;
         this.dirtyRowMax = maxRow;
       }
-      
+
       bucket.length = 0;
       this.tilesDirty = true;
     }
@@ -252,7 +252,7 @@ export class TerritoryPass {
       this.dirtyRowMin = minRow;
       this.dirtyRowMax = maxRow;
     }
-    
+
     if (any) {
       this.tilesDirty = true;
     }
