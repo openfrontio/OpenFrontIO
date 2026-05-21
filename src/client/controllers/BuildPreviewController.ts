@@ -334,6 +334,10 @@ export class BuildPreviewController implements Controller {
       u.type === UnitType.HydrogenBomb
     ) {
       rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
+    } else if (u.type === UnitType.Factory) {
+      rangeRadius = this.game.config().trainStationMaxRange();
+    } else if (u.type === UnitType.DefensePost) {
+      rangeRadius = this.game.config().defensePostRange();
     }
 
     return {

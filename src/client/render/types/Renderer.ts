@@ -1,3 +1,5 @@
+import type { TileRef } from "../../../core/game/GameMap";
+
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {
   Engine = 0,
@@ -152,8 +154,8 @@ export interface GhostPreviewData {
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
-  ghostRailPaths: number[][]; // TileRef paths (City/Port only)
-  overlappingRailroads: number[]; // Rail IDs in snap zone
+  ghostRailPaths: TileRef[][]; // TileRef paths (City/Port only)
+  overlappingRailroads: TileRef[]; // TileRefs containing rails in snap zone
   ownerID: number; // Player's smallID (for color)
   /** Tile position of existing structure being upgraded (null if fresh build). */
   upgradeTargetTile: number | null;
