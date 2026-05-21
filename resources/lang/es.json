@@ -7,6 +7,8 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
+    "title_starting": "OpenFront (ALPHA) - Comenzando en {time}",
+    "title_game_in_progress": "OpenFront (ALPHA) - Partida en progreso",
     "join_discord": "¡Únete al Discord!",
     "login_discord": "Iniciar sesión con Discord",
     "logged_in": "¡Sesión iniciada!",

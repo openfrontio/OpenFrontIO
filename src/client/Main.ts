@@ -8,6 +8,7 @@ import {
   GameInfo,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
@@ -61,12 +62,16 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import {
+  calculateServerTimeOffset,
   getDiscordAvatarUrl,
+  getSecondsUntilServerTimestamp,
   incrementGamesPlayed,
   isInIframe,
+  renderDuration,
   translateText,
 } from "./Utils";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
+import { setTitle } from "./PageTitleManager";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -326,7 +331,7 @@ class Client {
       `url(${assetUrl("fonts/OpenFront.ttf")})`,
     );
     document.fonts.add(openFrontFont);
-    openFrontFont.load().catch(() => {});
+    openFrontFont.load().catch(() => { });
 
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
@@ -498,7 +503,7 @@ class Client {
         // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
+          "Sharing this ID will allow others to view your game history and stats.",
         );
       }
     };
@@ -855,6 +860,37 @@ class Client {
 
     this.lobbyHandle = newLobbyHandle;
 
+    const onLobbyInfo = (event: LobbyInfoEvent) => {
+
+      const lobby = event.lobby;
+      if (lobby.startsAt) {
+        const serverTimeOffset = calculateServerTimeOffset(
+          lobby.serverTime ?? Date.now(),
+        );
+        const updateTitle = () => {
+          if (this.lobbyHandle !== newLobbyHandle) {
+            return;
+          }
+          const seconds = getSecondsUntilServerTimestamp(
+            lobby.startsAt!,
+            serverTimeOffset,
+          );
+          if (seconds > 0) {
+            setTitle(translateText("main.title_starting", {
+              time: renderDuration(seconds),
+            }))
+            setTimeout(updateTitle, 1000);
+          } else {
+            setTitle(translateText("main.title_game_in_progress"));
+          }
+        };
+        updateTitle();
+      } else {
+        setTitle(translateText("main.title_game_in_progress"));
+      }
+    };
+    this.eventBus.on(LobbyInfoEvent, onLobbyInfo);
+
     this.lobbyHandle.prestart.then(() => {
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
@@ -944,6 +980,8 @@ class Client {
 
       // Store current URL for popstate confirmation
       this.currentUrl = window.location.href;
+
+      setTitle(translateText("main.title_game_in_progress"));
     });
   }
 
@@ -967,6 +1005,7 @@ class Client {
     this.lobbyHandle.stop(true);
     this.lobbyHandle = null;
     this.currentUrl = null;
+    setTitle(translateText("main.title"));
 
     try {
       history.replaceState(null, "", "/");

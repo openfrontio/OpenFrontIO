@@ -31,6 +31,8 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
+    "title_starting": "OpenFront (ALPHA) - Starting {time}",
+    "title_game_in_progress": "OpenFront (ALPHA) - Game in progress",
     "login_discord": "Login with Discord",
     "sign_in": "Sign in",
     "discord_avatar_alt": "Discord profile avatar",
