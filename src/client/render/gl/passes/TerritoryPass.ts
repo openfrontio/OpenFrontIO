@@ -186,21 +186,28 @@ export class TerritoryPass {
   drainDripBucket(): void {
     const bucket = this.dripBuckets[this.currentBucket];
     if (bucket.length > 0) {
-      const w = this.mapW;
-      let minRow = this.dirtyRowMin;
-      let maxRow = this.dirtyRowMax;
-      for (let i = 0; i < bucket.length; i += 2) {
-        const ref = bucket[i];
-        this.cpuTileState[ref] = bucket[i + 1];
-        const row = (ref / w) | 0;
-        if (row < minRow) minRow = row;
-        if (row > maxRow) maxRow = row;
-      }
-      // If a full upload is already pending, don't constrain the bounding box to the delta.
-      if (!this.tilesDirty || this.dirtyRowMax >= 0) {
+      const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
+
+      if (isFullUploadPending) {
+        // Full upload pending: skip tracking dirty rows, just flush data
+        for (let i = 0; i < bucket.length; i += 2) {
+          this.cpuTileState[bucket[i]] = bucket[i + 1];
+        }
+      } else {
+        const w = this.mapW;
+        let minRow = this.dirtyRowMin;
+        let maxRow = this.dirtyRowMax;
+        for (let i = 0; i < bucket.length; i += 2) {
+          const ref = bucket[i];
+          this.cpuTileState[ref] = bucket[i + 1];
+          const row = (ref / w) | 0;
+          if (row < minRow) minRow = row;
+          if (row > maxRow) maxRow = row;
+        }
         this.dirtyRowMin = minRow;
         this.dirtyRowMax = maxRow;
       }
+      
       bucket.length = 0;
       this.tilesDirty = true;
     }
@@ -212,26 +219,41 @@ export class TerritoryPass {
    * seek so tile state pops to current sim state without the 60Hz stagger.
    */
   flushAllDripBuckets(): void {
-    const w = this.mapW;
-    let minRow = this.dirtyRowMin;
-    let maxRow = this.dirtyRowMax;
     let any = false;
-    for (let b = 0; b < this.nBuckets; b++) {
-      const bucket = this.dripBuckets[b];
-      if (bucket.length === 0) continue;
-      any = true;
-      for (let i = 0; i < bucket.length; i += 2) {
-        const ref = bucket[i];
-        this.cpuTileState[ref] = bucket[i + 1];
-        const row = (ref / w) | 0;
-        if (row < minRow) minRow = row;
-        if (row > maxRow) maxRow = row;
+    const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
+
+    if (isFullUploadPending) {
+      for (let b = 0; b < this.nBuckets; b++) {
+        const bucket = this.dripBuckets[b];
+        if (bucket.length === 0) continue;
+        any = true;
+        for (let i = 0; i < bucket.length; i += 2) {
+          this.cpuTileState[bucket[i]] = bucket[i + 1];
+        }
+        bucket.length = 0;
       }
-      bucket.length = 0;
-    }
-    if (any) {
+    } else {
+      const w = this.mapW;
+      let minRow = this.dirtyRowMin;
+      let maxRow = this.dirtyRowMax;
+      for (let b = 0; b < this.nBuckets; b++) {
+        const bucket = this.dripBuckets[b];
+        if (bucket.length === 0) continue;
+        any = true;
+        for (let i = 0; i < bucket.length; i += 2) {
+          const ref = bucket[i];
+          this.cpuTileState[ref] = bucket[i + 1];
+          const row = (ref / w) | 0;
+          if (row < minRow) minRow = row;
+          if (row > maxRow) maxRow = row;
+        }
+        bucket.length = 0;
+      }
       this.dirtyRowMin = minRow;
       this.dirtyRowMax = maxRow;
+    }
+    
+    if (any) {
       this.tilesDirty = true;
     }
   }

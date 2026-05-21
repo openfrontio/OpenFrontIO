@@ -105,8 +105,11 @@ export class TrailPass {
   ): void {
     this.liveTrailRef = trailState;
     if (dirtyRowMax >= 0) {
-      this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
-      this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);
+      // If a full upload is already pending, don't constrain the bounding box to the delta.
+      if (!this.trailsDirty || this.dirtyRowMax >= 0) {
+        this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
+        this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);
+      }
     }
     this.trailsDirty = true;
   }
