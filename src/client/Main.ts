@@ -859,10 +859,20 @@ class Client {
     }
 
     this.lobbyHandle = newLobbyHandle;
-
+    let lobbyTitleTimer: ReturnType<typeof setTimeout> | null = null;
     const onLobbyInfo = (event: LobbyInfoEvent) => {
-
+      if (this.lobbyHandle !== newLobbyHandle) {
+        if (lobbyTitleTimer !== null) {
+          clearTimeout(lobbyTitleTimer);
+          lobbyTitleTimer = null;
+        }
+        return;
+      }
       const lobby = event.lobby;
+      if (lobbyTitleTimer !== null) {
+        clearTimeout(lobbyTitleTimer);
+        lobbyTitleTimer = null;
+      }
       if (lobby.startsAt) {
         const serverTimeOffset = calculateServerTimeOffset(
           lobby.serverTime ?? Date.now(),
@@ -879,7 +889,7 @@ class Client {
             setTitle(translateText("main.title_starting", {
               time: renderDuration(seconds),
             }))
-            setTimeout(updateTitle, 1000);
+            lobbyTitleTimer = setTimeout(updateTitle, 1000);
           } else {
             setTitle(translateText("main.title_game_in_progress"));
           }
