@@ -191,15 +191,6 @@ export class BuildPreviewController implements Controller {
 
         this.ghostUnit.buildableUnit = unit;
 
-        if (unit.canUpgrade || unit.canBuild === false) {
-          // No rail-snap overlap for upgrades or invalid placements.
-          this.uiState.overlappingRailroads = [];
-          this.uiState.ghostRailPaths = [];
-        } else {
-          this.uiState.overlappingRailroads = unit.overlappingRailroads;
-          this.uiState.ghostRailPaths = unit.ghostRailPaths;
-        }
-
         if (this.pendingConfirm !== null) {
           const ev = this.pendingConfirm;
           this.pendingConfirm = null;
@@ -436,7 +427,6 @@ export class BuildPreviewController implements Controller {
   private clearGhostStructure() {
     this.pendingConfirm = null;
     this.ghostUnit = null;
-    this.uiState.ghostRailPaths = [];
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);
     this.view.updateNukeTrajectory(null);

@@ -51,8 +51,6 @@ export function createRenderer(
   const uiState: UIState = {
     attackRatio: 20,
     ghostStructure: null,
-    overlappingRailroads: [],
-    ghostRailPaths: [],
     rocketDirectionUp: true,
   };
 
