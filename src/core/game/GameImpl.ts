@@ -926,11 +926,17 @@ export class GameImpl implements Game {
     playerID: PlayerID | null,
     goldAmount?: bigint,
     params?: Record<string, string | number>,
+    unitID?: number,
+    focusPlayerID?: PlayerID,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
       id = this.player(playerID).smallID();
     }
+    const focusID =
+      focusPlayerID !== undefined
+        ? this.player(focusPlayerID).smallID()
+        : undefined;
     this.addUpdate({
       type: GameUpdateType.DisplayEvent,
       messageType: type,
@@ -938,6 +944,8 @@ export class GameImpl implements Game {
       playerID: id,
       goldAmount: goldAmount,
       params: params,
+      unitID: unitID,
+      focusPlayerID: focusID,
     });
   }
 

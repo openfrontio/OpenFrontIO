@@ -69,6 +69,8 @@ export interface GameViewEventMap {
   altviewpeek: AltViewPeekEvent;
   /** Grid-view default toggled (M key). */
   gridviewtoggle: GridViewToggleEvent;
+  /** WebGL Context successfully restored after a loss. (Requires full state re-upload) */
+  contextrestored: { type: "restored" };
 }
 
 /** A single item in the radial context menu. */

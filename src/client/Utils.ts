@@ -499,22 +499,20 @@ export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
     case MessageType.SAM_HIT:
     case MessageType.CAPTURED_ENEMY_UNIT:
-    case MessageType.RECEIVED_GOLD_FROM_TRADE:
     case MessageType.CONQUERED_PLAYER:
+    case MessageType.DONATION_RECEIVED:
+    case MessageType.ALLIANCE_ACCEPTED:
       return severityColors["success"];
     case MessageType.ATTACK_FAILED:
     case MessageType.ALLIANCE_REJECTED:
     case MessageType.ALLIANCE_BROKEN:
     case MessageType.UNIT_CAPTURED_BY_ENEMY:
     case MessageType.UNIT_DESTROYED:
+    case MessageType.NUKE_DETONATED:
       return severityColors["fail"];
     case MessageType.ATTACK_CANCELLED:
     case MessageType.ATTACK_REQUEST:
-    case MessageType.ALLIANCE_ACCEPTED:
-    case MessageType.SENT_GOLD_TO_PLAYER:
-    case MessageType.SENT_TROOPS_TO_PLAYER:
-    case MessageType.RECEIVED_GOLD_FROM_PLAYER:
-    case MessageType.RECEIVED_TROOPS_FROM_PLAYER:
+    case MessageType.DONATION_SENT:
       return severityColors["blue"];
     case MessageType.MIRV_INBOUND:
     case MessageType.NUKE_INBOUND:
