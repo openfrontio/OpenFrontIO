@@ -146,7 +146,7 @@ export class ClanDetailView extends LitElement {
     }
   }
 
-  private membersLoadInFlight = false;
+  @state() private membersLoadInFlight = false;
 
   private async loadInitialMembers() {
     if (this.membersLoadInFlight) return;
@@ -341,6 +341,11 @@ export class ClanDetailView extends LitElement {
             </p>
           </div>
         `;
+      }
+      // Initial lazy-load: show a spinner instead of an empty members
+      // list + pagination so there's no flash of "no members".
+      if (this.membersLoadInFlight && this.members.length === 0) {
+        return renderLoadingSpinner();
       }
       return html`
         <div class="space-y-6">

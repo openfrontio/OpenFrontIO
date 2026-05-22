@@ -333,9 +333,18 @@ export class ClanGameHistoryView extends LitElement {
   }
 
   private renderGameRow(game: ClanGame): TemplateResult {
-    const mapWebpPath = game.map
-      ? terrainMapFileLoader.getMapData(game.map as GameMapType).webpPath
-      : null;
+    // getMapData() throws for unknown map values — guard so an unmapped
+    // server response doesn't tank the whole history view.
+    let mapWebpPath: string | null = null;
+    if (game.map) {
+      try {
+        mapWebpPath = terrainMapFileLoader.getMapData(
+          game.map as GameMapType,
+        ).webpPath;
+      } catch {
+        mapWebpPath = null;
+      }
+    }
     const mapDisplayName = game.map ? (getMapName(game.map) ?? game.map) : null;
 
     return html`

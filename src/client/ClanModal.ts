@@ -189,7 +189,7 @@ export class ClanModal extends BaseModal {
         this.myRole = null;
         this.detailCache = null;
         this.gameHistoryCache = null;
-        this.activeTab = "my-clans";
+        this.setActiveTab("my-clans");
       },
       ariaLabel,
       rightContent: clan ? this.tagPill(clan.tag) : undefined,
@@ -296,8 +296,7 @@ export class ClanModal extends BaseModal {
             this.myRole = null;
             this.detailCache = null;
             this.view = "list";
-            this.activeTab = "my-clans";
-            this.loadMyClans();
+            this.setActiveTab("my-clans");
           }}
         ></clan-manage-view>`;
       }
@@ -365,7 +364,7 @@ export class ClanModal extends BaseModal {
           this.myRole = null;
           this.detailCache = null;
           this.gameHistoryCache = null;
-          this.activeTab = "my-clans";
+          this.setActiveTab("my-clans");
         }}
         @detail-loaded=${(
           e: CustomEvent<{
@@ -423,8 +422,7 @@ export class ClanModal extends BaseModal {
           this.myRole = null;
           this.detailCache = null;
           this.view = "list";
-          this.activeTab = "my-clans";
-          this.loadMyClans();
+          this.setActiveTab("my-clans");
         }}
         @request-sent=${(e: CustomEvent<{ tag: string; name: string }>) => {
           this.myPendingRequests = [
@@ -462,8 +460,9 @@ export class ClanModal extends BaseModal {
     }
     this.selectedClanTag = tag;
     this.view = "detail";
-    // Now that modalConfig() returns detail tabs, anchor activeTab to overview.
-    this.activeTab = "overview";
+    // modalConfig() returns detail tabs; setActiveTab anchors activeTab to
+    // "overview" and syncs the URL router (routerName = "clan").
+    this.setActiveTab("overview");
   }
 
   private renderMyClans() {
