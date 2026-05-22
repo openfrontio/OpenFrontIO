@@ -20,6 +20,13 @@ uniform float uMetaInfluenceCold;
 uniform float uMetaInfluenceHot;
 uniform float uOpacityFadeEnd;
 uniform vec3 uBloomColor;
+uniform vec3 uParticleColorDark;
+uniform vec3 uParticleColorBright;
+uniform float uParticleThresholdUnowned;
+uniform float uParticleThresholdOwned;
+uniform float uParticleFlickerSpeed;
+uniform float uParticleStrength;
+uniform float uParticleFreshScale;
 
 uniform sampler2D uHeatTex;
 
@@ -55,6 +62,7 @@ void main() {
 
   uint raw = texelFetch(uTileTex, tc, 0).r;
   if ((raw & (1u << FALLOUT_BIT)) == 0u) discard;
+  uint owner = raw & uint(OWNER_MASK);
 
   float heat = texelFetch(uHeatTex, tc, 0).r;
   vec2 tileCenter = vec2(tc) + 0.5;
@@ -79,4 +87,22 @@ void main() {
   float opacity = smoothstep(0.0, uOpacityFadeEnd, heat);
 
   fragColor = vec4(uBloomColor, 1.0) * broil * intensity * opacity;
+
+  // Particle dots — sharper per-tile flicker gated by a stochastic hash.
+  // (Relocated here from BorderStampPass; this is fallout-domain logic.)
+  float h1 = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
+  float h2 = fract(sin(float(tc.x) * 63.7 + float(tc.y) * 157.3) * 23421.631);
+  float pThresh = (owner == 0u) ? uParticleThresholdUnowned : uParticleThresholdOwned;
+  if (h2 > pThresh) {
+    // Per-tile rate variation breaks the global rhythm so tiles don't all
+    // pulse at the same frequency. h1 spans [0,1] → rate spans 0.4×–1.6× base.
+    float tileRate = uParticleFlickerSpeed * (0.4 + h1 * 1.2);
+    float flick = max(0.0, sin(uTick * tileRate + h1 * 12.0) * 0.8 + 0.2);
+    flick *= flick;
+    // Dampen when fresh (high heat); ramp to full as heat decays.
+    flick *= mix(uParticleFreshScale, 1.0, 1.0 - heat);
+    vec3 pc = mix(uParticleColorDark, uParticleColorBright, h1) * flick * uParticleStrength;
+    float pa = max(pc.r, max(pc.g, pc.b));
+    fragColor += vec4(pc, pa);
+  }
 }

@@ -1,9 +1,9 @@
 /**
- * TerritoryPass — territory fill + fallout charcoal ground.
+ * TerritoryPass — territory fill + stale-nuke ground.
  *
  * Draws only what should be darkened by the night cycle:
  *   - Owned territory (player color fill)
- *   - Unowned fallout (charcoal ground)
+ *   - Any fallout tile (stale-nuke ground, overrides owned territory)
  *
  * No borders, embers, trails, or defense checkerboard — those are
  * handled by BorderStampPass and TrailPass at full brightness.
@@ -31,9 +31,10 @@ export class TerritoryPass {
   private uCamera: WebGLUniformLocation;
   private uMapSize: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
-  private uCharcoalBase: WebGLUniformLocation;
-  private uCharcoalVariation: WebGLUniformLocation;
-  private uCharcoalAlpha: WebGLUniformLocation;
+  private uStaleNukeBase: WebGLUniformLocation;
+  private uStaleNukeVariation: WebGLUniformLocation;
+  private uStaleNukeAlpha: WebGLUniformLocation;
+  private uStaleNukeColor: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
@@ -103,14 +104,21 @@ export class TerritoryPass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
-    this.uCharcoalBase = gl.getUniformLocation(this.program, "uCharcoalBase")!;
-    this.uCharcoalVariation = gl.getUniformLocation(
+    this.uStaleNukeBase = gl.getUniformLocation(
       this.program,
-      "uCharcoalVariation",
+      "uStaleNukeBase",
     )!;
-    this.uCharcoalAlpha = gl.getUniformLocation(
+    this.uStaleNukeVariation = gl.getUniformLocation(
       this.program,
-      "uCharcoalAlpha",
+      "uStaleNukeVariation",
+    )!;
+    this.uStaleNukeAlpha = gl.getUniformLocation(
+      this.program,
+      "uStaleNukeAlpha",
+    )!;
+    this.uStaleNukeColor = gl.getUniformLocation(
+      this.program,
+      "uStaleNukeColor",
     )!;
     this.uHighlightOwner = gl.getUniformLocation(
       this.program,
@@ -362,7 +370,7 @@ export class TerritoryPass {
     this.highlightOwner = ownerID;
   }
 
-  /** Draw territory fill + fallout charcoal. Blending must be enabled by caller. */
+  /** Draw territory fill + stale-nuke ground. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
     this.flushTileTexture();
 
@@ -373,9 +381,15 @@ export class TerritoryPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
-    gl.uniform1f(this.uCharcoalBase, mo.charcoalBase);
-    gl.uniform1f(this.uCharcoalVariation, mo.charcoalVariation);
-    gl.uniform1f(this.uCharcoalAlpha, mo.charcoalAlpha);
+    gl.uniform1f(this.uStaleNukeBase, mo.staleNukeBase);
+    gl.uniform1f(this.uStaleNukeVariation, mo.staleNukeVariation);
+    gl.uniform1f(this.uStaleNukeAlpha, mo.staleNukeAlpha);
+    gl.uniform3f(
+      this.uStaleNukeColor,
+      mo.staleNukeR,
+      mo.staleNukeG,
+      mo.staleNukeB,
+    );
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
     gl.uniform1i(

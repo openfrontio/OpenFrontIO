@@ -373,11 +373,13 @@ export class GameView implements GameMap {
       let unit = this._units.get(update.id);
       const isStructure = STRUCTURE_TYPES.has(update.unitType);
       if (unit !== undefined) {
-        // Structure changes that affect rendering: level changed, became
-        // inactive, or finished construction (underConstruction → !underConstruction).
+        // Structure changes that affect rendering: owner changed (captured),
+        // level changed, became inactive, or finished construction
+        // (underConstruction → !underConstruction).
         if (
           isStructure &&
-          (unit.state.level !== update.level ||
+          (unit.state.ownerID !== update.ownerID ||
+            unit.state.level !== update.level ||
             unit.state.isActive !== update.isActive ||
             (unit.state.underConstruction &&
               !(update.underConstruction ?? false)))

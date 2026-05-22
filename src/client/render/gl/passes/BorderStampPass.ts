@@ -1,8 +1,8 @@
 /**
- * BorderStampPass — territory borders + defense checkerboard + embers.
+ * BorderStampPass — territory borders + defense checkerboard.
  *
  * Always draws at full brightness (after the optional night composite).
- * Reads pre-computed border flags, ember intensity, and defense proximity
+ * Reads pre-computed border flags and defense proximity
  * from the BorderComputePass RGBA8 buffer.
  */
 
@@ -27,9 +27,6 @@ export class BorderStampPass {
   private uDefenseCheckerDarken: WebGLUniformLocation;
   private uEmbargoTintRatio: WebGLUniformLocation;
   private uFriendlyTintRatio: WebGLUniformLocation;
-  private uEmberColorDark: WebGLUniformLocation;
-  private uEmberColorBright: WebGLUniformLocation;
-  private uEmberStrengthUnowned: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
@@ -82,18 +79,6 @@ export class BorderStampPass {
       this.program,
       "uFriendlyTintRatio",
     )!;
-    this.uEmberColorDark = gl.getUniformLocation(
-      this.program,
-      "uEmberColorDark",
-    )!;
-    this.uEmberColorBright = gl.getUniformLocation(
-      this.program,
-      "uEmberColorBright",
-    )!;
-    this.uEmberStrengthUnowned = gl.getUniformLocation(
-      this.program,
-      "uEmberStrengthUnowned",
-    )!;
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
 
     gl.useProgram(this.program);
@@ -112,7 +97,7 @@ export class BorderStampPass {
     this.affiliationTex = tex;
   }
 
-  /** Draw borders + defense checkerboard + embers. Blending must be enabled. */
+  /** Draw borders + defense checkerboard. Blending must be enabled. */
   draw(cameraMatrix: Float32Array): void {
     const gl = this.gl;
     const mo = this.settings.mapOverlay;
@@ -124,19 +109,6 @@ export class BorderStampPass {
     gl.uniform1f(this.uDefenseCheckerDarken, mo.defenseCheckerDarken);
     gl.uniform1f(this.uEmbargoTintRatio, mo.embargoTintRatio);
     gl.uniform1f(this.uFriendlyTintRatio, mo.friendlyTintRatio);
-    gl.uniform3f(
-      this.uEmberColorDark,
-      mo.emberColorDarkR,
-      mo.emberColorDarkG,
-      mo.emberColorDarkB,
-    );
-    gl.uniform3f(
-      this.uEmberColorBright,
-      mo.emberColorBrightR,
-      mo.emberColorBrightG,
-      mo.emberColorBrightB,
-    );
-    gl.uniform1f(this.uEmberStrengthUnowned, mo.emberStrengthUnowned);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
 
     gl.activeTexture(gl.TEXTURE0);
