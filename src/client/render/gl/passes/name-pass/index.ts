@@ -546,8 +546,8 @@ export class NamePass {
       this.maxPlayers,
       ambient,
     );
-    this.iconProgram.draw(cameraMatrix, this.settings, this.vao);
     this.statusIconProgram.draw(cameraMatrix, this.settings, this.vao);
+    this.iconProgram.draw(cameraMatrix, this.settings, this.vao);
 
     if (this.settings.passEnabled.nameDebug) {
       this.debugProgram.draw(cameraMatrix, this.settings, this.vao);

@@ -34,6 +34,17 @@ export interface RenderSettings {
     bloomB: number;
     bloomCoverage: number;
     heatDecayPerTick: number;
+    particleColorDarkR: number;
+    particleColorDarkG: number;
+    particleColorDarkB: number;
+    particleColorBrightR: number;
+    particleColorBrightG: number;
+    particleColorBrightB: number;
+    particleThresholdUnowned: number;
+    particleThresholdOwned: number;
+    particleFlickerSpeed: number;
+    particleStrength: number;
+    particleFreshScale: number;
   };
   dayNight: {
     mode: "light" | "dark";
@@ -55,19 +66,12 @@ export interface RenderSettings {
   mapOverlay: {
     trailAlpha: number;
     defenseCheckerDarken: number;
-    charcoalBase: number;
-    charcoalVariation: number;
-    charcoalAlpha: number;
-    emberThresholdUnowned: number;
-    emberThresholdOwned: number;
-    emberFlickerSpeed: number;
-    emberColorDarkR: number;
-    emberColorDarkG: number;
-    emberColorDarkB: number;
-    emberColorBrightR: number;
-    emberColorBrightG: number;
-    emberColorBrightB: number;
-    emberStrengthUnowned: number;
+    staleNukeBase: number;
+    staleNukeVariation: number;
+    staleNukeAlpha: number;
+    staleNukeR: number;
+    staleNukeG: number;
+    staleNukeB: number;
     highlightBrighten: number;
     highlightFillBrighten: number;
     highlightThicken: number;

@@ -10,9 +10,10 @@ uniform int uShowPatterns;
 
 uniform vec2 uMapSize;
 uniform int uAltView;
-uniform float uCharcoalBase;
-uniform float uCharcoalVariation;
-uniform float uCharcoalAlpha;
+uniform float uStaleNukeBase;
+uniform float uStaleNukeVariation;
+uniform float uStaleNukeAlpha;
+uniform vec3 uStaleNukeColor;
 uniform uint uHighlightOwner;      // 0 = no highlight; otherwise smallID of hovered owner
 uniform float uHighlightBrighten;  // mix amount toward white for highlighted tiles
 
@@ -30,18 +31,20 @@ void main() {
 
   if (owner == 0u && !fallout) discard;
 
-  // Alt-view: hide territory fill, keep fallout charcoal
-  if (uAltView != 0 && owner != 0u) discard;
-
-  // --- Fallout charcoal ground (unowned) ---
-  if (owner == 0u && fallout) {
+  // --- Stale-nuke ground (any fallout tile, owned or not) ---
+  // Renders for owned tiles too so the player's territory color can't bleed
+  // through dim/transparent spots in the fallout bloom above.
+  if (fallout) {
     float h = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
-    float charcoal = uCharcoalBase + h * uCharcoalVariation;
-    fragColor = vec4(vec3(charcoal), uCharcoalAlpha);
+    float noise = uStaleNukeBase + h * uStaleNukeVariation;
+    fragColor = vec4(uStaleNukeColor + vec3(noise), uStaleNukeAlpha);
     return;
   }
 
-  // --- Territory fill (owned) ---
+  // Alt-view: hide owned non-fallout tiles
+  if (uAltView != 0) discard;
+
+  // --- Territory fill (owned, not fallout) ---
   float u = (float(owner) + 0.5) / float(PALETTE_SIZE);
   vec4 color = texture(uPalette, vec2(u, 0.25));
 

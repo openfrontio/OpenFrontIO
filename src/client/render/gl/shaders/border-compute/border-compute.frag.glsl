@@ -7,10 +7,6 @@ uniform usampler2D uRelationTex; // R8UI — relationship matrix (ownerA × owne
 uniform vec2 uMapSize;
 uniform uint uHighlightOwner;
 uniform int uHighlightThicken; // Chebyshev radius for highlight expansion
-uniform float uTick;
-uniform float uEmberThresholdUnowned;
-uniform float uEmberThresholdOwned;
-uniform float uEmberFlickerSpeed;
 
 // Defense post proximity — (x, y, ownerID, _) per post
 uniform vec4 uDefensePosts[MAX_DEFENSE_POSTS];
@@ -31,7 +27,6 @@ void main() {
 
   uint raw = texelFetch(uTileTex, tc, 0).r;
   uint owner = raw & uint(OWNER_MASK);
-  bool fallout = (raw & (1u << FALLOUT_BIT)) != 0u;
 
   // --- Border detection ---
   float borderType = 0.0; // 0=interior, ~0.5=normal border, ~1.0=highlight border
@@ -104,20 +99,9 @@ void main() {
     }
   }
 
-  // --- Ember detection ---
-  float emberIntensity = 0.0;
-  if (fallout) {
-    float h = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
-    float h2 = fract(sin(float(tc.x) * 63.7 + float(tc.y) * 157.3) * 23421.631);
-    float threshold = (owner == 0u) ? uEmberThresholdUnowned : uEmberThresholdOwned;
-    if (h2 > threshold) {
-      float flicker = max(0.0, sin(uTick * uEmberFlickerSpeed + h * 12.0) * 0.8 + 0.2);
-      flicker *= flicker; // sharpen
-      emberIntensity = flicker;
-    }
-  }
-
   // A = relationship: 0.0=neutral, 0.5=friendly, 1.0=embargo
   float relation = float(maxRel) * 0.5;
-  fragColor = vec4(borderType, emberIntensity, defenseFlag, relation);
+  // G channel is unused (formerly emberIntensity; ember is now computed in
+  // FalloutBloomPass and FalloutLightPass).
+  fragColor = vec4(borderType, 0.0, defenseFlag, relation);
 }

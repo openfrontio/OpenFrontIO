@@ -191,15 +191,6 @@ export class BuildPreviewController implements Controller {
 
         this.ghostUnit.buildableUnit = unit;
 
-        if (unit.canUpgrade || unit.canBuild === false) {
-          // No rail-snap overlap for upgrades or invalid placements.
-          this.uiState.overlappingRailroads = [];
-          this.uiState.ghostRailPaths = [];
-        } else {
-          this.uiState.overlappingRailroads = unit.overlappingRailroads;
-          this.uiState.ghostRailPaths = unit.ghostRailPaths;
-        }
-
         if (this.pendingConfirm !== null) {
           const ev = this.pendingConfirm;
           this.pendingConfirm = null;
@@ -326,14 +317,22 @@ export class BuildPreviewController implements Controller {
     // Range circle: SAM placement preview shows targetable radius; nuke
     // previews show the outer blast radius at the target tile.
     let rangeRadius = 0;
-    if (u.type === UnitType.SAMLauncher) {
-      const level = this.resolveGhostRangeLevel(u) ?? 1;
-      rangeRadius = this.game.config().samRange(level);
-    } else if (
-      u.type === UnitType.AtomBomb ||
-      u.type === UnitType.HydrogenBomb
-    ) {
-      rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
+    switch (u.type) {
+      case UnitType.SAMLauncher: {
+        const level = this.resolveGhostRangeLevel(u) ?? 1;
+        rangeRadius = this.game.config().samRange(level);
+        break;
+      }
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
+        break;
+      case UnitType.Factory:
+        rangeRadius = this.game.config().trainStationMaxRange();
+        break;
+      case UnitType.DefensePost:
+        rangeRadius = this.game.config().defensePostRange();
+        break;
     }
 
     return {
@@ -428,7 +427,6 @@ export class BuildPreviewController implements Controller {
   private clearGhostStructure() {
     this.pendingConfirm = null;
     this.ghostUnit = null;
-    this.uiState.ghostRailPaths = [];
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);
     this.view.updateNukeTrajectory(null);
