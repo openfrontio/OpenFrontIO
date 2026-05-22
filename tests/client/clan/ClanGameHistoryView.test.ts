@@ -173,8 +173,8 @@ describe("ClanGameHistoryView", () => {
         games: [makeGame()],
         nextCursor: null,
       };
-      await mountView({ cachedState: cache });
-      await flushAsync();
+      const el = await mountView({ cachedState: cache });
+      await flushAsync(el);
 
       expect(fetchClanGames).toHaveBeenCalledOnce();
     });
