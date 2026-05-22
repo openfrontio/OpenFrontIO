@@ -137,19 +137,48 @@ export const JoinClanResponseSchema = z.object({
 });
 export type JoinClanResponse = z.infer<typeof JoinClanResponseSchema>;
 
-export const ClanStatsSchema = z.object({
-  clanTag: RequiredClanTagSchema,
-  games: z.number(),
-  wins: z.number(),
-  losses: z.number(),
-  stats: ClanMemberStatsSchema,
-  teamTypeWL: z.record(
-    z.string(),
-    z.object({ wl: z.tuple([z.number(), z.number()]) }),
-  ),
-  teamCountWL: z.record(
-    z.string(),
-    z.object({ wl: z.tuple([z.number(), z.number()]) }),
-  ),
+export const ClanGamePlayerSchema = z.object({
+  publicId: z.string(),
+  username: z.string(),
+  won: z.boolean(),
 });
-export type ClanStats = z.infer<typeof ClanStatsSchema>;
+export type ClanGamePlayer = z.infer<typeof ClanGamePlayerSchema>;
+
+// "incomplete" covers games with no recorded winner.
+// The server stamps this when winnerType IS NULL,
+// so we have to accept it on the wire even if the UI collapses it back
+// into the defeat-styled badge.
+export const ClanGameResultSchema = z.enum(["victory", "defeat", "incomplete"]);
+export type ClanGameResult = z.infer<typeof ClanGameResultSchema>;
+
+export const ClanGameFilters = ["ffa", "team", "hvn", "ranked"] as const;
+export const ClanGameFilterSchema = z.enum(ClanGameFilters);
+export type ClanGameFilter = z.infer<typeof ClanGameFilterSchema>;
+
+export const ClanGameSchema = z.object({
+  gameId: z.string(),
+  start: z.iso.datetime(),
+  durationSeconds: z.number().int().nonnegative(),
+  map: z.string().optional(),
+  mode: z.string().optional(),
+  // playerTeams is `null` (not absent) for FFA / non-team games — use
+  // `.nullish()` so the wire `null` doesn't fail the parse.
+  playerTeams: z.string().nullish(),
+  rankedType: z.string().optional(),
+  result: ClanGameResultSchema.optional(),
+  // Mirrors games.num_players nullability — historical rows may not
+  // carry a value. Use `.nullish()` so wire `null` parses cleanly.
+  totalPlayers: z.number().int().nonnegative().nullish(),
+  clanPlayers: ClanGamePlayerSchema.array(),
+});
+export type ClanGame = z.infer<typeof ClanGameSchema>;
+
+export const ClanGamesResponseSchema = z.object({
+  results: ClanGameSchema.array(),
+  // Opaque continuation token. Round-trip verbatim as the `cursor` query
+  // parameter to fetch the next page; never construct or parse it.
+  // `null` means the server has no more rows to serve. Page size is
+  // fixed server-side, so the client never sends a limit.
+  nextCursor: z.string().nullable(),
+});
+export type ClanGamesResponse = z.infer<typeof ClanGamesResponseSchema>;

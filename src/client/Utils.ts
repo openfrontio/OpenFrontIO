@@ -231,13 +231,24 @@ export function getModifierLabels(
 }
 
 export function renderDuration(totalSeconds: number): string {
-  if (totalSeconds <= 0) return "0s";
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  let time = "";
-  if (minutes > 0) time += `${minutes}min `;
-  time += `${seconds}s`;
-  return time.trim();
+  // Floor once so fractional inputs don't leak through to the seconds
+  // component (e.g. `0.5` → `"0.5s"`).
+  const whole = Math.floor(totalSeconds);
+  if (whole <= 0) return `0${translateText("common.duration_second_short")}`;
+  const hours = Math.floor(whole / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const seconds = whole % 60;
+  // Build largest-first, dropping trailing-zero components so 3600s reads
+  // as "1h" rather than "1h 0min 0s", and 60s as "1min" rather than
+  // "1min 0s". Sub-minute durations still surface seconds.
+  const parts: string[] = [];
+  if (hours > 0)
+    parts.push(`${hours}${translateText("common.duration_hour_short")}`);
+  if (minutes > 0)
+    parts.push(`${minutes}${translateText("common.duration_minute_short")}`);
+  if (seconds > 0 || parts.length === 0)
+    parts.push(`${seconds}${translateText("common.duration_second_short")}`);
+  return parts.join(" ");
 }
 
 export function renderTroops(troops: number): string {

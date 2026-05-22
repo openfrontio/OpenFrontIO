@@ -3,6 +3,9 @@ import {
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  type ClanGameFilter,
+  type ClanGamesResponse,
+  ClanGamesResponseSchema,
   type ClanInfo,
   ClanInfoSchema,
   type ClanLeaderboardResponse,
@@ -11,8 +14,6 @@ import {
   ClanMembersResponseSchema,
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
-  type ClanStats,
-  ClanStatsSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
 import { getApiBase } from "./Api";
@@ -21,6 +22,11 @@ export type {
   ClanBan,
   ClanBansResponse,
   ClanBrowseResponse,
+  ClanGame,
+  ClanGameFilter,
+  ClanGamePlayer,
+  ClanGameResult,
+  ClanGamesResponse,
   ClanInfo,
   ClanJoinRequest,
   ClanMember,
@@ -28,7 +34,6 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
-  ClanStats,
 } from "../core/ClanApiSchemas";
 
 async function clanFetch(
@@ -76,26 +81,6 @@ export async function fetchClanLeaderboard(): Promise<
     return parsed.data;
   } catch (err) {
     console.warn("fetchClanLeaderboard: request failed", err);
-    return false;
-  }
-}
-
-export async function fetchClanStats(tag: string): Promise<ClanStats | false> {
-  try {
-    const res = await fetch(
-      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}`,
-      { headers: { Accept: "application/json" } },
-    );
-    if (!res.ok) return false;
-    const json = await res.json();
-    const parsed = ClanStatsSchema.safeParse(json?.clan);
-    if (!parsed.success) {
-      console.warn("fetchClanStats: Zod validation failed", parsed.error);
-      return false;
-    }
-    return parsed.data;
-  } catch (err) {
-    console.warn("fetchClanStats: request failed", err);
     return false;
   }
 }
@@ -465,6 +450,36 @@ export async function unbanClanMember(
     return true;
   } catch {
     return { error: "clan_modal.error_network" };
+  }
+}
+
+export type ClanGamesFetchError = "forbidden" | "failed";
+
+export async function fetchClanGames(
+  tag: string,
+  opts: { filter?: ClanGameFilter; cursor?: string } = {},
+): Promise<ClanGamesResponse | { error: ClanGamesFetchError }> {
+  try {
+    const params = new URLSearchParams();
+    if (opts.filter) params.set("filter", opts.filter);
+    // `cursor` is an opaque continuation token issued by the previous
+    // response's `nextCursor`. Round-trip verbatim; never construct.
+    if (opts.cursor) params.set("cursor", opts.cursor);
+    const qs = params.toString();
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/games${qs ? `?${qs}` : ""}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const json = await res.json();
+    const parsed = ClanGamesResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanGames: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
   }
 }
 
