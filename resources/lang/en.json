@@ -380,7 +380,12 @@
     "clear_session": "Clear Session",
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "enter_email_address": "Please enter an email address",
-    "public_player_id": "Public Player ID:"
+    "public_player_id": "Public Player ID:",
+    "tab_account": "Account",
+    "tab_stats": "Stats",
+    "tab_games": "Games",
+    "no_stats": "No stats available yet. Play some games to start tracking.",
+    "no_games": "No games played yet."
   },
   "leaderboard_modal": {
     "title": "Leaderboard",
