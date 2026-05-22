@@ -47,6 +47,7 @@ import { MatchmakingModal } from "./Matchmaking";
 import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { setTitle } from "./PageTitleManager";
 import "./PatternInput";
 import "./SinglePlayerModal";
 import { StoreModal } from "./Store";
@@ -71,7 +72,6 @@ import {
   translateText,
 } from "./Utils";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
-import { setTitle } from "./PageTitleManager";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -331,7 +331,7 @@ class Client {
       `url(${assetUrl("fonts/OpenFront.ttf")})`,
     );
     document.fonts.add(openFrontFont);
-    openFrontFont.load().catch(() => { });
+    openFrontFont.load().catch(() => {});
 
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
@@ -503,7 +503,7 @@ class Client {
         // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
-          "Sharing this ID will allow others to view your game history and stats.",
+            "Sharing this ID will allow others to view your game history and stats.",
         );
       }
     };
@@ -886,9 +886,11 @@ class Client {
             serverTimeOffset,
           );
           if (seconds > 0) {
-            setTitle(translateText("main.title_starting", {
-              time: renderDuration(seconds),
-            }));
+            setTitle(
+              translateText("main.title_starting", {
+                time: renderDuration(seconds),
+              }),
+            );
             lobbyTitleTimer = setTimeout(updateTitle, 1000);
           } else {
             setTitle(translateText("main.title_game_in_progress"));
