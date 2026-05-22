@@ -70,6 +70,7 @@ export class ClanModal extends BaseModal {
   } | null = null;
 
   private gameHistoryCache: ClanGameHistoryCache | null = null;
+  private previousListTab: ListTab = "my-clans";
 
   private get onListView(): boolean {
     return this.view === "list" && !this.selectedClanTag;
@@ -189,7 +190,7 @@ export class ClanModal extends BaseModal {
         this.myRole = null;
         this.detailCache = null;
         this.gameHistoryCache = null;
-        this.setActiveTab("my-clans");
+        this.setActiveTab(this.previousListTab);
       },
       ariaLabel,
       rightContent: clan ? this.tagPill(clan.tag) : undefined,
@@ -202,6 +203,7 @@ export class ClanModal extends BaseModal {
 
   protected onClose(): void {
     this.activeTab = "my-clans";
+    this.previousListTab = "my-clans";
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -296,7 +298,7 @@ export class ClanModal extends BaseModal {
             this.myRole = null;
             this.detailCache = null;
             this.view = "list";
-            this.setActiveTab("my-clans");
+            this.setActiveTab(this.previousListTab);
           }}
         ></clan-manage-view>`;
       }
@@ -364,7 +366,7 @@ export class ClanModal extends BaseModal {
           this.myRole = null;
           this.detailCache = null;
           this.gameHistoryCache = null;
-          this.setActiveTab("my-clans");
+          this.setActiveTab(this.previousListTab);
         }}
         @detail-loaded=${(
           e: CustomEvent<{
@@ -422,7 +424,7 @@ export class ClanModal extends BaseModal {
           this.myRole = null;
           this.detailCache = null;
           this.view = "list";
-          this.setActiveTab("my-clans");
+          this.setActiveTab(this.previousListTab);
         }}
         @request-sent=${(e: CustomEvent<{ tag: string; name: string }>) => {
           this.myPendingRequests = [
@@ -457,6 +459,11 @@ export class ClanModal extends BaseModal {
   private openDetail(tag: string) {
     if (this.selectedClanTag !== tag) {
       this.gameHistoryCache = null;
+    }
+    // Remember which list tab the user was on so the back button can
+    // return them to it (browse vs my-clans).
+    if (isListTab(this.activeTab)) {
+      this.previousListTab = this.activeTab;
     }
     this.selectedClanTag = tag;
     this.view = "detail";

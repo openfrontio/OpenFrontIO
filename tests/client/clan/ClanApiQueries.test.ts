@@ -350,7 +350,7 @@ describe("fetchClanGames", () => {
         clanPlayers: [{ publicId: "p1", username: "alice", won: true }],
       },
     ],
-    nextCursor: "2024-05-31T00:00:00.000Z",
+    nextCursor: "opaque-cursor-abc123",
   };
 
   it("returns parsed data on success", async () => {
@@ -391,13 +391,13 @@ describe("fetchClanGames", () => {
 
     await fetchClanGames("TEST", {
       filter: "team",
-      cursor: "2024-05-31T00:00:00.000Z",
+      cursor: "opaque-cursor-abc123",
     });
 
     const calledUrl = fetchSpy.mock.calls[0]![0] as string;
     const url = new URL(calledUrl);
     expect(url.searchParams.get("filter")).toBe("team");
-    expect(url.searchParams.get("cursor")).toBe("2024-05-31T00:00:00.000Z");
+    expect(url.searchParams.get("cursor")).toBe("opaque-cursor-abc123");
   });
 
   it("URL-encodes the clan tag", async () => {

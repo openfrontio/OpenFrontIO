@@ -212,6 +212,14 @@ describe("ClanStatsSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a payload with stats omitted", () => {
+    const { stats: _omitted, ...withoutStats } = validStats;
+    void _omitted;
+    const result = ClanStatsSchema.safeParse(withoutStats);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.stats).toBeUndefined();
+  });
 });
 
 describe("ClanBanSchema", () => {
@@ -381,12 +389,16 @@ describe("ClanGamesResponseSchema", () => {
     clanPlayers: [{ publicId: "p1", username: "alice", won: true }],
   };
 
-  it("accepts a non-empty page with a cursor", () => {
+  it("accepts a non-empty page with an opaque cursor", () => {
+    // The cursor is contractually opaque (see ClanGamesResponseSchema
+    // comment) — use a non-date token to make that explicit.
     const result = ClanGamesResponseSchema.safeParse({
       results: [validGame],
-      nextCursor: "2024-05-31T00:00:00.000Z",
+      nextCursor: "opaque-cursor-abc123",
     });
     expect(result.success).toBe(true);
+    if (result.success)
+      expect(result.data.nextCursor).toBe("opaque-cursor-abc123");
   });
 
   it("accepts an empty page with a null cursor", () => {
