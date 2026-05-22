@@ -69,6 +69,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Iceland: 4,
   Italia: 6,
   Japan: 6,
+  Labyrinth: 5,
   Lemnos: 3,
   Lisbon: 4,
   LosAngeles: 8,
