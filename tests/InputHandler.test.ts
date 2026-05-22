@@ -65,8 +65,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       },
       mockCanvas,
       eventBus,
@@ -541,8 +539,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -597,8 +593,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -649,8 +643,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -671,8 +663,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -699,8 +689,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -724,8 +712,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
       inputHandler = new InputHandler(
         mockGameView,
@@ -752,8 +738,6 @@ describe("InputHandler AutoUpgrade", () => {
         attackRatio: 20,
         ghostStructure: null,
         rocketDirectionUp: true,
-
-
       } as UIState;
     });
 
@@ -892,8 +876,6 @@ describe("Warship box selection (Shift+drag)", () => {
       attackRatio: 20,
       ghostStructure: null,
       rocketDirectionUp: true,
-
-
     } as UIState;
     inputHandler = new InputHandler(
       mockGameView,
