@@ -3,7 +3,7 @@
  *
  * Draw order:
  *   DATA SYNC: tile flush → heat update → border compute
- *   BASE PASS (darkened by night): terrain → territory fill + fallout charcoal
+ *   BASE PASS (darkened by night): terrain → territory fill + stale-nuke ground
  *   NIGHT COMPOSITE (optional): lightmap → scene × (ambient + lightmap)
  *   FULL BRIGHTNESS (always): borders → railroads → ground units → structures →
  *     structure levels → bars → bloom → trails → missiles → fx → conquest → names
@@ -342,13 +342,13 @@ export class GPURenderer {
       this.settings,
     );
 
-    // --- Fallout light (needs tileTex, borderTex, heatManager) ---
+    // --- Fallout light (needs tileTex + heatManager; particle flicker is
+    //     computed inline using the falloutBloom particle settings) ---
     this.falloutLightPass = new FalloutLightPass(
       gl,
       mapW,
       mapH,
       this.res.tileTex,
-      this.res.borderTex,
       this.heatManager,
       this.settings,
     );
@@ -1070,8 +1070,7 @@ export class GPURenderer {
   }
 
   private computeTextures(): void {
-    if (this.settings.passEnabled.mapOverlay)
-      this.borderPass.draw(this.frameTick);
+    if (this.settings.passEnabled.mapOverlay) this.borderPass.draw();
   }
 
   private renderFrame(): void {
@@ -1086,7 +1085,7 @@ export class GPURenderer {
       const sceneTex = toTarget(this.gl, this.sceneTarget, () =>
         this.drawBaseLayer(cam),
       );
-      const lightTex = this.lightmapPass.draw(cam, cw, ch);
+      const lightTex = this.lightmapPass.draw(cam, cw, ch, this.frameTick);
       toScreen(this.gl, cw, ch, () =>
         this.nightCompositePass.draw(sceneTex, lightTex),
       );

@@ -2,7 +2,8 @@
  * FalloutLightPass — tile-space fallout light extraction + composite.
  *
  * Extracted from LightmapPass. Two-step:
- *   1. Extract fallout light at tile resolution (mapW x mapH) — reads heat + embers
+ *   1. Extract fallout light at tile resolution (mapW x mapH) — reads heat and
+ *      computes the same particle flicker as FalloutBloomPass inline
  *   2. Composite into the target lightmap FBO via camera-projected map quad (additive)
  */
 
@@ -28,7 +29,6 @@ export class FalloutLightPass {
   private mapH: number;
   private heatManager: HeatManager;
   private tileTex: WebGLTexture;
-  private borderTex: WebGLTexture;
 
   // Fallout light extraction
   private falloutLightProg: WebGLProgram;
@@ -38,6 +38,11 @@ export class FalloutLightPass {
   private uFalloutLightThreshold: WebGLUniformLocation;
   private uEmberLightColor: WebGLUniformLocation;
   private uEmberLightIntensity: WebGLUniformLocation;
+  private uFalloutTick: WebGLUniformLocation;
+  private uParticleThresholdUnowned: WebGLUniformLocation;
+  private uParticleThresholdOwned: WebGLUniformLocation;
+  private uParticleFlickerSpeed: WebGLUniformLocation;
+  private uParticleFreshScale: WebGLUniformLocation;
 
   // Fallout composite (tile-space → lightmap)
   private falloutCompositeProg: WebGLProgram;
@@ -57,7 +62,6 @@ export class FalloutLightPass {
     mapW: number,
     mapH: number,
     tileTex: WebGLTexture,
-    borderTex: WebGLTexture,
     heatManager: HeatManager,
     settings: RenderSettings,
   ) {
@@ -66,7 +70,6 @@ export class FalloutLightPass {
     this.mapW = mapW;
     this.mapH = mapH;
     this.tileTex = tileTex;
-    this.borderTex = borderTex;
     this.heatManager = heatManager;
 
     // Fallout light extraction program
@@ -99,10 +102,26 @@ export class FalloutLightPass {
       this.falloutLightProg,
       "uEmberLightIntensity",
     )!;
+    this.uFalloutTick = gl.getUniformLocation(this.falloutLightProg, "uTick")!;
+    this.uParticleThresholdUnowned = gl.getUniformLocation(
+      this.falloutLightProg,
+      "uParticleThresholdUnowned",
+    )!;
+    this.uParticleThresholdOwned = gl.getUniformLocation(
+      this.falloutLightProg,
+      "uParticleThresholdOwned",
+    )!;
+    this.uParticleFlickerSpeed = gl.getUniformLocation(
+      this.falloutLightProg,
+      "uParticleFlickerSpeed",
+    )!;
+    this.uParticleFreshScale = gl.getUniformLocation(
+      this.falloutLightProg,
+      "uParticleFreshScale",
+    )!;
     gl.useProgram(this.falloutLightProg);
     gl.uniform1i(gl.getUniformLocation(this.falloutLightProg, "uHeatTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.falloutLightProg, "uTileTex"), 1);
-    gl.uniform1i(gl.getUniformLocation(this.falloutLightProg, "uBorderTex"), 2);
 
     // Fallout composite program
     this.falloutCompositeProg = createProgram(
@@ -170,9 +189,11 @@ export class FalloutLightPass {
     targetFbo: WebGLFramebuffer,
     targetW: number,
     targetH: number,
+    tick: number,
   ): void {
     const gl = this.gl;
     const dn = this.settings.dayNight;
+    const fb = this.settings.falloutBloom;
 
     // Step 1: Extract fallout light in tile space
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.falloutFbo);
@@ -198,13 +219,16 @@ export class FalloutLightPass {
       dn.emberLightB,
     );
     gl.uniform1f(this.uEmberLightIntensity, dn.emberLightIntensity);
+    gl.uniform1f(this.uFalloutTick, tick);
+    gl.uniform1f(this.uParticleThresholdUnowned, fb.particleThresholdUnowned);
+    gl.uniform1f(this.uParticleThresholdOwned, fb.particleThresholdOwned);
+    gl.uniform1f(this.uParticleFlickerSpeed, fb.particleFlickerSpeed);
+    gl.uniform1f(this.uParticleFreshScale, fb.particleFreshScale);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.heatManager.getHeatTex());
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, this.borderTex);
     gl.bindVertexArray(this.quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 

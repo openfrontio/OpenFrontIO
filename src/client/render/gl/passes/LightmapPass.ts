@@ -142,6 +142,7 @@ export class LightmapPass {
     cameraMatrix: Float32Array,
     sceneW: number,
     sceneH: number,
+    tick: number,
   ): WebGLTexture {
     const gl = this.gl;
     const lw = Math.max(1, sceneW >> 1);
@@ -159,7 +160,7 @@ export class LightmapPass {
     this.pointLightPass.draw(cameraMatrix);
 
     // --- 2. Fallout light → extract at tile res, composite into FBO A (additive) ---
-    this.falloutLightPass.draw(cameraMatrix, this.lightFboA, lw, lh);
+    this.falloutLightPass.draw(cameraMatrix, this.lightFboA, lw, lh, tick);
 
     // --- 3. Blur: 2 iterations separable H+V Gaussian ---
     const zoom = Math.abs(cameraMatrix[0]);
