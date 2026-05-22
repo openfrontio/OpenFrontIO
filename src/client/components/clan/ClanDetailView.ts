@@ -172,12 +172,6 @@ export class ClanDetailView extends LitElement {
       this.pendingRequestCount = res.pendingRequests ?? 0;
       this.memberPage = 1;
 
-      const knownRole = this.myClanRoles.get(this.clanTag);
-      if (!knownRole && this.myPublicId) {
-        const me = res.results.find((m) => m.publicId === this.myPublicId);
-        if (me) this.myRole = me.role;
-      }
-
       this.dispatchEvent(
         new CustomEvent("members-loaded", {
           detail: {
