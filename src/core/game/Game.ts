@@ -987,7 +987,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
-  overlappingRailroads: number[];
+  overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }
 

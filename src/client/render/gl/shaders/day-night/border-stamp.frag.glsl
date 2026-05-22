@@ -12,9 +12,6 @@ uniform float uHighlightBrighten;
 uniform float uDefenseCheckerDarken;
 uniform float uEmbargoTintRatio;
 uniform float uFriendlyTintRatio;
-uniform vec3 uEmberColorDark;
-uniform vec3 uEmberColorBright;
-uniform float uEmberStrengthUnowned;
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -29,7 +26,6 @@ void main() {
   // Read pre-computed border flags from BorderComputePass
   vec4 borderData = texelFetch(uBorderTex, tc, 0);
   float borderType = borderData.r;      // 0=interior, ~0.5=normal, ~1.0=highlight
-  float emberIntensity = borderData.g;   // 0–1 flicker value
   bool defense = borderData.b > 0.5;    // defense post proximity
   float relation = borderData.a;        // 0.0=neutral, ~0.5=friendly, ~1.0=embargo
 
@@ -62,17 +58,6 @@ void main() {
     }
     fragColor = vec4(bc, 1.0);
     return;
-  }
-
-  // --- Ember stamp: full-brightness ember on fallout tiles ---
-  if (emberIntensity > 0.0) {
-    float h = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
-    vec3 ember = mix(uEmberColorDark, uEmberColorBright, h) * emberIntensity * uEmberStrengthUnowned;
-    float a = max(ember.r, max(ember.g, ember.b));
-    if (a > 0.01) {
-      fragColor = vec4(ember, 1.0);
-      return;
-    }
   }
 
   discard;

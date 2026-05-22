@@ -85,10 +85,11 @@ void main() {
   // Read player data
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, [free], [free]
   vec4 pd7 = texelFetch(uPlayerData, ivec2(7, playerIdx), 0); // nukeTargetsMe, traitorRemainingTicks, allianceFraction, [free]
 
-  // Early out: dead player
-  if (pd1.w <= 0.0) {
+  // Early out: dead player OR emoji is active
+  if (pd1.w <= 0.0 || pd4.y >= 0.0) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vLocalUV = vec2(0.0);
