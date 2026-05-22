@@ -1176,8 +1176,10 @@ export class GPURenderer {
     this.worldTextPass.tick();
     this.worldTextPass.draw(cam, zoom);
 
-    if (this.gridView) this.coordinateGridPass.draw(cam, zoom);
-    if (pe.name && !this.gridView)
+    // Grid shows on either trigger; names hide only under alt-view (space
+    // hold), not under the persistent M-key gridView toggle.
+    if (this.gridView || this.altView) this.coordinateGridPass.draw(cam, zoom);
+    if (pe.name && !this.altView)
       this.namePass.draw(cam, this.nightCompositePass.getAmbient());
 
     this.radialMenuPass.draw();
