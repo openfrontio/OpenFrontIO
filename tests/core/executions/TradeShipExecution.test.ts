@@ -143,6 +143,7 @@ describe("TradeShipExecution", () => {
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);
     expect(tradeShipExecution.isActive()).toBe(false);
-    expect(game.displayMessage).toHaveBeenCalled();
+    expect(origOwner.addGold).toHaveBeenCalled();
+    expect(dstOwner.addGold).toHaveBeenCalled();
   });
 });

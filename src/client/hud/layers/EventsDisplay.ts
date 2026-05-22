@@ -2,70 +2,61 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AllPlayers,
-  getMessageCategory,
-  MessageCategory,
-  MessageType,
-  Tick,
-} from "../../../core/game/Game";
+import { AllPlayers, MessageType } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
-  AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,
-  AllianceRequestUpdate,
   BrokeAllianceUpdate,
   DisplayChatMessageUpdate,
   DisplayMessageUpdate,
+  DonateEventUpdate,
   EmojiUpdate,
   GameUpdateType,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { Controller } from "../../Controller";
-import {
-  SendAllianceExtensionIntentEvent,
-  SendAllianceRejectIntentEvent,
-  SendAllianceRequestIntentEvent,
-} from "../../Transport";
+import { SendAllianceRequestIntentEvent } from "../../Transport";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
-import { renderNumber } from "../../Utils";
 
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
-import { getMessageTypeClasses, translateText } from "../../Utils";
-const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
-const chatIcon = assetUrl("images/ChatIconWhite.svg");
-const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
-const nukeIcon = assetUrl("images/NukeIconWhite.svg");
-const swordIcon = assetUrl("images/SwordIconWhite.svg");
+import {
+  getMessageTypeClasses,
+  renderNumber,
+  translateText,
+} from "../../Utils";
 
 interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
-  buttons?: {
-    text: string;
-    className: string;
-    action: () => void;
-    preventClose?: boolean;
-  }[];
   type: MessageType;
   highlight?: boolean;
   createdAt: number;
   onDelete?: () => void;
-  // lower number: lower on the display
-  priority?: number;
-  duration?: Tick;
   focusID?: number;
   unitView?: UnitView;
-  shouldDelete?: (game: GameView) => boolean;
-  allianceID?: number;
 }
+
+const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
+  MessageType.NUKE_INBOUND,
+  MessageType.HYDROGEN_BOMB_INBOUND,
+  MessageType.MIRV_INBOUND,
+  MessageType.NUKE_DETONATED,
+  MessageType.NAVAL_INVASION_INBOUND,
+  MessageType.ATTACK_REQUEST,
+  MessageType.ALLIANCE_ACCEPTED,
+  MessageType.ALLIANCE_BROKEN,
+  MessageType.CONQUERED_PLAYER,
+  MessageType.CHAT,
+  MessageType.DONATION_RECEIVED,
+]);
+
+const isTier1 = (type: MessageType): boolean => TIER_1_TYPES.has(type);
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Controller {
@@ -76,21 +67,7 @@ export class EventsDisplay extends LitElement implements Controller {
   private active: boolean = false;
   private events: GameEvent[] = [];
 
-  // allianceID -> last checked at tick
-  private alliancesCheckedAt = new Map<number, Tick>();
-  @state() private _hidden: boolean = false;
   @state() private _isVisible: boolean = false;
-  @state() private newEvents: number = 0;
-  @state() private latestGoldAmount: bigint | null = null;
-  @state() private goldAmountAnimating: boolean = false;
-  private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
-    [MessageCategory.ATTACK, false],
-    [MessageCategory.NUKE, false],
-    [MessageCategory.TRADE, false],
-    [MessageCategory.ALLIANCE, false],
-    [MessageCategory.CHAT, false],
-  ]);
 
   @query(".events-container")
   private _eventsContainer?: HTMLDivElement;
@@ -136,40 +113,9 @@ export class EventsDisplay extends LitElement implements Controller {
     `;
   }
 
-  private renderToggleButton(src: string, category: MessageCategory) {
-    // Adding the literal for the default size ensures tailwind will generate the class
-    const toggleButtonSizeMap = { default: "h-5" };
-    return this.renderButton({
-      content: html`<img
-        src="${src}"
-        class="${toggleButtonSizeMap["default"]}"
-        style="${this.eventsFilters.get(category)
-          ? "filter: grayscale(1) opacity(0.5);"
-          : ""}"
-      />`,
-      onClick: () => this.toggleEventFilter(category),
-      className: "cursor-pointer pointer-events-auto",
-    });
-  }
-
-  private toggleHidden() {
-    this._hidden = !this._hidden;
-    if (this._hidden) {
-      this.newEvents = 0;
-    }
-    this.requestUpdate();
-  }
-
-  private toggleEventFilter(filterName: MessageCategory) {
-    const currentState = this.eventsFilters.get(filterName) ?? false;
-    this.eventsFilters.set(filterName, !currentState);
-    this.requestUpdate();
-  }
-
   private updateMap = [
     [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
     [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
-    [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
     [
       GameUpdateType.AllianceRequestReply,
       this.onAllianceRequestReplyEvent.bind(this),
@@ -179,10 +125,7 @@ export class EventsDisplay extends LitElement implements Controller {
     [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
     [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
     [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
-    [
-      GameUpdateType.AllianceExtension,
-      this.onAllianceExtensionEvent.bind(this),
-    ],
+    [GameUpdateType.DonateEvent, this.onDonateEvent.bind(this)],
   ] as const;
 
   constructor() {
@@ -236,8 +179,6 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    this.checkForAllianceExpirations();
-
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
@@ -246,9 +187,17 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     let remainingEvents = this.events.filter((event) => {
-      const shouldKeep =
-        this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
-        !event.shouldDelete?.(this.game);
+      const expired = this.game.ticks() - event.createdAt >= 80;
+      const isInboundWarning =
+        event.type === MessageType.NUKE_INBOUND ||
+        event.type === MessageType.HYDROGEN_BOMB_INBOUND ||
+        event.type === MessageType.MIRV_INBOUND ||
+        event.type === MessageType.NAVAL_INVASION_INBOUND;
+      const unitGone =
+        isInboundWarning &&
+        event.unitView !== undefined &&
+        !event.unitView.isActive();
+      const shouldKeep = !expired && !unitGone;
       if (!shouldKeep && event.onDelete) {
         event.onDelete();
       }
@@ -267,106 +216,9 @@ export class EventsDisplay extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  disconnectedCallback() {
-    if (this.goldAmountTimeoutId !== null) {
-      clearTimeout(this.goldAmountTimeoutId);
-      this.goldAmountTimeoutId = null;
-    }
-  }
-
-  private checkForAllianceExpirations() {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer?.isAlive()) return;
-
-    const currentAllianceIds = new Set<number>();
-
-    for (const alliance of myPlayer.alliances()) {
-      currentAllianceIds.add(alliance.id);
-
-      if (
-        alliance.expiresAt >
-        this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
-      ) {
-        continue;
-      }
-
-      if (
-        (this.alliancesCheckedAt.get(alliance.id) ?? 0) >=
-        this.game.ticks() - this.game.config().allianceExtensionPromptOffset()
-      ) {
-        // We've already displayed a message for this alliance.
-        continue;
-      }
-
-      this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
-
-      const other = this.game.player(alliance.other) as PlayerView;
-
-      this.addEvent({
-        description: translateText("events_display.about_to_expire", {
-          name: other.displayName(),
-        }),
-        type: MessageType.RENEW_ALLIANCE,
-        duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
-        buttons: [
-          {
-            text: translateText("events_display.focus"),
-            className: "btn-gray",
-            action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
-            preventClose: true,
-          },
-          {
-            text: translateText("events_display.renew_alliance", {
-              name: other.displayName(),
-            }),
-            className: "btn",
-            action: () =>
-              this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
-          },
-          {
-            text: translateText("events_display.ignore"),
-            className: "btn-info",
-            action: () => {},
-          },
-        ],
-        highlight: true,
-        createdAt: this.game.ticks(),
-        focusID: other.smallID(),
-        allianceID: alliance.id,
-      });
-    }
-
-    for (const [allianceId] of this.alliancesCheckedAt) {
-      if (!currentAllianceIds.has(allianceId)) {
-        this.removeAllianceRenewalEvents(allianceId);
-        this.alliancesCheckedAt.delete(allianceId);
-      }
-    }
-  }
-
   private addEvent(event: GameEvent) {
     this.events = [...this.events, event];
-    if (this._hidden === true) {
-      this.newEvents++;
-    }
     this.requestUpdate();
-  }
-
-  private removeEvent(index: number) {
-    this.events = [
-      ...this.events.slice(0, index),
-      ...this.events.slice(index + 1),
-    ];
-  }
-
-  private removeAllianceRenewalEvents(allianceID: number) {
-    this.events = this.events.filter(
-      (event) =>
-        !(
-          event.type === MessageType.RENEW_ALLIANCE &&
-          event.allianceID === allianceID
-        ),
-    );
   }
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
@@ -378,27 +230,10 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    if (event.goldAmount !== undefined) {
-      const hasChanged = this.latestGoldAmount !== event.goldAmount;
-      this.latestGoldAmount = event.goldAmount;
-
-      if (this.goldAmountTimeoutId !== null) {
-        clearTimeout(this.goldAmountTimeoutId);
-      }
-
-      this.goldAmountTimeoutId = setTimeout(() => {
-        this.latestGoldAmount = null;
-        this.goldAmountTimeoutId = null;
-        this.requestUpdate();
-      }, 5000);
-
-      if (hasChanged) {
-        this.goldAmountAnimating = true;
-        setTimeout(() => {
-          this.goldAmountAnimating = false;
-          this.requestUpdate();
-        }, 600);
-      }
+    // Captured trade-ship gold is surfaced as a transient +gold pip in
+    // control-panel rather than as a scroll-list entry.
+    if (event.message === "events_display.received_gold_from_captured_ship") {
+      return;
     }
 
     let description: string = event.message;
@@ -406,12 +241,16 @@ export class EventsDisplay extends LitElement implements Controller {
       description = translateText(event.message, event.params ?? {});
     }
 
+    const unitView =
+      event.unitID !== undefined ? this.game.unit(event.unitID) : undefined;
     this.addEvent({
       description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+      unitView: unitView,
+      focusID: event.focusPlayerID,
     });
   }
 
@@ -461,81 +300,9 @@ export class EventsDisplay extends LitElement implements Controller {
     this.eventBus.emit(new PlaySoundEffectEvent("message"));
   }
 
-  onAllianceRequestEvent(update: AllianceRequestUpdate) {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.recipientID !== myPlayer.smallID()) {
-      return;
-    }
-
-    const requestor = this.game.playerBySmallID(
-      update.requestorID,
-    ) as PlayerView;
-    const recipient = this.game.playerBySmallID(
-      update.recipientID,
-    ) as PlayerView;
-
-    if (!requestor.isAlliedWith(recipient)) {
-      this.eventBus.emit(new PlaySoundEffectEvent("alliance-suggested"));
-    }
-    this.addEvent({
-      description: translateText("events_display.request_alliance", {
-        name: requestor.displayName(),
-      }),
-      buttons: [
-        {
-          text: translateText("events_display.focus"),
-          className: "btn-gray",
-          action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
-          preventClose: true,
-        },
-        {
-          text: translateText("events_display.accept_alliance"),
-          className: "btn",
-          action: () =>
-            this.eventBus.emit(
-              new SendAllianceRequestIntentEvent(recipient, requestor),
-            ),
-        },
-        {
-          text: translateText("events_display.reject_alliance"),
-          className: "btn-info",
-          action: () =>
-            this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor)),
-        },
-      ],
-      highlight: true,
-      type: MessageType.ALLIANCE_REQUEST,
-      createdAt: this.game.ticks(),
-      priority: 0,
-      duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
-      shouldDelete: (game) => {
-        // Recipient sent a separate request, so they became allied without the recipient responding.
-        return requestor.isAlliedWith(recipient);
-      },
-      focusID: update.requestorID,
-    });
-  }
-
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer) {
-      return;
-    }
-    // myPlayer can deny alliances without clicking on the button
-    if (update.request.recipientID === myPlayer.smallID()) {
-      // Remove alliance requests whose requestors are the same as the reply's requestor
-      // Noop unless the request was denied through other means (e.g attacking the requestor)
-      this.events = this.events.filter(
-        (event) =>
-          !(
-            event.type === MessageType.ALLIANCE_REQUEST &&
-            event.focusID === update.request.requestorID
-          ),
-      );
-      this.requestUpdate();
-      return;
-    }
-    if (update.request.requestorID !== myPlayer.smallID()) {
+    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
 
@@ -561,10 +328,6 @@ export class EventsDisplay extends LitElement implements Controller {
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
-
-    this.removeAllianceRenewalEvents(update.allianceID);
-    this.alliancesCheckedAt.delete(update.allianceID);
-    this.requestUpdate();
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
@@ -600,14 +363,6 @@ export class EventsDisplay extends LitElement implements Controller {
       });
     } else if (betrayed === myPlayer) {
       this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
-      const buttons = [
-        {
-          text: translateText("events_display.focus"),
-          className: "btn-gray",
-          action: () => this.eventBus.emit(new GoToPlayerEvent(traitor)),
-          preventClose: true,
-        },
-      ];
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
           name: traitor.displayName(),
@@ -616,7 +371,6 @@ export class EventsDisplay extends LitElement implements Controller {
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.traitorID,
-        buttons,
       });
     }
   }
@@ -646,11 +400,40 @@ export class EventsDisplay extends LitElement implements Controller {
     });
   }
 
-  private onAllianceExtensionEvent(update: AllianceExtensionUpdate) {
+  onDonateEvent(update: DonateEventUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || myPlayer.smallID() !== update.playerID) return;
-    this.removeAllianceRenewalEvents(update.allianceID);
-    this.requestUpdate();
+    if (!myPlayer) return;
+
+    const isRecipient = update.recipientId === myPlayer.id();
+    const isSender = update.senderId === myPlayer.id();
+    if (!isRecipient && !isSender) return;
+
+    const other = isRecipient
+      ? (this.game.player(update.senderId) as PlayerView)
+      : (this.game.player(update.recipientId) as PlayerView);
+
+    const isGold = update.donationType === "gold";
+    const messageKey = isRecipient
+      ? isGold
+        ? "events_display.received_gold_from_player"
+        : "events_display.received_troops_from_player"
+      : isGold
+        ? "events_display.sent_gold_to_player"
+        : "events_display.sent_troops_to_player";
+    const params: Record<string, string | number> = {
+      name: other.displayName(),
+      [isGold ? "gold" : "troops"]: renderNumber(update.amount),
+    };
+
+    this.addEvent({
+      description: translateText(messageKey, params),
+      type: isRecipient
+        ? MessageType.DONATION_RECEIVED
+        : MessageType.DONATION_SENT,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      focusID: other.smallID(),
+    });
   }
 
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
@@ -769,244 +552,107 @@ export class EventsDisplay extends LitElement implements Controller {
     `;
   }
 
+  private renderEventRow(event: GameEvent) {
+    return html`
+      <tr>
+        <td
+          class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
+            event.type,
+          )}"
+        >
+          ${event.focusID
+            ? this.renderButton({
+                content: this.getEventDescription(event),
+                onClick: () => {
+                  if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
+                },
+                className: "text-left",
+              })
+            : event.unitView
+              ? this.renderButton({
+                  content: this.getEventDescription(event),
+                  onClick: () => {
+                    if (event.unitView) this.emitGoToUnitEvent(event.unitView);
+                  },
+                  className: "text-left",
+                })
+              : this.getEventDescription(event)}
+        </td>
+      </tr>
+    `;
+  }
+
   render() {
     if (!this.active || !this._isVisible) {
       return html``;
     }
 
-    const styles = html`
-      <style>
-        @keyframes goldBounce {
-          0% {
-            transform: scale(1);
-          }
-          30% {
-            transform: scale(1.3);
-          }
-          50% {
-            transform: scale(1.1);
-          }
-          70% {
-            transform: scale(1.2);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-      </style>
-    `;
+    const myPlayer = this.game.myPlayer();
+    const showBetrayalTimer = !!(
+      myPlayer &&
+      myPlayer.isTraitor() &&
+      myPlayer.getTraitorRemainingTicks() > 0
+    );
 
-    const filteredEvents = this.events.filter((event) => {
-      const category = getMessageCategory(event.type);
-      return !this.eventsFilters.get(category);
-    });
+    const tier1Events: GameEvent[] = [];
+    let tier2Events: GameEvent[] = [];
+    for (const event of this.events) {
+      (isTier1(event.type) ? tier1Events : tier2Events).push(event);
+    }
+    tier1Events.sort((a, b) => a.createdAt - b.createdAt);
+    tier2Events.sort((a, b) => a.createdAt - b.createdAt);
+    tier2Events = tier2Events.slice(-4);
 
-    filteredEvents.sort((a, b) => {
-      const aPrior = a.priority ?? 100000;
-      const bPrior = b.priority ?? 100000;
-      if (aPrior === bPrior) {
-        return a.createdAt - b.createdAt;
-      }
-      return bPrior - aPrior;
-    });
+    if (
+      tier1Events.length === 0 &&
+      tier2Events.length === 0 &&
+      !showBetrayalTimer
+    ) {
+      return html``;
+    }
 
     return html`
-      ${styles}
-      <!-- Events Toggle (when hidden) -->
-      ${this._hidden
-        ? html`
-            <div class="relative w-fit z-50">
-              ${this.renderButton({
-                content: html`
-                  <span class="flex items-center gap-2">
-                    ${translateText("events_display.events")}
-                    ${this.newEvents > 0
-                      ? html`<span
-                          class="inline-block px-2 bg-red-500 rounded-lg text-sm"
-                          >${this.newEvents}</span
-                        >`
-                      : ""}
-                  </span>
-                `,
-                onClick: this.toggleHidden,
-                className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/92 backdrop-blur-sm",
-              })}
-            </div>
-          `
-        : html`
-            <!-- Main Events Display -->
-            <div
-              class="relative w-full z-50 min-[1200px]:w-96 backdrop-blur-sm"
-            >
-              <!-- Button Bar -->
+      <div class="flex flex-col gap-1 w-full min-[1200px]:w-96">
+        ${tier2Events.length > 0
+          ? html`
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/92 backdrop-blur-sm sm:rounded-tl-lg min-[1200px]:rounded-t-lg"
+                class="bg-gray-800/92 backdrop-blur-sm max-h-[12vh] lg:max-h-[22vh] overflow-y-auto rounded-lg opacity-90 events-container"
               >
-                <div class="flex justify-between items-center gap-3">
-                  <div class="flex gap-4">
-                    ${this.renderToggleButton(
-                      swordIcon,
-                      MessageCategory.ATTACK,
-                    )}
-                    ${this.renderToggleButton(nukeIcon, MessageCategory.NUKE)}
-                    ${this.renderToggleButton(
-                      donateGoldIcon,
-                      MessageCategory.TRADE,
-                    )}
-                    ${this.renderToggleButton(
-                      allianceIcon,
-                      MessageCategory.ALLIANCE,
-                    )}
-                    ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
-                  </div>
-                  <div class="flex items-center gap-3">
-                    ${this.latestGoldAmount !== null
-                      ? html`<span
-                          class="text-green-400 font-semibold transition-all duration-300 ${this
-                            .goldAmountAnimating
-                            ? "animate-pulse scale-110"
-                            : "scale-100"}"
-                          style="animation: ${this.goldAmountAnimating
-                            ? "goldBounce 0.6s ease-out"
-                            : "none"}"
-                          >+${renderNumber(this.latestGoldAmount)}</span
-                        >`
-                      : ""}
-                    ${this.renderButton({
-                      content: translateText("leaderboard.hide"),
-                      onClick: this.toggleHidden,
-                      className:
-                        "text-white cursor-pointer pointer-events-auto",
-                    })}
-                  </div>
-                </div>
+                <table
+                  class="w-full border-collapse text-white text-xs lg:text-sm pointer-events-auto"
+                >
+                  <tbody>
+                    ${tier2Events.map((event) => this.renderEventRow(event))}
+                  </tbody>
+                </table>
               </div>
-
-              <!-- Content Area -->
+            `
+          : ""}
+        ${tier1Events.length > 0 || showBetrayalTimer
+          ? html`
               <div
-                class="bg-gray-800/92 backdrop-blur-sm max-h-[15vh] lg:max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
+                class="bg-gray-800 backdrop-blur-sm rounded-lg shadow-lg border-l-4 border-red-500"
               >
-                <div>
-                  <table
-                    class="w-full max-h-none border-collapse text-white shadow-lg text-xs lg:text-sm pointer-events-auto"
-                  >
-                    <tbody>
-                      ${filteredEvents.map(
-                        (event, index) => html`
+                <table
+                  class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"
+                >
+                  <tbody>
+                    ${tier1Events.map((event) => this.renderEventRow(event))}
+                    ${showBetrayalTimer
+                      ? html`
                           <tr>
-                            <td
-                              class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
-                                event.type,
-                              )}"
-                            >
-                              ${event.focusID
-                                ? this.renderButton({
-                                    content: this.getEventDescription(event),
-                                    onClick: () => {
-                                      if (event.focusID)
-                                        this.emitGoToPlayerEvent(event.focusID);
-                                    },
-                                    className: "text-left",
-                                  })
-                                : event.unitView
-                                  ? this.renderButton({
-                                      content: this.getEventDescription(event),
-                                      onClick: () => {
-                                        if (event.unitView)
-                                          this.emitGoToUnitEvent(
-                                            event.unitView,
-                                          );
-                                      },
-                                      className: "text-left",
-                                    })
-                                  : this.getEventDescription(event)}
-                              <!-- Events with buttons (Alliance requests) -->
-                              ${event.buttons
-                                ? html`
-                                    <div class="flex flex-wrap gap-1.5 mt-1">
-                                      ${event.buttons.map(
-                                        (btn) => html`
-                                          <button
-                                            class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
-                            ${btn.className.includes("btn-info")
-                                              ? "bg-blue-500 hover:bg-blue-600"
-                                              : btn.className.includes(
-                                                    "btn-gray",
-                                                  )
-                                                ? "bg-gray-500 hover:bg-gray-600"
-                                                : "bg-green-600 hover:bg-green-700"}"
-                                            @click=${() => {
-                                              btn.action();
-                                              if (!btn.preventClose) {
-                                                const originalIndex =
-                                                  this.events.findIndex(
-                                                    (e) => e === event,
-                                                  );
-                                                if (originalIndex !== -1) {
-                                                  this.removeEvent(
-                                                    originalIndex,
-                                                  );
-                                                }
-                                              }
-                                              this.requestUpdate();
-                                            }}
-                                          >
-                                            ${btn.text}
-                                          </button>
-                                        `,
-                                      )}
-                                    </div>
-                                  `
-                                : ""}
+                            <td class="lg:px-2 lg:py-1 p-1 text-left">
+                              ${this.renderBetrayalDebuffTimer()}
                             </td>
                           </tr>
-                        `,
-                      )}
-                      <!--- Betrayal debuff timer row -->
-                      ${(() => {
-                        const myPlayer = this.game.myPlayer();
-                        return (
-                          myPlayer &&
-                          myPlayer.isTraitor() &&
-                          myPlayer.getTraitorRemainingTicks() > 0
-                        );
-                      })()
-                        ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                ${this.renderBetrayalDebuffTimer()}
-                              </td>
-                            </tr>
-                          `
-                        : ""}
-
-                      <!--- Empty row when no events -->
-                      ${filteredEvents.length === 0 &&
-                      !(() => {
-                        const myPlayer = this.game.myPlayer();
-                        return (
-                          myPlayer &&
-                          myPlayer.isTraitor() &&
-                          myPlayer.getTraitorRemainingTicks() > 0
-                        );
-                      })()
-                        ? html`
-                            <tr>
-                              <td
-                                class="lg:px-2 lg:py-1 p-1 min-w-72 text-left"
-                              >
-                                &nbsp;
-                              </td>
-                            </tr>
-                          `
-                        : ""}
-                    </tbody>
-                  </table>
-                </div>
+                        `
+                      : ""}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          `}
+            `
+          : ""}
+      </div>
     `;
   }
 

@@ -35,16 +35,6 @@ export const GameUpdateType = {
   NukeDetonation: 22,
 } as const;
 
-/** MessageType enum values from the game source. */
-export const MessageType = {
-  SAM_HIT: 9,
-  SENT_GOLD_TO_PLAYER: 18,
-  RECEIVED_GOLD_FROM_PLAYER: 19,
-  RECEIVED_GOLD_FROM_TRADE: 20,
-  SENT_TROOPS_TO_PLAYER: 21,
-  RECEIVED_TROOPS_FROM_PLAYER: 22,
-} as const;
-
 // ---------------------------------------------------------------------------
 // Typed update payloads (keyed by GameUpdateType values)
 // ---------------------------------------------------------------------------

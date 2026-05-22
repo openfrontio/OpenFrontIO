@@ -43,6 +43,12 @@ export class WebGLFrameBuilder {
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
   }
 
+  /** Drop internal caches to force a full re-upload of state on the next update(). */
+  clearCaches(): void {
+    this.knownSmallIDs.clear();
+    this.localPlayerSmallID = 0;
+  }
+
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
     this.syncLocalPlayer(gameView);
