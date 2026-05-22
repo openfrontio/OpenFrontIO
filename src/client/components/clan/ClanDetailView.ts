@@ -153,15 +153,19 @@ export class ClanDetailView extends LitElement {
     if (!this.clanTag) return;
     if (!this.myClanRoles.has(this.clanTag)) return;
     if (this.members.length > 0) return;
+    const gen = ++this.asyncGeneration;
+    const requestedTag = this.clanTag;
     this.membersLoadInFlight = true;
     try {
       const res = await fetchClanMembers(
-        this.clanTag,
+        requestedTag,
         1,
         this.membersPerPage,
         this.memberSort,
         this.memberOrder,
       );
+      if (gen !== this.asyncGeneration) return;
+      if (requestedTag !== this.clanTag) return;
       if (!res) return;
       this.members = res.results;
       this.membersTotal = res.total;

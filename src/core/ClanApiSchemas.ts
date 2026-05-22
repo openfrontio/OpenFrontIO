@@ -192,10 +192,10 @@ export type ClanGame = z.infer<typeof ClanGameSchema>;
 
 export const ClanGamesResponseSchema = z.object({
   results: ClanGameSchema.array(),
-  // ISO datetime of the last row in `results`, or `null` when the server
-  // has no more rows to serve. Pass back as `before` to load the next
-  // batch. Page size is fixed server-side, so the client never sends a
-  // limit.
+  // Opaque continuation token. Round-trip verbatim as the `cursor` query
+  // parameter to fetch the next page; never construct or parse it.
+  // `null` means the server has no more rows to serve. Page size is
+  // fixed server-side, so the client never sends a limit.
   nextCursor: z.string().nullable(),
 });
 export type ClanGamesResponse = z.infer<typeof ClanGamesResponseSchema>;

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   ClanBanSchema,
+  ClanGameFilterSchema,
+  ClanGamePlayerSchema,
+  ClanGameResultSchema,
+  ClanGameSchema,
+  ClanGamesResponseSchema,
   ClanInfoSchema,
   ClanJoinRequestSchema,
   ClanMemberSchema,
@@ -249,6 +254,159 @@ describe("ClanBanSchema", () => {
 
   it("rejects null bannedBy", () => {
     const result = ClanBanSchema.safeParse({ ...validBan, bannedBy: null });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ClanGameResultSchema", () => {
+  it.each(["victory", "defeat", "incomplete"])("accepts %s", (value) => {
+    expect(ClanGameResultSchema.safeParse(value).success).toBe(true);
+  });
+
+  it("rejects an unknown result value", () => {
+    expect(ClanGameResultSchema.safeParse("win").success).toBe(false);
+  });
+});
+
+describe("ClanGameFilterSchema", () => {
+  it.each(["ffa", "team", "hvn", "ranked"])("accepts %s", (value) => {
+    expect(ClanGameFilterSchema.safeParse(value).success).toBe(true);
+  });
+
+  it("rejects an unknown filter value", () => {
+    expect(ClanGameFilterSchema.safeParse("all").success).toBe(false);
+  });
+});
+
+describe("ClanGamePlayerSchema", () => {
+  const validPlayer = {
+    publicId: "p1",
+    username: "alice",
+    won: true,
+  };
+
+  it("accepts a valid player", () => {
+    expect(ClanGamePlayerSchema.safeParse(validPlayer).success).toBe(true);
+  });
+
+  it("rejects when won is not a boolean", () => {
+    expect(
+      ClanGamePlayerSchema.safeParse({ ...validPlayer, won: "true" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects when required fields are missing", () => {
+    expect(ClanGamePlayerSchema.safeParse({ publicId: "p1" }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("ClanGameSchema", () => {
+  const validGame = {
+    gameId: "g1",
+    start: "2024-06-01T00:00:00.000Z",
+    durationSeconds: 1234,
+    map: "World",
+    mode: "Team",
+    playerTeams: "Duos",
+    rankedType: "1v1",
+    result: "victory" as const,
+    totalPlayers: 8,
+    clanPlayers: [{ publicId: "p1", username: "alice", won: true }],
+  };
+
+  it("accepts a fully-populated game", () => {
+    expect(ClanGameSchema.safeParse(validGame).success).toBe(true);
+  });
+
+  it("accepts playerTeams: null (FFA / non-team games)", () => {
+    const result = ClanGameSchema.safeParse({
+      ...validGame,
+      playerTeams: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts totalPlayers: null (historical rows)", () => {
+    const result = ClanGameSchema.safeParse({
+      ...validGame,
+      totalPlayers: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a row with map/mode/rankedType/result omitted", () => {
+    const minimal = {
+      gameId: validGame.gameId,
+      start: validGame.start,
+      durationSeconds: validGame.durationSeconds,
+      playerTeams: validGame.playerTeams,
+      totalPlayers: validGame.totalPlayers,
+      clanPlayers: validGame.clanPlayers,
+    };
+    expect(ClanGameSchema.safeParse(minimal).success).toBe(true);
+  });
+
+  it("rejects a non-ISO start", () => {
+    expect(
+      ClanGameSchema.safeParse({ ...validGame, start: "June 1 2024" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a negative durationSeconds", () => {
+    expect(
+      ClanGameSchema.safeParse({ ...validGame, durationSeconds: -1 }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a negative totalPlayers", () => {
+    expect(
+      ClanGameSchema.safeParse({ ...validGame, totalPlayers: -1 }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an unknown result value", () => {
+    expect(
+      ClanGameSchema.safeParse({ ...validGame, result: "win" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("ClanGamesResponseSchema", () => {
+  const validGame = {
+    gameId: "g1",
+    start: "2024-06-01T00:00:00.000Z",
+    durationSeconds: 1234,
+    clanPlayers: [{ publicId: "p1", username: "alice", won: true }],
+  };
+
+  it("accepts a non-empty page with a cursor", () => {
+    const result = ClanGamesResponseSchema.safeParse({
+      results: [validGame],
+      nextCursor: "2024-05-31T00:00:00.000Z",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty page with a null cursor", () => {
+    const result = ClanGamesResponseSchema.safeParse({
+      results: [],
+      nextCursor: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when nextCursor is missing (must be string or null)", () => {
+    const result = ClanGamesResponseSchema.safeParse({ results: [] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when results is not an array", () => {
+    const result = ClanGamesResponseSchema.safeParse({
+      results: "not-an-array",
+      nextCursor: null,
+    });
     expect(result.success).toBe(false);
   });
 });

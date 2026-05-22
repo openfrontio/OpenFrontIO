@@ -104,6 +104,7 @@ export class ClanGameHistoryView extends LitElement {
     } else {
       this.loading = true;
       this.loadState = "ok";
+      this.loadingMore = false;
     }
     const filterParam = this.filter === "all" ? undefined : this.filter;
     // Append uses the saved cursor; a fresh load starts from the newest
@@ -532,15 +533,16 @@ export class ClanGameHistoryView extends LitElement {
     `;
   }
 
-  // FFA + Ranked 1v1 cap clan participation at a single player, so
-  // "1 / N total" is noise — just show the total. Team/HvN keep the
-  // clan-vs-total breakdown. Historical rows may carry a null
+  // Ranked games cap clan participation at a single player, so
+  // "1 / N total" is noise — just show the total. FFA can carry
+  // multiple clan members (renderResultBadge already handles partial
+  // wins via clanCount > 1), so it keeps the clan-vs-total breakdown.
+  // Team/HvN keep it too. Historical rows may carry a null
   // totalPlayers (games.num_players is nullable on the schema); render
   // "—" rather than "null".
   private renderPlayersField(game: ClanGame): TemplateResult {
     const isSingleClanSlot =
-      game.mode === "Free For All" ||
-      (game.rankedType !== undefined && game.rankedType !== "unranked");
+      game.rankedType !== undefined && game.rankedType !== "unranked";
     const total = game.totalPlayers ?? null;
     if (isSingleClanSlot) {
       return this.renderField(

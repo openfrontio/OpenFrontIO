@@ -39,7 +39,10 @@
     "month_sep": "September",
     "month_oct": "October",
     "month_nov": "November",
-    "month_dec": "December"
+    "month_dec": "December",
+    "duration_hour_short": "h",
+    "duration_minute_short": "min",
+    "duration_second_short": "s"
   },
   "main": {
     "title": "OpenFront (ALPHA)",

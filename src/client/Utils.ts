@@ -231,7 +231,8 @@ export function getModifierLabels(
 }
 
 export function renderDuration(totalSeconds: number): string {
-  if (totalSeconds <= 0) return "0s";
+  if (totalSeconds <= 0)
+    return `0${translateText("common.duration_second_short")}`;
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -239,9 +240,12 @@ export function renderDuration(totalSeconds: number): string {
   // as "1h" rather than "1h 0min 0s", and 60s as "1min" rather than
   // "1min 0s". Sub-minute durations still surface seconds.
   const parts: string[] = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}min`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+  if (hours > 0)
+    parts.push(`${hours}${translateText("common.duration_hour_short")}`);
+  if (minutes > 0)
+    parts.push(`${minutes}${translateText("common.duration_minute_short")}`);
+  if (seconds > 0 || parts.length === 0)
+    parts.push(`${seconds}${translateText("common.duration_second_short")}`);
   return parts.join(" ");
 }
 
