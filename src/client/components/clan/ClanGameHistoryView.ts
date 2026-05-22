@@ -1,12 +1,12 @@
 import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { ClientEnv } from "../../ClientEnv";
 import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
   type ClanGameFilter,
   fetchClanGames,
 } from "../../ClanApi";
+import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../Utils";
 import "../CopyButton";

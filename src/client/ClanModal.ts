@@ -29,18 +29,13 @@ type View =
   | "bans"
   | "my-requests";
 
-// Active-tab keys. The list tabs and detail tabs share BaseModal's
-// `activeTab` slot — the value's meaning depends on `view`.
+// List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
+// "members" / "game-history"); which set is live depends on `view`.
 const LIST_TABS = ["my-clans", "browse"] as const;
-const DETAIL_TABS = ["overview", "members", "game-history"] as const;
 type ListTab = (typeof LIST_TABS)[number];
-type DetailTab = (typeof DETAIL_TABS)[number];
 
 function isListTab(key: string): key is ListTab {
   return (LIST_TABS as readonly string[]).includes(key);
-}
-function isDetailTab(key: string): key is DetailTab {
-  return (DETAIL_TABS as readonly string[]).includes(key);
 }
 
 @customElement("clan-modal")
