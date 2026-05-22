@@ -161,7 +161,7 @@
     "outlineUsePlayerColor": false,
     "fillUsePlayerColor": true,
     "emojiRowOffset": 1.4,
-    "statusRowOffset": 2.5
+    "statusRowOffset": 1.4
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
