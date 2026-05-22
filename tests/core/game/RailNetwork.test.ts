@@ -168,6 +168,33 @@ describe("RailNetworkImpl", () => {
     expect(neighborStation.setCluster).toHaveBeenCalled();
   });
 
+  describe("overlappingRailroads", () => {
+    test("returns deterministic deduplicated TileRef array", () => {
+      const tile = 42 as any;
+      const railGridMock = {
+        query: vi.fn(
+          () => new Set([{ tiles: [50, 42, 60] }, { tiles: [60, 45, 42] }]),
+        ),
+      };
+      (network as any).railGrid = railGridMock;
+
+      const result = network.overlappingRailroads(tile);
+
+      expect(railGridMock.query).toHaveBeenCalledWith(tile, 3);
+      expect(result).toEqual([42, 45, 50, 60]); // Deduplicated and sorted
+    });
+
+    test("returns empty array when no railroads overlap", () => {
+      const tile = 42 as any;
+      const railGridMock = { query: vi.fn(() => new Set()) };
+      (network as any).railGrid = railGridMock;
+
+      const result = network.overlappingRailroads(tile);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe("computeGhostRailPaths", () => {
     test("returns empty when snappable rails exist nearby", () => {
       const tile = 42 as any;
