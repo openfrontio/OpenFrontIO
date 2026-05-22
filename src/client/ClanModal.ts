@@ -129,6 +129,8 @@ export class ClanModal extends BaseModal {
       this.view = "list";
       this.selectedClan = null;
       this.selectedClanTag = "";
+      this.detailCache = null;
+      this.gameHistoryCache = null;
       if (tab === "my-clans") {
         this.loadMyClans();
       }

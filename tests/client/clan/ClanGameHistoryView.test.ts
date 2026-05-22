@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { flushAsync } from "./ClanModalTestUtils";
+
 // ─── Mocks (defined before imports so vi.mock hoisting applies) ─────────────
 
 vi.mock("../../../src/client/Utils", () => ({
@@ -139,10 +141,7 @@ describe("ClanGameHistoryView", () => {
     it("fetches games on mount when no cache is provided", async () => {
       mockFetch(() => Promise.resolve(okPage([makeGame()])));
       const el = await mountView();
-      await el.updateComplete;
-      // One additional tick to let the post-fetch state propagate
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(fetchClanGames).toHaveBeenCalledWith("TST", {
         filter: undefined,
@@ -158,7 +157,7 @@ describe("ClanGameHistoryView", () => {
         nextCursor: "cursor-1",
       };
       const el = await mountView({ cachedState: cache });
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(fetchClanGames).not.toHaveBeenCalled();
       // Sentinel must be present so the observer can pick up where the
@@ -175,7 +174,7 @@ describe("ClanGameHistoryView", () => {
         nextCursor: null,
       };
       await mountView({ cachedState: cache });
-      await new Promise((r) => setTimeout(r, 0));
+      await flushAsync();
 
       expect(fetchClanGames).toHaveBeenCalledOnce();
     });
@@ -187,8 +186,7 @@ describe("ClanGameHistoryView", () => {
         Promise.resolve(okPage([makeGame({ gameId: "first" })], "cursor-1")),
       );
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       mockFetch(() => Promise.resolve(okPage([makeGame({ gameId: "ffa" })])));
       // Click the FFA filter tab. translateText echoes the key.
@@ -196,8 +194,7 @@ describe("ClanGameHistoryView", () => {
         b.textContent?.includes("clan_modal.history_type_ffa"),
       )!;
       ffaTab.click();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(fetchClanGames).toHaveBeenLastCalledWith("TST", {
         filter: "ffa",
@@ -212,8 +209,7 @@ describe("ClanGameHistoryView", () => {
         Promise.resolve(okPage([makeGame({ gameId: "p1" })], "next-token")),
       );
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       mockFetch(() =>
         Promise.resolve(okPage([makeGame({ gameId: "p2" })], null)),
@@ -230,8 +226,7 @@ describe("ClanGameHistoryView", () => {
         ],
         observer as unknown as IntersectionObserver,
       );
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(fetchClanGames).toHaveBeenLastCalledWith("TST", {
         filter: undefined,
@@ -244,8 +239,7 @@ describe("ClanGameHistoryView", () => {
         Promise.resolve(okPage([makeGame({ gameId: "p1" })], "next-token")),
       );
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       mockFetch(() => Promise.resolve({ error: "failed" }));
       const observer = FakeIntersectionObserver.last!;
@@ -258,8 +252,7 @@ describe("ClanGameHistoryView", () => {
         ],
         observer as unknown as IntersectionObserver,
       );
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       // Retry footer is rendered (the key is `history_load_more_failed`)
       expect(el.textContent).toContain("clan_modal.history_load_more_failed");
@@ -276,8 +269,7 @@ describe("ClanGameHistoryView", () => {
     it("renders the members-only message on 403", async () => {
       mockFetch(() => Promise.resolve({ error: "forbidden" }));
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(el.textContent).toContain("clan_modal.history_members_only");
     });
@@ -285,8 +277,7 @@ describe("ClanGameHistoryView", () => {
     it("renders the unavailable state with a try-again button on non-403 errors", async () => {
       mockFetch(() => Promise.resolve({ error: "failed" }));
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(el.textContent).toContain("clan_modal.history_unavailable");
       expect(el.textContent).toContain("leaderboard_modal.try_again");
@@ -295,8 +286,7 @@ describe("ClanGameHistoryView", () => {
     it("renders the empty state when results is []", async () => {
       mockFetch(() => Promise.resolve(okPage([])));
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(el.textContent).toContain("clan_modal.history_empty");
     });
@@ -308,8 +298,7 @@ describe("ClanGameHistoryView", () => {
     async function badgeTextFor(game: ClanGame): Promise<string> {
       mockFetch(() => Promise.resolve(okPage([game])));
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
       return el.textContent ?? "";
     }
 
@@ -393,8 +382,7 @@ describe("ClanGameHistoryView", () => {
     async function typeLabelFor(game: ClanGame): Promise<string> {
       mockFetch(() => Promise.resolve(okPage([game])));
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
       return el.textContent ?? "";
     }
 
@@ -481,8 +469,7 @@ describe("ClanGameHistoryView", () => {
     async function bodyTextFor(game: ClanGame): Promise<string> {
       mockFetch(() => Promise.resolve(okPage([game])));
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
       return el.textContent ?? "";
     }
 
@@ -528,8 +515,7 @@ describe("ClanGameHistoryView", () => {
         ),
       );
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       const headers = el.querySelectorAll("h3");
       expect(headers).toHaveLength(1);
@@ -544,8 +530,7 @@ describe("ClanGameHistoryView", () => {
         Promise.resolve(okPage([makeGame({ start: yesterday.toISOString() })])),
       );
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(el.textContent).toContain("clan_modal.history_yesterday");
     });
@@ -557,8 +542,7 @@ describe("ClanGameHistoryView", () => {
         Promise.resolve(okPage([makeGame({ gameId: "abc/xyz" })])),
       );
       const el = await mountView();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       const pushSpy = vi.spyOn(history, "pushState");
       const winEvents: string[] = [];
@@ -573,7 +557,7 @@ describe("ClanGameHistoryView", () => {
         b.textContent?.includes("clan_modal.history_watch_replay"),
       )!;
       watchBtn.click();
-      await new Promise((r) => setTimeout(r, 0));
+      await flushAsync(el);
 
       expect(pushSpy).toHaveBeenCalledOnce();
       const url = pushSpy.mock.calls[0][2] as string;
@@ -598,8 +582,7 @@ describe("ClanGameHistoryView", () => {
         events.push((e as CustomEvent<ClanGameHistoryCache>).detail),
       );
       // The first load was already issued in connectedCallback — wait for it.
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       // Re-trigger by switching filter to capture the event.
       mockFetch(() =>
@@ -609,8 +592,7 @@ describe("ClanGameHistoryView", () => {
         b.textContent?.includes("clan_modal.history_type_ffa"),
       )!;
       ffaTab.click();
-      await new Promise((r) => setTimeout(r, 0));
-      await el.updateComplete;
+      await flushAsync(el);
 
       expect(events.length).toBeGreaterThan(0);
       const last = events[events.length - 1];
