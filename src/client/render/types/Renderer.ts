@@ -155,6 +155,10 @@ export interface GhostPreviewData {
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
+  /** Whether to render the cost label under the ghost (user setting). */
+  showCost: boolean;
+  /** True if the player has enough gold to afford this build (drives label color). */
+  canAfford: boolean;
   ghostRailPaths: TileRef[][]; // TileRef paths (City/Port only)
   overlappingRailroads: TileRef[]; // TileRefs containing rails in snap zone
   ownerID: number; // Player's smallID (for color)

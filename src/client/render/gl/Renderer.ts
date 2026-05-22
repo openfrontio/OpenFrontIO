@@ -30,7 +30,6 @@ import type { RadialMenuItem } from "./Events";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
-import { ConquestPopupPass } from "./passes/ConquestPopupPass";
 import { CoordinateGridPass } from "./passes/CoordinateGridPass";
 import { CrosshairPass } from "./passes/CrosshairPass";
 import { FalloutBloomPass } from "./passes/FalloutBloomPass";
@@ -56,6 +55,7 @@ import { TerrainPass } from "./passes/TerrainPass";
 import { TerritoryPass } from "./passes/TerritoryPass";
 import { TrailPass } from "./passes/TrailPass";
 import { UnitPass } from "./passes/UnitPass";
+import { WorldTextPass } from "./passes/WorldTextPass";
 import { createRenderSettings, type RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
@@ -114,7 +114,7 @@ export class GPURenderer {
   private crosshairPass: CrosshairPass;
   private railroadPass: RailroadPass;
   private barPass: BarPass;
-  private conquestPopupPass: ConquestPopupPass;
+  private worldTextPass: WorldTextPass;
   private radialMenuPass: RadialMenuPass;
   private selectionBoxPass: SelectionBoxPass;
   private moveIndicatorPass: MoveIndicatorPass;
@@ -399,8 +399,8 @@ export class GPURenderer {
     this.namePass = new NamePass(gl, header, paletteData, this.settings);
     this.fxPass = new FxPass(gl, header, this.settings);
     this.barPass = new BarPass(gl, header, this.settings);
-    this.conquestPopupPass = new ConquestPopupPass(gl, this.settings);
-    this.conquestPopupPass.setMapWidth(this.mapW);
+    this.worldTextPass = new WorldTextPass(gl, this.settings);
+    this.worldTextPass.setMapWidth(this.mapW);
     this.radialMenuPass = new RadialMenuPass(gl);
     this.selectionBoxPass = new SelectionBoxPass(gl);
     this.moveIndicatorPass = new MoveIndicatorPass(gl, this.settings);
@@ -730,7 +730,7 @@ export class GPURenderer {
   applyConquestEvents(events: ConquestFx[]): void {
     if (events.length > 0) {
       this.fxPass.applyConquestEvents(events);
-      this.conquestPopupPass.applyConquestEvents(events);
+      this.worldTextPass.applyConquestEvents(events);
     }
   }
 
@@ -741,7 +741,7 @@ export class GPURenderer {
       this.localPlayerID > 0
         ? events.filter((e) => e.smallID === this.localPlayerID)
         : events;
-    if (filtered.length > 0) this.conquestPopupPass.applyBonusEvents(filtered);
+    if (filtered.length > 0) this.worldTextPass.applyBonusEvents(filtered);
   }
 
   updateAttackRings(rings: AttackRingInput[]): void {
@@ -750,11 +750,11 @@ export class GPURenderer {
 
   clearFx(): void {
     this.fxPass.clear();
-    this.conquestPopupPass.clear();
+    this.worldTextPass.clear();
   }
   setFxTimeFn(fn: () => number): void {
     this.fxPass.setTimeFn(fn);
-    this.conquestPopupPass.setTimeFn(fn);
+    this.worldTextPass.setTimeFn(fn);
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
@@ -762,6 +762,17 @@ export class GPURenderer {
     this.railroadPass.updateGhostPreview(data);
     this.rangeCirclePass.updateGhostPreview(data);
     this.crosshairPass.updateGhostPreview(data);
+    this.worldTextPass.setGhostCostLabel(
+      data && data.showCost && data.cost > 0
+        ? {
+            tileX: data.tileX,
+            tileY: data.tileY,
+            cost: data.cost,
+            canAfford: data.canAfford,
+            canPlace: data.canBuild || data.canUpgrade,
+          }
+        : null,
+    );
     this.samGhostVisible =
       data !== null && SAM_RADIUS_GHOST_TYPES.has(data.ghostType);
     this.samRadiusPass.setVisible(
@@ -1162,8 +1173,8 @@ export class GPURenderer {
       this.fxPass.draw(cam, zoom);
     }
 
-    this.conquestPopupPass.tick();
-    this.conquestPopupPass.draw(cam, zoom);
+    this.worldTextPass.tick();
+    this.worldTextPass.draw(cam, zoom);
 
     if (this.gridView) this.coordinateGridPass.draw(cam, zoom);
     if (pe.name && !this.gridView)
@@ -1203,7 +1214,7 @@ export class GPURenderer {
     this.unitPass.dispose();
     this.namePass.dispose();
     this.fxPass.dispose();
-    this.conquestPopupPass.dispose();
+    this.worldTextPass.dispose();
     this.radialMenuPass.dispose();
     this.selectionBoxPass.dispose();
     this.moveIndicatorPass.dispose();

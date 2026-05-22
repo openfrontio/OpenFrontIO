@@ -1,9 +1,10 @@
 /**
- * ConquestPopupPass — MSDF-rendered floating text popups.
+ * WorldTextPass — MSDF-rendered text in world space.
  *
- * Renders two kinds of popups using the same MSDF atlas as NamePass:
- * - Conquest popups: "+ 500" gold text at conquered player locations (static position, fade only)
- * - Bonus popups: "+ 45K" income text at port tiles (rises upward + fades)
+ * One pass, one MSDF atlas, several callers:
+ *  - Conquest popups: "+ 500" gold text at conquered player locations (fade only)
+ *  - Bonus popups:    "+ 45K" income text at port tiles (rises upward + fades)
+ *  - Ghost cost label: persistent build-cost number under the ghost cursor
  */
 
 import type { BonusEvent, ConquestFx } from "../../types";
@@ -16,8 +17,9 @@ import { layoutString } from "./name-pass/TextLayout";
 import { CHAR_RANGE, MAX_CHARS } from "./name-pass/Types";
 
 import { assetUrl } from "src/core/AssetUrls";
-import fragSrc from "../shaders/conquest-popup/conquest-popup.frag.glsl?raw";
-import vertSrc from "../shaders/conquest-popup/conquest-popup.vert.glsl?raw";
+import { renderNumber } from "../../../Utils";
+import fragSrc from "../shaders/world-text/world-text.frag.glsl?raw";
+import vertSrc from "../shaders/world-text/world-text.vert.glsl?raw";
 
 const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 
@@ -36,6 +38,12 @@ const CONQUEST_Y_OFFSET = 8;
 /** World-space font size for conquest popups. */
 const CONQUEST_SCALE = 6;
 const CONQUEST_OUTLINE_WIDTH = 2.0;
+/** Tiles below the ghost icon center for the cost label. */
+const GHOST_COST_Y_OFFSET = 3;
+/** World-space font size — smaller than popups so it sits unobtrusively under the icon. */
+const GHOST_COST_SCALE = 4;
+/** Matches player-name outline width for a consistent UI look. */
+const GHOST_COST_OUTLINE_WIDTH = 1.4;
 
 // ---------------------------------------------------------------------------
 // Active popup tracking
@@ -62,10 +70,10 @@ function formatGold(gold: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// ConquestPopupPass
+// WorldTextPass
 // ---------------------------------------------------------------------------
 
-export class ConquestPopupPass {
+export class WorldTextPass {
   private gl: WebGL2RenderingContext;
   private program: WebGLProgram;
   private maxInstances = 512;
@@ -100,6 +108,16 @@ export class ConquestPopupPass {
 
   // Active popups (both conquest and bonus, unified)
   private active: ActivePopup[] = [];
+
+  // Persistent ghost-cost label (separate from popup lifecycle; doesn't fade).
+  private ghostCostLabel: {
+    x: number;
+    y: number;
+    text: string;
+    colorR: number;
+    colorG: number;
+    colorB: number;
+  } | null = null;
 
   // Settings reference
   private settings: RenderSettings;
@@ -277,12 +295,56 @@ export class ConquestPopupPass {
     }
   }
 
+  /**
+   * Set or clear the ghost-cost label rendered under the build cursor.
+   * `null` clears it. Called from Renderer.updateGhostPreview.
+   */
+  setGhostCostLabel(
+    label: {
+      tileX: number;
+      tileY: number;
+      cost: number;
+      canAfford: boolean;
+      canPlace: boolean;
+    } | null,
+  ): void {
+    if (label === null) {
+      this.ghostCostLabel = null;
+      return;
+    }
+    // Color precedence: red (can't afford) > gray (can't place here) > white (OK).
+    let r = 1,
+      g = 1,
+      b = 1;
+    if (!label.canAfford) {
+      g = 0.3;
+      b = 0.3;
+    } else if (!label.canPlace) {
+      r = 0.6;
+      g = 0.6;
+      b = 0.6;
+    }
+    // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
+    // pass raw tile coords here — same convention as the other popup entries.
+    this.ghostCostLabel = {
+      x: label.tileX,
+      y: label.tileY + GHOST_COST_Y_OFFSET,
+      text: renderNumber(label.cost),
+      colorR: r,
+      colorG: g,
+      colorB: b,
+    };
+  }
+
   // -------------------------------------------------------------------------
   // Tick — cull expired, rebuild instance buffer
   // -------------------------------------------------------------------------
 
   tick(): void {
-    if (this.active.length === 0) return;
+    if (this.active.length === 0 && this.ghostCostLabel === null) {
+      this.instanceCount = 0;
+      return;
+    }
     const now = this.now();
 
     // Remove expired popups (swap-remove)
@@ -336,6 +398,38 @@ export class ConquestPopupPass {
         this.instanceData[off + 7] = popup.colorB;
         this.instanceData[off + 8] = popup.scale;
         this.instanceData[off + 9] = popup.outlineWidth;
+        count++;
+      }
+    }
+
+    // Ghost cost label — persistent, no fade or rise. layoutString already
+    // centers cursors around 0, so passing the tile coord places the text
+    // centered on the tile (vertex shader adds the +0.5 tile-center offset).
+    const label = this.ghostCostLabel;
+    if (label) {
+      layoutString(
+        label.text,
+        this.glyph,
+        this.kernTable,
+        this.charCodes,
+        this.cursors,
+      );
+      const len = Math.min(label.text.length, MAX_CHARS);
+      for (let i = 0; i < len; i++) {
+        if (this.charCodes[i] === 0) continue;
+        if (count >= this.maxInstances) this.growBuffer();
+
+        const off = count * FLOATS_PER_INSTANCE;
+        this.instanceData[off + 0] = label.x;
+        this.instanceData[off + 1] = label.y;
+        this.instanceData[off + 2] = this.cursors[i];
+        this.instanceData[off + 3] = this.charCodes[i];
+        this.instanceData[off + 4] = 1;
+        this.instanceData[off + 5] = label.colorR;
+        this.instanceData[off + 6] = label.colorG;
+        this.instanceData[off + 7] = label.colorB;
+        this.instanceData[off + 8] = GHOST_COST_SCALE;
+        this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
         count++;
       }
     }

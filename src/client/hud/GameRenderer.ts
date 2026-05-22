@@ -271,7 +271,14 @@ export function createRenderer(
 
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
-    new BuildPreviewController(game, eventBus, uiState, transformHandler, view),
+    new BuildPreviewController(
+      game,
+      eventBus,
+      uiState,
+      transformHandler,
+      view,
+      userSettings,
+    ),
     new HoverHighlightController(game, eventBus, transformHandler, view),
     new StructureHighlightController(eventBus, view),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
