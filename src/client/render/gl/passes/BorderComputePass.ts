@@ -4,7 +4,7 @@
  * Runs a fullscreen quad at tile resolution (mapW × mapH) and writes to an
  * RGBA8 texture:
  *   R = border type: 0 = interior, 0.5 = normal border, 1.0 = highlight border
- *   G = ember intensity: 0–255 (pre-computed flicker value, 0 = no ember)
+ *   G = unused (was ember intensity — moved to FalloutBloomPass/FalloutLightPass)
  *   B = defense proximity: 1.0 if border tile is within range of same-owner defense post
  *
  * Both MapOverlayPass (daytime) and the night stamp overlay read this buffer
@@ -48,10 +48,6 @@ export class BorderComputePass {
   private uMapSize: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightThicken: WebGLUniformLocation;
-  private uTick: WebGLUniformLocation;
-  private uEmberThresholdUnowned: WebGLUniformLocation;
-  private uEmberThresholdOwned: WebGLUniformLocation;
-  private uEmberFlickerSpeed: WebGLUniformLocation;
   private uDefensePosts: WebGLUniformLocation;
   private uDefensePostCount: WebGLUniformLocation;
   private uDefensePostRange: WebGLUniformLocation;
@@ -91,19 +87,6 @@ export class BorderComputePass {
       this.program,
       "uHighlightThicken",
     )!;
-    this.uTick = gl.getUniformLocation(this.program, "uTick")!;
-    this.uEmberThresholdUnowned = gl.getUniformLocation(
-      this.program,
-      "uEmberThresholdUnowned",
-    )!;
-    this.uEmberThresholdOwned = gl.getUniformLocation(
-      this.program,
-      "uEmberThresholdOwned",
-    )!;
-    this.uEmberFlickerSpeed = gl.getUniformLocation(
-      this.program,
-      "uEmberFlickerSpeed",
-    )!;
     this.uDefensePosts = gl.getUniformLocation(this.program, "uDefensePosts")!;
     this.uDefensePostCount = gl.getUniformLocation(
       this.program,
@@ -131,7 +114,7 @@ export class BorderComputePass {
     });
 
     // --- RGBA8 border buffer at tile resolution ---
-    // R = border type, G = ember intensity, B = defense proximity flag
+    // R = border type, G = unused, B = defense proximity flag
     this.borderTex = createTexture2D(gl, {
       width: mapW,
       height: mapH,
@@ -223,7 +206,7 @@ export class BorderComputePass {
    * Compute border flags for the current frame. Call before MapOverlayPass and stamp overlay.
    * Leaves the GL state with its own FBO bound — caller must restore FBO and viewport.
    */
-  draw(tick: number): void {
+  draw(): void {
     if (!this.dirty) return;
     this.dirty = false;
 
@@ -238,10 +221,6 @@ export class BorderComputePass {
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1i(this.uHighlightThicken, Math.floor(mo.highlightThicken));
-    gl.uniform1f(this.uTick, tick);
-    gl.uniform1f(this.uEmberThresholdUnowned, mo.emberThresholdUnowned);
-    gl.uniform1f(this.uEmberThresholdOwned, mo.emberThresholdOwned);
-    gl.uniform1f(this.uEmberFlickerSpeed, mo.emberFlickerSpeed);
     gl.uniform4fv(this.uDefensePosts, this.defensePostData);
     gl.uniform1i(this.uDefensePostCount, this.defensePostCount);
     gl.uniform1f(this.uDefensePostRange, mo.defensePostRange);
