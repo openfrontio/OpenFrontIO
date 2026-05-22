@@ -137,23 +137,6 @@ export const JoinClanResponseSchema = z.object({
 });
 export type JoinClanResponse = z.infer<typeof JoinClanResponseSchema>;
 
-export const ClanStatsSchema = z.object({
-  clanTag: RequiredClanTagSchema,
-  games: z.number(),
-  wins: z.number(),
-  losses: z.number(),
-  stats: ClanMemberStatsSchema.optional(),
-  teamTypeWL: z.record(
-    z.string(),
-    z.object({ wl: z.tuple([z.number(), z.number()]) }),
-  ),
-  teamCountWL: z.record(
-    z.string(),
-    z.object({ wl: z.tuple([z.number(), z.number()]) }),
-  ),
-});
-export type ClanStats = z.infer<typeof ClanStatsSchema>;
-
 export const ClanGamePlayerSchema = z.object({
   publicId: z.string(),
   username: z.string(),
@@ -175,7 +158,7 @@ export type ClanGameFilter = z.infer<typeof ClanGameFilterSchema>;
 export const ClanGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
-  durationSeconds: z.number().nonnegative(),
+  durationSeconds: z.number().int().nonnegative(),
   map: z.string().optional(),
   mode: z.string().optional(),
   // playerTeams is `null` (not absent) for FFA / non-team games — use
@@ -185,7 +168,7 @@ export const ClanGameSchema = z.object({
   result: ClanGameResultSchema.optional(),
   // Mirrors games.num_players nullability — historical rows may not
   // carry a value. Use `.nullish()` so wire `null` parses cleanly.
-  totalPlayers: z.number().nonnegative().nullish(),
+  totalPlayers: z.number().int().nonnegative().nullish(),
   clanPlayers: ClanGamePlayerSchema.array(),
 });
 export type ClanGame = z.infer<typeof ClanGameSchema>;

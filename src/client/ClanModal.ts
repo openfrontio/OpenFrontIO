@@ -69,6 +69,10 @@ export class ClanModal extends BaseModal {
     pendingRequestCount: number;
   } | null = null;
 
+  // Single-clan cache: switching clans within one modal session drops
+  // it (see `openDetail`), so a user who clan-hops loses their filter
+  // selection and accumulated scroll on the previous clan. Keyed-by-tag
+  // would persist across hops if that becomes desired.
   private gameHistoryCache: ClanGameHistoryCache | null = null;
   private previousListTab: ListTab = "my-clans";
 
@@ -458,6 +462,11 @@ export class ClanModal extends BaseModal {
 
   private openDetail(tag: string) {
     if (this.selectedClanTag !== tag) {
+      // History cache is per-clan (see `gameHistoryCache` declaration),
+      // so it must be cleared on tag change. `detailCache` is left
+      // alone — its `tag` field is checked at render time and the
+      // detail view falls back to a fresh fetch when it doesn't match,
+      // so an explicit null here would be redundant.
       this.gameHistoryCache = null;
     }
     // Remember which list tab the user was on so the back button can

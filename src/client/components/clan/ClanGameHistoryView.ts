@@ -1,6 +1,6 @@
 import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../../core/game/Game";
+import { GameMapType, GameMode } from "../../../core/game/Game";
 import {
   type ClanGame,
   type ClanGameFilter,
@@ -56,6 +56,11 @@ export class ClanGameHistoryView extends LitElement {
   private asyncGeneration = 0;
   private sentinel: HTMLElement | null = null;
   private observer: IntersectionObserver | null = null;
+  // Memoise grouping against the current `games` reference so re-renders
+  // triggered by unrelated state (e.g. `loadingMore` flipping) don't
+  // re-walk the accumulated list each time.
+  private groupedFor: ClanGame[] | null = null;
+  private grouped: DayGroup[] = [];
 
   connectedCallback() {
     super.connectedCallback();
@@ -271,8 +276,13 @@ export class ClanGameHistoryView extends LitElement {
 
     // Group consecutive games by their start day so the user gets a sense
     // of when each batch was played without us having to render N
-    // standalone date pills.
-    const groups = groupGamesByDay(this.games);
+    // standalone date pills. Cached against the `games` reference; `load()`
+    // always assigns a fresh array, so identity comparison is safe.
+    if (this.groupedFor !== this.games) {
+      this.grouped = groupGamesByDay(this.games);
+      this.groupedFor = this.games;
+    }
+    const groups = this.grouped;
     return html`
       <div class="space-y-5">
         ${groups.map(
@@ -289,7 +299,7 @@ export class ClanGameHistoryView extends LitElement {
                 </h3>
                 <span class="h-px flex-1 bg-white/10"></span>
               </div>
-              <div class="columns-1 lg:columns-2 gap-3">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 ${group.games.map((game) => this.renderGameRow(game))}
               </div>
             </div>
@@ -324,10 +334,13 @@ export class ClanGameHistoryView extends LitElement {
         </div>
       `;
     }
-    // Sentinel element drives auto-load; the spinner is only shown when
-    // we're actively fetching to avoid flashing for offscreen sentinels.
+    // Sentinel drives auto-load; the spinner is shown adjacent to it (not
+    // *as* it) so the sentinel node identity stays stable across pages —
+    // otherwise every fetch tears down and recreates the IntersectionObserver
+    // (the spinner replacing the sentinel changed the queried node).
     return html`
-      <div data-scroll-sentinel class="py-3">
+      <div class="py-3">
+        <div data-scroll-sentinel aria-hidden="true" class="h-px"></div>
         ${this.loadingMore ? renderLoadingSpinner() : ""}
       </div>
     `;
@@ -347,11 +360,16 @@ export class ClanGameHistoryView extends LitElement {
       }
     }
     const mapDisplayName = game.map ? (getMapName(game.map) ?? game.map) : null;
+    // Partition once per row so renderResultBadge + renderPlayerLists
+    // don't each re-walk clanPlayers (matters in 50v50 lobbies).
+    const winners: ClanGame["clanPlayers"] = [];
+    const losers: ClanGame["clanPlayers"] = [];
+    for (const p of game.clanPlayers) {
+      (p.won ? winners : losers).push(p);
+    }
 
     return html`
-      <div
-        class="bg-white/5 border border-white/10 rounded-xl overflow-hidden mb-3 break-inside-avoid"
-      >
+      <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
         ${mapWebpPath
           ? html`<div
               class="relative w-full aspect-[3/1] overflow-hidden bg-surface"
@@ -360,6 +378,8 @@ export class ClanGameHistoryView extends LitElement {
                 src=${mapWebpPath}
                 alt=${mapDisplayName ?? ""}
                 draggable="false"
+                loading="lazy"
+                decoding="async"
                 class="w-full h-full object-cover"
               />
               <div
@@ -373,7 +393,7 @@ export class ClanGameHistoryView extends LitElement {
                   </div>`
                 : ""}
               <div class="absolute top-2 right-2">
-                ${this.renderResultBadge(game)}
+                ${this.renderResultBadge(game, winners)}
               </div>
               <div
                 class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
@@ -424,7 +444,7 @@ export class ClanGameHistoryView extends LitElement {
             renderDuration(game.durationSeconds),
           )}
         </div>
-        ${this.renderPlayerLists(game)}
+        ${this.renderPlayerLists(game, winners, losers)}
       </div>
     `;
   }
@@ -447,14 +467,17 @@ export class ClanGameHistoryView extends LitElement {
   // misleading — 19 lost. The server now stamps `won` per clan player
   // so we count exactly. Team/HvN games still surface Victory/Defeat
   // when the clan plays as a unit (everyone on the winning team won).
-  private renderResultBadge(game: ClanGame): TemplateResult {
+  private renderResultBadge(
+    game: ClanGame,
+    winners: ClanGame["clanPlayers"],
+  ): TemplateResult {
     const result = game.result;
     if (!result) return html``;
 
     const clanCount = game.clanPlayers.length;
-    const winCount = game.clanPlayers.filter((p) => p.won).length;
+    const winCount = winners.length;
     const isIndividual =
-      game.mode === "Free For All" ||
+      isFfa(game) ||
       (game.rankedType !== undefined && game.rankedType !== "unranked");
     const isPartial =
       isIndividual && clanCount > 1 && winCount > 0 && winCount < clanCount;
@@ -483,10 +506,12 @@ export class ClanGameHistoryView extends LitElement {
   // Split the clan roster into winners and non-winners so the user can
   // tell at a glance which clan-mates actually won the match — a single
   // mixed list with crowns was hard to scan, especially in 50v50 lobbies.
-  private renderPlayerLists(game: ClanGame): TemplateResult | string {
+  private renderPlayerLists(
+    game: ClanGame,
+    winners: ClanGame["clanPlayers"],
+    losers: ClanGame["clanPlayers"],
+  ): TemplateResult | string {
     if (game.clanPlayers.length === 0) return "";
-    const winners = game.clanPlayers.filter((p) => p.won);
-    const losers = game.clanPlayers.filter((p) => !p.won);
     return html`
       ${winners.length > 0
         ? this.renderPlayerSection(
@@ -570,7 +595,7 @@ export class ClanGameHistoryView extends LitElement {
         ranked: game.rankedType,
       });
     }
-    if (game.mode === "Free For All") {
+    if (isFfa(game)) {
       return translateText("clan_modal.history_type_ffa");
     }
     const pt = game.playerTeams;
@@ -587,6 +612,22 @@ export class ClanGameHistoryView extends LitElement {
     }
     return translateText("clan_modal.history_type_team");
   }
+}
+
+// FFA is "no team grouping". Match the server's `GameMode.FFA` enum
+// literal first, but fall back to absent `playerTeams` so a row that
+// arrives without the mode field (older row, server bug) still labels
+// as FFA instead of silently degrading to "Team" — which would
+// disagree with the FFA filter bucket that already routed it here.
+function isFfa(game: ClanGame): boolean {
+  if (game.mode === GameMode.FFA) return true;
+  if (
+    game.mode === undefined &&
+    (game.playerTeams === null || game.playerTeams === undefined)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function formatAbsoluteTime(iso: string): string {

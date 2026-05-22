@@ -63,6 +63,7 @@ export class ClanDetailView extends LitElement {
   @state() private loading = false;
   @state() private actionPending = false;
   @state() private allStatsExpanded = false;
+  @state() private membersLoadInFlight = false;
   private memberSearch = "";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private asyncGeneration = 0;
@@ -106,9 +107,20 @@ export class ClanDetailView extends LitElement {
     this.pendingRequestCount = 0;
     this.memberSearch = "";
 
-    // Overview-tab fetch only: clan info. Members are deferred until
-    // the user actually opens the Members tab (see willUpdate).
-    const detail = await fetchClanDetail(this.clanTag);
+    // When the user lands directly on the Members tab (deep link / cached
+    // activeTab), fire both fetches in parallel — otherwise sequencing
+    // adds a full members RTT to the visible loading time. The Overview
+    // tab waits for detail only; willUpdate kicks off members on tab
+    // switch later.
+    const goingToMembers =
+      this.detailTab === "members" && this.myClanRoles.has(this.clanTag);
+    const detailPromise = fetchClanDetail(this.clanTag);
+    if (goingToMembers) {
+      // Floating; loadInitialMembers's own asyncGeneration + tag guards
+      // cancel cleanly if the user navigates away mid-flight.
+      void this.loadInitialMembers();
+    }
+    const detail = await detailPromise;
 
     if (gen !== this.asyncGeneration) return;
     this.loading = false;
@@ -123,8 +135,12 @@ export class ClanDetailView extends LitElement {
 
     this.selectedClan = detail;
     this.memberPage = 1;
-    this.members = [];
-    this.membersTotal = 0;
+    if (!goingToMembers) {
+      // Members tab will populate these via loadInitialMembers; the
+      // Overview tab doesn't need them.
+      this.members = [];
+      this.membersTotal = 0;
+    }
     this.myRole = this.myClanRoles.get(this.clanTag) ?? null;
 
     this.dispatchEvent(
@@ -140,20 +156,18 @@ export class ClanDetailView extends LitElement {
         composed: true,
       }),
     );
-
-    if (this.detailTab === "members" && this.myRole !== null) {
-      this.loadInitialMembers();
-    }
   }
-
-  @state() private membersLoadInFlight = false;
 
   private async loadInitialMembers() {
     if (this.membersLoadInFlight) return;
     if (!this.clanTag) return;
     if (!this.myClanRoles.has(this.clanTag)) return;
     if (this.members.length > 0) return;
-    const gen = ++this.asyncGeneration;
+    // Don't share `asyncGeneration` with loadDetail — these two run
+    // concurrently when the user lands on the Members tab directly, and
+    // bumping the shared counter would cancel the parent. The
+    // `membersLoadInFlight` flag dedupes concurrent invocations and the
+    // `requestedTag` check handles tag navigation.
     const requestedTag = this.clanTag;
     this.membersLoadInFlight = true;
     try {
@@ -164,7 +178,6 @@ export class ClanDetailView extends LitElement {
         this.memberSort,
         this.memberOrder,
       );
-      if (gen !== this.asyncGeneration) return;
       if (requestedTag !== this.clanTag) return;
       if (!res) return;
       this.members = res.results;

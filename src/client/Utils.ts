@@ -231,11 +231,13 @@ export function getModifierLabels(
 }
 
 export function renderDuration(totalSeconds: number): string {
-  if (totalSeconds <= 0)
-    return `0${translateText("common.duration_second_short")}`;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  // Floor once so fractional inputs don't leak through to the seconds
+  // component (e.g. `0.5` → `"0.5s"`).
+  const whole = Math.floor(totalSeconds);
+  if (whole <= 0) return `0${translateText("common.duration_second_short")}`;
+  const hours = Math.floor(whole / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const seconds = whole % 60;
   // Build largest-first, dropping trailing-zero components so 3600s reads
   // as "1h" rather than "1h 0min 0s", and 60s as "1min" rather than
   // "1min 0s". Sub-minute durations still surface seconds.

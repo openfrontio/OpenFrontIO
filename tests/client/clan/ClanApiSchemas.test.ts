@@ -9,7 +9,6 @@ import {
   ClanInfoSchema,
   ClanJoinRequestSchema,
   ClanMemberSchema,
-  ClanStatsSchema,
 } from "../../../src/core/ClanApiSchemas";
 
 describe("ClanInfoSchema", () => {
@@ -155,70 +154,6 @@ describe("ClanJoinRequestSchema", () => {
       createdAt: "2024-06-10",
     });
     expect(result.success).toBe(false);
-  });
-});
-
-describe("ClanStatsSchema", () => {
-  const validStats = {
-    clanTag: "ABcd1",
-    games: 10,
-    wins: 7,
-    losses: 3,
-    stats: {
-      total: { wins: 7, losses: 3 },
-      ffa: { wins: 3, losses: 2 },
-      team: { wins: 2, losses: 1 },
-      hvn: { wins: 1, losses: 0 },
-      duos: { wins: 1, losses: 0 },
-      trios: { wins: 0, losses: 1 },
-      quads: { wins: 1, losses: 0 },
-      "2": { wins: 1, losses: 0 },
-      "3": { wins: 0, losses: 1 },
-      "4": { wins: 1, losses: 0 },
-      "5": { wins: 0, losses: 0 },
-      "6": { wins: 0, losses: 0 },
-      "7": { wins: 0, losses: 0 },
-      ranked: { wins: 1, losses: 0 },
-      "1v1": { wins: 1, losses: 0 },
-    },
-    teamTypeWL: { ffa: { wl: [7, 3] } },
-    teamCountWL: { "2": { wl: [4, 1] } },
-  };
-
-  it("accepts a valid clan tag (2-5 alphanumeric chars)", () => {
-    for (const tag of ["AB", "abc12", "XYZAB"]) {
-      const result = ClanStatsSchema.safeParse({ ...validStats, clanTag: tag });
-      expect(result.success, `tag "${tag}" should be valid`).toBe(true);
-    }
-  });
-
-  it("rejects tags that are too short", () => {
-    const result = ClanStatsSchema.safeParse({ ...validStats, clanTag: "A" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects tags that are too long", () => {
-    const result = ClanStatsSchema.safeParse({
-      ...validStats,
-      clanTag: "TOOLNG",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects tags with non-alphanumeric characters", () => {
-    const result = ClanStatsSchema.safeParse({
-      ...validStats,
-      clanTag: "AB-CD",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts a payload with stats omitted", () => {
-    const { stats: _omitted, ...withoutStats } = validStats;
-    void _omitted;
-    const result = ClanStatsSchema.safeParse(withoutStats);
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.stats).toBeUndefined();
   });
 });
 

@@ -63,6 +63,10 @@ export function clanApiMockFactory() {
       page: 1,
       limit: 20,
     })),
+    fetchClanGames: vi.fn(async () => ({
+      results: [],
+      nextCursor: null,
+    })),
   };
 }
 

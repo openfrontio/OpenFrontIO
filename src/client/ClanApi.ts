@@ -34,7 +34,6 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
-  ClanStats,
 } from "../core/ClanApiSchemas";
 
 async function clanFetch(
