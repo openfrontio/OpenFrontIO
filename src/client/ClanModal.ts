@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { type ClanInfo, type ClanMember, type ClanStats } from "./ClanApi";
+import { type ClanInfo, type ClanMember } from "./ClanApi";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
 import "./components/clan/ClanBrowseView";
@@ -72,7 +72,6 @@ export class ClanModal extends BaseModal {
     members: ClanMember[];
     membersTotal: number;
     pendingRequestCount: number;
-    stats: ClanStats | null;
   } | null = null;
 
   private gameHistoryCache: ClanGameHistoryCache | null = null;
@@ -380,7 +379,6 @@ export class ClanModal extends BaseModal {
             members: ClanMember[];
             membersTotal: number;
             pendingRequestCount: number;
-            stats: ClanStats | null;
           }>,
         ) => {
           this.selectedClan = e.detail.clan;
@@ -390,7 +388,25 @@ export class ClanModal extends BaseModal {
             members: e.detail.members,
             membersTotal: e.detail.membersTotal,
             pendingRequestCount: e.detail.pendingRequestCount,
-            stats: e.detail.stats,
+          };
+        }}
+        @members-loaded=${(
+          e: CustomEvent<{
+            members: ClanMember[];
+            membersTotal: number;
+            pendingRequestCount: number;
+          }>,
+        ) => {
+          if (
+            !this.detailCache ||
+            this.detailCache.tag !== this.selectedClanTag
+          )
+            return;
+          this.detailCache = {
+            ...this.detailCache,
+            members: e.detail.members,
+            membersTotal: e.detail.membersTotal,
+            pendingRequestCount: e.detail.pendingRequestCount,
           };
         }}
         @navigate-manage=${() => (this.view = "manage")}

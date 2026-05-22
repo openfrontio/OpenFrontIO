@@ -6,10 +6,8 @@ import {
   type ClanMember,
   type ClanMemberOrder,
   type ClanMemberSort,
-  type ClanStats,
   fetchClanDetail,
   fetchClanMembers,
-  fetchClanStats,
   joinClan,
   leaveClan,
 } from "../../ClanApi";
@@ -20,7 +18,6 @@ import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
-  renderClanWL,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -50,7 +47,6 @@ export class ClanDetailView extends LitElement {
     members: ClanMember[];
     membersTotal: number;
     pendingRequestCount: number;
-    stats: ClanStats | null;
   } | null = null;
   @property() detailTab: "overview" | "members" = "overview";
 
@@ -64,7 +60,6 @@ export class ClanDetailView extends LitElement {
   @state() private memberSort: ClanMemberSort = "default";
   @state() private memberOrder: ClanMemberOrder = "asc";
   @state() private pendingRequestCount = 0;
-  @state() private clanStats: ClanStats | null = null;
   @state() private loading = false;
   @state() private actionPending = false;
   @state() private allStatsExpanded = false;
@@ -86,7 +81,6 @@ export class ClanDetailView extends LitElement {
     this.members = cache.members;
     this.membersTotal = cache.membersTotal;
     this.pendingRequestCount = cache.pendingRequestCount;
-    this.clanStats = cache.stats;
     this.memberPage = 1;
     const knownRole = this.myClanRoles.get(this.clanTag);
     this.myRole = knownRole ?? null;
@@ -112,23 +106,11 @@ export class ClanDetailView extends LitElement {
     this.pendingRequestCount = 0;
     this.memberSearch = "";
 
-    const isMember = this.myClanRoles.has(this.clanTag);
-    const [detail, membersRes, stats] = await Promise.all([
-      fetchClanDetail(this.clanTag),
-      isMember
-        ? fetchClanMembers(
-            this.clanTag,
-            1,
-            this.membersPerPage,
-            this.memberSort,
-            this.memberOrder,
-          )
-        : Promise.resolve(false as const),
-      fetchClanStats(this.clanTag),
-    ]);
+    // Overview-tab fetch only: clan info. Members are deferred until
+    // the user actually opens the Members tab (see willUpdate).
+    const detail = await fetchClanDetail(this.clanTag);
 
     if (gen !== this.asyncGeneration) return;
-    this.clanStats = stats || null;
     this.loading = false;
 
     if (!detail) {
@@ -141,25 +123,9 @@ export class ClanDetailView extends LitElement {
 
     this.selectedClan = detail;
     this.memberPage = 1;
-
-    if (membersRes) {
-      this.members = membersRes.results;
-      this.membersTotal = membersRes.total;
-      this.pendingRequestCount = membersRes.pendingRequests ?? 0;
-      const knownRole = this.myClanRoles.get(this.clanTag);
-      if (knownRole) {
-        this.myRole = knownRole;
-      } else {
-        const me = this.myPublicId
-          ? membersRes.results.find((m) => m.publicId === this.myPublicId)
-          : null;
-        this.myRole = me ? me.role : null;
-      }
-    } else {
-      this.members = [];
-      this.membersTotal = 0;
-      this.myRole = null;
-    }
+    this.members = [];
+    this.membersTotal = 0;
+    this.myRole = this.myClanRoles.get(this.clanTag) ?? null;
 
     this.dispatchEvent(
       new CustomEvent("detail-loaded", {
@@ -169,12 +135,71 @@ export class ClanDetailView extends LitElement {
           members: this.members,
           membersTotal: this.membersTotal,
           pendingRequestCount: this.pendingRequestCount,
-          stats: this.clanStats,
         },
         bubbles: true,
         composed: true,
       }),
     );
+
+    if (this.detailTab === "members" && this.myRole !== null) {
+      this.loadInitialMembers();
+    }
+  }
+
+  private membersLoadInFlight = false;
+
+  private async loadInitialMembers() {
+    if (this.membersLoadInFlight) return;
+    if (!this.clanTag) return;
+    if (!this.myClanRoles.has(this.clanTag)) return;
+    if (this.members.length > 0) return;
+    this.membersLoadInFlight = true;
+    try {
+      const res = await fetchClanMembers(
+        this.clanTag,
+        1,
+        this.membersPerPage,
+        this.memberSort,
+        this.memberOrder,
+      );
+      if (!res) return;
+      this.members = res.results;
+      this.membersTotal = res.total;
+      this.pendingRequestCount = res.pendingRequests ?? 0;
+      this.memberPage = 1;
+
+      const knownRole = this.myClanRoles.get(this.clanTag);
+      if (!knownRole && this.myPublicId) {
+        const me = res.results.find((m) => m.publicId === this.myPublicId);
+        if (me) this.myRole = me.role;
+      }
+
+      this.dispatchEvent(
+        new CustomEvent("members-loaded", {
+          detail: {
+            members: this.members,
+            membersTotal: this.membersTotal,
+            pendingRequestCount: this.pendingRequestCount,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } finally {
+      this.membersLoadInFlight = false;
+    }
+  }
+
+  protected willUpdate(changed: Map<string, unknown>) {
+    if (
+      (changed.has("detailTab") || changed.has("selectedClan")) &&
+      this.detailTab === "members" &&
+      this.selectedClan &&
+      this.members.length === 0 &&
+      this.myClanRoles.has(this.clanTag)
+    ) {
+      this.loadInitialMembers();
+    }
   }
 
   private async loadMemberPage(page: number) {
@@ -347,8 +372,6 @@ export class ClanDetailView extends LitElement {
               : translateText("clan_modal.invite_only"),
           )}
         </div>
-
-        ${this.clanStats ? renderClanWL(this.clanStats) : ""}
 
         <div class="flex flex-wrap gap-3">
           ${this.renderActionButtons(

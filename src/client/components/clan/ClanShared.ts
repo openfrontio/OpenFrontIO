@@ -5,7 +5,6 @@ import type {
   ClanMemberOrder,
   ClanMemberSort,
   ClanMemberStats,
-  ClanStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
 import "./ClanStatsBreakdown";
@@ -78,18 +77,6 @@ export function renderStat(label: string, value: string): TemplateResult {
         ${label}
       </div>
       <div class="text-white font-bold text-sm truncate">${value}</div>
-    </div>
-  `;
-}
-
-export function renderClanWL(stats: ClanStats): TemplateResult | string {
-  if (stats.games === 0 || !stats.stats) return "";
-  return html`
-    <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-3">
-      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
-        ${translateText("clan_modal.statistics")}
-      </h3>
-      <clan-stats-breakdown .stats=${stats.stats}></clan-stats-breakdown>
     </div>
   `;
 }

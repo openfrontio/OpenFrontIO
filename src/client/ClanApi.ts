@@ -14,8 +14,6 @@ import {
   ClanMembersResponseSchema,
   type ClanRequestsResponse,
   ClanRequestsResponseSchema,
-  type ClanStats,
-  ClanStatsSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
 import { getApiBase } from "./Api";
@@ -84,26 +82,6 @@ export async function fetchClanLeaderboard(): Promise<
     return parsed.data;
   } catch (err) {
     console.warn("fetchClanLeaderboard: request failed", err);
-    return false;
-  }
-}
-
-export async function fetchClanStats(tag: string): Promise<ClanStats | false> {
-  try {
-    const res = await fetch(
-      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}`,
-      { headers: { Accept: "application/json" } },
-    );
-    if (!res.ok) return false;
-    const json = await res.json();
-    const parsed = ClanStatsSchema.safeParse(json?.clan);
-    if (!parsed.success) {
-      console.warn("fetchClanStats: Zod validation failed", parsed.error);
-      return false;
-    }
-    return parsed.data;
-  } catch (err) {
-    console.warn("fetchClanStats: request failed", err);
     return false;
   }
 }

@@ -14,7 +14,6 @@ import {
   fetchClanMembers,
   fetchClanRequests,
   fetchClans,
-  fetchClanStats,
 } from "../../../src/client/ClanApi";
 
 const okJson = (data: unknown, status = 200) => ({
@@ -68,61 +67,6 @@ describe("fetchClanLeaderboard", () => {
   it("returns false when Zod validation fails", async () => {
     mockFetch(() => okJson({ start: "bad-date", end: "bad-date", clans: [] }));
     const result = await fetchClanLeaderboard();
-    expect(result).toBe(false);
-  });
-});
-
-describe("fetchClanStats", () => {
-  const clanStats = {
-    clanTag: "TEST",
-    games: 20,
-    wins: 15,
-    losses: 5,
-    stats: {
-      total: { wins: 15, losses: 5 },
-      ffa: { wins: 7, losses: 3 },
-      team: { wins: 4, losses: 1 },
-      hvn: { wins: 1, losses: 0 },
-      duos: { wins: 2, losses: 0 },
-      trios: { wins: 1, losses: 1 },
-      quads: { wins: 1, losses: 0 },
-      "2": { wins: 2, losses: 0 },
-      "3": { wins: 1, losses: 1 },
-      "4": { wins: 1, losses: 0 },
-      "5": { wins: 0, losses: 0 },
-      "6": { wins: 0, losses: 0 },
-      "7": { wins: 0, losses: 0 },
-      ranked: { wins: 3, losses: 1 },
-      "1v1": { wins: 3, losses: 1 },
-    },
-    teamTypeWL: { ffa: { wl: [15, 5] } },
-    teamCountWL: { "2": { wl: [10, 3] } },
-  };
-
-  it("returns parsed data from json.clan on success", async () => {
-    mockFetch(() => okJson({ clan: clanStats }));
-    const result = await fetchClanStats("TEST");
-    expect(result).toEqual(clanStats);
-  });
-
-  it("returns false when json.clan is missing", async () => {
-    mockFetch(() => okJson({}));
-    const result = await fetchClanStats("TEST");
-    expect(result).toBe(false);
-  });
-
-  it("returns false on non-ok response", async () => {
-    mockFetch(() => failRes(404));
-    const result = await fetchClanStats("TEST");
-    expect(result).toBe(false);
-  });
-
-  it("returns false on network error", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.reject(new Error("offline"))),
-    );
-    const result = await fetchClanStats("TEST");
     expect(result).toBe(false);
   });
 });
