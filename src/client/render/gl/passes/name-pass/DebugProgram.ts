@@ -5,12 +5,15 @@
  * The shared playerDataTex is passed in but not owned/deleted.
  */
 
-import flagAtlasMeta from "resources/atlases/flag-atlas-meta.json";
 import type { RenderSettings } from "../../RenderSettings";
 import debugBoxFragSrc from "../../shaders/name/debug-box.frag.glsl?raw";
 import debugBoxVertSrc from "../../shaders/name/debug-box.vert.glsl?raw";
 import { createProgram } from "../../utils/GlUtils";
 import type { ParsedAtlas } from "./Types";
+
+// Must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts.
+const FLAG_CELL_W = 128;
+const FLAG_CELL_H = 85;
 
 export class DebugProgram {
   private gl: WebGL2RenderingContext;
@@ -35,7 +38,6 @@ export class DebugProgram {
     this.playerDataTex = playerDataTex;
     this.maxPlayers = maxPlayers;
 
-    const fm = flagAtlasMeta as any;
     this.program = createProgram(gl, debugBoxVertSrc, debugBoxFragSrc);
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPlayerData"), 0);
@@ -44,8 +46,14 @@ export class DebugProgram {
       atlas.fontSize,
     );
     gl.uniform1f(gl.getUniformLocation(this.program, "uFontBase")!, atlas.base);
-    gl.uniform1f(gl.getUniformLocation(this.program, "uFlagCellW")!, fm.cellW);
-    gl.uniform1f(gl.getUniformLocation(this.program, "uFlagCellH")!, fm.cellH);
+    gl.uniform1f(
+      gl.getUniformLocation(this.program, "uFlagCellW")!,
+      FLAG_CELL_W,
+    );
+    gl.uniform1f(
+      gl.getUniformLocation(this.program, "uFlagCellH")!,
+      FLAG_CELL_H,
+    );
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;

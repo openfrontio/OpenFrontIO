@@ -30,7 +30,6 @@ import { createFullscreenQuad } from "../../utils/GlUtils";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
-  buildFlagLookup,
   buildGlyphTables,
   buildKernTable,
   parseAtlasData,
@@ -42,6 +41,7 @@ import {
   buildStringTex,
 } from "./DataTextures";
 import { DebugProgram } from "./DebugProgram";
+import { FlagAtlasArray } from "./FlagAtlasArray";
 import { IconProgram } from "./IconProgram";
 import { StatusIconProgram } from "./StatusIconProgram";
 import { formatTroops, layoutString } from "./TextLayout";
@@ -78,8 +78,10 @@ export class NamePass {
   private slots: Map<string, PlayerSlot> = new Map();
   private maxPlayers: number;
   private playerColors: Map<string, [number, number, number]> = new Map();
-  private flagCodeToIndex: Map<string, number>;
+  private flagAtlas: FlagAtlasArray;
   private emojiCharToIndex: Map<string, number>;
+  /** Slots waiting on a flag URL → set of slots that want that URL's layer. */
+  private slotsWaitingForFlag = new Map<string, Set<PlayerSlot>>();
 
   // CPU-side mirrors — batched upload in draw()
   private cpuPlayerData: Float32Array;
@@ -112,8 +114,21 @@ export class NamePass {
     const atlas = parseAtlasData();
     this.glyph = buildGlyphTables(atlas.chars);
     this.kernTable = buildKernTable(atlas.kernings);
-    this.flagCodeToIndex = buildFlagLookup();
     this.emojiCharToIndex = buildEmojiLookup();
+
+    // Runtime flag-image manager (TEXTURE_2D_ARRAY of player flags, fetched
+    // on demand from URLs). When a flag finishes loading, flip every slot
+    // that wanted that URL from layer -1 to the resolved layer.
+    this.flagAtlas = new FlagAtlasArray(gl, (url, layer) => {
+      const waiting = this.slotsWaitingForFlag.get(url);
+      if (!waiting) return;
+      this.slotsWaitingForFlag.delete(url);
+      for (const slot of waiting) {
+        if (slot.flagUrl !== url) continue; // player changed flag while we waited
+        slot.flagLayerIdx = layer;
+        this.writePlayerDataRow(slot);
+      }
+    });
 
     // Build player lookups and extract territory colors from palette
     this.playerByID = new Map();
@@ -157,6 +172,7 @@ export class NamePass {
       gl,
       atlas,
       this.playerDataTex,
+      this.flagAtlas,
       this.maxPlayers,
     );
     this.statusIconProgram = new StatusIconProgram(
@@ -192,6 +208,28 @@ export class NamePass {
     }
   }
 
+  /**
+   * Request the texture layer for a slot's flag (called once at slot creation).
+   * If the image is already loaded the layer index is set immediately; otherwise
+   * the slot joins a wait list and is updated when the image arrives.
+   */
+  private resolveSlotFlag(slot: PlayerSlot): void {
+    const url = slot.flagUrl;
+    if (!url) return;
+    this.flagAtlas.request(url);
+    const layer = this.flagAtlas.getLayer(url);
+    if (layer >= 0) {
+      slot.flagLayerIdx = layer;
+      return;
+    }
+    let waiting = this.slotsWaitingForFlag.get(url);
+    if (!waiting) {
+      waiting = new Set();
+      this.slotsWaitingForFlag.set(url, waiting);
+    }
+    waiting.add(slot);
+  }
+
   // -------------------------------------------------------------------------
   // Name updates — called by GPURenderer
   // -------------------------------------------------------------------------
@@ -223,8 +261,7 @@ export class NamePass {
     let nextSlotIndex = 0;
     for (const p of this.playerByID.values()) {
       if (!this.slots.has(p.id)) {
-        const flagCode = p.flag;
-        this.slots.set(p.id, {
+        const slot: PlayerSlot = {
           index: nextSlotIndex++,
           playerID: p.id,
           static: p,
@@ -239,9 +276,8 @@ export class NamePass {
           nameLen: 0,
           troopLen: 0,
           lastTroopStr: "",
-          flagAtlasIdx: flagCode
-            ? (this.flagCodeToIndex.get(flagCode) ?? -1)
-            : -1,
+          flagUrl: p.flag,
+          flagLayerIdx: -1,
           emojiAtlasIdx: -1,
           nameHalfWidth: 0,
           crown: false,
@@ -255,7 +291,9 @@ export class NamePass {
           nukeTargetsMe: false,
           traitorRemainingTicks: 0,
           allianceFraction: 0,
-        });
+        };
+        this.slots.set(p.id, slot);
+        this.resolveSlotFlag(slot);
       } else {
         nextSlotIndex = Math.max(
           nextSlotIndex,
@@ -457,8 +495,8 @@ export class NamePass {
     d[off + 14] = slot.static.playerType === PlayerTypeEnum.Human ? 1.0 : 0.0;
     d[off + 15] = slot.nameHalfWidth;
 
-    // Column 4: flagAtlasIdx, emojiAtlasIdx, [free], [free]
-    d[off + 16] = slot.flagAtlasIdx;
+    // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]
+    d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
     d[off + 18] = 0;
     d[off + 19] = 0;
@@ -562,6 +600,7 @@ export class NamePass {
     const gl = this.gl;
     this.textProgram.dispose();
     this.iconProgram.dispose();
+    this.flagAtlas.dispose();
     this.statusIconProgram.dispose();
     this.debugProgram.dispose();
     gl.deleteTexture(this.glyphMetricsTex);

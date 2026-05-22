@@ -24,6 +24,7 @@ export interface PlayerStatic {
   playerType: PlayerTypeEnum;
   team: string | null;
   isLobbyCreator: boolean;
+  /** Resolved flag image URL, or undefined for no flag. */
   flag?: string;
   /** Hex color (e.g. "#ff0000"). Populated from territoryColor (live) or palette (replay). */
   color?: string;

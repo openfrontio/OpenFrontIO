@@ -100,22 +100,6 @@ export function assetUrl(path: string): string {
   return buildAssetUrl(path, getAssetManifest(), getCdnBase());
 }
 
-/**
- * Extracts a clean flag name from a cosmetic flag string, which could be
- * a literal "flag:Name" token or a full CDN URL (e.g. ".../flags/Name.hash.svg").
- */
-export function extractFlagName(flagData: string): string {
-  if (flagData.startsWith("flag:")) {
-    return flagData.slice(5);
-  }
-  const match = flagData.match(/\/flags\/([^?#]+)\.svg/);
-  if (match) {
-    const raw = match[1].replace(/\.[a-f0-9]{8,12}$/i, "");
-    return safeDecodeAssetSegment(raw);
-  }
-  return flagData;
-}
-
 // Rewrites Vite's emitted /assets/... references in the built index.html to
 // use the cdnBaseRaw EJS placeholder, so RenderHtml.ts can prefix them with
 // CDN_BASE at request time. Scoped to src=/href= attribute values so inline
