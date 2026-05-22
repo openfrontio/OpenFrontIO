@@ -1,12 +1,13 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import {
   PlayerGame,
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
+import { Cosmetics } from "../core/CosmeticSchemas";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -17,17 +18,22 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
+import "./components/SubscriptionPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { fetchCosmetics } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
+  protected routerName = "account";
+
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
+  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -60,136 +66,163 @@ export class AccountModal extends BaseModal {
     );
   }
 
-  render() {
-    const content = this.isLoadingUser
-      ? this.renderLoadingSpinner(
-          translateText("account_modal.fetching_account"),
-        )
-      : this.renderInner();
-
-    if (this.inline) {
-      return this.isLoadingUser
-        ? html`<div class="${this.modalContainerClass}">
-            ${modalHeader({
-              title: translateText("account_modal.title"),
-              onBack: () => this.close(),
-              ariaLabel: translateText("common.back"),
-            })}
-            ${content}
-          </div>`
-        : content;
-    }
-
-    return html`
-      <o-modal
-        id="account-modal"
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
-    `;
-  }
-
-  private renderInner() {
+  protected renderHeaderSlot() {
     const isLoggedIn = !!this.userMeResponse?.user;
-    const title = translateText("account_modal.title");
     const publicId = this.userMeResponse?.player?.publicId ?? "";
     const displayId = publicId || translateText("account_modal.not_found");
+    return modalHeader({
+      title: translateText("account_modal.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      rightContent:
+        isLoggedIn && !this.isLoadingUser
+          ? html`
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
+                  >${translateText("account_modal.public_player_id")}</span
+                >
+                <copy-button
+                  .lobbyId=${publicId}
+                  .copyText=${publicId}
+                  .displayText=${displayId}
+                ></copy-button>
+              </div>
+            `
+          : undefined,
+    });
+  }
 
+  private isLinkedAccount(): boolean {
+    const me = this.userMeResponse?.user;
+    return !!(me?.discord ?? me?.email);
+  }
+
+  protected modalConfig() {
+    if (this.isLoadingUser || !this.isLinkedAccount()) {
+      return {};
+    }
+    return {
+      tabs: [
+        { key: "account", label: translateText("account_modal.tab_account") },
+        { key: "stats", label: translateText("account_modal.tab_stats") },
+        { key: "games", label: translateText("account_modal.tab_games") },
+      ],
+    };
+  }
+
+  protected renderBody(tab: string) {
+    if (this.isLoadingUser) {
+      return this.renderLoadingSpinner(
+        translateText("account_modal.fetching_account"),
+      );
+    }
+    if (!this.isLinkedAccount()) {
+      return html`<div class="custom-scrollbar mr-1">
+        ${this.renderLoginOptions()}
+      </div>`;
+    }
     return html`
-      <div class="${this.modalContainerClass}">
-        ${modalHeader({
-          title,
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-          rightContent: isLoggedIn
-            ? html`
-                <div class="flex items-center gap-2">
-                  <span
-                    class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                    >${translateText("account_modal.personal_player_id")}</span
-                  >
-                  <copy-button
-                    .lobbyId=${publicId}
-                    .copyText=${publicId}
-                    .displayText=${displayId}
-                  ></copy-button>
-                </div>
-              `
-            : undefined,
-        })}
-
-        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
-          ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
-        </div>
+      <div class="custom-scrollbar mr-1">
+        <div class="p-6">${this.renderTab(tab)}</div>
       </div>
     `;
   }
 
-  private renderAccountInfo() {
-    const me = this.userMeResponse?.user;
-    const isLinked = me?.discord ?? me?.email;
-
-    if (!isLinked) {
-      return this.renderLoginOptions();
+  private renderTab(tab: string): TemplateResult {
+    switch (tab) {
+      case "stats":
+        return this.renderStatsTab();
+      case "games":
+        return this.renderGamesTab();
+      default:
+        return this.renderAccountTab();
     }
+  }
 
+  private renderAccountTab(): TemplateResult {
     return html`
-      <div class="p-6">
-        <div class="flex flex-col gap-6">
-          <!-- Top Row: Connected As -->
-          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-            <div class="flex flex-col items-center gap-4">
-              <div
-                class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
-              >
-                ${translateText("account_modal.connected_as")}
-              </div>
-              <div class="flex items-center gap-8 justify-center flex-wrap">
-                <discord-user-header
-                  .data=${this.userMeResponse?.user?.discord ?? null}
-                ></discord-user-header>
-                ${this.renderLoggedInAs()}
-              </div>
+      <div class="flex flex-col gap-6">
+        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+          <div class="flex flex-col items-center gap-4">
+            <div
+              class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
+            >
+              ${translateText("account_modal.connected_as")}
+            </div>
+            <div class="flex items-center gap-8 justify-center flex-wrap">
+              <discord-user-header
+                .data=${this.userMeResponse?.user?.discord ?? null}
+              ></discord-user-header>
+              ${this.renderLoggedInAs()}
             </div>
           </div>
-
-          <!-- Middle Row: Stats Section -->
-          ${this.hasAnyStats()
-            ? html`<div
-                class="bg-white/5 rounded-xl border border-white/10 p-6"
-              >
-                <h3
-                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-                >
-                  <span class="text-blue-400">📊</span>
-                  ${translateText("account_modal.stats_overview")}
-                </h3>
-                <player-stats-tree-view
-                  .statsTree=${this.statsTree}
-                ></player-stats-tree-view>
-              </div>`
-            : ""}
-
-          <!-- Bottom Row: Recent Games Section -->
-          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-            <h3
-              class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-            >
-              <span class="text-blue-400">🎮</span>
-              ${translateText("game_list.recent_games")}
-            </h3>
-            <game-list
-              .games=${this.recentGames}
-              .onViewGame=${(id: string) => void this.viewGame(id)}
-            ></game-list>
-          </div>
         </div>
+        ${this.renderSubscriptionPanel()}
       </div>
     `;
+  }
+
+  private renderStatsTab(): TemplateResult {
+    if (!this.hasAnyStats()) {
+      return this.renderEmptyState(
+        "📊",
+        translateText("account_modal.no_stats"),
+      );
+    }
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span class="text-blue-400">📊</span>
+          ${translateText("account_modal.stats_overview")}
+        </h3>
+        <player-stats-tree-view
+          .statsTree=${this.statsTree}
+        ></player-stats-tree-view>
+      </div>
+    `;
+  }
+
+  private renderGamesTab(): TemplateResult {
+    if (this.recentGames.length === 0) {
+      return this.renderEmptyState(
+        "🎮",
+        translateText("account_modal.no_games"),
+      );
+    }
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span class="text-blue-400">🎮</span>
+          ${translateText("game_list.recent_games")}
+        </h3>
+        <game-list
+          .games=${this.recentGames}
+          .onViewGame=${(id: string) => void this.viewGame(id)}
+        ></game-list>
+      </div>
+    `;
+  }
+
+  private renderEmptyState(icon: string, message: string): TemplateResult {
+    return html`
+      <div
+        class="bg-white/5 rounded-xl border border-white/10 p-12 flex flex-col items-center justify-center text-center"
+      >
+        <div class="text-4xl mb-3">${icon}</div>
+        <p class="text-white/60 text-sm">${message}</p>
+      </div>
+    `;
+  }
+
+  private renderSubscriptionPanel(): TemplateResult | "" {
+    const sub = this.userMeResponse?.player?.subscription;
+    if (!sub) return "";
+    const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
+    return html`<subscription-panel
+      .sub=${sub}
+      .cosmetic=${cosmetic}
+    ></subscription-panel>`;
   }
 
   private renderCurrency(): TemplateResult {
@@ -229,9 +262,8 @@ export class AccountModal extends BaseModal {
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const config = await getRuntimeClientServerConfig();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(
@@ -241,12 +273,12 @@ export class AccountModal extends BaseModal {
 
   private renderLogoutButton(): TemplateResult {
     return html`
-      <button
-        @click="${this.handleLogout}"
-        class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-red-600/80 hover:bg-red-600 border border-red-500/50 rounded-lg transition-all shadow-lg hover:shadow-red-900/40"
-      >
-        ${translateText("account_modal.log_out")}
-      </button>
+      <o-button
+        variant="danger"
+        size="md"
+        translationKey="account_modal.log_out"
+        @click=${this.handleLogout}
+      ></o-button>
     `;
   }
 
@@ -318,19 +350,20 @@ export class AccountModal extends BaseModal {
                   name="email"
                   .value="${this.email}"
                   @input="${this.handleEmailInput}"
-                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10"
+                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
                   placeholder="${translateText(
                     "account_modal.email_placeholder",
                   )}"
                   required
                 />
               </div>
-              <button
-                @click="${this.handleSubmit}"
-                class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5"
-              >
-                ${translateText("account_modal.get_magic_link")}
-              </button>
+              <o-button
+                variant="primary"
+                width="block"
+                size="md"
+                translationKey="account_modal.get_magic_link"
+                @click=${this.handleSubmit}
+              ></o-button>
             </div>
           </div>
 
@@ -376,6 +409,11 @@ export class AccountModal extends BaseModal {
 
   protected onOpen(): void {
     this.isLoadingUser = true;
+
+    void fetchCosmetics().then((cosmetics) => {
+      this.cosmetics = cosmetics;
+      this.requestUpdate();
+    });
 
     void getUserMe()
       .then((userMe) => {

@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { getRuntimeClientServerConfig } from "../../core/configuration/ConfigLoader";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserSettings } from "../../core/game/UserSettings";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { copyToClipboard, translateText } from "../Utils";
@@ -63,8 +63,7 @@ export class CopyButton extends LitElement {
   }
 
   private async buildCopyUrl(): Promise<string> {
-    const config = await getRuntimeClientServerConfig();
-    let url = `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}`;
+    let url = `${window.location.origin}/${ClientEnv.workerPath(this.lobbyId)}/game/${this.lobbyId}`;
     if (this.includeLobbyQuery) {
       url += `?lobby&s=${encodeURIComponent(this.lobbySuffix)}`;
     }
@@ -80,7 +79,7 @@ export class CopyButton extends LitElement {
     return await this.buildCopyUrl();
   }
 
-  private async handleCopy() {
+  async handleCopy() {
     const text = await this.resolveCopyText();
     if (!text) {
       alert("Error copying game id");

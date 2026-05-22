@@ -6,6 +6,7 @@
     "lang_code": "fr"
   },
   "common": {
+    "not_logged_in": "Pas connecté·e",
     "close": "Fermer",
     "copy": "Copier",
     "paste": "Coller",
@@ -24,6 +25,7 @@
     "copied": "Copié !",
     "click_to_copy": "Cliquer pour copier",
     "enabled": "Activé",
+    "disabled": "Désactivé",
     "map_default": "Carte par défaut"
   },
   "main": {
@@ -97,6 +99,8 @@
     "action_build": "Ouvrir le menu de construction",
     "action_emote": "Ouvrir le menu des émojis",
     "action_center": "Recentrer la caméra",
+    "action_pause_game": "Mettre en pause / Relancer le jeu",
+    "action_game_speed": "Accélérer / Ralentir le déroulement du jeu (solo uniquement)",
     "action_zoom": "Zoomer/Dézoomer",
     "action_move_camera": "Déplacer la caméra",
     "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
@@ -118,12 +122,13 @@
     "ui_options": "Options",
     "ui_options_desc": "Les éléments suivants peuvent être trouvés à l'intérieur :",
     "ui_playeroverlay": "Informations sur le joueur",
-    "ui_playeroverlay_desc": "Lorsque que vous survolez un territoire, l'affichage des informations de Joueur sont affichées dans Options. Cela montre le type de joueur : Humain, Nation ou Tribu. L'attitude d'une Nation envers vous, allant d'Hostile à Amicale. Et les troupes en défense, l'or, ainsi que le nombre de Vaisseaux de guerre et diverses structures possédées par le joueur.",
+    "ui_playeroverlay_desc": "Lorsque que vous survolez un territoire, l'affichage des informations de Joueur sont affichées. Cela montre le type de joueur (Humain, Nation ou Tribu), l'attitude d'une Nation envers vous (d'Hostile à Amicale), ainsi que les troupes en défense, l'or, et le nombre de structures et vaisseaux de guerre possédées par le joueur.",
     "ui_wilderness": "Région sauvage",
-    "option_pause": "Mettre en pause/Continuer la partie - Disponible uniquement dans le mode solo.",
+    "option_pause": "Mettre en pause/Continuer la partie - Indisponible en parties publiques.",
+    "option_speed": "Vitesse - Ajuster la vitesse du jeu. Indisponible en parties publiques.",
     "option_timer": "Chronomètre - Temps écoulé depuis le début du jeu.",
     "option_exit": "Bouton de sortie.",
-    "option_settings": "Paramètres - Ouvre le menu Paramètres. À l'intérieur vous pouvez basculer la vue alternative, les émojis, le mode sombre, Ninja (mode noms anonymes/aléatoires), et l'action au clic gauche.",
+    "option_settings": "Paramètres - Ouvre le menu des paramètres. Vous pouvez y basculer la vue alternative, les émojis, le mode sombre, mode ninja (noms anonymes/aléatoires), et l'action au clic gauche.",
     "radial_title": "Menu radial",
     "radial_desc": "Un clic droit (ou un appui sur mobile) ouvre le menu Radial. Faites un clic droit à l'extérieur pour le fermer. À partir du menu, vous pouvez :",
     "radial_build": "Ouvrir le menu de construction.",
@@ -196,10 +201,11 @@
     "infinite_troops": "Troupes infinies",
     "compact_map": "Carte compacte",
     "disable_alliances": "Désactiver les alliances",
+    "water_nukes": "Bombes à eau",
     "max_timer": "Durée de jeu (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Veuillez entrer une valeur max valide pour le minuteur (1-120 minutes)",
-    "enables_title": "Activer les paramètres",
+    "enables_title": "Désactiver les Unités",
     "start": "Commencer la partie",
     "options_changed_no_achievements": "Paramètres personnalisés - succès désactivés",
     "gold_multiplier": "Multiplicateur d'or",
@@ -325,6 +331,10 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "tourney1": "Tournoi 2 Équipes",
+    "tourney2": "Tournoi 3 Équipes",
+    "tourney3": "Tournoi 4 Équipes",
+    "tourney4": "Tournoi 8 Équipes",
     "passage": "Passage",
     "sierpinski": "Sierpinski",
     "thebox": "La boite",
@@ -342,12 +352,21 @@
     "niledelta": "Delta du Nil",
     "arctic": "Arctique",
     "sanfrancisco": "San Francisco",
-    "aegean": "Mer Égée"
+    "aegean": "Mer Égée",
+    "milkyway": "Voie lactée",
+    "dyslexdria": "Dyslexdria",
+    "greatlakes": "Grands Lacs",
+    "straitofmalacca": "Détroit de Malacca",
+    "luna": "Luna",
+    "conakry": "Conakry",
+    "caucasus": "Caucase",
+    "mediterranean": "Méditerranée"
   },
   "map_categories": {
     "featured": "En vedette",
     "continental": "Continental",
     "regional": "Régional",
+    "tournament": "Tournoi",
     "fantasy": "Autre",
     "special": "Spéciales",
     "arcade": "Arcade"
@@ -364,7 +383,11 @@
     "error": "Une erreur s'est produite. Veuillez réessayer ou contacter le support.",
     "joined_waiting": "Salon rejoint ! En attente du démarrage de l'hôte...",
     "version_mismatch": "Cette partie a été créée avec une version différente. Impossible de rejoindre.",
-    "disabled_units": "Unités désactivées"
+    "disabled_units": "Unités désactivées",
+    "game_length": "Durée de jeu",
+    "pvp_immunity": "Durée d'immunité des joueurs",
+    "starting_gold": "Or de départ",
+    "host_cheats": "Privilèges de l'hôte"
   },
   "public_lobby": {
     "title": "En attente du début de la partie...",
@@ -417,7 +440,8 @@
     "donate_troops": "Donner des troupes",
     "compact_map": "Carte compacte",
     "disable_alliances": "Désactiver les alliances",
-    "enables_title": "Activer les paramètres",
+    "water_nukes": "Bombes à eau",
+    "enables_title": "Désactiver les unités",
     "player": "Joueur",
     "players": "Joueurs",
     "nation_players": "Nations",
@@ -440,8 +464,8 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Or de départ (En millions)",
     "starting_gold_placeholder": "5",
-    "leave_confirmation": "Es-tu sûr.e de vouloir quitter le salon ?",
-    "team_type": "Type d'équipe"
+    "host_cheats": "Privilèges de l'hôte",
+    "leave_confirmation": "Es-tu sûr.e de vouloir quitter le salon ?"
   },
   "team_colors": {
     "red": "Rouge",
@@ -486,8 +510,20 @@
     "crowded": "Foule",
     "hard_nations": "Nations difficiles",
     "starting_gold": "{amount}M Or de départ",
+    "starting_gold_label": "Or de départ",
     "gold_multiplier": "x{amount} Multiplicateur d'Or",
-    "disable_alliances": "Alliances désactivées"
+    "disable_alliances": "Alliances désactivées",
+    "disable_alliances_label": "Alliances",
+    "ports_disabled": "Ports désactivés",
+    "ports_disabled_label": "Ports",
+    "nukes_disabled": "Bombes nucléaires désactivées",
+    "nukes_disabled_label": "Bombes nucléaires",
+    "sams_disabled": "SAMs désactivés",
+    "sams_disabled_label": "SAMs",
+    "peace_time": "4min de paix",
+    "peace_time_label": "Immunité des joueurs",
+    "water_nukes": "Bombes à eau",
+    "water_nukes_label": "Bombes à eau"
   },
   "select_lang": {
     "title": "Sélectionner une langue"
@@ -509,6 +545,7 @@
     "title": "Paramètres",
     "tab_basic": "Réglages de base",
     "tab_keybinds": "Raccourcis clavier",
+    "keybinds_hint": "Cliquez sur une touche pour la redéfinir. Vous pouvez assigner une seule touche ou Maj + la combinaison de touches.",
     "dark_mode_label": "Mode sombre",
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
     "emojis_label": "Émojis",
@@ -535,6 +572,8 @@
     "territory_patterns_desc": "Choisissez d'afficher ou non les designs des skins de territoire dans le jeu",
     "coordinate_grid_label": "Grille de coordonnées",
     "coordinate_grid_desc": "Activer/désactiver l'affichage de la grille de coordonnées",
+    "attacking_troops_overlay_label": "Surcouche des troupes en attaque",
+    "attacking_troops_overlay_desc": "Afficher le nombre de troupes en attaque sur les lignes de front actives.",
     "performance_overlay_label": "Surcouche de performances",
     "performance_overlay_desc": "Activer/désactiver la surcouche de performances. Lorsqu'elle est activée, la surcouche de performances sera affichée. Appuyez sur Maj+D pendant le jeu pour l\"activer.",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
@@ -571,6 +610,12 @@
     "build_menu_modifier_desc": "Maintenez cette touche enfoncée en cliquant pour ouvrir le menu de construction.",
     "emoji_menu_modifier": "Menu de modifications des émojis",
     "emoji_menu_modifier_desc": "Maintenez cette touche enfoncée en cliquant pour ouvrir le menu des émojis.",
+    "pause_game": "Pause",
+    "pause_game_desc": "Mettre en pause ou reprendre le jeu (parties solo et salons privés).",
+    "game_speed_up": "Accélération du jeu",
+    "game_speed_up_desc": "Avancer la vitesse du jeu d'un cran. Solo uniquement.",
+    "game_speed_down": "Ralentissement du jeu",
+    "game_speed_down_desc": "Reculer la vitesse du jeu d'un cran. Solo uniquement.",
     "attack_ratio_controls": "Contrôles du ratio d'attaque",
     "attack_ratio_up": "Augmenter le ratio d'attaque",
     "attack_ratio_up_desc": "Augmenter le ratio d'attaque de {amount}%",
@@ -814,7 +859,7 @@
     "alliance_time_remaining": "L'alliance expire dans",
     "start_trade": "Commencer le commerce",
     "stop_trade": "Arrêter le commerce",
-    "stop_trade_all": "Arrêter le commerce avec tout le monde",
+    "stop_trade_all": "Arrêter le commerce avec les ennemis",
     "start_trade_all": "Commencer le commerce avec tout le monde",
     "alliances": "Alliances",
     "chat": "Chat",
@@ -834,7 +879,8 @@
   },
   "kick_reason": {
     "duplicate_session": "Expulsé de la partie (vous jouiez peut-être dans un autre onglet)",
-    "lobby_creator": "Expulsé par le créateur du lobby"
+    "lobby_creator": "Expulsé par le créateur du lobby",
+    "host_left": "L'hôte a quitté le salon."
   },
   "send_troops_modal": {
     "title_with_name": "Envoyer des troupes à {name}",
@@ -898,6 +944,21 @@
     "pvp_immunity_active": "Immunité des joueurs active pour {seconds}s",
     "catching_up": "Rattrapage..."
   },
+  "store": {
+    "title": "Boutique",
+    "patterns": "Skins",
+    "flags": "Drapeaux",
+    "packs": "Packs",
+    "no_flags": "Aucun drapeau disponible. Revenez plus tard.",
+    "no_skins": "Aucun skin disponible, Revenez plus tard.",
+    "no_packs": "Aucun pack disponible, Revenez plus tard.",
+    "currency_pack_purchase_success": "Achat du pack de monnaie réussi !",
+    "checkout_failed": "Échec de la création de la scène de paiement.",
+    "login_required": "Vous devez être connecté·e pour acheter avec de la monnaie.",
+    "not_enough_currency": "Pas assez de monnaie pour cet achat.",
+    "purchase_failed": "Échec de l'achat. Veuillez réessayer.",
+    "purchase_success": "Achat réussit : {name}"
+  },
   "territory_patterns": {
     "title": "Skins",
     "purchase": "Acheter",
@@ -906,10 +967,19 @@
     },
     "select_skin": "Sélectionnez le motif",
     "selected": "sélectionné",
-    "colors": "Couleurs",
-    "show_only_owned": "Mes skins",
-    "all_owned": "Vous possédez déjà tous les motifs ! Revenez plus tard pour de nouveaux.",
-    "not_logged_in": "Non connecté"
+    "search": "Recherche..."
+  },
+  "cosmetics": {
+    "artist_label": "Artiste :",
+    "color_label": "Couleur :",
+    "common": "Commun",
+    "uncommon": "Peu commun",
+    "rare": "Rare",
+    "epic": "Épique",
+    "legendary": "Légendaire",
+    "adfree": "sans publicité à vie !",
+    "hard": "Plutonium",
+    "soft": "Capsule"
   },
   "flag_input": {
     "title": "Sélectionner un drapeau",
@@ -980,6 +1050,8 @@
     "public": "Public",
     "private": "Privé",
     "solo": "Solo",
+    "ranked": "Classé",
+    "ranked_1v1": "1v1",
     "mode": "Mode",
     "stats_wins": "Victoires",
     "stats_losses": "Défaites",
@@ -992,5 +1064,14 @@
     "description": "(ALPHA)",
     "login_required": "Connectez-vous pour jouer en mode classé",
     "must_login": "Vous devez être connecté pour jouer en mode classé."
+  },
+  "news_box": {
+    "tournament": "TOURNOI",
+    "tutorial": "TUTORIEL",
+    "news": "NOUVEAUTÉS",
+    "warning": "AVERTISSEMENT",
+    "dismiss": "Ignorer",
+    "go_to_item": "Aller à l'article {num}",
+    "firefox_warning": "OpenFront.io ne fonctionne pas bien avec [les navigateurs basés sur Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Nous vous recommandons d'utiliser un navigateur [basé sur Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser) #Browsers_based_on_Chromium) pour de meilleures performances."
   }
 }

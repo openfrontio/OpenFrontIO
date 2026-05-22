@@ -1,5 +1,4 @@
-import { NukeMagnitude } from "../../src/core/configuration/Config";
-import { DefaultConfig } from "../../src/core/configuration/DefaultConfig";
+import { Config, NukeMagnitude } from "../../src/core/configuration/Config";
 import {
   Game,
   Player,
@@ -9,7 +8,7 @@ import {
 } from "../../src/core/game/Game";
 import { TileRef } from "../../src/core/game/GameMap";
 
-export class TestConfig extends DefaultConfig {
+export class TestConfig extends Config {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
@@ -100,7 +99,6 @@ export class TestConfig extends DefaultConfig {
   }
 }
 export class UseRealAttackLogic extends TestConfig {
-  // Override to use DefaultConfig's real attackLogic
   attackLogic(
     gm: Game,
     attackTroops: number,
@@ -112,7 +110,7 @@ export class UseRealAttackLogic extends TestConfig {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
-    return DefaultConfig.prototype.attackLogic.call(
+    return Config.prototype.attackLogic.call(
       this,
       gm,
       attackTroops,

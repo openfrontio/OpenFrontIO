@@ -229,7 +229,6 @@ export class NukeExecution implements Execution {
 
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
-      console.log(`Nuke destroyed before reaching target`);
       this.active = false;
       return;
     }
@@ -386,6 +385,27 @@ export class NukeExecution implements Execution {
     this.active = false;
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
+
+    if (
+      this.nukeType === UnitType.AtomBomb ||
+      this.nukeType === UnitType.HydrogenBomb
+    ) {
+      const messageKey =
+        this.nukeType === UnitType.AtomBomb
+          ? "events_display.atom_bomb_detonated"
+          : "events_display.hydrogen_bomb_detonated";
+      for (const [impactedPlayer] of tilesPerPlayers) {
+        mg.displayMessage(
+          messageKey,
+          MessageType.NUKE_DETONATED,
+          impactedPlayer.id(),
+          undefined,
+          { name: this.player.displayName() },
+          undefined,
+          this.player.id(),
+        );
+      }
+    }
 
     // Record stats
     this.mg

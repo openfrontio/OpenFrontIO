@@ -1,7 +1,7 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { translateText } from "../client/Utils";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -10,6 +10,7 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -22,7 +23,7 @@ import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
+import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
@@ -92,6 +93,7 @@ export class HostLobbyModal extends BaseModal {
   private botsUpdateTimer: number | null = null;
   private nationsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
+  private userSettings = new UserSettings();
 
   private leaveLobbyOnClose = true;
 
@@ -121,8 +123,7 @@ export class HostLobbyModal extends BaseModal {
         return link;
       }
     }
-    const config = await getRuntimeClientServerConfig();
-    return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
+    return `${window.location.origin}/${ClientEnv.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
 
   private async constructUrl(): Promise<string> {
@@ -131,9 +132,18 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    if (!crazyGamesSDK.isOnCrazyGames()) {
-      history.replaceState(null, "", url);
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return;
     }
+    history.replaceState(null, "", url);
+  }
+
+  private updateLobbyHistory(lobbyUrl: string): void {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return;
+    }
+    const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
+    history.replaceState(null, "", lobbyIdHidden ? "/streamer-mode" : lobbyUrl);
   }
 
   private startLobbyUpdates() {
@@ -151,7 +161,25 @@ export class HostLobbyModal extends BaseModal {
     this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("host_modal.title"),
+      onBack: () => {
+        this.leaveLobbyOnClose = true;
+        this.close();
+      },
+      ariaLabel: translateText("common.back"),
+      rightContent: html`
+        <copy-button
+          .lobbyId=${this.lobbyId}
+          .lobbySuffix=${this.lobbyUrlSuffix}
+          include-lobby-query
+        ></copy-button>
+      `,
+    });
+  }
+
+  protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
         .labelKey=${"host_modal.max_timer"}
@@ -259,28 +287,9 @@ export class HostLobbyModal extends BaseModal {
       ></toggle-input-card>`,
     ];
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <!-- Header -->
-        ${modalHeader({
-          title: translateText("host_modal.title"),
-          onBack: () => {
-            this.leaveLobbyOnClose = true;
-            this.close();
-          },
-          ariaLabel: translateText("common.back"),
-          rightContent: html`
-            <copy-button
-              .lobbyId=${this.lobbyId}
-              .lobbySuffix=${this.lobbyUrlSuffix}
-              include-lobby-query
-            ></copy-button>
-          `,
-        })}
-
-        <div
-          class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
-        >
+    return html`
+      <div class="flex flex-col h-full">
+        <div class="flex-1 p-6 mx-auto w-full max-w-5xl">
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-10"}
@@ -404,32 +413,18 @@ export class HostLobbyModal extends BaseModal {
 
         <!-- Player List / footer -->
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
-          <button
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-[#0073b7] hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
-            @click=${this.startGame}
-            ?disabled=${this.clients.length < 2}
-          >
-            ${this.clients.length === 1
+          <o-button
+            variant="primary"
+            width="block"
+            size="lg"
+            .title=${this.clients.length === 1
               ? translateText("host_modal.waiting")
               : translateText("host_modal.start")}
-          </button>
+            ?disable=${this.clients.length < 2}
+            @click=${this.startGame}
+          ></o-button>
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        title=""
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-        hideHeader
-      >
-        ${content}
-      </o-modal>
     `;
   }
 
@@ -439,6 +434,14 @@ export class HostLobbyModal extends BaseModal {
     // Note: clientID will be assigned by server when we join the lobby
     // lobbyCreatorClientID stays empty until then
 
+    // Copy immediately so the host can share the link without waiting for the
+    // server. If lobby creation fails, clear the clipboard to avoid a dead link.
+    void this.constructUrl().then(async (url) => {
+      this.updateLobbyHistory(url);
+      await this.updateComplete;
+      void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+    });
+
     // Pass auth token for creator identification (server extracts persistentID from it)
     createLobby(this.lobbyId)
       .then(async (lobby) => {
@@ -447,8 +450,6 @@ export class HostLobbyModal extends BaseModal {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
         crazyGamesSDK.showInviteButton(this.lobbyId);
-        const url = await this.constructUrl();
-        this.updateHistory(url);
       })
       .then(() => {
         this.dispatchEvent(
@@ -461,6 +462,10 @@ export class HostLobbyModal extends BaseModal {
             composed: true,
           }),
         );
+      })
+      .catch(() => {
+        // Clear clipboard so the host doesn't accidentally share a dead link
+        void navigator.clipboard.writeText("").catch(() => {});
       });
     if (this.modalEl) {
       this.modalEl.onClose = () => {
@@ -932,7 +937,7 @@ export class HostLobbyModal extends BaseModal {
       ? this.spawnImmunityDurationMinutes * 60 * 10
       : 0;
     const url = await this.constructUrl();
-    this.updateHistory(url);
+    this.updateLobbyHistory(url);
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {
@@ -1000,21 +1005,12 @@ export class HostLobbyModal extends BaseModal {
     // If the modal closes as part of starting the game, do not leave the lobby
     this.leaveLobbyOnClose = false;
 
-    const config = await getRuntimeClientServerConfig();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
+    this.dispatchEvent(
+      new CustomEvent("start-game", {
+        bubbles: true,
+        composed: true,
+      }),
     );
-
-    if (!response.ok) {
-      this.leaveLobbyOnClose = true;
-    }
-    return response;
   }
 
   private kickPlayer(clientID: string) {
@@ -1048,13 +1044,12 @@ export class HostLobbyModal extends BaseModal {
 }
 
 async function createLobby(gameID: string): Promise<GameInfo> {
-  const config = await getRuntimeClientServerConfig();
   // Send JWT token for creator identification - server extracts persistentID from it
   // persistentID should never be exposed to other clients
   const token = await getPlayToken();
   try {
     const response = await fetch(
-      `/${config.workerPath(gameID)}/api/create_game/${gameID}`,
+      `/${ClientEnv.workerPath(gameID)}/api/create_game/${gameID}`,
       {
         method: "POST",
         headers: {

@@ -189,28 +189,8 @@ export class TradeShipExecution implements Execution {
         .stats()
         .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
     } else {
-      this.srcPort.owner().addGold(gold);
+      this.srcPort.owner().addGold(gold, this.srcPort.tile());
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
-      this.mg.displayMessage(
-        "events_display.received_gold_from_trade",
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this._dstPort.owner().id(),
-        gold,
-        {
-          gold: renderNumber(gold),
-          name: this.srcPort.owner().displayName(),
-        },
-      );
-      this.mg.displayMessage(
-        "events_display.received_gold_from_trade",
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this.srcPort.owner().id(),
-        gold,
-        {
-          gold: renderNumber(gold),
-          name: this._dstPort.owner().displayName(),
-        },
-      );
       // Record stats
       this.mg
         .stats()

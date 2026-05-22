@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Flag, Pack, Pattern } from "../../core/CosmeticSchemas";
+import { Flag, Pack, Pattern, Subscription } from "../../core/CosmeticSchemas";
 import { PlayerPattern } from "../../core/Schemas";
 import {
   PaymentMethod,
@@ -13,6 +13,7 @@ import "./CosmeticContainer";
 import "./CosmeticInfo";
 import { renderPatternPreview } from "./PatternPreview";
 import "./PlutoniumIcon";
+import { DEFAULT_DOLLAR_LABEL_KEY } from "./PurchaseButton";
 
 @customElement("cosmetic-button")
 export class CosmeticButton extends LitElement {
@@ -27,6 +28,10 @@ export class CosmeticButton extends LitElement {
 
   @property({ type: Function })
   onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
+
+  /** True if the user already has a subscription (any tier). */
+  @property({ type: Boolean })
+  userHasSubscription: boolean = false;
 
   createRenderRoot() {
     return this;
@@ -46,6 +51,9 @@ export class CosmeticButton extends LitElement {
     }
     if (this.resolved.type === "pack") {
       return (c as Pack).displayName;
+    }
+    if (this.resolved.type === "subscription") {
+      return translateCosmetic("subscriptions", c.name);
     }
     return translateCosmetic("flags", c.name);
   }
@@ -91,6 +99,37 @@ export class CosmeticButton extends LitElement {
       </div>`;
     }
 
+    if (this.resolved.type === "subscription") {
+      const sub = this.resolved.cosmetic as Subscription;
+      return html`<div
+        class="flex flex-col items-center justify-between h-full w-full text-center gap-2 p-1"
+      >
+        <span class="text-xs text-white/70 line-clamp-3 px-1"
+          >${sub.description}</span
+        >
+        <div class="flex flex-col items-center gap-1">
+          <div class="flex items-center gap-1.5">
+            <plutonium-icon .size=${24}></plutonium-icon>
+            <span class="text-sm font-bold text-green-400"
+              >${sub.dailyHardCurrency.toLocaleString()}</span
+            >
+            <span class="text-[10px] text-white/50 uppercase"
+              >${translateText("cosmetics.per_day")}</span
+            >
+          </div>
+          <div class="flex items-center gap-1.5">
+            <cap-icon .size=${24}></cap-icon>
+            <span class="text-sm font-bold text-amber-700"
+              >${sub.dailySoftCurrency.toLocaleString()}</span
+            >
+            <span class="text-[10px] text-white/50 uppercase"
+              >${translateText("cosmetics.per_day")}</span
+            >
+          </div>
+        </div>
+      </div>`;
+    }
+
     const c = this.resolved.cosmetic as Flag;
     return html`<img
       src=${c.url}
@@ -110,9 +149,23 @@ export class CosmeticButton extends LitElement {
 
   render() {
     const c = this.resolved.cosmetic;
+    const priced = c as Pattern | Flag | Pack | null;
+    const priceHard = priced?.priceHard;
+    const priceSoft = priced?.priceSoft;
+    const artist = priced?.artist;
     const isPurchasable = this.resolved.relationship === "purchasable";
     const type = this.resolved.type;
     const isPattern = type === "pattern";
+    const isOwnedSubscription =
+      type === "subscription" && this.resolved.relationship === "owned";
+    const dollarLabelKey =
+      type === "subscription"
+        ? this.userHasSubscription
+          ? "store.switch_button"
+          : "store.subscribe_button"
+        : DEFAULT_DOLLAR_LABEL_KEY;
+    const priceSuffix =
+      type === "subscription" ? translateText("store.price_per_month") : "";
     const sizeClass = type === "flag" ? "gap-1 p-1.5 w-36" : "gap-2 p-3 w-48";
     const crazygamesClass = isPattern ? "no-crazygames " : "";
 
@@ -122,15 +175,17 @@ export class CosmeticButton extends LitElement {
         .rarity=${c?.rarity ?? "common"}
         .selected=${this.selected}
         .product=${isPurchasable && c?.product ? c.product : null}
-        .priceHard=${isPurchasable ? (c?.priceHard ?? null) : null}
-        .priceSoft=${isPurchasable ? (c?.priceSoft ?? null) : null}
+        .priceHard=${isPurchasable ? (priceHard ?? null) : null}
+        .priceSoft=${isPurchasable ? (priceSoft ?? null) : null}
+        .dollarLabelKey=${dollarLabelKey}
+        .priceSuffix=${priceSuffix}
         .onPurchaseDollar=${isPurchasable && c?.product
           ? () => this.onPurchase?.(this.resolved, "dollar")
           : undefined}
-        .onPurchaseHard=${isPurchasable && c?.priceHard !== undefined
+        .onPurchaseHard=${isPurchasable && priceHard !== undefined
           ? () => this.onPurchase?.(this.resolved, "hard")
           : undefined}
-        .onPurchaseSoft=${isPurchasable && c?.priceSoft !== undefined
+        .onPurchaseSoft=${isPurchasable && priceSoft !== undefined
           ? () => this.onPurchase?.(this.resolved, "soft")
           : undefined}
         .name=${this.displayName}
@@ -141,10 +196,10 @@ export class CosmeticButton extends LitElement {
             : "gap-1"} rounded-lg cursor-pointer transition-all duration-200 flex-1"
           @click=${() => this.handleClick()}
         >
-          ${(c?.product ?? c?.priceHard ?? c?.priceSoft)
+          ${(c?.product ?? priceHard ?? priceSoft)
             ? html`<cosmetic-info
-                .artist=${c.artist}
-                .rarity=${c.rarity}
+                .artist=${artist}
+                .rarity=${c!.rarity}
                 .colorPalette=${this.resolved.colorPalette?.name}
                 .showAdFree=${isPurchasable}
               ></cosmetic-info>`
@@ -156,6 +211,13 @@ export class CosmeticButton extends LitElement {
             ${this.renderPreview()}
           </div>
         </button>
+        ${isOwnedSubscription
+          ? html`<div
+              class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"
+            >
+              ${translateText("store.current_plan")}
+            </div>`
+          : nothing}
       </cosmetic-container>
     `;
   }

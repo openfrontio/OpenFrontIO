@@ -40,6 +40,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitView } from "./GameView";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -75,6 +76,7 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
+  private startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -97,6 +99,7 @@ export class GameImpl implements Game {
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
   private unitGrid: UnitGrid;
+  private _unitMap = new Map<number, Unit>();
 
   private playerTeams: Team[] = [];
   private botTeam: Team = ColoredTeams.Bot;
@@ -287,6 +290,10 @@ export class GameImpl implements Game {
     this._waterManager.queueTile(tile);
   }
 
+  unit(id: number): Unit | undefined {
+    return this._unitMap.get(id);
+  }
+
   units(...types: UnitType[]): Unit[] {
     return Array.from(this._players.values()).flatMap((p) => p.units(...types));
   }
@@ -403,7 +410,18 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
-    return this._ticks <= this.config().numSpawnPhaseTurns();
+    return this.startTick === null;
+  }
+
+  endSpawnPhase(): void {
+    if (this.startTick !== null) {
+      return;
+    }
+    this.startTick = this._ticks;
+    this.addUpdate({
+      type: GameUpdateType.SpawnPhaseEnd,
+      startTick: this.startTick,
+    });
   }
 
   ticks(): number {
@@ -437,8 +455,8 @@ export class GameImpl implements Game {
     this.execs.push(...inited);
     this.unInitExecs = unInited;
     for (const player of this._players.values()) {
-      // Players change each to so always add them
-      this.addUpdate(player.toUpdate());
+      const update = player.toUpdate();
+      if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
@@ -813,18 +831,28 @@ export class GameImpl implements Game {
 
   public isSpawnImmunityActive(): boolean {
     return (
-      this.config().numSpawnPhaseTurns() +
-        this.config().spawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this.config().spawnImmunityDuration()
     );
+  }
+
+  public elapsedGameSeconds(): number {
+    return this.ticksSinceStart() / 10;
   }
 
   public isNationSpawnImmunityActive(): boolean {
     return (
-      this.config().numSpawnPhaseTurns() +
-        this.config().nationSpawnImmunityDuration() >
-      this.ticks()
+      this.inSpawnPhase() ||
+      this.ticksSinceStart() < this.config().nationSpawnImmunityDuration()
     );
+  }
+
+  private ticksSinceStart(): number {
+    if (this.inSpawnPhase()) {
+      return 0;
+    }
+
+    return Math.max(0, this.ticks() - this.startTick!);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
@@ -898,11 +926,17 @@ export class GameImpl implements Game {
     playerID: PlayerID | null,
     goldAmount?: bigint,
     params?: Record<string, string | number>,
+    unitID?: number,
+    focusPlayerID?: PlayerID,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
       id = this.player(playerID).smallID();
     }
+    const focusID =
+      focusPlayerID !== undefined
+        ? this.player(focusPlayerID).smallID()
+        : undefined;
     this.addUpdate({
       type: GameUpdateType.DisplayEvent,
       messageType: type,
@@ -910,6 +944,8 @@ export class GameImpl implements Game {
       playerID: id,
       goldAmount: goldAmount,
       params: params,
+      unitID: unitID,
+      focusPlayerID: focusID,
     });
   }
 
@@ -955,9 +991,11 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
+    this._unitMap.set(u.id(), u);
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    this._unitMap.delete(u.id());
     this.planDrivenUnitIds.delete(u.id());
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
@@ -995,7 +1033,7 @@ export class GameImpl implements Game {
       tile,
       searchRange,
       types,
-      predicate,
+      predicate as (unit: Unit | UnitView) => boolean,
       playerId,
       includeUnderConstruction,
     );
@@ -1144,6 +1182,9 @@ export class GameImpl implements Game {
   tileState(tile: TileRef): number {
     return this._map.tileState(tile);
   }
+  tileStateBuffer(): Uint16Array {
+    return this._map.tileStateBuffer();
+  }
   updateTile(tile: TileRef, state: number): boolean {
     return this._map.updateTile(tile, state);
   }
@@ -1196,6 +1237,9 @@ export class GameImpl implements Game {
     const skipGoldTransfer =
       attacksSent === 0n && conquered.type() === PlayerType.Human;
     const gold = skipGoldTransfer ? 0n : conquered.gold();
+    const goldCaptured = skipGoldTransfer
+      ? 0n
+      : this._config.conquerGoldAmount(conquered);
 
     if (skipGoldTransfer) {
       this.displayMessage(
@@ -1214,22 +1258,22 @@ export class GameImpl implements Game {
         conqueror.id(),
         gold,
         {
-          gold: renderNumber(gold),
+          gold: renderNumber(goldCaptured),
           name: conquered.displayName(),
         },
       );
-      conqueror.addGold(gold);
+      conqueror.addGold(goldCaptured);
       conquered.removeGold(gold);
 
       // Record stats
-      this.stats().goldWar(conqueror, conquered, gold);
+      this.stats().goldWar(conqueror, conquered, goldCaptured);
     }
 
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
       conqueredId: conquered.id(),
-      gold,
+      gold: goldCaptured,
     });
   }
 }

@@ -1,6 +1,6 @@
 import type { TemplateResult } from "lit";
 import { html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
@@ -15,14 +15,29 @@ import {
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
+type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
+
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
-  @state() private activeTab: "patterns" | "flags" | "packs" = "patterns";
-
+  protected routerName = "store";
   private cosmetics: Cosmetics | null = null;
-  private isActive = false;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
+
+  protected modalConfig() {
+    if (this.affiliateCode) {
+      // Affiliate mode: hide tabs, show only items associated with the code.
+      return {};
+    }
+    return {
+      tabs: [
+        { key: "packs", label: translateText("store.packs") },
+        { key: "subscriptions", label: translateText("store.subscriptions") },
+        { key: "patterns", label: translateText("store.patterns") },
+        { key: "flags", label: translateText("store.flags") },
+      ],
+    };
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -41,43 +56,12 @@ export class StoreModal extends BaseModal {
   }
 
   private renderHeader(): TemplateResult {
-    return html`
-      ${modalHeader({
-        title: translateText("store.title"),
-        onBack: () => this.close(),
-        ariaLabel: translateText("common.back"),
-        rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
-      })}
-      <div class="flex items-center gap-2 justify-center pt-2">
-        <button
-          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-            .activeTab === "packs"
-            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-          @click=${() => (this.activeTab = "packs")}
-        >
-          ${translateText("store.packs")}
-        </button>
-        <button
-          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-            .activeTab === "patterns"
-            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-          @click=${() => (this.activeTab = "patterns")}
-        >
-          ${translateText("store.patterns")}
-        </button>
-        <button
-          class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-            .activeTab === "flags"
-            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-            : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
-          @click=${() => (this.activeTab = "flags")}
-        >
-          ${translateText("store.flags")}
-        </button>
-      </div>
-    `;
+    return modalHeader({
+      title: translateText("store.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      rightContent: html`<not-logged-in-warning></not-logged-in-warning>`,
+    });
   }
 
   private renderPatternGrid(): TemplateResult {
@@ -185,63 +169,112 @@ export class StoreModal extends BaseModal {
     `;
   }
 
-  render() {
-    if (!this.isActive && !this.inline) return html``;
+  private renderSubscriptionGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        r.type === "subscription" &&
+        (r.relationship === "purchasable" || r.relationship === "owned"),
+    );
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        ${this.renderHeader()}
-        <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
-          ${this.activeTab === "patterns"
-            ? this.renderPatternGrid()
-            : this.activeTab === "flags"
-              ? this.renderFlagGrid()
-              : this.renderPackGrid()}
-        </div>
+    if (items.length === 0) {
+      return html`<div
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.no_subscriptions")}
+      </div>`;
+    }
+
+    const userHasSubscription =
+      this.userMeResponse !== false &&
+      this.userMeResponse.player.subscription !== null;
+
+    return html`
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
+      >
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${purchaseCosmetic}
+              .userHasSubscription=${userHasSubscription}
+            ></cosmetic-button>
+          `,
+        )}
       </div>
     `;
+  }
 
-    if (this.inline) {
-      return content;
+  protected renderHeaderSlot() {
+    return this.renderHeader();
+  }
+
+  protected renderBody(key: string): TemplateResult {
+    if (this.affiliateCode) {
+      return this.renderAffiliateGrid();
+    }
+    switch (key as StoreTab) {
+      case "patterns":
+        return this.renderPatternGrid();
+      case "flags":
+        return this.renderFlagGrid();
+      case "subscriptions":
+        return this.renderSubscriptionGrid();
+      case "packs":
+      default:
+        return this.renderPackGrid();
+    }
+  }
+
+  private renderAffiliateGrid(): TemplateResult {
+    const items = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).filter(
+      (r) =>
+        (r.type === "pattern" || r.type === "flag" || r.type === "pack") &&
+        r.relationship === "purchasable",
+    );
+
+    if (items.length === 0) {
+      return html`<div
+        class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+      >
+        ${translateText("store.no_skins")}
+      </div>`;
     }
 
     return html`
-      <o-modal
-        id="storeModal"
-        title="${translateText("store.title")}"
-        ?inline=${this.inline}
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
+      <div
+        class="flex flex-wrap gap-4 p-8 justify-center items-stretch content-start"
       >
-        ${content}
-      </o-modal>
+        ${items.map(
+          (r) => html`
+            <cosmetic-button
+              .resolved=${r}
+              .onPurchase=${purchaseCosmetic}
+            ></cosmetic-button>
+          `,
+        )}
+      </div>
     `;
   }
 
-  public async open(options?: string | { affiliateCode?: string }) {
-    if (this.isModalOpen) return;
-    this.isActive = true;
-    if (typeof options === "string") {
-      this.affiliateCode = options;
-    } else if (
-      options !== null &&
-      typeof options === "object" &&
-      !Array.isArray(options)
-    ) {
-      this.affiliateCode = options.affiliateCode ?? null;
-    } else {
-      this.affiliateCode = null;
-    }
-
+  protected async onOpen(args?: Record<string, unknown>) {
+    const affiliate =
+      typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
+    this.affiliateCode = affiliate;
     this.cosmetics ??= await fetchCosmetics();
     await this.refresh();
-    super.open();
   }
 
-  public close() {
-    this.isActive = false;
+  protected onClose(): void {
     this.affiliateCode = null;
-    super.close();
   }
 
   public async refresh() {

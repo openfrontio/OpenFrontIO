@@ -1,0 +1,78 @@
+{
+  "width": 540,
+  "height": 242,
+  "rows": [
+    {
+      "yOffset": 0,
+      "height": 60,
+      "worldWidth": 60,
+      "worldHeight": 60
+    },
+    {
+      "yOffset": 60,
+      "height": 38,
+      "worldWidth": 48,
+      "worldHeight": 38
+    },
+    {
+      "yOffset": 98,
+      "height": 15,
+      "worldWidth": 17,
+      "worldHeight": 15
+    },
+    {
+      "yOffset": 113,
+      "height": 19,
+      "worldWidth": 19,
+      "worldHeight": 19
+    },
+    {
+      "yOffset": 132,
+      "height": 12,
+      "worldWidth": 13,
+      "worldHeight": 12
+    },
+    {
+      "yOffset": 144,
+      "height": 14,
+      "worldWidth": 16,
+      "worldHeight": 14
+    },
+    {
+      "yOffset": 158,
+      "height": 13,
+      "worldWidth": 7,
+      "worldHeight": 13
+    },
+    {
+      "yOffset": 171,
+      "height": 12,
+      "worldWidth": 11,
+      "worldHeight": 12
+    },
+    {
+      "yOffset": 183,
+      "height": 16,
+      "worldWidth": 24,
+      "worldHeight": 16
+    },
+    {
+      "yOffset": 199,
+      "height": 16,
+      "worldWidth": 24,
+      "worldHeight": 16
+    },
+    {
+      "yOffset": 215,
+      "height": 7,
+      "worldWidth": 9,
+      "worldHeight": 7
+    },
+    {
+      "yOffset": 222,
+      "height": 20,
+      "worldWidth": 21,
+      "worldHeight": 20
+    }
+  ]
+}

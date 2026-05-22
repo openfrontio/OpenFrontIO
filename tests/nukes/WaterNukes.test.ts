@@ -1,5 +1,4 @@
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
-import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -8,11 +7,8 @@ import {
   UnitType,
 } from "../../src/core/game/Game";
 import { TileRef } from "../../src/core/game/GameMap";
-import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 import { constructionExecution } from "../util/utils";
-
-const gameID: GameID = "game_id";
 
 function launchNukeAt(game: Game, player: Player, target: TileRef): void {
   game.addExecution(new NukeExecution(UnitType.AtomBomb, player, target, null));
@@ -30,19 +26,21 @@ function tickUntilNukeLands(game: Game, maxTicks = 50): void {
 describe("Water Nukes", () => {
   let game: Game;
   let player: Player;
+  const info = new PlayerInfo("p", PlayerType.Human, null, "p");
 
   describe("when waterNukes is enabled", () => {
     beforeEach(async () => {
-      game = await setup("plains", {
-        infiniteGold: true,
-        instantBuild: true,
-        waterNukes: true,
-      });
-      const info = new PlayerInfo("p", PlayerType.Human, null, "p");
-      game.addPlayer(info);
-      game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
+      game = await setup(
+        "plains",
+        {
+          infiniteGold: true,
+          instantBuild: true,
+          waterNukes: true,
+        },
+        [info],
+      );
       player = game.player(info.id);
+      player.conquer(game.ref(1, 1));
 
       // Build a missile silo
       constructionExecution(game, player, 1, 1, UnitType.MissileSilo);
@@ -111,19 +109,18 @@ describe("Water Nukes", () => {
 
     test("waterGraphVersion increments after water conversion", async () => {
       // Need a game with nav mesh enabled for graph rebuilds
-      const navGame = await setup("plains", {
-        infiniteGold: true,
-        instantBuild: true,
-        waterNukes: true,
-        disableNavMesh: false,
-      });
-      const info2 = new PlayerInfo("p2", PlayerType.Human, null, "p2");
-      navGame.addPlayer(info2);
-      navGame.addExecution(
-        new SpawnExecution(gameID, info2, navGame.ref(1, 1)),
+      const navGame = await setup(
+        "plains",
+        {
+          infiniteGold: true,
+          instantBuild: true,
+          waterNukes: true,
+          disableNavMesh: false,
+        },
+        [info],
       );
-      while (navGame.inSpawnPhase()) navGame.executeNextTick();
-      const player2 = navGame.player(info2.id);
+      const player2 = navGame.player(info.id);
+      player2.conquer(navGame.ref(1, 1));
       constructionExecution(navGame, player2, 1, 1, UnitType.MissileSilo);
 
       const versionBefore = navGame.waterGraphVersion();
@@ -143,16 +140,17 @@ describe("Water Nukes", () => {
 
   describe("when waterNukes is disabled (default)", () => {
     beforeEach(async () => {
-      game = await setup("plains", {
-        infiniteGold: true,
-        instantBuild: true,
-        waterNukes: false,
-      });
-      const info = new PlayerInfo("p", PlayerType.Human, null, "p");
-      game.addPlayer(info);
-      game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
+      game = await setup(
+        "plains",
+        {
+          infiniteGold: true,
+          instantBuild: true,
+          waterNukes: false,
+        },
+        [info],
+      );
       player = game.player(info.id);
+      player.conquer(game.ref(1, 1));
 
       constructionExecution(game, player, 1, 1, UnitType.MissileSilo);
     });
@@ -182,16 +180,17 @@ describe("Water Nukes", () => {
 
   describe("updateTile terrain byte round-trip", () => {
     test("terrain byte is packed and unpacked correctly", async () => {
-      game = await setup("plains", {
-        infiniteGold: true,
-        instantBuild: true,
-        waterNukes: true,
-      });
-      const info = new PlayerInfo("p", PlayerType.Human, null, "p");
-      game.addPlayer(info);
-      game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
-      while (game.inSpawnPhase()) game.executeNextTick();
+      game = await setup(
+        "plains",
+        {
+          infiniteGold: true,
+          instantBuild: true,
+          waterNukes: true,
+        },
+        [info],
+      );
       player = game.player(info.id);
+      player.conquer(game.ref(1, 1));
       constructionExecution(game, player, 1, 1, UnitType.MissileSilo);
 
       const target = game.ref(10, 10);

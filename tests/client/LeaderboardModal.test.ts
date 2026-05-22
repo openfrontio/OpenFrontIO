@@ -44,13 +44,6 @@ vi.mock("../../src/client/Api", () => {
   return {
     getApiBase: vi.fn(getApiBase),
     getUserMe: vi.fn(async () => false),
-    fetchClanLeaderboard: vi.fn(async () => {
-      const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) return false;
-      return res.json();
-    }),
     fetchPlayerLeaderboard: vi.fn(async (page: number) => {
       const url = new URL(`${getApiBase()}/leaderboard/ranked`);
       url.searchParams.set("page", String(page));
@@ -66,6 +59,19 @@ vi.mock("../../src/client/Api", () => {
         }
         return false;
       }
+      return res.json();
+    }),
+  };
+});
+
+vi.mock("../../src/client/ClanApi", () => {
+  const getApiBase = () => "http://localhost:3000";
+  return {
+    fetchClanLeaderboard: vi.fn(async () => {
+      const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return false;
       return res.json();
     }),
   };
@@ -95,6 +101,7 @@ beforeEach(() => {
   );
 });
 
+import "../../src/client/components/baseComponents/Modal";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
 
 describe("LeaderboardModal", () => {
@@ -328,7 +335,14 @@ describe("LeaderboardModal", () => {
         }),
       });
 
-      const tab = modal.querySelector("#clan-leaderboard-tab");
+      modal.inline = true;
+      await modal.updateComplete;
+      const oModal = modal.querySelector("o-modal");
+      await (oModal as unknown as { updateComplete: Promise<unknown> })
+        .updateComplete;
+      const tab = oModal!.shadowRoot!.querySelector(
+        'button[role="tab"][data-key="clans"]',
+      );
       expect(tab).toBeTruthy();
 
       tab!.dispatchEvent(new MouseEvent("click", { bubbles: true }));

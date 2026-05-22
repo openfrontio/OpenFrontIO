@@ -1,4 +1,3 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -23,7 +22,6 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
-  MessageType,
   MutableAlliance,
   Player,
   PlayerBuildable,
@@ -43,6 +41,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import { diffPlayerUpdate } from "./GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -105,6 +104,13 @@ export class PlayerImpl implements Player {
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
+  /**
+   * Last PlayerUpdate emitted for this player on the worker→main channel.
+   * Used by GameImpl's tick loop to compute field-level diffs. Undefined on
+   * first emission (full snapshot sent).
+   */
+  public lastSentUpdate: PlayerUpdate | undefined;
+
   constructor(
     private mg: GameImpl,
     private _smallID: number,
@@ -119,7 +125,24 @@ export class PlayerImpl implements Player {
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
-  toUpdate(): PlayerUpdate {
+  /**
+   * Build a PlayerUpdate for the worker→main wire.
+   *
+   * The first call for a player returns the full snapshot. Subsequent calls
+   * return only fields that changed since the previous call (a partial
+   * `{ type, id, ...changedFields }`), or `null` if nothing changed.
+   *
+   * `lastSentUpdate` is updated to the full snapshot on every call.
+   */
+  toUpdate(): PlayerUpdate | null {
+    const full = this.toFullUpdate();
+    const prev = this.lastSentUpdate;
+    this.lastSentUpdate = full;
+    if (prev === undefined) return full;
+    return diffPlayerUpdate(prev, full);
+  }
+
+  private toFullUpdate(): PlayerUpdate {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );
@@ -177,6 +200,7 @@ export class PlayerImpl implements Player {
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
+      spawnTile: this._spawnTile,
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
       isLobbyCreator: this.isLobbyCreator(),
@@ -319,6 +343,7 @@ export class PlayerImpl implements Player {
     }
     return false;
   }
+
   numTilesOwned(): number {
     return this._tiles.size;
   }
@@ -331,7 +356,7 @@ export class PlayerImpl implements Player {
     return this._borderTiles;
   }
 
-  neighbors(): (Player | TerraNullius)[] {
+  nearby(): (Player | TerraNullius)[] {
     const ns: Set<Player | TerraNullius> = new Set();
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {
@@ -345,7 +370,56 @@ export class PlayerImpl implements Player {
         }
       }
     }
+    for (const n of this.shoreReachableNeighbors()) {
+      ns.add(n);
+    }
     return Array.from(ns);
+  }
+
+  // Samples every 10th border tile for shore tiles, checks the tile 5 steps
+  // away in each cardinal direction that immediately enters water, to detect
+  // players separated by a small river (up to 4 water tiles wide)
+  private shoreReachableNeighbors(): Set<Player | TerraNullius> {
+    const ns: Set<Player | TerraNullius> = new Set();
+    const map = this.mg.map();
+    const shores = Array.from(this.borderTiles()).filter((t) => map.isShore(t));
+    const directions: [number, number][] = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+
+    for (let i = 0; i < shores.length; i += 10) {
+      const border = shores[i];
+
+      const bx = map.x(border);
+      const by = map.y(border);
+
+      for (const [dx, dy] of directions) {
+        // Only follow directions that immediately enter water; land-adjacent
+        // directions are already covered by the direct neighbors() loop.
+        const x1 = bx + dx;
+        const y1 = by + dy;
+        if (!map.isValidCoord(x1, y1) || !map.isWater(map.ref(x1, y1)))
+          continue;
+
+        const nx = bx + dx * 5;
+        const ny = by + dy * 5;
+        if (!map.isValidCoord(nx, ny)) continue;
+        const tile = map.ref(nx, ny);
+        if (!map.isLand(tile)) continue;
+        if (!map.hasOwner(tile) && map.hasFallout(tile)) continue;
+        const owner = map.ownerID(tile);
+        if (owner !== this.smallID()) {
+          ns.add(
+            this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+          );
+        }
+      }
+    }
+
+    return ns;
   }
 
   isPlayer(): this is Player {
@@ -746,20 +820,13 @@ export class PlayerImpl implements Player {
     recipient.addTroops(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    this.mg.displayMessage(
-      "events_display.sent_troops_to_player",
-      MessageType.SENT_TROOPS_TO_PLAYER,
-      this.id(),
-      undefined,
-      { troops: renderTroops(troops), name: recipient.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.received_troops_from_player",
-      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
-      recipient.id(),
-      undefined,
-      { troops: renderTroops(troops), name: this.displayName() },
-    );
+    this.mg.addUpdate({
+      type: GameUpdateType.DonateEvent,
+      donationType: "troops",
+      senderId: this.id(),
+      recipientId: recipient.id(),
+      amount: BigInt(removed),
+    });
     return true;
   }
 
@@ -770,20 +837,13 @@ export class PlayerImpl implements Player {
     recipient.addGold(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    this.mg.displayMessage(
-      "events_display.sent_gold_to_player",
-      MessageType.SENT_GOLD_TO_PLAYER,
-      this.id(),
-      undefined,
-      { gold: renderNumber(gold), name: recipient.displayName() },
-    );
-    this.mg.displayMessage(
-      "events_display.received_gold_from_player",
-      MessageType.RECEIVED_GOLD_FROM_PLAYER,
-      recipient.id(),
-      gold,
-      { gold: renderNumber(gold), name: this.displayName() },
-    );
+    this.mg.addUpdate({
+      type: GameUpdateType.DonateEvent,
+      donationType: "gold",
+      senderId: this.id(),
+      recipientId: recipient.id(),
+      amount: removed,
+    });
     return true;
   }
 

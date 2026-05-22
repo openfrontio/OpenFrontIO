@@ -55,6 +55,7 @@ describe("TradeShipExecution", () => {
     } as any;
 
     piratePort = {
+      id: vi.fn(() => 201),
       tile: vi.fn(() => 56),
       owner: vi.fn(() => pirate),
       isActive: vi.fn(() => true),
@@ -63,6 +64,7 @@ describe("TradeShipExecution", () => {
     } as any;
 
     piratePort2 = {
+      id: vi.fn(() => 202),
       tile: vi.fn(() => 75),
       owner: vi.fn(() => pirate),
       isActive: vi.fn(() => true),
@@ -71,6 +73,7 @@ describe("TradeShipExecution", () => {
     } as any;
 
     srcPort = {
+      id: vi.fn(() => 101),
       tile: vi.fn(() => 10),
       owner: vi.fn(() => origOwner),
       isActive: vi.fn(() => true),
@@ -79,6 +82,7 @@ describe("TradeShipExecution", () => {
     } as any;
 
     dstPort = {
+      id: vi.fn(() => 102),
       tile: vi.fn(() => 100),
       owner: vi.fn(() => dstOwner),
       isActive: vi.fn(() => true),
@@ -139,6 +143,7 @@ describe("TradeShipExecution", () => {
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);
     expect(tradeShipExecution.isActive()).toBe(false);
-    expect(game.displayMessage).toHaveBeenCalled();
+    expect(origOwner.addGold).toHaveBeenCalled();
+    expect(dstOwner.addGold).toHaveBeenCalled();
   });
 });

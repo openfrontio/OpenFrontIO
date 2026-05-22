@@ -19,6 +19,9 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     attackRatioUp: "KeyY",
     boatAttack: "KeyB",
     groundAttack: "KeyG",
+    retaliateAttack: "Shift+KeyR",
+    requestAlliance: "KeyK",
+    breakAlliance: "KeyL",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -31,6 +34,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     altKey: "AltLeft",
     shiftKey: "ShiftLeft",
     resetGfx: "KeyR",
+    selectAllWarships: "KeyF",
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
@@ -160,6 +164,10 @@ export class UserSettings {
     return this.getBool("settings.territoryPatterns", true);
   }
 
+  goToPlayer() {
+    return this.getBool("settings.goToPlayer", true);
+  }
+
   attackingTroopsOverlay() {
     return this.getBool("settings.attackingTroopsOverlay", true);
   }
@@ -219,6 +227,10 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.setBool("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  toggleGoToPlayer() {
+    this.setBool("settings.goToPlayer", !this.goToPlayer());
   }
 
   toggleDarkMode() {
@@ -380,7 +392,7 @@ export class UserSettings {
   }
 
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 1);
+    return this.getFloat("settings.soundEffectsVolume", 0);
   }
 
   setSoundEffectsVolume(volume: number): void {

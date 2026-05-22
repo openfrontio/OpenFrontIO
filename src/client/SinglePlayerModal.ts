@@ -63,6 +63,8 @@ const DEFAULT_OPTIONS = {
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
+  protected routerName = "single-player";
+
   @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
   @state() private selectedDifficulty: Difficulty =
     DEFAULT_OPTIONS.selectedDifficulty;
@@ -169,7 +171,34 @@ export class SinglePlayerModal extends BaseModal {
     this.mapWins = winsMap;
   }
 
-  render() {
+  protected renderHeaderSlot() {
+    return modalHeader({
+      title: translateText("main.solo") || "Solo",
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.back"),
+      rightContent: hasLinkedAccount(this.userMeResponse)
+        ? html`<button
+            @click=${this.toggleAchievements}
+            class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
+              .showAchievements
+              ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+              : "text-white/60"}"
+          >
+            <img
+              src=${assetUrl("images/MedalIconWhite.svg")}
+              class="w-4 h-4 opacity-80 shrink-0"
+              style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
+            />
+            <span
+              class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+              >${translateText("single_modal.toggle_achievements")}</span
+            >
+          </button>`
+        : this.renderNotLoggedInBanner(),
+    });
+  }
+
+  protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
         .labelKey=${"single_modal.max_timer"}
@@ -224,39 +253,8 @@ export class SinglePlayerModal extends BaseModal {
       ></toggle-input-card>`,
     ];
 
-    const content = html`
-      <div class="${this.modalContainerClass}">
-        <!-- Header -->
-        ${modalHeader({
-          title: translateText("main.solo") || "Solo",
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.back"),
-          rightContent: hasLinkedAccount(this.userMeResponse)
-            ? html`<button
-                @click=${this.toggleAchievements}
-                class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
-                  .showAchievements
-                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                  : "text-white/60"}"
-              >
-                <img
-                  src=${assetUrl("images/MedalIconWhite.svg")}
-                  class="w-4 h-4 opacity-80 shrink-0"
-                  style="${this.showAchievements
-                    ? ""
-                    : "filter: grayscale(1);"}"
-                />
-                <span
-                  class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
-                  >${translateText("single_modal.toggle_achievements")}</span
-                >
-              </button>`
-            : this.renderNotLoggedInBanner(),
-        })}
-
-        <div
-          class="flex-1 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
-        >
+    return html`
+      <div class="px-6 pt-4 pb-6 mx-auto w-full max-w-5xl">
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -341,37 +339,26 @@ export class SinglePlayerModal extends BaseModal {
 
         <!-- Footer Action -->
         <div class="p-6 border-t border-white/10 bg-black/20">
-          ${hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
-            ? html`<div
-                class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
-              >
-                ${translateText("single_modal.options_changed_no_achievements")}
-              </div>`
-            : null}
-          <button
+          ${
+            hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
+              ? html`<div
+                  class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
+                >
+                  ${translateText(
+                    "single_modal.options_changed_no_achievements",
+                  )}
+                </div>`
+              : null
+          }
+          <o-button
+            variant="primary"
+            width="block"
+            size="lg"
+            translationKey="single_modal.start"
             @click=${this.startGame}
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-[#0073b7] hover:bg-sky-500 rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0"
-          >
-            ${translateText("single_modal.start")}
-          </button>
+          ></o-button>
         </div>
       </div>
-    `;
-
-    if (this.inline) {
-      return content;
-    }
-
-    return html`
-      <o-modal
-        id="singlePlayerModal"
-        title="${translateText("main.solo") || "Solo"}"
-        ?inline=${this.inline}
-        hideHeader
-        hideCloseButton
-      >
-        ${content}
-      </o-modal>
     `;
   }
 

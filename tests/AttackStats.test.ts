@@ -1,35 +1,37 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { GameID } from "../src/core/Schemas";
 import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
 let game: Game;
-const gameID: GameID = "game_id";
 let player1: Player;
 let player2: Player;
+const player1Info = new PlayerInfo(
+  "player1",
+  PlayerType.Human,
+  "player1",
+  "player1",
+);
+const player2Info = new PlayerInfo(
+  "player2",
+  PlayerType.Human,
+  "player2",
+  "player2",
+);
 
 describe("AttackStats", () => {
   beforeEach(async () => {
     game = await setup("plains", { infiniteTroops: true }, [
-      new PlayerInfo("player1", PlayerType.Human, "player1", "player1"),
-      new PlayerInfo("player2", PlayerType.Human, "player2", "player2"),
+      player1Info,
+      player2Info,
     ]);
 
     player1 = game.player("player1");
     player2 = game.player("player2");
-
-    game.addExecution(
-      new SpawnExecution(gameID, player1.info(), game.ref(50, 50)),
-    );
-    game.addExecution(
-      new SpawnExecution(gameID, player2.info(), game.ref(50, 55)),
-    );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
+    player1.conquer(game.ref(50, 50));
+    player2.conquer(game.ref(50, 51));
+    player2.addGold(100n);
+    game.stats().goldWork(player2, 100n);
   });
 
   test("should increase war gold stat when a player is eliminated", () => {
@@ -96,11 +98,11 @@ function expectWarGoldStatIsIncreasedAfterKill(
   const attackerStats = game.stats().stats()[attacker.clientID()!];
   const defenderStats = game.stats().stats()[defender.clientID()!];
 
-  // Verify that all defender's gold was recorded as war gold in the attacker's stats
+  // Conqueror receives 50% of human defender's gold as war gold
   expect(attackerStats?.gold?.[GOLD_INDEX_WAR]).toBeDefined();
   expect(defenderStats?.gold?.[GOLD_INDEX_WORK]).toBeDefined();
   expect(attackerStats?.gold?.[GOLD_INDEX_WAR]).toBe(
-    defenderStats?.gold?.reduce((acc, g) => acc + g, 0n),
+    (defenderStats?.gold?.reduce((acc, g) => acc + g, 0n) ?? 0n) / 2n,
   );
 }
 
