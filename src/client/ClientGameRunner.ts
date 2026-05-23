@@ -1,6 +1,6 @@
 import { Config } from "src/core/configuration/Config";
 import { translateText } from "../client/Utils";
-import { EventBus, GameEvent } from "../core/EventBus";
+import { EventBus } from "../core/EventBus";
 import {
   ClientID,
   GameID,
@@ -69,6 +69,7 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameView as WebGLGameView } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
+import { SoundUpdateEvent } from "./sound/Sounds";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -517,10 +518,6 @@ async function createClientGame(
     soundManager.dispose();
     throw err;
   }
-}
-
-export class SoundUpdateEvent implements GameEvent {
-  constructor(public gu: GameUpdateViewData) {}
 }
 
 export class ClientGameRunner {

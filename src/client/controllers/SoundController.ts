@@ -6,9 +6,12 @@ import {
   UnitUpdate,
 } from "../../core/game/GameUpdates";
 import { GameView } from "../../core/game/GameView";
-import { SoundUpdateEvent } from "../ClientGameRunner";
 import { Controller } from "../Controller";
-import { PlaySoundEffectEvent, SoundEffect } from "../sound/Sounds";
+import {
+  PlaySoundEffectEvent,
+  SoundEffect,
+  SoundUpdateEvent,
+} from "../sound/Sounds";
 
 export class SoundController implements Controller {
   constructor(

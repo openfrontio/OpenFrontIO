@@ -1,5 +1,6 @@
 import { assetUrl } from "../../core/AssetUrls";
 import { GameEvent } from "../../core/EventBus";
+import { GameUpdateViewData } from "../../core/game/GameUpdates";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
@@ -47,6 +48,10 @@ export const soundEffectUrls: ReadonlyMap<SoundEffect, string> = new Map([
 
 export class PlaySoundEffectEvent implements GameEvent {
   constructor(public readonly effect: SoundEffect) {}
+}
+
+export class SoundUpdateEvent implements GameEvent {
+  constructor(public gu: GameUpdateViewData) {}
 }
 
 export class SetSoundEffectsVolumeEvent implements GameEvent {
