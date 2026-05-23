@@ -549,6 +549,7 @@ export const PlayerSchema = z.object({
   clanTag: ClanTagSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
+  friends: z.array(ID).optional(),
 });
 
 export const GameStartInfoSchema = z.object({

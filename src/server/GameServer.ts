@@ -731,18 +731,29 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    const publicIdToClientID = new Map<string, ClientID>();
+    for (const c of this.activeClients) {
+      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
+    }
+
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
       config: this.gameConfig,
-      players: this.activeClients.map((c) => ({
-        username: c.username,
-        clanTag: c.clanTag ?? null,
-        clientID: c.clientID,
-        cosmetics: c.cosmetics,
-        isLobbyCreator: this.lobbyCreatorID === c.clientID,
-      })),
+      players: this.activeClients.map((c) => {
+        const friendClientIDs = c.friends
+          .map((pid) => publicIdToClientID.get(pid))
+          .filter((id): id is ClientID => id !== undefined);
+        return {
+          username: c.username,
+          clanTag: c.clanTag ?? null,
+          clientID: c.clientID,
+          cosmetics: c.cosmetics,
+          isLobbyCreator: this.lobbyCreatorID === c.clientID,
+          friends: friendClientIDs.length > 0 ? friendClientIDs : undefined,
+        };
+      }),
     });
     if (!result.success) {
       const error = z.prettifyError(result.error);

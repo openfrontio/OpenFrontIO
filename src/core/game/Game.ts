@@ -580,6 +580,7 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
     public readonly clanTag: string | null = null,
+    public readonly friends: ClientID[] = [],
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
