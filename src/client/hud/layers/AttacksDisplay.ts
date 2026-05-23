@@ -22,7 +22,8 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
-import { getColoredSprite } from "../SpriteLoader";
+import { MS_PER_TICK } from "../../render/GameConstants";
+import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
 import { estimateBoatEtaSeconds } from "./boatEta";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
@@ -47,7 +48,9 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this;
   }
 
-  init() {}
+  init() {
+    void loadAllSprites();
+  }
 
   tick() {
     this.active = true;
@@ -341,26 +344,19 @@ export class AttacksDisplay extends LitElement implements Controller {
     return player?.displayName() ?? "";
   }
 
-  private getBoatEtaSeconds(boat: UnitView): number | null {
+  private getBoatMotion(
+    boat: UnitView,
+  ): { progress: number; etaSeconds: number } | null {
     const plan = this.game.motionPlans().get(boat.id());
     if (!plan) return null;
     const totalTicks = (plan.path.length - 1) * plan.ticksPerStep;
+    if (totalTicks <= 0) return { progress: 1, etaSeconds: 0 };
     const elapsedTicks = this.game.ticks() - plan.startTick;
-    const remainingTicks = totalTicks - elapsedTicks;
-    if (remainingTicks <= 0) return 0;
-    return estimateBoatEtaSeconds(
-      remainingTicks,
-      this.game.config().serverConfig().turnIntervalMs(),
-    );
-  }
-
-  private getBoatProgress(boat: UnitView): number | null {
-    const plan = this.game.motionPlans().get(boat.id());
-    if (!plan) return null;
-    const totalTicks = (plan.path.length - 1) * plan.ticksPerStep;
-    if (totalTicks <= 0) return 1;
-    const elapsedTicks = this.game.ticks() - plan.startTick;
-    return Math.min(1, Math.max(0, elapsedTicks / totalTicks));
+    const remainingTicks = Math.max(0, totalTicks - elapsedTicks);
+    return {
+      progress: Math.min(1, Math.max(0, elapsedTicks / totalTicks)),
+      etaSeconds: estimateBoatEtaSeconds(remainingTicks, MS_PER_TICK),
+    };
   }
 
   private renderBoatIcon(boat: UnitView) {
@@ -374,18 +370,19 @@ export class AttacksDisplay extends LitElement implements Controller {
   }
 
   private renderProgressBar(
-    progress: number | null,
-    etaSeconds: number | null,
+    progress: number,
+    etaSeconds: number,
     color: string,
   ) {
-    if (progress === null) return html``;
     const pct = Math.round(progress * 100);
-    const showCountdown =
-      etaSeconds !== null && etaSeconds > 0 && etaSeconds <= 5;
+    const showCountdown = etaSeconds > 0 && etaSeconds <= 5;
     return html`<div
       class="w-10 h-2 rounded-full bg-gray-900/60 overflow-hidden shrink-0 relative"
     >
-      <div class="h-full rounded-full ${color}" style="width: ${pct}%"></div>
+      <div
+        class="h-full rounded-full ${color}"
+        style="width: ${pct}%; transition: width 100ms linear"
+      ></div>
       ${showCountdown
         ? html`<span
             class="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white leading-none"
@@ -404,8 +401,7 @@ export class AttacksDisplay extends LitElement implements Controller {
       showCancel: boolean;
     },
   ) {
-    const progress = this.getBoatProgress(boat);
-    const etaSeconds = this.getBoatEtaSeconds(boat);
+    const motion = this.getBoatMotion(boat);
     const isRetreating = boat.transportShipState().isRetreating;
     return html`
       <div
@@ -416,7 +412,13 @@ export class AttacksDisplay extends LitElement implements Controller {
             <span class="inline-block min-w-[3rem] text-right"
               >${renderTroops(boat.troops())}</span
             >
-            ${this.renderProgressBar(progress, etaSeconds, opts.barColor)}
+            ${motion
+              ? this.renderProgressBar(
+                  motion.progress,
+                  motion.etaSeconds,
+                  opts.barColor,
+                )
+              : ""}
             <span class="truncate text-xs ml-1">${opts.label}</span>`,
           onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
           className: `text-left ${opts.color} inline-flex items-center gap-0.5 lg:gap-1 min-w-0`,
@@ -444,7 +446,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.outgoingBoats.map((boat) =>
       this.renderBoatRow(boat, {
         color: "text-aquarius",
-        barColor: "bg-aquarius",
+        barColor: "bg-malibu-blue",
         label: this.getBoatTargetName(boat),
         showCancel: true,
       }),

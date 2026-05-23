@@ -1,14 +1,13 @@
-/** Estimates arrival time in seconds from remaining ticks and server tick interval. */
+/** Estimates arrival time in seconds from remaining ticks and a tick duration in ms. */
 export function estimateBoatEtaSeconds(
   remainingTicks: number,
-  turnIntervalMs: number,
+  msPerTick: number,
 ): number {
   if (!Number.isFinite(remainingTicks) || remainingTicks < 0) {
     throw new Error(`Invalid remainingTicks: ${remainingTicks}`);
   }
-  if (!Number.isFinite(turnIntervalMs) || turnIntervalMs <= 0) {
-    throw new Error(`Invalid turnIntervalMs: ${turnIntervalMs}`);
+  if (!Number.isFinite(msPerTick) || msPerTick <= 0) {
+    throw new Error(`Invalid msPerTick: ${msPerTick}`);
   }
-  const secondsPerTick = turnIntervalMs / 1000;
-  return Math.ceil(remainingTicks * secondsPerTick);
+  return Math.ceil((remainingTicks * msPerTick) / 1000);
 }
