@@ -28,19 +28,22 @@ export class SoundController implements Controller {
     if ((gu.pendingTurns ?? 0) > 1 || this.view.ticks() <= 0) return;
 
     const myPlayer = this.view.myPlayer();
-    if (!myPlayer) return;
 
     // 1. Process Conquests
-    gu.updates[GameUpdateType.ConquestEvent]?.forEach((cu: ConquestUpdate) => {
-      if (cu.conquerorId === myPlayer.id()) {
-        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.KaChing));
-      }
-    });
+    if (myPlayer) {
+      gu.updates[GameUpdateType.ConquestEvent]?.forEach(
+        (cu: ConquestUpdate) => {
+          if (cu.conquerorId === myPlayer.id()) {
+            this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.KaChing));
+          }
+        },
+      );
+    }
 
     // 2. Process Units
     gu.updates[GameUpdateType.Unit]?.forEach((u: UnitUpdate) => {
       const existingUnit = this.view.unit(u.id);
-      const isMine = u.ownerID === myPlayer.smallID();
+      const isMine = myPlayer ? u.ownerID === myPlayer.smallID() : false;
 
       if (!existingUnit) {
         this.handleNewUnitSounds(u.unitType, isMine);
