@@ -51,7 +51,7 @@ export class PlaySoundEffectEvent implements GameEvent {
 }
 
 export class SoundUpdateEvent implements GameEvent {
-  constructor(public gu: GameUpdateViewData) {}
+  constructor(public readonly gu: GameUpdateViewData) {}
 }
 
 export class SetSoundEffectsVolumeEvent implements GameEvent {
