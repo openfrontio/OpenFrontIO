@@ -10,7 +10,11 @@ import {
   validateClanTag,
   validateUsername,
 } from "../core/validations/username";
+import { getUserMe } from "./Api";
+import { fetchClanExists } from "./ClanApi";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+
+const CLAN_OWNERSHIP_DEBOUNCE_MS = 400;
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -29,6 +33,11 @@ export class UsernameInput extends LitElement {
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
   private _lastValidatedLang: string | null = null;
+  private syncValidationError: string = "";
+  private syncIsValid: boolean = true;
+  private clanTagAsyncError: string = "";
+  private clanTagCheckCounter: number = 0;
+  private clanTagCheckTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Remove static styles since we're using Tailwind
 
@@ -179,20 +188,106 @@ export class UsernameInput extends LitElement {
 
     const clanTagResult = validateClanTag(this.clanTag);
     if (!clanTagResult.isValid) {
-      this._isValid = false;
-      this.validationError = clanTagResult.error ?? "";
-      return;
+      this.syncIsValid = false;
+      this.syncValidationError = clanTagResult.error ?? "";
+    } else {
+      const result = validateUsername(trimmedBase);
+      this.syncIsValid = result.isValid;
+      if (result.isValid) {
+        localStorage.setItem(usernameKey, trimmedBase);
+        // clanTag is persisted by scheduleClanTagOwnershipCheck (or its async
+        // continuation) so we never store a tag the server would reject.
+        this.syncValidationError = "";
+      } else {
+        this.syncValidationError = result.error ?? "";
+      }
     }
 
-    const result = validateUsername(trimmedBase);
-    this._isValid = result.isValid;
-    if (result.isValid) {
-      localStorage.setItem(usernameKey, trimmedBase);
-      localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
-      this.validationError = "";
-    } else {
-      this.validationError = result.error ?? "";
+    this.scheduleClanTagOwnershipCheck();
+    this.updateValidationState();
+  }
+
+  private persistClanTag(tag: string) {
+    if (this.syncIsValid) {
+      localStorage.setItem(clanTagKey, tag);
     }
+  }
+
+  private updateValidationState() {
+    if (!this.syncIsValid) {
+      this._isValid = false;
+      this.validationError = this.syncValidationError;
+      return;
+    }
+    if (this.clanTagAsyncError) {
+      this._isValid = false;
+      this.validationError = this.clanTagAsyncError;
+      return;
+    }
+    this._isValid = true;
+    this.validationError = "";
+  }
+
+  private scheduleClanTagOwnershipCheck() {
+    if (this.clanTagCheckTimer !== null) {
+      clearTimeout(this.clanTagCheckTimer);
+      this.clanTagCheckTimer = null;
+    }
+    const tag = this.clanTag;
+    if (
+      tag.length < MIN_CLAN_TAG_LENGTH ||
+      tag.length > MAX_CLAN_TAG_LENGTH ||
+      !validateClanTag(tag).isValid
+    ) {
+      // Bump the counter so any in-flight check is discarded.
+      this.clanTagCheckCounter++;
+      if (this.clanTagAsyncError) {
+        this.clanTagAsyncError = "";
+      }
+      // No async check needed — persist the (empty/short) value so clearing
+      // the tag is remembered across reloads.
+      this.persistClanTag(this.getClanTag() ?? "");
+      return;
+    }
+    this.clanTagCheckTimer = setTimeout(() => {
+      this.clanTagCheckTimer = null;
+      void this.runClanTagOwnershipCheck(tag);
+    }, CLAN_OWNERSHIP_DEBOUNCE_MS);
+  }
+
+  private async runClanTagOwnershipCheck(expectedTag: string) {
+    const checkId = ++this.clanTagCheckCounter;
+    const stillCurrent = () =>
+      checkId === this.clanTagCheckCounter && this.clanTag === expectedTag;
+
+    const me = await getUserMe();
+    if (!stillCurrent()) return;
+    if (me) {
+      const myTags = (me.player.clans ?? []).map((c) => c.tag.toUpperCase());
+      if (myTags.includes(expectedTag.toUpperCase())) {
+        this.setClanTagAsyncError("");
+        this.persistClanTag(expectedTag);
+        return;
+      }
+    }
+
+    const exists = await fetchClanExists(expectedTag);
+    if (!stillCurrent()) return;
+    if (exists === true) {
+      this.setClanTagAsyncError(
+        translateText("username.tag_not_member", { tag: expectedTag }),
+      );
+    } else {
+      this.setClanTagAsyncError("");
+      this.persistClanTag(expectedTag);
+    }
+  }
+
+  private setClanTagAsyncError(error: string) {
+    if (this.clanTagAsyncError === error) return;
+    this.clanTagAsyncError = error;
+    this.updateValidationState();
+    this.requestUpdate();
   }
 
   public isValid(): boolean {

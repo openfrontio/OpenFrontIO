@@ -21,7 +21,7 @@ import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
-import { getUserMe, verifyClientToken } from "./jwt";
+import { clanExistsByTag, getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { MapPlaylist } from "./MapPlaylist";
@@ -357,19 +357,18 @@ export async function startWorker() {
         }
 
         // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
         const { clanTag: censoredClanTag, username: censoredUsername } =
           privilegeRefresher
             .get()
             .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
-        // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization
+        // Try to reconnect an existing client (e.g., page refresh).
+        // Username may have changed since initial join; clanTag is intentionally
+        // omitted so the reconnect can't swap to a tag that wasn't validated on
+        // the original join. To change clan tag, the player must fully rejoin.
         if (
           gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
             username: censoredUsername,
-            clanTag: censoredClanTag,
           })
         ) {
           return;
@@ -378,6 +377,7 @@ export async function startWorker() {
         let flares: string[] | undefined;
         let publicId: string | undefined;
         let friends: string[] = [];
+        let userClanTags: Set<string> = new Set();
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
@@ -400,6 +400,11 @@ export async function startWorker() {
           flares = result.response.player.flares;
           publicId = result.response.player.publicId;
           friends = result.response.player.friends;
+          userClanTags = new Set(
+            (result.response.player.clans ?? []).map((c) =>
+              c.tag.toUpperCase(),
+            ),
+          );
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -454,6 +459,26 @@ export async function startWorker() {
           }
         }
 
+        // Enforce clan tag ownership. A player can wear a tag only if they're
+        // a member; if they're not and the tag belongs to a real clan, drop it
+        // to prevent impersonation. Fictional tags pass through. Runs after
+        // turnstile so we don't burn an API call on rejected bot joins.
+        let resolvedClanTag = censoredClanTag;
+        if (
+          resolvedClanTag !== null &&
+          !userClanTags.has(resolvedClanTag.toUpperCase())
+        ) {
+          const exists = await clanExistsByTag(resolvedClanTag);
+          if (exists === true) {
+            log.warn("Dropped clan tag: player is not a member", {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+              clanTag: resolvedClanTag,
+            });
+            resolvedClanTag = null;
+          }
+        }
+
         // Create client and add to game
         const client = new Client(
           generateID(),
@@ -463,7 +488,7 @@ export async function startWorker() {
           flares,
           ip,
           censoredUsername,
-          censoredClanTag,
+          resolvedClanTag,
           ws,
           cosmeticResult.cosmetics,
           publicId,

@@ -98,3 +98,18 @@ export async function getUserMe(
     };
   }
 }
+
+// Best-effort check: does a clan with this tag exist?
+// Returns null on transport errors or unexpected statuses so callers can
+// fail open — the goal is impersonation prevention, not availability blocker.
+export async function clanExistsByTag(tag: string): Promise<boolean | null> {
+  try {
+    const url = `${ServerEnv.jwtIssuer()}/public/clan/${encodeURIComponent(tag)}/exists`;
+    const response = await fetch(url);
+    if (response.status === 200) return true;
+    if (response.status === 404) return false;
+    return null;
+  } catch {
+    return null;
+  }
+}

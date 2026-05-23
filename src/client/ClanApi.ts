@@ -125,6 +125,23 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   }
 }
 
+// Lightweight existence probe. Public endpoint, no auth required — used to
+// detect clan-tag ownership conflicts when a user types a tag into the input.
+// Returns null on unexpected statuses so callers can fail open.
+export async function fetchClanExists(tag: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}/exists`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (res.status === 200) return true;
+    if (res.status === 404) return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export type ClanMemberSort =
   | "default"
   | "winsTotal"
