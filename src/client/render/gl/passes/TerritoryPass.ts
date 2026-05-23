@@ -37,8 +37,18 @@ export class TerritoryPass {
   private uStaleNukeColor: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
+  private uTime: WebGLUniformLocation;
+  private uHoverBBox: WebGLUniformLocation;
+  private uHoverFlash: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
   private highlightOwner = 0;
+
+  /** Cached AABB of the hovered player's territory; [minX, minY, maxX, maxY]. */
+  private hoverBBox = new Float32Array(4);
+  /** Wall-clock seconds when hover last started; -Infinity if not hovering. */
+  private hoverEnterTimeSec = -Infinity;
+  /** Duration (sec) of the hover-enter flash. */
+  private static readonly FLASH_DURATION = 0.4;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
@@ -128,6 +138,9 @@ export class TerritoryPass {
       this.program,
       "uHighlightBrighten",
     )!;
+    this.uTime = gl.getUniformLocation(this.program, "uTime")!;
+    this.uHoverBBox = gl.getUniformLocation(this.program, "uHoverBBox")!;
+    this.uHoverFlash = gl.getUniformLocation(this.program, "uHoverFlash")!;
     this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
 
     gl.useProgram(this.program);
@@ -367,15 +380,31 @@ export class TerritoryPass {
 
   /** Set the hovered player's smallID for territory-fill brightening (0 = off). */
   setHighlightOwner(ownerID: number): void {
+    if (ownerID === this.highlightOwner) return;
     this.highlightOwner = ownerID;
+    if (ownerID === 0) {
+      this.hoverEnterTimeSec = -Infinity;
+      return;
+    }
+    const bbox = this.getBBoxForOwner(ownerID);
+    if (bbox !== null) {
+      this.hoverBBox[0] = bbox.minX;
+      this.hoverBBox[1] = bbox.minY;
+      this.hoverBBox[2] = bbox.maxX;
+      this.hoverBBox[3] = bbox.maxY;
+    }
+    this.hoverEnterTimeSec = performance.now() / 1000;
   }
 
   /** Draw territory fill + stale-nuke ground. Blending must be enabled by caller. */
-  draw(cameraMatrix: Float32Array): void {
+  draw(cameraMatrix: Float32Array, timeSec: number): void {
     this.flushTileTexture();
 
     const gl = this.gl;
     const mo = this.settings.mapOverlay;
+
+    // Bound time before scaling so int(timeSec * speed) in the shader stays safe.
+    const t = timeSec % 1000;
 
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
@@ -392,6 +421,11 @@ export class TerritoryPass {
     );
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
+    gl.uniform1f(this.uTime, t);
+    gl.uniform4fv(this.uHoverBBox, this.hoverBBox);
+    const flashElapsed = timeSec - this.hoverEnterTimeSec;
+    const flash = Math.max(0, 1 - flashElapsed / TerritoryPass.FLASH_DURATION);
+    gl.uniform1f(this.uHoverFlash, flash);
     gl.uniform1i(
       this.uShowPatterns,
       this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,

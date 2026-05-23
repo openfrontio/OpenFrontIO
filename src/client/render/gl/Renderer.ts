@@ -1048,7 +1048,7 @@ export class GPURenderer {
     this.trackFps(now);
     this.uploadTextures();
     this.computeTextures();
-    this.renderFrame();
+    this.renderFrame(now / 1000);
     if (this.onFrame) this.onFrame(performance.now() - now);
     if (this.afterRender) this.afterRender(this.canvas);
   }
@@ -1084,7 +1084,7 @@ export class GPURenderer {
     if (this.settings.passEnabled.mapOverlay) this.borderPass.draw();
   }
 
-  private renderFrame(): void {
+  private renderFrame(timeSec: number): void {
     const cam = this.camera.getMatrix();
     const zoom = this.camera.zoom;
     const cw = this.canvas.width;
@@ -1094,14 +1094,14 @@ export class GPURenderer {
     if (nightActive) {
       this.resizeSceneTargetIfNeeded(cw, ch);
       const sceneTex = toTarget(this.gl, this.sceneTarget, () =>
-        this.drawBaseLayer(cam),
+        this.drawBaseLayer(cam, timeSec),
       );
       const lightTex = this.lightmapPass.draw(cam, cw, ch, this.frameTick);
       toScreen(this.gl, cw, ch, () =>
         this.nightCompositePass.draw(sceneTex, lightTex),
       );
     } else {
-      toScreen(this.gl, cw, ch, () => this.drawBaseLayer(cam));
+      toScreen(this.gl, cw, ch, () => this.drawBaseLayer(cam, timeSec));
     }
 
     this.renderOverlays(cam, zoom);
@@ -1130,7 +1130,7 @@ export class GPURenderer {
     );
   }
 
-  private drawBaseLayer(cam: Float32Array): void {
+  private drawBaseLayer(cam: Float32Array, timeSec: number): void {
     const gl = this.gl;
     const pe = this.settings.passEnabled;
     gl.clearColor(0.04, 0.04, 0.06, 1.0);
@@ -1139,7 +1139,7 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    if (pe.mapOverlay) this.territoryPass.draw(cam);
+    if (pe.mapOverlay) this.territoryPass.draw(cam, timeSec);
   }
 
   private renderOverlays(cam: Float32Array, zoom: number): void {
