@@ -610,7 +610,7 @@ export class GameServer {
           }
           this._hasEnded = true;
         }
-      } else {
+      } else if (!this._hasEnded) {
         // Check if remaining clients have reached a winner consensus
         this.checkWinnerConsensus();
       }
@@ -1257,8 +1257,11 @@ export class GameServer {
     potentialWinner.ips.add(client.ip);
 
     const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+    const activeVotes = [...potentialWinner.ips].filter((ip) =>
+      activeUniqueIPs.has(ip),
+    ).length;
 
-    const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
+    const ratio = `${activeVotes}/${activeUniqueIPs.size}`;
     this.log.info(
       `received winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
       {
@@ -1266,14 +1269,14 @@ export class GameServer {
       },
     );
 
-    if (potentialWinner.ips.size * 2 <= activeUniqueIPs.size) {
+    if (activeVotes * 2 <= activeUniqueIPs.size) {
       return;
     }
 
     // Vote succeeded
     this.winner = potentialWinner.winner;
     this.log.info(
-      `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+      `Winner determined by ${activeVotes}/${activeUniqueIPs.size} active IPs`,
       {
         winnerKey: winnerKey,
       },
@@ -1282,17 +1285,23 @@ export class GameServer {
   }
 
   private checkWinnerConsensus() {
-    if (this.winner !== null) {
+    if (this.winner !== null || this._hasEnded) {
       return;
     }
 
     const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+    if (activeUniqueIPs.size === 0) {
+      return;
+    }
 
     for (const [winnerKey, potentialWinner] of this.winnerVotes.entries()) {
-      if (potentialWinner.ips.size * 2 > activeUniqueIPs.size) {
+      const activeVotes = [...potentialWinner.ips].filter((ip) =>
+        activeUniqueIPs.has(ip),
+      ).length;
+      if (activeVotes * 2 > activeUniqueIPs.size) {
         this.winner = potentialWinner.winner;
         this.log.info(
-          `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs after client disconnect`,
+          `Winner determined by ${activeVotes}/${activeUniqueIPs.size} active IPs after client disconnect`,
           {
             winnerKey: winnerKey,
           },
