@@ -23,7 +23,7 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 
-import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
 import {
   getMessageTypeClasses,
@@ -297,7 +297,7 @@ export class EventsDisplay extends LitElement implements Controller {
       type: MessageType.CHAT,
       unsafeDescription: false,
     });
-    this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Message));
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
@@ -335,7 +335,7 @@ export class EventsDisplay extends LitElement implements Controller {
     if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
-      this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
+      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AllianceBroken));
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
@@ -362,7 +362,7 @@ export class EventsDisplay extends LitElement implements Controller {
         focusID: update.betrayedID,
       });
     } else if (betrayed === myPlayer) {
-      this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
+      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AllianceBroken));
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
           name: traitor.displayName(),

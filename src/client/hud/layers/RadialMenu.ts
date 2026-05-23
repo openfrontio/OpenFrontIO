@@ -3,7 +3,7 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { Controller } from "../../Controller";
 import { CloseViewEvent } from "../../InputHandler";
-import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { PlaySoundEffectEvent, SoundEffect } from "../../sound/Sounds";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import {
   CenterButtonElement,
@@ -507,7 +507,7 @@ export class RadialMenu implements Controller {
         this.navigationInProgress
       )
         return;
-      this.eventBus.emit(new PlaySoundEffectEvent("click"));
+      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
 
       if (
         this.currentLevel > 0 &&

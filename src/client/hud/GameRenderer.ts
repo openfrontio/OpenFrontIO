@@ -7,6 +7,7 @@ import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { SoundController } from "../controllers/SoundController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
@@ -283,6 +284,7 @@ export function createRenderer(
     new HoverHighlightController(game, eventBus, transformHandler, view),
     new StructureHighlightController(eventBus, view),
     new ViewModeController(eventBus, view),
+    new SoundController(eventBus, game),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     actionableEvents,
