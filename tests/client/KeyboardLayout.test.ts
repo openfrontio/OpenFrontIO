@@ -207,6 +207,52 @@ describe("KeyboardLayout", () => {
       expect(fake.getLayoutMap).toHaveBeenCalledTimes(2);
     });
 
+    it("does not let an older in-flight load overwrite the cache after layoutchange starts a newer load", async () => {
+      const fake = installFakeKeyboard({});
+
+      // Stage two getLayoutMap calls, both deferred so we can resolve them
+      // in a controlled order.
+      let resolveFirst!: (value: Map<string, string>) => void;
+      let resolveSecond!: (value: Map<string, string>) => void;
+      fake.getLayoutMap.mockImplementationOnce(
+        () =>
+          new Promise<Map<string, string>>((r) => {
+            resolveFirst = r;
+          }),
+      );
+      fake.getLayoutMap.mockImplementationOnce(
+        () =>
+          new Promise<Map<string, string>>((r) => {
+            resolveSecond = r;
+          }),
+      );
+
+      // Start load #1 — will await `resolveFirst`.
+      void loadKeyboardLayout();
+
+      // Layoutchange before #1 resolves: cache invalidates and the auto-
+      // reload starts load #2, awaiting `resolveSecond`.
+      fake.emitLayoutChange();
+
+      // Resolve load #1 with stale data. The generation guard must drop it.
+      resolveFirst(new Map([["KeyW", "stale"]]));
+      // Flush microtasks so the .finally on load #1 runs.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Cache must NOT contain the stale value.
+      expect(getKeyForCode("KeyW")).not.toBe("stale");
+      expect(getKeyForCode("KeyW")).toBeNull();
+
+      // Resolve load #2 with the correct, current layout.
+      resolveSecond(new Map([["KeyW", "w"]]));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(getKeyForCode("KeyW")).toBe("w");
+      expect(fake.getLayoutMap).toHaveBeenCalledTimes(2);
+    });
+
     it("returns a disposer that removes the subscription", async () => {
       installFakeKeyboard({ KeyW: "z" });
       const cb = vi.fn();

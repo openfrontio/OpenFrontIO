@@ -29,6 +29,10 @@ interface KeyboardApi extends EventTarget {
 let cachedLayout: ReadonlyMap<string, string> | null = null;
 let pendingLoad: Promise<void> | null = null;
 let layoutChangeBound = false;
+// Monotonic counter incremented on every `layoutchange` so an older,
+// still-in-flight `performLoad` that resolves *after* a newer load has
+// started cannot overwrite `cachedLayout` with stale data.
+let loadGeneration = 0;
 const subscribers = new Set<() => void>();
 
 function getKeyboardApi(): KeyboardApi | null {
@@ -62,6 +66,10 @@ function bindLayoutChange(api: KeyboardApi): void {
 }
 
 function onLayoutChange(): void {
+  // Bump the generation *before* clearing state so any in-flight
+  // `performLoad` that resolves after this point sees a mismatched
+  // generation and skips its commit.
+  loadGeneration += 1;
   cachedLayout = null;
   pendingLoad = null;
   // Notify subscribers immediately so components fall back to the QWERTY
@@ -73,13 +81,20 @@ function onLayoutChange(): void {
 }
 
 async function performLoad(): Promise<void> {
+  // Capture the generation at the start of this load. If `onLayoutChange`
+  // bumps the counter while we await `getLayoutMap`, the generation we
+  // captured will no longer match and we must drop our result rather
+  // than overwrite a fresher load's cache.
+  const startGeneration = loadGeneration;
   const api = getKeyboardApi();
   if (!api) return;
   bindLayoutChange(api);
   try {
     const map = await api.getLayoutMap();
+    if (startGeneration !== loadGeneration) return;
     cachedLayout = map;
   } catch (e) {
+    if (startGeneration !== loadGeneration) return;
     console.warn("Failed to load keyboard layout map:", e);
     cachedLayout = null;
   }
@@ -164,5 +179,6 @@ export function _resetForTesting(): void {
   cachedLayout = null;
   pendingLoad = null;
   layoutChangeBound = false;
+  loadGeneration = 0;
   subscribers.clear();
 }
