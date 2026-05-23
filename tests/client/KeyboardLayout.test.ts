@@ -158,20 +158,53 @@ describe("KeyboardLayout", () => {
       expect(cb).toHaveBeenCalledTimes(2);
     });
 
-    it("invalidates the cache when layoutchange fires so the next load picks up the new layout", async () => {
+    it("invalidates the cache when layoutchange fires so labels fall back to the QWERTY path", async () => {
       const fake = installFakeKeyboard({ KeyW: "z" });
       await loadKeyboardLayout();
       expect(getKeyForCode("KeyW")).toBe("z");
 
-      // Simulate the user switching to QWERTY mid-session.
+      // Simulate the user switching to QWERTY mid-session. The next
+      // getLayoutMap() invocation (kicked off automatically by
+      // onLayoutChange) will return the new map.
       fake.getLayoutMap.mockResolvedValueOnce(new Map([["KeyW", "w"]]));
       fake.emitLayoutChange();
 
-      // Cache is invalidated immediately…
+      // Cache is invalidated immediately so callers see the QWERTY fallback
+      // until the auto-triggered reload finishes.
       expect(getKeyForCode("KeyW")).toBeNull();
-      // …and the next load picks up the updated layout.
+    });
+
+    it("auto-reloads the layout map after layoutchange so subscribers receive the new layout without a manual call", async () => {
+      const fake = installFakeKeyboard({ KeyW: "z" });
       await loadKeyboardLayout();
+      expect(getKeyForCode("KeyW")).toBe("z");
+
+      fake.getLayoutMap.mockResolvedValueOnce(new Map([["KeyW", "w"]]));
+
+      // Subscribe so we can await the second (post-auto-reload) notification.
+      let resolvePostReload: () => void;
+      const postReload = new Promise<void>((r) => {
+        resolvePostReload = r;
+      });
+      let count = 0;
+      subscribeToLayoutChange(() => {
+        count += 1;
+        if (count === 2) resolvePostReload();
+      });
+
+      fake.emitLayoutChange();
+
+      // First notification is the synchronous "cache cleared" one.
+      expect(count).toBe(1);
+      expect(getKeyForCode("KeyW")).toBeNull();
+
+      // Auto-triggered reload completes and notifies again with the new
+      // layout map populated.
+      await postReload;
+      expect(count).toBe(2);
       expect(getKeyForCode("KeyW")).toBe("w");
+      // getLayoutMap was called twice: the initial load + the auto-reload.
+      expect(fake.getLayoutMap).toHaveBeenCalledTimes(2);
     });
 
     it("returns a disposer that removes the subscription", async () => {

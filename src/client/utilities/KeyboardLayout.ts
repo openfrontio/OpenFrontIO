@@ -64,7 +64,12 @@ function bindLayoutChange(api: KeyboardApi): void {
 function onLayoutChange(): void {
   cachedLayout = null;
   pendingLoad = null;
+  // Notify subscribers immediately so components fall back to the QWERTY
+  // path while the new layout is being fetched, then kick off a fresh load
+  // — `loadKeyboardLayout` will notify subscribers again from its `.finally`
+  // hook so labels update once the new map resolves.
   notifySubscribers();
+  void loadKeyboardLayout();
 }
 
 async function performLoad(): Promise<void> {
