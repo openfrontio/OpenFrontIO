@@ -436,8 +436,38 @@
     "tab_account": "Account",
     "tab_stats": "Stats",
     "tab_games": "Games",
+    "tab_friends": "Friends",
     "no_stats": "No stats available yet. Play some games to start tracking.",
     "no_games": "No games played yet."
+  },
+  "friends": {
+    "add_friend": "Add Friend",
+    "public_id_placeholder": "Enter their public player ID",
+    "send_request": "Send Request",
+    "pending_requests": "Pending Requests",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "accept": "Accept",
+    "deny": "Deny",
+    "withdraw": "Withdraw",
+    "your_friends": "Your Friends",
+    "no_friends": "You haven't added any friends yet.",
+    "friends_since": "Friends since {date}",
+    "remove": "Remove",
+    "load_more": "Load More",
+    "confirm_remove": "Remove {publicId} from your friends?",
+    "request_sent": "Friend request sent",
+    "request_auto_accepted": "Friend request accepted — you are now friends",
+    "request_accepted": "Friend request accepted",
+    "request_denied": "Friend request denied",
+    "request_withdrawn": "Friend request withdrawn",
+    "friend_removed": "Friend removed",
+    "load_failed": "Failed to load friends",
+    "cannot_friend_self": "You can't add yourself as a friend",
+    "error_not_found": "Player not found",
+    "error_conflict": "Already friends or request already sent",
+    "error_bad_request": "Invalid request",
+    "error_generic": "Something went wrong. Please try again."
   },
   "leaderboard_modal": {
     "title": "Leaderboard",
@@ -572,7 +602,8 @@
     "taiwanstrait": "Taiwan Strait",
     "danishstraits": "Danish Straits",
     "northwestpassage": "Northwest Passage",
-    "venice": "Venice"
+    "venice": "Venice",
+    "indiansubcontinent": "Indian Subcontinent"
   },
   "map_categories": {
     "featured": "Featured",
