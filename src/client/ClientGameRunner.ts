@@ -21,10 +21,12 @@ import {
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
+  ConquestUpdate,
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
+  UnitUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
 import { GameView, PlayerView } from "../core/game/GameView";
@@ -69,6 +71,7 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameView as WebGLGameView } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
+import { PlaySoundEffectEvent } from "./sound/Sounds";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -654,6 +657,89 @@ export class ClientGameRunner {
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
+
+      // Sound FX
+      if ((gu.pendingTurns ?? 0) <= 1 && this.gameView.ticks() > 0) {
+        const myPlayer = this.gameView.myPlayer();
+        if (myPlayer) {
+          gu.updates[GameUpdateType.ConquestEvent]?.forEach(
+            (cu: ConquestUpdate) => {
+              if (cu.conquerorId === myPlayer.id()) {
+                this.eventBus.emit(new PlaySoundEffectEvent("ka-ching"));
+              }
+            },
+          );
+
+          gu.updates[GameUpdateType.Unit]?.forEach((u: UnitUpdate) => {
+            const existingUnit = this.gameView.unit(u.id);
+            const isMine = u.ownerID === myPlayer.smallID();
+
+            if (!existingUnit) {
+              switch (u.unitType) {
+                case UnitType.AtomBomb:
+                  this.eventBus.emit(new PlaySoundEffectEvent("atom-launch"));
+                  break;
+                case UnitType.HydrogenBomb:
+                  this.eventBus.emit(
+                    new PlaySoundEffectEvent("hydrogen-launch"),
+                  );
+                  break;
+                case UnitType.MIRV:
+                  this.eventBus.emit(new PlaySoundEffectEvent("mirv-launch"));
+                  break;
+                case UnitType.Warship:
+                  if (isMine) {
+                    this.eventBus.emit(
+                      new PlaySoundEffectEvent("build-warship"),
+                    );
+                  }
+                  break;
+                case UnitType.City:
+                  if (isMine) {
+                    this.eventBus.emit(new PlaySoundEffectEvent("build-city"));
+                  }
+                  break;
+                case UnitType.Port:
+                  if (isMine) {
+                    this.eventBus.emit(new PlaySoundEffectEvent("build-port"));
+                  }
+                  break;
+                case UnitType.DefensePost:
+                  if (isMine) {
+                    this.eventBus.emit(
+                      new PlaySoundEffectEvent("build-defense-post"),
+                    );
+                  }
+                  break;
+                case UnitType.SAMLauncher:
+                  if (isMine) {
+                    this.eventBus.emit(new PlaySoundEffectEvent("sam-built"));
+                  }
+                  break;
+                case UnitType.MissileSilo:
+                  if (isMine) {
+                    this.eventBus.emit(new PlaySoundEffectEvent("silo-built"));
+                  }
+                  break;
+              }
+            } else if (
+              existingUnit.isActive() &&
+              !u.isActive &&
+              u.reachedTarget
+            ) {
+              if (u.unitType === UnitType.HydrogenBomb) {
+                this.eventBus.emit(new PlaySoundEffectEvent("hydrogen-hit"));
+              } else if (
+                u.unitType === UnitType.AtomBomb ||
+                u.unitType === UnitType.MIRV
+              ) {
+                this.eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
+              }
+            }
+          });
+        }
+      }
+
       this.gameView.update(gu);
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
