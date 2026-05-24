@@ -7,11 +7,7 @@ import {
 } from "../../core/game/GameUpdates";
 import { GameView } from "../../core/game/GameView";
 import { Controller } from "../Controller";
-import {
-  PlaySoundEffectEvent,
-  SoundEffect,
-  SoundUpdateEvent,
-} from "../sound/Sounds";
+import { PlaySoundEffectEvent, SoundUpdateEvent } from "../sound/Sounds";
 
 export class SoundController implements Controller {
   constructor(
@@ -34,7 +30,7 @@ export class SoundController implements Controller {
       gu.updates[GameUpdateType.ConquestEvent]?.forEach(
         (cu: ConquestUpdate) => {
           if (cu.conquerorId === myPlayer.id()) {
-            this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.KaChing));
+            this.eventBus.emit(new PlaySoundEffectEvent("ka-ching"));
           }
         },
       );
@@ -56,52 +52,42 @@ export class SoundController implements Controller {
   private handleNewUnitSounds(unitType: UnitType, isMine: boolean) {
     switch (unitType) {
       case UnitType.AtomBomb:
-        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomLaunch));
+        this.eventBus.emit(new PlaySoundEffectEvent("atom-launch"));
         break;
       case UnitType.HydrogenBomb:
-        this.eventBus.emit(
-          new PlaySoundEffectEvent(SoundEffect.HydrogenLaunch),
-        );
+        this.eventBus.emit(new PlaySoundEffectEvent("hydrogen-launch"));
         break;
       case UnitType.MIRV:
-        this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.MirvLaunch));
+        this.eventBus.emit(new PlaySoundEffectEvent("mirv-launch"));
         break;
       case UnitType.Warship:
         if (isMine)
-          this.eventBus.emit(
-            new PlaySoundEffectEvent(SoundEffect.BuildWarship),
-          );
+          this.eventBus.emit(new PlaySoundEffectEvent("build-warship"));
         break;
       case UnitType.City:
-        if (isMine)
-          this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.BuildCity));
+        if (isMine) this.eventBus.emit(new PlaySoundEffectEvent("build-city"));
         break;
       case UnitType.Port:
-        if (isMine)
-          this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.BuildPort));
+        if (isMine) this.eventBus.emit(new PlaySoundEffectEvent("build-port"));
         break;
       case UnitType.DefensePost:
         if (isMine)
-          this.eventBus.emit(
-            new PlaySoundEffectEvent(SoundEffect.BuildDefensePost),
-          );
+          this.eventBus.emit(new PlaySoundEffectEvent("build-defense-post"));
         break;
       case UnitType.SAMLauncher:
-        if (isMine)
-          this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.SamBuilt));
+        if (isMine) this.eventBus.emit(new PlaySoundEffectEvent("sam-built"));
         break;
       case UnitType.MissileSilo:
-        if (isMine)
-          this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.SiloBuilt));
+        if (isMine) this.eventBus.emit(new PlaySoundEffectEvent("silo-built"));
         break;
     }
   }
 
   private handleImpactSounds(unitType: UnitType) {
     if (unitType === UnitType.HydrogenBomb) {
-      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.HydrogenHit));
+      this.eventBus.emit(new PlaySoundEffectEvent("hydrogen-hit"));
     } else if (unitType === UnitType.AtomBomb || unitType === UnitType.MIRV) {
-      this.eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomHit));
+      this.eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     }
   }
 }

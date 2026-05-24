@@ -10,7 +10,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
-import { PlaySoundEffectEvent, SoundEffect } from "../../sound/Sounds";
+import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import {
   SendAllianceExtensionIntentEvent,
@@ -203,9 +203,7 @@ export class ActionableEvents extends LitElement implements Controller {
     ) as PlayerView;
 
     if (!requestor.isAlliedWith(recipient)) {
-      this.eventBus.emit(
-        new PlaySoundEffectEvent(SoundEffect.AllianceSuggested),
-      );
+      this.eventBus.emit(new PlaySoundEffectEvent("alliance-suggested"));
     }
     this.addEvent({
       description: translateText("events_display.request_alliance", {

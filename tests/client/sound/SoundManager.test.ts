@@ -67,7 +67,6 @@ import {
   PlaySoundEffectEvent,
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
-  SoundEffect,
 } from "../../../src/client/sound/Sounds";
 import { EventBus } from "../../../src/core/EventBus";
 import { UserSettings } from "../../../src/core/game/UserSettings";
@@ -94,14 +93,14 @@ describe("SoundManager", () => {
   });
 
   it("lazy-loads a sound effect once and reuses it", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     // 3 background music Howls + 1 Click Howl = 4
     expect(howlCtor).toHaveBeenCalledTimes(4);
   });
 
   it("plays a sound effect when PlaySoundEffectEvent is emitted", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomHit));
+    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     const effectHowl = howlInstances[howlInstances.length - 1];
     expect(effectHowl.play).toHaveBeenCalledTimes(1);
   });
@@ -124,7 +123,7 @@ describe("SoundManager", () => {
     howlCtor.mockClear();
     howlInstances.length = 0;
     new SoundManager(bus, settings);
-    bus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    bus.emit(new PlaySoundEffectEvent("click"));
     expect(howlCtor).toHaveBeenLastCalledWith(
       expect.objectContaining({ volume: 0.3 }),
     );
@@ -139,7 +138,7 @@ describe("SoundManager", () => {
   });
 
   it("responds to SetSoundEffectsVolumeEvent", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
     clickHowl.volume.mockClear();
     eventBus.emit(new SetSoundEffectsVolumeEvent(0.4));
@@ -161,18 +160,18 @@ describe("SoundManager", () => {
   });
 
   it("dispose() unsubscribes from EventBus so events no longer play sounds", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
     expect(clickHowl.play).toHaveBeenCalledTimes(1);
 
     soundManager.dispose();
 
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     expect(clickHowl.play).toHaveBeenCalledTimes(1);
   });
 
   it("dispose() stops and unloads all loaded sound effects", () => {
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
 
     soundManager.dispose();
@@ -193,7 +192,7 @@ describe("SoundManager", () => {
   });
 
   it("does not throw when playSoundEffect is called directly", () => {
-    expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
+    expect(() => soundManager.playSoundEffect("click")).not.toThrow();
   });
 
   it("does not throw when playBackgroundMusic and stopBackgroundMusic are called", () => {
@@ -213,7 +212,7 @@ describe("SoundManager", () => {
         throw new Error("audio backend failure");
       });
     });
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     const clickHowl = howlInstances[howlInstances.length - 1];
     clickHowl.play.mockImplementation(() => {
       throw new Error("audio backend failure");
@@ -229,8 +228,8 @@ describe("SoundManager", () => {
     expect(() => soundManager.stopBackgroundMusic()).not.toThrow();
     expect(() => soundManager.setBackgroundMusicVolume(0.5)).not.toThrow();
     expect(() => soundManager.setSoundEffectsVolume(0.5)).not.toThrow();
-    expect(() => soundManager.playSoundEffect(SoundEffect.Click)).not.toThrow();
-    expect(() => soundManager.stopSoundEffect(SoundEffect.Click)).not.toThrow();
+    expect(() => soundManager.playSoundEffect("click")).not.toThrow();
+    expect(() => soundManager.stopSoundEffect("click")).not.toThrow();
   });
 });
 
@@ -247,28 +246,28 @@ describe("Sound channel management", () => {
 
   it("new sound always plays even when at channel cap", () => {
     for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+      eventBus.emit(new PlaySoundEffectEvent("click"));
     }
 
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomHit));
+    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     const atomHowl = howlInstances[howlInstances.length - 1];
     expect(atomHowl.play).toHaveBeenCalled();
   });
 
   it("stops the oldest sound when at channel cap", () => {
     for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+      eventBus.emit(new PlaySoundEffectEvent("click"));
     }
     const clickHowl = howlInstances[howlInstances.length - 1];
 
     // The first play had id=1. Playing one more should stop id=1.
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.AtomHit));
+    eventBus.emit(new PlaySoundEffectEvent("atom-hit"));
     expect(clickHowl.stop).toHaveBeenCalledWith(1);
   });
 
   it("frees a channel when a sound ends naturally", () => {
     for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+      eventBus.emit(new PlaySoundEffectEvent("click"));
     }
     const clickHowl = howlInstances[howlInstances.length - 1];
 
@@ -277,13 +276,13 @@ describe("Sound channel management", () => {
 
     // Next sound should play without stopping anything
     clickHowl.stop.mockClear();
-    eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+    eventBus.emit(new PlaySoundEffectEvent("click"));
     expect(clickHowl.stop).not.toHaveBeenCalled();
   });
 
   it("allows up to MAX_CONCURRENT_SOUNDS without stopping any", () => {
     for (let i = 0; i < MAX_CONCURRENT_SOUNDS; i++) {
-      eventBus.emit(new PlaySoundEffectEvent(SoundEffect.Click));
+      eventBus.emit(new PlaySoundEffectEvent("click"));
     }
     const clickHowl = howlInstances[howlInstances.length - 1];
     expect(clickHowl.play).toHaveBeenCalledTimes(8);
