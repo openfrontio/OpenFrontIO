@@ -734,6 +734,12 @@ export class GPURenderer {
     }
   }
 
+  setAttackTroopLabels(
+    labels: import("./passes/WorldTextPass").AttackTroopLabel[],
+  ): void {
+    this.worldTextPass.setAttackTroopLabels(labels);
+  }
+
   applyBonusEvents(events: BonusEvent[]): void {
     if (events.length === 0) return;
     // In live game, filter to local player only. In replay (localPlayerID=0), show all.
@@ -1173,14 +1179,16 @@ export class GPURenderer {
       this.fxPass.draw(cam, zoom);
     }
 
-    this.worldTextPass.tick();
-    this.worldTextPass.draw(cam, zoom);
-
     // Grid shows on either trigger; names hide only under alt-view (space
     // hold), not under the persistent M-key gridView toggle.
     if (this.gridView || this.altView) this.coordinateGridPass.draw(cam, zoom);
     if (pe.name && !this.altView)
       this.namePass.draw(cam, this.nightCompositePass.getAmbient());
+
+    // World text (attack-troop labels, popups, ghost cost) draws on top of
+    // player names so attack callouts aren't hidden behind a centered name.
+    this.worldTextPass.tick(zoom);
+    this.worldTextPass.draw(cam, zoom);
 
     this.radialMenuPass.draw();
 

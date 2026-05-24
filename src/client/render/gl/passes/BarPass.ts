@@ -138,6 +138,7 @@ export class BarPass {
 
     // --- Progress bars (structures) ---
     for (const unit of structures.values()) {
+      if (!unit.isActive) continue;
       const progress = this.computeStructureProgress(unit, gameTick);
       if (progress !== null) this.pushProgress(unit, progress);
     }
