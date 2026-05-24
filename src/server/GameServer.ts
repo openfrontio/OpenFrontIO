@@ -731,6 +731,8 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    const friendsFor = this.buildFriendsLookup();
+
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
@@ -742,6 +744,7 @@ export class GameServer {
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
+        friends: friendsFor(c),
       })),
     });
     if (!result.success) {
@@ -955,18 +958,37 @@ export class GameServer {
   }
 
   public gameInfo(): GameInfo {
+    const friendsFor = this.buildFriendsLookup();
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
         clanTag: c.clanTag ?? null,
         clientID: c.clientID,
+        friends: friendsFor(c),
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+    };
+  }
+
+  // Maps each active client's publicId-based friends list to in-game
+  // clientIDs, dropping friends not present in this game. Returns undefined
+  // when no friends are present so the field can be omitted from the wire
+  // payload.
+  private buildFriendsLookup(): (client: Client) => ClientID[] | undefined {
+    const publicIdToClientID = new Map<string, ClientID>();
+    for (const c of this.activeClients) {
+      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
+    }
+    return (client: Client) => {
+      const friendClientIDs = client.friends
+        .map((pid) => publicIdToClientID.get(pid))
+        .filter((id): id is ClientID => id !== undefined);
+      return friendClientIDs.length > 0 ? friendClientIDs : undefined;
     };
   }
 

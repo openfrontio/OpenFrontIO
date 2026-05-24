@@ -223,10 +223,14 @@ export class RailNetworkImpl implements RailNetwork {
     return editedClusters.size !== 0;
   }
 
-  overlappingRailroads(tile: TileRef): number[] {
-    return [...this.railGrid.query(tile, this.stationRadius)].map(
-      (railroad: Railroad) => railroad.id,
-    );
+  overlappingRailroads(tile: TileRef): TileRef[] {
+    const tiles = new Set<TileRef>();
+    for (const railroad of this.railGrid.query(tile, this.stationRadius)) {
+      for (const t of railroad.tiles) {
+        tiles.add(t);
+      }
+    }
+    return Array.from(tiles).sort((a, b) => a - b);
   }
 
   private canSnapToExistingRailway(tile: TileRef): boolean {

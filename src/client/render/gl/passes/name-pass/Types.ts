@@ -56,7 +56,10 @@ export interface PlayerSlot {
   nameLen: number;
   troopLen: number;
   lastTroopStr: string;
-  flagAtlasIdx: number;
+  /** URL identifying which flag this player wants (dedup key). undefined = none. */
+  flagUrl: string | undefined;
+  /** Layer index in FlagAtlasArray, or -1 if not loaded yet / no flag. */
+  flagLayerIdx: number;
   emojiAtlasIdx: number;
   nameHalfWidth: number;
 

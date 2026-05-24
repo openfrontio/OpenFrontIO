@@ -371,6 +371,9 @@ export class GameView {
   setAltView(active: boolean): void {
     this.renderer?.setAltView(active);
   }
+  setGridView(active: boolean): void {
+    this.renderer?.setGridView(active);
+  }
   setShowPatterns(active: boolean): void {
     this.renderer?.setShowPatterns(active);
   }

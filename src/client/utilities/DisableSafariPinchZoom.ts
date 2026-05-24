@@ -13,16 +13,18 @@
  * (Chrome, Firefox, every Android browser) treat the listeners as a no-op,
  * so it is safe to install them unconditionally.
  *
+ * The listeners live for the document's lifetime; the browser releases them
+ * when the page is torn down, so no disposer is needed.
+ *
  * @param target - The EventTarget to attach the listeners to. Defaults to
  *   `document`, which is the scope Safari uses to decide whether to zoom
  *   the page.
- * @returns A function that removes the installed listeners.
  *
  * @see https://github.com/openfrontio/OpenFrontIO/issues/2330
  */
 export function installSafariPinchZoomBlocker(
   target: EventTarget = document,
-): () => void {
+): void {
   const block = (e: Event) => {
     e.preventDefault();
   };
@@ -31,10 +33,4 @@ export function installSafariPinchZoomBlocker(
   for (const type of events) {
     target.addEventListener(type, block);
   }
-
-  return () => {
-    for (const type of events) {
-      target.removeEventListener(type, block);
-    }
-  };
 }

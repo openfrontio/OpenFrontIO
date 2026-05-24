@@ -171,6 +171,7 @@ export enum GameMapType {
   BajaCalifornia = "Baja California",
   MiddleEast = "Middle East",
   TaiwanStrait = "Taiwan Strait",
+  IndianSubcontinent = "Indian Subcontinent",
   DanishStraits = "Danish Straits",
   NorthwestPassage = "Northwest Passage",
   Venice = "Venice",
@@ -238,6 +239,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BajaCalifornia,
     GameMapType.MiddleEast,
     GameMapType.TaiwanStrait,
+    GameMapType.IndianSubcontinent,
     GameMapType.DanishStraits,
     GameMapType.NorthwestPassage,
     GameMapType.Venice,
@@ -580,6 +582,7 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
     public readonly clanTag: string | null = null,
+    public readonly friends: ClientID[] = [],
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
@@ -987,7 +990,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
-  overlappingRailroads: number[];
+  overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }
 

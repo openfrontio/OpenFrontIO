@@ -7,6 +7,8 @@ import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { StructureHighlightController } from "../controllers/StructureHighlightController";
+import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
@@ -51,8 +53,6 @@ export function createRenderer(
   const uiState: UIState = {
     attackRatio: 20,
     ghostStructure: null,
-    overlappingRailroads: [],
-    ghostRailPaths: [],
     rocketDirectionUp: true,
   };
 
@@ -272,8 +272,17 @@ export function createRenderer(
 
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
-    new BuildPreviewController(game, eventBus, uiState, transformHandler, view),
+    new BuildPreviewController(
+      game,
+      eventBus,
+      uiState,
+      transformHandler,
+      view,
+      userSettings,
+    ),
     new HoverHighlightController(game, eventBus, transformHandler, view),
+    new StructureHighlightController(eventBus, view),
+    new ViewModeController(eventBus, view),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
     actionableEvents,

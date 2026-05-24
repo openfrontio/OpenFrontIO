@@ -51,6 +51,8 @@ function makeClient(
     null,
     ws as any,
     undefined,
+    undefined,
+    [],
   );
   return { client, ws };
 }
