@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { PlayerID } from "src/core/game/Game";
 import { renderTroops, translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -78,6 +79,11 @@ export class Leaderboard extends LitElement implements Controller {
 
     const maxTroops = (p: PlayerView) => this.game!.config().maxTroops(p);
 
+    const maxTroopsMap = new Map<PlayerID, number>();
+    for (const player of sorted) {
+      maxTroopsMap.set(player.id(), maxTroops(player));
+    }
+
     switch (this._sortKey) {
       case "gold":
         sorted = sorted.sort((a, b) =>
@@ -85,7 +91,9 @@ export class Leaderboard extends LitElement implements Controller {
         );
         break;
       case "maxtroops":
-        sorted = sorted.sort((a, b) => compare(maxTroops(a), maxTroops(b)));
+        sorted = sorted.sort((a, b) =>
+          compare(maxTroopsMap.get(a.id())!, maxTroopsMap.get(b.id())!),
+        );
         break;
       default:
         sorted = sorted.sort((a, b) =>
@@ -102,7 +110,7 @@ export class Leaderboard extends LitElement implements Controller {
       : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      const maxTroops = this.game!.config().maxTroops(player);
+      const maxTroops = maxTroopsMap.get(player.id())!;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -132,7 +140,7 @@ export class Leaderboard extends LitElement implements Controller {
       }
 
       if (myPlayer.isAlive()) {
-        const myPlayerMaxTroops = this.game!.config().maxTroops(myPlayer);
+        const myPlayerMaxTroops = maxTroopsMap.get(myPlayer.id())!;
         this.players.pop();
         this.players.push({
           name: myPlayer.displayName(),
@@ -274,7 +282,7 @@ export class Leaderboard extends LitElement implements Controller {
       </div>
 
       <button
-        class="mt-2 p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm 
+        class="mt-2 p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm
         border rounded-md border-slate-500 transition-colors
         text-white mx-auto block hover:bg-white/10 bg-gray-700/50"
         @click=${() => {
