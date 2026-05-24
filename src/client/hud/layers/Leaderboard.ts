@@ -80,7 +80,8 @@ export class Leaderboard extends LitElement implements Controller {
     const maxTroopsMap = new Map<PlayerID, number>();
     const maxTroopsCalc = (p: PlayerView) => this.game!.config().maxTroops(p);
     const maxTroops = (p: PlayerView) => {
-      if (p.id() in maxTroopsMap) return maxTroopsMap.get(p.id())!;
+      const potential = maxTroopsMap.get(p.id());
+      if (potential !== undefined) return potential;
       const result = maxTroopsCalc(p);
       maxTroopsMap.set(p.id(), result);
       return result;
