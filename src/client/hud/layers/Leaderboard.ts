@@ -77,12 +77,14 @@ export class Leaderboard extends LitElement implements Controller {
     const compare = (a: number, b: number) =>
       this._sortOrder === "asc" ? a - b : b - a;
 
-    const maxTroops = (p: PlayerView) => this.game!.config().maxTroops(p);
-
     const maxTroopsMap = new Map<PlayerID, number>();
-    for (const player of sorted) {
-      maxTroopsMap.set(player.id(), maxTroops(player));
-    }
+    const maxTroopsCalc = (p: PlayerView) => this.game!.config().maxTroops(p);
+    const maxTroops = (p: PlayerView) => {
+      if (p.id() in maxTroopsMap) return maxTroopsMap.get(p.id())!;
+      const result = maxTroopsCalc(p);
+      maxTroopsMap.set(p.id(), result);
+      return result;
+    };
 
     switch (this._sortKey) {
       case "gold":
@@ -91,6 +93,11 @@ export class Leaderboard extends LitElement implements Controller {
         );
         break;
       case "maxtroops":
+        for (const player of sorted) {
+          maxTroopsMap.set(player.id(), maxTroopsCalc(player));
+        }
+
+        // We know that these exist in the map so we can omit the check
         sorted = sorted.sort((a, b) =>
           compare(maxTroopsMap.get(a.id())!, maxTroopsMap.get(b.id())!),
         );
@@ -110,7 +117,6 @@ export class Leaderboard extends LitElement implements Controller {
       : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      const maxTroops = maxTroopsMap.get(player.id())!;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -118,7 +124,7 @@ export class Leaderboard extends LitElement implements Controller {
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
-        maxTroops: renderTroops(maxTroops),
+        maxTroops: renderTroops(maxTroops(player)),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
           myPlayer !== null &&
@@ -140,7 +146,6 @@ export class Leaderboard extends LitElement implements Controller {
       }
 
       if (myPlayer.isAlive()) {
-        const myPlayerMaxTroops = maxTroopsMap.get(myPlayer.id())!;
         this.players.pop();
         this.players.push({
           name: myPlayer.displayName(),
@@ -149,7 +154,7 @@ export class Leaderboard extends LitElement implements Controller {
             myPlayer.numTilesOwned() / this.game.numLandTiles(),
           ),
           gold: renderNumber(myPlayer.gold()),
-          maxTroops: renderTroops(myPlayerMaxTroops),
+          maxTroops: renderTroops(maxTroops(myPlayer)),
           isMyPlayer: true,
           isOnSameTeam: true,
           player: myPlayer,
