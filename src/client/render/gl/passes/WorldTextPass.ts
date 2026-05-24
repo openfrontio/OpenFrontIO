@@ -44,6 +44,13 @@ const GHOST_COST_Y_OFFSET = 3;
 const GHOST_COST_SCALE = 4;
 /** Matches player-name outline width for a consistent UI look. */
 const GHOST_COST_OUTLINE_WIDTH = 1.4;
+/**
+ * Screen-relative em scale for attack troop labels. Pre-divided by the current
+ * zoom each frame so the on-screen label size stays constant regardless of
+ * how far the camera is zoomed.
+ */
+const ATTACK_LABEL_SCREEN_SCALE = 34.0;
+const ATTACK_LABEL_OUTLINE_WIDTH = 1.2;
 
 // ---------------------------------------------------------------------------
 // Active popup tracking
@@ -61,6 +68,20 @@ interface ActivePopup {
   colorB: number;
   scale: number;
   outlineWidth: number;
+}
+
+/**
+ * Persistent attack-troop label rendered at a world-space position.
+ * AttackingTroopsController pushes a fresh list each frame with already-
+ * interpolated positions (smoothing happens controller-side).
+ */
+export interface AttackTroopLabel {
+  x: number;
+  y: number;
+  text: string;
+  colorR: number;
+  colorG: number;
+  colorB: number;
 }
 
 function formatGold(gold: number): string {
@@ -118,6 +139,10 @@ export class WorldTextPass {
     colorG: number;
     colorB: number;
   } | null = null;
+
+  // Persistent attack-troop labels. Controller pushes the full list each frame
+  // (already interpolated), so we just iterate and render.
+  private attackTroopLabels: AttackTroopLabel[] = [];
 
   // Settings reference
   private settings: RenderSettings;
@@ -336,12 +361,24 @@ export class WorldTextPass {
     };
   }
 
+  /**
+   * Replace the set of attack-troop labels. Controller pushes the full list
+   * each frame with interpolated positions; empty array clears them.
+   */
+  setAttackTroopLabels(labels: AttackTroopLabel[]): void {
+    this.attackTroopLabels = labels;
+  }
+
   // -------------------------------------------------------------------------
   // Tick — cull expired, rebuild instance buffer
   // -------------------------------------------------------------------------
 
-  tick(): void {
-    if (this.active.length === 0 && this.ghostCostLabel === null) {
+  tick(zoom: number): void {
+    if (
+      this.active.length === 0 &&
+      this.ghostCostLabel === null &&
+      this.attackTroopLabels.length === 0
+    ) {
       this.instanceCount = 0;
       return;
     }
@@ -355,10 +392,10 @@ export class WorldTextPass {
       }
     }
 
-    this.rebuildInstances(now);
+    this.rebuildInstances(now, zoom);
   }
 
-  private rebuildInstances(now: number): void {
+  private rebuildInstances(now: number, zoom: number): void {
     let count = 0;
 
     for (const popup of this.active) {
@@ -398,6 +435,38 @@ export class WorldTextPass {
         this.instanceData[off + 7] = popup.colorB;
         this.instanceData[off + 8] = popup.scale;
         this.instanceData[off + 9] = popup.outlineWidth;
+        count++;
+      }
+    }
+
+    // Attack troop labels — persistent, no fade. Controller interpolates
+    // positions before pushing. Scale is divided by zoom so the label keeps
+    // a constant on-screen size regardless of how zoomed-in the camera is.
+    const attackScale = ATTACK_LABEL_SCREEN_SCALE / Math.max(zoom, 0.0001);
+    for (const label of this.attackTroopLabels) {
+      layoutString(
+        label.text,
+        this.glyph,
+        this.kernTable,
+        this.charCodes,
+        this.cursors,
+      );
+      const len = Math.min(label.text.length, MAX_CHARS);
+      for (let i = 0; i < len; i++) {
+        if (this.charCodes[i] === 0) continue;
+        if (count >= this.maxInstances) this.growBuffer();
+
+        const off = count * FLOATS_PER_INSTANCE;
+        this.instanceData[off + 0] = label.x;
+        this.instanceData[off + 1] = label.y;
+        this.instanceData[off + 2] = this.cursors[i];
+        this.instanceData[off + 3] = this.charCodes[i];
+        this.instanceData[off + 4] = 1;
+        this.instanceData[off + 5] = label.colorR;
+        this.instanceData[off + 6] = label.colorG;
+        this.instanceData[off + 7] = label.colorB;
+        this.instanceData[off + 8] = attackScale;
+        this.instanceData[off + 9] = ATTACK_LABEL_OUTLINE_WIDTH;
         count++;
       }
     }
@@ -495,6 +564,7 @@ export class WorldTextPass {
 
   clear(): void {
     this.active.length = 0;
+    this.attackTroopLabels = [];
     this.instanceCount = 0;
   }
 
