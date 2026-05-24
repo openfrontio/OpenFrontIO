@@ -6,6 +6,7 @@ import {
   pattern,
   resolveConfusablesTransformer,
   resolveLeetSpeakTransformer,
+  skipNonAlphabeticTransformer,
   toAsciiLowerCaseTransformer,
 } from "obscenity";
 import countries from "resources/countries.json";
@@ -71,15 +72,21 @@ export function createMatcher(bannedWords: string[]): RegExpMatcher {
   ];
   // substringMatcher: literal patterns, no collapse — catches "niggertesting" as a substring
   // collapseMatcher: deduped patterns + collapse transformer — catches "niiiigger", "hiiitler"
+  // skipNonAlphabeticTransformer is applied last to catch punctuation-separated bypasses
+  // like "n.i.g.g.e.r".
   const substringMatcher = new RegExpMatcher({
     ...buildDataset(bannedWords, false),
-    blacklistMatcherTransformers: baseTransformers,
+    blacklistMatcherTransformers: [
+      ...baseTransformers,
+      skipNonAlphabeticTransformer(),
+    ],
   });
   const collapseMatcher = new RegExpMatcher({
     ...buildDataset(bannedWords, true),
     blacklistMatcherTransformers: [
       ...baseTransformers,
       collapseDuplicatesTransformer(),
+      skipNonAlphabeticTransformer(),
     ],
   });
   return {
@@ -176,21 +183,24 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
           refs.patternColorPaletteName ?? null,
         );
       } catch (e) {
-        return { type: "forbidden", reason: "invalid pattern: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid pattern: " + message };
       }
     }
     if (refs.color) {
       try {
         cosmetics.color = this.isColorAllowed(flares, refs.color);
       } catch (e) {
-        return { type: "forbidden", reason: "invalid color: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid color: " + message };
       }
     }
     if (refs.flag) {
       try {
         cosmetics.flag = this.isFlagAllowed(flares, refs.flag);
       } catch (e) {
-        return { type: "forbidden", reason: "invalid flag: " + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid flag: " + message };
       }
     }
 
@@ -209,6 +219,8 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     try {
       decodePatternData(found.pattern, this.b64urlDecode);
     } catch (e) {
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(`Invalid pattern ${name}`);
     }
 

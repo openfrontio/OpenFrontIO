@@ -94,6 +94,11 @@ Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R
 [U.S. Geological Survey](https://earthexplorer.usgs.gov/metadata/4980/GT30ANTARCPS/)
 [Public Domain](https://www.doi.gov/copyright)
 
+### Los Angeles Map
+
+© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
+Licensed under ODbL
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)

@@ -404,7 +404,7 @@ export class CosmeticContainer extends LitElement {
     if (this.name) {
       this._nameEl ??= document.createElement("div");
       const cfg = rarityConfig[this.rarity] ?? fallback;
-      this._nameEl.className = `text-xs font-bold uppercase tracking-wider text-center truncate w-full`;
+      this._nameEl.className = `text-xs font-bold uppercase tracking-wider text-center whitespace-normal break-words w-full`;
       this._nameEl.style.color = cfg.nameColor;
       this._nameEl.title = this.name;
       this._nameEl.textContent = this.name;

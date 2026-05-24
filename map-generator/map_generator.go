@@ -36,7 +36,7 @@ type Coord struct {
 }
 
 // TerrainType represents the classification of a map tile (e.g., Land or Water).
-type TerrainType int
+type TerrainType uint8
 
 // Enumeration of possible TerrainType values.
 const (
@@ -46,10 +46,13 @@ const (
 
 // Terrain represents the properties of a single map tile.
 // Magnitude represents elevation for Land (0-30) or distance to land for Water.
+// Fields are ordered to minimise alignment padding: float64 first (8 bytes,
+// offset 0), then three 1-byte fields, giving 16 bytes total vs 24 with the
+// original layout.
 type Terrain struct {
+	Magnitude float64
 	Type      TerrainType
 	Shoreline bool
-	Magnitude float64
 	Ocean     bool
 }
 
@@ -147,11 +150,15 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 			}
 		}
 	}
+	// Image data is no longer needed; release it for GC.
+	img = nil
+	args.ImageBuffer = nil
 
-	removeSmallIslands(ctx, terrain, args.RemoveSmall)
+	removeSmallIslands(ctx, terrain, minIslandSize, args.RemoveSmall)
 	processWater(ctx, terrain, args.RemoveSmall)
 
 	terrain4x := createMiniMap(terrain)
+	removeSmallIslands(ctx, terrain4x, minIslandSize/2, args.RemoveSmall)
 	processWater(ctx, terrain4x, false)
 
 	terrain16x := createMiniMap(terrain4x)
@@ -168,8 +175,11 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 	}
 
 	mapData, mapNumLandTiles := packTerrain(ctx, terrain)
+	terrain = nil
 	mapData4x, numLandTiles4x := packTerrain(ctx, terrain4x)
+	terrain4x = nil
 	mapData16x, numLandTiles16x := packTerrain(ctx, terrain16x)
+	terrain16x = nil
 
 	logger.Debug(fmt.Sprintf("Land Tile Count (1x): %d", mapNumLandTiles))
 	logger.Debug(fmt.Sprintf("Land Tile Count (4x): %d", numLandTiles4x))
@@ -271,23 +281,25 @@ func processShore(ctx context.Context, terrain [][]Terrain) []Coord {
 	width := len(terrain)
 	height := len(terrain[0])
 
+	var buf [4]Coord
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			tile := &terrain[x][y]
-			neighbors := getNeighbors(x, y, terrain)
+			tile.Shoreline = false
+			n := neighborCoords(x, y, width, height, &buf)
 
 			if tile.Type == Land {
 				// Land tile adjacent to water is shoreline
-				for _, n := range neighbors {
-					if n.Type == Water {
+				for _, c := range buf[:n] {
+					if terrain[c.X][c.Y].Type == Water {
 						tile.Shoreline = true
 						break
 					}
 				}
 			} else {
 				// Water tile adjacent to land is shoreline
-				for _, n := range neighbors {
-					if n.Type == Land {
+				for _, c := range buf[:n] {
+					if terrain[c.X][c.Y].Type == Land {
 						tile.Shoreline = true
 						shorelineWaters = append(shorelineWaters, Coord{X: x, Y: y})
 						break
@@ -349,37 +361,30 @@ func processDistToLand(ctx context.Context, shorelineWaters []Coord, terrain [][
 	}
 }
 
-// getNeighbors returns a list of Terrain tiles adjacent to the specified coordinates.
-func getNeighbors(x, y int, terrain [][]Terrain) []Terrain {
-	coords := getNeighborCoords(x, y, terrain)
-	neighbors := make([]Terrain, len(coords))
-	for i, coord := range coords {
-		neighbors[i] = terrain[coord.X][coord.Y]
-	}
-	return neighbors
-}
-
-// getNeighborCoords returns a list of valid adjacent coordinates (up, down, left, right).
-// It ensures that the returned coordinates are within the bounds of the terrain grid.
-func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
-	width := len(terrain)
-	height := len(terrain[0])
-	var coords []Coord
-
+// neighborCoords fills out with the valid orthogonal neighbours of (x, y) and
+// returns the count. out must be a caller-allocated [4]Coord buffer; by
+// reusing the same buffer across calls the caller avoids any heap allocation.
+// Neighbours that would fall outside [0,width) × [0,height) are omitted, so
+// the count is 2 at corners, 3 on edges, and 4 in the interior.
+func neighborCoords(x, y, width, height int, out *[4]Coord) int {
+	n := 0
 	if x > 0 {
-		coords = append(coords, Coord{X: x - 1, Y: y})
+		out[n] = Coord{X: x - 1, Y: y}
+		n++
 	}
 	if x < width-1 {
-		coords = append(coords, Coord{X: x + 1, Y: y})
+		out[n] = Coord{X: x + 1, Y: y}
+		n++
 	}
 	if y > 0 {
-		coords = append(coords, Coord{X: x, Y: y - 1})
+		out[n] = Coord{X: x, Y: y - 1}
+		n++
 	}
 	if y < height-1 {
-		coords = append(coords, Coord{X: x, Y: y + 1})
+		out[n] = Coord{X: x, Y: y + 1}
+		n++
 	}
-
-	return coords
+	return n
 }
 
 // processWater identifies and processes bodies of water in the terrain.
@@ -389,7 +394,16 @@ func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
 func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 	logger := LoggerFromContext(ctx)
 	logger.Info("Processing water bodies")
-	visited := make(map[string]bool)
+	width := len(terrain)
+	height := len(terrain[0])
+	visited := make([]bool, width*height)
+
+	// Clear any Ocean flags inherited from a previous scale's struct copy.
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			terrain[x][y].Ocean = false
+		}
+	}
 
 	type waterBody struct {
 		coords []Coord
@@ -399,11 +413,10 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 	var waterBodies []waterBody
 
 	// Find all distinct water bodies
-	for x := 0; x < len(terrain); x++ {
-		for y := 0; y < len(terrain[0]); y++ {
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
 			if terrain[x][y].Type == Water {
-				key := fmt.Sprintf("%d,%d", x, y)
-				if visited[key] {
+				if visited[x*height+y] {
 					continue
 				}
 
@@ -461,27 +474,32 @@ func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
 
 // getArea performs a Breadth-First Search (BFS) to find a contiguous area of tiles
 // sharing the same TerrainType as the passed x,y coordinates.
-// The visited map is updated to prevent reprocessing tiles.
-func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
+// visited is a flat bool slice of size width*height indexed by x*height+y
+// (column-major, matching the terrain[x][y] grid layout); it is updated to
+// prevent reprocessing tiles across multiple getArea calls.
+func getArea(x, y int, terrain [][]Terrain, visited []bool) []Coord {
+	width := len(terrain)
+	height := len(terrain[0])
 	targetType := terrain[x][y].Type
 	var area []Coord
+
+	visited[x*height+y] = true
 	queue := []Coord{{X: x, Y: y}}
 
+	var buf [4]Coord
 	for len(queue) > 0 {
 		coord := queue[0]
 		queue = queue[1:]
 
-		key := fmt.Sprintf("%d,%d", coord.X, coord.Y)
-		if visited[key] {
-			continue
-		}
-		visited[key] = true
-
 		if terrain[coord.X][coord.Y].Type == targetType {
 			area = append(area, coord)
-
-			neighborCoords := getNeighborCoords(coord.X, coord.Y, terrain)
-			queue = append(queue, neighborCoords...)
+			n := neighborCoords(coord.X, coord.Y, width, height, &buf)
+			for _, c := range buf[:n] {
+				if !visited[c.X*height+c.Y] {
+					visited[c.X*height+c.Y] = true
+					queue = append(queue, c)
+				}
+			}
 		}
 	}
 
@@ -490,13 +508,14 @@ func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 
 // removeSmallIslands identifies and removes small land masses from the terrain.
 // If removeSmall is true, any removed bodies are converted to Water.
-func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
+// Land bodies smaller than minSize are removed.
+func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, removeSmall bool) {
 	logger := LoggerFromContext(ctx)
 	if !removeSmall {
 		return
 	}
 
-	visited := make(map[string]bool)
+	visited := make([]bool, len(terrain)*len(terrain[0]))
 
 	type landBody struct {
 		coords []Coord
@@ -506,11 +525,11 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bo
 	var landBodies []landBody
 
 	// Find all distinct land bodies
+	height := len(terrain[0])
 	for x := 0; x < len(terrain); x++ {
-		for y := 0; y < len(terrain[0]); y++ {
+		for y := 0; y < height; y++ {
 			if terrain[x][y].Type == Land {
-				key := fmt.Sprintf("%d,%d", x, y)
-				if visited[key] {
+				if visited[x*height+y] {
 					continue
 				}
 
@@ -526,7 +545,7 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bo
 	smallIslands := 0
 
 	for _, body := range landBodies {
-		if body.size < minIslandSize {
+		if body.size < minSize {
 			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size), RemovalLogTag)
 			smallIslands++
 			for _, coord := range body.coords {
@@ -536,10 +555,12 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bo
 		}
 	}
 
-	logger.Info(fmt.Sprintf("Identified and removed %d islands smaller than %d tiles", smallIslands, minIslandSize))
+	logger.Info(fmt.Sprintf("Identified and removed %d islands smaller than %d tiles", smallIslands, minSize))
 }
 
 // packTerrain serializes the terrain grid into a byte slice.
+// The output buffer is row-major (y*width+x), matching the expected
+// raster scan order of the binary map format.
 // Each byte represents a single tile with bit flags:
 //   - Bit 7: Land (1) / Water (0)
 //   - Bit 6: Shoreline

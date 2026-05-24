@@ -1,9 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
+import medalIconRaw from "../../../../resources/images/MedalIconWhite.svg?raw";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
+
+const medalMaskUrl = `url('data:image/svg+xml;utf8,${encodeURIComponent(medalIconRaw)}') no-repeat center / contain`;
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -86,7 +88,7 @@ export class MapDisplay extends LitElement {
         @keydown="${this.handleKeydown}"
         class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${this
           .selected
-          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+          ? "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue-strong)]"
           : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"}"
       >
         ${this.isLoading
@@ -144,7 +146,7 @@ export class MapDisplay extends LitElement {
     const wins = this.readWins();
     return medalOrder.map((medal) => {
       const earned = wins.has(medal);
-      const mask = `url('${assetUrl("images/MedalIconWhite.svg")}') no-repeat center / contain`;
+      const mask = medalMaskUrl;
       return html`<div
         class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
         style="background-color:${colors[

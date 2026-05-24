@@ -167,10 +167,6 @@ export class TerritoryLayer implements Layer {
   }
 
   private spawnHighlight() {
-    if (this.game.ticks() % 5 === 0) {
-      return;
-    }
-
     this.highlightContext.clearRect(
       0,
       0,
@@ -248,7 +244,7 @@ export class TerritoryLayer implements Layer {
       minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
 
     const baseColor = this.theme.spawnHighlightSelfColor(); //white
-    let teamColor: Colord | null = null;
+    let teamColor: Colord;
 
     const team: Team | null = focusedPlayer.team();
     if (team !== null && Object.values(ColoredTeams).includes(team)) {

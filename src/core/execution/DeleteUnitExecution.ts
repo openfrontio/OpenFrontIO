@@ -20,8 +20,8 @@ export class DeleteUnitExecution implements Execution {
     }
     this.mg = mg;
 
-    const unit = this.player.units().find((u) => u.id() === this.unitId);
-    if (!unit) {
+    const unit = this.mg.unit(this.unitId);
+    if (!unit || unit.owner() !== this.player) {
       console.warn(
         `SECURITY: unit ${this.unitId} not found or not owned by player ${this.player.displayName()}`,
       );

@@ -24,8 +24,11 @@ import {
   TerraNullius,
   Tick,
   TrainType,
+  TransportShipState,
+  Unit,
   UnitInfo,
   UnitType,
+  WarshipState,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -115,14 +118,28 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
-  retreating(): boolean {
-    if (
-      this.type() !== UnitType.TransportShip &&
-      this.type() !== UnitType.Warship
-    ) {
-      throw Error("Must be a transport ship or warship");
+  warshipState(): WarshipState {
+    if (this.data.warshipState === undefined) {
+      throw new Error("warshipState called on non-warship unit");
     }
-    return this.data.retreating;
+    return this.data.warshipState;
+  }
+  updateWarshipState(_update: Partial<WarshipState>): void {
+    throw new Error("updateWarshipState is not supported on UnitView");
+  }
+  isInCombat(): boolean {
+    return this.data.warshipState?.isInCombat ?? false;
+  }
+  touch(): void {
+    throw new Error("touch is not supported on UnitView");
+  }
+  transportShipState(): TransportShipState {
+    return this.data.transportShipState ?? { isRetreating: false, troops: 0 };
+  }
+  updateTransportShipState(
+    _update: Pick<TransportShipState, "isRetreating">,
+  ): void {
+    throw new Error("updateTransportShipState is not supported on UnitView");
   }
   tile(): TileRef {
     return this.data.pos;
@@ -1135,7 +1152,7 @@ export class GameView implements GameMap {
       tile,
       searchRange,
       types,
-      predicate,
+      predicate as (unit: Unit | UnitView) => boolean,
       playerId,
       includeUnderConstruction,
     );

@@ -5,7 +5,36 @@
 
 @theme {
   --default-ring-width: 3px;
-  --default-ring-color: var(text-[#0073b7]);
+  --default-ring-color: var(--color-malibu-blue);
+  --font-display: "OpenFront", Inter, Arial, sans-serif;
+
+  /* Openfront.io brand palette — see Openfront_Brand_Guidelines.pdf §4 */
+  --color-malibu-blue: #0084d1;
+  --color-aquarius: #3fa9f5;
+  --color-dawn-blue: #cccccc;
+  --color-bright-white: #ffffff;
+
+  /* Openfront Masters sub-brand */
+  --color-cyber-yellow: #ffd700;
+  --color-limestone: #999999;
+
+  /* Background & decorative — not for standalone UI use */
+  --color-deep-navy: #0a1628;
+  --color-hex-cyan: #00c8ff;
+  --color-frame-orange: #f97316;
+
+  /* App-specific surface colors */
+  --color-surface: #0a1628;
+
+  --shadow-malibu-blue: 0 0 15px rgba(0, 132, 209, 0.2);
+  --shadow-malibu-blue-soft: 0 0 12px rgba(0, 132, 209, 0.2);
+  --shadow-malibu-blue-strong: 0 0 15px rgba(0, 132, 209, 0.3);
+  --shadow-malibu-blue-pill: 0 0 6px rgba(0, 132, 209, 0.35);
+  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(0, 132, 209, 0.2);
+  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(0, 132, 209, 0.3);
+  --shadow-lobby-card-hover: 0 0 0 2px #0084d1, 0 0 20px rgba(0, 132, 209, 0.5);
+  --shadow-action-card-hover:
+    0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
 }
 
 @layer base {
@@ -113,7 +142,7 @@ body {
   padding: 15px 20px;
   font-size: 16px;
   cursor: pointer;
-  background-color: #0073b7;
+  background-color: var(--color-malibu-blue);
   color: white;
   border: none;
   border-radius: 8px;
@@ -123,7 +152,7 @@ body {
 }
 
 .start-game-button:not(:disabled):hover {
-  background-color: #0073b7;
+  background-color: var(--color-aquarius);
 }
 
 .start-game-button:disabled {
@@ -580,7 +609,7 @@ label.option-card:hover {
 /* News Button Notification */
 news-button .active button {
   position: relative;
-  border-color: #0073b7 !important;
+  border-color: var(--color-malibu-blue) !important;
   border-width: 2px !important;
   box-shadow:
     0 0 0 1px rgba(37, 99, 235, 0.5),

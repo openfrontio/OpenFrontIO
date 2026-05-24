@@ -6,6 +6,7 @@ import {
   Player,
   PlayerType,
   Relation,
+  Structures,
   Tick,
   Unit,
   UnitType,
@@ -20,6 +21,18 @@ import { closestTwoTiles } from "../Util";
 import { AiAttackBehavior } from "../utils/AiAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { randTerritoryTileArray } from "./NationUtils";
+
+/** Cap on silo levels reachable via maybeDestroyEnemySam's upgrade fallback. */
+const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
+
+/**
+ * Level-weighted structure density (sum of structure levels per tile owned)
+ * above which the richest impossible nation will pre-emptively nuke a player.
+ */
+const HIGH_DENSITY_NUKE_THRESHOLD = 1 / 75;
+
+/** Minimum sum of structure levels a player needs to qualify as a high-density nuke target. */
+const MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE = 5;
 
 export class NationNukeBehavior {
   private readonly recentlySentNukes: [
@@ -43,14 +56,23 @@ export class NationNukeBehavior {
   ) {}
 
   maybeSendNuke() {
+    const silos = this.player.units(UnitType.MissileSilo);
+    const config = this.game.config();
+    if (
+      silos.length === 0 ||
+      config.isUnitDisabled(UnitType.MissileSilo) ||
+      (config.isUnitDisabled(UnitType.AtomBomb) &&
+        config.isUnitDisabled(UnitType.HydrogenBomb))
+    ) {
+      return;
+    }
+
     const nukeTarget = this.findBestNukeTarget();
     if (nukeTarget === null) {
       return;
     }
 
-    const silos = this.player.units(UnitType.MissileSilo);
     if (
-      silos.length === 0 ||
       nukeTarget.type() === PlayerType.Bot || // Don't nuke tribes (as opposed to nations and humans)
       this.player.isOnSameTeam(nukeTarget) ||
       this.attackBehavior.shouldAttack(nukeTarget) === false
@@ -77,14 +99,7 @@ export class NationNukeBehavior {
     }
     const range = this.game.config().nukeMagnitudes(nukeType).outer;
 
-    const structures = nukeTarget.units(
-      UnitType.City,
-      UnitType.DefensePost,
-      UnitType.MissileSilo,
-      UnitType.Port,
-      UnitType.SAMLauncher,
-      UnitType.Factory,
-    );
+    const structures = nukeTarget.units(...Structures.types);
     const structureTiles = structures.map((u) => u.tile());
     const difficulty = this.game.config().gameConfig().difficulty;
     // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
@@ -167,6 +182,20 @@ export class NationNukeBehavior {
       return incomingAttackPlayer;
     }
 
+    // On Impossible, the richest nation hunts very high structure density targets
+    // Restricting to the richest nation prevents every impossible nation
+    // from piling onto the same compact player.
+    if (
+      diff === Difficulty.Impossible &&
+      this.isRichestNation() &&
+      this.random.chance(2)
+    ) {
+      const denseTarget = this.findHighDensityTarget();
+      if (denseTarget !== null) {
+        return denseTarget;
+      }
+    }
+
     // On impossible difficulty, prioritize nuking the crown if they have more than 50% of the map
     const { difficulty, gameMode } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Impossible && gameMode === GameMode.FFA) {
@@ -228,6 +257,39 @@ export class NationNukeBehavior {
     }
 
     return null;
+  }
+
+  private isRichestNation(): boolean {
+    const myGold = this.player.gold();
+    for (const other of this.game.players()) {
+      if (other === this.player) continue;
+      if (other.type() !== PlayerType.Nation) continue;
+      if (other.gold() > myGold) return false;
+    }
+    return true;
+  }
+
+  private findHighDensityTarget(): Player | null {
+    let bestTarget: Player | null = null;
+    let bestDensity = HIGH_DENSITY_NUKE_THRESHOLD;
+    for (const other of this.game.players()) {
+      if (other === this.player) continue;
+      if (other.type() === PlayerType.Bot) continue;
+      if (this.player.isFriendly(other)) continue;
+      const tilesOwned = other.numTilesOwned();
+      if (tilesOwned === 0) continue;
+      const structures = other.units(...Structures.types);
+      let levelSum = 0;
+      for (const s of structures) levelSum += s.level();
+      // Skip players with too few structures regardless of density
+      if (levelSum < MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE) continue;
+      const density = levelSum / tilesOwned;
+      if (density > bestDensity) {
+        bestDensity = density;
+        bestTarget = other;
+      }
+    }
+    return bestTarget;
   }
 
   private findFFACrownTarget(): Player | null {
@@ -377,12 +439,19 @@ export class NationNukeBehavior {
       return this.cost(type);
     }
 
-    // Return the actual cost in team games (saving up for a MIRV is not relevant, the game will be finished before that)
-    // or if we already have enough gold to buy both a MIRV and a hydro
+    // Save up a limited amount in team games, synced with NationStructureBehavior
+    // Saving up for a MIRV is not relevant
     if (
-      this.game.config().gameConfig().gameMode === GameMode.Team ||
+      this.game.config().gameConfig().gameMode === GameMode.Team &&
+      this.player.gold() > this.cost(UnitType.HydrogenBomb)
+    ) {
+      return this.cost(type);
+    }
+
+    // Return the actual cost if we already have enough gold to buy both a MIRV and a hydro
+    if (
       this.player.gold() >
-        this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
+      this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
     ) {
       return this.cost(type);
     }
@@ -735,6 +804,13 @@ export class NationNukeBehavior {
     // Try each enemy SAM as a target, easiest (lowest level) first
     const sortedSams = enemySams.slice().sort((a, b) => a.level() - b.level());
     let needsMoreSilos = false;
+    // Track the first failed attempt so we can upgrade a silo that would
+    // actually have helped that plan (rather than an unrelated silo).
+    let failedTarget: {
+      targetTile: TileRef;
+      coveringSamIds: Set<number>;
+      totalBombs: number;
+    } | null = null;
 
     for (const targetSam of sortedSams) {
       const targetTile = targetSam.tile();
@@ -832,6 +908,7 @@ export class NationNukeBehavior {
       }
 
       if (unblockedBombs.length < totalBombs) {
+        failedTarget ??= { targetTile, coveringSamIds, totalBombs };
         needsMoreSilos = true;
         continue;
       }
@@ -860,6 +937,7 @@ export class NationNukeBehavior {
       }
 
       if (bestWindowCount < totalBombs) {
+        failedTarget ??= { targetTile, coveringSamIds, totalBombs };
         needsMoreSilos = true;
         continue;
       }
@@ -921,8 +999,8 @@ export class NationNukeBehavior {
 
     // Couldn't destroy any SAM — upgrade silos only if capacity was the bottleneck.
     // If we only lack gold, don't waste it upgrading silos — just wait and save.
-    if (needsMoreSilos) {
-      this.maybeUpgradeBestProtectedSilo();
+    if (needsMoreSilos && failedTarget !== null) {
+      this.maybeUpgradeHelpfulSilo(failedTarget);
     }
   }
 
@@ -951,18 +1029,47 @@ export class NationNukeBehavior {
   }
 
   /**
-   * Upgrade the missile silo that is best protected by our own SAMs.
-   * Called when we need more silo capacity to overwhelm enemy SAMs.
+   * Upgrade a missile silo that would actually have helped the failed
+   * overwhelm attempt: trajectory to the failed target is not blocked by
+   * non-covering enemy SAMs, and the silo is below the upgrade cap. Among
+   * those, picks the one best protected by our own SAMs.
    */
-  private maybeUpgradeBestProtectedSilo(): void {
+  private maybeUpgradeHelpfulSilo(failedTarget: {
+    targetTile: TileRef;
+    coveringSamIds: Set<number>;
+    totalBombs: number;
+  }): void {
     const silos = this.player.units(UnitType.MissileSilo);
     if (silos.length === 0) return;
+
+    // First pass: find silos with an unblocked trajectory to the failed
+    // target. Only these contribute slots to the overwhelm plan.
+    const unblockedSilos: Unit[] = [];
+    for (const silo of silos) {
+      if (
+        !this.isTrajectoryInterceptableBySam(
+          silo.tile(),
+          failedTarget.targetTile,
+          failedTarget.coveringSamIds,
+        )
+      ) {
+        unblockedSilos.push(silo);
+      }
+    }
+    if (unblockedSilos.length === 0) return;
+
+    // Bail out if the target is unreachable even at max silo level —
+    // crazy amounts of covering SAMs, upgrading is wasted gold.
+    const maxAchievableSlots =
+      unblockedSilos.length * MAX_NATION_SILO_UPGRADE_LEVEL;
+    if (maxAchievableSlots < failedTarget.totalBombs) return;
 
     const ourSams = this.player.units(UnitType.SAMLauncher);
     let bestSilo: Unit | null = null;
     let bestProtection = -1;
 
-    for (const silo of silos) {
+    for (const silo of unblockedSilos) {
+      if (silo.level() >= MAX_NATION_SILO_UPGRADE_LEVEL) continue;
       if (!this.player.canUpgradeUnit(silo)) continue;
 
       let protection = 0;

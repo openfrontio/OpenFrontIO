@@ -65,7 +65,7 @@ export class ColorAllocator {
       this.availableColors = [...this.fallbackColors];
     }
 
-    let selectedIndex = 0;
+    let selectedIndex: number;
 
     if (this.assigned.size === 0 || this.assigned.size > 50) {
       // Randomly pick the first color if no colors have been assigned yet.

@@ -53,6 +53,7 @@ var maps = []struct {
     {Name: "straitofmalacca"},
 	{Name: "mars"},
 	{Name: "mena"},
+	{Name: "middleeast"},
 	{Name: "montreal"},
 	{Name: "newyorkcity"},
 	{Name: "northamerica"},
@@ -85,15 +86,17 @@ var maps = []struct {
 	{Name: "sanfrancisco"},
 	{Name: "aegean"},
 	{Name: "milkyway"},
-	{Name: "mediterranean"},
+	{Name: "marenostrum"},
 	{Name: "greatlakes"},
-    {Name: "dyslexdria"},
-    {Name: "luna"},
-    {Name: "conakry"},
-    {Name: "caucasus"},
-    {Name: "beringsea"},
+	{Name: "dyslexdria"},
+	{Name: "luna"},
+	{Name: "conakry"},
+	{Name: "caucasus"},
+    {Name: "losangeles"},
+    {Name: "beringsea"}, 
     {Name: "antarctica"},
     {Name: "archipelagosea"},
+    {Name: "bajacalifornia"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},
@@ -104,6 +107,9 @@ var maps = []struct {
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
 var mapsFlag string
+
+// workersFlag controls how many maps are processed concurrently, bounding peak memory usage.
+var workersFlag int
 
 // logFlags holds all the flags related to configuring the map-generator logging
 var logFlags LogFlags
@@ -246,15 +252,20 @@ func parseMapsFlag() (map[string]bool, error) {
 
 // loadTerrainMaps manages the concurrent generation of all selected maps.
 // It spins up goroutines for each map and aggregates any errors.
+// Concurrency is bounded by --workers to cap peak memory usage.
 func loadTerrainMaps() error {
+	if workersFlag < 1 {
+		return fmt.Errorf("--workers must be >= 1, got %d", workersFlag)
+	}
 	selectedMaps, err := parseMapsFlag()
 	if err != nil {
 		return err
 	}
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(maps))
+	sem := make(chan struct{}, workersFlag)
 
-	// Process maps concurrently
+	// Process maps concurrently, bounded by the semaphore
 	for _, mapItem := range maps {
 		if selectedMaps != nil && !selectedMaps[mapItem.Name] {
 			continue
@@ -263,6 +274,8 @@ func loadTerrainMaps() error {
 		mapItem := mapItem
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			mapLogTag := slog.String("map", mapItem.Name)
 			testLogTag := slog.Bool("isTest", mapItem.IsTest)
 			logger := slog.Default().With(mapLogTag).With(testLogTag)
@@ -291,6 +304,7 @@ func loadTerrainMaps() error {
 // It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
+	flag.IntVar(&workersFlag, "workers", 4, "number of maps to process concurrently. reduce to lower peak memory usage.")
 	flag.StringVar(&logFlags.logLevel, "log-level", "", "Explicitly sets the log level to one of: ALL, DEBUG, INFO (default), WARN, ERROR.")
 	flag.BoolVar(&logFlags.verbose, "verbose", false, "Adds additional logging and prefixes logs with the [mapname].  Alias of log-level=DEBUG.")
 	flag.BoolVar(&logFlags.verbose, "v", false, "-verbose shorthand")

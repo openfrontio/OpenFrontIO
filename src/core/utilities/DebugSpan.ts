@@ -9,6 +9,11 @@ type Span = {
 
 const stack: Span[] = [];
 
+declare global {
+  var __DEBUG_SPAN_ENABLED__: boolean | undefined;
+  var __DEBUG_SPANS__: Span[];
+}
+
 function isEnabled(): boolean {
   return globalThis.__DEBUG_SPAN_ENABLED__ === true;
 }
@@ -82,7 +87,10 @@ export const DebugSpan = {
       );
     };
 
-    const properties = {
+    const properties: {
+      timings: Record<string, number | undefined>;
+      data: Record<string, any>;
+    } = {
       timings: { total: span.duration },
       data: extractData(span),
     };

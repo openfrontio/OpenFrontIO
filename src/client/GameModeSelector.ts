@@ -28,7 +28,7 @@ import {
   translateText,
 } from "./Utils";
 
-const CARD_BG = "bg-sky-950";
+const CARD_BG = "bg-surface";
 
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
@@ -120,7 +120,7 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-[#0073b7] hover:bg-sky-500 active:bg-sky-700",
+            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
           )}
         </div>
         <!-- Create/ranked/join: mobile only, below solo -->
@@ -128,19 +128,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
         </div>
         <!-- iOS Add to Home Screen banner -->
@@ -192,7 +192,7 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.solo"),
             this.openSinglePlayerModal,
-            "bg-[#0073b7] hover:bg-sky-500 active:bg-sky-700",
+            "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]",
           )}
         </div>
         <!-- Bottom row: create + ranked + join (desktop only) -->
@@ -200,19 +200,19 @@ export class GameModeSelector extends LitElement {
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
           ${!crazyGamesSDK.isOnCrazyGames()
             ? this.renderSmallActionCard(
                 translateText("mode_selector.ranked_title"),
                 this.openRankedMenu,
-                "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+                "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
               )
             : html`<div class="invisible"></div>`}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            "bg-slate-600 hover:bg-slate-500 active:bg-slate-700",
+            "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]",
           )}
         </div>
       </div>
@@ -253,7 +253,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-colors text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
+        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
       >
         ${title}
       </button>
@@ -275,7 +275,7 @@ export class GameModeSelector extends LitElement {
       ? getSecondsUntilServerTimestamp(lobby.startsAt, this.serverTimeOffset)
       : undefined;
 
-    let timeDisplay: string = "";
+    let timeDisplay: string;
     let timeDisplayUppercase = false;
     if (timeRemaining === undefined) {
       timeDisplay = renderDuration(this.defaultLobbyTime);
@@ -299,7 +299,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-sky-950"
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)]"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div
@@ -325,7 +325,7 @@ export class GameModeSelector extends LitElement {
                 ${modifierLabels.map(
                   (label) =>
                     html`<span
-                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-[#0073b7] text-white shadow-[0_0_6px_rgba(14,165,233,0.35)]"
+                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-widest bg-malibu-blue text-white shadow-[var(--shadow-malibu-blue-pill)]"
                       >${label}</span
                     >`,
                 )}
@@ -335,7 +335,7 @@ export class GameModeSelector extends LitElement {
             <span
               class="text-xs font-bold tracking-widest ${timeDisplayUppercase
                 ? "uppercase"
-                : "normal-case"} bg-[#0073b7] text-white px-2 py-1 rounded"
+                : "normal-case"} bg-malibu-blue text-white px-2 py-1 rounded"
               >${timeDisplay}</span
             >
           </div>

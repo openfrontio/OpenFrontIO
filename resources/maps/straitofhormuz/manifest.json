@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 300,
-    "num_land_tiles": 77229,
+    "num_land_tiles": 77223,
     "width": 450
   },
   "map4x": {
     "height": 600,
-    "num_land_tiles": 312219,
+    "num_land_tiles": 312041,
     "width": 900
   },
   "name": "Strait of Hormuz",

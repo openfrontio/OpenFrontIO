@@ -6,12 +6,12 @@
   },
   "map16x": {
     "height": 325,
-    "num_land_tiles": 115505,
+    "num_land_tiles": 115500,
     "width": 500
   },
   "map4x": {
     "height": 650,
-    "num_land_tiles": 476669,
+    "num_land_tiles": 476275,
     "width": 1000
   },
   "name": "greatlakes",

@@ -349,13 +349,10 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         const bytes = Buffer.byteLength(message, "utf8");
-        const intentType =
-          clientMsg.type === "intent" ? clientMsg.intent.type : undefined;
         const rateResult = this.intentRateLimiter.check(
           client.clientID,
           clientMsg.type,
           bytes,
-          intentType,
         );
         if (rateResult === "kick") {
           this.log.warn(`Client rate limit exceeded, kicking`, {
@@ -485,6 +482,35 @@ export class GameServer {
                 );
 
                 this.updateGameConfig(stampedIntent.config);
+                return;
+              }
+              case "start_game": {
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can start game`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot start public game via WebSocket`, {
+                    gameID: this.id,
+                  });
+                  return;
+                }
+                if (this.hasStarted()) {
+                  this.log.warn(`Cannot start game that has already started`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+                this.log.info(`Lobby creator starting game via WebSocket`, {
+                  creatorID: client.clientID,
+                  gameID: this.id,
+                });
+                this.start();
                 return;
               }
               case "toggle_pause": {
@@ -765,6 +791,8 @@ export class GameServer {
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
+      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
           0,

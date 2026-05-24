@@ -210,25 +210,6 @@ export async function startWorker() {
     res.json(game.gameInfo());
   });
 
-  // Add other endpoints from your original server
-  app.post("/api/start_game/:id", async (req, res) => {
-    log.info(`starting private lobby with id ${req.params.id}`);
-    const game = gm.game(req.params.id);
-    if (!game) {
-      return;
-    }
-    if (game.isPublic()) {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-      log.info(
-        `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
-      );
-      return;
-    }
-    game.start();
-    res.status(200).json({ success: true });
-  });
-
   app.get("/api/game/:id/exists", async (req, res) => {
     const lobbyId = req.params.id;
     res.json({
@@ -287,7 +268,10 @@ export async function startWorker() {
         gameID: gameRecord.info.gameID,
       });
 
-      archive(finalizeGameRecord(gameRecord));
+      archive(
+        finalizeGameRecord(gameRecord),
+        privilegeRefresher.getCosmeticFlagUrls(),
+      );
       res.json({
         success: true,
       });
@@ -448,7 +432,7 @@ export async function startWorker() {
           const turnstileResult = await verifyTurnstileToken(
             ip,
             clientMsg.turnstileToken,
-            config.turnstileSecretKey(),
+            config,
           );
           switch (turnstileResult.status) {
             case "approved":

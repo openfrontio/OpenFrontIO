@@ -34,7 +34,7 @@ import { Layer } from "./Layer";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderNumber } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+import { GoToPlayerEvent, GoToUnitEvent } from "../TransformHandler";
 
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getMessageTypeClasses, translateText } from "../../Utils";

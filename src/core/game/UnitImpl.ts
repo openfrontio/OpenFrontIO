@@ -6,9 +6,11 @@ import {
   Tick,
   TrainType,
   TrajectoryTile,
+  TransportShipState,
   Unit,
   UnitInfo,
   UnitType,
+  WarshipState,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
@@ -21,7 +23,8 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _retreating: boolean = false;
+  private _transportShipState: TransportShipState | undefined = undefined;
+  private _warshipState: WarshipState | undefined = undefined;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
@@ -33,7 +36,6 @@ export class UnitImpl implements Unit {
   // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
-  private _patrolTile: TileRef | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
@@ -61,8 +63,16 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
-    this._patrolTile =
-      "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
+    if (this._type === UnitType.TransportShip) {
+      this._transportShipState = { isRetreating: false, troops: 0 };
+    }
+    if ("patrolTile" in params) {
+      this._warshipState = {
+        state: "patrolling",
+        patrolTile: params.patrolTile,
+        lastCombatTick: -100,
+      };
+    }
     this._targetUnit =
       "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
     this._loaded =
@@ -90,14 +100,6 @@ export class UnitImpl implements Unit {
 
   isTargetable(): boolean {
     return this._targetable;
-  }
-
-  setPatrolTile(tile: TileRef): void {
-    this._patrolTile = tile;
-  }
-
-  patrolTile(): TileRef | undefined {
-    return this._patrolTile;
   }
 
   isUnit(): this is Unit {
@@ -128,7 +130,14 @@ export class UnitImpl implements Unit {
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
       reachedTarget: this._reachedTarget,
-      retreating: this._retreating,
+      warshipState:
+        this._warshipState !== undefined
+          ? { ...this.warshipState() }
+          : undefined,
+      transportShipState:
+        this._transportShipState !== undefined
+          ? this.transportShipState()
+          : undefined,
       pos: this._tile,
       markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
@@ -221,11 +230,25 @@ export class UnitImpl implements Unit {
   }
 
   modifyHealth(delta: number, attacker?: Player): void {
-    this._health = withinInt(
+    const previousHealth = this._health;
+    const nextHealth = withinInt(
       this._health + toInt(delta),
       0n,
       toInt(this.info().maxHealth ?? 1),
     );
+
+    if (nextHealth === previousHealth) {
+      return;
+    }
+
+    if (
+      attacker !== undefined &&
+      delta < 0 &&
+      this._warshipState !== undefined
+    ) {
+      this._warshipState.lastCombatTick = this.mg.ticks();
+    }
+    this._health = nextHealth;
     this.mg.addUpdate(this.toUpdate());
     if (this._health === 0n) {
       this.delete(true, attacker);
@@ -328,22 +351,79 @@ export class UnitImpl implements Unit {
     return this._destroyer;
   }
 
-  retreating(): boolean {
-    return this._retreating;
+  warshipState(): WarshipState {
+    if (this._warshipState === undefined) {
+      throw new Error("warshipState called on non-warship unit");
+    }
+    this._warshipState.isInCombat = this.isInCombat();
+    return this._warshipState;
   }
 
-  setRetreating(retreating: boolean): void {
-    if (this._retreating !== retreating) {
-      this._retreating = retreating;
+  updateWarshipState(update: Partial<WarshipState>): void {
+    if (this._warshipState === undefined) {
+      throw new Error("updateWarshipState called on non-warship unit");
+    }
+    if (update.isInCombat) {
+      this.markInCombat();
+    }
+    const merged = { ...this._warshipState, ...update };
+    if (
+      merged.state === this._warshipState.state &&
+      merged.patrolTile === this._warshipState.patrolTile &&
+      merged.retreatPort === this._warshipState.retreatPort
+    )
+      return;
+    this._warshipState = {
+      state: merged.state,
+      patrolTile: merged.patrolTile,
+      retreatPort: merged.retreatPort,
+      lastCombatTick: this._warshipState.lastCombatTick,
+    };
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isInCombat(): boolean {
+    return this.mg.ticks() - this._warshipState!.lastCombatTick <= 3;
+  }
+
+  private markInCombat(): void {
+    const wasInCombat = this.isInCombat();
+    this._warshipState!.lastCombatTick = this.mg.ticks();
+    if (!wasInCombat) {
       this.mg.addUpdate(this.toUpdate());
     }
   }
 
-  orderBoatRetreat() {
-    if (this.type() !== UnitType.TransportShip) {
-      throw new Error("Cannot retreat " + this.type());
+  transportShipState(): TransportShipState {
+    if (this._transportShipState === undefined) {
+      throw new Error("transportShipState called on non-transport-ship unit");
     }
-    this.setRetreating(true);
+    return {
+      isRetreating: this._transportShipState.isRetreating,
+      troops: this._troops,
+    };
+  }
+
+  updateTransportShipState(update: Partial<TransportShipState>): void {
+    if (this._transportShipState === undefined) {
+      throw new Error(
+        "updateTransportShipState called on non-transport-ship unit",
+      );
+    }
+    let changed = false;
+    if (
+      update.isRetreating !== undefined &&
+      this._transportShipState.isRetreating !== update.isRetreating
+    ) {
+      this._transportShipState = {
+        ...this._transportShipState,
+        isRetreating: update.isRetreating,
+      };
+      changed = true;
+    }
+    if (changed) {
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
   isUnderConstruction(): boolean {

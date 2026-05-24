@@ -1,27 +1,45 @@
-import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
-import { Cell } from "../../../core/game/Game";
+import { Cell, PlayerType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
-const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
-export function troopAttackColor(
-  attackerTroops: number,
-  defenderTroops: number,
-): string {
-  return attackerTroops > defenderTroops ? "#66ff66" : "#ffbe3c";
+// Match AttacksDisplay: aquarius for outgoing, red-400 for incoming.
+const OUTGOING_COLOR = "var(--color-aquarius)";
+const INCOMING_COLOR = "var(--color-red-400)";
+
+// At/above this zoom the label is rendered at full size; below it shrinks
+// linearly toward LABEL_MIN_RENDERED_SIZE as zoom→0.
+const LABEL_FULL_SIZE_ZOOM = 4.0;
+const LABEL_MIN_RENDERED_SIZE = 0.63;
+// Overall size multiplier applied to the rendered label.
+const LABEL_SIZE_MULTIPLIER = 1.0;
+
+// Counter-scale against the container's `scale(zoom)`. At/above
+// LABEL_FULL_SIZE_ZOOM the rendered size is capped at LABEL_SIZE_MULTIPLIER;
+// below it the rendered size shrinks linearly toward
+// LABEL_SIZE_MULTIPLIER * LABEL_MIN_RENDERED_SIZE as zoom→0.
+export function computeLabelScale(zoom: number): number {
+  const t = Math.min(1, zoom / LABEL_FULL_SIZE_ZOOM);
+  const renderedSize =
+    LABEL_SIZE_MULTIPLIER *
+    (LABEL_MIN_RENDERED_SIZE + (1 - LABEL_MIN_RENDERED_SIZE) * t);
+  return renderedSize / zoom;
 }
 
-export function troopDefenceColor(
-  attackerTroops: number,
-  myTroops: number,
-): string {
-  return attackerTroops > myTroops ? "#ff4444" : "#ff9944";
+// Worker returns clusters sorted by size; two near-equal-size fronts can flip
+// ordering tick-to-tick. If swapping brings each new position closer to where
+// its label already is, swap `next` in place. (clusteredPositions caps at 2.)
+export function alignClusterOrder(next: Cell[], prev: (Cell | null)[]): void {
+  const [a, b] = prev;
+  if (next.length !== 2 || !a || !b) return;
+  const dist = (p: Cell, q: Cell) => Math.abs(p.x - q.x) + Math.abs(p.y - q.y);
+  const direct = dist(next[0], a) + dist(next[1], b);
+  const swapped = dist(next[1], a) + dist(next[0], b);
+  if (swapped < direct) [next[0], next[1]] = [next[1], next[0]];
 }
 
 // An attack can have multiple disconnected front-line segments, so elements
@@ -31,7 +49,6 @@ interface AttackLabel {
   positions: (Cell | null)[];
   isIncoming: boolean;
   attackerTroops: number;
-  defenderTroops: number;
 }
 
 export class AttackingTroopsOverlay implements Layer {
@@ -42,6 +59,9 @@ export class AttackingTroopsOverlay implements Layer {
   private inFlightRequest = false;
   private isVisible = true;
   private onAlternateView: (e: AlternateViewEvent) => void;
+  // Last transform string written per element; lets renderLayer skip identical
+  // re-assignments every frame (~60fps × N labels).
+  private lastTransform = new WeakMap<HTMLDivElement, string>();
 
   constructor(
     private readonly game: GameView,
@@ -84,6 +104,10 @@ export class AttackingTroopsOverlay implements Layer {
     return 200;
   }
 
+  private labelScale(): number {
+    return computeLabelScale(this.transformHandler.scale);
+  }
+
   tick() {
     if (!this.userSettings.attackingTroopsOverlay() || !this.isVisible) {
       if (this.labels.size > 0) this.clearAllLabels();
@@ -98,7 +122,7 @@ export class AttackingTroopsOverlay implements Layer {
 
     const activeIDs = new Set<string>();
 
-    // Outgoing attacks — green if winning, amber if losing.
+    // Outgoing: only label attacks targeting another player.
     for (const attack of myPlayer.outgoingAttacks()) {
       activeIDs.add(attack.id);
       if (!attack.targetID) {
@@ -110,18 +134,22 @@ export class AttackingTroopsOverlay implements Layer {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, defender.troops(), false);
+      this.ensureLabel(attack.id, attack.troops, false);
     }
 
-    // Incoming attacks — red if the attacker outnumbers the player, orange otherwise.
+    // Incoming: only label attacks coming from another player; skip tribes.
     for (const attack of myPlayer.incomingAttacks()) {
       activeIDs.add(attack.id);
       const attacker = this.game.playerBySmallID(attack.attackerID);
-      if (!attacker || !attacker.isPlayer()) {
+      if (
+        !attacker ||
+        !attacker.isPlayer() ||
+        attacker.type() === PlayerType.Bot
+      ) {
         this.removeLabel(attack.id);
         continue;
       }
-      this.ensureLabel(attack.id, attack.troops, myPlayer.troops(), true);
+      this.ensureLabel(attack.id, attack.troops, true);
     }
 
     for (const [id] of this.labels) {
@@ -153,7 +181,6 @@ export class AttackingTroopsOverlay implements Layer {
   private ensureLabel(
     attackID: string,
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
   ) {
     let label = this.labels.get(attackID);
@@ -163,15 +190,13 @@ export class AttackingTroopsOverlay implements Layer {
         positions: [],
         isIncoming,
         attackerTroops,
-        defenderTroops,
       };
       this.labels.set(attackID, label);
     } else {
       label.attackerTroops = attackerTroops;
-      label.defenderTroops = defenderTroops;
     }
     for (const el of label.elements) {
-      this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+      this.updateLabelContent(el, attackerTroops);
     }
   }
 
@@ -185,6 +210,9 @@ export class AttackingTroopsOverlay implements Layer {
     );
     this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
 
+    // Hoist the per-frame label scale once; zoom is constant within a frame.
+    const scale = this.labelScale();
+    const innerTransform = `scale(${scale})`;
     for (const label of this.labels.values()) {
       for (let i = 0; i < label.elements.length; i++) {
         const el = label.elements[i];
@@ -195,10 +223,17 @@ export class AttackingTroopsOverlay implements Layer {
           continue;
         }
 
-        el.style.display = "inline-flex";
-        // Centre the label on its world position and counter-scale so text
-        // stays the same screen size regardless of zoom level.
-        el.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        el.style.display = "";
+        const inner = el.children[0] as HTMLDivElement;
+        // Outer: world position only — the 0.25s transition smooths cluster
+        // shifts. Inner: scale only — applied without transition so zoom is
+        // instant.
+        const outerTransform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%)`;
+        if (this.lastTransform.get(el) !== outerTransform) {
+          el.style.transform = outerTransform;
+          this.lastTransform.set(el, outerTransform);
+        }
+        inner.style.transform = innerTransform;
       }
     }
   }
@@ -207,11 +242,7 @@ export class AttackingTroopsOverlay implements Layer {
     // Add elements for new clusters.
     while (lbl.elements.length < positions.length) {
       lbl.elements.push(
-        this.createLabelElement(
-          lbl.attackerTroops,
-          lbl.defenderTroops,
-          lbl.isIncoming,
-        ),
+        this.createLabelElement(lbl.attackerTroops, lbl.isIncoming),
       );
       lbl.positions.push(null);
     }
@@ -222,77 +253,68 @@ export class AttackingTroopsOverlay implements Layer {
       lbl.positions.pop();
     }
 
-    // Snap large jumps instantly; let the CSS transition handle small advances.
+    alignClusterOrder(positions, lbl.positions);
+
+    // Snap teleport-sized jumps instantly; let the CSS transition handle the rest.
     for (let i = 0; i < positions.length; i++) {
       const old = lbl.positions[i];
       const next = positions[i];
-      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 50) {
+      if (old && Math.hypot(next.x - old.x, next.y - old.y) > 200) {
         const el = lbl.elements[i];
         el.style.transition = "none";
-        el.style.transform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%) scale(${1 / this.transformHandler.scale})`;
+        const outerTransform = `translate(${next.x}px, ${next.y}px) translate(-50%, -50%)`;
+        el.style.transform = outerTransform;
+        this.lastTransform.set(el, outerTransform);
         requestAnimationFrame(() => {
-          el.style.transition = "transform 0.2s ease-out";
+          el.style.transition = "transform 0.25s linear";
         });
       }
       lbl.positions[i] = next;
     }
   }
 
+  // Outer wraps position+transition (animates cluster moves). Inner holds the
+  // scale (instant on zoom) plus all visual chrome. Splitting them keeps the
+  // 0.25s transition off zoom changes.
   private createLabelTemplate(): HTMLDivElement {
-    const el = document.createElement("div");
-    el.style.position = "absolute";
-    el.style.display = "none";
-    el.style.alignItems = "center";
-    el.style.gap = "3px";
-    el.style.whiteSpace = "nowrap";
-    el.style.fontSize = "11px";
-    el.style.fontWeight = "bold";
-    el.style.padding = "1px 4px";
-    el.style.borderRadius = "3px";
-    el.style.backgroundColor = "rgba(0,0,0,0.55)";
-    el.style.pointerEvents = "none";
-    el.style.lineHeight = "1.3";
-    el.style.transition = "transform 0.2s ease-out";
-    el.style.width = "max-content";
-    const icon = document.createElement("img");
-    icon.style.width = "10px";
-    icon.style.height = "10px";
-    el.appendChild(icon);
-    const span = document.createElement("span");
-    span.style.minWidth = "25px";
-    el.appendChild(span);
-    return el;
+    const outer = document.createElement("div");
+    outer.style.position = "absolute";
+    outer.style.display = "none";
+    outer.style.pointerEvents = "none";
+    outer.style.transition = "transform 0.25s linear";
+
+    const inner = document.createElement("div");
+    inner.style.whiteSpace = "nowrap";
+    inner.style.fontSize = "17px";
+    inner.style.fontWeight = "bold";
+    inner.style.lineHeight = "1.3";
+    inner.style.width = "max-content";
+    // No background — let the territory border show through. Stacked black
+    // text-shadows form a soft dark glow so the number stays readable over
+    // any terrain.
+    inner.style.textShadow =
+      "0 0 2px rgba(0,0,0,1), 0 0 3px rgba(0,0,0,0.85), 0 0 5px rgba(0,0,0,0.5)";
+    outer.appendChild(inner);
+
+    return outer;
   }
 
   private createLabelElement(
     attackerTroops: number,
-    defenderTroops: number,
     isIncoming: boolean,
   ): HTMLDivElement {
     const el = this.labelTemplate.cloneNode(true) as HTMLDivElement;
-    el.style.fontFamily = this.game.config().theme().font();
-    this.updateLabelContent(el, attackerTroops, defenderTroops, isIncoming);
+    const inner = el.children[0] as HTMLDivElement;
+    inner.style.fontFamily = this.game.config().theme().font();
+    inner.style.color = isIncoming ? INCOMING_COLOR : OUTGOING_COLOR;
+    inner.textContent = renderTroops(attackerTroops);
     this.container.appendChild(el);
     return el;
   }
 
-  private updateLabelContent(
-    el: HTMLDivElement,
-    attackerTroops: number,
-    defenderTroops: number,
-    isIncoming: boolean,
-  ) {
-    const icon = el.children[0] as HTMLImageElement;
-    const span = el.children[1] as HTMLSpanElement;
-    if (isIncoming) {
-      icon.src = shieldIcon;
-      span.style.color = troopDefenceColor(attackerTroops, defenderTroops);
-      span.textContent = renderTroops(attackerTroops);
-    } else {
-      icon.src = swordIcon;
-      span.style.color = troopAttackColor(attackerTroops, defenderTroops);
-      span.textContent = renderTroops(attackerTroops);
-    }
+  private updateLabelContent(el: HTMLDivElement, attackerTroops: number) {
+    const inner = el.children[0] as HTMLDivElement;
+    inner.textContent = renderTroops(attackerTroops);
   }
 
   private removeLabel(attackID: string) {

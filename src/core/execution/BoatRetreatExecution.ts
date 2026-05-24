@@ -23,7 +23,7 @@ export class BoatRetreatExecution implements Execution {
       return;
     }
 
-    unit.orderBoatRetreat();
+    unit.updateTransportShipState({ isRetreating: true });
     this.active = false;
   }
 

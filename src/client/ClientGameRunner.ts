@@ -13,7 +13,12 @@ import {
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getGameLogicConfig } from "../core/configuration/ConfigLoader";
-import { BuildableUnit, Structures, UnitType } from "../core/game/Game";
+import {
+  BuildableUnit,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -34,6 +39,7 @@ import {
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
+  DoRetaliateAttackEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -53,7 +59,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
+import { GoToPlayerEvent } from "./graphics/TransformHandler";
 import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -237,7 +243,7 @@ async function createClientGame(
     userSettings,
     lobbyConfig.gameRecord !== undefined,
   );
-  let gameMap: TerrainMapData | null = null;
+  let gameMap: TerrainMapData;
 
   if (terrainLoad) {
     gameMap = await terrainLoad;
@@ -392,6 +398,10 @@ export class ClientGameRunner {
       this.doGroundAttackUnderCursor.bind(this),
     );
     this.eventBus.on(
+      DoRetaliateAttackEvent,
+      this.doRetaliateAttackMostRecent.bind(this),
+    );
+    this.eventBus.on(
       DoRequestAllianceEvent,
       this.doRequestAllianceUnderCursor.bind(this),
     );
@@ -441,6 +451,8 @@ export class ClientGameRunner {
       console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);
     };
+
+    let hasGoneToPlayer = false;
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
@@ -472,7 +484,7 @@ export class ClientGameRunner {
               return;
             }
 
-            this.eventBus.emit(new GoToPlayerEvent(myPlayer));
+            this.eventBus.emit(new GoToPlayerEvent(myPlayer, 10));
           };
 
           goToPlayer();
@@ -519,6 +531,15 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "turn") {
+        if (
+          !this.gameView.inSpawnPhase() &&
+          !hasGoneToPlayer &&
+          this.gameView.myPlayer()
+        ) {
+          hasGoneToPlayer = true;
+          this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));
+        }
+
         // Track when we receive the turn to calculate delay
         const now = Date.now();
         if (this.lastTickReceiveTime > 0) {
@@ -770,6 +791,41 @@ export class ClientGameRunner {
         );
       }
     });
+  }
+
+  private doRetaliateAttackMostRecent(): void {
+    if (!this.isActive || this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const incomingAttacks = this.myPlayer.incomingAttacks().filter((a) => {
+      const t = (
+        this.gameView.playerBySmallID(a.attackerID) as PlayerView
+      ).type();
+      return t !== PlayerType.Bot;
+    });
+
+    if (incomingAttacks.length === 0) return;
+
+    const mostRecentAttack = incomingAttacks[incomingAttacks.length - 1];
+
+    const attacker = this.gameView.playerBySmallID(
+      mostRecentAttack.attackerID,
+    ) as PlayerView;
+    if (!attacker) return;
+
+    const counterTroops = Math.min(
+      mostRecentAttack.troops,
+      this.renderer.uiState.attackRatio * this.myPlayer.troops(),
+    );
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private doRequestAllianceUnderCursor(): void {
