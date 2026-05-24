@@ -43,6 +43,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Australia: 4,
   Baikal: 5,
   BajaCalifornia: 4,
+  Balkans: 6,
   BeringSea: 5,
   BeringStrait: 2,
   BetweenTwoSeas: 5,
