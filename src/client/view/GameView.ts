@@ -112,7 +112,6 @@ export class GameView implements GameMap {
   private trainUnitToEngine = new Map<number, number>();
 
   private toDelete = new Set<number>();
-  private deletedUnitIds = new Set<number>();
 
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
 
@@ -264,7 +263,6 @@ export class GameView implements GameMap {
     this.toDelete.forEach((id) => {
       this._units.delete(id);
       this._unitStates.delete(id);
-      this.deletedUnitIds.add(id);
     });
     this.toDelete.clear();
 
@@ -389,11 +387,7 @@ export class GameView implements GameMap {
           this._structuresDirty = true;
         }
         unit.update(update);
-      } else if (!update.isActive && this.deletedUnitIds.has(update.id)) {
-        if (isStructure) this._structuresDirty = true;
-        return;
       } else {
-        this.deletedUnitIds.delete(update.id);
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
         this._unitStates.set(update.id, unit.state);
