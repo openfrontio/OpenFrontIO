@@ -104,6 +104,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Venice: 6,
   World: 20,
   Yenisei: 6,
+  Labyrinth: 6,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
