@@ -10,11 +10,11 @@ vi.mock("../../../src/client/Auth", () => ({
 
 import {
   fetchClanDetail,
+  fetchClanGames,
   fetchClanLeaderboard,
   fetchClanMembers,
   fetchClanRequests,
   fetchClans,
-  fetchClanStats,
 } from "../../../src/client/ClanApi";
 
 const okJson = (data: unknown, status = 200) => ({
@@ -68,61 +68,6 @@ describe("fetchClanLeaderboard", () => {
   it("returns false when Zod validation fails", async () => {
     mockFetch(() => okJson({ start: "bad-date", end: "bad-date", clans: [] }));
     const result = await fetchClanLeaderboard();
-    expect(result).toBe(false);
-  });
-});
-
-describe("fetchClanStats", () => {
-  const clanStats = {
-    clanTag: "TEST",
-    games: 20,
-    wins: 15,
-    losses: 5,
-    stats: {
-      total: { wins: 15, losses: 5 },
-      ffa: { wins: 7, losses: 3 },
-      team: { wins: 4, losses: 1 },
-      hvn: { wins: 1, losses: 0 },
-      duos: { wins: 2, losses: 0 },
-      trios: { wins: 1, losses: 1 },
-      quads: { wins: 1, losses: 0 },
-      "2": { wins: 2, losses: 0 },
-      "3": { wins: 1, losses: 1 },
-      "4": { wins: 1, losses: 0 },
-      "5": { wins: 0, losses: 0 },
-      "6": { wins: 0, losses: 0 },
-      "7": { wins: 0, losses: 0 },
-      ranked: { wins: 3, losses: 1 },
-      "1v1": { wins: 3, losses: 1 },
-    },
-    teamTypeWL: { ffa: { wl: [15, 5] } },
-    teamCountWL: { "2": { wl: [10, 3] } },
-  };
-
-  it("returns parsed data from json.clan on success", async () => {
-    mockFetch(() => okJson({ clan: clanStats }));
-    const result = await fetchClanStats("TEST");
-    expect(result).toEqual(clanStats);
-  });
-
-  it("returns false when json.clan is missing", async () => {
-    mockFetch(() => okJson({}));
-    const result = await fetchClanStats("TEST");
-    expect(result).toBe(false);
-  });
-
-  it("returns false on non-ok response", async () => {
-    mockFetch(() => failRes(404));
-    const result = await fetchClanStats("TEST");
-    expect(result).toBe(false);
-  });
-
-  it("returns false on network error", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.reject(new Error("offline"))),
-    );
-    const result = await fetchClanStats("TEST");
     expect(result).toBe(false);
   });
 });
@@ -381,6 +326,129 @@ describe("fetchClanRequests", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     await fetchClanRequests("TEST");
+
+    const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
+      string,
+      string
+    >;
+    expect(headers.Authorization).toBe("Bearer test-token");
+  });
+});
+
+describe("fetchClanGames", () => {
+  const gamesResponse = {
+    results: [
+      {
+        gameId: "g1",
+        start: "2024-06-01T00:00:00.000Z",
+        durationSeconds: 1234,
+        map: "World",
+        mode: "Team",
+        playerTeams: "Duos",
+        result: "victory",
+        totalPlayers: 8,
+        clanPlayers: [{ publicId: "p1", username: "alice", won: true }],
+      },
+    ],
+    nextCursor: "opaque-cursor-abc123",
+  };
+
+  it("returns parsed data on success", async () => {
+    mockFetch(() => okJson(gamesResponse));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual(gamesResponse);
+  });
+
+  it("accepts a null nextCursor (no more pages)", async () => {
+    mockFetch(() => okJson({ ...gamesResponse, nextCursor: null }));
+    const result = await fetchClanGames("TEST");
+    expect("error" in result).toBe(false);
+    if (!("error" in result)) expect(result.nextCursor).toBeNull();
+  });
+
+  it("omits filter and cursor query params when not provided", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("TEST");
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    const url = new URL(calledUrl);
+    expect(url.searchParams.has("filter")).toBe(false);
+    expect(url.searchParams.has("cursor")).toBe(false);
+    expect(url.pathname).toBe("/clans/TEST/games");
+  });
+
+  it("passes filter and cursor as query params", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("TEST", {
+      filter: "team",
+      cursor: "opaque-cursor-abc123",
+    });
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    const url = new URL(calledUrl);
+    expect(url.searchParams.get("filter")).toBe("team");
+    expect(url.searchParams.get("cursor")).toBe("opaque-cursor-abc123");
+  });
+
+  it("URL-encodes the clan tag", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("A/B");
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    // encodeURIComponent('/') === '%2F'
+    expect(calledUrl).toContain("/clans/A%2FB/games");
+  });
+
+  it("returns { error: 'forbidden' } on 403", async () => {
+    mockFetch(() => failRes(403));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "forbidden" });
+  });
+
+  it("returns { error: 'failed' } on other non-ok responses", async () => {
+    mockFetch(() => failRes(500));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "failed" });
+  });
+
+  it("returns { error: 'failed' } when Zod validation fails", async () => {
+    mockFetch(() => okJson({ results: "not-an-array", nextCursor: 42 }));
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "failed" });
+  });
+
+  it("returns { error: 'failed' } on network error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    const result = await fetchClanGames("TEST");
+    expect(result).toEqual({ error: "failed" });
+  });
+
+  it("sends Authorization header", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(gamesResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanGames("TEST");
 
     const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
       string,

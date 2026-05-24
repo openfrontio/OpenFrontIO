@@ -18,12 +18,9 @@ uniform float uNameScaleCap;
 uniform float uFontSize;        // atlas reference font size (same as name shader's uFontSize)
 uniform float uFontBase;        // atlas baseline height (same as name shader's uBase)
 
-// Flag atlas layout
-uniform float uFlagCellW;   // texels per flag cell (width)
-uniform float uFlagCellH;   // texels per flag cell (height)
-uniform float uFlagCols;    // columns in flag atlas
-uniform float uFlagAtlasW;  // flag atlas texture width
-uniform float uFlagAtlasH;  // flag atlas texture height
+// Flag cell shape (fixed, matches FlagAtlasArray cell size)
+uniform float uFlagCellW;
+uniform float uFlagCellH;
 
 // Emoji atlas layout
 uniform float uEmojiCell;    // texels per emoji cell (square)
@@ -35,7 +32,8 @@ uniform float uEmojiAtlasH;  // emoji atlas texture height
 uniform float uEmojiRowOffset;
 
 out vec2 vUV;
-flat out int vIconType; // 0 = flag, 1 = emoji, -1 = discard
+flat out int vIconType;  // 0 = flag, 1 = emoji, -1 = discard
+flat out int vFlagLayer; // valid when vIconType == 0
 
 void main() {
   // Decode instance ID → playerIdx + iconType (0=flag, 1=emoji)
@@ -46,22 +44,24 @@ void main() {
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, isHuman, nameHalfWidth
-  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagIdx, emojiIdx, [free], [free]
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayer, emojiIdx, [free], [free]
 
   // Early out: dead player
   if (pd1.w <= 0.0) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vIconType = -1;
+    vFlagLayer = 0;
     return;
   }
 
-  // Get atlas index for this icon type
+  // Get atlas/layer index for this icon type
   float atlasIdx = (iconType == 0) ? pd4.x : pd4.y;
   if (atlasIdx < 0.0) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vIconType = -1;
+    vFlagLayer = 0;
     return;
   }
 
@@ -85,6 +85,7 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vIconType = -1;
+    vFlagLayer = 0;
     return;
   }
 
@@ -92,46 +93,49 @@ void main() {
 
   // Compute icon size and position based on type
   float iconW, iconH;
-  float cellW, cellH, cols, atlasW, atlasH;
   vec2 iconOrigin;
 
   if (iconType == 0) {
-    // FLAG — to the left of the name
-    cellW  = uFlagCellW;
-    cellH  = uFlagCellH;
-    cols   = uFlagCols;
-    atlasW = uFlagAtlasW;
-    atlasH = uFlagAtlasH;
-
-    // Flag world size: height matches ~120% of the name text height
+    // FLAG — to the left of the name. Sampled from sampler2DArray; uses
+    // plain [0,1] UVs and the layer is passed via vFlagLayer.
     float flagWorldH = uFontBase * nameWorldScale * 1.2;
-    float flagWorldW = flagWorldH * (cellW / cellH);
+    float flagWorldW = flagWorldH * (uFlagCellW / uFlagCellH);
 
-    // Position: left of name, vertically centered on the name baseline
     iconOrigin = vec2(
       wx - nameHalfWidth * nameWorldScale - flagWorldW,
       wy - flagWorldH * 0.5
     );
     iconW = flagWorldW;
     iconH = flagWorldH;
-  } else {
-    // EMOJI — above the name
-    cellW  = uEmojiCell;
-    cellH  = uEmojiCell;
-    cols   = uEmojiCols;
-    atlasW = uEmojiAtlasW;
-    atlasH = uEmojiAtlasH;
 
-    // Emoji world size: slightly larger than name text height
+    vUV = aPos;
+    vFlagLayer = int(atlasIdx);
+  } else {
+    // EMOJI — above the name. Sampled from a 2D atlas; compute grid UVs.
+    float cellW  = uEmojiCell;
+    float cellH  = uEmojiCell;
+    float cols   = uEmojiCols;
+    float atlasW = uEmojiAtlasW;
+    float atlasH = uEmojiAtlasH;
+
     float emojiWorldSize = uFontBase * nameWorldScale * 1.0;
 
-    // Position: centered above name
     iconOrigin = vec2(
       wx - emojiWorldSize * 0.5,
       wy - uFontBase * nameWorldScale * uEmojiRowOffset
     );
     iconW = emojiWorldSize;
     iconH = emojiWorldSize;
+
+    int idx = int(atlasIdx);
+    int col = idx - (idx / int(cols)) * int(cols);
+    int row = idx / int(cols);
+    float u0 = float(col) * cellW / atlasW;
+    float v0 = float(row) * cellH / atlasH;
+    float u1 = u0 + cellW / atlasW;
+    float v1 = v0 + cellH / atlasH;
+    vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
+    vFlagLayer = 0;
   }
 
   // Quad world position
@@ -141,14 +145,5 @@ void main() {
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 
-  // UV from atlas grid
-  int idx = int(atlasIdx);
-  int col = idx - (idx / int(cols)) * int(cols);
-  int row = idx / int(cols);
-  float u0 = float(col) * cellW / atlasW;
-  float v0 = float(row) * cellH / atlasH;
-  float u1 = u0 + cellW / atlasW;
-  float v1 = v0 + cellH / atlasH;
-  vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
   vIconType = iconType;
 }

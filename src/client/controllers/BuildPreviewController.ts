@@ -16,6 +16,7 @@ import {
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
 import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,
@@ -57,6 +58,7 @@ export class BuildPreviewController implements Controller {
     public uiState: UIState,
     private transformHandler: TransformHandler,
     private view: WebGLGameView,
+    private userSettings: UserSettings,
   ) {}
 
   init() {
@@ -335,13 +337,16 @@ export class BuildPreviewController implements Controller {
         break;
     }
 
+    const cost = u.cost;
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
       tileY: this.game.y(tileRef),
       canBuild: u.canBuild !== false,
       canUpgrade: u.canUpgrade !== false,
-      cost: Number(u.cost),
+      cost: Number(cost),
+      showCost: this.userSettings.cursorCostLabel(),
+      canAfford: myPlayer.gold() >= cost,
       ghostRailPaths: u.ghostRailPaths,
       overlappingRailroads: u.overlappingRailroads,
       ownerID: myPlayer.smallID(),

@@ -15,69 +15,50 @@ function dispatchCancelableGestureEvent(
 }
 
 describe("installSafariPinchZoomBlocker", () => {
-  it("prevents the default action of each Safari gesture event on document", () => {
-    const uninstall = installSafariPinchZoomBlocker();
-
-    try {
-      for (const type of GESTURE_EVENTS) {
-        const event = dispatchCancelableGestureEvent(document, type);
-        expect(event.defaultPrevented).toBe(true);
-      }
-    } finally {
-      uninstall();
-    }
-  });
-
-  it("attaches listeners to the provided target", () => {
+  it("calls preventDefault on each Safari gesture event dispatched at the target", () => {
     const target = document.createElement("div");
-    const uninstall = installSafariPinchZoomBlocker(target);
-
-    try {
-      for (const type of GESTURE_EVENTS) {
-        const event = dispatchCancelableGestureEvent(target, type);
-        expect(event.defaultPrevented).toBe(true);
-      }
-    } finally {
-      uninstall();
-    }
-  });
-
-  it("removes the listeners when the returned disposer is called", () => {
-    const target = document.createElement("div");
-    const uninstall = installSafariPinchZoomBlocker(target);
-    uninstall();
+    installSafariPinchZoomBlocker(target);
 
     for (const type of GESTURE_EVENTS) {
       const event = dispatchCancelableGestureEvent(target, type);
-      expect(event.defaultPrevented).toBe(false);
+      expect(event.defaultPrevented).toBe(true);
     }
   });
 
-  it("does not affect events on unrelated targets", () => {
-    const scope = document.createElement("div");
-    const other = document.createElement("div");
-    const uninstall = installSafariPinchZoomBlocker(scope);
+  it("defaults to attaching the listeners to document", () => {
+    const addEventListenerSpy = vi
+      .spyOn(document, "addEventListener")
+      .mockImplementation(() => {});
 
     try {
-      const event = dispatchCancelableGestureEvent(other, "gesturestart");
-      expect(event.defaultPrevented).toBe(false);
+      installSafariPinchZoomBlocker();
+
+      for (const type of GESTURE_EVENTS) {
+        expect(addEventListenerSpy).toHaveBeenCalledWith(
+          type,
+          expect.any(Function),
+        );
+      }
     } finally {
-      uninstall();
+      addEventListenerSpy.mockRestore();
     }
+  });
+
+  it("does not affect events dispatched at unrelated targets", () => {
+    const scope = document.createElement("div");
+    const other = document.createElement("div");
+    installSafariPinchZoomBlocker(scope);
+
+    const event = dispatchCancelableGestureEvent(other, "gesturestart");
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("leaves unrelated event types alone", () => {
-    const uninstall = installSafariPinchZoomBlocker();
+    const target = document.createElement("div");
+    installSafariPinchZoomBlocker(target);
 
-    try {
-      const event = new Event("touchstart", {
-        bubbles: true,
-        cancelable: true,
-      });
-      document.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
-    } finally {
-      uninstall();
-    }
+    const event = new Event("touchstart", { bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 });
