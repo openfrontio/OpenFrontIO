@@ -264,6 +264,7 @@ export class StructurePass {
     let count = 0;
 
     for (const unit of units.values()) {
+      if (!unit.isActive) continue;
       const atlasIdx = this.typeToAtlasCol.get(unit.unitType);
       if (atlasIdx === undefined) continue;
 

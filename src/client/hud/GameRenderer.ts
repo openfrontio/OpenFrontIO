@@ -5,6 +5,7 @@ import { Controller } from "../Controller";
 import { GameStartingModal } from "../GameStartingModal";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
+import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
 import { SoundController } from "../controllers/SoundController";
@@ -15,7 +16,6 @@ import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
-import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -285,7 +285,7 @@ export function createRenderer(
     new StructureHighlightController(eventBus, view),
     new ViewModeController(eventBus, view),
     new SoundController(eventBus, game),
-    new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
+    new AttackingTroopsController(game, eventBus, userSettings, view),
     eventsDisplay,
     actionableEvents,
     attacksDisplay,
