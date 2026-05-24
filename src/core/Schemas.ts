@@ -156,6 +156,7 @@ const ClientInfoSchema = z.object({
   clientID: z.string(),
   username: UsernameSchema,
   clanTag: ClanTagSchema,
+  friends: z.array(z.string()).optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -192,6 +193,7 @@ export interface ClientInfo {
   clientID: ClientID;
   username: string;
   clanTag: string | null;
+  friends?: ClientID[];
 }
 export enum LogSeverity {
   Debug = "DEBUG",
