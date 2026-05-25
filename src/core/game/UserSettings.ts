@@ -42,6 +42,11 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+/**
+ * Storage key for the player's selected territory cosmetic. Stores either
+ * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
+ * mutually exclusive, so they share one slot.
+ */
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
@@ -256,7 +261,11 @@ export class UserSettings {
     if (cosmetics === null) return null;
     let data = this.getCached(PATTERN_KEY);
     if (data === null) return null;
+    // Skin selections share this key — defer to getSelectedSkinName.
+    if (data.startsWith("skin:")) return null;
     const patternPrefix = "pattern:";
+    // Accept both `pattern:<name>[:<palette>]` (current) and bare `<name>[:<palette>]`
+    // (older builds wrote unprefixed) so existing localStorage values still resolve.
     if (data.startsWith(patternPrefix)) {
       data = data.slice(patternPrefix.length);
     }
@@ -270,12 +279,25 @@ export class UserSettings {
     } satisfies PlayerPattern;
   }
 
-  setSelectedPatternName(patternName: string | undefined): void {
-    if (patternName === undefined) {
+  /**
+   * Accepts a fully-prefixed cosmetic value: `"pattern:<name>[:<palette>]"`
+   * or `"skin:<name>"`. Patterns and skins share storage because they're
+   * mutually exclusive — writing one automatically clears the other.
+   */
+  setSelectedPatternName(value: string | undefined): void {
+    if (value === undefined) {
       this.removeCached(PATTERN_KEY);
     } else {
-      this.setCached(PATTERN_KEY, patternName);
+      this.setCached(PATTERN_KEY, value);
     }
+  }
+
+  /** Returns the bare skin name (no `skin:` prefix), or null if a pattern (or nothing) is selected. */
+  getSelectedSkinName(): string | null {
+    const data = this.getCached(PATTERN_KEY);
+    if (data === null) return null;
+    const skinPrefix = "skin:";
+    return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
   }
 
   getFlag(): string | null {
