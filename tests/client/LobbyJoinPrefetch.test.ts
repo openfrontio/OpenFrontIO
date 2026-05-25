@@ -95,6 +95,7 @@ describe("getUserMe caching", () => {
       "fetch",
       vi.fn(async () => ({
         ok: true,
+        status: 200,
         json: async () => userMePayload,
       })),
     );
