@@ -120,7 +120,7 @@ describe("ClanTagInput async ownership check", () => {
     expect(localStorage.getItem("clanTag")).toBe("FIC");
   });
 
-  it("fails open: keeps the tag when existence check returns null", async () => {
+  it("fails closed: rejects the tag when existence check is inconclusive", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(null);
 
@@ -132,7 +132,7 @@ describe("ClanTagInput async ownership check", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(input.isValid()).toBe(true);
+    expect(input.isValid()).toBe(false);
   });
 
   it("discards stale async results when the tag has changed", async () => {
