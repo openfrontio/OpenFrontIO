@@ -87,10 +87,8 @@ export class GameServer {
 
   private websockets: Set<WebSocket> = new Set();
 
-  private winnerVotes: Map<
-    string,
-    { winner: Winner; ips: Set<string> }
-  > = new Map();
+  private winnerVotes: Map<string, { winner: Winner; ips: Set<string> }> =
+    new Map();
 
   private _hasEnded = false;
 
@@ -1248,7 +1246,10 @@ export class GameServer {
     // Add client vote
     const winnerKey = JSON.stringify(clientMsg.winner);
     if (!this.winnerVotes.has(winnerKey)) {
-      this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg.winner });
+      this.winnerVotes.set(winnerKey, {
+        ips: new Set(),
+        winner: clientMsg.winner,
+      });
     }
     const potentialWinner = this.winnerVotes.get(winnerKey)!;
     potentialWinner.ips.add(client.ip);
