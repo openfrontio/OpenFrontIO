@@ -373,11 +373,13 @@ export class GameView implements GameMap {
       let unit = this._units.get(update.id);
       const isStructure = STRUCTURE_TYPES.has(update.unitType);
       if (unit !== undefined) {
-        // Structure changes that affect rendering: level changed, became
-        // inactive, or finished construction (underConstruction → !underConstruction).
+        // Structure changes that affect rendering: owner changed (captured),
+        // level changed, became inactive, or finished construction
+        // (underConstruction → !underConstruction).
         if (
           isStructure &&
-          (unit.state.level !== update.level ||
+          (unit.state.ownerID !== update.ownerID ||
+            unit.state.level !== update.level ||
             unit.state.isActive !== update.isActive ||
             (unit.state.underConstruction &&
               !(update.underConstruction ?? false)))
@@ -474,9 +476,15 @@ export class GameView implements GameMap {
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
+
     f.playerStatus = computePlayerStatus(this._playerStates, this._unitStates, {
-      localPlayerID: this._myPlayer?.smallID() ?? 0,
+      localPlayerSmallID: this._myPlayer?.smallID() ?? 0,
+      localPlayerID: this._myPlayer?.id() ?? "",
       tileState: this._map.tileStateBuffer(),
+      tick: gu.tick,
+      allianceDuration: this._config.allianceDuration(),
+      isTransitiveTarget: (sid) =>
+        this._myPlayer?.hasTransitiveTarget(sid) ?? false,
     });
     const rel = buildRelationMatrix(this._playerStates);
     f.relationMatrix = rel.matrix;

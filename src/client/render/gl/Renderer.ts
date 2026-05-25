@@ -3,7 +3,7 @@
  *
  * Draw order:
  *   DATA SYNC: tile flush → heat update → border compute
- *   BASE PASS (darkened by night): terrain → territory fill + fallout charcoal
+ *   BASE PASS (darkened by night): terrain → territory fill + stale-nuke ground
  *   NIGHT COMPOSITE (optional): lightmap → scene × (ambient + lightmap)
  *   FULL BRIGHTNESS (always): borders → railroads → ground units → structures →
  *     structure levels → bars → bloom → trails → missiles → fx → conquest → names
@@ -30,7 +30,6 @@ import type { RadialMenuItem } from "./Events";
 import { BarPass } from "./passes/BarPass";
 import { BorderComputePass } from "./passes/BorderComputePass";
 import { BorderStampPass } from "./passes/BorderStampPass";
-import { ConquestPopupPass } from "./passes/ConquestPopupPass";
 import { CoordinateGridPass } from "./passes/CoordinateGridPass";
 import { CrosshairPass } from "./passes/CrosshairPass";
 import { FalloutBloomPass } from "./passes/FalloutBloomPass";
@@ -56,6 +55,7 @@ import { TerrainPass } from "./passes/TerrainPass";
 import { TerritoryPass } from "./passes/TerritoryPass";
 import { TrailPass } from "./passes/TrailPass";
 import { UnitPass } from "./passes/UnitPass";
+import { WorldTextPass } from "./passes/WorldTextPass";
 import { createRenderSettings, type RenderSettings } from "./RenderSettings";
 import { AffiliationPalette } from "./utils/Affiliation";
 import { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";
@@ -114,7 +114,7 @@ export class GPURenderer {
   private crosshairPass: CrosshairPass;
   private railroadPass: RailroadPass;
   private barPass: BarPass;
-  private conquestPopupPass: ConquestPopupPass;
+  private worldTextPass: WorldTextPass;
   private radialMenuPass: RadialMenuPass;
   private selectionBoxPass: SelectionBoxPass;
   private moveIndicatorPass: MoveIndicatorPass;
@@ -124,6 +124,7 @@ export class GPURenderer {
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
   private spawnOverlayPass: SpawnOverlayPass;
+  private inSpawnPhase = false;
 
   private paletteTex: WebGLTexture;
   private paletteData: Float32Array;
@@ -281,13 +282,12 @@ export class GPURenderer {
       this.settings,
     );
 
-    // --- Territory (needs tileTex, trailTex, paletteTex, patternTexs) ---
+    // --- Territory (needs tileTex, paletteTex, patternTexs) ---
     this.territoryPass = new TerritoryPass(
       gl,
       mapW,
       mapH,
       this.res.tileTex,
-      this.res.trailTex,
       this.paletteTex,
       this.patternMetaTex,
       this.patternDataTex,
@@ -342,13 +342,13 @@ export class GPURenderer {
       this.settings,
     );
 
-    // --- Fallout light (needs tileTex, borderTex, heatManager) ---
+    // --- Fallout light (needs tileTex + heatManager; particle flicker is
+    //     computed inline using the falloutBloom particle settings) ---
     this.falloutLightPass = new FalloutLightPass(
       gl,
       mapW,
       mapH,
       this.res.tileTex,
-      this.res.borderTex,
       this.heatManager,
       this.settings,
     );
@@ -399,8 +399,8 @@ export class GPURenderer {
     this.namePass = new NamePass(gl, header, paletteData, this.settings);
     this.fxPass = new FxPass(gl, header, this.settings);
     this.barPass = new BarPass(gl, header, this.settings);
-    this.conquestPopupPass = new ConquestPopupPass(gl, this.settings);
-    this.conquestPopupPass.setMapWidth(this.mapW);
+    this.worldTextPass = new WorldTextPass(gl, this.settings);
+    this.worldTextPass.setMapWidth(this.mapW);
     this.radialMenuPass = new RadialMenuPass(gl);
     this.selectionBoxPass = new SelectionBoxPass(gl);
     this.moveIndicatorPass = new MoveIndicatorPass(gl, this.settings);
@@ -545,25 +545,26 @@ export class GPURenderer {
     currentTick?: number,
   ): void {
     this.territoryPass.uploadFullTileState(tileState);
-    this.territoryPass.uploadFullTrailState(trailState);
+    this.trailPass.uploadFullState(trailState);
     this.heatManager.resetForSeek(tileState, nukeEvents, currentTick);
   }
 
   applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
     this.territoryPass.uploadFullTileState(tileState);
-    this.territoryPass.uploadFullTrailState(trailState);
+    this.trailPass.uploadFullState(trailState);
   }
 
   applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
     this.territoryPass.uploadDeltaTiles(changedTiles);
-    this.territoryPass.uploadFullTrailState(trailState);
+    this.trailPass.uploadFullState(trailState);
   }
 
   uploadTileAndTrailState(
     tileState: Uint16Array,
     trailState: Uint8Array,
   ): void {
-    this.territoryPass.setLiveRefs(tileState, trailState);
+    this.territoryPass.setLiveRef(tileState);
+    this.trailPass.setLiveRef(trailState);
   }
 
   uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
@@ -575,11 +576,7 @@ export class GPURenderer {
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
-    this.territoryPass.applyLiveTrailDelta(
-      trailState,
-      dirtyRowMin,
-      dirtyRowMax,
-    );
+    this.trailPass.applyLiveDelta(trailState, dirtyRowMin, dirtyRowMax);
   }
 
   /** Re-upload palette data to the GPU texture (e.g. when players appear after initial startup). */
@@ -733,8 +730,14 @@ export class GPURenderer {
   applyConquestEvents(events: ConquestFx[]): void {
     if (events.length > 0) {
       this.fxPass.applyConquestEvents(events);
-      this.conquestPopupPass.applyConquestEvents(events);
+      this.worldTextPass.applyConquestEvents(events);
     }
+  }
+
+  setAttackTroopLabels(
+    labels: import("./passes/WorldTextPass").AttackTroopLabel[],
+  ): void {
+    this.worldTextPass.setAttackTroopLabels(labels);
   }
 
   applyBonusEvents(events: BonusEvent[]): void {
@@ -744,7 +747,7 @@ export class GPURenderer {
       this.localPlayerID > 0
         ? events.filter((e) => e.smallID === this.localPlayerID)
         : events;
-    if (filtered.length > 0) this.conquestPopupPass.applyBonusEvents(filtered);
+    if (filtered.length > 0) this.worldTextPass.applyBonusEvents(filtered);
   }
 
   updateAttackRings(rings: AttackRingInput[]): void {
@@ -753,11 +756,11 @@ export class GPURenderer {
 
   clearFx(): void {
     this.fxPass.clear();
-    this.conquestPopupPass.clear();
+    this.worldTextPass.clear();
   }
   setFxTimeFn(fn: () => number): void {
     this.fxPass.setTimeFn(fn);
-    this.conquestPopupPass.setTimeFn(fn);
+    this.worldTextPass.setTimeFn(fn);
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
@@ -765,6 +768,17 @@ export class GPURenderer {
     this.railroadPass.updateGhostPreview(data);
     this.rangeCirclePass.updateGhostPreview(data);
     this.crosshairPass.updateGhostPreview(data);
+    this.worldTextPass.setGhostCostLabel(
+      data && data.showCost && data.cost > 0
+        ? {
+            tileX: data.tileX,
+            tileY: data.tileY,
+            cost: data.cost,
+            canAfford: data.canAfford,
+            canPlace: data.canBuild || data.canUpgrade,
+          }
+        : null,
+    );
     this.samGhostVisible =
       data !== null && SAM_RADIUS_GHOST_TYPES.has(data.ghostType);
     this.samRadiusPass.setVisible(
@@ -781,6 +795,7 @@ export class GPURenderer {
   }
 
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
+    this.inSpawnPhase = inSpawnPhase;
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
 
@@ -1060,15 +1075,19 @@ export class GPURenderer {
 
   private uploadTextures(): void {
     if (this.altView) this.affiliationPalette.flush();
+    if (this.inSpawnPhase) {
+      this.territoryPass.flushAllDripBuckets();
+    } else {
+      this.territoryPass.drainDripBucket();
+    }
     if (this.territoryPass.flushTileTexture())
       this.borderPass.notifyTilesChanged();
-    this.territoryPass.flushTrailTexture();
+    this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }
 
   private computeTextures(): void {
-    if (this.settings.passEnabled.mapOverlay)
-      this.borderPass.draw(this.frameTick);
+    if (this.settings.passEnabled.mapOverlay) this.borderPass.draw();
   }
 
   private renderFrame(): void {
@@ -1083,7 +1102,7 @@ export class GPURenderer {
       const sceneTex = toTarget(this.gl, this.sceneTarget, () =>
         this.drawBaseLayer(cam),
       );
-      const lightTex = this.lightmapPass.draw(cam, cw, ch);
+      const lightTex = this.lightmapPass.draw(cam, cw, ch, this.frameTick);
       toScreen(this.gl, cw, ch, () =>
         this.nightCompositePass.draw(sceneTex, lightTex),
       );
@@ -1160,12 +1179,16 @@ export class GPURenderer {
       this.fxPass.draw(cam, zoom);
     }
 
-    this.conquestPopupPass.tick();
-    this.conquestPopupPass.draw(cam, zoom);
-
-    if (this.gridView) this.coordinateGridPass.draw(cam, zoom);
-    if (pe.name && !this.gridView)
+    // Grid shows on either trigger; names hide only under alt-view (space
+    // hold), not under the persistent M-key gridView toggle.
+    if (this.gridView || this.altView) this.coordinateGridPass.draw(cam, zoom);
+    if (pe.name && !this.altView)
       this.namePass.draw(cam, this.nightCompositePass.getAmbient());
+
+    // World text (attack-troop labels, popups, ghost cost) draws on top of
+    // player names so attack callouts aren't hidden behind a centered name.
+    this.worldTextPass.tick(zoom);
+    this.worldTextPass.draw(cam, zoom);
 
     this.radialMenuPass.draw();
 
@@ -1201,7 +1224,7 @@ export class GPURenderer {
     this.unitPass.dispose();
     this.namePass.dispose();
     this.fxPass.dispose();
-    this.conquestPopupPass.dispose();
+    this.worldTextPass.dispose();
     this.radialMenuPass.dispose();
     this.selectionBoxPass.dispose();
     this.moveIndicatorPass.dispose();

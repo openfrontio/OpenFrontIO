@@ -121,9 +121,14 @@ Live mode upload semantics (in `frame/Upload.ts`):
 - `changedTiles.length > 0` → "only these tiles changed, sub-upload dirty rows"
 - `changedTiles.length === 0` → "nothing changed, skip"
 
-`tileState` is drip-applied per render frame (see `gameView.drainPendingTileUpdates`
-in `view/GameView.ts`) so big territory changes don't teleport in one chunk
-each tick — they spread across the ~6 render frames between ticks.
+Live tile changes are drip-applied per render frame inside `TerritoryPass`
+(see `applyLiveDelta` + `drainDripBucket` in `gl/passes/TerritoryPass.ts`).
+Each tick's `changedTiles` is hashed by `ref` into N round-robin buckets
+(`tileDrip.bucketCount`, default 12); the renderer drains one bucket per
+60Hz frame in `uploadTextures()`. The stable per-ref hash guarantees that
+repeated updates to the same tile stay in arrival order, so the latest
+owner always wins. During spawn phase, `flushAllDripBuckets()` is called
+instead so initial state pops without staggering.
 
 ## Asset pipeline
 

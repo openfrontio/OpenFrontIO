@@ -1,4 +1,5 @@
 import { PseudoRandom } from "../PseudoRandom";
+import { ClientID } from "../Schemas";
 import { simpleHash } from "../Util";
 import { PlayerInfo, PlayerType, Team } from "./Game";
 
@@ -10,31 +11,24 @@ export function assignTeams(
   const result = new Map<PlayerInfo, Team | "kicked">();
   const teamPlayerCount = new Map<Team, number>();
 
-  // Group players by clan
+  // Clans are strict: a clan goes to one team together, and any overflow
+  // members get kicked. (You opted into the clan, so we honor "all or
+  // nothing" for placement.)
   const clanGroups = new Map<string, PlayerInfo[]>();
-  const noClanPlayers: PlayerInfo[] = [];
-
-  // Sort players into clan groups or no-clan list
-  for (const player of players) {
-    const clanTag = player.clanTag;
-    if (clanTag) {
-      if (!clanGroups.has(clanTag)) {
-        clanGroups.set(clanTag, []);
-      }
-      clanGroups.get(clanTag)!.push(player);
+  const nonClanPlayers: PlayerInfo[] = [];
+  for (const p of players) {
+    if (p.clanTag) {
+      if (!clanGroups.has(p.clanTag)) clanGroups.set(p.clanTag, []);
+      clanGroups.get(p.clanTag)!.push(p);
     } else {
-      noClanPlayers.push(player);
+      nonClanPlayers.push(p);
     }
   }
 
-  // Sort clans by size (largest first)
-  const sortedClanPlayers = Array.from(clanGroups.values()).sort(
+  const sortedClans = Array.from(clanGroups.values()).sort(
     (a, b) => b.length - a.length,
   );
-
-  // First, assign clan players
-  for (const clanPlayers of sortedClanPlayers) {
-    // Try to keep the clan together on the team with fewer players
+  for (const clan of sortedClans) {
     let team: Team | null = null;
     let teamSize = 0;
     for (const t of teams) {
@@ -43,10 +37,8 @@ export function assignTeams(
       teamSize = p;
       team = t;
     }
-
     if (team === null) continue;
-
-    for (const player of clanPlayers) {
+    for (const player of clan) {
       if (teamSize < maxTeamSize) {
         teamSize++;
         result.set(player, team);
@@ -57,31 +49,85 @@ export function assignTeams(
     teamPlayerCount.set(team, teamSize);
   }
 
-  // Then, assign non-clan players to balance teams
-  let nationPlayers = noClanPlayers.filter(
-    (player) => player.playerType === PlayerType.Nation,
+  // Friend edges are a soft preference: when placing a player, prefer the
+  // team where the most of their friends already are. If that team is full
+  // we spill onto the next-emptiest non-full team rather than kicking — you
+  // didn't opt into being grouped with friend-of-friend, so a chain that
+  // doesn't fit shouldn't bench anyone.
+  const presentClientIDs = new Set<ClientID>();
+  for (const p of players) {
+    if (p.clientID !== null) presentClientIDs.add(p.clientID);
+  }
+  const friendGraph = new Map<ClientID, Set<ClientID>>();
+  const addEdge = (a: ClientID, b: ClientID) => {
+    let s = friendGraph.get(a);
+    if (s === undefined) {
+      s = new Set();
+      friendGraph.set(a, s);
+    }
+    s.add(b);
+  };
+  for (const p of players) {
+    if (p.clientID === null) continue;
+    for (const friendID of p.friends) {
+      if (!presentClientIDs.has(friendID)) continue;
+      addEdge(p.clientID, friendID);
+      addEdge(friendID, p.clientID);
+    }
+  }
+
+  const teamByClientID = new Map<ClientID, Team>();
+  for (const [player, team] of result.entries()) {
+    if (player.clientID !== null && team !== "kicked") {
+      teamByClientID.set(player.clientID, team);
+    }
+  }
+
+  const placePlayer = (p: PlayerInfo) => {
+    const myFriends =
+      p.clientID !== null ? friendGraph.get(p.clientID) : undefined;
+    let bestTeam: Team | null = null;
+    let bestFriendCount = -1;
+    let bestSize = Infinity;
+    for (const t of teams) {
+      const size = teamPlayerCount.get(t) ?? 0;
+      if (size >= maxTeamSize) continue;
+      let friendsOnTeam = 0;
+      if (myFriends !== undefined) {
+        for (const friendID of myFriends) {
+          if (teamByClientID.get(friendID) === t) friendsOnTeam++;
+        }
+      }
+      if (
+        friendsOnTeam > bestFriendCount ||
+        (friendsOnTeam === bestFriendCount && size < bestSize)
+      ) {
+        bestFriendCount = friendsOnTeam;
+        bestSize = size;
+        bestTeam = t;
+      }
+    }
+    if (bestTeam === null) {
+      result.set(p, "kicked");
+      return;
+    }
+    teamPlayerCount.set(bestTeam, (teamPlayerCount.get(bestTeam) ?? 0) + 1);
+    result.set(p, bestTeam);
+    if (p.clientID !== null) teamByClientID.set(p.clientID, bestTeam);
+  };
+
+  let nationPlayers = nonClanPlayers.filter(
+    (p) => p.playerType === PlayerType.Nation,
   );
   if (nationPlayers.length > 0) {
-    // Shuffle only nations to randomize their team assignment
     const random = new PseudoRandom(simpleHash(nationPlayers[0].id));
     nationPlayers = random.shuffleArray(nationPlayers);
   }
-  const otherPlayers = noClanPlayers.filter(
-    (player) => player.playerType !== PlayerType.Nation,
+  const otherPlayers = nonClanPlayers.filter(
+    (p) => p.playerType !== PlayerType.Nation,
   );
-
-  for (const player of otherPlayers.concat(nationPlayers)) {
-    let team: Team | null = null;
-    let teamSize = 0;
-    for (const t of teams) {
-      const p = teamPlayerCount.get(t) ?? 0;
-      if (team !== null && teamSize <= p) continue;
-      teamSize = p;
-      team = t;
-    }
-    if (team === null) continue;
-    teamPlayerCount.set(team, teamSize + 1);
-    result.set(player, team);
+  for (const p of otherPlayers.concat(nationPlayers)) {
+    placePlayer(p);
   }
 
   return result;

@@ -43,6 +43,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Australia: 4,
   Baikal: 5,
   BajaCalifornia: 4,
+  Balkans: 6,
   BeringSea: 5,
   BeringStrait: 2,
   BetweenTwoSeas: 5,
@@ -67,6 +68,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Halkidiki: 4,
   Hawaii: 4,
   Iceland: 4,
+  IndianSubcontinent: 8,
   Italia: 6,
   Japan: 6,
   Lemnos: 3,
@@ -244,6 +246,7 @@ export class MapPlaylist {
       bots: isCompact ? 100 : 400,
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
+      disableClanTags: mode === GameMode.FFA ? true : undefined,
     } satisfies GameConfig;
   }
 
@@ -455,6 +458,7 @@ export class MapPlaylist {
         this.getSpawnImmunityDuration(playerTeams, startingGold),
       disabledUnits,
       waterNukes: isWaterNukes ? true : undefined,
+      disableClanTags: mode === GameMode.FFA ? true : undefined,
     } satisfies GameConfig;
   }
 

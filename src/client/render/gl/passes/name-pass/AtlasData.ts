@@ -4,7 +4,6 @@
  */
 
 import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
-import flagAtlasMeta from "resources/atlases/flag-atlas-meta.json";
 import atlasData from "resources/atlases/msdf-atlas.json";
 import type { BMChar, BMKerning, ParsedAtlas } from "./Types";
 import { CHAR_RANGE } from "./Types";
@@ -66,15 +65,6 @@ export function buildKernTable(kernings: BMKerning[]): Int8Array {
 // ---------------------------------------------------------------------------
 // Icon atlas lookups
 // ---------------------------------------------------------------------------
-
-export function buildFlagLookup(): Map<string, number> {
-  const map = new Map<string, number>();
-  const meta = flagAtlasMeta as { flags: Record<string, number> };
-  for (const [code, idx] of Object.entries(meta.flags)) {
-    map.set(code, idx);
-  }
-  return map;
-}
 
 export function buildEmojiLookup(): Map<string, number> {
   const map = new Map<string, number>();

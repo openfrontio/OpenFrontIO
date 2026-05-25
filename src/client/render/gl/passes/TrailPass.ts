@@ -1,9 +1,9 @@
 /**
  * TrailPass — boat trail lines.
  *
- * Simple dedicated pass: for each tile with a non-zero trail owner,
- * output the owner's territory color at configurable alpha.
- * Always draws at full brightness (after night composite).
+ * Owns the CPU-side trail state (R8UI, 0=none, 1–255=ownerID), the dirty-row
+ * bookkeeping for partial GPU uploads, and the trail fragment shader that
+ * draws the colored breadcrumb behind moving units.
  */
 
 import type { RenderSettings } from "../RenderSettings";
@@ -32,6 +32,17 @@ export class TrailPass {
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
 
+  /** CPU-side trail state (R8UI, 0=none, 1–255=ownerID). */
+  private cpuTrailState: Uint8Array;
+  private trailsDirty = false;
+
+  /** Live-game reference — bypasses memcpy. Null for replay path. */
+  private liveTrailRef: Uint8Array | null = null;
+
+  /** Dirty row range for partial trail upload. Infinity/-1 = full upload. */
+  private dirtyRowMin = Infinity;
+  private dirtyRowMax = -1;
+
   constructor(
     gl: WebGL2RenderingContext,
     mapW: number,
@@ -46,6 +57,7 @@ export class TrailPass {
     this.mapH = mapH;
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
+    this.cpuTrailState = new Uint8Array(mapW * mapH);
 
     this.program = createProgram(
       gl,
@@ -75,8 +87,100 @@ export class TrailPass {
     this.affiliationTex = tex;
   }
 
+  // ---------------------------------------------------------------------------
+  // Trail data upload
+  // ---------------------------------------------------------------------------
+
+  /** Live-game path: reference the game's own trail array directly. */
+  setLiveRef(trailState: Uint8Array): void {
+    this.liveTrailRef = trailState;
+    this.trailsDirty = true;
+  }
+
+  /** Live trail delta: update live ref + accept dirty row range from TrailManager. */
+  applyLiveDelta(
+    trailState: Uint8Array,
+    dirtyRowMin: number,
+    dirtyRowMax: number,
+  ): void {
+    this.liveTrailRef = trailState;
+    if (dirtyRowMax >= 0) {
+      const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
+      // If a full upload is already pending, don't narrow the bounds to the delta
+      if (!isFullUploadPending) {
+        this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
+        this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);
+      }
+    }
+    this.trailsDirty = true;
+  }
+
+  /** Full trail state upload (on seek). */
+  uploadFullState(trailState: Uint8Array): void {
+    this.liveTrailRef = null;
+    this.cpuTrailState.set(trailState);
+    this.trailsDirty = true;
+  }
+
+  /** Set a single trail tile (during playback advance). */
+  setTile(ref: number, ownerID: number): void {
+    this.cpuTrailState[ref] = ownerID;
+    this.trailsDirty = true;
+  }
+
+  /** Clear all trails (on seek before rebuilding). */
+  clear(): void {
+    this.cpuTrailState.fill(0);
+    this.trailsDirty = true;
+  }
+
+  /** Flush trail texture to GPU. Called once per render frame in uploadTextures. */
+  flushTexture(): void {
+    if (!this.trailsDirty) return;
+    const gl = this.gl;
+    const src = this.liveTrailRef ?? this.cpuTrailState;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.trailTex);
+
+    if (this.dirtyRowMax >= 0) {
+      // Partial upload — only dirty rows
+      const minRow = this.dirtyRowMin;
+      const rowCount = this.dirtyRowMax - minRow + 1;
+      const offset = minRow * this.mapW;
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        minRow,
+        this.mapW,
+        rowCount,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        src.subarray(offset, offset + rowCount * this.mapW),
+      );
+    } else {
+      // Full upload (first tick, seek, replay, etc.)
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        this.mapW,
+        this.mapH,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        src,
+      );
+    }
+
+    this.dirtyRowMin = Infinity;
+    this.dirtyRowMax = -1;
+    this.trailsDirty = false;
+  }
+
   /** Draw trail overlay. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
+    this.flushTexture();
     const gl = this.gl;
 
     gl.useProgram(this.program);

@@ -1,4 +1,4 @@
-import { placeName } from "../client/hud/NameBoxCalculator";
+import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
@@ -53,6 +53,7 @@ export async function createGameRunner(
       random.nextID(),
       p.isLobbyCreator ?? false,
       p.clanTag,
+      p.friends ?? [],
     );
   });
 
@@ -159,16 +160,14 @@ export class GameRunner {
       return false;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
-      this.game
-        .players()
-        .filter(
-          (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.Nation,
-        )
-        .forEach(
-          (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
-        );
+    if (this.game.inSpawnPhase()) {
+      for (const p of this.game.players()) {
+        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
+          continue;
+        }
+        if (p.spawnTile() === undefined) continue;
+        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+      }
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
@@ -177,9 +176,9 @@ export class GameRunner {
       this.game.ticks() < 3 ||
       this.game.ticks() % 30 === 0
     ) {
-      this.game.players().forEach((p) => {
+      for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
-      });
+      }
     }
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();

@@ -68,6 +68,7 @@ export enum GameUpdateType {
   EmbargoEvent,
   SpawnPhaseEnd,
   GamePaused,
+  DonateEvent,
 }
 
 export type GameUpdate =
@@ -92,7 +93,8 @@ export type GameUpdate =
   | ConquestUpdate
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
-  | GamePausedUpdate;
+  | GamePausedUpdate
+  | DonateEventUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -127,6 +129,14 @@ export interface ConquestUpdate {
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
+}
+
+export interface DonateEventUpdate {
+  type: GameUpdateType.DonateEvent;
+  donationType: "troops" | "gold";
+  senderId: PlayerID;
+  recipientId: PlayerID;
+  amount: bigint;
 }
 
 export interface UnitUpdate {
@@ -262,6 +272,8 @@ export interface DisplayMessageUpdate {
   goldAmount?: bigint;
   playerID: number | null;
   params?: Record<string, string | number>;
+  unitID?: number;
+  focusPlayerID?: number;
 }
 
 export type DisplayChatMessageUpdate = {

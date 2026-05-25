@@ -376,6 +376,8 @@ export async function startWorker() {
         }
 
         let flares: string[] | undefined;
+        let publicId: string | undefined;
+        let friends: string[] = [];
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
@@ -396,6 +398,8 @@ export async function startWorker() {
             return;
           }
           flares = result.response.player.flares;
+          publicId = result.response.player.publicId;
+          friends = result.response.player.friends;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -462,6 +466,8 @@ export async function startWorker() {
           censoredClanTag,
           ws,
           cosmeticResult.cosmetics,
+          publicId,
+          friends,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

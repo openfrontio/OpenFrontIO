@@ -1,3 +1,5 @@
+import type { TileRef } from "../../../core/game/GameMap";
+
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {
   Engine = 0,
@@ -22,6 +24,7 @@ export interface PlayerStatic {
   playerType: PlayerTypeEnum;
   team: string | null;
   isLobbyCreator: boolean;
+  /** Resolved flag image URL, or undefined for no flag. */
   flag?: string;
   /** Hex color (e.g. "#ff0000"). Populated from territoryColor (live) or palette (replay). */
   color?: string;
@@ -152,8 +155,12 @@ export interface GhostPreviewData {
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
-  ghostRailPaths: number[][]; // TileRef paths (City/Port only)
-  overlappingRailroads: number[]; // Rail IDs in snap zone
+  /** Whether to render the cost label under the ghost (user setting). */
+  showCost: boolean;
+  /** True if the player has enough gold to afford this build (drives label color). */
+  canAfford: boolean;
+  ghostRailPaths: TileRef[][]; // TileRef paths (City/Port only)
+  overlappingRailroads: TileRef[]; // TileRefs containing rails in snap zone
   ownerID: number; // Player's smallID (for color)
   /** Tile position of existing structure being upgraded (null if fresh build). */
   upgradeTargetTile: number | null;

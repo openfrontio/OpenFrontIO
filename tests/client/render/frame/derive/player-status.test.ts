@@ -1,9 +1,9 @@
 /**
  * computePlayerStatus has two modes:
  *
- *   - Replay mode (no localPlayerID): only crown / traitor / disconnected /
+ *   - Replay mode (no localPlayerSmallID): only crown / traitor / disconnected /
  *     nukeActive flags are populated. All relative flags are false.
- *   - Live mode (localPlayerID set): also fills alliance / target / embargo,
+ *   - Live mode (localPlayerSmallID set): also fills alliance / target / embargo,
  *     and nukeTargetsMe if a tileState buffer is supplied.
  *
  * The function only emits an entry per player when at least one flag is true
@@ -83,7 +83,7 @@ function unitsMap(...us: UnitState[]): Map<number, UnitState> {
   return new Map(us.map((u) => [u.id, u]));
 }
 
-describe("computePlayerStatus — replay mode (no localPlayerID)", () => {
+describe("computePlayerStatus — replay mode (no localPlayerSmallID)", () => {
   it("returns empty map when no flags are set", () => {
     const players = playersMap(ps({ smallID: 1 }));
     const status = computePlayerStatus(players, unitsMap());
@@ -160,14 +160,14 @@ describe("computePlayerStatus — replay mode (no localPlayerID)", () => {
   });
 });
 
-describe("computePlayerStatus — live mode (localPlayerID set)", () => {
+describe("computePlayerStatus — live mode (localPlayerSmallID set)", () => {
   it("alliance: local has them as ally → alliance true", () => {
     const players = playersMap(
       ps({ smallID: 1, allies: [2] }), // me
       ps({ smallID: 2 }),
     );
     const status = computePlayerStatus(players, unitsMap(), {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
     });
     expect(status.get(2)?.alliance).toBe(true);
   });
@@ -178,7 +178,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
       ps({ smallID: 2 }),
     );
     const status = computePlayerStatus(players, unitsMap(), {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
     });
     expect(status.get(2)?.target).toBe(true);
   });
@@ -188,7 +188,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
     let status = computePlayerStatus(
       playersMap(ps({ smallID: 1, embargoes: [2] }), ps({ smallID: 2 })),
       unitsMap(),
-      { localPlayerID: 1 },
+      { localPlayerSmallID: 1 },
     );
     expect(status.get(2)?.embargo).toBe(true);
 
@@ -196,7 +196,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
     status = computePlayerStatus(
       playersMap(ps({ smallID: 1 }), ps({ smallID: 2, embargoes: [1] })),
       unitsMap(),
-      { localPlayerID: 1 },
+      { localPlayerSmallID: 1 },
     );
     expect(status.get(2)?.embargo).toBe(true);
 
@@ -204,7 +204,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
     status = computePlayerStatus(
       playersMap(ps({ smallID: 1 }), ps({ smallID: 2, tilesOwned: 1 })),
       unitsMap(),
-      { localPlayerID: 1 },
+      { localPlayerSmallID: 1 },
     );
     // Player 2 only has crown — embargo should be false.
     expect(status.get(2)?.embargo).toBe(false);
@@ -222,7 +222,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
       ps({ smallID: 2 }),
     );
     const status = computePlayerStatus(players, unitsMap(), {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
     });
     // Player 1 (local) gets crown but no relative flags vs. self.
     expect(status.get(1)?.crown).toBe(true);
@@ -242,7 +242,9 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
         targetTile: 5,
       }),
     );
-    const status = computePlayerStatus(players, units, { localPlayerID: 1 });
+    const status = computePlayerStatus(players, units, {
+      localPlayerSmallID: 1,
+    });
     expect(status.get(2)?.nukeActive).toBe(true);
     expect(status.get(2)?.nukeTargetsMe).toBe(false);
   });
@@ -263,7 +265,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
     tileState[5] = 1;
 
     const status = computePlayerStatus(players, units, {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
       tileState,
     });
     expect(status.get(2)?.nukeTargetsMe).toBe(true);
@@ -289,7 +291,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
     tileState[5] = 3;
 
     const status = computePlayerStatus(players, units, {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
       tileState,
     });
     expect(status.get(2)?.nukeTargetsMe).toBe(false);
@@ -301,7 +303,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
       ps({ smallID: 2 }), // no other flags
     );
     const status = computePlayerStatus(players, unitsMap(), {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
     });
     // Without local-mode, player 2 wouldn't get an entry — alliance is the
     // only reason it shows up here.
@@ -309,13 +311,13 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
     expect(status.get(2)?.alliance).toBe(true);
   });
 
-  it("localPlayerID = 0 (no local player) behaves like replay mode", () => {
+  it("localPlayerSmallID = 0 (no local player) behaves like replay mode", () => {
     const players = playersMap(
       ps({ smallID: 1, allies: [2] }),
       ps({ smallID: 2, tilesOwned: 1 }),
     );
     const status = computePlayerStatus(players, unitsMap(), {
-      localPlayerID: 0,
+      localPlayerSmallID: 0,
     });
     expect(status.get(2)?.alliance).toBe(false);
   });
@@ -326,7 +328,7 @@ describe("computePlayerStatus — live mode (localPlayerID set)", () => {
       ps({ smallID: 2 }),
     );
     const status = computePlayerStatus(players, unitsMap(), {
-      localPlayerID: 1,
+      localPlayerSmallID: 1,
     });
     expect(status.get(2)?.allianceReq).toBe(false);
     expect(status.get(2)?.allianceFraction).toBe(0);

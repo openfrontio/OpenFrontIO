@@ -230,6 +230,7 @@ export class StructureLevelPass {
     let count = 0;
 
     for (const unit of units.values()) {
+      if (!unit.isActive) continue;
       if (!STRUCTURE_TYPES.has(unit.unitType)) continue;
       if (unit.level <= 1) continue;
 
