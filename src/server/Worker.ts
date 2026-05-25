@@ -473,12 +473,14 @@ export async function startWorker() {
               : [],
           );
           if (!userClanTags.has(resolvedClanTag.toUpperCase())) {
+            // Fail closed: inconclusive (null) means drop, not keep.
             const exists = await clanExistsByTag(resolvedClanTag);
-            if (exists === true) {
+            if (exists !== false) {
               log.warn("Dropped clan tag: player is not a member", {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,
                 clanTag: resolvedClanTag,
+                existsResult: exists,
               });
               resolvedClanTag = null;
             }

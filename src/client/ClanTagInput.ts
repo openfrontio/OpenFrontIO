@@ -131,10 +131,11 @@ export class ClanTagInput extends LitElement {
     this.checkCounter++;
 
     if (!result.isValid || tag.length === 0) {
-      // Nothing to ask the server about — clear any old ownership error,
-      // and remember the cleared/short value across reloads.
+      // Nothing to ask the server about — clear any old ownership error
+      // and wipe the stored tag so a reload doesn't restore a stale value
+      // that no longer matches the current (invalid/empty) input.
       this.ownershipError = "";
-      if (result.isValid) localStorage.setItem(clanTagKey, "");
+      localStorage.setItem(clanTagKey, "");
     } else {
       this.checkTimer = setTimeout(() => {
         this.checkTimer = null;
