@@ -14,6 +14,7 @@ import {
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
+import { ClanTagInput } from "./ClanTagInput";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -646,6 +647,9 @@ export class SinglePlayerModal extends BaseModal {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
+    const clanTagInput = document.querySelector(
+      "clan-tag-input",
+    ) as ClanTagInput | null;
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -659,7 +663,7 @@ export class SinglePlayerModal extends BaseModal {
               {
                 clientID,
                 username: usernameInput.getUsername(),
-                clanTag: usernameInput.getClanTag() ?? null,
+                clanTag: clanTagInput?.getValue() ?? null,
                 cosmetics: await getPlayerCosmetics(),
               },
             ],

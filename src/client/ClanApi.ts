@@ -1,4 +1,8 @@
 import {
+  ClanExistsResponseSchema,
+  clanExistsApiPath,
+} from "../core/ApiSchemas";
+import {
   type ClanBansResponse,
   ClanBansResponseSchema,
   type ClanBrowseResponse,
@@ -18,6 +22,8 @@ import {
 } from "../core/ClanApiSchemas";
 import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
+
+const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
 export type {
   ClanBan,
   ClanBansResponse,
@@ -30,9 +36,9 @@ export type {
   ClanInfo,
   ClanJoinRequest,
   ClanMember,
-  ClanMembersResponse,
   ClanMemberStats,
   ClanMemberWL,
+  ClanMembersResponse,
   ClanRequestsResponse,
 } from "../core/ClanApiSchemas";
 
@@ -127,14 +133,26 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
 
 // Lightweight existence probe. Public endpoint, no auth required — used to
 // detect clan-tag ownership conflicts when a user types a tag into the input.
-// Returns null on unexpected statuses so callers can fail open.
+// Returns null on unexpected statuses, timeouts, or transport errors so callers
+// can fail open.
 export async function fetchClanExists(tag: string): Promise<boolean | null> {
   try {
-    const res = await fetch(
-      `${getApiBase()}/public/clan/${encodeURIComponent(tag)}/exists`,
-      { headers: { Accept: "application/json" } },
-    );
-    if (res.status === 200) return true;
+    const res = await fetch(`${getApiBase()}${clanExistsApiPath(tag)}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
+    });
+    if (res.status === 200) {
+      try {
+        const text = await res.text();
+        if (text.length > 0) {
+          const parsed = ClanExistsResponseSchema.safeParse(JSON.parse(text));
+          if (parsed.success && parsed.data?.exists === false) return false;
+        }
+      } catch {
+        // Body parsing is forward-compat only; ignore failures.
+      }
+      return true;
+    }
     if (res.status === 404) return false;
     return null;
   } catch {

@@ -221,6 +221,7 @@ export class LangSelector extends LitElement {
       "help-modal",
       "settings-modal",
       "username-input",
+      "clan-tag-input",
       "game-mode-selector",
       "user-setting",
       "o-modal",

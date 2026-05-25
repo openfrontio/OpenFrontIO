@@ -10,6 +10,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { ClanTagInput } from "./ClanTagInput";
 import "./components/IOSAddToHomeScreenBanner";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
@@ -46,10 +47,14 @@ export class GameModeSelector extends LitElement {
   }
 
   /**
-   * Validates username input and shows error message if invalid.
-   * Returns true if valid, false otherwise.
+   * Validates username and clan tag inputs and shows error messages if invalid.
+   * Returns true if both are valid, false otherwise.
    */
   private validateUsername(): boolean {
+    const clanTagInput = document.querySelector(
+      "clan-tag-input",
+    ) as ClanTagInput | null;
+    if (clanTagInput && !clanTagInput.validateOrShowError()) return false;
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput | null;

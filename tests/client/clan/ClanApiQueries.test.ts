@@ -10,6 +10,7 @@ vi.mock("../../../src/client/Auth", () => ({
 
 import {
   fetchClanDetail,
+  fetchClanExists,
   fetchClanGames,
   fetchClanLeaderboard,
   fetchClanMembers,
@@ -69,6 +70,66 @@ describe("fetchClanLeaderboard", () => {
     mockFetch(() => okJson({ start: "bad-date", end: "bad-date", clans: [] }));
     const result = await fetchClanLeaderboard();
     expect(result).toBe(false);
+  });
+});
+
+describe("fetchClanExists", () => {
+  const okStatus = (status: number, body: string = "") => ({
+    status,
+    text: async () => body,
+  });
+
+  it("returns true on HTTP 200", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(okStatus(200))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBe(true);
+  });
+
+  it("returns false on HTTP 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(okStatus(404))),
+    );
+    await expect(fetchClanExists("XYZ")).resolves.toBe(false);
+  });
+
+  it("returns null on unexpected status (5xx)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(okStatus(503))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBeNull();
+  });
+
+  it("returns null on transport error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBeNull();
+  });
+
+  it("uppercases the tag in the URL", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okStatus(200)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    await fetchClanExists("abc");
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    expect(calledUrl).toContain("/public/clan/ABC/exists");
+  });
+
+  it("treats a body {exists:false} as false on 200", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(okStatus(200, JSON.stringify({ exists: false }))),
+      ),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBe(false);
   });
 });
 

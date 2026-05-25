@@ -1,20 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { generateCryptoRandomUUID, translateText } from "../client/Utils";
-import { sanitizeClanTag } from "../core/Util";
 import {
-  MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
-  MIN_CLAN_TAG_LENGTH,
   MIN_USERNAME_LENGTH,
-  validateClanTag,
   validateUsername,
 } from "../core/validations/username";
-import { getUserMe } from "./Api";
-import { fetchClanExists } from "./ClanApi";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-
-const CLAN_OWNERSHIP_DEBOUNCE_MS = 400;
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -23,23 +15,14 @@ interface LangSelectorLike {
 }
 
 const usernameKey: string = "username";
-const clanTagKey: string = "clanTag";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
   @state() private baseUsername: string = "";
-  @state() private clanTag: string = "";
 
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
   private _lastValidatedLang: string | null = null;
-  private syncValidationError: string = "";
-  private syncIsValid: boolean = true;
-  private clanTagAsyncError: string = "";
-  private clanTagCheckCounter: number = 0;
-  private clanTagCheckTimer: ReturnType<typeof setTimeout> | null = null;
-
-  // Remove static styles since we're using Tailwind
 
   createRenderRoot() {
     // Disable shadow DOM to allow Tailwind classes to work
@@ -48,14 +31,6 @@ export class UsernameInput extends LitElement {
 
   public getUsername(): string {
     return this.baseUsername.trim();
-  }
-
-  public getClanTag(): string | null {
-    return this.clanTag.length >= MIN_CLAN_TAG_LENGTH &&
-      this.clanTag.length <= MAX_CLAN_TAG_LENGTH &&
-      validateClanTag(this.clanTag).isValid
-      ? this.clanTag
-      : null;
   }
 
   connectedCallback() {
@@ -95,7 +70,6 @@ export class UsernameInput extends LitElement {
   private loadStoredUsername() {
     const storedUsername = localStorage.getItem(usernameKey);
     if (storedUsername) {
-      this.clanTag = localStorage.getItem(clanTagKey) ?? "";
       this.baseUsername = storedUsername;
       this.validateAndStore();
     } else {
@@ -106,16 +80,7 @@ export class UsernameInput extends LitElement {
 
   render() {
     return html`
-      <div class="flex items-center w-full h-full gap-2">
-        <input
-          type="text"
-          .value=${this.clanTag}
-          @input=${this.handleClanTagChange}
-          placeholder="${translateText("username.tag")}"
-          minlength="${MIN_CLAN_TAG_LENGTH}"
-          maxlength="${MAX_CLAN_TAG_LENGTH}"
-          class="w-[6rem] text-xl font-medium tracking-wider text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
-        />
+      <div class="relative w-full h-full">
         <input
           type="text"
           .value=${this.baseUsername}
@@ -123,43 +88,18 @@ export class UsernameInput extends LitElement {
           placeholder="${translateText("username.enter_username")}"
           minlength="${MIN_USERNAME_LENGTH}"
           maxlength="${MAX_USERNAME_LENGTH}"
-          class="flex-1 min-w-0 border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
+          class="w-full h-full border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
+        ${this.validationError
+          ? html`<div
+              id="username-validation-error"
+              class="absolute top-full left-0 z-50 w-full mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
+            >
+              ${this.validationError}
+            </div>`
+          : null}
       </div>
-      ${this.validationError
-        ? html`<div
-            id="username-validation-error"
-            class="absolute top-full left-0 z-50 w-full mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
-          >
-            ${this.validationError}
-          </div>`
-        : null}
     `;
-  }
-
-  private handleClanTagChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const originalValue = input.value;
-    const val = sanitizeClanTag(originalValue);
-    // Only show toast if characters were actually removed (not just uppercased)
-    if (originalValue.toUpperCase() !== val) {
-      input.value = val;
-      // Show toast when invalid characters are removed
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: translateText("username.tag_invalid_chars"),
-            color: "red",
-            duration: 2000,
-          },
-        }),
-      );
-    } else if (originalValue !== val) {
-      // Just update the input without toast if only case changed
-      input.value = val;
-    }
-    this.clanTag = val;
-    this.validateAndStore();
   }
 
   private handleUsernameChange(e: Event) {
@@ -168,7 +108,6 @@ export class UsernameInput extends LitElement {
     const val = originalValue.replace(/[[\]]/g, "");
     if (originalValue !== val) {
       input.value = val;
-      // Show toast when brackets are removed
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
@@ -185,109 +124,14 @@ export class UsernameInput extends LitElement {
 
   private validateAndStore() {
     const trimmedBase = this.getUsername();
-
-    const clanTagResult = validateClanTag(this.clanTag);
-    if (!clanTagResult.isValid) {
-      this.syncIsValid = false;
-      this.syncValidationError = clanTagResult.error ?? "";
+    const result = validateUsername(trimmedBase);
+    this._isValid = result.isValid;
+    if (result.isValid) {
+      localStorage.setItem(usernameKey, trimmedBase);
+      this.validationError = "";
     } else {
-      const result = validateUsername(trimmedBase);
-      this.syncIsValid = result.isValid;
-      if (result.isValid) {
-        localStorage.setItem(usernameKey, trimmedBase);
-        // clanTag is persisted by scheduleClanTagOwnershipCheck (or its async
-        // continuation) so we never store a tag the server would reject.
-        this.syncValidationError = "";
-      } else {
-        this.syncValidationError = result.error ?? "";
-      }
+      this.validationError = result.error ?? "";
     }
-
-    this.scheduleClanTagOwnershipCheck();
-    this.updateValidationState();
-  }
-
-  private persistClanTag(tag: string) {
-    if (this.syncIsValid) {
-      localStorage.setItem(clanTagKey, tag);
-    }
-  }
-
-  private updateValidationState() {
-    if (!this.syncIsValid) {
-      this._isValid = false;
-      this.validationError = this.syncValidationError;
-      return;
-    }
-    if (this.clanTagAsyncError) {
-      this._isValid = false;
-      this.validationError = this.clanTagAsyncError;
-      return;
-    }
-    this._isValid = true;
-    this.validationError = "";
-  }
-
-  private scheduleClanTagOwnershipCheck() {
-    if (this.clanTagCheckTimer !== null) {
-      clearTimeout(this.clanTagCheckTimer);
-      this.clanTagCheckTimer = null;
-    }
-    const tag = this.clanTag;
-    if (
-      tag.length < MIN_CLAN_TAG_LENGTH ||
-      tag.length > MAX_CLAN_TAG_LENGTH ||
-      !validateClanTag(tag).isValid
-    ) {
-      // Bump the counter so any in-flight check is discarded.
-      this.clanTagCheckCounter++;
-      if (this.clanTagAsyncError) {
-        this.clanTagAsyncError = "";
-      }
-      // No async check needed — persist the (empty/short) value so clearing
-      // the tag is remembered across reloads.
-      this.persistClanTag(this.getClanTag() ?? "");
-      return;
-    }
-    this.clanTagCheckTimer = setTimeout(() => {
-      this.clanTagCheckTimer = null;
-      void this.runClanTagOwnershipCheck(tag);
-    }, CLAN_OWNERSHIP_DEBOUNCE_MS);
-  }
-
-  private async runClanTagOwnershipCheck(expectedTag: string) {
-    const checkId = ++this.clanTagCheckCounter;
-    const stillCurrent = () =>
-      checkId === this.clanTagCheckCounter && this.clanTag === expectedTag;
-
-    const me = await getUserMe();
-    if (!stillCurrent()) return;
-    if (me) {
-      const myTags = (me.player.clans ?? []).map((c) => c.tag.toUpperCase());
-      if (myTags.includes(expectedTag.toUpperCase())) {
-        this.setClanTagAsyncError("");
-        this.persistClanTag(expectedTag);
-        return;
-      }
-    }
-
-    const exists = await fetchClanExists(expectedTag);
-    if (!stillCurrent()) return;
-    if (exists === true) {
-      this.setClanTagAsyncError(
-        translateText("username.tag_not_member", { tag: expectedTag }),
-      );
-    } else {
-      this.setClanTagAsyncError("");
-      this.persistClanTag(expectedTag);
-    }
-  }
-
-  private setClanTagAsyncError(error: string) {
-    if (this.clanTagAsyncError === error) return;
-    this.clanTagAsyncError = error;
-    this.updateValidationState();
-    this.requestUpdate();
   }
 
   public isValid(): boolean {

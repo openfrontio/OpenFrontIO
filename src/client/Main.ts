@@ -21,6 +21,8 @@ import "./AccountModal";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./ClanModal";
+import "./ClanTagInput";
+import { ClanTagInput } from "./ClanTagInput";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -251,6 +253,7 @@ class Client {
   private currentUrl: string | null = null;
 
   private usernameInput: UsernameInput | null = null;
+  private clanTagInput: ClanTagInput | null = null;
   private flagInput: FlagInput | null = null;
 
   private hostModal: HostPrivateLobbyModal;
@@ -359,6 +362,13 @@ class Client {
     ) as UsernameInput;
     if (!this.usernameInput) {
       console.warn("Username input element not found");
+    }
+
+    this.clanTagInput = document.querySelector(
+      "clan-tag-input",
+    ) as ClanTagInput;
+    if (!this.clanTagInput) {
+      console.warn("Clan tag input element not found");
     }
 
     this.gameModeSelector = document.querySelector(
@@ -814,6 +824,9 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
+    if (this.clanTagInput && !this.clanTagInput.validateOrShowError()) {
+      return;
+    }
     if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
     }
@@ -841,7 +854,7 @@ class Client {
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
-      playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      playerClanTag: this.clanTagInput?.getValue() ?? null,
       playerRole,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
@@ -862,6 +875,12 @@ class Client {
         // fix edge case where username-validation-error is re-rendered and hidden tag removed
         this.usernameInput.validationError = "";
       }
+      if (this.clanTagInput) {
+        this.clanTagInput.validationError = "";
+      }
+      document
+        .getElementById("clan-tag-validation-error")
+        ?.classList.add("hidden");
       document
         .getElementById("username-validation-error")
         ?.classList.add("hidden");

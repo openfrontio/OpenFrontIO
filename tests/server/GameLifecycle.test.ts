@@ -14,6 +14,7 @@ vi.mock("../../src/core/Schemas", async () => {
 });
 
 import { GameType } from "../../src/core/game/Game";
+import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
 
 describe("GameLifecycle", () => {
@@ -84,5 +85,116 @@ describe("GameLifecycle", () => {
     // Should not throw or crash
     await expect(game.end()).resolves.toBeUndefined();
     expect((game as any)._hasEnded).toBe(true);
+  });
+});
+
+describe("GameServer.rejoinClient — clanTag identityUpdate", () => {
+  let mockLogger: any;
+  const mkWs = (): any => ({
+    readyState: 1, // OPEN
+    on: vi.fn(),
+    send: vi.fn(),
+    close: vi.fn(),
+    removeAllListeners: vi.fn(),
+  });
+
+  beforeEach(() => {
+    mockLogger = {
+      child: vi.fn().mockReturnThis(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const seedClient = (game: GameServer, clanTag: string | null) => {
+    const ws = mkWs();
+    const client = new Client(
+      "cid-1",
+      "pid-1",
+      null,
+      null,
+      undefined,
+      "127.0.0.1",
+      "tester",
+      clanTag,
+      ws,
+      undefined,
+      undefined,
+      [],
+    );
+    // Seed internals as if the client had joined normally.
+    (game as any).activeClients.push(client);
+    (game as any).allClients.set(client.clientID, client);
+    (game as any).persistentIdToClientId.set(
+      client.persistentID,
+      client.clientID,
+    );
+    (game as any).websockets.add(ws);
+    return client;
+  };
+
+  it("preserves clanTag on reconnect when identityUpdate omits it", () => {
+    const game = new GameServer("g-1", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
+    const client = seedClient(game, "ABC");
+
+    const newWs = mkWs();
+    const ok = game.rejoinClient(newWs as any, "pid-1", 0, {
+      username: "renamed",
+    });
+
+    expect(ok).toBe(true);
+    expect(client.clanTag).toBe("ABC");
+    expect(client.username).toBe("renamed");
+  });
+
+  it("clears clanTag on reconnect when identityUpdate passes null", () => {
+    const game = new GameServer("g-2", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
+    const client = seedClient(game, "ABC");
+
+    game.rejoinClient(mkWs() as any, "pid-1", 0, {
+      username: "tester",
+      clanTag: null,
+    });
+
+    expect(client.clanTag).toBeNull();
+  });
+
+  it("updates clanTag on reconnect when identityUpdate passes a new tag", () => {
+    const game = new GameServer("g-3", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
+    const client = seedClient(game, "ABC");
+
+    game.rejoinClient(mkWs() as any, "pid-1", 0, {
+      username: "tester",
+      clanTag: "XYZ",
+    });
+
+    expect(client.clanTag).toBe("XYZ");
+  });
+
+  it("does not change identity if the game has already started", () => {
+    const game = new GameServer("g-4", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
+    const client = seedClient(game, "ABC");
+    (game as any)._hasStarted = true;
+
+    game.rejoinClient(mkWs() as any, "pid-1", 0, {
+      username: "renamed",
+      clanTag: "XYZ",
+    });
+
+    expect(client.clanTag).toBe("ABC");
+    expect(client.username).toBe("tester");
   });
 });
