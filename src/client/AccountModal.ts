@@ -135,6 +135,10 @@ export class AccountModal extends BaseModal {
         { key: "account", label: translateText("account_modal.tab_account") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
+        {
+          key: "achievements",
+          label: translateText("account_modal.tab_achievements"),
+        },
         { key: "friends", label: translateText("account_modal.tab_friends") },
       ],
     };
@@ -164,6 +168,8 @@ export class AccountModal extends BaseModal {
         return this.renderStatsTab();
       case "games":
         return this.renderGamesTab();
+      case "achievements":
+        return this.renderAchievementsTab();
       case "friends":
         return this.renderFriendsTab();
       default:
@@ -177,11 +183,6 @@ export class AccountModal extends BaseModal {
   }
 
   private renderAccountTab(): TemplateResult {
-    const achievements =
-      this.achievementGroups.length > 0
-        ? this.achievementGroups
-        : this.getUserMeAchievementGroups(this.userMeResponse);
-
     return html`
       <div class="flex flex-col gap-6">
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
@@ -200,14 +201,24 @@ export class AccountModal extends BaseModal {
           </div>
         </div>
         ${this.renderSubscriptionPanel()}
-        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-          <h3 class="text-lg font-bold text-white mb-4">
-            ${translateText("account_modal.achievements")}
-          </h3>
-          <player-achievements
-            .achievementGroups=${achievements}
-          ></player-achievements>
-        </div>
+      </div>
+    `;
+  }
+
+  private renderAchievementsTab(): TemplateResult {
+    const achievements =
+      this.achievementGroups.length > 0
+        ? this.achievementGroups
+        : this.getUserMeAchievementGroups(this.userMeResponse);
+
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+          ${translateText("account_modal.achievements")}
+        </h3>
+        <player-achievements
+          .achievementGroups=${achievements}
+        ></player-achievements>
       </div>
     `;
   }
