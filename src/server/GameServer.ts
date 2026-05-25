@@ -187,6 +187,19 @@ export class GameServer {
     );
   }
 
+  // Read-only snapshot of an existing client's identity, or null if no client
+  // is registered for this persistentID (including kicked clients, which are
+  // treated as gone for matching purposes).
+  public peekClientIdentity(
+    persistentID: string,
+  ): { username: string; clanTag: string | null } | null {
+    const clientID = this.getClientIdForPersistentId(persistentID);
+    if (!clientID) return null;
+    const client = this.allClients.get(clientID);
+    if (!client) return null;
+    return { username: client.username, clanTag: client.clanTag };
+  }
+
   // Get existing clientID for this persistentID, or null if new player
   public getClientIdForPersistentId(persistentID: string): ClientID | null {
     const clientID = this.persistentIdToClientId.get(persistentID);

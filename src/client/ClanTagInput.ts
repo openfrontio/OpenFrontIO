@@ -53,7 +53,9 @@ export class ClanTagInput extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.clanTag = localStorage.getItem(clanTagKey) ?? "";
-    this.validate();
+    // No user input to coalesce on initial mount — fire the ownership check
+    // immediately instead of paying the debounce delay.
+    this.validate({ immediate: true });
   }
 
   disconnectedCallback() {
@@ -126,7 +128,7 @@ export class ClanTagInput extends LitElement {
     this.validate();
   }
 
-  private validate() {
+  private validate(options: { immediate?: boolean } = {}) {
     const tag = this.clanTag;
     const result = validateClanTag(tag);
     this.formatError = result.isValid ? "" : (result.error ?? "");
@@ -148,6 +150,9 @@ export class ClanTagInput extends LitElement {
       this.ownershipError = "";
       localStorage.setItem(clanTagKey, "");
       this.currentCheck = Promise.resolve();
+    } else if (options.immediate) {
+      // Initial mount / non-typing trigger — no input to coalesce, run now.
+      this.currentCheck = this.checkOwnership(tag);
     } else {
       const debounce = new Promise<void>((resolve) => {
         this.resolveDebounce = resolve;

@@ -22,6 +22,20 @@ export class GameManager {
     return this.games.get(id) ?? null;
   }
 
+  /**
+   * Returns the existing client's stored identity for a (persistentID, gameID)
+   * pair without modifying any state. Used to short-circuit re-validation when
+   * a reconnect sends an unchanged username + clan tag.
+   */
+  public peekClientIdentity(
+    persistentID: string,
+    gameID: GameID,
+  ): { username: string; clanTag: string | null } | null {
+    const game = this.games.get(gameID);
+    if (!game) return null;
+    return game.peekClientIdentity(persistentID);
+  }
+
   public publicLobbies(): GameServer[] {
     return Array.from(this.games.values()).filter(
       (g) => g.phase() === GamePhase.Lobby && g.isPublic(),

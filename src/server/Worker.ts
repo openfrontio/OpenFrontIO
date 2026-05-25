@@ -7,11 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import {
-  ClanExistsResponseSchema,
-  clanExistsApiPath,
-  type UserMeResponse,
-} from "../core/ApiSchemas";
+import { type UserMeResponse } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -23,6 +19,7 @@ import {
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
+import { clanExistsByTag, resolveClanTag } from "./ClanTagOwnership";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
@@ -42,74 +39,6 @@ import { initWorkerMetrics } from "./WorkerMetrics";
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist();
-
-// Clan-existence probe used by the join-time ownership check.
-// Caches results briefly so a lobby surge doesn't fan out to the auth API.
-// Returns null on transport errors / unexpected statuses so callers fail open.
-const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
-const CLAN_EXISTS_CACHE_TTL_MS = 60_000;
-const clanExistsCache = new Map<
-  string,
-  { result: boolean; expiresAt: number }
->();
-
-async function clanExistsByTag(tag: string): Promise<boolean | null> {
-  const cacheKey = tag.toUpperCase();
-  const entry = clanExistsCache.get(cacheKey);
-  if (entry !== undefined) {
-    if (Date.now() < entry.expiresAt) return entry.result;
-    clanExistsCache.delete(cacheKey);
-  }
-
-  try {
-    const url = `${ServerEnv.jwtIssuer()}${clanExistsApiPath(tag)}`;
-    const response = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
-    });
-    if (response.status === 200) {
-      // Upstream currently has no body; tolerate {exists:false} for forward-compat.
-      try {
-        const text = await response.text();
-        if (text.length > 0) {
-          const parsed = ClanExistsResponseSchema.safeParse(JSON.parse(text));
-          if (parsed.success && parsed.data?.exists === false) {
-            clanExistsCache.set(cacheKey, {
-              result: false,
-              expiresAt: Date.now() + CLAN_EXISTS_CACHE_TTL_MS,
-            });
-            return false;
-          }
-        }
-      } catch {
-        // Forward-compat parsing only; ignore failures.
-      }
-      clanExistsCache.set(cacheKey, {
-        result: true,
-        expiresAt: Date.now() + CLAN_EXISTS_CACHE_TTL_MS,
-      });
-      return true;
-    }
-    if (response.status === 404) {
-      clanExistsCache.set(cacheKey, {
-        result: false,
-        expiresAt: Date.now() + CLAN_EXISTS_CACHE_TTL_MS,
-      });
-      return false;
-    }
-    log.warn("clanExistsByTag: unexpected status, failing open", {
-      tag: cacheKey,
-      status: response.status,
-    });
-    return null;
-  } catch (e) {
-    log.warn("clanExistsByTag: fetch failed, failing open", {
-      tag: cacheKey,
-      error: e instanceof Error ? e.message : String(e),
-    });
-    return null;
-  }
-}
 
 // Worker setup
 export async function startWorker() {
@@ -435,6 +364,29 @@ export async function startWorker() {
             .get()
             .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
+        // Fast-path: if an existing client for this persistentID already wears
+        // the same (censored) identity, the ownership check was performed at
+        // join time. Skip getUserMe and the existence probe — they're an auth
+        // round-trip we don't need.
+        const existingIdentity = gm.peekClientIdentity(
+          persistentId,
+          clientMsg.gameID,
+        );
+        if (
+          existingIdentity !== null &&
+          existingIdentity.username === censoredUsername &&
+          existingIdentity.clanTag === censoredClanTag
+        ) {
+          if (
+            gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+              username: censoredUsername,
+              clanTag: censoredClanTag,
+            })
+          ) {
+            return;
+          }
+        }
+
         // Fetch user profile up front. Needed here so the clan-tag ownership
         // check can run before the reconnect fast-path (otherwise a refresh
         // would let a player swap to an unvalidated tag), and reused below
@@ -463,29 +415,24 @@ export async function startWorker() {
         // Enforce clan tag ownership. A player can wear a tag only if they're
         // a member; if they're not and the tag belongs to a real clan, drop it
         // to prevent impersonation. Fictional tags pass through.
-        let resolvedClanTag = censoredClanTag;
-        if (resolvedClanTag !== null) {
-          const userClanTags = new Set(
-            userMeResponse
-              ? (userMeResponse.player.clans ?? []).map((c) =>
-                  c.tag.toUpperCase(),
-                )
-              : [],
-          );
-          if (!userClanTags.has(resolvedClanTag.toUpperCase())) {
-            // Fail closed: inconclusive (null) means drop, not keep.
-            const exists = await clanExistsByTag(resolvedClanTag);
-            if (exists !== false) {
-              log.warn("Dropped clan tag: player is not a member", {
-                persistentID: persistentId,
-                gameID: clientMsg.gameID,
-                clanTag: resolvedClanTag,
-                existsResult: exists,
-              });
-              resolvedClanTag = null;
-            }
-          }
+        const resolution = await resolveClanTag(
+          censoredClanTag,
+          userMeResponse,
+          (tag) =>
+            clanExistsByTag(tag, {
+              baseUrl: ServerEnv.jwtIssuer(),
+              onWarn: (event, ctx) => log.warn(event, ctx),
+            }),
+        );
+        if (resolution.dropped) {
+          log.warn("Dropped clan tag: player is not a member", {
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
+            clanTag: censoredClanTag,
+            reason: resolution.reason,
+          });
         }
+        const resolvedClanTag = resolution.tag;
 
         // Try to reconnect an existing client (e.g. page refresh). Pre-game,
         // username and clan tag pick up the latest validated values from this
