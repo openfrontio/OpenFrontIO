@@ -74,7 +74,6 @@ export const PlayerAchievementSchema = z.object({
   playerId: z.string(),
   achievement: z.string(),
   achievedAt: z.iso.datetime(),
-  gameId: z.string(),
   game: z.string(),
 });
 export type PlayerAchievementJson = z.infer<typeof PlayerAchievementSchema>;
