@@ -286,7 +286,7 @@ export class GameServer {
     ws: WebSocket,
     persistentID: string,
     lastTurn: number = 0,
-    identityUpdate?: { username: string; clanTag?: string | null },
+    identityUpdate?: { username: string; clanTag: string | null },
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
@@ -308,12 +308,7 @@ export class GameServer {
     this.activeClients.push(client);
     if (identityUpdate && !this.hasStarted()) {
       client.username = identityUpdate.username;
-      // clanTag is only updated when explicitly provided. The reconnect
-      // fast-path omits it so a refreshed client can't swap to a tag the
-      // initial join didn't validate.
-      if (identityUpdate.clanTag !== undefined) {
-        client.clanTag = identityUpdate.clanTag;
-      }
+      client.clanTag = identityUpdate.clanTag;
     }
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);

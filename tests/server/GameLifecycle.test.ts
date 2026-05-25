@@ -138,20 +138,20 @@ describe("GameServer.rejoinClient — clanTag identityUpdate", () => {
     return client;
   };
 
-  it("preserves clanTag on reconnect when identityUpdate omits it", () => {
+  it("updates username and clanTag on reconnect (pre-game)", () => {
     const game = new GameServer("g-1", mockLogger, Date.now(), {
       gameType: GameType.Private,
     } as any);
     const client = seedClient(game, "ABC");
 
-    const newWs = mkWs();
-    const ok = game.rejoinClient(newWs as any, "pid-1", 0, {
+    const ok = game.rejoinClient(mkWs() as any, "pid-1", 0, {
       username: "renamed",
+      clanTag: "XYZ",
     });
 
     expect(ok).toBe(true);
-    expect(client.clanTag).toBe("ABC");
     expect(client.username).toBe("renamed");
+    expect(client.clanTag).toBe("XYZ");
   });
 
   it("clears clanTag on reconnect when identityUpdate passes null", () => {
@@ -166,20 +166,6 @@ describe("GameServer.rejoinClient — clanTag identityUpdate", () => {
     });
 
     expect(client.clanTag).toBeNull();
-  });
-
-  it("updates clanTag on reconnect when identityUpdate passes a new tag", () => {
-    const game = new GameServer("g-3", mockLogger, Date.now(), {
-      gameType: GameType.Private,
-    } as any);
-    const client = seedClient(game, "ABC");
-
-    game.rejoinClient(mkWs() as any, "pid-1", 0, {
-      username: "tester",
-      clanTag: "XYZ",
-    });
-
-    expect(client.clanTag).toBe("XYZ");
   });
 
   it("does not change identity if the game has already started", () => {

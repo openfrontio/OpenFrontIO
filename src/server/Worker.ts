@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
   ClanExistsResponseSchema,
   clanExistsApiPath,
+  type UserMeResponse,
 } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
@@ -428,30 +429,18 @@ export async function startWorker() {
           return;
         }
 
-        // Normalize username and clan tag before any rejoin/join handling.
+        // Normalize username and clan tag.
         const { clanTag: censoredClanTag, username: censoredUsername } =
           privilegeRefresher
             .get()
             .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
-        // Try to reconnect an existing client (e.g., page refresh).
-        // Username may have changed since initial join; clanTag is intentionally
-        // omitted so the reconnect can't swap to a tag that wasn't validated on
-        // the original join. To change clan tag, the player must fully rejoin.
-        if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-          })
-        ) {
-          return;
-        }
-
-        let flares: string[] | undefined;
-        let publicId: string | undefined;
-        let friends: string[] = [];
-        let userClanTags: Set<string> = new Set();
-
+        // Fetch user profile up front. Needed here so the clan-tag ownership
+        // check can run before the reconnect fast-path (otherwise a refresh
+        // would let a player swap to an unvalidated tag), and reused below
+        // for flares/cosmetics on new joins.
         const allowedFlares = ServerEnv.allowedFlares();
+        let userMeResponse: UserMeResponse | null = null;
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
@@ -459,7 +448,6 @@ export async function startWorker() {
             return;
           }
         } else {
-          // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token);
           if (result.type === "error") {
             log.warn(`Unauthorized: ${result.message}`, {
@@ -469,26 +457,61 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          flares = result.response.player.flares;
-          publicId = result.response.player.publicId;
-          friends = result.response.player.friends;
-          userClanTags = new Set(
-            (result.response.player.clans ?? []).map((c) =>
-              c.tag.toUpperCase(),
-            ),
-          );
+          userMeResponse = result.response;
+        }
 
-          if (allowedFlares !== undefined) {
-            const allowed =
-              allowedFlares.length === 0 ||
-              allowedFlares.some((f) => flares?.includes(f));
-            if (!allowed) {
-              log.warn(
-                "Forbidden: player without an allowed flare attempted to join game",
-              );
-              ws.close(1002, "Forbidden");
-              return;
+        // Enforce clan tag ownership. A player can wear a tag only if they're
+        // a member; if they're not and the tag belongs to a real clan, drop it
+        // to prevent impersonation. Fictional tags pass through.
+        let resolvedClanTag = censoredClanTag;
+        if (resolvedClanTag !== null) {
+          const userClanTags = new Set(
+            userMeResponse
+              ? (userMeResponse.player.clans ?? []).map((c) =>
+                  c.tag.toUpperCase(),
+                )
+              : [],
+          );
+          if (!userClanTags.has(resolvedClanTag.toUpperCase())) {
+            const exists = await clanExistsByTag(resolvedClanTag);
+            if (exists === true) {
+              log.warn("Dropped clan tag: player is not a member", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                clanTag: resolvedClanTag,
+              });
+              resolvedClanTag = null;
             }
+          }
+        }
+
+        // Try to reconnect an existing client (e.g. page refresh). Pre-game,
+        // username and clan tag pick up the latest validated values from this
+        // connection.
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: resolvedClanTag,
+          })
+        ) {
+          return;
+        }
+
+        // New client — finish the join checks.
+        const flares = userMeResponse?.player.flares;
+        const publicId = userMeResponse?.player.publicId;
+        const friends = userMeResponse?.player.friends ?? [];
+
+        if (userMeResponse !== null && allowedFlares !== undefined) {
+          const allowed =
+            allowedFlares.length === 0 ||
+            allowedFlares.some((f) => flares?.includes(f));
+          if (!allowed) {
+            log.warn(
+              "Forbidden: player without an allowed flare attempted to join game",
+            );
+            ws.close(1002, "Forbidden");
+            return;
           }
         }
 
@@ -528,26 +551,6 @@ export async function startWorker() {
                 gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
-          }
-        }
-
-        // Enforce clan tag ownership. A player can wear a tag only if they're
-        // a member; if they're not and the tag belongs to a real clan, drop it
-        // to prevent impersonation. Fictional tags pass through. Runs after
-        // turnstile so we don't burn an API call on rejected bot joins.
-        let resolvedClanTag = censoredClanTag;
-        if (
-          resolvedClanTag !== null &&
-          !userClanTags.has(resolvedClanTag.toUpperCase())
-        ) {
-          const exists = await clanExistsByTag(resolvedClanTag);
-          if (exists === true) {
-            log.warn("Dropped clan tag: player is not a member", {
-              persistentID: persistentId,
-              gameID: clientMsg.gameID,
-              clanTag: resolvedClanTag,
-            });
-            resolvedClanTag = null;
           }
         }
 
