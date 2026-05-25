@@ -42,7 +42,8 @@ export class ClanTagInput extends LitElement {
   }
 
   public getValue(): string | null {
-    return this.clanTag.length >= MIN_CLAN_TAG_LENGTH &&
+    return this.isValid() &&
+      this.clanTag.length >= MIN_CLAN_TAG_LENGTH &&
       this.clanTag.length <= MAX_CLAN_TAG_LENGTH &&
       validateClanTag(this.clanTag).isValid
       ? this.clanTag
