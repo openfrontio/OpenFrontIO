@@ -834,12 +834,18 @@ class Client {
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID);
     }
-    const auth = await userAuth();
+    // Fetch auth, cosmetics and Turnstile token in parallel — all three are
+    // independent async operations that together dominate pre-join latency.
+    const [auth, cosmetics, turnstileToken] = await Promise.all([
+      userAuth(),
+      getPlayerCosmeticsRefs(),
+      this.getTurnstileToken(lobby),
+    ]);
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      cosmetics: await getPlayerCosmeticsRefs(),
-      turnstileToken: await this.getTurnstileToken(lobby),
+      cosmetics,
+      turnstileToken,
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       playerRole,

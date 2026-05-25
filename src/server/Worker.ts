@@ -386,20 +386,30 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized");
             return;
           }
-        } else {
-          // Verify token and get player permissions
-          const result = await getUserMe(clientMsg.token);
-          if (result.type === "error") {
-            log.warn(`Unauthorized: ${result.message}`, {
+        }
+
+        // Run getUserMe and Turnstile verification in parallel — they are
+        // independent HTTP calls and together account for the bulk of join
+        // latency. For anonymous users getUserMe is skipped.
+        const [userMeResult, turnstileResult] = await Promise.all([
+          claims !== null ? getUserMe(clientMsg.token) : Promise.resolve(null),
+          ServerEnv.env() !== GameEnv.Dev
+            ? verifyTurnstileToken(ip, clientMsg.turnstileToken)
+            : Promise.resolve({ status: "approved" as const }),
+        ]);
+
+        if (userMeResult !== null) {
+          if (userMeResult.type === "error") {
+            log.warn(`Unauthorized: ${userMeResult.message}`, {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          flares = result.response.player.flares;
-          publicId = result.response.player.publicId;
-          friends = result.response.player.friends;
+          flares = userMeResult.response.player.flares;
+          publicId = userMeResult.response.player.publicId;
+          friends = userMeResult.response.player.friends;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -428,11 +438,7 @@ export async function startWorker() {
           return;
         }
 
-        if (ServerEnv.env() !== GameEnv.Dev) {
-          const turnstileResult = await verifyTurnstileToken(
-            ip,
-            clientMsg.turnstileToken,
-          );
+        if (turnstileResult !== null) {
           switch (turnstileResult.status) {
             case "approved":
               break;
