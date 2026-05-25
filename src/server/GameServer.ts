@@ -23,6 +23,7 @@ import {
   ServerTurnMessage,
   StampedIntent,
   Turn,
+  Winner,
 } from "../core/Schemas";
 import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -66,7 +67,7 @@ export class GameServer {
 
   private lastPingUpdate = 0;
 
-  private winner: ClientSendWinnerMessage | null = null;
+  private winner: Winner | null = null;
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
@@ -88,7 +89,7 @@ export class GameServer {
 
   private winnerVotes: Map<
     string,
-    { winner: ClientSendWinnerMessage; ips: Set<string> }
+    { winner: Winner; ips: Set<string> }
   > = new Map();
 
   private _hasEnded = false;
@@ -1095,23 +1096,22 @@ export class GameServer {
   private archiveGame() {
     this.log.info("archiving game", {
       gameID: this.id,
-      winner: this.winner?.winner,
+      winner: this.winner,
     });
 
     // Players must stay in the same order as the game start info.
+    // Stats are intentionally left undefined: client-reported allPlayersStats
+    // were removed from ClientSendWinnerMessage to prevent fake stat injection.
+    // A future server-side stats tracker should populate this field instead.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
       (player) => {
-        const stats = this.winner?.allPlayersStats[player.clientID];
-        if (stats === undefined) {
-          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
-        }
         return {
           clientID: player.clientID,
           username: player.username,
           clanTag: player.clanTag,
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
-          stats,
+          stats: undefined,
           cosmetics: player.cosmetics,
         } satisfies PlayerRecord;
       },
@@ -1125,7 +1125,7 @@ export class GameServer {
           this.turns,
           this._startTime ?? 0,
           Date.now(),
-          this.winner?.winner,
+          this.winner ?? undefined,
           this.createdAt,
           this.visibleAt,
         ),
@@ -1248,7 +1248,7 @@ export class GameServer {
     // Add client vote
     const winnerKey = JSON.stringify(clientMsg.winner);
     if (!this.winnerVotes.has(winnerKey)) {
-      this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
+      this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg.winner });
     }
     const potentialWinner = this.winnerVotes.get(winnerKey)!;
     potentialWinner.ips.add(client.ip);

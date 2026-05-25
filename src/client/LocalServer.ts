@@ -228,7 +228,7 @@ export class LocalServer {
     }
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
-      this.allPlayersStats = clientMsg.allPlayersStats;
+      this.allPlayersStats = clientMsg.allPlayersStats ?? {};
     }
   }
 

@@ -574,10 +574,12 @@ export class Transport {
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+      // allPlayersStats is intentionally omitted from multiplayer messages:
+      // the server ignores client-reported stats to prevent fake stat injection.
+      // LocalServer handles stats separately for offline singleplayer.
       this.sendMsg({
         type: "winner",
         winner: event.winner,
-        allPlayersStats: event.allPlayersStats,
       } satisfies ClientSendWinnerMessage);
     } else {
       console.log(

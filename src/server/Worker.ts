@@ -233,6 +233,24 @@ export async function startWorker() {
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
     try {
+      // Require a valid JWT so only the actual player can archive their own game.
+      // Without this, any unauthenticated client could submit fake records for
+      // arbitrary persistentIDs (see security audit finding #1).
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith("Bearer ")) {
+        log.warn("archive_singleplayer_game: missing Authorization header");
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const tokenResult = await verifyClientToken(
+        authHeader.substring("Bearer ".length),
+      );
+      if (tokenResult.type === "error") {
+        log.warn(
+          `archive_singleplayer_game: invalid token — ${tokenResult.message}`,
+        );
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       const record = req.body;
 
       const result = PartialGameRecordSchema.safeParse(record);
@@ -258,6 +276,16 @@ export async function startWorker() {
           gameID: gameRecord.info.gameID,
         });
         return res.status(400).json({ error: "Invalid request" });
+      }
+
+      // Ensure the token owner matches the player in the record.
+      const recordPersistentID = result.data.info.players[0]?.persistentID;
+      if (recordPersistentID !== tokenResult.persistentId) {
+        log.warn(
+          `archive_singleplayer_game: persistentID mismatch — token: ${tokenResult.persistentId?.substring(0, 8)}, record: ${recordPersistentID?.substring(0, 8)}`,
+          { gameID: gameRecord.info.gameID },
+        );
+        return res.status(403).json({ error: "Forbidden" });
       }
 
       log.info("archiving singleplayer game", {

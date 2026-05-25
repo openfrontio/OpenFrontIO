@@ -641,7 +641,11 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 export const ClientSendWinnerSchema = z.object({
   type: z.literal("winner"),
   winner: WinnerSchema,
-  allPlayersStats: AllPlayersStatsSchema,
+  // allPlayersStats is optional and intentionally ignored by the multiplayer
+  // server (GameServer.handleWinner). It is only used by LocalServer for
+  // offline singleplayer archiving. Clients must not rely on the server
+  // accepting or trusting this field in multiplayer.
+  allPlayersStats: AllPlayersStatsSchema.optional(),
 });
 
 export const ClientHashSchema = z.object({
