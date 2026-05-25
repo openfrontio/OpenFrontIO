@@ -18,7 +18,7 @@ import {
   decompressGameRecord,
   replacer,
 } from "../core/Util";
-import { getPersistentID } from "./Auth";
+import { getAuthHeader, getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,
@@ -303,14 +303,18 @@ export class LocalServer {
 
     const jsonString = JSON.stringify(result.data, replacer);
 
-    compress(jsonString)
-      .then((compressedData) => {
+    Promise.all([compress(jsonString), getAuthHeader()])
+      .then(([compressedData, authHeader]) => {
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+        };
+        if (authHeader) {
+          headers["Authorization"] = authHeader;
+        }
         return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Encoding": "gzip",
-          },
+          headers,
           body: compressedData,
           keepalive: true, // Ensures request completes even if page unloads
         });
