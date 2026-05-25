@@ -22,7 +22,7 @@ import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs } from "./Cosmetics";
+import { fetchCosmetics, getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
@@ -313,9 +313,11 @@ class Client {
     });
     modalRouter.register("flag-input", { tag: "flag-input-modal" });
 
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
+    // Prefetch all data needed on lobby join so the user doesn't wait when
+    // clicking Join. These functions cache their results internally.
     this.turnstileTokenPromise = getTurnstileToken();
+    getUserMe();
+    fetchCosmetics();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -1045,20 +1047,24 @@ class Client {
     }
 
     const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
     if (!token) {
       console.log("No turnstile token");
+      this.turnstileTokenPromise = null;
       return null;
     }
 
     const tokenTTL = 3 * 60 * 1000;
     if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
+      console.log(
+        "Prefetched turnstile token is valid, starting next prefetch",
+      );
+      // Immediately start prefetching the next token in the background so
+      // subsequent joins don't have to wait for a fresh Turnstile challenge.
+      this.turnstileTokenPromise = getTurnstileToken();
       return token.token;
     } else {
       console.log("Turnstile token expired, getting new token");
+      this.turnstileTokenPromise = null;
       return (await getTurnstileToken())?.token ?? null;
     }
   }
