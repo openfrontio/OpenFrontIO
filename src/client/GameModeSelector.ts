@@ -48,13 +48,17 @@ export class GameModeSelector extends LitElement {
 
   /**
    * Validates username and clan tag inputs and shows error messages if invalid.
-   * Returns true if both are valid, false otherwise.
+   * Awaits any pending clan-tag ownership check so the gate doesn't pass while
+   * an async validation is still in flight.
    */
-  private validateUsername(): boolean {
+  private async validateIdentity(): Promise<boolean> {
     const clanTagInput = document.querySelector(
       "clan-tag-input",
     ) as ClanTagInput | null;
-    if (clanTagInput && !clanTagInput.validateOrShowError()) return false;
+    if (clanTagInput) {
+      await clanTagInput.awaitValidation();
+      if (!clanTagInput.validateOrShowError()) return false;
+    }
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput | null;
@@ -234,25 +238,25 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
   }
 
-  private openRankedMenu = () => {
-    if (!this.validateUsername()) return;
+  private openRankedMenu = async () => {
+    if (!(await this.validateIdentity())) return;
     window.showPage?.("page-ranked");
   };
 
-  private openSinglePlayerModal = () => {
-    if (!this.validateUsername()) return;
+  private openSinglePlayerModal = async () => {
+    if (!(await this.validateIdentity())) return;
     (
       document.querySelector("single-player-modal") as SinglePlayerModal
     )?.open();
   };
 
-  private openHostLobby = () => {
-    if (!this.validateUsername()) return;
+  private openHostLobby = async () => {
+    if (!(await this.validateIdentity())) return;
     (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
   };
 
-  private openJoinLobby = () => {
-    if (!this.validateUsername()) return;
+  private openJoinLobby = async () => {
+    if (!(await this.validateIdentity())) return;
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
 
@@ -386,8 +390,8 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private validateAndJoin(lobby: PublicGameInfo) {
-    if (!this.validateUsername()) return;
+  private async validateAndJoin(lobby: PublicGameInfo) {
+    if (!(await this.validateIdentity())) return;
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
