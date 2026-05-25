@@ -69,9 +69,9 @@ export async function getUserMe(
   | { type: "error"; message: string }
 > {
   try {
+    // Get the user object
     const response = await fetch(ServerEnv.jwtIssuer() + "/users/@me", {
       headers: {
-        Accept: "application/json",
         authorization: `Bearer ${token}`,
         "x-api-key": ServerEnv.apiKey(),
       },
