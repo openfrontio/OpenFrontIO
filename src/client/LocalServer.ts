@@ -303,21 +303,28 @@ export class LocalServer {
 
     const jsonString = JSON.stringify(result.data, replacer);
 
-    Promise.all([compress(jsonString), getAuthHeader()])
-      .then(([compressedData, authHeader]) => {
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-          "Content-Encoding": "gzip",
-        };
-        if (authHeader) {
-          headers["Authorization"] = authHeader;
-        }
-        return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
-          method: "POST",
-          headers,
-          body: compressedData,
-          keepalive: true, // Ensures request completes even if page unloads
-        });
+    compress(jsonString)
+      .then((compressedData) => {
+        // Auth lookup must not abort the upload on failure (e.g. network error
+        // during token refresh). Resolve to an empty string so the fetch still
+        // proceeds unauthenticated and the server can return 401 gracefully.
+        return getAuthHeader()
+          .catch(() => "")
+          .then((authHeader) => {
+            const headers: HeadersInit = {
+              "Content-Type": "application/json",
+              "Content-Encoding": "gzip",
+            };
+            if (authHeader) {
+              headers["Authorization"] = authHeader;
+            }
+            return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
+              method: "POST",
+              headers,
+              body: compressedData,
+              keepalive: true, // Ensures request completes even if page unloads
+            });
+          });
       })
       .catch((error) => {
         console.error("Failed to archive singleplayer game:", error);
