@@ -29,6 +29,8 @@ export class ClanTagInput extends LitElement {
   private ownershipError: string = "";
   private checkCounter: number = 0;
   private checkTimer: ReturnType<typeof setTimeout> | null = null;
+  private currentCheck: Promise<void> = Promise.resolve();
+  private resolveDebounce: (() => void) | null = null;
   private lastTranslatedLang: string | null = null;
 
   createRenderRoot() {
@@ -60,6 +62,9 @@ export class ClanTagInput extends LitElement {
       this.checkTimer = null;
     }
     this.checkCounter++; // cancel any in-flight async check
+    if (this.resolveDebounce) this.resolveDebounce();
+    this.resolveDebounce = null;
+    this.currentCheck = Promise.resolve();
   }
 
   protected updated(): void {
@@ -125,10 +130,15 @@ export class ClanTagInput extends LitElement {
     const result = validateClanTag(tag);
     this.formatError = result.isValid ? "" : (result.error ?? "");
 
-    // Cancel any pending/in-flight ownership check.
+    // Cancel any pending/in-flight ownership check. checkCounter++ marks
+    // any in-flight async work obsolete (stillCurrent() in checkOwnership
+    // returns false). Resolve the prior debounce so awaitValidation()
+    // callers don't hang on the cancelled chain.
     if (this.checkTimer !== null) clearTimeout(this.checkTimer);
     this.checkTimer = null;
     this.checkCounter++;
+    if (this.resolveDebounce) this.resolveDebounce();
+    this.resolveDebounce = null;
 
     if (!result.isValid || tag.length === 0) {
       // Nothing to ask the server about — clear any old ownership error
@@ -136,14 +146,31 @@ export class ClanTagInput extends LitElement {
       // that no longer matches the current (invalid/empty) input.
       this.ownershipError = "";
       localStorage.setItem(clanTagKey, "");
+      this.currentCheck = Promise.resolve();
     } else {
+      const debounce = new Promise<void>((resolve) => {
+        this.resolveDebounce = resolve;
+      });
       this.checkTimer = setTimeout(() => {
         this.checkTimer = null;
-        void this.checkOwnership(tag);
+        const resolve = this.resolveDebounce;
+        this.resolveDebounce = null;
+        resolve?.();
       }, CLAN_OWNERSHIP_DEBOUNCE_MS);
+      this.currentCheck = debounce.then(() => this.checkOwnership(tag));
     }
 
     this.refreshError();
+  }
+
+  // Resolves once the latest validate() chain finishes — either the debounce
+  // timer + ownership check, or immediately if the input is invalid/empty.
+  public async awaitValidation(): Promise<void> {
+    let last: Promise<void> | undefined;
+    while (this.currentCheck !== last) {
+      last = this.currentCheck;
+      await last;
+    }
   }
 
   // Are you a member? If not, does the clan exist? If it doesn't (fictional)

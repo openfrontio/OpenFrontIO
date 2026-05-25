@@ -824,8 +824,9 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
-    if (this.clanTagInput && !this.clanTagInput.validateOrShowError()) {
-      return;
+    if (this.clanTagInput) {
+      await this.clanTagInput.awaitValidation();
+      if (!this.clanTagInput.validateOrShowError()) return;
     }
     if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
       return;
