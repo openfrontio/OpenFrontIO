@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import playerAchievementMetadataJson from "../../../../../resources/playerAchievementMetadata.json" with { type: "json" };
+import playerAchievementMetadataJson from "../../../../../resources/PlayerAchievementMetadata.json" with { type: "json" };
 import type {
   AchievementsResponse,
   PlayerAchievementJson,
