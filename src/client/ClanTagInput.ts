@@ -173,8 +173,10 @@ export class ClanTagInput extends LitElement {
     }
   }
 
-  // Are you a member? If not, does the clan exist? If it doesn't (fictional)
-  // or the check fails open, accept. Otherwise reject.
+  // Are you a member? If not, only accept when the API confirms the clan
+  // doesn't exist (fictional). Inconclusive results (null/timeout) reject so
+  // the client matches the server's fail-closed enforcement — otherwise the
+  // client would let the modal open with a tag the server later drops.
   private async checkOwnership(tag: string) {
     const checkId = this.checkCounter;
     const stillCurrent = () =>
@@ -189,7 +191,7 @@ export class ClanTagInput extends LitElement {
     if (!myTags.includes(tag.toUpperCase())) {
       const exists = await fetchClanExists(tag);
       if (!stillCurrent()) return;
-      if (exists === true) {
+      if (exists !== false) {
         this.reject(tag);
         return;
       }
