@@ -572,6 +572,9 @@ export class DefaultConfig implements Config {
   emojiMessageCooldown(): Tick {
     return 5 * 10;
   }
+  quickChatCooldown(): Tick {
+    return 3 * 10;
+  }
   targetDuration(): Tick {
     return 10 * 10;
   }

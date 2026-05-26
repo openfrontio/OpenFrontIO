@@ -121,6 +121,7 @@ export interface Config {
   targetCooldown(): Tick;
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
+  quickChatCooldown(): Tick;
   donateCooldown(): Tick;
   embargoAllCooldown(): Tick;
   deletionMarkDuration(): Tick;

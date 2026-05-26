@@ -90,6 +90,7 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
+  private outgoingQuickChats_ = new Map<number, Tick>();
 
   private sentDonations: Donation[] = [];
 
@@ -733,6 +734,21 @@ export class PlayerImpl implements Player {
       }
     }
     return true;
+  }
+
+  canSendQuickChat(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
+    const lastSentAt = this.outgoingQuickChats_.get(recipient.smallID());
+    return (
+      lastSentAt === undefined ||
+      this.mg.ticks() - lastSentAt >= this.mg.config().quickChatCooldown()
+    );
+  }
+
+  recordQuickChat(recipient: Player): void {
+    this.outgoingQuickChats_.set(recipient.smallID(), this.mg.ticks());
   }
 
   canDonateGold(recipient: Player): boolean {
