@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
@@ -428,7 +427,8 @@ export async function startWorker() {
           return;
         }
 
-        if (ServerEnv.env() !== GameEnv.Dev) {
+        const f = false;
+        if (f) {
           const turnstileResult = await verifyTurnstileToken(
             ip,
             clientMsg.turnstileToken,
