@@ -8,14 +8,10 @@ let player2: Player;
 
 describe("QuickChat cooldown", () => {
   beforeEach(async () => {
-    game = await setup(
-      "plains",
-      {},
-      [
-        playerInfo("player1", PlayerType.Human),
-        playerInfo("player2", PlayerType.Human),
-      ],
-    );
+    game = await setup("plains", {}, [
+      playerInfo("player1", PlayerType.Human),
+      playerInfo("player2", PlayerType.Human),
+    ]);
 
     player1 = game.player("player1");
     player1.conquer(game.ref(0, 0));
