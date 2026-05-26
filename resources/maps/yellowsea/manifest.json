@@ -14,7 +14,6 @@
     "num_land_tiles": 258545,
     "width": 750
   },
-  
   "name": "Yellow Sea",
   "nations": [
     {
@@ -23,8 +22,7 @@
         575
       ],
       "flag": "kp",
-      "name": "North Korea",
-      "strength": 1
+      "name": "North Korea"
     },
     {
       "coordinates": [
@@ -32,8 +30,7 @@
         935
       ],
       "flag": "kr",
-      "name": "South Korea",
-      "strength": 1
+      "name": "South Korea"
     },
     {
       "coordinates": [
@@ -41,8 +38,7 @@
         220
       ],
       "flag": "cn",
-      "name": "Liaoning",
-      "strength": 1
+      "name": "Liaoning"
     },
     {
       "coordinates": [
@@ -50,8 +46,7 @@
         924
       ],
       "flag": "cn",
-      "name": "Shandong",
-      "strength": 1
+      "name": "Shandong"
     },
     {
       "coordinates": [
@@ -59,8 +54,7 @@
         295
       ],
       "flag": "cn",
-      "name": "Beijing",
-      "strength": 1
+      "name": "Beijing"
     },
     {
       "coordinates": [
@@ -68,8 +62,7 @@
         483
       ],
       "flag": "cn",
-      "name": "Tianjin",
-      "strength": 1
+      "name": "Tianjin"
     },
     {
       "coordinates": [
@@ -77,8 +70,7 @@
         781
       ],
       "flag": "cn",
-      "name": "Hebei",
-      "strength": 1
+      "name": "Hebei"
     }
   ]
 }
