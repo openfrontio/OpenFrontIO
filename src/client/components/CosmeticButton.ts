@@ -29,6 +29,9 @@ export class CosmeticButton extends LitElement {
   @property({ type: Function })
   onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
 
+  @property({ type: Function })
+  onTest?: (resolved: ResolvedCosmetic) => void;
+
   /** True if the user already has a subscription (any tier). */
   @property({ type: Boolean })
   userHasSubscription: boolean = false;
@@ -211,6 +214,17 @@ export class CosmeticButton extends LitElement {
             ${this.renderPreview()}
           </div>
         </button>
+        ${isPurchasable && isPattern && this.onTest
+          ? html`<button
+              class="w-full mt-1 px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200 hover:bg-blue-500/30 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this.onTest?.(this.resolved);
+              }}
+            >
+              ${translateText("skin_test_modal.preview_skin")}
+            </button>`
+          : nothing}
         ${isOwnedSubscription
           ? html`<div
               class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"

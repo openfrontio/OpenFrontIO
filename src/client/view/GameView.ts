@@ -117,6 +117,8 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
 
+  public isSkinTest: boolean = false;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,

@@ -35,6 +35,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
+import { SkinTestWinModal } from "./layers/SkinTestWinModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { TeamStats } from "./layers/TeamStats";
 import { UnitDisplay } from "./layers/UnitDisplay";
@@ -164,6 +165,13 @@ export function createRenderer(
   }
   winModal.eventBus = eventBus;
   winModal.game = game;
+
+  const skinTestWinModal = document.querySelector(
+    "skin-test-win-modal",
+  ) as SkinTestWinModal;
+  if (skinTestWinModal instanceof SkinTestWinModal) {
+    skinTestWinModal.eventBus = eventBus;
+  }
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -307,6 +315,7 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     winModal,
+    skinTestWinModal,
     replayPanel,
     settingsModal,
     teamStats,

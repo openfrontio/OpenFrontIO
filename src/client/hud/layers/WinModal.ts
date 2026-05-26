@@ -257,6 +257,11 @@ export class WinModal extends LitElement implements Controller {
   init() {}
 
   tick() {
+    // Don't show win modal during skin tests
+    if (this.game.isSkinTest) {
+      return;
+    }
+
     const myPlayer = this.game.myPlayer();
     if (
       !this.hasShownDeathModal &&
