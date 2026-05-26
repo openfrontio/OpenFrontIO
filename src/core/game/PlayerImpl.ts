@@ -953,6 +953,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other === this) {
+      return true;
+    }
     if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }
