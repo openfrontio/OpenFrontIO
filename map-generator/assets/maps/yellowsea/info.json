@@ -1,0 +1,49 @@
+{
+  "name": "Yellow Sea",
+ 
+  
+  "nations": [
+    {
+      "coordinates": [1350, 575],
+      "name": "North Korea",
+      "strength": 1,
+      "flag": "kp"
+    },
+    {
+      "coordinates": [1469, 935],
+      "name": "South Korea",
+      "strength": 1,
+      "flag": "kr"
+    },
+    {
+      "coordinates": [1003, 220],
+      "name": "Liaoning",
+      "strength": 1,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [490, 924],
+      "name": "Shandong",
+      "strength": 1,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [32, 295],
+      "name": "Beijing",
+      "strength": 1,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [161, 483],
+      "name": "Tianjin",
+      "strength": 1,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [109, 781],
+      "name": "Hebei",
+      "strength": 1,
+      "flag": "cn"
+    }
+  ]
+}
