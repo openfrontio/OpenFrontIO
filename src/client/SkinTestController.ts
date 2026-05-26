@@ -70,8 +70,6 @@ export class SkinTestController {
 
   private runAttack(): void {
     if (!this.active) return;
-    // Wait for the player to exist in the GameView before firing — gives the
-    // worker time to addPlayer() once the spawn execution runs.
     if (this.gameView.playerByClientID(this.clientID) === null) {
       if (++this.lookupRetries >= MAX_PLAYER_LOOKUP_RETRIES) {
         console.error("Skin test: gave up finding player");

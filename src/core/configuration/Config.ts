@@ -762,6 +762,18 @@ export class Config {
   }
 
   maxTroops(player: Player | PlayerView): number {
+    // When startingTroops is set for a human with infinite troops, treat the
+    // configured value as the cap so the troop bar starts at 100% rather than
+    // a sliver of the infinite-troops ceiling.
+    const override = this._gameConfig.startingTroops;
+    if (
+      override !== undefined &&
+      override !== null &&
+      player.type() === PlayerType.Human &&
+      this.hasInfiniteTroopsFor(player)
+    ) {
+      return override;
+    }
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
