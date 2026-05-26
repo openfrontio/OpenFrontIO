@@ -347,6 +347,26 @@ export async function startWorker() {
           return;
         }
 
+        if (clientMsg.type === "rejoin") {
+          log.info("rejoining game", {
+            gameID: clientMsg.gameID,
+            persistentID: persistentId,
+          });
+          const wasFound = gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
+          if (!wasFound) {
+            log.warn(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            );
+            ws.close(1002, "Game not found");
+          }
+          return;
+        }
+
         // Normalize username and clan tag before any rejoin/join handling.
         // If this connection maps to an existing lobby client, we still want
         // the latest pre-join identity to be reflected.
@@ -363,30 +383,6 @@ export async function startWorker() {
           const threeDigits = decimal % 1000n;
           censoredUsername = "Anon" + threeDigits.toString().padStart(3, "0");
           censoredClanTag = null;
-        }
-
-        if (clientMsg.type === "rejoin") {
-          log.info("rejoining game", {
-            gameID: clientMsg.gameID,
-            persistentID: persistentId,
-          });
-          const wasFound = gm.rejoinClient(
-            ws,
-            persistentId,
-            clientMsg.gameID,
-            clientMsg.lastTurn,
-            {
-              username: censoredUsername,
-              clanTag: censoredClanTag,
-            },
-          );
-          if (!wasFound) {
-            log.warn(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
-            );
-            ws.close(1002, "Game not found");
-          }
-          return;
         }
 
         // Try to reconnect an existing client (e.g., page refresh)
