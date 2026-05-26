@@ -21,6 +21,8 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
       adfree: false,
       flares,
       achievements: { singleplayerMap: [] },
+      friends: [],
+      subscription: null,
     },
   } as UserMeResponse;
 }

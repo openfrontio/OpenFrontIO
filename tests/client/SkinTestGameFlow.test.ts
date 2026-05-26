@@ -74,7 +74,7 @@ vi.mock("../../src/client/components/CosmeticButton", () => {
 });
 
 import { ClientGameRunner } from "../../src/client/ClientGameRunner";
-import { SkinTestWinModal } from "../../src/client/graphics/layers/SkinTestWinModal";
+import { SkinTestWinModal } from "../../src/client/hud/layers/SkinTestWinModal";
 import { GameUpdateType } from "../../src/core/game/GameUpdates";
 
 const makeCosmetics = () =>
@@ -190,6 +190,7 @@ describe("Skin test game flow", () => {
       worker,
       gameView,
       { playBackgroundMusic: vi.fn() } as any,
+      {} as any, // userSettings
     ) as any;
 
     // Seed the private myPlayer field so showSkinTestModal can resolve the pattern.

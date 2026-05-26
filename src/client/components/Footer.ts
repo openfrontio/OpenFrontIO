@@ -24,7 +24,7 @@ export class Footer extends LitElement {
           >
             <img
               src=${assetUrl("icons/github-mark-white.svg")}
-              data-i18n-alt="news.github_link"
+              data-i18n-alt="main.github"
               class="h-6 w-6 lg:h-7 lg:w-7 object-contain pointer-events-none"
               draggable="false"
             />

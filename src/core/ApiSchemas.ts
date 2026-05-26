@@ -117,9 +117,21 @@ export const UserMeResponseSchema = z.object({
         }),
       )
       .optional(),
+    friends: z.array(z.string()),
+    subscription: z
+      .object({
+        tier: z.string(),
+        status: z.string(),
+        currentPeriodEnd: z.coerce.date().nullable(),
+        cancelAtPeriodEnd: z.boolean(),
+      })
+      .nullable(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+export type UserSubscription = NonNullable<
+  NonNullable<UserMeResponse["player"]["subscription"]>
+>;
 
 export const PlayerStatsLeafSchema = z.object({
   wins: BigIntStringSchema,
@@ -205,6 +217,35 @@ export const RankedLeaderboardResponseSchema = z.object({
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
+>;
+
+export const FriendEntrySchema = z.object({
+  publicId: z.string(),
+  createdAt: z.iso.datetime(),
+});
+export type FriendEntry = z.infer<typeof FriendEntrySchema>;
+
+export const FriendRequestsResponseSchema = z.object({
+  incoming: FriendEntrySchema.array(),
+  outgoing: FriendEntrySchema.array(),
+});
+export type FriendRequestsResponse = z.infer<
+  typeof FriendRequestsResponseSchema
+>;
+
+export const FriendsListResponseSchema = z.object({
+  results: FriendEntrySchema.array(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type FriendsListResponse = z.infer<typeof FriendsListResponseSchema>;
+
+export const SendFriendRequestResponseSchema = z.object({
+  status: z.enum(["requested", "accepted"]),
+});
+export type SendFriendRequestResponse = z.infer<
+  typeof SendFriendRequestResponseSchema
 >;
 
 export const NewsItemSchema = z.object({

@@ -3,7 +3,7 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
 import { isAdminRole } from "../core/ApiSchemas";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientID,
@@ -28,6 +28,7 @@ import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { ServerEnv } from "./ServerEnv";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -69,6 +70,10 @@ export class GameServer {
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
+  // Wire-only copy of gameStartInfo sent to clients. Identical to
+  // gameStartInfo unless disableClanTags is set, in which case clan tags
+  // are stripped from players. Archive uses the original gameStartInfo.
+  private wireGameStartInfo!: GameStartInfo;
 
   private log: Logger;
 
@@ -96,7 +101,6 @@ export class GameServer {
     public readonly id: string,
     readonly log_: Logger,
     public readonly createdAt: number,
-    private config: ServerConfig,
     public gameConfig: GameConfig,
     private creatorPersistentID?: string,
     private startsAt?: number,
@@ -236,7 +240,7 @@ export class GameServer {
       return "rejected";
     }
 
-    if (this.config.env() === GameEnv.Prod) {
+    if (ServerEnv.env() === GameEnv.Prod) {
       // Prevent multiple clients from using the same account in prod
       const conflicting = this.activeClients.find(
         (c) =>
@@ -672,7 +676,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(msg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -729,6 +735,8 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    const friendsFor = this.buildFriendsLookup();
+
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
@@ -740,6 +748,7 @@ export class GameServer {
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
+        friends: friendsFor(c),
       })),
     });
     if (!result.success) {
@@ -748,10 +757,19 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.wireGameStartInfo = this.gameConfig.disableClanTags
+      ? {
+          ...this.gameStartInfo,
+          players: this.gameStartInfo.players.map((p) => ({
+            ...p,
+            clanTag: null,
+          })),
+        }
+      : this.gameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
-      this.config.turnIntervalMs(),
+      ServerEnv.turnIntervalMs(),
     );
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
@@ -781,24 +799,27 @@ export class GameServer {
     });
 
     try {
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.log.warn(`WebSocket not open, skipping start message`, {
+          clientID: client.clientID,
+          readyState: ws.readyState,
+        });
+        return;
+      }
       ws.send(
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.gameStartInfo,
+          gameStartInfo: this.wireGameStartInfo,
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
-      // can be enabled once we can use {cause: error} in Error constructor starting with ES2022
-      // eslint-disable-next-line preserve-caught-error
-      throw new Error(
-        `error sending start message for game ${this.id}, ${error}`.substring(
-          0,
-          250,
-        ),
-      );
+      this.log.error(`error sending start message for game ${this.id}`, {
+        clientID: client.clientID,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -950,18 +971,38 @@ export class GameServer {
   }
 
   public gameInfo(): GameInfo {
+    const friendsFor = this.buildFriendsLookup();
+    const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: hideClanTags ? null : (c.clanTag ?? null),
         clientID: c.clientID,
+        friends: friendsFor(c),
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+    };
+  }
+
+  // Maps each active client's publicId-based friends list to in-game
+  // clientIDs, dropping friends not present in this game. Returns undefined
+  // when no friends are present so the field can be omitted from the wire
+  // payload.
+  private buildFriendsLookup(): (client: Client) => ClientID[] | undefined {
+    const publicIdToClientID = new Map<string, ClientID>();
+    for (const c of this.activeClients) {
+      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
+    }
+    return (client: Client) => {
+      const friendClientIDs = client.friends
+        .map((pid) => publicIdToClientID.get(pid))
+        .filter((id): id is ClientID => id !== undefined);
+      return friendClientIDs.length > 0 ? friendClientIDs : undefined;
     };
   }
 
@@ -999,13 +1040,15 @@ export class GameServer {
         persistentID: client.persistentID,
         reasonKey,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: reasonKey,
-        } satisfies ServerErrorMessage),
-      );
-      client.ws.close(1000, reasonKey);
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(
+          JSON.stringify({
+            type: "error",
+            error: reasonKey,
+          } satisfies ServerErrorMessage),
+        );
+        client.ws.close(1000, reasonKey);
+      }
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
@@ -1137,7 +1180,9 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      c.ws.send(desyncMsg);
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(desyncMsg);
+      }
     }
   }
 

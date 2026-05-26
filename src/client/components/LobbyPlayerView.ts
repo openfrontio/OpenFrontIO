@@ -340,6 +340,7 @@ export class LobbyTeamView extends LitElement {
           c.clientID,
           false,
           c.clanTag,
+          c.friends ?? [],
         ),
     );
     const assignment = assignTeamsLobbyPreview(

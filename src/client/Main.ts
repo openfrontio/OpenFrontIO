@@ -1,4 +1,5 @@
 import version from "resources/version.txt?raw";
+import { ClientEnv } from "src/client/ClientEnv";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
@@ -10,7 +11,6 @@ import {
   PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
-import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   DARK_MODE_KEY,
@@ -18,7 +18,7 @@ import {
   UserSettings,
 } from "../core/game/UserSettings";
 import "./AccountModal";
-import { getUserMe } from "./Api";
+import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
@@ -43,6 +43,7 @@ import { initLayout } from "./Layout";
 import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import { modalRouter } from "./ModalRouter";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
@@ -65,6 +66,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -169,7 +171,6 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 
 declare global {
   interface Window {
-    GIT_COMMIT: string;
     turnstile: any;
     adsEnabled: boolean;
     PageOS: {
@@ -269,6 +270,50 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+
+    // Register modals with the URL router. Lobby modals (join/host) and
+    // matchmaking are intentionally omitted — they own their own URL state
+    // (path-based) or none at all.
+    modalRouter.register("store", {
+      tag: "store-modal",
+      pageId: "page-item-store",
+    });
+    modalRouter.register("settings", {
+      tag: "user-setting",
+      pageId: "page-settings",
+    });
+    modalRouter.register("leaderboard", {
+      tag: "leaderboard-modal",
+      pageId: "page-leaderboard",
+    });
+    modalRouter.register("clan", { tag: "clan-modal", pageId: "page-clan" });
+    modalRouter.register("account", {
+      tag: "account-modal",
+      pageId: "page-account",
+    });
+    modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
+    modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
+    modalRouter.register("language", {
+      tag: "language-modal",
+      pageId: "page-language",
+    });
+    modalRouter.register("single-player", {
+      tag: "single-player-modal",
+      pageId: "page-single-player",
+    });
+    modalRouter.register("ranked", {
+      tag: "ranked-modal",
+      pageId: "page-ranked",
+    });
+    modalRouter.register("troubleshooting", {
+      tag: "troubleshooting-modal",
+      pageId: "page-troubleshooting",
+    });
+    modalRouter.register("territory-patterns", {
+      tag: "territory-patterns-modal",
+    });
+    modalRouter.register("flag-input", { tag: "flag-input-modal" });
+
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -526,6 +571,13 @@ class Client {
     }
 
     const onHashUpdate = () => {
+      // Router-managed hash changes (#modal=...) are handled by the router
+      // syncing in/out; we don't need to tear down the lobby state for them.
+      if (modalRouter.isHashRouted()) {
+        modalRouter.routeFromHash();
+        return;
+      }
+
       // Reset the UI to its initial state
       this.joinModal?.close();
 
@@ -612,7 +664,7 @@ class Client {
         // On low end-chromebooks the join modal was not registered in time.
         await new Promise((resolve) => setTimeout(resolve, 2000));
         window.showPage?.("page-join-lobby");
-        this.joinModal?.open(lobbyId);
+        this.joinModal?.open({ lobbyId });
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
@@ -657,6 +709,14 @@ class Client {
       const type = params.get("type");
       if (type === "currency_pack") {
         alertAndStrip(translateText("store.currency_pack_purchase_success"));
+        return;
+      }
+
+      if (type === "subscription_tier") {
+        alert(translateText("store.subscription_purchase_success"));
+        strip();
+        invalidateUserMe();
+        window.location.reload();
         return;
       }
 
@@ -714,45 +774,42 @@ class Client {
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
       window.showPage?.("page-join-lobby");
-      this.joinModal.open(lobbyId);
+      this.joinModal.open({ lobbyId });
       console.log(`joining lobby ${lobbyId}`);
+      return;
+    }
+    if (modalRouter.routeFromHash()) {
       return;
     }
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.storeModal?.open(affiliateCode);
+        this.storeModal?.open({ affiliateCode });
       }
     }
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
     }
 
-    // Handle requeue parameter for ranked matchmaking
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.has("requeue")) {
-      // Remove only the requeue parameter, preserving other params and hash
-      searchParams.delete("requeue");
-      const newUrl =
-        window.location.pathname +
-        (searchParams.toString() ? "?" + searchParams.toString() : "") +
-        window.location.hash;
-      history.replaceState(null, "", newUrl);
-      // Wait for matchmaking button to be defined, then trigger its click handler.
-      customElements.whenDefined("matchmaking-button").then(() => {
-        const matchmakingButton = document.querySelector(
-          "matchmaking-button button",
-        ) as HTMLButtonElement | null;
-        if (matchmakingButton) {
-          matchmakingButton.click();
-        } else {
-          console.warn(
-            "Requeue requested, but matchmaking button not found in DOM.",
-          );
-        }
-      });
+    if (this.consumeRequeueUrl()) {
+      document.dispatchEvent(new CustomEvent("open-matchmaking"));
     }
+  }
+
+  private consumeRequeueUrl(): boolean {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (!searchParams.has("requeue")) {
+      return false;
+    }
+
+    searchParams.delete("requeue");
+    const newUrl =
+      window.location.pathname +
+      (searchParams.toString() ? `?${searchParams.toString()}` : "") +
+      window.location.hash;
+    history.replaceState(null, "", newUrl);
+    return true;
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -769,18 +826,19 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
-      this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
+      this.joinModal?.open({
+        lobbyId: lobby.gameID,
+        lobbyInfo: lobby.publicLobbyInfo,
+      });
     }
-    const config = await getRuntimeClientServerConfig();
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
-      this.updateJoinUrlForShare(lobby.gameID, config);
+      this.updateJoinUrlForShare(lobby.gameID);
     }
     const auth = await userAuth();
     const playerRole = auth !== false ? (auth.claims.role ?? null) : null;
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      serverConfig: config,
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
@@ -883,7 +941,7 @@ class Client {
         "",
         lobbyIdHidden
           ? "/streamer-mode"
-          : `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+          : `/${ClientEnv.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
       );
 
       // Store current URL for popstate confirmation
@@ -891,14 +949,11 @@ class Client {
     });
   }
 
-  private updateJoinUrlForShare(
-    lobbyId: string,
-    config: Awaited<ReturnType<typeof getRuntimeClientServerConfig>>,
-  ) {
+  private updateJoinUrlForShare(lobbyId: string) {
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
     const targetUrl = lobbyIdHidden
       ? "/streamer-mode"
-      : `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
+      : `/${ClientEnv.workerPath(lobbyId)}/game/${lobbyId}`;
     const currentUrl = window.location.pathname;
 
     if (currentUrl !== targetUrl) {
@@ -972,9 +1027,8 @@ class Client {
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
   ): Promise<string | null> {
-    const config = await getRuntimeClientServerConfig();
     if (
-      config.env() === GameEnv.Dev ||
+      ClientEnv.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;
@@ -1017,6 +1071,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
+  // on iOS and can softlock the HUD. See issue #2330.
+  installSafariPinchZoomBlocker();
+
   initLayout();
   new Client().initialize();
   initNavigation();
@@ -1050,9 +1108,8 @@ async function getTurnstileToken(): Promise<{
     throw new Error("Failed to load Turnstile script");
   }
 
-  const config = await getRuntimeClientServerConfig();
   const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
+    sitekey: ClientEnv.turnstileSiteKey(),
     size: "normal",
     appearance: "interaction-only",
     theme: "light",

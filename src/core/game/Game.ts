@@ -171,6 +171,11 @@ export enum GameMapType {
   BajaCalifornia = "Baja California",
   MiddleEast = "Middle East",
   TaiwanStrait = "Taiwan Strait",
+  IndianSubcontinent = "Indian Subcontinent",
+  DanishStraits = "Danish Straits",
+  NorthwestPassage = "Northwest Passage",
+  Venice = "Venice",
+  Balkans = "Balkans",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -234,6 +239,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BajaCalifornia,
     GameMapType.MiddleEast,
     GameMapType.TaiwanStrait,
+    GameMapType.Balkans,
+    GameMapType.IndianSubcontinent,
+    GameMapType.DanishStraits,
+    GameMapType.NorthwestPassage,
+    GameMapType.Venice,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -572,6 +582,7 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly isLobbyCreator: boolean = false,
     public readonly clanTag: string | null = null,
+    public readonly friends: ClientID[] = [],
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
@@ -824,7 +835,7 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  toUpdate(): PlayerUpdate;
+  toUpdate(): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
@@ -920,6 +931,8 @@ export interface Game extends GameMap {
     playerID: PlayerID | null,
     goldAmount?: bigint,
     params?: Record<string, string | number>,
+    unitID?: number,
+    focusPlayerID?: PlayerID,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -977,7 +990,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
-  overlappingRailroads: number[];
+  overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }
 
@@ -1024,6 +1037,7 @@ export enum MessageType {
   CONQUERED_PLAYER,
   MIRV_INBOUND,
   NUKE_INBOUND,
+  NUKE_DETONATED,
   HYDROGEN_BOMB_INBOUND,
   NAVAL_INVASION_INBOUND,
   SAM_MISS,
@@ -1036,11 +1050,8 @@ export enum MessageType {
   ALLIANCE_REQUEST,
   ALLIANCE_BROKEN,
   ALLIANCE_EXPIRED,
-  SENT_GOLD_TO_PLAYER,
-  RECEIVED_GOLD_FROM_PLAYER,
-  RECEIVED_GOLD_FROM_TRADE,
-  SENT_TROOPS_TO_PLAYER,
-  RECEIVED_TROOPS_FROM_PLAYER,
+  DONATION_SENT,
+  DONATION_RECEIVED,
   CHAT,
   RENEW_ALLIANCE,
 }
@@ -1062,6 +1073,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
   [MessageType.MIRV_INBOUND]: MessageCategory.NUKE,
   [MessageType.NUKE_INBOUND]: MessageCategory.NUKE,
+  [MessageType.NUKE_DETONATED]: MessageCategory.NUKE,
   [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.NUKE,
   [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
@@ -1075,11 +1087,8 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
   [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
-  [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
-  [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.DONATION_SENT]: MessageCategory.TRADE,
+  [MessageType.DONATION_RECEIVED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
 } as const;
 

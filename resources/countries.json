@@ -14,6 +14,11 @@
     "name": "Achaemenid Empire"
   },
   {
+    "code": "Aceh",
+    "continent": "Asia",
+    "name": "Aceh"
+  },
+  {
     "code": "ae",
     "continent": "Asia",
     "name": "United Arab Emirates"
@@ -195,6 +200,11 @@
     "code": "au",
     "continent": "Oceania",
     "name": "Australia"
+  },
+  {
+    "code": "Azad Kashmir",
+    "continent": "Asia",
+    "name": "Azad Kashmir"
   },
   {
     "code": "az",
@@ -1071,6 +1081,11 @@
     "name": "Jamaica"
   },
   {
+    "code": "Jammu and Kashmir",
+    "continent": "Asia",
+    "name": "Jammu and Kashmir"
+  },
+  {
     "code": "jp",
     "continent": "Asia",
     "name": "Japan"
@@ -1804,6 +1819,11 @@
     "name": "Prince Edward Island"
   },
   {
+    "code": "Principality of Moldavia",
+    "continent": "Europe",
+    "name": "Principality of Moldavia"
+  },
+  {
     "code": "provence",
     "continent": "Europe",
     "name": "Provence"
@@ -1867,6 +1887,11 @@
     "code": "Republic of Pirates",
     "continent": "North America",
     "name": "Republic of Pirates"
+  },
+  {
+    "code": "Republika Srpska",
+    "continent": "Europe",
+    "name": "Republika Srpska"
   },
   {
     "code": "re",
@@ -2066,6 +2091,11 @@
     "name": "Sierra Leone"
   },
   {
+    "code": "Sikkim",
+    "continent": "Asia",
+    "name": "Sikkim"
+  },
+  {
     "code": "sg",
     "continent": "Asia",
     "name": "Singapore"
@@ -2074,6 +2104,11 @@
     "code": "sx",
     "continent": "North America",
     "name": "Sint Maarten"
+  },
+  {
+    "code": "Slavonia",
+    "continent": "Europe",
+    "name": "Slavonia"
   },
   {
     "code": "sk",
@@ -2275,6 +2310,11 @@
     "name": "Tonga"
   },
   {
+    "code": "Transylvania",
+    "continent": "Europe",
+    "name": "Transylvania"
+  },
+  {
     "code": "tt",
     "continent": "South America",
     "name": "Trinidad and Tobago"
@@ -2447,6 +2487,11 @@
     "code": "Virginia",
     "continent": "North America",
     "name": "Virginia"
+  },
+  {
+    "code": "Vojvodina",
+    "continent": "Europe",
+    "name": "Vojvodina"
   },
   {
     "code": "gb-wls",

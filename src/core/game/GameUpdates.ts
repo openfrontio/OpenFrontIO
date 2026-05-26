@@ -68,6 +68,7 @@ export enum GameUpdateType {
   EmbargoEvent,
   SpawnPhaseEnd,
   GamePaused,
+  DonateEvent,
 }
 
 export type GameUpdate =
@@ -92,7 +93,8 @@ export type GameUpdate =
   | ConquestUpdate
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
-  | GamePausedUpdate;
+  | GamePausedUpdate
+  | DonateEventUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -127,6 +129,14 @@ export interface ConquestUpdate {
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
+}
+
+export interface DonateEventUpdate {
+  type: GameUpdateType.DonateEvent;
+  donationType: "troops" | "gold";
+  senderId: PlayerID;
+  recipientId: PlayerID;
+  amount: bigint;
 }
 
 export interface UnitUpdate {
@@ -164,35 +174,44 @@ export interface AttackUpdate {
   retreating: boolean;
 }
 
+/**
+ * Player snapshot delivered worker -> main thread.
+ *
+ * Only `type` and `id` are guaranteed. Every other field is omitted when its
+ * value matches the previous emission for the same player. The first emission
+ * for a player always includes all fields; consumers must handle subsequent
+ * partial updates by merging into local state, not overwriting.
+ */
 export interface PlayerUpdate {
   type: GameUpdateType.Player;
-  nameViewData?: NameViewData;
-  clientID: ClientID | null;
-  name: string;
-  displayName: string;
   id: PlayerID;
+  nameViewData?: NameViewData;
+  clientID?: ClientID | null;
+  name?: string;
+  displayName?: string;
   team?: Team;
-  smallID: number;
-  playerType: PlayerType;
-  isAlive: boolean;
-  isDisconnected: boolean;
-  tilesOwned: number;
-  gold: Gold;
-  troops: number;
-  allies: number[];
-  embargoes: Set<PlayerID>;
-  isTraitor: boolean;
+  smallID?: number;
+  playerType?: PlayerType;
+  isAlive?: boolean;
+  isDisconnected?: boolean;
+  tilesOwned?: number;
+  gold?: Gold;
+  troops?: number;
+  allies?: number[];
+  embargoes?: Set<PlayerID>;
+  isTraitor?: boolean;
   traitorRemainingTicks?: number;
-  targets: number[];
-  outgoingEmojis: EmojiMessage[];
-  outgoingAttacks: AttackUpdate[];
-  incomingAttacks: AttackUpdate[];
-  outgoingAllianceRequests: PlayerID[];
-  alliances: AllianceView[];
-  hasSpawned: boolean;
-  betrayals: number;
-  lastDeleteUnitTick: Tick;
-  isLobbyCreator: boolean;
+  targets?: number[];
+  outgoingEmojis?: EmojiMessage[];
+  outgoingAttacks?: AttackUpdate[];
+  incomingAttacks?: AttackUpdate[];
+  outgoingAllianceRequests?: PlayerID[];
+  alliances?: AllianceView[];
+  hasSpawned?: boolean;
+  spawnTile?: TileRef;
+  betrayals?: number;
+  lastDeleteUnitTick?: Tick;
+  isLobbyCreator?: boolean;
 }
 
 export interface AllianceView {
@@ -253,6 +272,8 @@ export interface DisplayMessageUpdate {
   goldAmount?: bigint;
   playerID: number | null;
   params?: Record<string, string | number>;
+  unitID?: number;
+  focusPlayerID?: number;
 }
 
 export type DisplayChatMessageUpdate = {

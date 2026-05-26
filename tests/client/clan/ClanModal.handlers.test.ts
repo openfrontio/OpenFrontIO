@@ -4,7 +4,6 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
-  configLoaderMockFactory,
   crazyGamesSdkMockFactory,
   flushAsync,
   getElState,
@@ -22,9 +21,6 @@ vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
-vi.mock("../../../src/core/configuration/ConfigLoader", () =>
-  configLoaderMockFactory(),
-);
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
 
 stubLocalStorage();
@@ -593,12 +589,10 @@ describe("ClanModal — handlers", () => {
 
   describe("handleJoin", () => {
     beforeEach(async () => {
-      const { fetchClanDetail, fetchClanStats } =
-        await import("../../../src/client/ClanApi");
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan({ isOpen: true, memberCount: 5 }),
       );
-      (fetchClanStats as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
 
       setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
       setState(modal, "myClanRoles" as keyof ClanModal, new Map() as never);
@@ -656,7 +650,7 @@ describe("ClanModal — handlers", () => {
 
   describe("handleLeave", () => {
     beforeEach(async () => {
-      const { fetchClanDetail, fetchClanMembers, fetchClanStats } =
+      const { fetchClanDetail, fetchClanMembers } =
         await import("../../../src/client/ClanApi");
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan(),
@@ -674,7 +668,6 @@ describe("ClanModal — handlers", () => {
         limit: 10,
         pendingRequests: 0,
       });
-      (fetchClanStats as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
 
       setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
       setState(

@@ -386,6 +386,27 @@ export class NukeExecution implements Execution {
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
 
+    if (
+      this.nukeType === UnitType.AtomBomb ||
+      this.nukeType === UnitType.HydrogenBomb
+    ) {
+      const messageKey =
+        this.nukeType === UnitType.AtomBomb
+          ? "events_display.atom_bomb_detonated"
+          : "events_display.hydrogen_bomb_detonated";
+      for (const [impactedPlayer] of tilesPerPlayers) {
+        mg.displayMessage(
+          messageKey,
+          MessageType.NUKE_DETONATED,
+          impactedPlayer.id(),
+          undefined,
+          { name: this.player.displayName() },
+          undefined,
+          this.player.id(),
+        );
+      }
+    }
+
     // Record stats
     this.mg
       .stats()

@@ -5,7 +5,7 @@
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\"",
     "start:client": "vite",
     "start:server": "tsx src/server/Server.ts",
-    "start:server-dev": "cross-env GAME_ENV=dev tsx src/server/Server.ts",
+    "start:server-dev": "cross-env GAME_ENV=dev NUM_WORKERS=2 TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:staging": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "dev:prod": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.io concurrently \"npm run start:client\" \"npm run start:server-dev\"",
@@ -82,8 +82,8 @@
     "@lit-labs/virtualizer": "^2.1.1",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.216.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.216.0",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.216.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.218.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.218.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-logs": "^0.216.0",
     "@opentelemetry/sdk-metrics": "^2.7.1",
@@ -104,6 +104,7 @@
     "ip-anonymize": "^0.1.0",
     "jose": "^6.2.3",
     "js-yaml": "^4.1.1",
+    "lil-gui": "^0.21.0",
     "limiter": "^3.0.0",
     "nanoid": "^5.1.11",
     "node-html-parser": "^7.1.0",
@@ -112,8 +113,11 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "winston": "^3.19.0",
-    "ws": "^8.20.0",
+    "ws": "^8.20.1",
     "zod": "^4.4.2"
+  },
+  "overrides": {
+    "sanitize-html": ">=2.17.4"
   },
   "type": "module"
 }

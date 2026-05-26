@@ -1,6 +1,7 @@
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
+  MessageType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -117,6 +118,99 @@ describe("NukeExecution", () => {
 
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);
+  });
+
+  test("AtomBomb detonation emits NUKE_DETONATED to each impacted player", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    // Give otherPlayer a cluster around (50,50) so the blast intersects them.
+    for (let x = 48; x < 53; x++) {
+      for (let y = 48; y < 53; y++) {
+        otherPlayer.conquer(game.ref(x, y));
+      }
+    }
+
+    const displayMessageSpy = vi.spyOn(game, "displayMessage");
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 200);
+
+    const detonatedCalls = displayMessageSpy.mock.calls.filter(
+      (call) => call[1] === MessageType.NUKE_DETONATED,
+    );
+    expect(detonatedCalls.length).toBeGreaterThan(0);
+    const otherCall = detonatedCalls.find(
+      (call) => call[2] === otherPlayer.id(),
+    );
+    expect(otherCall).toBeDefined();
+    expect(otherCall![0]).toBe("events_display.atom_bomb_detonated");
+    // focusPlayerID (7th positional) is the launcher
+    expect(otherCall![6]).toBe(player.id());
+
+    displayMessageSpy.mockRestore();
+  });
+
+  test("HydrogenBomb detonation emits NUKE_DETONATED with hydrogen_bomb key", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    for (let x = 48; x < 53; x++) {
+      for (let y = 48; y < 53; y++) {
+        otherPlayer.conquer(game.ref(x, y));
+      }
+    }
+
+    const displayMessageSpy = vi.spyOn(game, "displayMessage");
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.HydrogenBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 300);
+
+    const detonatedCalls = displayMessageSpy.mock.calls.filter(
+      (call) => call[1] === MessageType.NUKE_DETONATED,
+    );
+    expect(detonatedCalls.length).toBeGreaterThan(0);
+    expect(detonatedCalls[0][0]).toBe("events_display.hydrogen_bomb_detonated");
+
+    displayMessageSpy.mockRestore();
+  });
+
+  test("MIRVWarhead detonation does NOT emit NUKE_DETONATED", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    for (let x = 48; x < 53; x++) {
+      for (let y = 48; y < 53; y++) {
+        otherPlayer.conquer(game.ref(x, y));
+      }
+    }
+
+    const displayMessageSpy = vi.spyOn(game, "displayMessage");
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.MIRVWarhead,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 200);
+
+    const detonatedCalls = displayMessageSpy.mock.calls.filter(
+      (call) => call[1] === MessageType.NUKE_DETONATED,
+    );
+    expect(detonatedCalls).toHaveLength(0);
+
+    displayMessageSpy.mockRestore();
   });
 
   test("nuke should break alliance when destroying ally's building even with few tiles", async () => {
