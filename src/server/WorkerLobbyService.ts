@@ -1,6 +1,8 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
+import { GameEnv } from "../core/configuration/Config";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { isCloudflareOrLoopbackIp } from "./Cloudflare";
 import { GameManager } from "./GameManager";
 import {
   MasterMessageSchema,
@@ -8,6 +10,7 @@ import {
   WorkerReady,
 } from "./IPCBridgeSchema";
 import { logger } from "./Logger";
+import { ServerEnv } from "./ServerEnv";
 
 export class WorkerLobbyService {
   private readonly lobbiesWss: WebSocketServer;
@@ -100,6 +103,36 @@ export class WorkerLobbyService {
 
   private setupUpgradeHandler() {
     this.server.on("upgrade", (request, socket, head) => {
+      if (
+        ServerEnv.env() === GameEnv.Prod ||
+        ServerEnv.env() === GameEnv.Preprod
+      ) {
+        const clientIp = (socket as any).remoteAddress ?? "";
+        if (!isCloudflareOrLoopbackIp(clientIp)) {
+          this.log.warn(
+            `WebSocket upgrade rejected: Bypassed Cloudflare proxy. Remote IP: ${clientIp}`,
+          );
+          socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+
+        const host = request.headers.host ?? "";
+        const isIpHost = /^[0-9.:]+$/.test(host);
+        if (
+          isIpHost &&
+          !clientIp.includes("127.0.0.1") &&
+          !clientIp.includes("::1")
+        ) {
+          this.log.warn(
+            `WebSocket upgrade rejected: Bypassed Cloudflare proxy. Host header was an IP: ${host}`,
+          );
+          socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+      }
+
       const pathname = request.url ?? "";
       if (pathname === "/lobbies" || pathname.endsWith("/lobbies")) {
         this.lobbiesWss.handleUpgrade(request, socket, head, (ws) => {
