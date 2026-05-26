@@ -760,6 +760,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateGold(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -787,6 +790,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateTroops(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -814,6 +820,7 @@ export class PlayerImpl implements Player {
   }
 
   donateTroops(recipient: Player, troops: number): boolean {
+    if (recipient === this) return false;
     if (troops <= 0) return false;
     const removed = this.removeTroops(troops);
     if (removed === 0) return false;
@@ -831,6 +838,7 @@ export class PlayerImpl implements Player {
   }
 
   donateGold(recipient: Player, gold: Gold): boolean {
+    if (recipient === this) return false;
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
