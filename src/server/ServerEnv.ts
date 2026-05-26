@@ -168,7 +168,12 @@ export class ServerEnv {
     return token;
   }
   static verifyAdminKey(providedKey: string): boolean {
-    const expected = ServerEnv.adminToken();
+    let expected: string;
+    try {
+      expected = ServerEnv.adminToken();
+    } catch {
+      return false;
+    }
     if (!expected) return false;
 
     // Use SHA-256 hashing to produce fixed-length 32-byte buffers,

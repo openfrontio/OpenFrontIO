@@ -127,4 +127,9 @@ describe("ServerEnv.verifyAdminKey", () => {
     vi.stubEnv("ADMIN_TOKEN", "secure-admin-secret-2026");
     expect(ServerEnv.verifyAdminKey("")).toBe(false);
   });
+
+  test("returns false when ADMIN_TOKEN is unset", () => {
+    vi.stubEnv("ADMIN_TOKEN", "");
+    expect(ServerEnv.verifyAdminKey("some-key")).toBe(false);
+  });
 });
