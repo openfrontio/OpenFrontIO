@@ -7,7 +7,7 @@ import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 
 const APP_SHELL_CACHE_CONTROL =
-  "public, max-age=0, s-maxage=300, stale-while-revalidate=86400";
+  "public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400";
 
 const appShellContentCache = new Map<string, Promise<string>>();
 

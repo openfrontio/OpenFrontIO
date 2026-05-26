@@ -30,6 +30,7 @@ import type {
   RadialMenuItem,
 } from "./Events";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
+import type { AttackTroopLabel } from "./passes/WorldTextPass";
 import { GPURenderer } from "./Renderer";
 import type { RenderSettings } from "./RenderSettings";
 
@@ -288,6 +289,9 @@ export class GameView {
   }
   applyConquestEvents(events: ConquestFx[]): void {
     this.renderer?.applyConquestEvents(events);
+  }
+  setAttackTroopLabels(labels: AttackTroopLabel[]): void {
+    this.renderer?.setAttackTroopLabels(labels);
   }
   applyBonusEvents(events: BonusEvent[]): void {
     this.renderer?.applyBonusEvents(events);

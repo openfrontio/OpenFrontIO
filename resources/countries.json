@@ -1819,6 +1819,11 @@
     "name": "Prince Edward Island"
   },
   {
+    "code": "Principality of Moldavia",
+    "continent": "Europe",
+    "name": "Principality of Moldavia"
+  },
+  {
     "code": "provence",
     "continent": "Europe",
     "name": "Provence"
@@ -1882,6 +1887,11 @@
     "code": "Republic of Pirates",
     "continent": "North America",
     "name": "Republic of Pirates"
+  },
+  {
+    "code": "Republika Srpska",
+    "continent": "Europe",
+    "name": "Republika Srpska"
   },
   {
     "code": "re",
@@ -2096,6 +2106,11 @@
     "name": "Sint Maarten"
   },
   {
+    "code": "Slavonia",
+    "continent": "Europe",
+    "name": "Slavonia"
+  },
+  {
     "code": "sk",
     "continent": "Europe",
     "name": "Slovakia"
@@ -2295,6 +2310,11 @@
     "name": "Tonga"
   },
   {
+    "code": "Transylvania",
+    "continent": "Europe",
+    "name": "Transylvania"
+  },
+  {
     "code": "tt",
     "continent": "South America",
     "name": "Trinidad and Tobago"
@@ -2467,6 +2487,11 @@
     "code": "Virginia",
     "continent": "North America",
     "name": "Virginia"
+  },
+  {
+    "code": "Vojvodina",
+    "continent": "Europe",
+    "name": "Vojvodina"
   },
   {
     "code": "gb-wls",
