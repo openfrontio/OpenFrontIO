@@ -57,6 +57,21 @@ app.use(
 );
 
 app.set("trust proxy", 3);
+
+if (ServerEnv.env() === GameEnv.Prod || ServerEnv.env() === GameEnv.Preprod) {
+  app.use((req, res, next) => {
+    const host = req.headers.host ?? "";
+    const isIpHost = /^[0-9.:]+$/.test(host);
+    const hasCfHeader = Boolean(req.headers["cf-connecting-ip"]);
+
+    if (isIpHost || !hasCfHeader) {
+      log.warn(`Bypassed Cloudflare proxy. Host: ${host}`);
+      return res.status(403).send("Forbidden: Direct IP access is blocked.");
+    }
+    next();
+  });
+}
+
 app.use(
   rateLimit({
     windowMs: 1000, // 1 second

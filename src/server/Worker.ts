@@ -103,6 +103,21 @@ export async function startWorker() {
   });
 
   app.set("trust proxy", 3);
+
+  if (ServerEnv.env() === GameEnv.Prod || ServerEnv.env() === GameEnv.Preprod) {
+    app.use((req, res, next) => {
+      const host = req.headers.host ?? "";
+      const isIpHost = /^[0-9.:]+$/.test(host);
+      const hasCfHeader = Boolean(req.headers["cf-connecting-ip"]);
+
+      if (isIpHost || !hasCfHeader) {
+        log.warn(`Bypassed Cloudflare proxy. Host: ${host}`);
+        return res.status(403).send("Forbidden: Direct IP access is blocked.");
+      }
+      next();
+    });
+  }
+
   app.use(compression());
 
   app.use(
@@ -277,8 +292,24 @@ export async function startWorker() {
     }
   });
 
-  // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
+    if (
+      ServerEnv.env() === GameEnv.Prod ||
+      ServerEnv.env() === GameEnv.Preprod
+    ) {
+      const host = req.headers.host ?? "";
+      const isIpHost = /^[0-9.:]+$/.test(host);
+      const hasCfHeader = Boolean(req.headers["cf-connecting-ip"]);
+
+      if (isIpHost || !hasCfHeader) {
+        log.warn(
+          `WebSocket connection bypassed Cloudflare proxy. Host: ${host}`,
+        );
+        ws.close(1002, "Forbidden");
+        return;
+      }
+    }
+
     ws.on("message", async (message: string) => {
       const ip = getClientIp(req);
 
