@@ -107,3 +107,24 @@ describe("ServerEnv.allowedFlares", () => {
     expect(ServerEnv.allowedFlares()).toEqual(["admin", "beta"]);
   });
 });
+
+describe("ServerEnv.verifyAdminKey", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("returns true when key matches perfectly", () => {
+    vi.stubEnv("ADMIN_TOKEN", "secure-admin-secret-2026");
+    expect(ServerEnv.verifyAdminKey("secure-admin-secret-2026")).toBe(true);
+  });
+
+  test("returns false when key does not match", () => {
+    vi.stubEnv("ADMIN_TOKEN", "secure-admin-secret-2026");
+    expect(ServerEnv.verifyAdminKey("wrong-key")).toBe(false);
+  });
+
+  test("returns false when provided key is empty", () => {
+    vi.stubEnv("ADMIN_TOKEN", "secure-admin-secret-2026");
+    expect(ServerEnv.verifyAdminKey("")).toBe(false);
+  });
+});

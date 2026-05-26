@@ -175,9 +175,12 @@ export async function startWorker() {
     }
 
     const gc = result.data;
+    const providedKeyHeader = req.headers[ServerEnv.adminHeader()];
+    const providedKey =
+      typeof providedKeyHeader === "string" ? providedKeyHeader : "";
     if (
       gc?.gameType === GameType.Public &&
-      req.headers[ServerEnv.adminHeader()] !== ServerEnv.adminToken()
+      !ServerEnv.verifyAdminKey(providedKey)
     ) {
       log.warn(
         `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
