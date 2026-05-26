@@ -748,6 +748,12 @@ export class Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
+    if (
+      this._gameConfig.startingTroops !== undefined &&
+      this._gameConfig.startingTroops !== null
+    ) {
+      return this._gameConfig.startingTroops;
+    }
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 

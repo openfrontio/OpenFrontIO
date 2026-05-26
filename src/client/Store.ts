@@ -120,6 +120,7 @@ export class StoreModal extends BaseModal {
               disableNations: true,
               infiniteGold: true,
               infiniteTroops: true,
+              startingTroops: 10_000_000,
               percentageTilesOwnedToWin: 99,
               disabledUnits: [
                 UnitType.City,
