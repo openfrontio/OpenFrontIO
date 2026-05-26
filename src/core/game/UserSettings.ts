@@ -47,6 +47,12 @@ export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
+export const TERRITORY_RENDERER_KEY = "settings.territoryRenderer";
+export type TerritoryRendererPreference =
+  | "auto"
+  | "classic"
+  | "webgl"
+  | "webgpu";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -154,7 +160,7 @@ export class UserSettings {
   }
 
   webgpuDebug(): boolean {
-    return this.get("settings.webgpuDebug", true);
+    return this.get("settings.webgpuDebug", false);
   }
 
   alertFrame() {
@@ -195,6 +201,27 @@ export class UserSettings {
 
   territoryBorderMode(): number {
     return this.getInt("settings.territoryBorderMode", 1);
+  }
+
+  territoryRenderer(): TerritoryRendererPreference {
+    const value = this.getString(TERRITORY_RENDERER_KEY, "auto");
+    if (
+      value === "auto" ||
+      value === "classic" ||
+      value === "webgl" ||
+      value === "webgpu"
+    ) {
+      return value;
+    }
+    return "auto";
+  }
+
+  setTerritoryRenderer(value: string): void {
+    const renderer =
+      value === "classic" || value === "webgl" || value === "webgpu"
+        ? value
+        : "auto";
+    this.setString(TERRITORY_RENDERER_KEY, renderer);
   }
 
   toggleAttackingTroopsOverlay() {

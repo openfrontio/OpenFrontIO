@@ -30,6 +30,7 @@ export class TerritoryRenderer {
   private resources: GroundTruthData | null = null;
   private ready = false;
   private initPromise: Promise<void> | null = null;
+  private failureReason: string | null = null;
   private territoryShaderPath = "render/territory.wgsl";
   private territoryShaderParams0 = new Float32Array(4);
   private territoryShaderParams1 = new Float32Array(4);
@@ -99,15 +100,25 @@ export class TerritoryRenderer {
 
   private startInit(): void {
     if (this.initPromise) return;
-    this.initPromise = this.init();
+    this.initPromise = this.init().catch((error) => {
+      this.ready = false;
+      this.failureReason =
+        error instanceof Error ? error.message : String(error);
+      console.warn("[TerritoryRenderer] WebGPU init failed", error);
+    });
   }
 
   private async init(): Promise<void> {
     const webgpuDevice = await WebGPUDevice.create(this.canvas);
     if (!webgpuDevice) {
+      this.failureReason = "WebGPU device initialization failed.";
       return;
     }
     this.device = webgpuDevice;
+    void webgpuDevice.device.lost.then((info) => {
+      this.ready = false;
+      this.failureReason = `WebGPU device lost: ${info.reason}`;
+    });
 
     const state = this.game.tileStateView();
     this.resources = GroundTruthData.create(
@@ -180,6 +191,25 @@ export class TerritoryRenderer {
     this.renderPassOrder = this.topologicalSort(this.renderPasses);
 
     this.ready = true;
+  }
+
+  async whenReady(): Promise<boolean> {
+    await this.initPromise;
+    return this.ready && this.failureReason === null;
+  }
+
+  getFailureReason(): string | null {
+    return this.failureReason;
+  }
+
+  dispose(): void {
+    this.ready = false;
+    try {
+      this.device?.device.destroy();
+    } catch {
+      // Ignore device cleanup failures during renderer fallback.
+    }
+    this.canvas.remove();
   }
 
   /**

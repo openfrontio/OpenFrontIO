@@ -8,6 +8,7 @@ export class PastelThemeDark extends PastelTheme {
 
   private darkWater = colord("rgb(14,11,30)");
   private darkShorelineWater = colord("rgb(50,50,50)");
+  private darkPlayerHighlight = colord("rgb(99, 42, 42)");
 
   // | Terrain Type      | Magnitude | Base Color Logic                                | Visual Description    |
   // | :---------------- | :-------- | :---------------------------------------------- | :-------------------- |
@@ -58,5 +59,9 @@ export class PastelThemeDark extends PastelTheme {
           b: 180 + mag / 2,
         });
     }
+  }
+
+  playerHighlightColor(): Colord {
+    return this.darkPlayerHighlight;
   }
 }

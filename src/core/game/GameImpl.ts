@@ -692,6 +692,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
+    this.updateDefendedStateForTileChange(tile, owner);
     this.recordTileUpdate(tile);
   }
 
@@ -710,6 +711,9 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
+    if (this._map.isDefended(tile)) {
+      this._map.setDefended(tile, false);
+    }
     this.recordTileUpdate(tile);
   }
 
@@ -971,7 +975,16 @@ export class GameImpl implements Game {
     }
   }
   updateUnitTile(u: Unit) {
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
     this.unitGrid.updateUnitCell(u);
+  }
+
+  refreshDefensePostDefendedState(u: Unit) {
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
   }
 
   hasUnitNearby(
@@ -1253,6 +1266,49 @@ export class GameImpl implements Game {
       conqueredId: conquered.id(),
       gold: goldCaptured,
     });
+  }
+
+  private updateDefendedStateForDefensePost(
+    center: TileRef,
+    owner: PlayerImpl,
+  ) {
+    const range = this.config().defensePostRange();
+    const rangeSq = range * range;
+
+    for (const tile of owner._borderTiles) {
+      if (this._map.euclideanDistSquared(center, tile) <= rangeSq) {
+        const wasDefended = this._map.isDefended(tile);
+        const isDefended = this.unitGrid.hasUnitNearby(
+          tile,
+          range,
+          UnitType.DefensePost,
+          owner.id(),
+        );
+        if (wasDefended !== isDefended) {
+          this._map.setDefended(tile, isDefended);
+          this.recordTileUpdate(tile);
+        }
+      }
+    }
+  }
+
+  private updateDefendedStateForTileChange(tile: TileRef, owner: PlayerImpl) {
+    const wasDefended = this._map.isDefended(tile);
+    const isDefended = this.unitGrid.hasUnitNearby(
+      tile,
+      this.config().defensePostRange(),
+      UnitType.DefensePost,
+      owner.id(),
+    );
+    if (wasDefended !== isDefended) {
+      this._map.setDefended(tile, isDefended);
+    }
+
+    if (
+      this.unitGrid.hasUnitNearby(tile, 0, UnitType.DefensePost, owner.id())
+    ) {
+      this.updateDefendedStateForDefensePost(tile, owner);
+    }
   }
 }
 
