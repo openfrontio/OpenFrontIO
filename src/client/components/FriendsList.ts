@@ -224,8 +224,21 @@ export class FriendsList extends LitElement {
 
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderAddSection()} ${this.renderRequestsSection()}
-        ${this.renderFriendsSection()}
+        ${this.renderTeamInfo()} ${this.renderAddSection()}
+        ${this.renderRequestsSection()} ${this.renderFriendsSection()}
+      </div>
+    `;
+  }
+
+  private renderTeamInfo(): TemplateResult {
+    return html`
+      <div
+        class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-3"
+      >
+        <span class="text-blue-400 text-lg shrink-0">🛡️</span>
+        <p class="text-sm text-white/80">
+          ${translateText("friends.team_info")}
+        </p>
       </div>
     `;
   }

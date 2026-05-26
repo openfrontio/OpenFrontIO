@@ -70,6 +70,10 @@ export class GameServer {
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
+  // Wire-only copy of gameStartInfo sent to clients. Identical to
+  // gameStartInfo unless disableClanTags is set, in which case clan tags
+  // are stripped from players. Archive uses the original gameStartInfo.
+  private wireGameStartInfo!: GameStartInfo;
 
   private log: Logger;
 
@@ -731,29 +735,21 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    const publicIdToClientID = new Map<string, ClientID>();
-    for (const c of this.activeClients) {
-      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
-    }
+    const friendsFor = this.buildFriendsLookup();
 
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
       config: this.gameConfig,
-      players: this.activeClients.map((c) => {
-        const friendClientIDs = c.friends
-          .map((pid) => publicIdToClientID.get(pid))
-          .filter((id): id is ClientID => id !== undefined);
-        return {
-          username: c.username,
-          clanTag: c.clanTag ?? null,
-          clientID: c.clientID,
-          cosmetics: c.cosmetics,
-          isLobbyCreator: this.lobbyCreatorID === c.clientID,
-          friends: friendClientIDs.length > 0 ? friendClientIDs : undefined,
-        };
-      }),
+      players: this.activeClients.map((c) => ({
+        username: c.username,
+        clanTag: c.clanTag ?? null,
+        clientID: c.clientID,
+        cosmetics: c.cosmetics,
+        isLobbyCreator: this.lobbyCreatorID === c.clientID,
+        friends: friendsFor(c),
+      })),
     });
     if (!result.success) {
       const error = z.prettifyError(result.error);
@@ -761,6 +757,15 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.wireGameStartInfo = this.gameConfig.disableClanTags
+      ? {
+          ...this.gameStartInfo,
+          players: this.gameStartInfo.players.map((p) => ({
+            ...p,
+            clanTag: null,
+          })),
+        }
+      : this.gameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -805,7 +810,7 @@ export class GameServer {
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.gameStartInfo,
+          gameStartInfo: this.wireGameStartInfo,
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
@@ -966,18 +971,38 @@ export class GameServer {
   }
 
   public gameInfo(): GameInfo {
+    const friendsFor = this.buildFriendsLookup();
+    const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: hideClanTags ? null : (c.clanTag ?? null),
         clientID: c.clientID,
+        friends: friendsFor(c),
       })),
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+    };
+  }
+
+  // Maps each active client's publicId-based friends list to in-game
+  // clientIDs, dropping friends not present in this game. Returns undefined
+  // when no friends are present so the field can be omitted from the wire
+  // payload.
+  private buildFriendsLookup(): (client: Client) => ClientID[] | undefined {
+    const publicIdToClientID = new Map<string, ClientID>();
+    for (const c of this.activeClients) {
+      if (c.publicId) publicIdToClientID.set(c.publicId, c.clientID);
+    }
+    return (client: Client) => {
+      const friendClientIDs = client.friends
+        .map((pid) => publicIdToClientID.get(pid))
+        .filter((id): id is ClientID => id !== undefined);
+      return friendClientIDs.length > 0 ? friendClientIDs : undefined;
     };
   }
 

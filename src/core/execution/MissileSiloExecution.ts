@@ -18,6 +18,11 @@ export class MissileSiloExecution implements Execution {
       return;
     }
 
+    if (!this.silo.isActive()) {
+      this.active = false;
+      return;
+    }
+
     // frontTime is the time the earliest missile fired.
     const frontTime = this.silo.missileTimerQueue()[0];
     if (frontTime === undefined) {
