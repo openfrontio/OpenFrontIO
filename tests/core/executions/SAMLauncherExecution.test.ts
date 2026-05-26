@@ -268,4 +268,20 @@ describe("SAM", () => {
 
     expect(sam.missileTimerQueue()).toHaveLength(0);
   });
+
+  test("setTrajectoryIndex keeps index at zero for empty trajectories", async () => {
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+      targetTile: game.ref(2, 1),
+      trajectory: [],
+    });
+
+    expect(() => nuke.setTrajectoryIndex(-1)).not.toThrow();
+    expect(nuke.trajectoryIndex()).toBe(0);
+
+    expect(() => nuke.setTrajectoryIndex(0)).not.toThrow();
+    expect(nuke.trajectoryIndex()).toBe(0);
+
+    expect(() => nuke.setTrajectoryIndex(5)).not.toThrow();
+    expect(nuke.trajectoryIndex()).toBe(0);
+  });
 });
