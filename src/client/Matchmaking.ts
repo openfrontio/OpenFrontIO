@@ -7,6 +7,7 @@ import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { IdentityReadyController } from "./identity/IdentityReadyController";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
@@ -204,6 +205,7 @@ export class MatchmakingModal extends BaseModal {
 @customElement("matchmaking-button")
 export class MatchmakingButton extends LitElement {
   @state() private isLoggedIn = false;
+  private identity = new IdentityReadyController(this);
 
   constructor() {
     super();
@@ -226,12 +228,20 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
+    const disabled = this.isLoggedIn && !this.identity.ready;
+    const title = disabled
+      ? this.identity.validating
+        ? translateText("username.tag_checking")
+        : translateText("matchmaking_modal.title")
+      : translateText("matchmaking_modal.title");
     return this.isLoggedIn
       ? html`
           <button
             @click="${this.handleLoggedInClick}"
-            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
-            title="${translateText("matchmaking_modal.title")}"
+            ?disabled=${disabled}
+            aria-busy=${this.identity.validating ? "true" : "false"}
+            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600"
+            title="${title}"
           >
             <span class="relative z-10 text-2xl">
               ${translateText("matchmaking_button.play_ranked")}

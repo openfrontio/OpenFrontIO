@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { getUserMe, hasLinkedAccount } from "../Api";
 import { userAuth } from "../Auth";
+import { IdentityReadyController } from "../identity/IdentityReadyController";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
 import { modalHeader } from "./ui/ModalHeader";
@@ -14,6 +15,7 @@ export class RankedModal extends BaseModal {
   @state() private elo: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
+  private identity = new IdentityReadyController(this);
 
   constructor() {
     super();
@@ -118,10 +120,16 @@ export class RankedModal extends BaseModal {
   }
 
   private renderCard(title: string, subtitle: string, onClick: () => void) {
+    const disabled = !this.identity.ready;
     return html`
       <button
         @click=${onClick}
-        class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-surface border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3"
+        ?disabled=${disabled}
+        title=${disabled && this.identity.validating
+          ? translateText("username.tag_checking")
+          : ""}
+        aria-busy=${this.identity.validating ? "true" : "false"}
+        class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-surface border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <div class="flex flex-col items-center gap-1 text-center">
           <h3

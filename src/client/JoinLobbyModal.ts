@@ -37,6 +37,7 @@ import "./components/CopyButton";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { IdentityReadyController } from "./identity/IdentityReadyController";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 
 @customElement("join-lobby-modal")
@@ -58,6 +59,7 @@ export class JoinLobbyModal extends BaseModal {
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
+  private identity = new IdentityReadyController(this);
   private handledJoinTimeout = false;
 
   private isPrivateLobby(): boolean {
@@ -250,9 +252,14 @@ export class JoinLobbyModal extends BaseModal {
               ></o-button>
             </div>
             <o-button
-              title=${translateText("private_lobby.join_lobby")}
+              title=${
+                this.identity.validating
+                  ? translateText("username.tag_checking")
+                  : translateText("private_lobby.join_lobby")
+              }
               width="block"
               submit
+              ?disable=${!this.identity.ready}
             ></o-button>
           </div>
         </div>
@@ -891,6 +898,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private async joinLobbyFromInput(e: SubmitEvent): Promise<void> {
     e.preventDefault();
+    // Guard against Enter-key submit while the identity gate hasn't cleared
+    // (the disabled button blocks click but not keyboard submission).
+    if (!this.identity.ready) return;
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
       this.showMessage(translateText("private_lobby.not_found"), "red");
