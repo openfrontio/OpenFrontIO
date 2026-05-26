@@ -229,11 +229,6 @@ export class MatchmakingButton extends LitElement {
 
   render() {
     const disabled = this.isLoggedIn && !this.identity.ready;
-    const title = disabled
-      ? this.identity.validating
-        ? translateText("username.tag_checking")
-        : translateText("matchmaking_modal.title")
-      : translateText("matchmaking_modal.title");
     return this.isLoggedIn
       ? html`
           <button
@@ -241,7 +236,7 @@ export class MatchmakingButton extends LitElement {
             ?disabled=${disabled}
             aria-busy=${this.identity.validating ? "true" : "false"}
             class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600"
-            title="${title}"
+            title="${translateText("matchmaking_modal.title")}"
           >
             <span class="relative z-10 text-2xl">
               ${translateText("matchmaking_button.play_ranked")}

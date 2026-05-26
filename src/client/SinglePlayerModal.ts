@@ -359,11 +359,7 @@ export class SinglePlayerModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            translationKey=${
-              this.identity.validating
-                ? "username.tag_checking"
-                : "single_modal.start"
-            }
+            translationKey="single_modal.start"
             ?disable=${!this.identity.ready}
             @click=${this.startGame}
           ></o-button>

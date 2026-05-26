@@ -252,11 +252,7 @@ export class JoinLobbyModal extends BaseModal {
               ></o-button>
             </div>
             <o-button
-              title=${
-                this.identity.validating
-                  ? translateText("username.tag_checking")
-                  : translateText("private_lobby.join_lobby")
-              }
+              title=${translateText("private_lobby.join_lobby")}
               width="block"
               submit
               ?disable=${!this.identity.ready}

@@ -47,16 +47,6 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
-  private identityTooltip(): string {
-    if (this.identity.validating) {
-      return translateText("username.tag_checking");
-    }
-    const { username, clanTag } = this.identity.state;
-    if (!username.valid) return username.error;
-    if (!clanTag.valid) return clanTag.error;
-    return "";
-  }
-
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
@@ -258,12 +248,10 @@ export class GameModeSelector extends LitElement {
     bgClass: string = CARD_BG,
   ) {
     const disabled = !this.identity.ready;
-    const tip = this.identityTooltip();
     return html`
       <button
         @click=${onClick}
         ?disabled=${disabled}
-        title=${disabled && tip ? tip : ""}
         aria-busy=${this.identity.validating ? "true" : "false"}
         class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:brightness-100"
       >
@@ -309,12 +297,10 @@ export class GameModeSelector extends LitElement {
     }
 
     const disabled = !this.identity.ready;
-    const tip = this.identityTooltip();
     return html`
       <button
         @click=${() => this.joinPublicLobby(lobby)}
         ?disabled=${disabled}
-        title=${disabled && tip ? tip : ""}
         aria-busy=${this.identity.validating ? "true" : "false"}
         class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
       >

@@ -125,9 +125,6 @@ export class RankedModal extends BaseModal {
       <button
         @click=${onClick}
         ?disabled=${disabled}
-        title=${disabled && this.identity.validating
-          ? translateText("username.tag_checking")
-          : ""}
         aria-busy=${this.identity.validating ? "true" : "false"}
         class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-surface border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
       >

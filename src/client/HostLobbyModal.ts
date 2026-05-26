@@ -419,11 +419,9 @@ export class HostLobbyModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            .title=${this.identity.validating
-              ? translateText("username.tag_checking")
-              : this.clients.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")}
+            .title=${this.clients.length === 1
+              ? translateText("host_modal.waiting")
+              : translateText("host_modal.start")}
             ?disable=${this.clients.length < 2 || !this.identity.ready}
             @click=${this.startGame}
           ></o-button>
