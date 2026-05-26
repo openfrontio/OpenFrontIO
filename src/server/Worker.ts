@@ -11,6 +11,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
+  GAME_ID_REGEX,
   GameID,
   PartialGameRecordSchema,
   ServerErrorMessage,
@@ -140,6 +141,9 @@ export async function startWorker() {
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;
+    if (!GAME_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Invalid game ID format" });
+    }
 
     // Extract persistentID from Authorization header token
     // Never accept persistentID directly from client
@@ -209,15 +213,22 @@ export async function startWorker() {
 
   app.get("/api/game/:id/exists", async (req, res) => {
     const lobbyId = req.params.id;
+    if (!GAME_ID_REGEX.test(lobbyId)) {
+      return res.status(400).json({ error: "Invalid game ID format" });
+    }
     res.json({
       exists: gm.game(lobbyId) !== null,
     });
   });
 
   app.get("/api/game/:id", async (req, res) => {
-    const game = gm.game(req.params.id);
+    const id = req.params.id;
+    if (!GAME_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Invalid game ID format" });
+    }
+    const game = gm.game(id);
     if (game === null) {
-      log.info(`lobby ${req.params.id} not found`);
+      log.info(`lobby ${id} not found`);
       return res.status(404).json({ error: "Game not found" });
     }
     res.json(game.gameInfo());
@@ -336,6 +347,24 @@ export async function startWorker() {
           return;
         }
 
+        // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
+        let { clanTag: censoredClanTag, username: censoredUsername } =
+          privilegeRefresher
+            .get()
+            .censor(clientMsg.username, clientMsg.clanTag ?? null);
+
+        if (claims === null) {
+          // If the user is unauthenticated (anonymous guest), generate a deterministic guest name.
+          // Clan tag is cleared for guests to prevent impersonation.
+          const cleanUuid = persistentId.replace(/-/g, "").toLowerCase();
+          const decimal = BigInt(`0x${cleanUuid}`);
+          const threeDigits = decimal % 1000n;
+          censoredUsername = "Anon" + threeDigits.toString().padStart(3, "0");
+          censoredClanTag = null;
+        }
+
         if (clientMsg.type === "rejoin") {
           log.info("rejoining game", {
             gameID: clientMsg.gameID,
@@ -346,6 +375,10 @@ export async function startWorker() {
             persistentId,
             clientMsg.gameID,
             clientMsg.lastTurn,
+            {
+              username: censoredUsername,
+              clanTag: censoredClanTag,
+            },
           );
           if (!wasFound) {
             log.warn(
@@ -355,14 +388,6 @@ export async function startWorker() {
           }
           return;
         }
-
-        // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
-        const { clanTag: censoredClanTag, username: censoredUsername } =
-          privilegeRefresher
-            .get()
-            .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
         // Try to reconnect an existing client (e.g., page refresh)
         // If successful, skip all authorization
