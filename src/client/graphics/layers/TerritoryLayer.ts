@@ -8,8 +8,10 @@ import {
 import { TransformHandler } from "../TransformHandler";
 import { ClassicTerritoryBackend } from "./ClassicTerritoryBackend";
 import {
+  TERRITORY_RENDERER_STATUS_EVENT,
   TerritoryBackend,
   TerritoryRendererId,
+  TerritoryRendererStatus,
   selectTerritoryBackend,
   territoryRendererOrder,
 } from "./TerritoryBackend";
@@ -25,6 +27,7 @@ export class TerritoryLayer implements TerritoryBackend {
   private initialized = false;
   private readonly settingsChanged = () => {
     this.failedBackends.clear();
+    this.publishStatus("Retrying renderer selection");
     void this.selectConfiguredBackend();
   };
 
@@ -51,7 +54,10 @@ export class TerritoryLayer implements TerritoryBackend {
     );
 
     // Keep the map visible while accelerated renderers initialize.
-    this.activateBackend(this.createBackend("classic"));
+    this.activateBackend(
+      this.createBackend("classic"),
+      "Using Classic while accelerated renderer initializes",
+    );
     void this.selectConfiguredBackend();
   }
 
@@ -122,6 +128,8 @@ export class TerritoryLayer implements TerritoryBackend {
 
     if (selection.backend !== null) {
       this.activateBackend(selection.backend);
+    } else {
+      this.publishStatus("No territory renderer is currently available");
     }
   }
 
@@ -161,7 +169,10 @@ export class TerritoryLayer implements TerritoryBackend {
     }
   }
 
-  private activateBackend(backend: TerritoryBackend) {
+  private activateBackend(
+    backend: TerritoryBackend,
+    message: string | null = null,
+  ) {
     if (this.activeBackend === backend) {
       return;
     }
@@ -169,6 +180,7 @@ export class TerritoryLayer implements TerritoryBackend {
     this.activeBackend = backend;
     previous?.dispose?.();
     console.info(`[TerritoryLayer] active renderer: ${backend.id}`);
+    this.publishStatus(message);
   }
 
   private runActive(
@@ -196,6 +208,7 @@ export class TerritoryLayer implements TerritoryBackend {
     if (backend.id !== "classic") {
       this.failedBackends.add(backend.id);
     }
+    this.publishStatus(`${backend.id} failed: ${reason}`);
     if (this.activeBackend === backend) {
       this.activeBackend = null;
       backend.dispose?.();
@@ -240,5 +253,18 @@ export class TerritoryLayer implements TerritoryBackend {
     context.fillStyle = this.game.config().theme().backgroundColor().toHex();
     context.fillRect(0, 0, context.canvas.width, context.canvas.height);
     context.restore();
+  }
+
+  private publishStatus(message: string | null = null) {
+    const detail: TerritoryRendererStatus = {
+      active: this.activeBackend?.id ?? null,
+      preference: this.userSettings.territoryRenderer(),
+      failedBackends: Array.from(this.failedBackends),
+      message,
+    };
+
+    globalThis.dispatchEvent?.(
+      new CustomEvent(TERRITORY_RENDERER_STATUS_EVENT, { detail }),
+    );
   }
 }

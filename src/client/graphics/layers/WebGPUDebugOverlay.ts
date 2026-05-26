@@ -48,7 +48,19 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   @state()
   private tickComputeMs: number = 0;
 
+  @state()
+  private position: { x: number; y: number } | null = null;
+
+  @state()
+  private isDragging = false;
+
   private frameTimes: number[] = [];
+  private dragState: {
+    pointerId: number;
+    offsetX: number;
+    offsetY: number;
+  } | null = null;
+  private readonly positionStorageKey = "webgpuDebugOverlay.position.v1";
 
   static styles = css`
     .overlay {
@@ -71,6 +83,10 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       user-select: none;
     }
 
+    .overlay.dragging {
+      opacity: 0.72;
+    }
+
     .title {
       font-weight: 700;
       margin-bottom: 8px;
@@ -78,6 +94,12 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .overlay.dragging .title {
+      cursor: grabbing;
     }
 
     .metrics {
@@ -154,6 +176,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   `;
 
   init() {
+    this.restorePosition();
     this.eventBus.on(WebGPUComputeMetricsEvent, (e) => {
       if (typeof e.computeMs === "number" && Number.isFinite(e.computeMs)) {
         this.tickComputeMs = e.computeMs;
@@ -161,6 +184,11 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       }
     });
     this.requestUpdate();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.endDrag();
   }
 
   updateFrameMetrics(frameDurationMs: number): void {
@@ -301,6 +329,118 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     `;
   }
 
+  private restorePosition() {
+    try {
+      const raw = localStorage.getItem(this.positionStorageKey);
+      if (!raw) {
+        return;
+      }
+      const parsed = JSON.parse(raw) as { x: unknown; y: unknown };
+      if (
+        typeof parsed.x === "number" &&
+        typeof parsed.y === "number" &&
+        Number.isFinite(parsed.x) &&
+        Number.isFinite(parsed.y)
+      ) {
+        this.position = this.clampPosition(parsed.x, parsed.y);
+      }
+    } catch {
+      // Keep the default position.
+    }
+  }
+
+  private savePosition() {
+    if (!this.position) {
+      return;
+    }
+    try {
+      localStorage.setItem(
+        this.positionStorageKey,
+        JSON.stringify(this.position),
+      );
+    } catch {
+      // Position persistence is best-effort.
+    }
+  }
+
+  private clampPosition(x: number, y: number) {
+    const overlay = this.renderRoot.querySelector(
+      ".overlay",
+    ) as HTMLElement | null;
+    const width = overlay?.offsetWidth ?? 340;
+    const height = overlay?.offsetHeight ?? 420;
+    const margin = 8;
+    return {
+      x: Math.max(margin, Math.min(window.innerWidth - width - margin, x)),
+      y: Math.max(margin, Math.min(window.innerHeight - height - margin, y)),
+    };
+  }
+
+  private overlayStyle() {
+    if (!this.position) {
+      return "";
+    }
+    return `left: ${this.position.x}px; top: ${this.position.y}px;`;
+  }
+
+  private stopPointerEvent(event: PointerEvent) {
+    event.stopPropagation();
+  }
+
+  private handleDragPointerDown(event: PointerEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const overlay = this.renderRoot.querySelector(
+      ".overlay",
+    ) as HTMLElement | null;
+    if (!overlay) {
+      return;
+    }
+    const rect = overlay.getBoundingClientRect();
+    this.position = { x: rect.left, y: rect.top };
+    this.isDragging = true;
+    this.dragState = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+
+    globalThis.addEventListener("pointermove", this.handleDragPointerMove);
+    globalThis.addEventListener("pointerup", this.handleDragPointerUp);
+    globalThis.addEventListener("pointercancel", this.handleDragPointerUp);
+  }
+
+  private readonly handleDragPointerMove = (event: PointerEvent) => {
+    if (!this.dragState || event.pointerId !== this.dragState.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.position = this.clampPosition(
+      event.clientX - this.dragState.offsetX,
+      event.clientY - this.dragState.offsetY,
+    );
+  };
+
+  private readonly handleDragPointerUp = (event: PointerEvent) => {
+    if (!this.dragState || event.pointerId !== this.dragState.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.savePosition();
+    this.endDrag();
+  };
+
+  private endDrag() {
+    globalThis.removeEventListener("pointermove", this.handleDragPointerMove);
+    globalThis.removeEventListener("pointerup", this.handleDragPointerUp);
+    globalThis.removeEventListener("pointercancel", this.handleDragPointerUp);
+    this.dragState = null;
+    this.isDragging = false;
+  }
+
   render() {
     if (!this.userSettings || !this.userSettings.webgpuDebug()) {
       return null;
@@ -323,8 +463,12 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       TERRITORY_POST_SMOOTHING[0];
 
     return html`
-      <div class="overlay">
-        <div class="title">
+      <div
+        class="overlay ${this.isDragging ? "dragging" : ""}"
+        style=${this.overlayStyle()}
+        @pointerdown=${this.stopPointerEvent}
+      >
+        <div class="title" @pointerdown=${this.handleDragPointerDown}>
           <div>WebGPU Debug</div>
         </div>
 

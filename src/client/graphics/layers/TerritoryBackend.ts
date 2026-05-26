@@ -2,6 +2,8 @@ import { Layer } from "./Layer";
 
 export type TerritoryRendererId = "classic" | "webgl" | "webgpu";
 export type TerritoryRendererPreference = "auto" | TerritoryRendererId;
+export const TERRITORY_RENDERER_STATUS_EVENT =
+  "event:territory-renderer-status";
 
 export const TERRITORY_RENDERER_OPTIONS: TerritoryRendererPreference[] = [
   "auto",
@@ -15,6 +17,13 @@ export interface TerritoryBackend extends Layer {
   dispose?: () => void;
   getFailureReason?: () => string | null;
   whenReady?: () => Promise<boolean>;
+}
+
+export interface TerritoryRendererStatus {
+  active: TerritoryRendererId | null;
+  preference: TerritoryRendererPreference;
+  failedBackends: TerritoryRendererId[];
+  message: string | null;
 }
 
 export interface TerritoryBackendCandidate {

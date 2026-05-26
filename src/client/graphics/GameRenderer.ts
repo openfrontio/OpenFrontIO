@@ -33,6 +33,7 @@ import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
+import { RendererStatusPanel } from "./layers/RendererStatusPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
@@ -252,6 +253,15 @@ export function createRenderer(
   webgpuDebugOverlay.userSettings = userSettings;
   webgpuDebugOverlay.requestUpdate();
 
+  const rendererStatusPanel = document.querySelector(
+    "renderer-status-panel",
+  ) as RendererStatusPanel;
+  if (!(rendererStatusPanel instanceof RendererStatusPanel)) {
+    console.error("renderer status panel not found");
+  }
+  rendererStatusPanel.userSettings = userSettings;
+  rendererStatusPanel.requestUpdate();
+
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -285,6 +295,7 @@ export function createRenderer(
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
+    rendererStatusPanel,
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, eventBus, transformHandler, uiState),
     new CoordinateGridLayer(game, eventBus, transformHandler),
