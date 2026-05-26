@@ -651,6 +651,17 @@ export class SinglePlayerModal extends BaseModal {
       "clan-tag-input",
     ) as ClanTagInput | null;
 
+    // Validate identity before dispatching/closing so a failed clan-tag
+    // ownership check keeps the modal open with the user's configured game
+    // settings intact rather than silently dropping them.
+    if (clanTagInput) {
+      await clanTagInput.awaitValidation();
+      if (!clanTagInput.validateOrShowError()) return;
+    }
+    if (usernameInput && !usernameInput.validateOrShowError()) {
+      return;
+    }
+
     await crazyGamesSDK.requestMidgameAd();
 
     this.dispatchEvent(

@@ -150,20 +150,30 @@ export class ClanTagInput extends LitElement {
       this.ownershipError = "";
       localStorage.setItem(clanTagKey, "");
       this.currentCheck = Promise.resolve();
-    } else if (options.immediate) {
-      // Initial mount / non-typing trigger — no input to coalesce, run now.
-      this.currentCheck = this.checkOwnership(tag);
     } else {
-      const debounce = new Promise<void>((resolve) => {
-        this.resolveDebounce = resolve;
-      });
-      this.checkTimer = setTimeout(() => {
-        this.checkTimer = null;
-        const resolve = this.resolveDebounce;
-        this.resolveDebounce = null;
-        resolve?.();
-      }, CLAN_OWNERSHIP_DEBOUNCE_MS);
-      this.currentCheck = debounce.then(() => this.checkOwnership(tag));
+      // Snapshot the generation so cancelled debounce chains skip the API
+      // round-trip entirely — checkOwnership's internal stillCurrent() only
+      // fires after getUserMe() has already returned.
+      const generation = this.checkCounter;
+      const run = (): Promise<void> => {
+        if (generation !== this.checkCounter) return Promise.resolve();
+        return this.checkOwnership(tag);
+      };
+      if (options.immediate) {
+        // Initial mount / non-typing trigger — no input to coalesce, run now.
+        this.currentCheck = run();
+      } else {
+        const debounce = new Promise<void>((resolve) => {
+          this.resolveDebounce = resolve;
+        });
+        this.checkTimer = setTimeout(() => {
+          this.checkTimer = null;
+          const resolve = this.resolveDebounce;
+          this.resolveDebounce = null;
+          resolve?.();
+        }, CLAN_OWNERSHIP_DEBOUNCE_MS);
+        this.currentCheck = debounce.then(run);
+      }
     }
 
     this.refreshError();
