@@ -2,14 +2,14 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
+import "../../components/CosmeticButton";
+import { Controller } from "../../Controller";
 import {
   fetchCosmetics,
   purchaseCosmetic,
   ResolvedCosmetic,
 } from "../../Cosmetics";
 import { translateText } from "../../Utils";
-import "../../components/CosmeticButton";
-import { Controller } from "../../Controller";
 
 export class ShowSkinTestModalEvent {
   constructor(
