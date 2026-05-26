@@ -533,6 +533,10 @@ export class Config {
   }
 
   percentageTilesOwnedToWin(): number {
+    const override = this._gameConfig.percentageTilesOwnedToWin;
+    if (override !== undefined && override !== null) {
+      return override;
+    }
     if (this._gameConfig.gameMode === GameMode.Team) {
       return 95;
     }

@@ -12,7 +12,6 @@ import {
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, findClosestBy, replacer } from "../core/Util";
-import { TestSkinExecution } from "../core/execution/TestSkinExecution";
 import {
   BuildableUnit,
   PlayerType,
@@ -51,6 +50,7 @@ import {
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { SkinTestController } from "./SkinTestController";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -68,7 +68,6 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { ShowSkinTestModalEvent } from "./hud/layers/SkinTestWinModal";
 import { GameView as WebGLGameView } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
@@ -535,7 +534,7 @@ export class ClientGameRunner {
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
-  private testSkinExecution: TestSkinExecution | null = null;
+  private skinTestController: SkinTestController | null = null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -557,13 +556,8 @@ export class ClientGameRunner {
   }
 
   private stopSkinTest() {
-    if (this.testSkinExecution !== null) {
-      try {
-        this.testSkinExecution.stop();
-      } finally {
-        this.testSkinExecution = null;
-      }
-    }
+    this.skinTestController?.stop();
+    this.skinTestController = null;
   }
   /**
    * Determines whether window closing should be prevented.
@@ -626,32 +620,18 @@ export class ClientGameRunner {
     }, 20000);
 
     if (this.lobby.isSkinTest) {
-      // Set game speed to maximum
       this.eventBus.emit(
         new ReplaySpeedChangeEvent(ReplaySpeedMultiplier.fastest),
       );
-
-      // Clean up any prior skin test resources, then set a new timeout and start a fresh execution
       this.stopSkinTest();
-
-      // Start a fresh TestSkinExecution which manages its own modal timeout
-      this.testSkinExecution = new TestSkinExecution(
+      this.skinTestController = new SkinTestController(
         this.gameView,
         this.clientID!,
-        () => this.isActive,
-        () => {
-          // Called when execution requests the modal be shown — stop the game and
-          // clean up resources first.
-          this.stop();
-        },
-        (targetID, troops) =>
-          this.eventBus.emit(new SendAttackIntentEvent(targetID, troops)),
-        (patternName, colorPalette) =>
-          this.eventBus.emit(
-            new ShowSkinTestModalEvent(patternName, colorPalette),
-          ),
+        this.eventBus,
+        this.renderer.skinTestWinModal,
+        () => this.stop(),
       );
-      this.testSkinExecution.start();
+      this.skinTestController.start();
     }
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
@@ -713,8 +693,8 @@ export class ClientGameRunner {
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
         if (this.lobby.isSkinTest) {
-          // For skin tests, show the modal immediately on win instead of waiting
-          this.testSkinExecution?.showModal();
+          // Skin tests: show the modal immediately on win instead of saving the game.
+          this.skinTestController?.showModal();
         } else {
           this.saveGame(gu.updates[GameUpdateType.Win][0]);
         }

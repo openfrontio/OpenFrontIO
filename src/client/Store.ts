@@ -12,6 +12,7 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { GameConfig } from "../core/Schemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticButton";
 import "./components/NotLoggedInWarning";
@@ -25,6 +26,52 @@ import {
 import { translateText } from "./Utils";
 
 type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
+
+// Units the player cannot build during a skin preview — keeps focus on the
+// pattern itself rather than late-game mechanics.
+const SKIN_TEST_DISABLED_UNITS: UnitType[] = [
+  UnitType.City,
+  UnitType.Factory,
+  UnitType.Port,
+  UnitType.MissileSilo,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.Warship,
+];
+
+function buildSkinTestGameConfig(): GameConfig {
+  return {
+    gameMap: GameMapType.Iceland,
+    gameMapSize: GameMapSize.Compact,
+    gameType: GameType.Singleplayer,
+    gameMode: GameMode.FFA,
+    difficulty: Difficulty.Easy,
+    nations: "disabled",
+    bots: 0,
+    donateGold: false,
+    donateTroops: false,
+    instantBuild: false,
+    randomSpawn: true,
+    infiniteGold: true,
+    infiniteTroops: true,
+    startingTroops: 10_000_000,
+    percentageTilesOwnedToWin: 99,
+    disabledUnits: SKIN_TEST_DISABLED_UNITS,
+  };
+}
+
+function patternDisplayName(name: string): string {
+  const translation = translateText(`territory_patterns.pattern.${name}`);
+  if (!translation.startsWith("territory_patterns.pattern."))
+    return translation;
+  return name
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -71,22 +118,6 @@ export class StoreModal extends BaseModal {
     const clientID = this.userMeResponse.player.publicId;
     const gameID = pattern.name;
 
-    const selectedPattern = {
-      name: pattern.name,
-      patternData: pattern.pattern,
-      colorPalette: colorPalette ?? undefined,
-    };
-
-    const translation = translateText(
-      `territory_patterns.pattern.${pattern.name}`,
-    );
-    const displayName = translation.startsWith("territory_patterns.pattern.")
-      ? pattern.name
-          .split("_")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ")
-      : translation;
-
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -99,42 +130,17 @@ export class StoreModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: displayName,
+                username: patternDisplayName(pattern.name),
                 cosmetics: {
-                  pattern: selectedPattern,
+                  pattern: {
+                    name: pattern.name,
+                    patternData: pattern.pattern,
+                    colorPalette: colorPalette ?? undefined,
+                  },
                 },
               },
             ],
-            config: {
-              gameMap: GameMapType.Iceland,
-              gameMapSize: GameMapSize.Compact,
-              gameType: GameType.Singleplayer,
-              gameMode: GameMode.FFA,
-              playerTeams: 1,
-              bots: 0,
-              difficulty: Difficulty.Easy,
-              donateGold: false,
-              donateTroops: false,
-              instantBuild: false,
-              randomSpawn: true,
-              disableNations: true,
-              infiniteGold: true,
-              infiniteTroops: true,
-              startingTroops: 10_000_000,
-              percentageTilesOwnedToWin: 99,
-              disabledUnits: [
-                UnitType.City,
-                UnitType.Factory,
-                UnitType.Port,
-                UnitType.MissileSilo,
-                UnitType.DefensePost,
-                UnitType.SAMLauncher,
-                UnitType.AtomBomb,
-                UnitType.HydrogenBomb,
-                UnitType.MIRV,
-                UnitType.Warship,
-              ],
-            },
+            config: buildSkinTestGameConfig(),
             lobbyCreatedAt: Date.now(),
           },
         },

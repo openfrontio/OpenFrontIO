@@ -166,12 +166,9 @@ export function createRenderer(
   winModal.eventBus = eventBus;
   winModal.game = game;
 
-  const skinTestWinModal = document.querySelector(
-    "skin-test-win-modal",
-  ) as SkinTestWinModal;
-  if (skinTestWinModal instanceof SkinTestWinModal) {
-    skinTestWinModal.eventBus = eventBus;
-  }
+  const skinTestWinModalEl = document.querySelector("skin-test-win-modal");
+  const skinTestWinModal =
+    skinTestWinModalEl instanceof SkinTestWinModal ? skinTestWinModalEl : null;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -315,7 +312,6 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     winModal,
-    skinTestWinModal,
     replayPanel,
     settingsModal,
     teamStats,
@@ -332,6 +328,7 @@ export function createRenderer(
     uiState,
     layers,
     performanceOverlay,
+    skinTestWinModal,
   );
 }
 
@@ -343,6 +340,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Controller[],
     private performanceOverlay: PerformanceOverlay,
+    public readonly skinTestWinModal: SkinTestWinModal | null,
   ) {}
 
   initialize() {

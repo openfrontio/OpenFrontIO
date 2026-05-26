@@ -56,8 +56,13 @@ describe("TerritoryPatternsModal", () => {
   let modal: TerritoryPatternsModal;
 
   beforeEach(async () => {
-    if (typeof (globalThis as any).localStorage?.getItem !== "function") {
-      let store: Record<string, string> = {};
+    // Reset between tests: JSDOM may persist its real localStorage across
+    // tests, and the previous fallback closure persists its own `store`.
+    // Either way, clear before each run.
+    if (typeof (globalThis as any).localStorage?.clear === "function") {
+      (globalThis as any).localStorage.clear();
+    } else {
+      const store: Record<string, string> = {};
       Object.defineProperty(globalThis, "localStorage", {
         value: {
           getItem: (k: string) => (k in store ? store[k] : null),
@@ -68,7 +73,7 @@ describe("TerritoryPatternsModal", () => {
             delete store[k];
           },
           clear: () => {
-            store = {};
+            for (const key of Object.keys(store)) delete store[key];
           },
         },
         configurable: true,

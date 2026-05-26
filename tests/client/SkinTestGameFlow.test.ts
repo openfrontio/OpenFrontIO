@@ -5,7 +5,6 @@ vi.mock("../../src/client/Utils", () => ({
   getSvgAspectRatio: async () => 1,
 }));
 
-// Avoid any audio side effects.
 vi.mock("../../src/client/sound/SoundManager", () => ({
   SoundManager: vi.fn().mockImplementation(() => ({
     playBackgroundMusic: vi.fn(),
@@ -18,12 +17,12 @@ const purchaseCosmeticMock = vi.fn();
 vi.mock("../../src/client/Cosmetics", () => ({
   fetchCosmetics: (...args: any[]) => fetchCosmeticsMock(...args),
   purchaseCosmetic: (...args: any[]) => purchaseCosmeticMock(...args),
-  // Not needed in this suite
   patternRelationship: () => "blocked",
   resolveCosmetics: () => [],
 }));
 
-// Mock CosmeticButton so SkinTestWinModal can render a purchase click target in JSDOM.
+// Mock CosmeticButton so the modal can render a clickable purchase target in
+// JSDOM without dragging in real canvas rendering.
 vi.mock("../../src/client/components/CosmeticButton", () => {
   class CosmeticButton extends HTMLElement {
     private _resolved: any = null;
@@ -68,9 +67,7 @@ vi.mock("../../src/client/components/CosmeticButton", () => {
     customElements.define("cosmetic-button", CosmeticButton);
   }
 
-  return {
-    CosmeticButton,
-  };
+  return { CosmeticButton };
 });
 
 import { ClientGameRunner } from "../../src/client/ClientGameRunner";
@@ -93,11 +90,11 @@ const makeCosmetics = () =>
 
 describe("Skin test game flow", () => {
   let modal: SkinTestWinModal;
+  let runner: ClientGameRunner | null = null;
 
   beforeEach(async () => {
     fetchCosmeticsMock.mockResolvedValue(makeCosmetics());
 
-    // Ensure the skin test win modal exists in DOM.
     if (!customElements.get("skin-test-win-modal")) {
       customElements.define("skin-test-win-modal", SkinTestWinModal);
     }
@@ -108,25 +105,23 @@ describe("Skin test game flow", () => {
   });
 
   afterEach(() => {
+    runner?.stop();
+    runner = null;
     document.body.removeChild(modal);
     vi.clearAllMocks();
   });
 
-  it("when a skin-test game ends (win update), it shows the buy modal and purchase calls handlePurchase", async () => {
-    // Minimal stubs for runner dependencies.
-    // Use a real EventBus so the modal can subscribe to events.
+  it("shows the buy modal on game-end and routes purchase through the modal", async () => {
     const { EventBus } = await import("../../src/core/EventBus");
     const eventBus = new EventBus();
-    modal.eventBus = eventBus;
 
     const renderer = {
       initialize: vi.fn(),
       tick: vi.fn(),
+      skinTestWinModal: modal,
     } as any;
 
-    const input = {
-      initialize: vi.fn(),
-    } as any;
+    const input = { initialize: vi.fn() } as any;
 
     const transport = {
       turnComplete: vi.fn(),
@@ -147,10 +142,7 @@ describe("Skin test game flow", () => {
 
     const myPlayer = {
       cosmetics: {
-        pattern: {
-          name: "purch_pattern",
-          colorPalette: null,
-        },
+        pattern: { name: "purch_pattern", colorPalette: null },
       },
       troops: () => 1000,
       clientID: () => "client123",
@@ -180,7 +172,7 @@ describe("Skin test game flow", () => {
       },
     } as any;
 
-    const runner = new ClientGameRunner(
+    runner = new ClientGameRunner(
       lobby,
       "client123",
       eventBus,
@@ -189,18 +181,13 @@ describe("Skin test game flow", () => {
       transport,
       worker,
       gameView,
-      { playBackgroundMusic: vi.fn() } as any,
-      {} as any, // userSettings
-    ) as any;
+      { playBackgroundMusic: vi.fn(), dispose: vi.fn() } as any,
+      {} as any,
+    );
 
-    // Seed the private myPlayer field so showSkinTestModal can resolve the pattern.
-    runner.myPlayer = myPlayer;
-
-    // Start the runner so it registers the worker callback.
     runner.start();
     expect(workerCallback).toBeTruthy();
 
-    // Simulate the game ending via a Win update.
     const updates: any[] = [];
     updates[GameUpdateType.Hash] = [];
     updates[GameUpdateType.Win] = [
@@ -219,13 +206,13 @@ describe("Skin test game flow", () => {
       tickExecutionDuration: 0,
     });
 
-    // showSkinTestModal() is async (fetchCosmetics + lit updates). Give the
-    // microtask queue a moment, then await the next render.
+    // showByName() is async (fetchCosmetics + lit updates); wait for the
+    // microtask queue to drain, then for the next render.
     await new Promise((r) => setTimeout(r, 0));
     await modal.updateComplete;
     expect(modal.isVisible).toBe(true);
 
-    // PatternButton is also a custom element; give it a tick to render.
+    // The mock cosmetic-button is also a custom element; let it render.
     await new Promise((r) => setTimeout(r, 0));
 
     const buyBtn = modal.querySelector(
