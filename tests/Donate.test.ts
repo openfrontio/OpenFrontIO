@@ -124,6 +124,59 @@ describe("Donate gold to an ally", () => {
     expect(donor.gold() < donorGoldBefore).toBe(true);
     expect(recipient.gold() > recipientGoldBefore).toBe(true);
   });
+
+  it("defaults to one-third of gold when amount is null", async () => {
+    const game = await setup("ocean_and_land", {
+      infiniteGold: false,
+      donateGold: true,
+    });
+    const gameID: GameID = "game_id";
+
+    const donorInfo = new PlayerInfo(
+      "donor",
+      PlayerType.Human,
+      null,
+      "donor_id",
+    );
+    const recipientInfo = new PlayerInfo(
+      "recipient",
+      PlayerType.Human,
+      null,
+      "recipient_id",
+    );
+
+    game.addPlayer(donorInfo);
+    game.addPlayer(recipientInfo);
+
+    const donor = game.player(donorInfo.id);
+    const recipient = game.player(recipientInfo.id);
+
+    const spawnA = game.ref(0, 10);
+    const spawnB = game.ref(0, 15);
+
+    game.addExecution(
+      new SpawnExecution(gameID, donorInfo, spawnA),
+      new SpawnExecution(gameID, recipientInfo, spawnB),
+    );
+
+    const allianceRequest = donor.createAllianceRequest(recipient);
+    if (allianceRequest) {
+      allianceRequest.accept();
+    }
+    game.executeNextTick();
+
+    donor.addGold(9000n);
+    const donorGoldBefore = donor.gold();
+    const recipientGoldBefore = recipient.gold();
+    game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, null));
+
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+
+    expect(donor.gold()).toBeLessThan(donorGoldBefore);
+    expect(recipient.gold()).toBeGreaterThan(recipientGoldBefore);
+  });
 });
 
 describe("Donate troops to a non ally", () => {

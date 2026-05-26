@@ -479,6 +479,10 @@ export class UnitImpl implements Unit {
   }
 
   setTrajectoryIndex(i: number): void {
+    if (this._trajectory.length === 0) {
+      this._trajectoryIndex = 0;
+      return;
+    }
     const max = this._trajectory.length - 1;
     this._trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
   }
