@@ -71,9 +71,9 @@ void main() {
     }
   }
 
-  // Hover highlight: brighten every tile owned by the hovered player.
+  // Hover highlight: bump alpha on every tile owned by the hovered player.
   if (uHighlightOwner != 0u && owner == uHighlightOwner) {
-    color.rgb = mix(color.rgb, vec3(1.0), uHighlightBrighten);
+    color.a = 130.0 / 255.0;
   }
 
   fragColor = color;

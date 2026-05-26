@@ -185,7 +185,7 @@ export class WebGLFrameBuilder {
     this.palette[fillOff] = fillRgba.r / 255;
     this.palette[fillOff + 1] = fillRgba.g / 255;
     this.palette[fillOff + 2] = fillRgba.b / 255;
-    this.palette[fillOff + 3] = 150 / 255;
+    this.palette[fillOff + 3] = 120 / 255;
 
     const borderRgba = border.toRgb();
     const borderOff = PALETTE_SIZE * 4 + smallID * 4;
