@@ -239,3 +239,51 @@ describe("Donate Gold to a non ally", () => {
     expect(recipient.gold() >= recipientGoldBefore).toBe(true);
   });
 });
+
+describe("Self donation prevention", () => {
+  it("Should evaluate isFriendly(this) to true but disallow donating to self", async () => {
+    const game = await setup("ocean_and_land", {
+      infiniteGold: false,
+      infiniteTroops: false,
+      donateGold: true,
+      donateTroops: true,
+    });
+    const gameID: GameID = "game_id";
+
+    // Create a player with team=0/null (default/FFA)
+    const playerInfo = new PlayerInfo(
+      "player_self",
+      PlayerType.Human,
+      null,
+      "self_id",
+    );
+    game.addPlayer(playerInfo);
+
+    const player = game.player(playerInfo.id);
+    const spawnA = game.ref(0, 10);
+
+    game.addExecution(new SpawnExecution(gameID, playerInfo, spawnA));
+    game.executeNextTick();
+
+    // Assert player.isFriendly(player) === true
+    expect(player.isFriendly(player)).toBe(true);
+
+    // Assert canDonateGold and canDonateTroops return false for self
+    expect(player.canDonateGold(player)).toBe(false);
+    expect(player.canDonateTroops(player)).toBe(false);
+
+    // Try executing DonateGoldExecution and DonateTroopsExecution on self
+    player.addGold(1000n);
+    player.addTroops(1000);
+    const goldBefore = player.gold();
+    const troopsBefore = player.troops();
+
+    game.addExecution(new DonateGoldExecution(player, player.id(), 500));
+    game.addExecution(new DonateTroopsExecution(player, player.id(), 500));
+    game.executeNextTick();
+
+    // Verify no changes occurred to gold or troops (execution failed/aborted)
+    expect(player.gold()).toBe(goldBefore);
+    expect(player.troops()).toBe(troopsBefore);
+  });
+});
