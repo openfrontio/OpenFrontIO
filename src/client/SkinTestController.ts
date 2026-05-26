@@ -1,5 +1,5 @@
 import { EventBus } from "../core/EventBus";
-import { GameView, PlayerView } from "../core/game/GameView";
+import { GameView } from "../core/game/GameView";
 import { ClientID } from "../core/Schemas";
 import { SkinTestWinModal } from "./hud/layers/SkinTestWinModal";
 import { SendAttackIntentEvent } from "./Transport";
@@ -7,6 +7,7 @@ import { SendAttackIntentEvent } from "./Transport";
 const INITIAL_ATTACK_DELAY_MS = 100;
 const MAX_PLAYER_LOOKUP_RETRIES = 50;
 const MODAL_TIMEOUT_MS = 120_000;
+const INITIAL_ATTACK_TROOPS = 1_000_000;
 
 /**
  * Client-side controller for the "preview a skin" singleplayer game.
@@ -17,7 +18,6 @@ const MODAL_TIMEOUT_MS = 120_000;
  * the EventBus + DOM — neither of which belong in src/core.
  */
 export class SkinTestController {
-  private myPlayer: PlayerView | null = null;
   private attackTimer: ReturnType<typeof setTimeout> | null = null;
   private modalTimer: ReturnType<typeof setTimeout> | null = null;
   private lookupRetries = 0;
@@ -70,19 +70,16 @@ export class SkinTestController {
 
   private runAttack(): void {
     if (!this.active) return;
-    if (this.myPlayer === null) {
-      const found = this.gameView.playerByClientID(this.clientID);
-      if (found === null) {
-        if (++this.lookupRetries >= MAX_PLAYER_LOOKUP_RETRIES) {
-          console.error("Skin test: gave up finding player");
-          return;
-        }
-        this.scheduleAttack();
+    // Wait for the player to exist in the GameView before firing — gives the
+    // worker time to addPlayer() once the spawn execution runs.
+    if (this.gameView.playerByClientID(this.clientID) === null) {
+      if (++this.lookupRetries >= MAX_PLAYER_LOOKUP_RETRIES) {
+        console.error("Skin test: gave up finding player");
         return;
       }
-      this.myPlayer = found;
+      this.scheduleAttack();
+      return;
     }
-    const troops = Math.floor(this.myPlayer.troops() / 2);
-    this.eventBus.emit(new SendAttackIntentEvent(null, troops));
+    this.eventBus.emit(new SendAttackIntentEvent(null, INITIAL_ATTACK_TROOPS));
   }
 }

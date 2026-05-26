@@ -40,14 +40,14 @@ describe("SkinTestController", () => {
     return { controller, onAttack, modal, onPreviewEnded };
   }
 
-  it("schedules an initial attack with half the player's troops", () => {
+  it("schedules an initial attack with a fixed troop count", () => {
     const { controller, onAttack } = makeController();
     controller.start();
     vi.advanceTimersByTime(200);
     expect(onAttack).toHaveBeenCalledTimes(1);
     expect(onAttack.mock.calls[0][0]).toMatchObject({
       targetID: null,
-      troops: 50,
+      troops: 1_000_000,
     });
   });
 
