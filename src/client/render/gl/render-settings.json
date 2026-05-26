@@ -23,7 +23,7 @@
     "contrastHiHot": 0,
     "metaFreq": 0.02,
     "intensityCold": 0.15,
-    "intensityHot": 0.6,
+    "intensityHot": 1.8,
     "metaInfluenceCold": 1,
     "metaInfluenceHot": 0,
     "opacityFadeEnd": 1,
@@ -31,7 +31,18 @@
     "bloomG": 0.8196078431372549,
     "bloomB": 0,
     "bloomCoverage": 1.1,
-    "heatDecayPerTick": 1
+    "heatDecayPerTick": 1,
+    "particleColorDarkR": 0.05,
+    "particleColorDarkG": 0.4,
+    "particleColorDarkB": 0.05,
+    "particleColorBrightR": 0.2,
+    "particleColorBrightG": 1,
+    "particleColorBrightB": 0.2,
+    "particleThresholdUnowned": 0.85,
+    "particleThresholdOwned": 0.875,
+    "particleFlickerSpeed": 0.2,
+    "particleStrength": 1,
+    "particleFreshScale": 0.2
   },
   "dayNight": {
     "mode": "light",
@@ -53,19 +64,12 @@
   "mapOverlay": {
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
-    "charcoalBase": 0,
-    "charcoalVariation": 0.05,
-    "charcoalAlpha": 0.87,
-    "emberThresholdUnowned": 0.85,
-    "emberThresholdOwned": 0.875,
-    "emberFlickerSpeed": 0.12,
-    "emberColorDarkR": 0.6,
-    "emberColorDarkG": 0.15,
-    "emberColorDarkB": 0,
-    "emberColorBrightR": 1,
-    "emberColorBrightG": 0.5,
-    "emberColorBrightB": 0.05,
-    "emberStrengthUnowned": 0.5,
+    "staleNukeBase": 0,
+    "staleNukeVariation": 0.05,
+    "staleNukeAlpha": 1,
+    "staleNukeR": 0.05,
+    "staleNukeG": 0.55,
+    "staleNukeB": 0.07,
     "highlightBrighten": 0.25,
     "highlightFillBrighten": 0.15,
     "highlightThicken": 2,
@@ -74,8 +78,8 @@
     "friendlyTintRatio": 0.35
   },
   "railroad": {
-    "railMinZoom": 2,
-    "railDetailZoom": 4,
+    "railMinZoom": 4,
+    "railDetailZoom": 6,
     "railAlpha": 1
   },
   "structure": {
@@ -161,7 +165,7 @@
     "outlineUsePlayerColor": false,
     "fillUsePlayerColor": true,
     "emojiRowOffset": 1.4,
-    "statusRowOffset": 2.5
+    "statusRowOffset": 1.4
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
@@ -251,7 +255,7 @@
     "gradientSolidEnd": 0.1
   },
   "altView": {
-    "gridFontSize": 16,
+    "gridFontSize": 24,
     "recolorStructures": true
   },
   "tileDrip": {

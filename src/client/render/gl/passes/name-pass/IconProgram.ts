@@ -1,31 +1,36 @@
 /**
  * IconProgram — instanced flag + emoji icons beside player names.
  *
- * Owns: shader program, uniform locations, flag atlas + emoji atlas textures.
- * The shared playerDataTex is passed in but not owned/deleted.
+ * Owns the shader program and the emoji atlas texture. The flag texture is a
+ * sampler2DArray populated at runtime by FlagAtlasArray (passed in, not owned).
+ * The shared playerDataTex is also passed in but not owned/deleted.
  */
 
 import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
-import flagAtlasMeta from "resources/atlases/flag-atlas-meta.json";
 import { assetUrl } from "src/core/AssetUrls";
 import type { RenderSettings } from "../../RenderSettings";
 import iconFragSrc from "../../shaders/name/icon.frag.glsl?raw";
 import iconVertSrc from "../../shaders/name/icon.vert.glsl?raw";
 import { createProgram } from "../../utils/GlUtils";
+import type { FlagAtlasArray } from "./FlagAtlasArray";
 import type { ParsedAtlas } from "./Types";
 
 const emojiAtlasUrl = assetUrl("atlases/emoji-atlas.png");
-const flagAtlasUrl = assetUrl("atlases/flag-atlas.png");
+
+// Must match FLAG_CELL_W / FLAG_CELL_H in FlagAtlasArray.ts. Used only for
+// world-space aspect ratio of the flag quad.
+const FLAG_CELL_W = 128;
+const FLAG_CELL_H = 85;
 
 export class IconProgram {
   private gl: WebGL2RenderingContext;
   private program: WebGLProgram;
   private playerDataTex: WebGLTexture;
+  private flagAtlas: FlagAtlasArray;
   private maxPlayers: number;
 
-  private flagAtlasTex: WebGLTexture | null = null;
   private emojiAtlasTex: WebGLTexture | null = null;
-  private iconsReady = false;
+  private emojiReady = false;
 
   // Dynamic uniform locations
   private uCamera: WebGLUniformLocation;
@@ -40,10 +45,12 @@ export class IconProgram {
     gl: WebGL2RenderingContext,
     atlas: ParsedAtlas,
     playerDataTex: WebGLTexture,
+    flagAtlas: FlagAtlasArray,
     maxPlayers: number,
   ) {
     this.gl = gl;
     this.playerDataTex = playerDataTex;
+    this.flagAtlas = flagAtlas;
     this.maxPlayers = maxPlayers;
 
     this.program = createProgram(gl, iconVertSrc, iconFragSrc);
@@ -55,20 +62,19 @@ export class IconProgram {
     gl.uniform1i(gl.getUniformLocation(this.program, "uEmojiAtlas"), 2);
 
     // Static uniforms from atlas metadata
-    const fm = flagAtlasMeta as any;
     const em = emojiAtlasMeta as any;
     gl.uniform1f(
       gl.getUniformLocation(this.program, "uFontSize")!,
       atlas.fontSize,
     );
     gl.uniform1f(gl.getUniformLocation(this.program, "uFontBase")!, atlas.base);
-    gl.uniform1f(gl.getUniformLocation(this.program, "uFlagCellW")!, fm.cellW);
-    gl.uniform1f(gl.getUniformLocation(this.program, "uFlagCellH")!, fm.cellH);
-    gl.uniform1f(gl.getUniformLocation(this.program, "uFlagCols")!, fm.cols);
-    gl.uniform1f(gl.getUniformLocation(this.program, "uFlagAtlasW")!, fm.width);
     gl.uniform1f(
-      gl.getUniformLocation(this.program, "uFlagAtlasH")!,
-      fm.height,
+      gl.getUniformLocation(this.program, "uFlagCellW")!,
+      FLAG_CELL_W,
+    );
+    gl.uniform1f(
+      gl.getUniformLocation(this.program, "uFlagCellH")!,
+      FLAG_CELL_H,
     );
     gl.uniform1f(
       gl.getUniformLocation(this.program, "uEmojiCell")!,
@@ -102,52 +108,34 @@ export class IconProgram {
       "uEmojiRowOffset",
     )!;
 
-    this.loadAtlases();
+    this.loadEmojiAtlas();
   }
 
   get ready(): boolean {
-    return this.iconsReady;
+    return this.emojiReady;
   }
 
-  private loadAtlases(): void {
+  private loadEmojiAtlas(): void {
     const gl = this.gl;
-    const load = (url: string, cb: (tex: WebGLTexture) => void) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const tex = gl.createTexture()!;
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texParameteri(
-          gl.TEXTURE_2D,
-          gl.TEXTURE_MIN_FILTER,
-          gl.LINEAR_MIPMAP_LINEAR,
-        );
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          0,
-          gl.RGBA,
-          gl.RGBA,
-          gl.UNSIGNED_BYTE,
-          img,
-        );
-        gl.generateMipmap(gl.TEXTURE_2D);
-        cb(tex);
-      };
-      img.src = url;
-    };
-    load(flagAtlasUrl, (tex) => {
-      this.flagAtlasTex = tex;
-      this.iconsReady =
-        this.flagAtlasTex !== null && this.emojiAtlasTex !== null;
-    });
-    load(emojiAtlasUrl, (tex) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const tex = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(
+        gl.TEXTURE_2D,
+        gl.TEXTURE_MIN_FILTER,
+        gl.LINEAR_MIPMAP_LINEAR,
+      );
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.generateMipmap(gl.TEXTURE_2D);
       this.emojiAtlasTex = tex;
-      this.iconsReady =
-        this.flagAtlasTex !== null && this.emojiAtlasTex !== null;
-    });
+      this.emojiReady = true;
+    };
+    img.src = emojiAtlasUrl;
   }
 
   draw(
@@ -155,7 +143,7 @@ export class IconProgram {
     settings: RenderSettings,
     vao: WebGLVertexArrayObject,
   ): void {
-    if (!this.iconsReady) return;
+    if (!this.emojiReady) return;
 
     const gl = this.gl;
     const ns = settings.name;
@@ -172,7 +160,7 @@ export class IconProgram {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.playerDataTex);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.flagAtlasTex!);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.flagAtlas.texture);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.emojiAtlasTex!);
 
@@ -183,7 +171,6 @@ export class IconProgram {
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.program);
-    if (this.flagAtlasTex) gl.deleteTexture(this.flagAtlasTex);
     if (this.emojiAtlasTex) gl.deleteTexture(this.emojiAtlasTex);
   }
 }

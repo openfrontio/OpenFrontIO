@@ -1,6 +1,6 @@
 import { Colord } from "colord";
 import { base64url } from "jose";
-import { extractFlagName } from "../core/AssetUrls";
+import { assetUrl } from "../core/AssetUrls";
 import { decodePatternData } from "../core/PatternDecoder";
 import { PlayerType } from "../core/game/Game";
 import { GameView } from "../core/game/GameView";
@@ -41,6 +41,12 @@ export class WebGLFrameBuilder {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
     this.patternMeta = new Float32Array(PALETTE_SIZE * 4);
     this.patternData = new Uint8Array(PALETTE_SIZE * 1024);
+  }
+
+  /** Drop internal caches to force a full re-upload of state on the next update(). */
+  clearCaches(): void {
+    this.knownSmallIDs.clear();
+    this.localPlayerSmallID = 0;
   }
 
   update(gameView: GameView): void {
@@ -128,10 +134,11 @@ export class WebGLFrameBuilder {
 
       this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
 
-      let flag = p.cosmetics.flag;
-      if (flag) {
-        flag = extractFlagName(flag);
-      }
+      // p.cosmetics.flag has already been server-resolved to either a full URL
+      // or a relative asset path (e.g. "/flags/US.svg" or a CDN URL for a
+      // custom flag). assetUrl() passes URLs through and rewrites paths.
+      const flagRef = p.cosmetics.flag;
+      const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
 
       const pattern = p.cosmetics.pattern;
       if (pattern && pattern.patternData) {
@@ -154,7 +161,7 @@ export class WebGLFrameBuilder {
 
       newPlayers.push({
         ...p.static,
-        flag: flag,
+        flag: flagUrl,
         color: p.territoryColor().toHex(),
       });
     }

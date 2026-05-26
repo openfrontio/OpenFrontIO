@@ -11,7 +11,7 @@ export interface GPUResources {
   tileTex: WebGLTexture; // R16UI  — tile ownership + flags
   trailTex: WebGLTexture; // R8UI   — trail owner per tile
   paletteTex: WebGLTexture; // RGBA32F — player colors
-  borderTex: WebGLTexture; // RGBA8  — border type + ember + defense
+  borderTex: WebGLTexture; // RGBA8  — border type + defense + relation (G unused)
   heatTexA: WebGLTexture; // R8     — fallout heat ping-pong A
   heatTexB: WebGLTexture; // R8     — fallout heat ping-pong B
 }

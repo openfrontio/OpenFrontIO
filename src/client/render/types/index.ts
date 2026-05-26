@@ -61,7 +61,7 @@ export type {
 } from "./Replay";
 
 // Game update type constants and event payloads (shared between shim + codec)
-export { GameUpdateType, MessageType } from "./GameUpdates";
+export { GameUpdateType } from "./GameUpdates";
 export type {
   AllianceExpiredUpdate,
   AllianceReplyUpdate,

@@ -57,6 +57,13 @@ export class FalloutBloomPass {
   private uMetaInfluenceHot: WebGLUniformLocation;
   private uOpacityFadeEnd: WebGLUniformLocation;
   private uBloomColor: WebGLUniformLocation;
+  private uParticleColorDark: WebGLUniformLocation;
+  private uParticleColorBright: WebGLUniformLocation;
+  private uParticleThresholdUnowned: WebGLUniformLocation;
+  private uParticleThresholdOwned: WebGLUniformLocation;
+  private uParticleFlickerSpeed: WebGLUniformLocation;
+  private uParticleStrength: WebGLUniformLocation;
+  private uParticleFreshScale: WebGLUniformLocation;
 
   // Uniforms — composite
   private uCompositeCam: WebGLUniformLocation;
@@ -147,6 +154,34 @@ export class FalloutBloomPass {
       "uOpacityFadeEnd",
     )!;
     this.uBloomColor = gl.getUniformLocation(this.extractProg, "uBloomColor")!;
+    this.uParticleColorDark = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleColorDark",
+    )!;
+    this.uParticleColorBright = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleColorBright",
+    )!;
+    this.uParticleThresholdUnowned = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleThresholdUnowned",
+    )!;
+    this.uParticleThresholdOwned = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleThresholdOwned",
+    )!;
+    this.uParticleFlickerSpeed = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleFlickerSpeed",
+    )!;
+    this.uParticleStrength = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleStrength",
+    )!;
+    this.uParticleFreshScale = gl.getUniformLocation(
+      this.extractProg,
+      "uParticleFreshScale",
+    )!;
     gl.useProgram(this.extractProg);
     gl.uniform1i(gl.getUniformLocation(this.extractProg, "uTileTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.extractProg, "uHeatTex"), 1);
@@ -257,6 +292,23 @@ export class FalloutBloomPass {
     gl.uniform1f(this.uMetaInfluenceHot, fb.metaInfluenceHot);
     gl.uniform1f(this.uOpacityFadeEnd, fb.opacityFadeEnd);
     gl.uniform3f(this.uBloomColor, fb.bloomR, fb.bloomG, fb.bloomB);
+    gl.uniform3f(
+      this.uParticleColorDark,
+      fb.particleColorDarkR,
+      fb.particleColorDarkG,
+      fb.particleColorDarkB,
+    );
+    gl.uniform3f(
+      this.uParticleColorBright,
+      fb.particleColorBrightR,
+      fb.particleColorBrightG,
+      fb.particleColorBrightB,
+    );
+    gl.uniform1f(this.uParticleThresholdUnowned, fb.particleThresholdUnowned);
+    gl.uniform1f(this.uParticleThresholdOwned, fb.particleThresholdOwned);
+    gl.uniform1f(this.uParticleFlickerSpeed, fb.particleFlickerSpeed);
+    gl.uniform1f(this.uParticleStrength, fb.particleStrength);
+    gl.uniform1f(this.uParticleFreshScale, fb.particleFreshScale);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);

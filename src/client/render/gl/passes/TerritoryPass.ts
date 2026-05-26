@@ -1,9 +1,9 @@
 /**
- * TerritoryPass — territory fill + fallout charcoal ground.
+ * TerritoryPass — territory fill + stale-nuke ground.
  *
  * Draws only what should be darkened by the night cycle:
  *   - Owned territory (player color fill)
- *   - Unowned fallout (charcoal ground)
+ *   - Any fallout tile (stale-nuke ground, overrides owned territory)
  *
  * No borders, embers, trails, or defense checkerboard — those are
  * handled by BorderStampPass and TrailPass at full brightness.
@@ -31,9 +31,10 @@ export class TerritoryPass {
   private uCamera: WebGLUniformLocation;
   private uMapSize: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
-  private uCharcoalBase: WebGLUniformLocation;
-  private uCharcoalVariation: WebGLUniformLocation;
-  private uCharcoalAlpha: WebGLUniformLocation;
+  private uStaleNukeBase: WebGLUniformLocation;
+  private uStaleNukeVariation: WebGLUniformLocation;
+  private uStaleNukeAlpha: WebGLUniformLocation;
+  private uStaleNukeColor: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
@@ -103,14 +104,21 @@ export class TerritoryPass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
-    this.uCharcoalBase = gl.getUniformLocation(this.program, "uCharcoalBase")!;
-    this.uCharcoalVariation = gl.getUniformLocation(
+    this.uStaleNukeBase = gl.getUniformLocation(
       this.program,
-      "uCharcoalVariation",
+      "uStaleNukeBase",
     )!;
-    this.uCharcoalAlpha = gl.getUniformLocation(
+    this.uStaleNukeVariation = gl.getUniformLocation(
       this.program,
-      "uCharcoalAlpha",
+      "uStaleNukeVariation",
+    )!;
+    this.uStaleNukeAlpha = gl.getUniformLocation(
+      this.program,
+      "uStaleNukeAlpha",
+    )!;
+    this.uStaleNukeColor = gl.getUniformLocation(
+      this.program,
+      "uStaleNukeColor",
     )!;
     this.uHighlightOwner = gl.getUniformLocation(
       this.program,
@@ -186,18 +194,28 @@ export class TerritoryPass {
   drainDripBucket(): void {
     const bucket = this.dripBuckets[this.currentBucket];
     if (bucket.length > 0) {
-      const w = this.mapW;
-      let minRow = this.dirtyRowMin;
-      let maxRow = this.dirtyRowMax;
-      for (let i = 0; i < bucket.length; i += 2) {
-        const ref = bucket[i];
-        this.cpuTileState[ref] = bucket[i + 1];
-        const row = (ref / w) | 0;
-        if (row < minRow) minRow = row;
-        if (row > maxRow) maxRow = row;
+      const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
+
+      if (isFullUploadPending) {
+        // Full upload pending: skip tracking dirty rows, just flush data
+        for (let i = 0; i < bucket.length; i += 2) {
+          this.cpuTileState[bucket[i]] = bucket[i + 1];
+        }
+      } else {
+        const w = this.mapW;
+        let minRow = this.dirtyRowMin;
+        let maxRow = this.dirtyRowMax;
+        for (let i = 0; i < bucket.length; i += 2) {
+          const ref = bucket[i];
+          this.cpuTileState[ref] = bucket[i + 1];
+          const row = (ref / w) | 0;
+          if (row < minRow) minRow = row;
+          if (row > maxRow) maxRow = row;
+        }
+        this.dirtyRowMin = minRow;
+        this.dirtyRowMax = maxRow;
       }
-      this.dirtyRowMin = minRow;
-      this.dirtyRowMax = maxRow;
+
       bucket.length = 0;
       this.tilesDirty = true;
     }
@@ -209,26 +227,41 @@ export class TerritoryPass {
    * seek so tile state pops to current sim state without the 60Hz stagger.
    */
   flushAllDripBuckets(): void {
-    const w = this.mapW;
-    let minRow = this.dirtyRowMin;
-    let maxRow = this.dirtyRowMax;
     let any = false;
-    for (let b = 0; b < this.nBuckets; b++) {
-      const bucket = this.dripBuckets[b];
-      if (bucket.length === 0) continue;
-      any = true;
-      for (let i = 0; i < bucket.length; i += 2) {
-        const ref = bucket[i];
-        this.cpuTileState[ref] = bucket[i + 1];
-        const row = (ref / w) | 0;
-        if (row < minRow) minRow = row;
-        if (row > maxRow) maxRow = row;
+    const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
+
+    if (isFullUploadPending) {
+      for (let b = 0; b < this.nBuckets; b++) {
+        const bucket = this.dripBuckets[b];
+        if (bucket.length === 0) continue;
+        any = true;
+        for (let i = 0; i < bucket.length; i += 2) {
+          this.cpuTileState[bucket[i]] = bucket[i + 1];
+        }
+        bucket.length = 0;
       }
-      bucket.length = 0;
-    }
-    if (any) {
+    } else {
+      const w = this.mapW;
+      let minRow = this.dirtyRowMin;
+      let maxRow = this.dirtyRowMax;
+      for (let b = 0; b < this.nBuckets; b++) {
+        const bucket = this.dripBuckets[b];
+        if (bucket.length === 0) continue;
+        any = true;
+        for (let i = 0; i < bucket.length; i += 2) {
+          const ref = bucket[i];
+          this.cpuTileState[ref] = bucket[i + 1];
+          const row = (ref / w) | 0;
+          if (row < minRow) minRow = row;
+          if (row > maxRow) maxRow = row;
+        }
+        bucket.length = 0;
+      }
       this.dirtyRowMin = minRow;
       this.dirtyRowMax = maxRow;
+    }
+
+    if (any) {
       this.tilesDirty = true;
     }
   }
@@ -337,7 +370,7 @@ export class TerritoryPass {
     this.highlightOwner = ownerID;
   }
 
-  /** Draw territory fill + fallout charcoal. Blending must be enabled by caller. */
+  /** Draw territory fill + stale-nuke ground. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
     this.flushTileTexture();
 
@@ -348,9 +381,15 @@ export class TerritoryPass {
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
-    gl.uniform1f(this.uCharcoalBase, mo.charcoalBase);
-    gl.uniform1f(this.uCharcoalVariation, mo.charcoalVariation);
-    gl.uniform1f(this.uCharcoalAlpha, mo.charcoalAlpha);
+    gl.uniform1f(this.uStaleNukeBase, mo.staleNukeBase);
+    gl.uniform1f(this.uStaleNukeVariation, mo.staleNukeVariation);
+    gl.uniform1f(this.uStaleNukeAlpha, mo.staleNukeAlpha);
+    gl.uniform3f(
+      this.uStaleNukeColor,
+      mo.staleNukeR,
+      mo.staleNukeG,
+      mo.staleNukeB,
+    );
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
     gl.uniform1i(

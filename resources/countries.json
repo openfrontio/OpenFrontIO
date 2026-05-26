@@ -202,6 +202,11 @@
     "name": "Australia"
   },
   {
+    "code": "Azad Kashmir",
+    "continent": "Asia",
+    "name": "Azad Kashmir"
+  },
+  {
     "code": "az",
     "continent": "Asia",
     "name": "Azerbaijan"
@@ -1074,6 +1079,11 @@
     "code": "jm",
     "continent": "North America",
     "name": "Jamaica"
+  },
+  {
+    "code": "Jammu and Kashmir",
+    "continent": "Asia",
+    "name": "Jammu and Kashmir"
   },
   {
     "code": "jp",
@@ -2069,6 +2079,11 @@
     "code": "sl",
     "continent": "Africa",
     "name": "Sierra Leone"
+  },
+  {
+    "code": "Sikkim",
+    "continent": "Asia",
+    "name": "Sikkim"
   },
   {
     "code": "sg",

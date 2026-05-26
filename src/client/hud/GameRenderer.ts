@@ -7,9 +7,12 @@ import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { StructureHighlightController } from "../controllers/StructureHighlightController";
+import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
+import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
 import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
@@ -50,8 +53,6 @@ export function createRenderer(
   const uiState: UIState = {
     attackRatio: 20,
     ghostStructure: null,
-    overlappingRailroads: [],
-    ghostRailPaths: [],
     rocketDirectionUp: true,
   };
 
@@ -119,6 +120,16 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const actionableEvents = document.querySelector(
+    "actionable-events",
+  ) as ActionableEvents;
+  if (!(actionableEvents instanceof ActionableEvents)) {
+    console.error("actionable events not found");
+  }
+  actionableEvents.eventBus = eventBus;
+  actionableEvents.game = game;
+  actionableEvents.uiState = uiState;
 
   const attacksDisplay = document.querySelector(
     "attacks-display",
@@ -261,10 +272,20 @@ export function createRenderer(
 
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
-    new BuildPreviewController(game, eventBus, uiState, transformHandler, view),
+    new BuildPreviewController(
+      game,
+      eventBus,
+      uiState,
+      transformHandler,
+      view,
+      userSettings,
+    ),
     new HoverHighlightController(game, eventBus, transformHandler, view),
+    new StructureHighlightController(eventBus, view),
+    new ViewModeController(eventBus, view),
     new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
     eventsDisplay,
+    actionableEvents,
     attacksDisplay,
     chatDisplay,
     buildMenu,

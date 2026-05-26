@@ -34,39 +34,76 @@ import { GPURenderer } from "./Renderer";
 import type { RenderSettings } from "./RenderSettings";
 
 export class GameView {
-  private renderer: GPURenderer;
+  private renderer: GPURenderer | null = null;
   private resizeObs: ResizeObserver | null = null;
 
   private listeners = new Map<string, Set<(e: unknown) => void>>();
+  private cachedIcons: { key: string; img: CanvasImageSource }[] = [];
+
+  // Stored for context recreation
+  private cachedOnFrame: ((ms: number) => void) | null = null;
+  private cachedAfterRender: ((canvas: HTMLCanvasElement) => void) | null =
+    null;
 
   constructor(
-    canvas: HTMLCanvasElement,
-    header: RendererConfig,
-    terrainBytes: Uint8Array,
-    paletteData: Float32Array,
-    raf?: typeof requestAnimationFrame,
-    caf?: typeof cancelAnimationFrame,
+    private canvas: HTMLCanvasElement,
+    private header: RendererConfig,
+    private terrainBytes: Uint8Array,
+    private paletteData: Float32Array,
+    private raf?: typeof requestAnimationFrame,
+    private caf?: typeof cancelAnimationFrame,
   ) {
-    this.renderer = new GPURenderer(
-      canvas,
-      header,
-      terrainBytes,
-      paletteData,
-      raf,
-      caf,
-    );
+    this.initRenderer();
 
     this.resizeObs = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) this.renderer.resize(width, height);
+        if (width > 0 && height > 0) this.renderer?.resize(width, height);
       }
     });
     this.resizeObs.observe(canvas);
 
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
+    canvas.addEventListener("webglcontextlost", this.onContextLost, false);
+    canvas.addEventListener(
+      "webglcontextrestored",
+      this.onContextRestored,
+      false,
+    );
   }
+
+  private initRenderer = () => {
+    this.renderer = new GPURenderer(
+      this.canvas,
+      this.header,
+      this.terrainBytes,
+      this.paletteData,
+      this.raf,
+      this.caf,
+    );
+
+    // Restore cached state
+    if (this.cachedIcons.length > 0) {
+      this.renderer.registerRadialMenuIcons(this.cachedIcons);
+    }
+    this.renderer.onFrame = this.cachedOnFrame;
+    this.renderer.afterRender = this.cachedAfterRender;
+
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
+  };
+
+  private onContextLost = (e: Event) => {
+    e.preventDefault();
+    if (this.renderer) {
+      this.renderer.dispose();
+      this.renderer = null;
+    }
+  };
+
+  private onContextRestored = () => {
+    this.initRenderer();
+    this.emit("contextrestored", { type: "restored" });
+  };
 
   // ---- Event system ----
 
@@ -106,51 +143,52 @@ export class GameView {
     items: RadialMenuItem[],
     centerItem?: RadialMenuItem,
   ): void {
-    this.renderer.showRadialMenu(screenX, screenY, items, centerItem);
+    this.renderer?.showRadialMenu(screenX, screenY, items, centerItem);
   }
 
   hideRadialMenu(): void {
-    this.renderer.hideRadialMenu();
+    this.renderer?.hideRadialMenu();
   }
 
   openRadialSubMenu(subItems: RadialMenuItem[]): void {
-    this.renderer.openRadialSubMenu(subItems);
+    this.renderer?.openRadialSubMenu(subItems);
   }
 
   goBackRadialMenu(): void {
-    this.renderer.goBackRadialMenu();
+    this.renderer?.goBackRadialMenu();
   }
 
   get radialMenuVisible(): boolean {
-    return this.renderer.radialMenuVisible;
+    return this.renderer?.radialMenuVisible ?? false;
   }
   registerRadialMenuIcons(
     icons: { key: string; img: CanvasImageSource }[],
   ): void {
-    this.renderer.registerRadialMenuIcons(icons);
+    this.cachedIcons = icons;
+    this.renderer?.registerRadialMenuIcons(icons);
   }
 
   // ---- Camera ----
 
   screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-    return this.renderer.screenToWorld(screenX, screenY);
+    return this.renderer?.screenToWorld(screenX, screenY) ?? { x: 0, y: 0 };
   }
 
   worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
-    return this.renderer.worldToScreen(worldX, worldY);
+    return this.renderer?.worldToScreen(worldX, worldY) ?? { x: 0, y: 0 };
   }
 
   panTo(worldX: number, worldY: number): void {
-    this.renderer.panTo(worldX, worldY);
+    this.renderer?.panTo(worldX, worldY);
   }
   zoomTo(level: number): void {
-    this.renderer.zoomTo(level);
+    this.renderer?.zoomTo(level);
   }
   fitMap(): void {
-    this.renderer.fitMap();
+    this.renderer?.fitMap();
   }
   focusOwner(ownerID: number): void {
-    this.renderer.focusOwner(ownerID);
+    this.renderer?.focusOwner(ownerID);
   }
 
   focusBBox(
@@ -160,19 +198,19 @@ export class GameView {
     maxY: number,
     padding?: number,
   ): void {
-    this.renderer.focusBBox(minX, minY, maxX, maxY, padding);
+    this.renderer?.focusBBox(minX, minY, maxX, maxY, padding);
   }
 
   getCameraState(): { x: number; y: number; z: number } {
-    return this.renderer.getCameraState();
+    return this.renderer?.getCameraState() ?? { x: 0, y: 0, z: 1 };
   }
 
   setCameraState(x: number, y: number, z: number): void {
-    this.renderer.setCameraState(x, y, z);
+    this.renderer?.setCameraState(x, y, z);
   }
 
   getOwnerAtWorld(worldX: number, worldY: number): number {
-    return this.renderer.getOwnerAtWorld(worldX, worldY);
+    return this.renderer?.getOwnerAtWorld(worldX, worldY) ?? 0;
   }
 
   // ---- Data upload ----
@@ -183,7 +221,7 @@ export class GameView {
     nukeEvents?: Array<{ tick: number; tiles: number[] }>,
     currentTick?: number,
   ): void {
-    this.renderer.applyFullFrame(
+    this.renderer?.applyFullFrame(
       tileState,
       trailState,
       nukeEvents,
@@ -192,30 +230,30 @@ export class GameView {
   }
 
   applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
-    this.renderer.applyFullTiles(tileState, trailState);
+    this.renderer?.applyFullTiles(tileState, trailState);
   }
   applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
-    this.renderer.applyDelta(changedTiles, trailState);
+    this.renderer?.applyDelta(changedTiles, trailState);
   }
   uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
-    this.renderer.uploadLiveDelta(tileState, changedTiles);
+    this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
   uploadLiveTrailDelta(
     trailState: Uint8Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
-    this.renderer.uploadLiveTrailDelta(trailState, dirtyRowMin, dirtyRowMax);
+    this.renderer?.uploadLiveTrailDelta(trailState, dirtyRowMin, dirtyRowMax);
   }
   /** Upload full tile + trail state without resetting bloom (for live play). */
   uploadTileAndTrailState(
     tileState: Uint16Array,
     trailState: Uint8Array,
   ): void {
-    this.renderer.uploadTileAndTrailState(tileState, trailState);
+    this.renderer?.uploadTileAndTrailState(tileState, trailState);
   }
   updatePalette(paletteData: Float32Array): void {
-    this.renderer.updatePalette(paletteData);
+    this.renderer?.updatePalette(paletteData);
   }
   addPlayers(
     players: PlayerStatic[],
@@ -223,13 +261,13 @@ export class GameView {
     patternMeta: Float32Array,
     patternData: Uint8Array,
   ): void {
-    this.renderer.addPlayers(players, paletteData, patternMeta, patternData);
+    this.renderer?.addPlayers(players, paletteData, patternMeta, patternData);
   }
   uploadRailroadState(data: Uint8Array): void {
-    this.renderer.uploadRailroadState(data);
+    this.renderer?.uploadRailroadState(data);
   }
   updateUnits(units: Map<number, UnitState>, gameTick: number): void {
-    this.renderer.updateUnits(units, gameTick);
+    this.renderer?.updateUnits(units, gameTick);
   }
   updateNames(
     names: Map<string, NameEntry>,
@@ -237,122 +275,127 @@ export class GameView {
     snap: boolean,
     statusData?: Map<number, PlayerStatusData>,
   ): void {
-    this.renderer.updateNames(names, players, snap, statusData);
+    this.renderer?.updateNames(names, players, snap, statusData);
   }
   updateRelations(data: Uint8Array, size: number): void {
-    this.renderer.updateRelations(data, size);
+    this.renderer?.updateRelations(data, size);
   }
   updateStructures(units: Map<number, UnitState>): void {
-    this.renderer.updateStructures(units);
+    this.renderer?.updateStructures(units);
   }
   applyDeadUnits(deadUnits: DeadUnitFx[]): void {
-    this.renderer.applyDeadUnits(deadUnits);
+    this.renderer?.applyDeadUnits(deadUnits);
   }
   applyConquestEvents(events: ConquestFx[]): void {
-    this.renderer.applyConquestEvents(events);
+    this.renderer?.applyConquestEvents(events);
   }
   applyBonusEvents(events: BonusEvent[]): void {
-    this.renderer.applyBonusEvents(events);
+    this.renderer?.applyBonusEvents(events);
   }
   applyRailroadDust(tileRefs: number[]): void {
-    this.renderer.applyRailroadDust(tileRefs);
+    this.renderer?.applyRailroadDust(tileRefs);
   }
   /** Refresh terrain texels whose underlying terrain byte changed (water nukes). */
   applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
-    this.renderer.applyTerrainDelta(refs, terrainBytes);
+    this.renderer?.applyTerrainDelta(refs, terrainBytes);
   }
   updateAttackRings(rings: AttackRingInput[]): void {
-    this.renderer.updateAttackRings(rings);
+    this.renderer?.updateAttackRings(rings);
   }
   clearFx(): void {
-    this.renderer.clearFx();
+    this.renderer?.clearFx();
   }
   setFxTimeFn(fn: () => number): void {
-    this.renderer.setFxTimeFn(fn);
+    this.renderer?.setFxTimeFn(fn);
   }
 
   /** Update ghost structure preview (build-mode visualization). null = clear. */
   updateGhostPreview(data: GhostPreviewData | null): void {
-    this.renderer.updateGhostPreview(data);
+    this.renderer?.updateGhostPreview(data);
   }
 
   // ---- Nuke UI ----
 
   /** Update nuke trajectory preview arc. null = hide. */
   updateNukeTrajectory(data: NukeTrajectoryData | null): void {
-    this.renderer.updateNukeTrajectory(data);
+    this.renderer?.updateNukeTrajectory(data);
   }
 
   /** Update in-flight nuke target telegraph circles. */
   updateNukeTelegraphs(data: NukeTelegraphData[]): void {
-    this.renderer.updateNukeTelegraphs(data);
+    this.renderer?.updateNukeTelegraphs(data);
   }
 
   /** Update spawn phase overlay (tile highlights + breathing rings). */
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
-    this.renderer.updateSpawnOverlay(inSpawnPhase, centers);
+    this.renderer?.updateSpawnOverlay(inSpawnPhase, centers);
   }
 
   // ---- Selection box ----
 
   /** Show/hide the stippled selection box around a unit (warship selection). */
   setSelectedUnit(unitId: number | null): void {
-    this.renderer.setSelectedUnit(unitId);
+    this.renderer?.setSelectedUnit(unitId);
   }
 
   /** Set multiple selected units (multi-select). Pass [] to clear. */
   setSelectedUnits(unitIds: readonly number[]): void {
-    this.renderer.setSelectedUnits(unitIds);
+    this.renderer?.setSelectedUnits(unitIds);
   }
 
   /** Flash converging-chevron animation at a warship move target. */
   showMoveIndicator(tileX: number, tileY: number, ownerID: number): void {
-    this.renderer.showMoveIndicator(tileX, tileY, ownerID);
+    this.renderer?.showMoveIndicator(tileX, tileY, ownerID);
   }
 
   // ---- SAM radius (replay) ----
 
   setSAMRadiusVisible(visible: boolean): void {
-    this.renderer.setSAMRadiusVisible(visible);
+    this.renderer?.setSAMRadiusVisible(visible);
   }
   setSAMPerspective(playerID: number, allies: Set<number>): void {
-    this.renderer.setSAMPerspective(playerID, allies);
+    this.renderer?.setSAMPerspective(playerID, allies);
   }
   setSAMColorMode(mode: "perspective" | "owner"): void {
-    this.renderer.setSAMColorMode(mode);
+    this.renderer?.setSAMColorMode(mode);
   }
   setSAMAllianceClusters(clusters: Map<number, number>): void {
-    this.renderer.setSAMAllianceClusters(clusters);
+    this.renderer?.setSAMAllianceClusters(clusters);
   }
 
   // ---- Other ----
 
   setLocalPlayerID(id: number): void {
-    this.renderer.setLocalPlayerID(id);
+    this.renderer?.setLocalPlayerID(id);
   }
   setAltView(active: boolean): void {
-    this.renderer.setAltView(active);
+    this.renderer?.setAltView(active);
+  }
+  setGridView(active: boolean): void {
+    this.renderer?.setGridView(active);
   }
   setShowPatterns(active: boolean): void {
-    this.renderer.setShowPatterns(active);
+    this.renderer?.setShowPatterns(active);
   }
   setHighlightOwner(ownerID: number): void {
-    this.renderer.setHighlightOwner(ownerID);
+    this.renderer?.setHighlightOwner(ownerID);
   }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
-    this.renderer.setHighlightStructureTypes(unitTypes);
+    this.renderer?.setHighlightStructureTypes(unitTypes);
   }
   getSettings(): RenderSettings {
-    return this.renderer.getSettings();
+    return this.renderer?.getSettings() ?? ({} as RenderSettings);
   }
   get fps(): number {
-    return this.renderer.fps;
+    return this.renderer?.fps ?? 0;
   }
   set onFrame(cb: ((ms: number) => void) | null) {
-    this.renderer.onFrame = cb;
+    this.cachedOnFrame = cb;
+    if (this.renderer) this.renderer.onFrame = cb;
   }
   set afterRender(cb: ((canvas: HTMLCanvasElement) => void) | null) {
-    this.renderer.afterRender = cb;
+    this.cachedAfterRender = cb;
+    if (this.renderer) this.renderer.afterRender = cb;
   }
 
   // ---- Lifecycle ----
@@ -361,6 +404,11 @@ export class GameView {
     this.resizeObs?.disconnect();
     this.resizeObs = null;
     this.listeners.clear();
-    this.renderer.dispose();
+    this.renderer?.dispose();
+    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.removeEventListener(
+      "webglcontextrestored",
+      this.onContextRestored,
+    );
   }
 }
