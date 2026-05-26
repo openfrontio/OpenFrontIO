@@ -110,7 +110,15 @@ export class UserSettings {
     this.setCached(key, value);
   }
 
-  private getFloat(key: string, defaultValue: number): number {
+  get(key: string, defaultValue: boolean): boolean {
+    return this.getBool(key, defaultValue);
+  }
+
+  set(key: string, value: boolean): void {
+    this.setBool(key, value);
+  }
+
+  getFloat(key: string, defaultValue: number): number {
     const value = this.getCached(key);
     if (!value) return defaultValue;
 
@@ -119,7 +127,7 @@ export class UserSettings {
     return floatValue;
   }
 
-  private setFloat(key: string, value: number) {
+  setFloat(key: string, value: number) {
     this.setCached(key, value.toString());
   }
 
@@ -183,6 +191,10 @@ export class UserSettings {
 
   attackingTroopsOverlay() {
     return this.getBool("settings.attackingTroopsOverlay", true);
+  }
+
+  territoryBorderMode(): number {
+    return this.getInt("settings.territoryBorderMode", 1);
   }
 
   toggleAttackingTroopsOverlay() {

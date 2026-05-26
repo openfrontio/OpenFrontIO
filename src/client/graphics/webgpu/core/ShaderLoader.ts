@@ -4,7 +4,8 @@
  */
 
 const shaderSources = import.meta.glob("../shaders/**/*.wgsl", {
-  as: "raw",
+  query: "?raw",
+  import: "default",
   eager: true,
 }) as Record<string, string>;
 
