@@ -1,12 +1,18 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { generateCryptoRandomUUID, translateText } from "../client/Utils";
 import {
   MAX_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
-  validateUsername,
 } from "../core/validations/username";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { IdentityReadyController } from "./identity/IdentityReadyController";
+import {
+  getUsernameForSubmit,
+  initIdentityFromStorage,
+  revalidateIdentityTranslations,
+  setUsername,
+} from "./identity/IdentityStore";
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -14,100 +20,84 @@ interface LangSelectorLike {
   defaultTranslations?: Record<string, string>;
 }
 
-const usernameKey: string = "username";
-
 @customElement("username-input")
 export class UsernameInput extends LitElement {
-  @state() private baseUsername: string = "";
-
-  @property({ type: String }) validationError: string = "";
-  private _isValid: boolean = true;
-  private _lastValidatedLang: string | null = null;
+  private identity = new IdentityReadyController(this);
+  private lastTranslatedLang: string | null = null;
 
   createRenderRoot() {
-    // Disable shadow DOM to allow Tailwind classes to work
     return this;
   }
 
   public getUsername(): string {
-    return this.baseUsername.trim();
+    return getUsernameForSubmit();
+  }
+
+  public isValid(): boolean {
+    return this.identity.state.username.valid;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadStoredUsername();
+    initIdentityFromStorage();
+    // Fall back to an anonymous handle the first time a user shows up with
+    // nothing in storage, so the field isn't empty (which would fail
+    // validation immediately and block play).
+    if (getUsernameForSubmit().length === 0) {
+      setUsername(genAnonUsername());
+    }
     crazyGamesSDK.getUsername().then((username) => {
-      if (username) {
-        this.baseUsername = username;
-        this.validateAndStore();
-      }
+      if (username) setUsername(username);
     });
     crazyGamesSDK.addAuthListener((user) => {
-      if (user) {
-        this.baseUsername = user.username;
-        this.validateAndStore();
-      }
+      if (user) setUsername(user.username);
     });
   }
 
   protected updated(): void {
-    // Re-validate when translations become available or language changes,
-    // since initial validation may run before translations are loaded.
-    if (this.validationError) {
-      const langSelector = document.querySelector<LangSelectorLike & Element>(
-        "lang-selector",
-      );
-      const lang = langSelector?.currentLang;
-      const hasTranslations =
-        langSelector?.translations ?? langSelector?.defaultTranslations;
-      if (hasTranslations && lang && lang !== this._lastValidatedLang) {
-        this._lastValidatedLang = lang;
-        this.validateAndStore();
-      }
-    }
-  }
-
-  private loadStoredUsername() {
-    const storedUsername = localStorage.getItem(usernameKey);
-    if (storedUsername) {
-      this.baseUsername = storedUsername;
-      this.validateAndStore();
-    } else {
-      this.baseUsername = genAnonUsername();
-      this.validateAndStore();
+    const ls = document.querySelector<LangSelectorLike & Element>(
+      "lang-selector",
+    );
+    const lang = ls?.currentLang;
+    const hasTranslations = ls?.translations ?? ls?.defaultTranslations;
+    if (hasTranslations && lang && lang !== this.lastTranslatedLang) {
+      this.lastTranslatedLang = lang;
+      revalidateIdentityTranslations();
     }
   }
 
   render() {
+    const { value, error } = this.identity.state.username;
     return html`
       <div class="relative w-full h-full">
         <input
           type="text"
-          .value=${this.baseUsername}
-          @input=${this.handleUsernameChange}
+          .value=${value}
+          @input=${this.handleInput}
           placeholder="${translateText("username.enter_username")}"
           minlength="${MIN_USERNAME_LENGTH}"
           maxlength="${MAX_USERNAME_LENGTH}"
+          aria-invalid=${error ? "true" : "false"}
           class="w-full h-full border-0 text-2xl font-medium tracking-wider text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
-        ${this.validationError
+        ${error
           ? html`<div
               id="username-validation-error"
               class="absolute top-full left-0 z-50 w-full mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
             >
-              ${this.validationError}
+              ${error}
             </div>`
           : null}
       </div>
     `;
   }
 
-  private handleUsernameChange(e: Event) {
+  private handleInput(e: Event) {
     const input = e.target as HTMLInputElement;
     const originalValue = input.value;
-    const val = originalValue.replace(/[[\]]/g, "");
-    if (originalValue !== val) {
-      input.value = val;
+    const stripped = originalValue.replace(/[[\]]/g, "");
+    if (originalValue !== stripped) {
+      input.value = stripped;
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
@@ -118,29 +108,13 @@ export class UsernameInput extends LitElement {
         }),
       );
     }
-    this.baseUsername = val;
-    this.validateAndStore();
-  }
-
-  private validateAndStore() {
-    const trimmedBase = this.getUsername();
-    const result = validateUsername(trimmedBase);
-    this._isValid = result.isValid;
-    if (result.isValid) {
-      localStorage.setItem(usernameKey, trimmedBase);
-      this.validationError = "";
-    } else {
-      this.validationError = result.error ?? "";
-    }
-  }
-
-  public isValid(): boolean {
-    return this._isValid;
+    setUsername(stripped);
   }
 
   public showValidationFeedback(): void {
     const message =
-      this.validationError || translateText("username.invalid_chars");
+      this.identity.state.username.error ||
+      translateText("username.invalid_chars");
     window.dispatchEvent(
       new CustomEvent("show-message", {
         detail: {
@@ -153,9 +127,7 @@ export class UsernameInput extends LitElement {
   }
 
   public validateOrShowError(): boolean {
-    if (this.isValid()) {
-      return true;
-    }
+    if (this.isValid()) return true;
     this.showValidationFeedback();
     return false;
   }

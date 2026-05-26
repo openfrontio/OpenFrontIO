@@ -29,6 +29,7 @@ import "./components/LobbyPlayerView";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { IdentityReadyController } from "./identity/IdentityReadyController";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
@@ -94,6 +95,7 @@ export class HostLobbyModal extends BaseModal {
   private nationsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
   private userSettings = new UserSettings();
+  private identity = new IdentityReadyController(this);
 
   private leaveLobbyOnClose = true;
 
@@ -417,10 +419,12 @@ export class HostLobbyModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            .title=${this.clients.length === 1
-              ? translateText("host_modal.waiting")
-              : translateText("host_modal.start")}
-            ?disable=${this.clients.length < 2}
+            .title=${this.identity.validating
+              ? translateText("username.tag_checking")
+              : this.clients.length === 1
+                ? translateText("host_modal.waiting")
+                : translateText("host_modal.start")}
+            ?disable=${this.clients.length < 2 || !this.identity.ready}
             @click=${this.startGame}
           ></o-button>
         </div>

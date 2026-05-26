@@ -30,7 +30,13 @@ vi.mock("../../src/client/ClanApi", () => ({
 
 import { getUserMe } from "../../src/client/Api";
 import { fetchClanExists } from "../../src/client/ClanApi";
-import { ClanTagInput } from "../../src/client/ClanTagInput";
+import {
+  __resetIdentityStoreForTests,
+  awaitIdentityReady,
+  getClanTagForSubmit,
+  getIdentityState,
+  setClanTag,
+} from "../../src/client/identity/IdentityStore";
 
 const flushPromises = async () => {
   for (let i = 0; i < 5; i++) {
@@ -43,6 +49,7 @@ beforeEach(() => {
   vi.mocked(getUserMe).mockReset();
   vi.mocked(fetchClanExists).mockReset();
   vi.stubGlobal("localStorage", createMockLocalStorage());
+  __resetIdentityStoreForTests();
 });
 
 afterEach(() => {
@@ -51,7 +58,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("ClanTagInput async ownership check", () => {
+describe("IdentityStore clan-tag ownership check", () => {
   it("surfaces tag_not_member when user is not a member and clan exists", async () => {
     vi.mocked(getUserMe).mockResolvedValue({
       user: {},
@@ -66,16 +73,14 @@ describe("ClanTagInput async ownership check", () => {
     } as any);
     vi.mocked(fetchClanExists).mockResolvedValue(true);
 
-    const input = new ClanTagInput();
-    (input as any).clanTag = "ABC";
-    (input as any).validate();
-
+    setClanTag("ABC");
     vi.advanceTimersByTime(401);
     await flushPromises();
     await flushPromises();
 
-    expect(input.isValid()).toBe(false);
-    expect((input as any).ownershipError).toBe("username.tag_not_member");
+    const state = getIdentityState();
+    expect(state.clanTag.valid).toBe(false);
+    expect(state.clanTag.error).toBe("username.tag_not_member");
   });
 
   it("clears any stored clanTag when async detects ownership conflict", async () => {
@@ -93,10 +98,7 @@ describe("ClanTagInput async ownership check", () => {
     vi.mocked(fetchClanExists).mockResolvedValue(true);
     localStorage.setItem("clanTag", "ABC");
 
-    const input = new ClanTagInput();
-    (input as any).clanTag = "ABC";
-    (input as any).validate();
-
+    setClanTag("ABC");
     vi.advanceTimersByTime(401);
     await flushPromises();
     await flushPromises();
@@ -108,15 +110,12 @@ describe("ClanTagInput async ownership check", () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(false);
 
-    const input = new ClanTagInput();
-    (input as any).clanTag = "FIC";
-    (input as any).validate();
-
+    setClanTag("FIC");
     vi.advanceTimersByTime(401);
     await flushPromises();
     await flushPromises();
 
-    expect(input.isValid()).toBe(true);
+    expect(getIdentityState().clanTag.valid).toBe(true);
     expect(localStorage.getItem("clanTag")).toBe("FIC");
   });
 
@@ -124,15 +123,12 @@ describe("ClanTagInput async ownership check", () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(null);
 
-    const input = new ClanTagInput();
-    (input as any).clanTag = "ABC";
-    (input as any).validate();
-
+    setClanTag("ABC");
     vi.advanceTimersByTime(401);
     await flushPromises();
     await flushPromises();
 
-    expect(input.isValid()).toBe(false);
+    expect(getIdentityState().clanTag.valid).toBe(false);
   });
 
   it("discards stale async results when the tag has changed", async () => {
@@ -146,16 +142,12 @@ describe("ClanTagInput async ownership check", () => {
       .mockReturnValueOnce(first)
       .mockReturnValueOnce(second);
 
-    const input = new ClanTagInput();
-
-    (input as any).clanTag = "AAA";
-    (input as any).validate();
+    setClanTag("AAA");
     vi.advanceTimersByTime(401);
     await flushPromises();
 
-    // Now the user switches to a different tag before the first response lands.
-    (input as any).clanTag = "BBB";
-    (input as any).validate();
+    // User switches to a different tag before the first response lands.
+    setClanTag("BBB");
     vi.advanceTimersByTime(401);
     await flushPromises();
 
@@ -163,41 +155,53 @@ describe("ClanTagInput async ownership check", () => {
     // tag is no longer AAA, so this must NOT clobber the result for BBB.
     resolveFirst(true);
     await flushPromises();
-    expect((input as any).ownershipError).toBe("");
+    expect(getIdentityState().clanTag.error).toBe("");
 
     // Second response says BBB doesn't exist → fictional, accept.
     resolveSecond(false);
     await flushPromises();
     await flushPromises();
 
-    expect(input.isValid()).toBe(true);
+    expect(getIdentityState().clanTag.valid).toBe(true);
     expect(localStorage.getItem("clanTag")).toBe("BBB");
   });
 
-  it("clears the pending timer in disconnectedCallback", () => {
+  it("flips ready false while a check is in flight, true on success", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(false);
 
-    const input = new ClanTagInput();
-    (input as any).clanTag = "ABC";
-    (input as any).validate();
+    setClanTag("ABC");
+    // Pre-debounce: checking flag already set so play buttons disable
+    // immediately, not after the debounce.
+    expect(getIdentityState().clanTagChecking).toBe(true);
+    expect(getIdentityState().ready).toBe(false);
 
-    expect((input as any).checkTimer).not.toBeNull();
-
-    (input as any).disconnectedCallback();
-
-    expect((input as any).checkTimer).toBeNull();
+    vi.advanceTimersByTime(401);
+    const ready = await awaitIdentityReady();
+    expect(ready).toBe(false); // username still invalid (empty)
+    expect(getIdentityState().clanTagChecking).toBe(false);
+    expect(getIdentityState().clanTag.valid).toBe(true);
   });
 
-  it("getValue returns null for empty/short/invalid tags and the tag when valid", () => {
-    const input = new ClanTagInput();
-    (input as any).clanTag = "";
-    expect(input.getValue()).toBeNull();
-    (input as any).clanTag = "A";
-    expect(input.getValue()).toBeNull();
-    (input as any).clanTag = "TOOLONG";
-    expect(input.getValue()).toBeNull();
-    (input as any).clanTag = "ABC";
-    expect(input.getValue()).toBe("ABC");
+  it("getClanTagForSubmit returns null while empty/short/pending; tag once accepted", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    vi.mocked(fetchClanExists).mockResolvedValue(false);
+
+    setClanTag("");
+    expect(getClanTagForSubmit()).toBeNull();
+
+    setClanTag("A");
+    expect(getClanTagForSubmit()).toBeNull();
+
+    setClanTag("ABC");
+    // Ownership check hasn't resolved yet → not submittable.
+    expect(getIdentityState().clanTagChecking).toBe(true);
+    expect(getClanTagForSubmit()).toBeNull();
+
+    vi.advanceTimersByTime(401);
+    await flushPromises();
+    await flushPromises();
+
+    expect(getClanTagForSubmit()).toBe("ABC");
   });
 });

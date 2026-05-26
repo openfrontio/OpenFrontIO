@@ -14,7 +14,6 @@ import {
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
-import { ClanTagInput } from "./ClanTagInput";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -23,8 +22,12 @@ import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { IdentityReadyController } from "./identity/IdentityReadyController";
+import {
+  getClanTagForSubmit,
+  getUsernameForSubmit,
+} from "./identity/IdentityStore";
 import { JoinLobbyEvent } from "./Main";
-import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
@@ -99,6 +102,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
 
+  private identity = new IdentityReadyController(this);
   private mapLoader = terrainMapFileLoader;
 
   connectedCallback() {
@@ -355,7 +359,12 @@ export class SinglePlayerModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            translationKey="single_modal.start"
+            translationKey=${
+              this.identity.validating
+                ? "username.tag_checking"
+                : "single_modal.start"
+            }
+            ?disable=${!this.identity.ready}
             @click=${this.startGame}
           ></o-button>
         </div>
@@ -644,24 +653,6 @@ export class SinglePlayerModal extends BaseModal {
     const clientID = generateID();
     const gameID = generateID();
 
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
-    const clanTagInput = document.querySelector(
-      "clan-tag-input",
-    ) as ClanTagInput | null;
-
-    // Validate identity before dispatching/closing so a failed clan-tag
-    // ownership check keeps the modal open with the user's configured game
-    // settings intact rather than silently dropping them.
-    if (clanTagInput) {
-      await clanTagInput.awaitValidation();
-      if (!clanTagInput.validateOrShowError()) return;
-    }
-    if (usernameInput && !usernameInput.validateOrShowError()) {
-      return;
-    }
-
     await crazyGamesSDK.requestMidgameAd();
 
     this.dispatchEvent(
@@ -673,8 +664,8 @@ export class SinglePlayerModal extends BaseModal {
             players: [
               {
                 clientID,
-                username: usernameInput.getUsername(),
-                clanTag: clanTagInput?.getValue() ?? null,
+                username: getUsernameForSubmit(),
+                clanTag: getClanTagForSubmit(),
                 cosmetics: await getPlayerCosmetics(),
               },
             ],

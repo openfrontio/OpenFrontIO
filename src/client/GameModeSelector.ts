@@ -10,16 +10,15 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
-import { ClanTagInput } from "./ClanTagInput";
 import "./components/IOSAddToHomeScreenBanner";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { HostLobbyModal } from "./HostLobbyModal";
+import { IdentityReadyController } from "./identity/IdentityReadyController";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
   getMapName,
@@ -42,27 +41,20 @@ export class GameModeSelector extends LitElement {
     this.handleLobbiesUpdate(lobbies),
   );
 
+  private identity = new IdentityReadyController(this);
+
   createRenderRoot() {
     return this;
   }
 
-  /**
-   * Validates username and clan tag inputs and shows error messages if invalid.
-   * Awaits any pending clan-tag ownership check so the gate doesn't pass while
-   * an async validation is still in flight.
-   */
-  private async validateIdentity(): Promise<boolean> {
-    const clanTagInput = document.querySelector(
-      "clan-tag-input",
-    ) as ClanTagInput | null;
-    if (clanTagInput) {
-      await clanTagInput.awaitValidation();
-      if (!clanTagInput.validateOrShowError()) return false;
+  private identityTooltip(): string {
+    if (this.identity.validating) {
+      return translateText("username.tag_checking");
     }
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput | null;
-    return usernameInput ? usernameInput.validateOrShowError() : true;
+    const { username, clanTag } = this.identity.state;
+    if (!username.valid) return username.error;
+    if (!clanTag.valid) return clanTag.error;
+    return "";
   }
 
   connectedCallback() {
@@ -238,25 +230,25 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, this.getLobbyTitle(lobby));
   }
 
-  private openRankedMenu = async () => {
-    if (!(await this.validateIdentity())) return;
+  private openRankedMenu = () => {
+    if (!this.identity.ready) return;
     window.showPage?.("page-ranked");
   };
 
-  private openSinglePlayerModal = async () => {
-    if (!(await this.validateIdentity())) return;
+  private openSinglePlayerModal = () => {
+    if (!this.identity.ready) return;
     (
       document.querySelector("single-player-modal") as SinglePlayerModal
     )?.open();
   };
 
-  private openHostLobby = async () => {
-    if (!(await this.validateIdentity())) return;
+  private openHostLobby = () => {
+    if (!this.identity.ready) return;
     (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
   };
 
-  private openJoinLobby = async () => {
-    if (!(await this.validateIdentity())) return;
+  private openJoinLobby = () => {
+    if (!this.identity.ready) return;
     (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
 
@@ -265,10 +257,15 @@ export class GameModeSelector extends LitElement {
     onClick: () => void,
     bgClass: string = CARD_BG,
   ) {
+    const disabled = !this.identity.ready;
+    const tip = this.identityTooltip();
     return html`
       <button
         @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
+        ?disabled=${disabled}
+        title=${disabled && tip ? tip : ""}
+        aria-busy=${this.identity.validating ? "true" : "false"}
+        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:brightness-100"
       >
         ${title}
       </button>
@@ -311,10 +308,15 @@ export class GameModeSelector extends LitElement {
       modifierLabels.sort((a, b) => a.length - b.length);
     }
 
+    const disabled = !this.identity.ready;
+    const tip = this.identityTooltip();
     return html`
       <button
-        @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)]"
+        @click=${() => this.joinPublicLobby(lobby)}
+        ?disabled=${disabled}
+        title=${disabled && tip ? tip : ""}
+        aria-busy=${this.identity.validating ? "true" : "false"}
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div
@@ -390,8 +392,8 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private async validateAndJoin(lobby: PublicGameInfo) {
-    if (!(await this.validateIdentity())) return;
+  private joinPublicLobby(lobby: PublicGameInfo) {
+    if (!this.identity.ready) return;
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {

@@ -22,7 +22,6 @@ import { getUserMe, invalidateUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./ClanModal";
 import "./ClanTagInput";
-import { ClanTagInput } from "./ClanTagInput";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -61,13 +60,18 @@ import {
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
-import { genAnonUsername, UsernameInput } from "./UsernameInput";
+import { genAnonUsername } from "./UsernameInput";
 import {
   getDiscordAvatarUrl,
   incrementGamesPlayed,
   isInIframe,
   translateText,
 } from "./Utils";
+import {
+  awaitIdentityReady,
+  getClanTagForSubmit,
+  getUsernameForSubmit,
+} from "./identity/IdentityStore";
 import { installSafariPinchZoomBlocker } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
@@ -252,8 +256,6 @@ class Client {
 
   private currentUrl: string | null = null;
 
-  private usernameInput: UsernameInput | null = null;
-  private clanTagInput: ClanTagInput | null = null;
   private flagInput: FlagInput | null = null;
 
   private hostModal: HostPrivateLobbyModal;
@@ -355,20 +357,6 @@ class Client {
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
       console.warn("Flag input element not found");
-    }
-
-    this.usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
-    if (!this.usernameInput) {
-      console.warn("Username input element not found");
-    }
-
-    this.clanTagInput = document.querySelector(
-      "clan-tag-input",
-    ) as ClanTagInput;
-    if (!this.clanTagInput) {
-      console.warn("Clan tag input element not found");
     }
 
     this.gameModeSelector = document.querySelector(
@@ -824,11 +812,13 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
-    if (this.clanTagInput) {
-      await this.clanTagInput.awaitValidation();
-      if (!this.clanTagInput.validateOrShowError()) return;
-    }
-    if (this.usernameInput && !this.usernameInput.validateOrShowError()) {
+    // Final identity gate. Callers (play buttons, modals) already disable
+    // themselves until identity is ready, so this is a defense-in-depth check
+    // for stray dispatches — bail silently rather than show a toast since
+    // the inputs already render their own inline errors.
+    const ready = await awaitIdentityReady();
+    if (!ready) {
+      console.warn("join-lobby blocked: identity not ready");
       return;
     }
 
@@ -854,8 +844,8 @@ class Client {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs(),
       turnstileToken: await this.getTurnstileToken(lobby),
-      playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
-      playerClanTag: this.clanTagInput?.getValue() ?? null,
+      playerName: getUsernameForSubmit() || genAnonUsername(),
+      playerClanTag: getClanTagForSubmit(),
       playerRole,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
@@ -872,13 +862,6 @@ class Client {
     this.lobbyHandle.prestart.then(() => {
       console.log("Closing modals");
       document.getElementById("settings-button")?.classList.add("hidden");
-      if (this.usernameInput) {
-        // fix edge case where username-validation-error is re-rendered and hidden tag removed
-        this.usernameInput.validationError = "";
-      }
-      if (this.clanTagInput) {
-        this.clanTagInput.validationError = "";
-      }
       document
         .getElementById("clan-tag-validation-error")
         ?.classList.add("hidden");

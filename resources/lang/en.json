@@ -662,7 +662,8 @@
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",
-    "tag_not_member": "Join the {tag} clan before using its tag."
+    "tag_not_member": "Join the {tag} clan before using its tag.",
+    "tag_checking": "Checking clan tag…"
   },
   "host_modal": {
     "title": "Create Private Lobby",
