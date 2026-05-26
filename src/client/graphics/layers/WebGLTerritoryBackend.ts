@@ -5,7 +5,11 @@ import { ColoredTeams, PlayerType, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
+import {
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+  WEBGL_DEBUG_KEY,
+} from "../../../core/game/UserSettings";
 import {
   AlternateViewEvent,
   ContextMenuEvent,
@@ -25,7 +29,6 @@ const ENABLE_CONTEST_TRACKING = false;
 const CONTEST_STRENGTH_EMA_ALPHA = 0.8;
 const CONTEST_STRENGTH_MIN = 0.01;
 const CONTEST_STRENGTH_MAX = 0.95;
-const DEBUG_TERRITORY_OVERLAY = false;
 
 type ContestComponent = {
   id: number;
@@ -104,6 +107,7 @@ export class WebGLTerritoryBackend implements TerritoryBackend {
     event.preventDefault();
     this.failureReason = "WebGL context lost.";
   };
+  private readonly debugSettingChanged = () => this.syncSmoothingDebugUi();
 
   constructor(
     private game: GameView,
@@ -409,8 +413,12 @@ export class WebGLTerritoryBackend implements TerritoryBackend {
         this.hoverHighlightOptions(),
       );
     });
+    globalThis.addEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${WEBGL_DEBUG_KEY}`,
+      this.debugSettingChanged,
+    );
     this.redraw();
-    this.ensureSmoothingDebugUi();
+    this.syncSmoothingDebugUi();
   }
 
   getFailureReason(): string | null {
@@ -418,6 +426,10 @@ export class WebGLTerritoryBackend implements TerritoryBackend {
   }
 
   dispose() {
+    globalThis.removeEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${WEBGL_DEBUG_KEY}`,
+      this.debugSettingChanged,
+    );
     this.smoothingDebugUi?.remove();
     this.smoothingDebugUi = null;
     this.territoryRenderer?.canvas.removeEventListener(
@@ -428,8 +440,17 @@ export class WebGLTerritoryBackend implements TerritoryBackend {
     this.territoryRenderer = null;
   }
 
+  private syncSmoothingDebugUi() {
+    if (!this.userSettings.webglDebug()) {
+      this.smoothingDebugUi?.remove();
+      this.smoothingDebugUi = null;
+      return;
+    }
+    this.ensureSmoothingDebugUi();
+  }
+
   private ensureSmoothingDebugUi() {
-    if (!DEBUG_TERRITORY_OVERLAY) return;
+    if (!this.userSettings.webglDebug()) return;
     if (this.smoothingDebugUi) return;
 
     const root = document.createElement("div");
@@ -1001,7 +1022,7 @@ export class WebGLTerritoryBackend implements TerritoryBackend {
       );
     }
 
-    if (DEBUG_TERRITORY_OVERLAY) {
+    if (this.userSettings.webglDebug()) {
       const overlayStart = FrameProfiler.start();
       this.drawDebugOverlay(context);
       FrameProfiler.end("TerritoryLayer:debugOverlay", overlayStart);

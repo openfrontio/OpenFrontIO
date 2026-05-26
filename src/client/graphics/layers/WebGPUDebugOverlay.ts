@@ -2,7 +2,11 @@ import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import { EventBus } from "../../../core/EventBus";
-import { UserSettings } from "../../../core/game/UserSettings";
+import {
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+  WEBGPU_DEBUG_KEY,
+} from "../../../core/game/UserSettings";
 import { WebGPUComputeMetricsEvent } from "../../InputHandler";
 import {
   TERRAIN_SHADER_KEY,
@@ -177,6 +181,10 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
 
   init() {
     this.restorePosition();
+    globalThis.addEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${WEBGPU_DEBUG_KEY}`,
+      this.handleDebugSettingChanged,
+    );
     this.eventBus.on(WebGPUComputeMetricsEvent, (e) => {
       if (typeof e.computeMs === "number" && Number.isFinite(e.computeMs)) {
         this.tickComputeMs = e.computeMs;
@@ -189,7 +197,15 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.endDrag();
+    globalThis.removeEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${WEBGPU_DEBUG_KEY}`,
+      this.handleDebugSettingChanged,
+    );
   }
+
+  private readonly handleDebugSettingChanged = () => {
+    this.requestUpdate();
+  };
 
   updateFrameMetrics(frameDurationMs: number): void {
     if (!this.userSettings || !this.userSettings.webgpuDebug()) {

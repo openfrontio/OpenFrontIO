@@ -48,6 +48,8 @@ export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const TERRITORY_RENDERER_KEY = "settings.territoryRenderer";
+export const WEBGL_DEBUG_KEY = "settings.webglDebug";
+export const WEBGPU_DEBUG_KEY = "settings.webgpuDebug";
 export type TerritoryRendererPreference =
   | "auto"
   | "classic"
@@ -160,7 +162,19 @@ export class UserSettings {
   }
 
   webgpuDebug(): boolean {
-    return this.get("settings.webgpuDebug", false);
+    return this.get(WEBGPU_DEBUG_KEY, false);
+  }
+
+  webglDebug(): boolean {
+    return this.get(WEBGL_DEBUG_KEY, false);
+  }
+
+  setWebgpuDebug(value: boolean): void {
+    this.set(WEBGPU_DEBUG_KEY, value);
+  }
+
+  setWebglDebug(value: boolean): void {
+    this.set(WEBGL_DEBUG_KEY, value);
   }
 
   alertFrame() {
@@ -221,6 +235,8 @@ export class UserSettings {
       value === "classic" || value === "webgl" || value === "webgpu"
         ? value
         : "auto";
+    this.setWebglDebug(renderer === "webgl");
+    this.setWebgpuDebug(renderer === "webgpu");
     this.setString(TERRITORY_RENDERER_KEY, renderer);
   }
 
@@ -254,7 +270,7 @@ export class UserSettings {
   }
 
   toggleWebgpuDebug() {
-    this.set("settings.webgpuDebug", !this.webgpuDebug());
+    this.setWebgpuDebug(!this.webgpuDebug());
   }
 
   toggleAlertFrame() {
