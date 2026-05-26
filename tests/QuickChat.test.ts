@@ -5,12 +5,14 @@ import { playerInfo, setup } from "./util/Setup";
 let game: Game;
 let player1: Player;
 let player2: Player;
+let player3: Player;
 
 describe("QuickChat cooldown", () => {
   beforeEach(async () => {
     game = await setup("plains", {}, [
       playerInfo("player1", PlayerType.Human),
       playerInfo("player2", PlayerType.Human),
+      playerInfo("player3", PlayerType.Human),
     ]);
 
     player1 = game.player("player1");
@@ -18,6 +20,9 @@ describe("QuickChat cooldown", () => {
 
     player2 = game.player("player2");
     player2.conquer(game.ref(0, 1));
+
+    player3 = game.player("player3");
+    player3.conquer(game.ref(0, 2));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
@@ -68,5 +73,13 @@ describe("QuickChat cooldown", () => {
 
     // player2 sending to player1 is independent
     expect(player2.canSendQuickChat(player1)).toBe(true);
+  });
+
+  test("cooldown is per-recipient — same sender can still chat with a different recipient", () => {
+    sendQuickChat(player1, player2);
+    expect(player1.canSendQuickChat(player2)).toBe(false);
+
+    // player1 is on cooldown for player2 but not for player3
+    expect(player1.canSendQuickChat(player3)).toBe(true);
   });
 });

@@ -90,7 +90,7 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
-  private outgoingQuickChats_: { recipientID: number; sentAt: Tick }[] = [];
+  private outgoingQuickChats_ = new Map<number, Tick>();
 
   private sentDonations: Donation[] = [];
 
@@ -740,19 +740,15 @@ export class PlayerImpl implements Player {
     if (recipient === this) {
       return false;
     }
-    const cooldown = this.mg.config().quickChatCooldown();
-    return this.outgoingQuickChats_.every(
-      (c) =>
-        c.recipientID !== recipient.smallID() ||
-        this.mg.ticks() - c.sentAt >= cooldown,
+    const lastSentAt = this.outgoingQuickChats_.get(recipient.smallID());
+    return (
+      lastSentAt === undefined ||
+      this.mg.ticks() - lastSentAt >= this.mg.config().quickChatCooldown()
     );
   }
 
   recordQuickChat(recipient: Player): void {
-    this.outgoingQuickChats_.push({
-      recipientID: recipient.smallID(),
-      sentAt: this.mg.ticks(),
-    });
+    this.outgoingQuickChats_.set(recipient.smallID(), this.mg.ticks());
   }
 
   canDonateGold(recipient: Player): boolean {
