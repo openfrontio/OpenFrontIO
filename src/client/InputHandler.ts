@@ -640,6 +640,10 @@ export class InputHandler {
   }
 
   onPointerUp(event: PointerEvent) {
+    if (!this.pointerDown) {
+      return;
+    }
+
     if (event.button === 1) {
       event.preventDefault();
       return;

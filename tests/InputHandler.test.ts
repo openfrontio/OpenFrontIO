@@ -251,6 +251,7 @@ describe("InputHandler AutoUpgrade", () => {
       });
       inputHandler["lastPointerDownX"] = 149;
       inputHandler["lastPointerDownY"] = 249;
+      inputHandler["pointerDown"] = true;
 
       inputHandler["onPointerUp"](pointerEvent);
 
