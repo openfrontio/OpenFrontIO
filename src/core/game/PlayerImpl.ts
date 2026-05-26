@@ -90,6 +90,7 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
+  private outgoingQuickChats_: { recipientID: number; sentAt: Tick }[] = [];
 
   private sentDonations: Donation[] = [];
 
@@ -733,6 +734,25 @@ export class PlayerImpl implements Player {
       }
     }
     return true;
+  }
+
+  canSendQuickChat(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
+    const cooldown = this.mg.config().quickChatCooldown();
+    return this.outgoingQuickChats_.every(
+      (c) =>
+        c.recipientID !== recipient.smallID() ||
+        this.mg.ticks() - c.sentAt >= cooldown,
+    );
+  }
+
+  recordQuickChat(recipient: Player): void {
+    this.outgoingQuickChats_.push({
+      recipientID: recipient.smallID(),
+      sentAt: this.mg.ticks(),
+    });
   }
 
   canDonateGold(recipient: Player): boolean {
