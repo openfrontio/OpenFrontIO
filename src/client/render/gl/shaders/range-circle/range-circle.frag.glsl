@@ -4,6 +4,7 @@ precision highp float;
 in vec2 vLocal; // [-1, +1]
 
 uniform float uRadius;
+uniform vec3 uColor;
 
 out vec4 fragColor;
 
@@ -23,5 +24,5 @@ void main() {
   float alpha = fill * 0.2 + stroke * 0.5;
   if (alpha < 0.001) discard;
 
-  fragColor = vec4(1.0, 1.0, 1.0, alpha);
+  fragColor = vec4(uColor, alpha);
 }

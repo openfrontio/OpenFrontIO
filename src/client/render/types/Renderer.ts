@@ -166,6 +166,8 @@ export interface GhostPreviewData {
   upgradeTargetTile: number | null;
   /** Range radius in tiles for the placement circle (0 = no circle). */
   rangeRadius: number;
+  /** True if placing here would carry a penalty (e.g. nuking an ally → traitor). */
+  rangeWarning: boolean;
 }
 
 /** Nuke trajectory preview data — Bezier control points + color thresholds. */
