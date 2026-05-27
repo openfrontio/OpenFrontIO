@@ -264,6 +264,15 @@ export class GameView {
   ): void {
     this.renderer?.addPlayers(players, paletteData, patternMeta, patternData);
   }
+  setPlayerSkin(smallID: number, url: string): void {
+    this.renderer?.setPlayerSkin(smallID, url);
+  }
+  initSkinAtlas(urls: readonly string[]): void {
+    this.renderer?.initSkinAtlas(urls);
+  }
+  setPlayerSpawn(smallID: number, x: number, y: number): void {
+    this.renderer?.setPlayerSpawn(smallID, x, y);
+  }
   uploadRailroadState(data: Uint8Array): void {
     this.renderer?.uploadRailroadState(data);
   }

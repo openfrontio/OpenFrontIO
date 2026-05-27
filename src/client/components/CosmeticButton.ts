@@ -1,6 +1,12 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Flag, Pack, Pattern, Subscription } from "../../core/CosmeticSchemas";
+import {
+  Flag,
+  Pack,
+  Pattern,
+  Skin,
+  Subscription,
+} from "../../core/CosmeticSchemas";
 import { PlayerPattern } from "../../core/Schemas";
 import {
   PaymentMethod,
@@ -46,7 +52,7 @@ export class CosmeticButton extends LitElement {
     if (c === null) {
       return translateText("territory_patterns.pattern.default");
     }
-    if (this.resolved.type === "pattern") {
+    if (this.resolved.type === "pattern" || this.resolved.type === "skin") {
       return translateCosmetic("territory_patterns.pattern", c.name);
     }
     if (this.resolved.type === "pack") {
@@ -70,6 +76,25 @@ export class CosmeticButton extends LitElement {
               colorPalette: this.resolved.colorPalette ?? undefined,
             };
       return renderPatternPreview(playerPattern, 150, 150);
+    }
+
+    if (this.resolved.type === "skin") {
+      const c = this.resolved.cosmetic as Skin | null;
+      if (c === null) {
+        // "Default" tile — visually consistent with pattern's default tile.
+        return html`<div
+          class="w-full h-full flex items-center justify-center text-white/40 text-xs uppercase"
+        >
+          ${translateText("territory_patterns.pattern.default")}
+        </div>`;
+      }
+      return html`<img
+        src=${c.url}
+        alt=${c.name}
+        class="w-full h-full object-contain pointer-events-none"
+        draggable="false"
+        loading="lazy"
+      />`;
     }
 
     if (this.resolved.type === "pack") {
@@ -149,13 +174,14 @@ export class CosmeticButton extends LitElement {
 
   render() {
     const c = this.resolved.cosmetic;
-    const priced = c as Pattern | Flag | Pack | null;
+    const priced = c as Pattern | Skin | Flag | Pack | null;
     const priceHard = priced?.priceHard;
     const priceSoft = priced?.priceSoft;
     const artist = priced?.artist;
     const isPurchasable = this.resolved.relationship === "purchasable";
     const type = this.resolved.type;
     const isPattern = type === "pattern";
+    const isSkin = type === "skin";
     const isOwnedSubscription =
       type === "subscription" && this.resolved.relationship === "owned";
     const dollarLabelKey =
@@ -167,7 +193,7 @@ export class CosmeticButton extends LitElement {
     const priceSuffix =
       type === "subscription" ? translateText("store.price_per_month") : "";
     const sizeClass = type === "flag" ? "gap-1 p-1.5 w-36" : "gap-2 p-3 w-48";
-    const crazygamesClass = isPattern ? "no-crazygames " : "";
+    const crazygamesClass = isPattern || isSkin ? "no-crazygames " : "";
 
     return html`
       <cosmetic-container
@@ -191,7 +217,8 @@ export class CosmeticButton extends LitElement {
         .name=${this.displayName}
       >
         <button
-          class="group relative flex flex-col items-center w-full ${isPattern
+          class="group relative flex flex-col items-center w-full ${isPattern ||
+          isSkin
             ? "gap-2"
             : "gap-1"} rounded-lg cursor-pointer transition-all duration-200 flex-1"
           @click=${() => this.handleClick()}
