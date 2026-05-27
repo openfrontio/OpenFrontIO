@@ -1223,8 +1223,8 @@ export class GameServer {
       }
     }
 
-    // If half clients out of sync assume all are out of sync.
-    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
+    // If strict majority clients out of sync assume all are out of sync.
+    if (outOfSyncClients.length > Math.floor(this.activeClients.length / 2)) {
       outOfSyncClients = this.activeClients;
     }
 

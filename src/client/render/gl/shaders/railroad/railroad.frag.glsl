@@ -12,6 +12,7 @@ uniform vec2 uMapSize;
 uniform float uZoom;
 uniform float uRailDetailZoom;
 uniform float uRailAlpha;
+uniform float uRailFade;             // Zoom-based fade multiplier (0..1)
 uniform float uGhostOwnerID;         // Player smallID for ghost rail color
 
 in vec2 vWorldPos;
@@ -139,17 +140,17 @@ void main() {
     // Overlapping railroad highlight — green tint
     if (highlighted) railColor = vec3(0.2, 0.85, 0.3);
     if (hitBridge) {
-      fragColor = vec4(mix(bridgeColor, railColor, railAlpha), 1.0);
+      fragColor = vec4(mix(bridgeColor, railColor, railAlpha), uRailFade);
     } else {
-      fragColor = vec4(railColor, railAlpha);
+      fragColor = vec4(railColor, railAlpha * uRailFade);
     }
   } else if (hitGhost) {
     float ghostAlpha = uRailAlpha * ghostCov * 0.5;
     vec3 ghostColor = uGhostOwnerID > 0.0
       ? texture(uPalette, vec2((uGhostOwnerID + 0.5) / float(PALETTE_SIZE), 0.75)).rgb
       : vec3(0.75);
-    fragColor = vec4(ghostColor, ghostAlpha);
+    fragColor = vec4(ghostColor, ghostAlpha * uRailFade);
   } else {
-    fragColor = vec4(bridgeColor, 1.0);
+    fragColor = vec4(bridgeColor, uRailFade);
   }
 }

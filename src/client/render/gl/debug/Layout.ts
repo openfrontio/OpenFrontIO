@@ -164,6 +164,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
         slider(s.railroad, "railMinZoom", d.railroad, 0, 10, 0.1, "Min Zoom"),
         slider(
           s.railroad,
+          "railFadeRange",
+          d.railroad,
+          0,
+          5,
+          0.1,
+          "Fade Range",
+        ),
+        slider(
+          s.railroad,
           "railDetailZoom",
           d.railroad,
           0,

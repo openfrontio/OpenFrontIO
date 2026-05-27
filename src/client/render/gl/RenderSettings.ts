@@ -81,6 +81,7 @@ export interface RenderSettings {
   };
   railroad: {
     railMinZoom: number;
+    railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
   };

@@ -1,12 +1,18 @@
 #version 300 es
 precision highp float;
 precision highp usampler2D;
+precision highp sampler2DArray;
 
 uniform usampler2D uTileTex;      // R16UI — tile state per cell
 uniform sampler2D  uPalette;      // RGBA32F — player colors
 uniform sampler2D  uPatternMeta;  // RGBA32F — 1D buffer, 1 px per owner. R=hasPattern, G=width, B=height, A=scale
 uniform usampler2D uPatternData;  // R8UI    — 2D buffer, row per owner, bytes for bitmask
+uniform sampler2DArray uSkinAtlas; // RGBA8 — per-skin PNG layer, tiled via REPEAT wrap
+uniform usampler2D uSkinLayer;    // R8UI — 1D buffer, 1 px per owner. 0=no skin, otherwise layer+1
+uniform usampler2D uSkinAnchor;   // RG16UI — 1D buffer, anchor tile (cx, cy) per owner. (0,0) = world origin
 uniform int uShowPatterns;
+uniform int uIsTeamMode;          // 1 = teams (tint skin by team color), 0 = FFA (raw skin colors)
+const float SKIN_DIM = 1024.0;    // atlas cell size in tiles — must match SkinAtlasArray.SKIN_DIM
 
 uniform vec2 uMapSize;
 uniform int uAltView;
@@ -48,32 +54,58 @@ void main() {
   float u = (float(owner) + 0.5) / float(PALETTE_SIZE);
   vec4 color = texture(uPalette, vec2(u, 0.25));
 
-  if (uShowPatterns == 1) {
+  // uShowPatterns gates both skins and patterns — they're the same
+  // "decorate the territory fill" feature from the user's perspective.
+  uint skinLayerPlus1 =
+    uShowPatterns == 1
+      ? texelFetch(uSkinLayer, ivec2(int(owner), 0), 0).r
+      : 0u;
+  if (skinLayerPlus1 > 0u) {
+    // Skin overrides pattern entirely (mutually exclusive). The image is a
+    // single stamp centered at the player's spawn tile — UVs outside [0,1]
+    // are treated as transparent so tiles beyond the image bounds fall back
+    // to the regular palette color. (0,0) anchor sentinel = world origin.
+    uvec2 anchor = texelFetch(uSkinAnchor, ivec2(int(owner), 0), 0).rg;
+    vec2 anchorOffset = (anchor == uvec2(0u)) ? vec2(0.0) : vec2(anchor);
+
+    vec2 skinUV = (vec2(tc) - anchorOffset) / vec2(SKIN_DIM) + vec2(0.5);
+    vec4 skin = texture(uSkinAtlas, vec3(skinUV, float(skinLayerPlus1) - 1.0));
+    bool inBounds =
+      skinUV.x >= 0.0 && skinUV.x <= 1.0 &&
+      skinUV.y >= 0.0 && skinUV.y <= 1.0;
+    float skinAlpha = inBounds ? skin.a : 0.0;
+    // Transparent (or out-of-bounds) pixels fall through to the player color;
+    // opaque pixels show the skin (tinted by team color in team games).
+    vec3 skinColor = (uIsTeamMode == 1) ? color.rgb * skin.rgb : skin.rgb;
+    color.rgb = mix(color.rgb, skinColor, skinAlpha);
+  } else if (uShowPatterns == 1) {
     vec4 meta = texelFetch(uPatternMeta, ivec2(int(owner), 0), 0);
     if (meta.r > 0.0) {
       int pWidth = int(meta.g);
       int pHeight = int(meta.b);
       int pScale = int(meta.a);
-      
+
       int px = tc.x >> pScale;
       int py = tc.y >> pScale;
       int mx = ((px % pWidth) + pWidth) % pWidth;
       int my = ((py % pHeight) + pHeight) % pHeight;
       int bitIndex = my * pWidth + mx;
       int byteIndex = bitIndex >> 3;
-      
+
       uint patternByte = texelFetch(uPatternData, ivec2(byteIndex, int(owner)), 0).r;
       bool isPrimary = (patternByte & (1u << uint(bitIndex & 7))) == 0u;
-      
+
       if (!isPrimary) {
         color = texture(uPalette, vec2(u, 0.75));
       }
     }
   }
 
-  // Hover highlight: brighten every tile owned by the hovered player.
+  // Hover highlight: boost saturation on the hovered player's tiles.
+  // luma = grayscale equivalent; mixing past 1.0 pushes color away from gray.
   if (uHighlightOwner != 0u && owner == uHighlightOwner) {
-    color.rgb = mix(color.rgb, vec3(1.0), uHighlightBrighten);
+    float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = clamp(mix(vec3(luma), color.rgb, 1.6), 0.0, 1.0);
   }
 
   fragColor = color;

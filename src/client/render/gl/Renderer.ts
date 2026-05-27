@@ -47,6 +47,7 @@ import { RailroadPass } from "./passes/RailroadPass";
 import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
 import { SelectionBoxPass } from "./passes/SelectionBoxPass";
+import { SkinAtlasArray } from "./passes/SkinAtlasArray";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import { SpawnOverlayPass } from "./passes/SpawnOverlayPass";
 import { StructureLevelPass } from "./passes/StructureLevelPass";
@@ -130,6 +131,13 @@ export class GPURenderer {
   private paletteData: Float32Array;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
+  private skinAtlas: SkinAtlasArray;
+  private skinLayerTex: WebGLTexture;
+  /** CPU-side mirror of skinLayerTex (0 = no skin, otherwise layer + 1). */
+  private skinLayerCpu: Uint8Array;
+  /** Per-player anchor (x,y) for skin sampling. (0,0) = world-origin anchor. */
+  private skinAnchorTex: WebGLTexture;
+  private skinAnchorCpu: Uint16Array;
   private canvas: HTMLCanvasElement;
   private settings: RenderSettings;
   private sceneTarget: RenderTarget;
@@ -242,6 +250,33 @@ export class GPURenderer {
       filter: gl.NEAREST,
     });
 
+    // --- Skin atlas (TEXTURE_2D_ARRAY of PNG layers) + per-player layer map ---
+    this.skinLayerCpu = new Uint8Array(palW);
+    this.skinLayerTex = createTexture2D(gl, {
+      width: palW,
+      height: 1,
+      internalFormat: gl.R8UI,
+      format: gl.RED_INTEGER,
+      type: gl.UNSIGNED_BYTE,
+      data: this.skinLayerCpu,
+      filter: gl.NEAREST,
+    });
+    // Per-player skin anchor: RG16UI, 2× uint16 per player → 4 bytes each.
+    // (0,0) sentinel means "no anchor" — shader uses world origin.
+    this.skinAnchorCpu = new Uint16Array(palW * 2);
+    this.skinAnchorTex = createTexture2D(gl, {
+      width: palW,
+      height: 1,
+      internalFormat: gl.RG16UI,
+      format: gl.RG_INTEGER,
+      type: gl.UNSIGNED_SHORT,
+      data: this.skinAnchorCpu,
+      filter: gl.NEAREST,
+    });
+    // Construct with no URLs — the real atlas is built once initSkinAtlas() is
+    // called with the locked-in player skin URLs at game start.
+    this.skinAtlas = new SkinAtlasArray(gl, [], () => {});
+
     // --- Border compute (creates its own borderTex) ---
     // Need a temporary tileTex reference for border compute — we'll create
     // GPUResources first, then wire everything.
@@ -282,7 +317,7 @@ export class GPURenderer {
       this.settings,
     );
 
-    // --- Territory (needs tileTex, paletteTex, patternTexs) ---
+    // --- Territory (needs tileTex, paletteTex, patternTexs, skinTexs) ---
     this.territoryPass = new TerritoryPass(
       gl,
       mapW,
@@ -291,6 +326,9 @@ export class GPURenderer {
       this.paletteTex,
       this.patternMetaTex,
       this.patternDataTex,
+      this.skinAtlas.texture,
+      this.skinLayerTex,
+      this.skinAnchorTex,
       this.settings,
     );
 
@@ -454,6 +492,9 @@ export class GPURenderer {
     for (const p of header.players) {
       if (p.team !== null) this.playerTeams.set(p.smallID, p.team);
     }
+    // Team mode = any player has a team. Drives skin tint behavior:
+    // FFA shows raw skin colors; teams multiply skin by team primary color.
+    this.territoryPass.setTeamMode(this.playerTeams.size > 0);
 
     this.startLoop();
   }
@@ -644,6 +685,76 @@ export class GPURenderer {
     for (const p of players) {
       if (p.team !== null) this.playerTeams.set(p.smallID, p.team);
     }
+    // Renderer was constructed with players: [] (real list arrives via this
+    // method), so team mode must be re-evaluated whenever new players arrive
+    // — otherwise team games never enable the skin-tint branch.
+    this.territoryPass.setTeamMode(this.playerTeams.size > 0);
+  }
+
+  /**
+   * Anchor a player's skin sampling at world coords (x, y). The center of the
+   * skin image lines up with this tile. Default (0,0) anchors at world origin.
+   */
+  setPlayerSpawn(smallID: number, x: number, y: number): void {
+    const off = smallID * 2;
+    this.skinAnchorCpu[off] = x;
+    this.skinAnchorCpu[off + 1] = y;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.skinAnchorTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      getPaletteSize(),
+      1,
+      gl.RG_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.skinAnchorCpu,
+    );
+  }
+
+  /**
+   * Allocate the skin atlas to exactly `urls.length` layers. The player set is
+   * locked at game start so this is called once with the complete URL list;
+   * URLs not in this set will be ignored by `setPlayerSkin`.
+   *
+   * Layers are zero-initialized (browsers do this for security regardless of
+   * the GL spec's "undefined" wording), so players whose images haven't
+   * decoded yet render with alpha=0 → falls through to base player color.
+   */
+  initSkinAtlas(urls: readonly string[]): void {
+    this.skinAtlas.dispose();
+    this.skinAtlas = new SkinAtlasArray(this.gl, urls, () => {});
+    this.territoryPass.setSkinAtlas(this.skinAtlas.texture);
+  }
+
+  /**
+   * Map a player to a pre-registered skin layer. URLs not registered via
+   * `initSkinAtlas` are silently dropped. If the image is still decoding the
+   * layer renders transparent (zero-init) until decode completes.
+   */
+  setPlayerSkin(smallID: number, url: string): void {
+    const layer = this.skinAtlas.getLayer(url);
+    if (layer < 0) return;
+    this.skinLayerCpu[smallID] = layer + 1;
+    this.uploadSkinLayerTex();
+  }
+
+  private uploadSkinLayerTex(): void {
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.skinLayerTex);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      getPaletteSize(),
+      1,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      this.skinLayerCpu,
+    );
   }
 
   uploadRailroadState(data: Uint8Array): void {
@@ -1235,6 +1346,9 @@ export class GPURenderer {
     this.gl.deleteTexture(this.paletteTex);
     this.gl.deleteTexture(this.patternMetaTex);
     this.gl.deleteTexture(this.patternDataTex);
+    this.gl.deleteTexture(this.skinLayerTex);
+    this.gl.deleteTexture(this.skinAnchorTex);
+    this.skinAtlas.dispose();
     this.gl.deleteFramebuffer(this.sceneTarget.fbo);
     this.gl.deleteTexture(this.sceneTarget.tex);
     this.lastUnits = new Map();
