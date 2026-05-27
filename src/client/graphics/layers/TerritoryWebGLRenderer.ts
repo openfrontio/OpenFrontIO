@@ -3357,6 +3357,9 @@ export class TerritoryWebGLRenderer {
         if (u_alternativeView) {
           // Alt view: terrain + borders only, no territory fill
           vec3 color = baseTerrainColor;
+          if (owner == 0u && hasFallout) {
+            color = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
+          }
           if (!u_debugDisableAllBorders && !u_debugDisableStaticBorders && owner != 0u && isBorder) {
             // Only draw borders, not territory fill
             uint relationAlt = relationCode(owner, uint(u_viewerId));
