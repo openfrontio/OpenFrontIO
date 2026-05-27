@@ -486,6 +486,9 @@ export class GameImpl implements Game {
       case "grid_segments":
         this.planDrivenUnitIds.add(record.unitId);
         break;
+      case "parabola":
+        this.planDrivenUnitIds.add(record.unitId);
+        break;
       case "train":
         this.planDrivenUnitIds.add(record.engineUnitId);
         for (const unitId of record.carUnitIds) {

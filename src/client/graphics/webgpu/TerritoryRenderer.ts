@@ -470,6 +470,16 @@ export class TerritoryRenderer {
     }
   }
 
+  updateTerrainDataTiles(tiles: readonly number[]): void {
+    if (!this.resources || !this.device || tiles.length === 0) {
+      return;
+    }
+    this.resources.uploadTerrainDataTiles(tiles);
+    if (this.terrainComputePass) {
+      this.terrainComputePass.markDirty();
+    }
+  }
+
   /**
    * Immediately execute terrain compute pass (for theme changes).
    * This ensures terrain is recomputed before the next render.

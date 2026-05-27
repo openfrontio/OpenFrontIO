@@ -60,28 +60,22 @@ const TRANSPORT_SHIP_MASK = [
   ".BTB.",
   "..B..",
 ] as const;
-const TRADE_SHIP_MASK = [
-  "..T..",
-  ".TBT.",
-  "TBBBT",
-  ".TBT.",
-  "..T..",
-] as const;
+const TRADE_SHIP_MASK = ["..T..", ".TBT.", "TBBBT", ".TBT.", "..T.."] as const;
 
-type TransportTrailState = {
+type MotionTrailState = {
   activePlanId: number;
-  epochs: TransportTrailEpoch[];
+  epochs: MotionTrailEpoch[];
   lastOnScreen: boolean;
 };
 
-type TransportTrailEpoch = SegmentTrailPlanView & {
+type MotionTrailEpoch = SegmentTrailPlanView & {
   planId: number;
   targetStep: number;
   drawnStep: number;
   sealed: boolean;
 };
 
-type ActiveTransportTrailPlan = {
+type ActiveMotionTrailPlan = {
   unitId: number;
   unit: UnitView;
   plan: SegmentTrailPlanView & { planId: number };
@@ -134,7 +128,7 @@ export class UnitLayer implements Layer {
 
   private gridMoverUnitIds = new Set<number>();
 
-  private transportShipTrails = new Map<number, TransportTrailState>();
+  private segmentTrails = new Map<number, MotionTrailState>();
   private trailDirty = false;
 
   private moverState = new Map<number, MoverRenderState>();
@@ -201,7 +195,7 @@ export class UnitLayer implements Layer {
   tick() {
     const trailPrune = pruneInactiveTrails(
       this.unitToTrail,
-      this.transportShipTrails,
+      this.segmentTrails,
       (unitId) => {
         const current = this.game.unit(unitId);
         return !!current && current.isActive();
@@ -482,13 +476,13 @@ export class UnitLayer implements Layer {
     const tickFloat = this.game.ticks() + tickAlpha;
     const viewBounds = this.currentViewBounds();
     const activeMoverIds = new Set<number>();
-    const activeTransportTrailPlans: ActiveTransportTrailPlan[] = [];
+    const activeMotionTrailPlans: ActiveMotionTrailPlan[] = [];
 
     for (const [unitId, plan] of this.game.motionPlans()) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) {
         this.clearMoverState(unitId);
-        if (this.transportShipTrails.delete(unitId)) this.trailDirty = true;
+        if (this.segmentTrails.delete(unitId)) this.trailDirty = true;
         continue;
       }
       activeMoverIds.add(unitId);
@@ -500,8 +494,8 @@ export class UnitLayer implements Layer {
         tickFloat,
         viewBounds,
       );
-      if (unit.type() === UnitType.TransportShip) {
-        activeTransportTrailPlans.push({
+      if (this.shouldDrawSegmentTrail(unit)) {
+        activeMotionTrailPlans.push({
           unitId,
           unit,
           plan,
@@ -530,10 +524,7 @@ export class UnitLayer implements Layer {
       viewBounds,
     );
 
-    this.advanceAndDrawTransportTrails(
-      this.game.ticks(),
-      activeTransportTrailPlans,
-    );
+    this.advanceAndDrawSegmentTrails(this.game.ticks(), activeMotionTrailPlans);
     this.rebuildTrailCanvasIfDirty();
 
     context.drawImage(
@@ -960,7 +951,9 @@ export class UnitLayer implements Layer {
           continue;
         }
 
-        const candidateRects: MoverSpriteRect[] = [candidateState.lastSpriteRect];
+        const candidateRects: MoverSpriteRect[] = [
+          candidateState.lastSpriteRect,
+        ];
         const candidateSample = this.getConflictSample(
           candidateId,
           tickFloat,
@@ -998,7 +991,13 @@ export class UnitLayer implements Layer {
       return null;
     }
 
-    return this.getMoverSample(unitId, unit, plan.planId, tickFloat, sampledCache);
+    return this.getMoverSample(
+      unitId,
+      unit,
+      plan.planId,
+      tickFloat,
+      sampledCache,
+    );
   }
 
   private anyRectsOverlap(
@@ -1227,10 +1226,7 @@ export class UnitLayer implements Layer {
 
   private rectsOverlap(a: MoverSpriteRect, b: MoverSpriteRect): boolean {
     return (
-      a.x < b.x + b.w &&
-      a.x + a.w > b.x &&
-      a.y < b.y + b.h &&
-      a.y + a.h > b.y
+      a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
     );
   }
 
@@ -1304,7 +1300,8 @@ export class UnitLayer implements Layer {
 
     while (
       idx > 0 &&
-      zoom < DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx - 1] - DYNAMIC_MOVER_ZOOM_HYSTERESIS
+      zoom <
+        DYNAMIC_MOVER_ZOOM_THRESHOLDS[idx - 1] - DYNAMIC_MOVER_ZOOM_HYSTERESIS
     ) {
       idx--;
     }
@@ -1344,7 +1341,8 @@ export class UnitLayer implements Layer {
 
     this.lastDynamicMoverCanvasRescaleMs =
       this.rebuildDynamicMoverCanvas(targetScale);
-    this.totalDynamicMoverCanvasRescaleMs += this.lastDynamicMoverCanvasRescaleMs;
+    this.totalDynamicMoverCanvasRescaleMs +=
+      this.lastDynamicMoverCanvasRescaleMs;
     this.dynamicMoverCanvasRescaleCount++;
     this.dynamicMoverCanvasScale = targetScale;
     this.lastDynamicMoverCanvasScaleChangeAtMs = nowMs;
@@ -1371,8 +1369,14 @@ export class UnitLayer implements Layer {
     const oldHeight = oldCanvas.height;
 
     this.dynamicMoverCanvas = document.createElement("canvas");
-    this.dynamicMoverCanvas.width = Math.max(1, this.game.width() * targetScale);
-    this.dynamicMoverCanvas.height = Math.max(1, this.game.height() * targetScale);
+    this.dynamicMoverCanvas.width = Math.max(
+      1,
+      this.game.width() * targetScale,
+    );
+    this.dynamicMoverCanvas.height = Math.max(
+      1,
+      this.game.height() * targetScale,
+    );
     const dynamicMoverContext = this.dynamicMoverCanvas.getContext("2d");
     if (dynamicMoverContext === null) {
       throw new Error("2d context not supported");
@@ -1681,35 +1685,35 @@ export class UnitLayer implements Layer {
     this.dynamicMoverContext.clearRect(rect.x, rect.y, rect.w, rect.h);
   }
 
-  private advanceAndDrawTransportTrails(
+  private advanceAndDrawSegmentTrails(
     currentTick: number,
-    activePlans: readonly ActiveTransportTrailPlan[],
+    activePlans: readonly ActiveMotionTrailPlan[],
   ): void {
     for (const { unitId, unit, plan, maybeOnScreen } of activePlans) {
-      const state = this.ensureTransportTrailState(unitId, plan, currentTick);
+      const state = this.ensureSegmentTrailState(unitId, plan, currentTick);
       const moverState = this.moverState.get(unitId);
       const onScreen = moverState ? moverState.bucket === "on" : maybeOnScreen;
 
       if (onScreen) {
-        this.drawPendingTransportTrailEpochs(unit, state);
+        this.drawPendingSegmentTrailEpochs(unit, state);
       }
       state.lastOnScreen = onScreen;
     }
   }
 
-  private ensureTransportTrailState(
+  private ensureSegmentTrailState(
     unitId: number,
     plan: SegmentTrailPlanView & { planId: number },
     currentTick: number,
-  ): TransportTrailState {
-    let state = this.transportShipTrails.get(unitId);
+  ): MotionTrailState {
+    let state = this.segmentTrails.get(unitId);
     if (!state) {
       state = {
         activePlanId: plan.planId,
         epochs: [],
         lastOnScreen: false,
       };
-      this.transportShipTrails.set(unitId, state);
+      this.segmentTrails.set(unitId, state);
     }
 
     let activeEpoch = state.epochs[state.epochs.length - 1];
@@ -1726,7 +1730,7 @@ export class UnitLayer implements Layer {
         activeEpoch.sealed = true;
       }
 
-      activeEpoch = this.createTransportTrailEpoch(plan, currentTick);
+      activeEpoch = this.createSegmentTrailEpoch(plan, currentTick);
       state.epochs.push(activeEpoch);
       state.activePlanId = plan.planId;
       return state;
@@ -1741,10 +1745,10 @@ export class UnitLayer implements Layer {
     return state;
   }
 
-  private createTransportTrailEpoch(
+  private createSegmentTrailEpoch(
     plan: SegmentTrailPlanView & { planId: number },
     currentTick: number,
-  ): TransportTrailEpoch {
+  ): MotionTrailEpoch {
     return {
       planId: plan.planId,
       startTick: plan.startTick,
@@ -1758,9 +1762,9 @@ export class UnitLayer implements Layer {
     };
   }
 
-  private drawPendingTransportTrailEpochs(
+  private drawPendingSegmentTrailEpochs(
     unit: UnitView,
-    state: TransportTrailState,
+    state: MotionTrailState,
   ): void {
     const ctx = this.trailContext;
     const strokeStyle = this.motionTrailColor(unit);
@@ -1816,7 +1820,7 @@ export class UnitLayer implements Layer {
       }
     }
 
-    for (const [unitId, trailState] of this.transportShipTrails) {
+    for (const [unitId, trailState] of this.segmentTrails) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) {
         continue;
@@ -1835,6 +1839,17 @@ export class UnitLayer implements Layer {
       }
       ctx.restore();
     }
+  }
+
+  private shouldDrawSegmentTrail(unit: UnitView): boolean {
+    const type = unit.type();
+    return (
+      type === UnitType.TransportShip ||
+      type === UnitType.AtomBomb ||
+      type === UnitType.HydrogenBomb ||
+      type === UnitType.MIRV ||
+      type === UnitType.MIRVWarhead
+    );
   }
 
   private relationshipForAlternateView(unit: UnitView): Relationship {

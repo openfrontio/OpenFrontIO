@@ -189,15 +189,6 @@ export const TERRITORY_SHADERS: TerritoryShaderDefinition[] = [
         max: 1,
         step: 0.01,
       },
-      {
-        kind: "range",
-        key: "settings.webgpu.territory.retro.defendedThreshold",
-        label: "Defended Threshold",
-        defaultValue: 0.01,
-        min: 0.01,
-        max: 1,
-        step: 0.01,
-      },
     ],
   },
 ];
@@ -223,7 +214,7 @@ export function territoryShaderIntFromId(id: TerritoryShaderId): number {
 export function readTerritoryShaderId(userSettings: {
   getInt: (key: string, defaultValue: number) => number;
 }): TerritoryShaderId {
-  return territoryShaderIdFromInt(userSettings.getInt(TERRITORY_SHADER_KEY, 0));
+  return territoryShaderIdFromInt(userSettings.getInt(TERRITORY_SHADER_KEY, 1));
 }
 
 export function buildTerritoryShaderParams(
@@ -280,10 +271,7 @@ export function buildTerritoryShaderParams(
       "settings.webgpu.territory.retro.defendedPatternStrength",
       0.5,
     );
-    const defendedThreshold = userSettings.getFloat(
-      "settings.webgpu.territory.retro.defendedThreshold",
-      0.01,
-    );
+    const defendedThreshold = 0.01;
 
     let flags = 0;
     if (colorByRelations) flags |= 1 << 0;

@@ -82,7 +82,7 @@ export function readTerritoryPostSmoothingId(userSettings: {
   getInt: (key: string, defaultValue: number) => number;
 }): TerritoryPostSmoothingId {
   return territoryPostSmoothingIdFromInt(
-    userSettings.getInt(TERRITORY_POST_SMOOTHING_KEY, 0),
+    userSettings.getInt(TERRITORY_POST_SMOOTHING_KEY, 1),
   );
 }
 

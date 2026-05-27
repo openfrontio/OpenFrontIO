@@ -1,5 +1,6 @@
 import { Theme } from "../../../../core/configuration/Config";
 import { UnitType } from "../../../../core/game/Game";
+import type { TileRef } from "../../../../core/game/GameMap";
 import { GameView } from "../../../../core/game/GameView";
 
 /**
@@ -603,6 +604,53 @@ export class GroundTruthData {
           { width: this.mapWidth, height: 1, depthOrArrayLayers: 1 },
         );
       }
+    }
+  }
+
+  uploadTerrainDataTiles(tiles: readonly TileRef[]): void {
+    if (tiles.length === 0) {
+      return;
+    }
+    if (this.needsTerrainDataUpload) {
+      this.uploadTerrainData();
+      return;
+    }
+
+    const rowBounds = new Map<number, { minX: number; maxX: number }>();
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i] >>> 0;
+      if (tile >= this.terrainData.length) {
+        continue;
+      }
+      const y = Math.floor(tile / this.mapWidth);
+      if (y < 0 || y >= this.mapHeight) {
+        continue;
+      }
+      const x = tile - y * this.mapWidth;
+      const existing = rowBounds.get(y);
+      if (existing) {
+        existing.minX = Math.min(existing.minX, x);
+        existing.maxX = Math.max(existing.maxX, x);
+      } else {
+        rowBounds.set(y, { minX: x, maxX: x });
+      }
+    }
+
+    for (const [y, bounds] of rowBounds) {
+      const width = bounds.maxX - bounds.minX + 1;
+      const paddedBytesPerRow = align(width, 256);
+      const row = new Uint8Array(paddedBytesPerRow);
+      const start = y * this.mapWidth + bounds.minX;
+      row.set(this.terrainData.subarray(start, start + width), 0);
+      this.device.queue.writeTexture(
+        {
+          texture: this.terrainDataTexture,
+          origin: { x: bounds.minX, y },
+        },
+        row,
+        { bytesPerRow: paddedBytesPerRow, rowsPerImage: 1 },
+        { width, height: 1, depthOrArrayLayers: 1 },
+      );
     }
   }
 

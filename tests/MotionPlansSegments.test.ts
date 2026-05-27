@@ -31,6 +31,36 @@ describe("MotionPlans grid_segments", () => {
     expect(Array.from(r.segmentSteps)).toEqual([5, 5]);
   });
 
+  it("packs/unpacks parabola records", () => {
+    const packed = packMotionPlans([
+      {
+        kind: "parabola",
+        unitId: 44,
+        planId: 3,
+        startTick: 99,
+        src: 10,
+        dst: 20,
+        increment: 7,
+        distanceBasedHeight: true,
+        directionUp: false,
+      },
+    ]);
+
+    const records = unpackMotionPlans(packed);
+    expect(records).toHaveLength(1);
+    const r = records[0];
+    expect(r.kind).toBe("parabola");
+    if (r.kind !== "parabola") throw new Error("type guard");
+    expect(r.unitId).toBe(44);
+    expect(r.planId).toBe(3);
+    expect(r.startTick).toBe(99);
+    expect(r.src).toBe(10);
+    expect(r.dst).toBe(20);
+    expect(r.increment).toBe(7);
+    expect(r.distanceBasedHeight).toBe(true);
+    expect(r.directionUp).toBe(false);
+  });
+
   it("skips unknown kinds using wordCount", () => {
     const gridPacked = packMotionPlans([
       {

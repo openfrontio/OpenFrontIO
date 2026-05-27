@@ -89,6 +89,31 @@ export class RendererStatusPanel extends LitElement implements Layer {
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    .titleActions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      padding: 4px 7px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
     .panel.dragging .title {
       cursor: grabbing;
     }
@@ -202,6 +227,32 @@ export class RendererStatusPanel extends LitElement implements Layer {
     const value = (event.target as HTMLSelectElement).value;
     this.userSettings.setTerritoryRenderer(value);
     this.preference = this.userSettings.territoryRenderer();
+  }
+
+  private rendererSettingsTarget(): "webgl" | "webgpu" | null {
+    if (this.activeRenderer === "webgl" || this.activeRenderer === "webgpu") {
+      return this.activeRenderer;
+    }
+    if (
+      this.activeRenderer === null &&
+      (this.preference === "webgl" || this.preference === "webgpu")
+    ) {
+      return this.preference;
+    }
+    return null;
+  }
+
+  private openRendererSettings(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const renderer = this.rendererSettingsTarget();
+    if (renderer === "webgl") {
+      this.userSettings.setWebgpuDebug(false);
+      this.userSettings.setWebglDebug(true);
+    } else if (renderer === "webgpu") {
+      this.userSettings.setWebglDebug(false);
+      this.userSettings.setWebgpuDebug(true);
+    }
   }
 
   private rendererLabel(id: TerritoryRendererId | TerritoryRendererPreference) {
@@ -341,6 +392,7 @@ export class RendererStatusPanel extends LitElement implements Layer {
     }
 
     const note = this.statusNote();
+    const canOpenSettings = this.rendererSettingsTarget() !== null;
     return html`
       <div
         class="panel ${this.isDragging ? "dragging" : ""}"
@@ -349,6 +401,16 @@ export class RendererStatusPanel extends LitElement implements Layer {
       >
         <div class="title" @pointerdown=${this.handleDragPointerDown}>
           <span>Renderer</span>
+          <div class="titleActions">
+            <button
+              type="button"
+              ?disabled=${!canOpenSettings}
+              @pointerdown=${this.stopPointerEvent}
+              @click=${this.openRendererSettings}
+            >
+              settings
+            </button>
+          </div>
         </div>
         <div class="body">
           <div class="row">

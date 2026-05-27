@@ -121,6 +121,11 @@ export class WebGPUTerritoryBackend implements TerritoryBackend {
       this.markTile(updatedTiles[i]);
     }
 
+    const updatedTerrainTiles = this.game.recentlyUpdatedTerrainTiles();
+    if (updatedTerrainTiles.length > 0) {
+      this.territoryRenderer?.updateTerrainDataTiles(updatedTerrainTiles);
+    }
+
     // After collecting pending updates and handling palette/theme changes,
     // invoke the renderer's tick() to process compute passes. This ensures
     // compute shaders run at the simulation rate rather than every frame.

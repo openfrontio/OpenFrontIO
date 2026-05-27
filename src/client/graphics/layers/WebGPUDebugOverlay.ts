@@ -106,6 +106,22 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       cursor: grabbing;
     }
 
+    .closeButton {
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+      font: inherit;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .closeButton:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
     .metrics {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -228,7 +244,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   }
 
   private selectedShaderId() {
-    const selected = this.userSettings.getInt(TERRITORY_SHADER_KEY, 0);
+    const selected = this.userSettings.getInt(TERRITORY_SHADER_KEY, 1);
     return territoryShaderIdFromInt(selected);
   }
 
@@ -241,7 +257,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   }
 
   private selectedTerrainShaderId() {
-    const selected = this.userSettings.getInt(TERRAIN_SHADER_KEY, 0);
+    const selected = this.userSettings.getInt(TERRAIN_SHADER_KEY, 2);
     return terrainShaderIdFromInt(selected);
   }
 
@@ -266,7 +282,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   }
 
   private selectedPostSmoothingId() {
-    const selected = this.userSettings.getInt(TERRITORY_POST_SMOOTHING_KEY, 0);
+    const selected = this.userSettings.getInt(TERRITORY_POST_SMOOTHING_KEY, 1);
     return territoryPostSmoothingIdFromInt(selected);
   }
 
@@ -403,6 +419,12 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     event.stopPropagation();
   }
 
+  private closeOverlay(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.userSettings.setWebgpuDebug(false);
+  }
+
   private handleDragPointerDown(event: PointerEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -486,6 +508,15 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       >
         <div class="title" @pointerdown=${this.handleDragPointerDown}>
           <div>WebGPU Debug</div>
+          <button
+            class="closeButton"
+            type="button"
+            title="Close"
+            @pointerdown=${this.stopPointerEvent}
+            @click=${this.closeOverlay}
+          >
+            x
+          </button>
         </div>
 
         <div class="metrics">

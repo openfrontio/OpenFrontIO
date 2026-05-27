@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import type { MotionPlanRecord } from "../game/MotionPlans";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
 import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";
@@ -188,6 +189,18 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+      const motionPlan: MotionPlanRecord = {
+        kind: "parabola",
+        unitId: this.nuke.id(),
+        planId: 1,
+        startTick: ticks + 1 + this.waitTicks,
+        src: spawn,
+        dst: this.dst,
+        increment: this.speed,
+        distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
+        directionUp: this.rocketDirectionUp,
+      };
+      this.mg.recordMotionPlan(motionPlan);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
         this.maybeBreakAlliances();
       }

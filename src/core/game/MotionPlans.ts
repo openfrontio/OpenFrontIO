@@ -3,6 +3,7 @@ import { TileRef } from "./GameMap";
 export enum PackedMotionPlanKind {
   TrainRailPathSet = 2,
   GridPathKeypointSegments = 3,
+  ParabolaSet = 4,
 }
 
 export interface GridKeypointSegmentPlan {
@@ -32,7 +33,22 @@ export interface TrainRailPathPlan {
   path: readonly TileRef[] | Uint32Array;
 }
 
-export type MotionPlanRecord = GridKeypointSegmentPlan | TrainRailPathPlan;
+export interface ParabolaPlan {
+  kind: "parabola";
+  unitId: number;
+  planId: number;
+  startTick: number;
+  src: TileRef;
+  dst: TileRef;
+  increment: number;
+  distanceBasedHeight: boolean;
+  directionUp: boolean;
+}
+
+export type MotionPlanRecord =
+  | GridKeypointSegmentPlan
+  | TrainRailPathPlan
+  | ParabolaPlan;
 
 export function packMotionPlans(
   records: readonly MotionPlanRecord[],
@@ -49,6 +65,10 @@ export function packMotionPlans(
         const carCount = (record.carUnitIds.length >>> 0) as number;
         const pathLen = (record.path.length >>> 0) as number;
         totalWords += 2 + 7 + carCount + pathLen;
+        break;
+      }
+      case "parabola": {
+        totalWords += 2 + 7;
         break;
       }
     }
@@ -113,6 +133,22 @@ export function packMotionPlans(
         for (let i = 0; i < pathLen; i++) {
           out[offset++] = path[i] >>> 0;
         }
+        break;
+      }
+      case "parabola": {
+        const flags =
+          (record.distanceBasedHeight ? 1 : 0) | (record.directionUp ? 2 : 0);
+        const wordCount = 2 + 7;
+
+        out[offset++] = PackedMotionPlanKind.ParabolaSet;
+        out[offset++] = wordCount >>> 0;
+        out[offset++] = record.unitId >>> 0;
+        out[offset++] = record.planId >>> 0;
+        out[offset++] = record.startTick >>> 0;
+        out[offset++] = record.src >>> 0;
+        out[offset++] = record.dst >>> 0;
+        out[offset++] = record.increment >>> 0;
+        out[offset++] = flags >>> 0;
         break;
       }
     }
@@ -216,6 +252,34 @@ export function unpackMotionPlans(packed: Uint32Array): MotionPlanRecord[] {
           speed,
           spacing,
           path,
+        });
+        break;
+      }
+      case PackedMotionPlanKind.ParabolaSet: {
+        if (wordCount !== 2 + 7) {
+          break;
+        }
+        const unitId = packed[offset + 2] >>> 0;
+        const planId = packed[offset + 3] >>> 0;
+        const startTick = packed[offset + 4] >>> 0;
+        const src = packed[offset + 5] as TileRef;
+        const dst = packed[offset + 6] as TileRef;
+        const increment = packed[offset + 7] >>> 0;
+        const flags = packed[offset + 8] >>> 0;
+        if (increment < 1) {
+          break;
+        }
+
+        records.push({
+          kind: "parabola",
+          unitId,
+          planId,
+          startTick,
+          src,
+          dst,
+          increment,
+          distanceBasedHeight: (flags & 1) !== 0,
+          directionUp: (flags & 2) !== 0,
         });
         break;
       }

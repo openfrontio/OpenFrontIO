@@ -180,7 +180,7 @@ export function terrainShaderIntFromId(id: TerrainShaderId): number {
 export function readTerrainShaderId(userSettings: {
   getInt: (key: string, defaultValue: number) => number;
 }): TerrainShaderId {
-  return terrainShaderIdFromInt(userSettings.getInt(TERRAIN_SHADER_KEY, 0));
+  return terrainShaderIdFromInt(userSettings.getInt(TERRAIN_SHADER_KEY, 2));
 }
 
 export function buildTerrainShaderParams(

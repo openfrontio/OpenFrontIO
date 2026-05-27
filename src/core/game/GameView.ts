@@ -2,6 +2,8 @@ import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { Config } from "../configuration/Config";
 import { ColorPalette } from "../CosmeticSchemas";
+import { UniversalPathFinding } from "../pathfinding/PathFinder";
+import { PathStatus } from "../pathfinding/types";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../Util";
@@ -964,7 +966,7 @@ export class GameView implements GameMap {
             }
           }
         } else {
-          while (seg + 1 < segmentCount && idx >= (segCumSteps[seg + 1] >>> 0)) {
+          while (seg + 1 < segmentCount && idx >= segCumSteps[seg + 1] >>> 0) {
             seg++;
           }
         }
@@ -1124,15 +1126,62 @@ export class GameView implements GameMap {
     }
   }
 
+  private setGridSegmentMotionPlan(record: {
+    unitId: number;
+    planId: number;
+    startTick: number;
+    ticksPerStep: number;
+    points: readonly TileRef[] | Uint32Array;
+    segmentSteps: readonly number[] | Uint32Array;
+  }): boolean {
+    if (
+      record.ticksPerStep < 1 ||
+      record.points.length < 1 ||
+      record.segmentSteps.length !== Math.max(0, record.points.length - 1)
+    ) {
+      return false;
+    }
+    const existing = this.unitMotionPlans.get(record.unitId);
+    if (existing && record.planId <= existing.planId) {
+      return false;
+    }
+
+    const points =
+      record.points instanceof Uint32Array
+        ? record.points
+        : Uint32Array.from(record.points);
+    const segmentSteps =
+      record.segmentSteps instanceof Uint32Array
+        ? record.segmentSteps
+        : Uint32Array.from(record.segmentSteps);
+
+    const segCumSteps = new Uint32Array(segmentSteps.length + 1);
+    for (let i = 0; i < segmentSteps.length; i++) {
+      segCumSteps[i + 1] = (segCumSteps[i] + (segmentSteps[i] >>> 0)) >>> 0;
+    }
+
+    this.unitMotionPlans.set(record.unitId, {
+      planId: record.planId,
+      startTick: record.startTick,
+      ticksPerStep: record.ticksPerStep,
+      points,
+      segmentSteps,
+      segCumSteps,
+      lastSegIdx: 0,
+    });
+    this.markMotionPlannedUnitIdsDirty();
+    return true;
+  }
+
   private applyMotionPlanRecords(records: readonly MotionPlanRecord[]): void {
     for (const record of records) {
       switch (record.kind) {
         case "grid_segments": {
-          if (
-            record.ticksPerStep < 1 ||
-            record.points.length < 1 ||
-            record.segmentSteps.length !== Math.max(0, record.points.length - 1)
-          ) {
+          this.setGridSegmentMotionPlan(record);
+          break;
+        }
+        case "parabola": {
+          if (record.increment < 1) {
             break;
           }
           const existing = this.unitMotionPlans.get(record.unitId);
@@ -1140,31 +1189,32 @@ export class GameView implements GameMap {
             break;
           }
 
-          const points =
-            record.points instanceof Uint32Array
-              ? record.points
-              : Uint32Array.from(record.points);
-          const segmentSteps =
-            record.segmentSteps instanceof Uint32Array
-              ? record.segmentSteps
-              : Uint32Array.from(record.segmentSteps);
+          const pf = UniversalPathFinding.Parabola(this._map, {
+            increment: record.increment,
+            distanceBasedHeight: record.distanceBasedHeight,
+            directionUp: record.directionUp,
+          });
 
-          const segCumSteps = new Uint32Array(segmentSteps.length + 1);
-          for (let i = 0; i < segmentSteps.length; i++) {
-            segCumSteps[i + 1] =
-              (segCumSteps[i] + (segmentSteps[i] >>> 0)) >>> 0;
+          const points: TileRef[] = [record.src];
+          for (let i = 0; i < 20000; i++) {
+            const step = pf.next(record.src, record.dst, record.increment);
+            if (step.status === PathStatus.NEXT) {
+              points.push(step.node);
+              continue;
+            }
+            break;
           }
 
-          this.unitMotionPlans.set(record.unitId, {
+          const segmentSteps = new Uint32Array(Math.max(0, points.length - 1));
+          segmentSteps.fill(1);
+          this.setGridSegmentMotionPlan({
+            unitId: record.unitId,
             planId: record.planId,
             startTick: record.startTick,
-            ticksPerStep: record.ticksPerStep,
+            ticksPerStep: 1,
             points,
             segmentSteps,
-            segCumSteps,
-            lastSegIdx: 0,
           });
-          this.markMotionPlannedUnitIdsDirty();
           break;
         }
         case "train": {

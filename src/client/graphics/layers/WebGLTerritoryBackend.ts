@@ -467,10 +467,41 @@ export class WebGLTerritoryBackend implements TerritoryBackend {
     root.style.touchAction = "none";
 
     const title = document.createElement("div");
-    title.textContent = "Territory smoothing";
     title.style.fontWeight = "700";
     title.style.marginBottom = "6px";
     title.style.cursor = "move";
+    title.style.display = "flex";
+    title.style.alignItems = "center";
+    title.style.justifyContent = "space-between";
+    title.style.gap = "10px";
+
+    const titleText = document.createElement("span");
+    titleText.textContent = "Territory smoothing";
+    title.appendChild(titleText);
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.textContent = "x";
+    closeButton.title = "Close";
+    closeButton.style.width = "22px";
+    closeButton.style.height = "22px";
+    closeButton.style.border = "1px solid rgba(255,255,255,0.18)";
+    closeButton.style.borderRadius = "5px";
+    closeButton.style.background = "rgba(255,255,255,0.08)";
+    closeButton.style.color = "rgba(255,255,255,0.88)";
+    closeButton.style.font = "12px monospace";
+    closeButton.style.lineHeight = "1";
+    closeButton.style.cursor = "pointer";
+    closeButton.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    closeButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.userSettings.setWebglDebug(false);
+    });
+    title.appendChild(closeButton);
     root.appendChild(title);
 
     // Restore last position (if any)
