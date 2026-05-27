@@ -1,7 +1,7 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
+import { Cell, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
