@@ -27,8 +27,8 @@ interface TeamEntry {
 
 @customElement("team-stats")
 export class TeamStats extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
+  @property({ attribute: false }) game!: GameView;
+  @property({ attribute: false }) eventBus!: EventBus;
 
   @property({ type: Boolean }) visible = false;
   teams: TeamEntry[] = [];

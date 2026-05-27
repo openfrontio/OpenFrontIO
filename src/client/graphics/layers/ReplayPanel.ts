@@ -19,8 +19,8 @@ export class ShowReplayPanelEvent {
 
 @customElement("replay-panel")
 export class ReplayPanel extends LitElement implements Layer {
-  public game: GameView | undefined;
-  public eventBus: EventBus | undefined;
+  @property({ attribute: false }) game: GameView | undefined;
+  @property({ attribute: false }) eventBus: EventBus | undefined;
 
   @property({ type: Boolean })
   visible: boolean = false;
@@ -31,12 +31,21 @@ export class ReplayPanel extends LitElement implements Layer {
   @property({ type: Boolean })
   isSingleplayer = false;
 
+  private _eventBusSubscribed = false;
+
   createRenderRoot() {
     return this; // Enable Tailwind CSS
   }
 
-  init() {
-    if (this.eventBus) {
+  init() {}
+
+  willUpdate(changed: Map<string, unknown>) {
+    if (
+      !this._eventBusSubscribed &&
+      this.eventBus &&
+      (changed.has("eventBus") || changed.size === 0)
+    ) {
+      this._eventBusSubscribed = true;
       this.eventBus.on(ShowReplayPanelEvent, (event: ShowReplayPanelEvent) => {
         this.visible = event.visible;
         this.isSingleplayer = event.isSingleplayer;

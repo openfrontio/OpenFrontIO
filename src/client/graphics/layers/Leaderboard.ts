@@ -2,11 +2,16 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { renderTroops, translateText } from "../../../client/Utils";
+import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { formatPercentage, renderNumber } from "../../Utils";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { Layer } from "./Layer";
+
+const profileIcon = assetUrl("images/ProfileIcon.svg");
+const goldIcon = assetUrl("images/GoldCoinIcon.svg");
+const troopIcon = assetUrl("images/TroopIconWhite.svg");
 
 interface Entry {
   name: string;
@@ -21,8 +26,8 @@ interface Entry {
 
 @customElement("leader-board")
 export class Leaderboard extends LitElement implements Layer {
-  public game: GameView | null = null;
-  public eventBus: EventBus | null = null;
+  @property({ attribute: false }) game: GameView | null = null;
+  @property({ attribute: false }) eventBus: EventBus | null = null;
 
   players: Entry[] = [];
 
@@ -41,8 +46,8 @@ export class Leaderboard extends LitElement implements Layer {
 
   init() {}
 
-  willUpdate(changed: Map<string, unknown>) {
-    if (changed.has("visible") && this.visible) {
+  willUpdate(_changed: Map<string, unknown>) {
+    if (this.visible && this.game !== null) {
       this.updateLeaderboard();
     }
   }
@@ -177,22 +182,28 @@ export class Leaderboard extends LitElement implements Layer {
       >
         <div
           class="grid bg-gray-800/85 w-full text-xs md:text-xs lg:text-sm rounded-lg overflow-hidden"
-          style="grid-template-columns: minmax(24px, 30px) minmax(60px, 100px) minmax(45px, 70px) minmax(40px, 55px) minmax(55px, 105px);"
+          style="grid-template-columns: minmax(24px, 30px) minmax(60px, 100px) minmax(45px, 70px) minmax(35px, 50px) minmax(45px, 65px);"
         >
           <div class="contents font-bold bg-gray-700/60">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
+              class="py-1 md:py-2 flex items-center justify-center border-b border-slate-500"
+              title=${translateText("leaderboard.player")}
             >
-              ${translateText("leaderboard.player")}
+              <img
+                src=${profileIcon}
+                alt=${translateText("leaderboard.player")}
+                class="w-4 h-4"
+              />
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              class="py-1 md:py-2 flex items-center justify-center gap-0.5 border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              title=${translateText("leaderboard.owned")}
               @click=${() => this.setSort("tiles")}
             >
-              ${translateText("leaderboard.owned")}
+              <span class="text-base leading-none">🌐</span>
               ${this._sortKey === "tiles"
                 ? this._sortOrder === "asc"
                   ? "⬆️"
@@ -200,10 +211,15 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              class="py-1 md:py-2 flex items-center justify-center gap-0.5 border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              title=${translateText("leaderboard.gold")}
               @click=${() => this.setSort("gold")}
             >
-              ${translateText("leaderboard.gold")}
+              <img
+                src=${goldIcon}
+                alt=${translateText("leaderboard.gold")}
+                class="w-4 h-4"
+              />
               ${this._sortKey === "gold"
                 ? this._sortOrder === "asc"
                   ? "⬆️"
@@ -211,10 +227,15 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              class="py-1 md:py-2 flex items-center justify-center gap-0.5 border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              title=${translateText("leaderboard.maxtroops")}
               @click=${() => this.setSort("maxtroops")}
             >
-              ${translateText("leaderboard.maxtroops")}
+              <img
+                src=${troopIcon}
+                alt=${translateText("leaderboard.maxtroops")}
+                class="w-4 h-4"
+              />
               ${this._sortKey === "maxtroops"
                 ? this._sortOrder === "asc"
                   ? "⬆️"

@@ -18,13 +18,11 @@ import { DynamicUILayer } from "./layers/DynamicUILayer";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
-import { GameLeftSidebar } from "./layers/GameLeftSidebar";
-import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GameMenu } from "./layers/GameMenu";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
 import { Layer } from "./layers/Layer";
-import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
@@ -33,13 +31,11 @@ import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
-import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
-import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
@@ -88,28 +84,12 @@ export function createRenderer(
   buildMenu.uiState = uiState;
   buildMenu.transformHandler = transformHandler;
 
-  const leaderboard = document.querySelector("leader-board") as Leaderboard;
-  if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
-    console.error("LeaderBoard element not found in the DOM");
+  const gameMenu = document.querySelector("game-menu") as GameMenu;
+  if (!gameMenu || !(gameMenu instanceof GameMenu)) {
+    console.error("GameMenu element not found in the DOM");
   }
-  leaderboard.eventBus = eventBus;
-  leaderboard.game = game;
-
-  const gameLeftSidebar = document.querySelector(
-    "game-left-sidebar",
-  ) as GameLeftSidebar;
-  if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
-    console.error("GameLeftSidebar element not found in the DOM");
-  }
-  gameLeftSidebar.game = game;
-  gameLeftSidebar.eventBus = eventBus;
-
-  const teamStats = document.querySelector("team-stats") as TeamStats;
-  if (!teamStats || !(teamStats instanceof TeamStats)) {
-    console.error("TeamStats element not found in the DOM");
-  }
-  teamStats.eventBus = eventBus;
-  teamStats.game = game;
+  gameMenu.game = game;
+  gameMenu.eventBus = eventBus;
 
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
@@ -162,22 +142,6 @@ export function createRenderer(
   }
   winModal.eventBus = eventBus;
   winModal.game = game;
-
-  const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
-  if (!(replayPanel instanceof ReplayPanel)) {
-    console.error("replay panel not found");
-  }
-  replayPanel.eventBus = eventBus;
-  replayPanel.game = game;
-
-  const gameRightSidebar = document.querySelector(
-    "game-right-sidebar",
-  ) as GameRightSidebar;
-  if (!(gameRightSidebar instanceof GameRightSidebar)) {
-    console.error("Game Right bar not found");
-  }
-  gameRightSidebar.game = game;
-  gameRightSidebar.eventBus = eventBus;
 
   const settingsModal = document.querySelector(
     "settings-modal",
@@ -304,16 +268,12 @@ export function createRenderer(
     ),
     spawnTimer,
     immunityTimer,
-    leaderboard,
-    gameLeftSidebar,
+    gameMenu,
     unitDisplay,
-    gameRightSidebar,
     controlPanel,
     playerInfo,
     winModal,
-    replayPanel,
     settingsModal,
-    teamStats,
     playerPanel,
     headsUpMessage,
     multiTabModal,
