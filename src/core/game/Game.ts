@@ -175,6 +175,7 @@ export enum GameMapType {
   DanishStraits = "Danish Straits",
   NorthwestPassage = "Northwest Passage",
   Venice = "Venice",
+  Korea = "Korea",
   Balkans = "Balkans",
   Labyrinth = "Labyrinth",
 }
@@ -238,6 +239,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BeringSea,
     GameMapType.ArchipelagoSea,
     GameMapType.BajaCalifornia,
+    GameMapType.Korea,
     GameMapType.MiddleEast,
     GameMapType.TaiwanStrait,
     GameMapType.Balkans,
