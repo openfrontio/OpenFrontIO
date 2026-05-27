@@ -602,9 +602,12 @@
     "danishstraits": "Danish Straits",
     "northwestpassage": "Northwest Passage",
     "venice": "Venice",
+    "korea": "Korea",
     "indiansubcontinent": "Indian Subcontinent",
     "balkans": "Balkans",
     "yellowsea": "Yellow Sea"
+    "labyrinth": "Labyrinth",
+    "balkans": "Balkans"
   },
   "map_categories": {
     "featured": "Featured",

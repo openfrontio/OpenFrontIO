@@ -60,10 +60,10 @@ void main() {
   //   0 = normal
   //   1 = flicker (nukes/warheads — cycling hot colors)
   //   2 = angry (warships attacking — solid red territory band)
-  if (vFlags > 1.5) {
+  if (abs(vFlags - FLAG_ANGRY) < 0.1) {
     // Angry: solid red territory band
     territoryColor = uAngryColor;
-  } else if (vFlags > 0.5) {
+  } else if (abs(vFlags - FLAG_FLICKER) < 0.1) {
     // Flicker: cycle through hot colors, offset by position hash
     float phase = fract(uTick * uFlickerSpeed + vHash);
     int idx = int(phase * 4.0) % 4;
