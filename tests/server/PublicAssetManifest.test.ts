@@ -59,6 +59,36 @@ describe("PublicAssetManifest", () => {
     await fs.writeFile(pagePath, pageContent);
   }
 
+  async function writeTextureAtlasFixture(
+    resourcesDir: string,
+    jsonRelativePath: string,
+    imageFilePath: string,
+    imageContent: string = "png-v1",
+  ): Promise<void> {
+    const jsonPath = path.join(resourcesDir, jsonRelativePath);
+    const imagePath = path.join(path.dirname(jsonPath), imageFilePath);
+    const atlasImagePath = imageFilePath.split(path.sep).join(path.posix.sep);
+
+    await fs.mkdir(path.dirname(imagePath), { recursive: true });
+    await fs.writeFile(
+      jsonPath,
+      JSON.stringify(
+        {
+          frames: {},
+          meta: {
+            image: atlasImagePath,
+            format: "RGBA8888",
+            size: { w: 1, h: 1 },
+            scale: "1",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    await fs.writeFile(imagePath, imageContent);
+  }
+
   async function emitHashedAsset(
     outDir: string,
     assetHref: string,
@@ -187,6 +217,79 @@ describe("PublicAssetManifest", () => {
 
     expect(emittedManifest).toContain("https://cdn.example.com/app-icon.png");
     expect(emittedManifest).toContain("data:image/png;base64,AAA");
+  });
+
+  test("rewrites TexturePacker atlas image refs to hashed relative paths", async () => {
+    const { resourcesDir, outDir } = await createTempResources();
+
+    await writeTextureAtlasFixture(
+      resourcesDir,
+      path.join("images", "namelayer-icons.json"),
+      "namelayer-icons.png",
+    );
+
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
+
+    const jsonHref = assetManifest["images/namelayer-icons.json"];
+    const pngHref = assetManifest["images/namelayer-icons.png"];
+    const emittedJson = await emitHashedAsset(outDir, jsonHref);
+    const emittedAtlas = JSON.parse(emittedJson) as {
+      meta: { image: string };
+    };
+
+    expect(emittedAtlas.meta.image).toBe(
+      getExpectedRelativeEmittedPath(jsonHref, pngHref),
+    );
+    expect(emittedAtlas.meta.image).not.toBe("namelayer-icons.png");
+  });
+
+  test("TexturePacker atlas JSON hash changes when its image changes", async () => {
+    const { resourcesDir } = await createTempResources();
+
+    await writeTextureAtlasFixture(
+      resourcesDir,
+      path.join("images", "namelayer-icons.json"),
+      "namelayer-icons.png",
+    );
+
+    const firstManifest = buildPublicAssetManifest([resourcesDir]);
+
+    await fs.writeFile(
+      path.join(resourcesDir, "images", "namelayer-icons.png"),
+      "png-v2",
+    );
+    clearPublicAssetManifestCache();
+
+    const secondManifest = buildPublicAssetManifest([resourcesDir]);
+
+    expect(firstManifest["images/namelayer-icons.png"]).not.toBe(
+      secondManifest["images/namelayer-icons.png"],
+    );
+    expect(firstManifest["images/namelayer-icons.json"]).not.toBe(
+      secondManifest["images/namelayer-icons.json"],
+    );
+  });
+
+  test("fails when TexturePacker atlas JSON references a missing image", async () => {
+    const { resourcesDir } = await createTempResources();
+
+    await fs.mkdir(path.join(resourcesDir, "images"), { recursive: true });
+    await fs.writeFile(
+      path.join(resourcesDir, "images", "namelayer-icons.json"),
+      JSON.stringify(
+        {
+          frames: {},
+          meta: { image: "missing.png" },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(() => buildPublicAssetManifest([resourcesDir])).toThrow(
+      /images\/namelayer-icons\.json references images\/missing\.png/i,
+    );
   });
 
   test("rewrites BMFont XML page filenames to hashed relative paths", async () => {

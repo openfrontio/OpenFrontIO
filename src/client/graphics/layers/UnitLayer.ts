@@ -52,6 +52,7 @@ const DYNAMIC_MOVER_ZOOM_HYSTERESIS = 0.2;
 const DYNAMIC_MOVER_SCALE_SETTLE_MS = 160;
 const DYNAMIC_MOVER_SCALE_COOLDOWN_MS = 300;
 const DYNAMIC_MOVER_SUBPIXEL_SNAP = false;
+const SPRITELESS_CELL_MARKER_SIZE = 3;
 const SMALL_SHIP_MASK_SIZE = 5;
 const TRANSPORT_SHIP_MASK = [
   "..B..",
@@ -2191,14 +2192,15 @@ export class UnitLayer implements Layer {
     customTerritoryColor?: Colord,
   ): MoverSpriteRect {
     if (this.isSpriteLessCellUnit(unit)) {
-      const outX = roundCoords ? Math.round(x) : x;
-      const outY = roundCoords ? Math.round(y) : y;
+      const markerOffset = Math.floor(SPRITELESS_CELL_MARKER_SIZE / 2);
+      const outX = (roundCoords ? Math.round(x) : x) - markerOffset;
+      const outY = (roundCoords ? Math.round(y) : y) - markerOffset;
       const pad = 2;
       return {
         x: outX - pad,
         y: outY - pad,
-        w: 1 + pad * 2,
-        h: 1 + pad * 2,
+        w: SPRITELESS_CELL_MARKER_SIZE + pad * 2,
+        h: SPRITELESS_CELL_MARKER_SIZE + pad * 2,
       };
     }
 
@@ -2248,10 +2250,16 @@ export class UnitLayer implements Layer {
     }
 
     if (this.isSpriteLessCellUnit(unit)) {
-      const outX = roundCoords ? Math.round(x) : x;
-      const outY = roundCoords ? Math.round(y) : y;
+      const markerOffset = Math.floor(SPRITELESS_CELL_MARKER_SIZE / 2);
+      const outX = (roundCoords ? Math.round(x) : x) - markerOffset;
+      const outY = (roundCoords ? Math.round(y) : y) - markerOffset;
       ctx.fillStyle = this.cellUnitFillStyle(unit);
-      ctx.fillRect(outX, outY, 1, 1);
+      ctx.fillRect(
+        outX,
+        outY,
+        SPRITELESS_CELL_MARKER_SIZE,
+        SPRITELESS_CELL_MARKER_SIZE,
+      );
       ctx.restore();
 
       return this.computeSpriteRect(

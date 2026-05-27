@@ -195,10 +195,62 @@ function renderBitmapFontAsset({
   );
 }
 
+function renderTextureAtlasJsonAsset({
+  resourcesDir,
+  relativePath,
+  assetManifest,
+}: DerivedPublicAssetRenderContext): string {
+  const atlas = JSON.parse(readPublicAssetText(resourcesDir, relativePath)) as {
+    meta?: { image?: unknown };
+  };
+
+  const imagePath = atlas.meta?.image;
+  if (imagePath === undefined) {
+    return `${JSON.stringify(atlas, null, 2)}\n`;
+  }
+
+  if (typeof imagePath !== "string") {
+    throw new Error(
+      `Derived asset ${relativePath} contains a non-string atlas image reference`,
+    );
+  }
+
+  if (imagePath.trim().length === 0) {
+    throw new Error(
+      `Derived asset ${relativePath} contains a blank atlas image reference`,
+    );
+  }
+
+  if (!isExternalAssetReference(imagePath)) {
+    const referencedAssetPath = resolveDerivedAssetReference(
+      relativePath,
+      imagePath,
+    );
+    const referencedHashedUrl = assetManifest[referencedAssetPath];
+    if (!referencedHashedUrl) {
+      throw new Error(
+        `Derived asset ${relativePath} references ${referencedAssetPath}, but it is missing from the asset manifest`,
+      );
+    }
+
+    atlas.meta!.image = getEmittedAssetRelativePath(
+      relativePath,
+      referencedHashedUrl,
+    );
+  }
+
+  return `${JSON.stringify(atlas, null, 2)}\n`;
+}
+
 const DERIVED_PUBLIC_ASSET_RENDERERS: DerivedPublicAssetRenderer[] = [
   {
     matches: (relativePath) => relativePath === "manifest.json",
     render: renderWebManifestAsset,
+  },
+  {
+    matches: (relativePath) =>
+      relativePath.startsWith("images/") && relativePath.endsWith(".json"),
+    render: renderTextureAtlasJsonAsset,
   },
   {
     matches: (relativePath) =>
