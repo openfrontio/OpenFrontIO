@@ -1,40 +1,69 @@
 {
   "name": "Yellow Sea",
-  "nations": [
+    "nations": [
     {
-      "coordinates": [1350, 575],
-      "name": "North Korea",
-      "flag": "kp"
+      "coordinates": [
+        1350,
+        575
+      ],
+      "flag": "kp",
+      "name": "North Korea"
     },
     {
-      "coordinates": [1469, 935],
-      "name": "South Korea",
-      "flag": "kr"
+      "coordinates": [
+        1469,
+        935
+      ],
+      "flag": "kr",
+      "name": "South Korea"
     },
     {
-      "coordinates": [1003, 220],
-      "name": "Liaoning",
-      "flag": "cn"
+      "coordinates": [
+        1003,
+        220
+      ],
+      "flag": "cn",
+      "name": "Liaoning"
     },
     {
-      "coordinates": [490, 924],
-      "name": "Shandong",
-      "flag": "cn"
+      "coordinates": [
+        490,
+        924
+      ],
+      "flag": "cn",
+      "name": "Shandong"
     },
     {
-      "coordinates": [32, 295],
-      "name": "Beijing",
-      "flag": "cn"
+      "coordinates": [
+        32,
+        295
+      ],
+      "flag": "cn",
+      "name": "Beijing"
     },
     {
-      "coordinates": [161, 483],
-      "name": "Tianjin",
-      "flag": "cn"
+      "coordinates": [
+        161,
+        483
+      ],
+      "flag": "cn",
+      "name": "Tianjin"
     },
     {
-      "coordinates": [109, 781],
-      "name": "Hebei",
-      "flag": "cn"
+      "coordinates": [
+        109,
+        781
+      ],
+      "flag": "cn",
+      "name": "Hebei"
+    },
+    {
+      "coordinates": [
+        1387,
+        84
+      ],
+      "flag": "cn",
+      "name": "Jilin"
     }
   ]
 }

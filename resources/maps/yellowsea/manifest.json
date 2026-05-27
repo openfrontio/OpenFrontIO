@@ -71,6 +71,13 @@
       ],
       "flag": "cn",
       "name": "Hebei"
+    },
+    {
+      "coordinates": [
+        1387, 84
+      ],
+      "flag": "cn",
+      "name": "Jilin"
     }
   ]
 }
