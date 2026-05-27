@@ -57,10 +57,7 @@ export class PlayerExecution implements Execution {
 
       const captor = this.mg!.player(owner.id());
       if (u.type() === UnitType.DefensePost) {
-        u.decreaseLevel(captor);
-        if (u.isActive()) {
-          captor.captureUnit(u);
-        }
+        u.delete(true, captor);
       } else {
         captor.captureUnit(u);
       }
