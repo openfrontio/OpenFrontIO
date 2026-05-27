@@ -1,67 +1,43 @@
 {
   "name": "Yellow Sea",
-    "nations": [
+  "nations": [
     {
-      "coordinates": [
-        1350,
-        575
-      ],
+      "coordinates": [1350, 575],
       "flag": "kp",
       "name": "North Korea"
     },
     {
-      "coordinates": [
-        1469,
-        935
-      ],
+      "coordinates": [1469, 935],
       "flag": "kr",
       "name": "South Korea"
     },
     {
-      "coordinates": [
-        1003,
-        220
-      ],
+      "coordinates": [1003, 220],
       "flag": "cn",
       "name": "Liaoning"
     },
     {
-      "coordinates": [
-        490,
-        924
-      ],
+      "coordinates": [490, 924],
       "flag": "cn",
       "name": "Shandong"
     },
     {
-      "coordinates": [
-        32,
-        295
-      ],
+      "coordinates": [32, 295],
       "flag": "cn",
       "name": "Beijing"
     },
     {
-      "coordinates": [
-        161,
-        483
-      ],
+      "coordinates": [161, 483],
       "flag": "cn",
       "name": "Tianjin"
     },
     {
-      "coordinates": [
-        109,
-        781
-      ],
+      "coordinates": [109, 781],
       "flag": "cn",
       "name": "Hebei"
     },
     {
-      "coordinates": [
-        1387,
-        84
-      ],
+      "coordinates": [1387, 84],
       "flag": "cn",
       "name": "Jilin"
     }
