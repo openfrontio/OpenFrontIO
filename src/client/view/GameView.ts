@@ -494,7 +494,13 @@ export class GameView implements GameMap {
       this._unitStates,
       this._map.width(),
     );
-    f.attackRings = extractAttackRings(this._unitStates, this._map.width());
+    f.attackRings = this._myPlayer
+      ? extractAttackRings(
+          this._unitStates,
+          this._map.width(),
+          this._myPlayer.smallID(),
+        )
+      : [];
     f.structuresDirty = this._structuresDirty;
 
     // First populate: signal "full upload required" by nulling changedTiles.
