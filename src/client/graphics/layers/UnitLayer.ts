@@ -882,6 +882,10 @@ export class UnitLayer implements Layer {
       sampledCache.set(unitId, null);
       return null;
     }
+    if (this.requiresSpriteBitmap(unit) && !isSpriteReady(unit)) {
+      sampledCache.set(unitId, null);
+      return null;
+    }
 
     const renderX = this.snapDynamicMoverCoord(sampled.x);
     const renderY = this.snapDynamicMoverCoord(sampled.y);
@@ -2186,6 +2190,18 @@ export class UnitLayer implements Layer {
     roundCoords: boolean,
     customTerritoryColor?: Colord,
   ): MoverSpriteRect {
+    if (this.isSpriteLessCellUnit(unit)) {
+      const outX = roundCoords ? Math.round(x) : x;
+      const outY = roundCoords ? Math.round(y) : y;
+      const pad = 2;
+      return {
+        x: outX - pad,
+        y: outY - pad,
+        w: 1 + pad * 2,
+        h: 1 + pad * 2,
+      };
+    }
+
     if (this.isSmallMaskShip(unit)) {
       const { x: outX, y: outY } = this.smallShipTopLeft(x, y, roundCoords);
       const pad = 1;
@@ -2229,6 +2245,22 @@ export class UnitLayer implements Layer {
     ctx.save();
     if (!targetable) {
       ctx.globalAlpha = 0.5;
+    }
+
+    if (this.isSpriteLessCellUnit(unit)) {
+      const outX = roundCoords ? Math.round(x) : x;
+      const outY = roundCoords ? Math.round(y) : y;
+      ctx.fillStyle = this.cellUnitFillStyle(unit);
+      ctx.fillRect(outX, outY, 1, 1);
+      ctx.restore();
+
+      return this.computeSpriteRect(
+        unit,
+        x,
+        y,
+        roundCoords,
+        customTerritoryColor,
+      );
     }
 
     if (this.isSmallMaskShip(unit)) {
@@ -2317,6 +2349,29 @@ export class UnitLayer implements Layer {
   private isSmallMaskShip(unit: UnitView): boolean {
     const type = unit.type();
     return type === UnitType.TransportShip || type === UnitType.TradeShip;
+  }
+
+  private isSpriteLessCellUnit(unit: UnitView): boolean {
+    return unit.type() === UnitType.MIRVWarhead;
+  }
+
+  private requiresSpriteBitmap(unit: UnitView): boolean {
+    return !this.isSmallMaskShip(unit) && !this.isSpriteLessCellUnit(unit);
+  }
+
+  private cellUnitFillStyle(unit: UnitView): string {
+    if (this.alternateView) {
+      const rel = this.relationshipForAlternateView(unit);
+      switch (rel) {
+        case Relationship.Self:
+          return this.theme.selfColor().toRgbString();
+        case Relationship.Ally:
+          return this.theme.allyColor().toRgbString();
+        case Relationship.Enemy:
+          return this.theme.enemyColor().toRgbString();
+      }
+    }
+    return unit.owner().borderColor().toRgbString();
   }
 
   private smallShipMask(unit: UnitView): readonly string[] {
