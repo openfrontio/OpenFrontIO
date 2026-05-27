@@ -79,6 +79,7 @@
   },
   "railroad": {
     "railMinZoom": 4,
+    "railFadeRange": 2,
     "railDetailZoom": 6,
     "railAlpha": 1
   },
