@@ -1,709 +1,270 @@
-import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
 import {
-  Cell,
-  ColoredTeams,
-  PlayerType,
-  Team,
-  UnitType,
-} from "../../../core/game/Game";
-import { euclDistFN, TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import {
-  AlternateViewEvent,
-  DragEvent,
-  MouseOverEvent,
-} from "../../InputHandler";
-import { FrameProfiler } from "../FrameProfiler";
+  TERRITORY_RENDERER_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../../core/game/UserSettings";
 import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
+import { ClassicTerritoryBackend } from "./ClassicTerritoryBackend";
+import {
+  TERRITORY_RENDERER_STATUS_EVENT,
+  TerritoryBackend,
+  TerritoryRendererId,
+  TerritoryRendererStatus,
+  selectTerritoryBackend,
+  territoryRendererOrder,
+} from "./TerritoryBackend";
+import { WebGLTerritoryBackend } from "./WebGLTerritoryBackend";
+import { WebGPUTerritoryBackend } from "./WebGPUTerritoryBackend";
 
-export class TerritoryLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-  private imageData: ImageData;
-  private alternativeImageData: ImageData;
-  private borderAnimTime = 0;
+export class TerritoryLayer implements TerritoryBackend {
+  readonly id = "classic";
 
-  private cachedTerritoryPatternsEnabled: boolean | undefined;
-
-  private tileToRenderQueue: PriorityQueue<{
-    tile: TileRef;
-    lastUpdate: number;
-  }> = new PriorityQueue((a, b) => {
-    return a.lastUpdate - b.lastUpdate;
-  });
-  private random = new PseudoRandom(123);
-  private theme: Theme;
-
-  // Used for spawn highlighting
-  private highlightCanvas: HTMLCanvasElement;
-  private highlightContext: CanvasRenderingContext2D;
-
-  private highlightedTerritory: PlayerView | null = null;
-
-  private alternativeView = false;
-  private lastDragTime = 0;
-  private nodrawDragDuration = 200;
-  private lastMousePosition: { x: number; y: number } | null = null;
-
-  private refreshRate = 10; //refresh every 10ms
-  private lastRefresh = 0;
-
-  private lastFocusedPlayer: PlayerView | null = null;
+  private activeBackend: TerritoryBackend | null = null;
+  private failedBackends = new Set<TerritoryRendererId>();
+  private selectionToken = 0;
+  private initialized = false;
+  private readonly settingsChanged = () => {
+    this.failedBackends.clear();
+    this.publishStatus("Retrying renderer selection");
+    void this.selectConfiguredBackend();
+  };
 
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-  ) {
-    this.theme = game.config().theme();
-    this.cachedTerritoryPatternsEnabled = undefined;
+    private userSettings: UserSettings,
+  ) {}
+
+  profileName(): string {
+    return "TerritoryLayer:renderLayer";
   }
 
   shouldTransform(): boolean {
     return true;
   }
 
-  async paintPlayerBorder(player: PlayerView) {
-    const tiles = await player.borderTiles();
-    tiles.borderTiles.forEach((tile: TileRef) => {
-      this.paintTerritory(tile, true); // Immediately paint the tile instead of enqueueing
-    });
+  init() {
+    this.initialized = true;
+    globalThis.addEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${TERRITORY_RENDERER_KEY}`,
+      this.settingsChanged,
+    );
+
+    // Keep the map visible while accelerated renderers initialize.
+    this.activateBackend(
+      this.createBackend("classic"),
+      "Using Classic while accelerated renderer initializes",
+    );
+    void this.selectConfiguredBackend();
   }
 
   tick() {
-    if (this.game.inSpawnPhase()) {
-      this.spawnHighlight();
-    }
-
-    this.game.recentlyUpdatedTiles().forEach((t) => {
-      this.enqueueTile(t);
-      // Immediately clear territory overlay for water tiles so old
-      // borders/territory don't persist visually (e.g. after nuke turns land to water)
-      if (this.game.isWater(t)) {
-        this.clearTile(t);
-      }
-    });
-    const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    unitUpdates.forEach((update) => {
-      if (update.unitType === UnitType.DefensePost) {
-        // Only update borders if the defense post is not under construction
-        if (update.underConstruction) {
-          return; // Skip barrier creation while under construction
-        }
-
-        const tile = update.pos;
-        this.game
-          .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
-          .forEach((t) => {
-            if (
-              this.game.isBorder(t) &&
-              (this.game.ownerID(t) === update.ownerID ||
-                this.game.ownerID(t) === update.lastOwnerID)
-            ) {
-              this.enqueueTile(t);
-            }
-          });
-      }
-    });
-
-    // Detect alliance mutations
-    const myPlayer = this.game.myPlayer();
-    if (myPlayer) {
-      updates?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
-        const territory = this.game.playerBySmallID(update.betrayedID);
-        if (territory && territory instanceof PlayerView) {
-          this.redrawBorder(territory);
-        }
-      });
-
-      updates?.[GameUpdateType.AllianceRequestReply]?.forEach((update) => {
-        if (
-          update.accepted &&
-          (update.request.requestorID === myPlayer.smallID() ||
-            update.request.recipientID === myPlayer.smallID())
-        ) {
-          const territoryId =
-            update.request.requestorID === myPlayer.smallID()
-              ? update.request.recipientID
-              : update.request.requestorID;
-          const territory = this.game.playerBySmallID(territoryId);
-          if (territory && territory instanceof PlayerView) {
-            this.redrawBorder(territory);
-          }
-        }
-      });
-      updates?.[GameUpdateType.EmbargoEvent]?.forEach((update) => {
-        const player = this.game.playerBySmallID(update.playerID) as PlayerView;
-        const embargoed = this.game.playerBySmallID(
-          update.embargoedID,
-        ) as PlayerView;
-
-        if (
-          player.id() === myPlayer?.id() ||
-          embargoed.id() === myPlayer?.id()
-        ) {
-          this.redrawBorder(player, embargoed);
-        }
-      });
-    }
-
-    const focusedPlayer = this.game.focusedPlayer();
-    if (focusedPlayer !== this.lastFocusedPlayer) {
-      if (this.lastFocusedPlayer) {
-        this.paintPlayerBorder(this.lastFocusedPlayer);
-      }
-      if (focusedPlayer) {
-        this.paintPlayerBorder(focusedPlayer);
-      }
-      this.lastFocusedPlayer = focusedPlayer;
-    }
-  }
-
-  private spawnHighlight() {
-    this.highlightContext.clearRect(
-      0,
-      0,
-      this.game.width(),
-      this.game.height(),
-    );
-
-    this.drawFocusedPlayerHighlight();
-
-    const humans = this.game
-      .playerViews()
-      .filter((p) => p.type() === PlayerType.Human);
-
-    const focusedPlayer = this.game.focusedPlayer();
-    const teamColors = Object.values(ColoredTeams);
-    for (const human of humans) {
-      if (human === focusedPlayer) {
-        continue;
-      }
-      const center = human.nameLocation();
-      if (!center) {
-        continue;
-      }
-      const centerTile = this.game.ref(center.x, center.y);
-      if (!centerTile) {
-        continue;
-      }
-      let color = this.theme.spawnHighlightColor();
-      const myPlayer = this.game.myPlayer();
-      if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
-        // In FFA games (when team === null), use default yellow spawn highlight color
-        color = this.theme.spawnHighlightColor();
-      } else if (myPlayer !== null && myPlayer !== human) {
-        // In Team games, the spawn highlight color becomes that player's team color
-        // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
-        const team = human.team();
-        if (team !== null && teamColors.includes(team)) {
-          color = this.theme.teamColor(team);
-        } else {
-          if (myPlayer.isFriendly(human)) {
-            color = this.theme.spawnHighlightTeamColor();
-          } else {
-            color = this.theme.spawnHighlightColor();
-          }
-        }
-      }
-
-      for (const tile of this.game.bfs(
-        centerTile,
-        euclDistFN(centerTile, 9, true),
-      )) {
-        if (!this.game.hasOwner(tile)) {
-          this.paintHighlightTile(tile, color, 255);
-        }
-      }
-    }
-  }
-
-  private drawFocusedPlayerHighlight() {
-    const focusedPlayer = this.game.focusedPlayer();
-
-    if (!focusedPlayer) {
-      return;
-    }
-    const center = focusedPlayer.nameLocation();
-    if (!center) {
-      return;
-    }
-    // Breathing border animation
-    this.borderAnimTime += 0.5;
-    const minRad = 8;
-    const maxRad = 24;
-    // Range: [minPadding..maxPadding]
-    const radius =
-      minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
-
-    const baseColor = this.theme.spawnHighlightSelfColor(); //white
-    let teamColor: Colord | null = null;
-
-    const team: Team | null = focusedPlayer.team();
-    if (team !== null && Object.values(ColoredTeams).includes(team)) {
-      teamColor = this.theme.teamColor(team).alpha(0.5);
-    } else {
-      teamColor = baseColor;
-    }
-
-    this.drawBreathingRing(
-      center.x,
-      center.y,
-      minRad,
-      maxRad,
-      radius,
-      baseColor, // Always draw white static semi-transparent ring
-      teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
-    );
-
-    // Draw breathing rings for teammates in team games (helps colorblind players identify teammates)
-    this.drawTeammateHighlights(minRad, maxRad, radius);
-  }
-
-  private drawTeammateHighlights(
-    minRad: number,
-    maxRad: number,
-    radius: number,
-  ) {
-    const myPlayer = this.game.myPlayer();
-    if (myPlayer === null || myPlayer.team() === null) {
-      return;
-    }
-
-    const teammates = this.game
-      .playerViews()
-      .filter((p) => p !== myPlayer && myPlayer.isOnSameTeam(p));
-
-    // Smaller radius for teammates (more subtle than self highlight)
-    const teammateMinRad = 5;
-    const teammateMaxRad = 14;
-    const teammateRadius =
-      teammateMinRad +
-      (teammateMaxRad - teammateMinRad) *
-        ((radius - minRad) / (maxRad - minRad));
-
-    const teamColors = Object.values(ColoredTeams);
-    for (const teammate of teammates) {
-      const center = teammate.nameLocation();
-      if (!center) {
-        continue;
-      }
-
-      const team = teammate.team();
-      let baseColor: Colord;
-      let breathingColor: Colord;
-
-      if (team !== null && teamColors.includes(team)) {
-        baseColor = this.theme.teamColor(team).alpha(0.5);
-        breathingColor = this.theme.teamColor(team).alpha(0.5);
-      } else {
-        baseColor = this.theme.spawnHighlightTeamColor();
-        breathingColor = this.theme.spawnHighlightTeamColor();
-      }
-
-      this.drawBreathingRing(
-        center.x,
-        center.y,
-        teammateMinRad,
-        teammateMaxRad,
-        teammateRadius,
-        baseColor,
-        breathingColor,
-      );
-    }
-  }
-
-  init() {
-    this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
-    this.eventBus.on(AlternateViewEvent, (e) => {
-      this.alternativeView = e.alternateView;
-    });
-    this.eventBus.on(DragEvent, (e) => {
-      // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
-      // this.lastDragTime = Date.now();
-    });
-    this.redraw();
-  }
-
-  onMouseOver(event: MouseOverEvent) {
-    this.lastMousePosition = { x: event.x, y: event.y };
-    this.updateHighlightedTerritory();
-  }
-
-  private updateHighlightedTerritory() {
-    if (!this.alternativeView) {
-      return;
-    }
-
-    if (!this.lastMousePosition) {
-      return;
-    }
-
-    const cell = this.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-    if (!this.game.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
-    const previousTerritory = this.highlightedTerritory;
-    const territory = this.getTerritoryAtCell(cell);
-
-    if (territory) {
-      this.highlightedTerritory = territory;
-    } else {
-      this.highlightedTerritory = null;
-    }
-
-    if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
-      const territories: PlayerView[] = [];
-      if (previousTerritory) {
-        territories.push(previousTerritory);
-      }
-      if (this.highlightedTerritory) {
-        territories.push(this.highlightedTerritory);
-      }
-      this.redrawBorder(...territories);
-    }
-  }
-
-  private getTerritoryAtCell(cell: { x: number; y: number }) {
-    const tile = this.game.ref(cell.x, cell.y);
-    if (!tile) {
-      return null;
-    }
-    // If the tile has no owner, it is either a fallout tile or a terra nullius tile.
-    if (!this.game.hasOwner(tile)) {
-      return null;
-    }
-    const owner = this.game.owner(tile);
-    return owner instanceof PlayerView ? owner : null;
+    this.runActive("tick", (backend) => backend.tick?.());
   }
 
   redraw() {
-    console.log("redrew territory layer");
-    this.canvas = document.createElement("canvas");
-    const context = this.canvas.getContext("2d");
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
-
-    this.imageData = this.context.getImageData(
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-    );
-    this.alternativeImageData = this.context.getImageData(
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-    );
-    this.initImageData();
-
-    this.context.putImageData(
-      this.alternativeView ? this.alternativeImageData : this.imageData,
-      0,
-      0,
-    );
-
-    // Add a second canvas for highlights
-    this.highlightCanvas = document.createElement("canvas");
-    const highlightContext = this.highlightCanvas.getContext("2d", {
-      alpha: true,
-    });
-    if (highlightContext === null) throw new Error("2d context not supported");
-    this.highlightContext = highlightContext;
-    this.highlightCanvas.width = this.game.width();
-    this.highlightCanvas.height = this.game.height();
-
-    this.game.forEachTile((t) => {
-      this.paintTerritory(t);
-    });
-  }
-
-  redrawBorder(...players: PlayerView[]) {
-    return Promise.all(
-      players.map(async (player) => {
-        const tiles = await player.borderTiles();
-        tiles.borderTiles.forEach((tile: TileRef) => {
-          this.paintTerritory(tile, true);
-        });
-      }),
-    );
-  }
-
-  initImageData() {
-    this.game.forEachTile((tile) => {
-      const cell = new Cell(this.game.x(tile), this.game.y(tile));
-      const index = cell.y * this.game.width() + cell.x;
-      const offset = index * 4;
-      this.imageData.data[offset + 3] = 0;
-      this.alternativeImageData.data[offset + 3] = 0;
-    });
+    if (!this.initialized) {
+      return;
+    }
+    this.runActive("redraw", (backend) => backend.redraw?.());
+    void this.selectConfiguredBackend();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    const now = Date.now();
-    if (
-      now > this.lastDragTime + this.nodrawDragDuration &&
-      now > this.lastRefresh + this.refreshRate
-    ) {
-      this.lastRefresh = now;
-      const renderTerritoryStart = FrameProfiler.start();
-      this.renderTerritory();
-      FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
-
-      const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
-      const vx0 = Math.max(0, topLeft.x);
-      const vy0 = Math.max(0, topLeft.y);
-      const vx1 = Math.min(this.game.width() - 1, bottomRight.x);
-      const vy1 = Math.min(this.game.height() - 1, bottomRight.y);
-
-      const w = vx1 - vx0 + 1;
-      const h = vy1 - vy0 + 1;
-
-      if (w > 0 && h > 0) {
-        const putImageStart = FrameProfiler.start();
-        this.context.putImageData(
-          this.alternativeView ? this.alternativeImageData : this.imageData,
-          0,
-          0,
-          vx0,
-          vy0,
-          w,
-          h,
-        );
-        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
-      }
+    if (!this.activeBackend) {
+      return;
     }
 
-    const drawCanvasStart = FrameProfiler.start();
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
+    if (this.activeBackend.id !== "webgpu") {
+      this.fillBackground(context);
+    }
+
+    this.runActive("renderLayer", (backend) => backend.renderLayer?.(context));
+  }
+
+  dispose() {
+    globalThis.removeEventListener?.(
+      `${USER_SETTINGS_CHANGED_EVENT}:${TERRITORY_RENDERER_KEY}`,
+      this.settingsChanged,
     );
-    FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
-    if (this.game.inSpawnPhase()) {
-      const highlightDrawStart = FrameProfiler.start();
-      context.drawImage(
-        this.highlightCanvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
-      FrameProfiler.end(
-        "TerritoryLayer:drawHighlightCanvas",
-        highlightDrawStart,
-      );
-    }
+    this.activeBackend?.dispose?.();
+    this.activeBackend = null;
   }
 
-  renderTerritory() {
-    let numToRender = Math.floor(this.tileToRenderQueue.size() / 10);
-    if (numToRender === 0 || this.game.inSpawnPhase()) {
-      numToRender = this.tileToRenderQueue.size();
-    }
-
-    while (numToRender > 0) {
-      numToRender--;
-
-      const entry = this.tileToRenderQueue.pop();
-      if (!entry) {
-        break;
-      }
-
-      const tile = entry.tile;
-      this.paintTerritory(tile);
-      for (const neighbor of this.game.neighbors(tile)) {
-        this.paintTerritory(neighbor, true);
-      }
-    }
-  }
-
-  paintTerritory(tile: TileRef, isBorder: boolean = false) {
-    if (isBorder && !this.game.hasOwner(tile)) {
+  private async selectConfiguredBackend() {
+    const token = ++this.selectionToken;
+    const preference = this.userSettings.territoryRenderer();
+    const order = territoryRendererOrder(preference, this.failedBackends);
+    if (
+      this.activeBackend?.id === order[0] &&
+      !this.activeBackend.getFailureReason?.()
+    ) {
       return;
     }
 
-    if (!this.game.hasOwner(tile)) {
-      if (this.game.hasFallout(tile)) {
-        this.paintTile(this.imageData, tile, this.theme.falloutColor(), 150);
-        this.paintTile(
-          this.alternativeImageData,
-          tile,
-          this.theme.falloutColor(),
-          150,
-        );
-        return;
-      }
-      this.clearTile(tile);
+    const selection = await selectTerritoryBackend(
+      preference,
+      this.failedBackends,
+      (id) => this.createBackend(id),
+      () => token === this.selectionToken,
+    );
+
+    if (selection.cancelled) {
       return;
     }
-    const owner = this.game.owner(tile) as PlayerView;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isHighlighted =
-      this.highlightedTerritory &&
-      this.highlightedTerritory.id() === owner.id();
-    const myPlayer = this.game.myPlayer();
 
-    if (this.game.isBorder(tile)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const playerIsFocused = owner && this.game.focusedPlayer() === owner;
-      if (myPlayer) {
-        const alternativeColor = this.alternateViewColor(owner);
-        this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
+    for (const failure of selection.failures) {
+      console.warn(
+        `[TerritoryLayer] ${failure.id} renderer unavailable: ${failure.reason}`,
+        failure.error ?? "",
+      );
+      if (failure.id !== "classic") {
+        this.failedBackends.add(failure.id);
       }
-      const isDefended = this.game.hasUnitNearby(
-        tile,
-        this.game.config().defensePostRange(),
-        UnitType.DefensePost,
-        owner.id(),
-      );
+    }
 
-      this.paintTile(
-        this.imageData,
-        tile,
-        owner.borderColor(tile, isDefended),
-        255,
-      );
+    if (selection.backend !== null) {
+      this.activateBackend(selection.backend);
     } else {
-      // Alternative view only shows borders.
-      this.clearAlternativeTile(tile);
-
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      this.publishStatus("No territory renderer is currently available");
     }
   }
 
-  alternateViewColor(other: PlayerView): Colord {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) {
-      return this.theme.neutralColor();
+  private async initializeCandidate(
+    backend: TerritoryBackend,
+    token: number,
+  ): Promise<boolean> {
+    try {
+      await backend.init?.();
+      if (token !== this.selectionToken) {
+        return false;
+      }
+      if (backend.getFailureReason?.()) {
+        console.warn(
+          `[TerritoryLayer] ${backend.id} renderer unavailable: ${backend.getFailureReason()}`,
+        );
+        return false;
+      }
+      if (backend.whenReady) {
+        const ready = await backend.whenReady();
+        if (!ready || backend.getFailureReason?.()) {
+          console.warn(
+            `[TerritoryLayer] ${backend.id} renderer unavailable: ${
+              backend.getFailureReason?.() ?? "initialization failed"
+            }`,
+          );
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn(
+        `[TerritoryLayer] ${backend.id} renderer failed init`,
+        error,
+      );
+      return false;
     }
-    if (other.smallID() === myPlayer.smallID()) {
-      return this.theme.selfColor();
-    }
-    if (other.isFriendly(myPlayer)) {
-      return this.theme.allyColor();
-    }
-    if (!other.hasEmbargo(myPlayer)) {
-      return this.theme.neutralColor();
-    }
-    return this.theme.enemyColor();
   }
 
-  paintAlternateViewTile(tile: TileRef, other: PlayerView) {
-    const color = this.alternateViewColor(other);
-    this.paintTile(this.alternativeImageData, tile, color, 255);
-  }
-
-  paintTile(imageData: ImageData, tile: TileRef, color: Colord, alpha: number) {
-    const offset = tile * 4;
-    imageData.data[offset] = color.rgba.r;
-    imageData.data[offset + 1] = color.rgba.g;
-    imageData.data[offset + 2] = color.rgba.b;
-    imageData.data[offset + 3] = alpha;
-  }
-
-  clearTile(tile: TileRef) {
-    const offset = tile * 4;
-    this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
-    this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
-  }
-
-  clearAlternativeTile(tile: TileRef) {
-    const offset = tile * 4;
-    this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
-  }
-
-  enqueueTile(tile: TileRef) {
-    this.tileToRenderQueue.push({
-      tile: tile,
-      lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
-    });
-  }
-
-  async enqueuePlayerBorder(player: PlayerView) {
-    const playerBorderTiles = await player.borderTiles();
-    playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
-      this.enqueueTile(tile);
-    });
-  }
-
-  paintHighlightTile(tile: TileRef, color: Colord, alpha: number) {
-    this.clearTile(tile);
-    const x = this.game.x(tile);
-    const y = this.game.y(tile);
-    this.highlightContext.fillStyle = color.alpha(alpha / 255).toRgbString();
-    this.highlightContext.fillRect(x, y, 1, 1);
-  }
-
-  clearHighlightTile(tile: TileRef) {
-    const x = this.game.x(tile);
-    const y = this.game.y(tile);
-    this.highlightContext.clearRect(x, y, 1, 1);
-  }
-
-  private drawBreathingRing(
-    cx: number,
-    cy: number,
-    minRad: number,
-    maxRad: number,
-    radius: number,
-    transparentColor: Colord,
-    breathingColor: Colord,
+  private activateBackend(
+    backend: TerritoryBackend,
+    message: string | null = null,
   ) {
-    const ctx = this.highlightContext;
-    if (!ctx) return;
+    if (this.activeBackend === backend) {
+      return;
+    }
+    const previous = this.activeBackend;
+    this.activeBackend = backend;
+    previous?.dispose?.();
+    console.info(`[TerritoryLayer] active renderer: ${backend.id}`);
+    this.publishStatus(message);
+  }
 
-    // Draw a semi-transparent ring around the starting location
-    ctx.beginPath();
-    // Transparency matches the highlight color provided
-    const transparent = transparentColor.alpha(0);
-    const radGrad = ctx.createRadialGradient(cx, cy, minRad, cx, cy, maxRad);
+  private runActive(
+    operation: "tick" | "redraw" | "renderLayer",
+    run: (backend: TerritoryBackend) => void,
+  ) {
+    const backend = this.activeBackend;
+    if (!backend) {
+      return;
+    }
 
-    // Pixels with radius < minRad are transparent
-    radGrad.addColorStop(0, transparent.toRgbString());
-    // The ring then starts with solid highlight color
-    radGrad.addColorStop(0.01, transparentColor.toRgbString());
-    radGrad.addColorStop(0.1, transparentColor.toRgbString());
-    // The outer edge of the ring is transparent
-    radGrad.addColorStop(1, transparent.toRgbString());
+    try {
+      run(backend);
+      const reason = backend.getFailureReason?.();
+      if (reason) {
+        this.handleBackendFailure(backend, `${operation}: ${reason}`);
+      }
+    } catch (error) {
+      this.handleBackendFailure(backend, `${operation}: ${String(error)}`);
+    }
+  }
 
-    // Draw an arc at the max radius and fill with the created radial gradient
-    ctx.arc(cx, cy, maxRad, 0, Math.PI * 2);
-    ctx.fillStyle = radGrad;
-    ctx.closePath();
-    ctx.fill();
+  private handleBackendFailure(backend: TerritoryBackend, reason: string) {
+    console.warn(`[TerritoryLayer] ${backend.id} renderer failed: ${reason}`);
+    if (backend.id !== "classic") {
+      this.failedBackends.add(backend.id);
+    }
+    this.publishStatus(`${backend.id} failed: ${reason}`);
+    if (this.activeBackend === backend) {
+      this.activeBackend = null;
+      backend.dispose?.();
+      const classic = this.createBackend("classic");
+      void this.initializeCandidate(classic, ++this.selectionToken).then(
+        (ready) => {
+          if (ready) {
+            this.activateBackend(classic);
+            void this.selectConfiguredBackend();
+          }
+        },
+      );
+    }
+  }
 
-    const breatheInner = breathingColor.alpha(0);
-    // Draw a solid ring around the starting location with outer radius = the breathing radius
-    ctx.beginPath();
-    const radGrad2 = ctx.createRadialGradient(cx, cy, minRad, cx, cy, radius);
-    // Pixels with radius < minRad are transparent
-    radGrad2.addColorStop(0, breatheInner.toRgbString());
-    // The ring then starts with solid highlight color
-    radGrad2.addColorStop(0.01, breathingColor.toRgbString());
-    // The ring is solid throughout
-    radGrad2.addColorStop(1, breathingColor.toRgbString());
+  private createBackend(id: TerritoryRendererId): TerritoryBackend {
+    if (id === "webgpu") {
+      return new WebGPUTerritoryBackend(
+        this.game,
+        this.eventBus,
+        this.transformHandler,
+        this.userSettings,
+      );
+    }
+    if (id === "webgl") {
+      return new WebGLTerritoryBackend(
+        this.game,
+        this.eventBus,
+        this.transformHandler,
+      );
+    }
+    return new ClassicTerritoryBackend(
+      this.game,
+      this.eventBus,
+      this.transformHandler,
+    );
+  }
 
-    // Draw an arc at the current breathing radius and fill with the created "gradient"
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fillStyle = radGrad2;
-    ctx.fill();
+  private fillBackground(context: CanvasRenderingContext2D) {
+    context.save();
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.fillStyle = this.game.config().theme().backgroundColor().toHex();
+    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+    context.restore();
+  }
+
+  private publishStatus(message: string | null = null) {
+    const detail: TerritoryRendererStatus = {
+      active: this.activeBackend?.id ?? null,
+      preference: this.userSettings.territoryRenderer(),
+      failedBackends: Array.from(this.failedBackends),
+      message,
+    };
+
+    globalThis.dispatchEvent?.(
+      new CustomEvent(TERRITORY_RENDERER_STATUS_EVENT, { detail }),
+    );
   }
 }

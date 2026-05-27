@@ -669,6 +669,11 @@ export class GameView implements GameMap {
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
+  private updatedOwnerChanges: Array<{
+    tile: TileRef;
+    previousOwner: number;
+    newOwner: number;
+  }> = [];
 
   private _myPlayer: PlayerView | null = null;
 
@@ -780,14 +785,24 @@ export class GameView implements GameMap {
 
     this.updatedTiles = [];
     this.updatedTerrainTiles = [];
+    this.updatedOwnerChanges = [];
     const packed = this.lastUpdate.packedTileUpdates;
     for (let i = 0; i + 1 < packed.length; i += 2) {
       const tile = packed[i];
       const state = packed[i + 1];
+      const previousOwner = this._map.ownerID(tile);
       const terrainChanged = this.updateTile(tile, state);
       this.updatedTiles.push(tile);
       if (terrainChanged) {
         this.updatedTerrainTiles.push(tile);
+      }
+      const newOwner = this._map.ownerID(tile);
+      if (previousOwner !== newOwner) {
+        this.updatedOwnerChanges.push({
+          tile,
+          previousOwner,
+          newOwner,
+        });
       }
     }
 
@@ -1107,6 +1122,14 @@ export class GameView implements GameMap {
     return this.updatedTerrainTiles;
   }
 
+  recentlyUpdatedOwnerTiles(): Array<{
+    tile: TileRef;
+    previousOwner: number;
+    newOwner: number;
+  }> {
+    return this.updatedOwnerChanges;
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
@@ -1322,6 +1345,18 @@ export class GameView implements GameMap {
   }
   setFallout(ref: TileRef, value: boolean): void {
     return this._map.setFallout(ref, value);
+  }
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+  setDefended(ref: TileRef, value: boolean): void {
+    return this._map.setDefended(ref, value);
+  }
+  tileStateView(): Uint16Array {
+    return this._map.tileStateView();
+  }
+  terrainDataView(): Uint8Array {
+    return this._map.terrainDataView();
   }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);

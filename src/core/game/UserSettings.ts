@@ -47,6 +47,14 @@ export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
+export const TERRITORY_RENDERER_KEY = "settings.territoryRenderer";
+export const WEBGL_DEBUG_KEY = "settings.webglDebug";
+export const WEBGPU_DEBUG_KEY = "settings.webgpuDebug";
+export type TerritoryRendererPreference =
+  | "auto"
+  | "classic"
+  | "webgl"
+  | "webgpu";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -110,7 +118,15 @@ export class UserSettings {
     this.setCached(key, value);
   }
 
-  private getFloat(key: string, defaultValue: number): number {
+  get(key: string, defaultValue: boolean): boolean {
+    return this.getBool(key, defaultValue);
+  }
+
+  set(key: string, value: boolean): void {
+    this.setBool(key, value);
+  }
+
+  getFloat(key: string, defaultValue: number): number {
     const value = this.getCached(key);
     if (!value) return defaultValue;
 
@@ -119,8 +135,22 @@ export class UserSettings {
     return floatValue;
   }
 
-  private setFloat(key: string, value: number) {
+  setFloat(key: string, value: number) {
     this.setCached(key, value.toString());
+  }
+
+  getInt(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    const intValue = parseInt(value, 10);
+    if (!Number.isFinite(intValue)) return defaultValue;
+
+    return intValue;
+  }
+
+  setInt(key: string, value: number): void {
+    localStorage.setItem(key, Math.trunc(value).toString());
   }
 
   emojis() {
@@ -129,6 +159,22 @@ export class UserSettings {
 
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
+  }
+
+  webgpuDebug(): boolean {
+    return this.get(WEBGPU_DEBUG_KEY, false);
+  }
+
+  webglDebug(): boolean {
+    return this.get(WEBGL_DEBUG_KEY, false);
+  }
+
+  setWebgpuDebug(value: boolean): void {
+    this.set(WEBGPU_DEBUG_KEY, value);
+  }
+
+  setWebglDebug(value: boolean): void {
+    this.set(WEBGL_DEBUG_KEY, value);
   }
 
   alertFrame() {
@@ -167,6 +213,33 @@ export class UserSettings {
     return this.getBool("settings.attackingTroopsOverlay", true);
   }
 
+  territoryBorderMode(): number {
+    return this.getInt("settings.territoryBorderMode", 1);
+  }
+
+  territoryRenderer(): TerritoryRendererPreference {
+    const value = this.getString(TERRITORY_RENDERER_KEY, "auto");
+    if (
+      value === "auto" ||
+      value === "classic" ||
+      value === "webgl" ||
+      value === "webgpu"
+    ) {
+      return value;
+    }
+    return "auto";
+  }
+
+  setTerritoryRenderer(value: string): void {
+    const renderer =
+      value === "classic" || value === "webgl" || value === "webgpu"
+        ? value
+        : "auto";
+    this.setWebglDebug(renderer === "webgl");
+    this.setWebgpuDebug(renderer === "webgpu");
+    this.setString(TERRITORY_RENDERER_KEY, renderer);
+  }
+
   toggleAttackingTroopsOverlay() {
     this.setBool(
       "settings.attackingTroopsOverlay",
@@ -194,6 +267,10 @@ export class UserSettings {
 
   togglePerformanceOverlay() {
     this.setBool(PERFORMANCE_OVERLAY_KEY, !this.performanceOverlay());
+  }
+
+  toggleWebgpuDebug() {
+    this.setWebgpuDebug(!this.webgpuDebug());
   }
 
   toggleAlertFrame() {
