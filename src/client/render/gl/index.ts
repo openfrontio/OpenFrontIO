@@ -9,6 +9,8 @@ export type {
   RadialMenuSelectEvent,
 } from "./Events";
 export { GameView } from "./GameView";
+export { GraphicsOverridesSchema } from "./GraphicsOverrides";
+export type { GraphicsOverrides } from "./GraphicsOverrides";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
 export {
   createRenderSettings,

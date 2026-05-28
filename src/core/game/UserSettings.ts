@@ -1,7 +1,7 @@
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
-} from "../../client/hud/layers/GraphicsSettingsModal";
+} from "../../client/render/gl/GraphicsOverrides";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 

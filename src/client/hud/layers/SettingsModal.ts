@@ -105,10 +105,10 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  public closeModal() {
+  public closeModal({ keepPause = false }: { keepPause?: boolean } = {}) {
     this.isVisible = false;
     this.requestUpdate();
-    this.pauseGame(false);
+    if (!keepPause) this.pauseGame(false);
   }
 
   private pauseGame(pause: boolean) {
@@ -185,8 +185,14 @@ export class SettingsModal extends LitElement implements Controller {
   }
 
   private onGraphicsSettingsButtonClick() {
-    this.eventBus.emit(new ShowGraphicsSettingsModalEvent());
-    this.closeModal();
+    this.eventBus.emit(
+      new ShowGraphicsSettingsModalEvent(
+        true,
+        this.shouldPause,
+        this.wasPausedWhenOpened,
+      ),
+    );
+    this.closeModal({ keepPause: true });
   }
 
   private onExitButtonClick() {

@@ -484,6 +484,7 @@ async function createClientGame(
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
     );
 
+    const graphicsListenerAbort = new AbortController();
     const applyGraphicsOverrides = (): void => {
       const generated = generateRenderSettings(
         userSettings.graphicsOverrides(),
@@ -495,6 +496,7 @@ async function createClientGame(
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       applyGraphicsOverrides,
+      { signal: graphicsListenerAbort.signal },
     );
 
     let debugGui: ReturnType<typeof createDebugGui> | null = null;
@@ -542,6 +544,7 @@ async function createClientGame(
       soundManager,
       userSettings,
       webglBuilder,
+      graphicsListenerAbort,
     );
   } catch (err) {
     soundManager.dispose();
@@ -575,6 +578,7 @@ export class ClientGameRunner {
     private soundManager: SoundManager,
     private userSettings: UserSettings,
     private webglBuilder: WebGLFrameBuilder | null = null,
+    private graphicsListenerAbort: AbortController | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -831,6 +835,7 @@ export class ClientGameRunner {
 
   public stop() {
     this.soundManager.dispose();
+    this.graphicsListenerAbort?.abort();
     if (!this.isActive) return;
 
     this.isActive = false;

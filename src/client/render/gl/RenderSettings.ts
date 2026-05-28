@@ -1,4 +1,4 @@
-import { GraphicsOverrides } from "../../hud/layers/GraphicsSettingsModal";
+import { GraphicsOverrides } from "./GraphicsOverrides";
 import defaults from "./render-settings.json";
 
 export interface RenderSettings {

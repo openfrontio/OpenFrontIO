@@ -1,27 +1,16 @@
 import { html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { z } from "zod";
+import { customElement, property, query, state } from "lit/decorators.js";
+import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
+import { PauseGameIntentEvent } from "src/client/Transport";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";
+import type { GraphicsOverrides } from "../../render/gl";
 import renderDefaults from "../../render/gl/render-settings.json";
 
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
-
-export const GraphicsOverridesSchema = z
-  .object({
-    name: z
-      .object({
-        nameScaleFactor: z.number(),
-        cullThreshold: z.number(),
-      })
-      .partial(),
-  })
-  .partial();
-
-export type GraphicsOverrides = z.infer<typeof GraphicsOverridesSchema>;
 
 const NAME_SCALE_MIN = 0.2;
 const NAME_SCALE_MAX = 1.5;
@@ -32,7 +21,11 @@ const NAME_CULL_MAX = 0.05;
 const NAME_CULL_STEP = 0.001;
 
 export class ShowGraphicsSettingsModalEvent {
-  constructor(public readonly isVisible: boolean = true) {}
+  constructor(
+    public readonly isVisible: boolean = true,
+    public readonly shouldPause: boolean = false,
+    public readonly isPaused: boolean = false,
+  ) {}
 }
 
 @customElement("graphics-settings-modal")
@@ -46,11 +39,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   @query(".modal-overlay")
   private modalOverlay!: HTMLElement;
 
+  @property({ type: Boolean })
+  shouldPause = false;
+
+  @property({ type: Boolean })
+  wasPausedWhenOpened = false;
+
   init() {
     this.eventBus.on(ShowGraphicsSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
+      this.shouldPause = event.shouldPause;
+      this.wasPausedWhenOpened = event.isPaused;
+      this.pauseGame(true);
       this.requestUpdate();
     });
+  }
+
+  private pauseGame(pause: boolean) {
+    if (this.shouldPause && !this.wasPausedWhenOpened) {
+      if (pause) {
+        crazyGamesSDK.gameplayStop();
+      } else {
+        crazyGamesSDK.gameplayStart();
+      }
+      this.eventBus.emit(new PauseGameIntentEvent(pause));
+    }
   }
 
   createRenderRoot() {
@@ -88,6 +101,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   public closeModal() {
     this.isVisible = false;
     this.requestUpdate();
+    this.pauseGame(false);
   }
 
   private currentNameScale(): number {
