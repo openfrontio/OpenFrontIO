@@ -33,5 +33,21 @@
       "coordinates": [1555, 258],
       "name": "Andalusia"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 651,
+        "width": 2900,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 825,
+        "width": 2900,
+        "x": 0,
+        "y": 651
+      }
+    ]
+  }
 }

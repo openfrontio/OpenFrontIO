@@ -11,5 +11,21 @@
       "name": "Russia",
       "flag": "ru"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 916,
+        "width": 750,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 916,
+        "width": 750,
+        "x": 750,
+        "y": 0
+      }
+    ]
+  }
 }
