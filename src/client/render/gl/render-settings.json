@@ -116,7 +116,13 @@
       }
     },
     "highlightOutlineWidth": 0.04,
-    "highlightDimAlpha": 0.3
+    "highlightDimAlpha": 0.3,
+    "fillDarken": 0.65,
+    "borderDarken": 0.35,
+    "iconAlpha": 1.0,
+    "iconR": 1.0,
+    "iconG": 1.0,
+    "iconB": 1.0
   },
   "structureLevel": {
     "scale": 1.2,

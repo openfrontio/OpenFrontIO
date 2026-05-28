@@ -102,6 +102,16 @@ export interface RenderSettings {
     shapes: Record<string, { scale: number; iconFill: number }>;
     highlightOutlineWidth: number;
     highlightDimAlpha: number;
+    /** HSV value multiplier applied to the icon fill (interior). 1.0 = no darkening. */
+    fillDarken: number;
+    /** HSV value multiplier applied to the icon border (outer ring). 1.0 = no darkening. */
+    borderDarken: number;
+    /** Multiplier on final icon alpha. 1.0 = opaque. */
+    iconAlpha: number;
+    /** RGB color of the inner icon glyph */
+    iconR: number;
+    iconG: number;
+    iconB: number;
   };
   structureLevel: {
     scale: number;
@@ -278,6 +288,16 @@ export function generateRenderSettings(
   }
   if (overrides.name?.cullThreshold !== undefined) {
     settings.name.cullThreshold = overrides.name.cullThreshold;
+  }
+  if (overrides.structure?.classicIcons === true) {
+    // Classic look: lighter player-colored shape behind a dark icon glyph,
+    // with a touch of translucency.
+    settings.structure.borderDarken = 0.7;
+    settings.structure.fillDarken = 1.0;
+    settings.structure.iconR = 0;
+    settings.structure.iconG = 0;
+    settings.structure.iconB = 0;
+    settings.structure.iconAlpha = 0.75;
   }
   if (overrides.name?.darkNames !== undefined) {
     const dark = overrides.name.darkNames;

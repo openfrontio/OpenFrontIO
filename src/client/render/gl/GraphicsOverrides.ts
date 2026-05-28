@@ -9,6 +9,11 @@ export const GraphicsOverridesSchema = z
         darkNames: z.boolean(),
       })
       .partial(),
+    structure: z
+      .object({
+        classicIcons: z.boolean(),
+      })
+      .partial(),
   })
   .partial();
 

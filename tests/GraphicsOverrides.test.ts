@@ -23,6 +23,18 @@ describe("GraphicsOverridesSchema", () => {
     }
   });
 
+  test("accepts partial structure overrides", () => {
+    const cases = [
+      { structure: {} },
+      { structure: { classicIcons: true } },
+      { structure: { classicIcons: false } },
+      { name: { darkNames: true }, structure: { classicIcons: true } },
+    ];
+    for (const c of cases) {
+      expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
+    }
+  });
+
   test("rejects wrong field types", () => {
     expect(
       GraphicsOverridesSchema.safeParse({ name: { nameScaleFactor: "big" } })
@@ -30,6 +42,11 @@ describe("GraphicsOverridesSchema", () => {
     ).toBe(false);
     expect(
       GraphicsOverridesSchema.safeParse({ name: { darkNames: "yes" } }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        structure: { classicIcons: "yes" },
+      }).success,
     ).toBe(false);
   });
 });
@@ -116,5 +133,48 @@ describe("generateRenderSettings", () => {
     expect(s.passEnabled).toEqual(defaults.passEnabled);
     expect(s.dayNight).toEqual(defaults.dayNight);
     expect(s.structure).toEqual(defaults.structure);
+  });
+
+  test("classicIcons=true → light shape + dark icon + 0.75 alpha", () => {
+    const s = generateRenderSettings({
+      structure: { classicIcons: true },
+    }).structure;
+    // Shape (circle behind) is mostly player color, lightly darkened.
+    expect(s.fillDarken).toBe(1.0);
+    expect(s.borderDarken).toBe(0.7);
+    // Icon glyph itself is black.
+    expect(s.iconR).toBe(0);
+    expect(s.iconG).toBe(0);
+    expect(s.iconB).toBe(0);
+    // Slightly translucent in classic mode.
+    expect(s.iconAlpha).toBe(0.75);
+  });
+
+  test("classicIcons=false or absent → keeps render-settings.json defaults (fully opaque)", () => {
+    const defaults = createRenderSettings().structure;
+    const off = generateRenderSettings({
+      structure: { classicIcons: false },
+    }).structure;
+    expect(off.borderDarken).toBe(defaults.borderDarken);
+    expect(off.fillDarken).toBe(defaults.fillDarken);
+    expect(off.iconR).toBe(defaults.iconR);
+    expect(off.iconAlpha).toBe(1);
+    const absent = generateRenderSettings({ structure: {} }).structure;
+    expect(absent.borderDarken).toBe(defaults.borderDarken);
+    expect(absent.fillDarken).toBe(defaults.fillDarken);
+    expect(absent.iconR).toBe(defaults.iconR);
+    expect(absent.iconAlpha).toBe(1);
+  });
+
+  test("classicIcons + name overrides compose independently", () => {
+    const s = generateRenderSettings({
+      name: { darkNames: true, nameScaleFactor: 0.9 },
+      structure: { classicIcons: true },
+    });
+    expect(s.name.fillUsePlayerColor).toBe(false);
+    expect(s.name.nameScaleFactor).toBe(0.9);
+    expect(s.structure.borderDarken).toBe(0.7);
+    expect(s.structure.fillDarken).toBe(1.0);
+    expect(s.structure.iconAlpha).toBe(0.75);
   });
 });

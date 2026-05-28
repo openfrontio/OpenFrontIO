@@ -491,6 +491,7 @@ async function createClientGame(
       );
       const live = view.getSettings();
       Object.assign(live.name, generated.name);
+      Object.assign(live.structure, generated.structure);
     };
     applyGraphicsOverrides();
     globalThis.addEventListener(

@@ -927,6 +927,9 @@
     "colored_names_desc": "Show player names in their player color or in black",
     "colored": "Colored",
     "black": "Black",
+    "section_structure_icons": "Structure Icons",
+    "classic_icons_label": "Classic icons",
+    "classic_icons_desc": "Lighter outline with near-black interior",
     "reset_label": "Reset to defaults",
     "reset_desc": "Clear all graphics overrides"
   },

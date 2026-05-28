@@ -127,6 +127,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private patchStructure(patch: Partial<GraphicsOverrides["structure"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      structure: { ...current.structure, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentClassicIcons(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().structure?.classicIcons ?? false
+    );
+  }
+
+  private onToggleClassicIcons() {
+    this.patchStructure({ classicIcons: !this.currentClassicIcons() });
+  }
+
   private onNameScaleChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ nameScaleFactor: value });
@@ -159,6 +178,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const nameScale = this.currentNameScale();
     const nameCull = this.currentNameCull();
     const namesColored = !this.currentDarkNames();
+    const classicIcons = this.currentClassicIcons();
 
     return html`
       <div
@@ -261,6 +281,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 ${namesColored
                   ? translateText("graphics_setting.colored")
                   : translateText("graphics_setting.black")}
+              </div>
+            </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_structure_icons")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleClassicIcons}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.classic_icons_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.classic_icons_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${classicIcons
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
