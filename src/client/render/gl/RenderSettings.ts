@@ -279,6 +279,19 @@ export function generateRenderSettings(
   if (overrides.name?.cullThreshold !== undefined) {
     settings.name.cullThreshold = overrides.name.cullThreshold;
   }
+  if (overrides.name?.darkNames !== undefined) {
+    const dark = overrides.name.darkNames;
+    // Dark: black fill + player-colored outline. Force outline RGB to black
+    // so the shader's defaultFill ramp (mix(uOutlineColor, black, fillT))
+    // collapses to pure black regardless of ambient.
+    // Colored: player-colored fill + white outline (defaults from JSON).
+    settings.name.fillUsePlayerColor = !dark;
+    settings.name.outlineUsePlayerColor = dark;
+    const channel = dark ? 0 : 1;
+    settings.name.outlineR = channel;
+    settings.name.outlineG = channel;
+    settings.name.outlineB = channel;
+  }
   return settings;
 }
 

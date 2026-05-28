@@ -137,6 +137,17 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchName({ cullThreshold: value });
   }
 
+  private currentDarkNames(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().name?.darkNames ??
+      !renderDefaults.name.fillUsePlayerColor
+    );
+  }
+
+  private onToggleNamesColored() {
+    this.patchName({ darkNames: !this.currentDarkNames() });
+  }
+
   private onResetClick() {
     this.userSettings.setGraphicsOverrides({});
     this.requestUpdate();
@@ -147,6 +158,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
     const nameScale = this.currentNameScale();
     const nameCull = this.currentNameCull();
+    const namesColored = !this.currentDarkNames();
 
     return html`
       <div
@@ -232,6 +244,25 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 ${nameCull.toFixed(3)}
               </div>
             </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleNamesColored}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.colored_names_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.colored_names_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${namesColored
+                  ? translateText("graphics_setting.colored")
+                  : translateText("graphics_setting.black")}
+              </div>
+            </button>
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button

@@ -923,6 +923,10 @@
     "name_scale_label": "Name Scale",
     "name_cull_label": "Minimum name size",
     "name_cull_desc": "Hide names smaller than this size",
+    "colored_names_label": "Name color",
+    "colored_names_desc": "Show player names in their player color or in black",
+    "colored": "Colored",
+    "black": "Black",
     "reset_label": "Reset to defaults",
     "reset_desc": "Clear all graphics overrides"
   },

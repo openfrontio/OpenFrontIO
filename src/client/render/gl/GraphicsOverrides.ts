@@ -6,6 +6,7 @@ export const GraphicsOverridesSchema = z
       .object({
         nameScaleFactor: z.number(),
         cullThreshold: z.number(),
+        darkNames: z.boolean(),
       })
       .partial(),
   })
