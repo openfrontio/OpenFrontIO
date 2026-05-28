@@ -1,14 +1,12 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import {
-  awaitIdentityReady,
   getIdentityState,
   subscribeIdentity,
   type IdentityState,
 } from "./IdentityStore";
 
-// Subscribes a Lit host to the identity store and triggers a re-render
-// whenever the ready/validating state changes. Lets play buttons bind
-// `?disabled=${!identity.ready}` without bespoke wiring per consumer.
+// Subscribes a Lit host to the identity store and re-renders it whenever the
+// ready state changes, so play buttons can bind `?disabled=${!identity.ready}`.
 export class IdentityReadyController implements ReactiveController {
   private unsubscribe: (() => void) | null = null;
   private snapshot: IdentityState;
@@ -40,9 +38,5 @@ export class IdentityReadyController implements ReactiveController {
 
   get state(): IdentityState {
     return this.snapshot;
-  }
-
-  async awaitReady(): Promise<boolean> {
-    return awaitIdentityReady();
   }
 }

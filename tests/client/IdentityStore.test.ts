@@ -39,10 +39,20 @@ import {
 } from "../../src/client/identity/IdentityStore";
 
 const flushPromises = async () => {
-  for (let i = 0; i < 5; i++) {
-    await Promise.resolve();
-  }
+  for (let i = 0; i < 5; i++) await Promise.resolve();
 };
+
+const anonMe = {
+  user: {},
+  player: {
+    publicId: "p1",
+    adfree: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+    clans: [],
+  },
+} as any;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -59,18 +69,8 @@ afterEach(() => {
 });
 
 describe("IdentityStore clan-tag ownership check", () => {
-  it("surfaces tag_not_member when user is not a member and clan exists", async () => {
-    vi.mocked(getUserMe).mockResolvedValue({
-      user: {},
-      player: {
-        publicId: "p1",
-        adfree: false,
-        achievements: { singleplayerMap: [] },
-        friends: [],
-        subscription: null,
-        clans: [],
-      },
-    } as any);
+  it("rejects with tag_not_member when not a member and the clan exists", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(anonMe);
     vi.mocked(fetchClanExists).mockResolvedValue(true);
 
     setClanTag("ABC");
@@ -83,18 +83,8 @@ describe("IdentityStore clan-tag ownership check", () => {
     expect(state.clanTag.error).toBe("username.tag_not_member");
   });
 
-  it("clears any stored clanTag when async detects ownership conflict", async () => {
-    vi.mocked(getUserMe).mockResolvedValue({
-      user: {},
-      player: {
-        publicId: "p1",
-        adfree: false,
-        achievements: { singleplayerMap: [] },
-        friends: [],
-        subscription: null,
-        clans: [],
-      },
-    } as any);
+  it("clears any stored clanTag on an ownership conflict", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(anonMe);
     vi.mocked(fetchClanExists).mockResolvedValue(true);
     localStorage.setItem("clanTag", "ABC");
 
@@ -106,7 +96,7 @@ describe("IdentityStore clan-tag ownership check", () => {
     expect(localStorage.getItem("clanTag")).toBeNull();
   });
 
-  it("keeps the tag when the clan does not exist (fictional)", async () => {
+  it("accepts a fictional tag (clan does not exist)", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(false);
 
@@ -119,7 +109,22 @@ describe("IdentityStore clan-tag ownership check", () => {
     expect(localStorage.getItem("clanTag")).toBe("FIC");
   });
 
-  it("fails closed: rejects the tag when existence check is inconclusive", async () => {
+  it("accepts a member's tag without probing existence", async () => {
+    vi.mocked(getUserMe).mockResolvedValue({
+      ...anonMe,
+      player: { ...anonMe.player, clans: [{ tag: "ABC" }] },
+    });
+
+    setClanTag("ABC");
+    vi.advanceTimersByTime(401);
+    await flushPromises();
+    await flushPromises();
+
+    expect(getIdentityState().clanTag.valid).toBe(true);
+    expect(fetchClanExists).not.toHaveBeenCalled();
+  });
+
+  it("rejects with tag_check_failed when existence is inconclusive", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(null);
 
@@ -128,7 +133,10 @@ describe("IdentityStore clan-tag ownership check", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(getIdentityState().clanTag.valid).toBe(false);
+    // Can't prove ownership -> stays gated, with a message telling the user.
+    const state = getIdentityState();
+    expect(state.clanTag.valid).toBe(false);
+    expect(state.clanTag.error).toBe("username.tag_check_failed");
   });
 
   it("discards stale async results when the tag has changed", async () => {
@@ -146,18 +154,16 @@ describe("IdentityStore clan-tag ownership check", () => {
     vi.advanceTimersByTime(401);
     await flushPromises();
 
-    // User switches to a different tag before the first response lands.
+    // Switch tags before the first probe lands.
     setClanTag("BBB");
     vi.advanceTimersByTime(401);
     await flushPromises();
 
-    // First (stale) response would have said "AAA exists" → conflict, but the
-    // tag is no longer AAA, so this must NOT clobber the result for BBB.
+    // Stale "AAA exists" must not clobber BBB.
     resolveFirst(true);
     await flushPromises();
     expect(getIdentityState().clanTag.error).toBe("");
 
-    // Second response says BBB doesn't exist → fictional, accept.
     resolveSecond(false);
     await flushPromises();
     await flushPromises();
@@ -166,13 +172,12 @@ describe("IdentityStore clan-tag ownership check", () => {
     expect(localStorage.getItem("clanTag")).toBe("BBB");
   });
 
-  it("flips ready false while a check is in flight, true on success", async () => {
+  it("gates play while a check is in flight, then clears it", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(false);
 
     setClanTag("ABC");
-    // Pre-debounce: checking flag already set so play buttons disable
-    // immediately, not after the debounce.
+    // Pre-debounce: checking is already set so buttons disable immediately.
     expect(getIdentityState().clanTagChecking).toBe(true);
     expect(getIdentityState().ready).toBe(false);
 
@@ -183,18 +188,17 @@ describe("IdentityStore clan-tag ownership check", () => {
     expect(getIdentityState().clanTag.valid).toBe(true);
   });
 
-  it("getClanTagForSubmit returns null while empty/short/pending; tag once accepted", async () => {
+  it("getClanTagForSubmit: null while empty/short/checking; tag once accepted", async () => {
     vi.mocked(getUserMe).mockResolvedValue(false);
     vi.mocked(fetchClanExists).mockResolvedValue(false);
 
     setClanTag("");
     expect(getClanTagForSubmit()).toBeNull();
 
-    setClanTag("A");
+    setClanTag("A"); // too short -> format invalid
     expect(getClanTagForSubmit()).toBeNull();
 
     setClanTag("ABC");
-    // Ownership check hasn't resolved yet → not submittable.
     expect(getIdentityState().clanTagChecking).toBe(true);
     expect(getClanTagForSubmit()).toBeNull();
 

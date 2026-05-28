@@ -21,24 +21,11 @@ export const RefreshResponseSchema = z.object({
 });
 export type RefreshResponse = z.infer<typeof RefreshResponseSchema>;
 
-// Auth API path for the clan existence probe. Uppercased here so the URL
-// matches the canonical tag form (membership checks also uppercase), avoiding
-// case-sensitivity mismatches against the upstream endpoint.
+// Existence-probe path (200 = exists, 404 = not); uppercased to match the
+// canonical tag form. Shared so the client probe and server enforcement agree.
 export function clanExistsApiPath(tag: string): string {
   return `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
 }
-
-// The upstream contract uses HTTP status alone (200 = exists, 404 = not).
-// This schema is kept for forward-compat in case a body is added; today it
-// matches an empty/absent body too.
-export const ClanExistsResponseSchema = z
-  .object({
-    exists: z.boolean().optional(),
-  })
-  .partial()
-  .or(z.null())
-  .or(z.undefined());
-export type ClanExistsResponse = z.infer<typeof ClanExistsResponseSchema>;
 
 export const TokenPayloadSchema = z.object({
   jti: z.string(),

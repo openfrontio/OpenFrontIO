@@ -812,10 +812,9 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
-    // Final identity gate. Callers (play buttons, modals) already disable
-    // themselves until identity is ready, so this is a defense-in-depth check
-    // for stray dispatches — bail silently rather than show a toast since
-    // the inputs already render their own inline errors.
+    // Wait for any in-flight clan-tag check, then gate: buttons disable
+    // themselves until ready, and this also covers programmatic/deep-link
+    // joins. Bail silently — the inputs render their own inline errors.
     const ready = await awaitIdentityReady();
     if (!ready) {
       console.warn("join-lobby blocked: identity not ready");

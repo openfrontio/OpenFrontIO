@@ -121,16 +121,6 @@ describe("fetchClanExists", () => {
     const calledUrl = fetchSpy.mock.calls[0]![0] as string;
     expect(calledUrl).toContain("/public/clan/ABC/exists");
   });
-
-  it("treats a body {exists:false} as false on 200", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() =>
-        Promise.resolve(okStatus(200, JSON.stringify({ exists: false }))),
-      ),
-    );
-    await expect(fetchClanExists("ABC")).resolves.toBe(false);
-  });
 });
 
 describe("fetchClanDetail", () => {

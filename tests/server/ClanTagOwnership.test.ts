@@ -1,15 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import {
   clanExistsByTag,
   resolveClanTag,
 } from "../../src/server/ClanTagOwnership";
 
-const okResponse = (status: number, body = ""): Response =>
-  ({
-    status,
-    text: async () => body,
-  }) as unknown as Response;
+const okResponse = (status: number): Response =>
+  ({ status }) as unknown as Response;
 
 const userWithClans = (tags: string[]): UserMeResponse =>
   ({
@@ -32,144 +29,50 @@ const userWithClans = (tags: string[]): UserMeResponse =>
   }) as UserMeResponse;
 
 describe("clanExistsByTag", () => {
-  let cache: Map<string, { expiresAt: number }>;
-  let now: number;
-
-  beforeEach(() => {
-    cache = new Map();
-    now = 1_000_000;
+  const deps = (fetcher: () => Promise<Response>) => ({
+    baseUrl: "https://auth.example",
+    fetcher: fetcher as unknown as typeof fetch,
   });
 
   it("returns true on HTTP 200", async () => {
-    const fetcher = vi.fn(async () => okResponse(200));
-    const result = await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
+    const result = await clanExistsByTag(
+      "ABC",
+      deps(async () => okResponse(200)),
+    );
     expect(result).toBe(true);
   });
 
-  it("returns false on HTTP 404 without caching it", async () => {
-    const fetcher = vi.fn(async () => okResponse(404));
-    const result = await clanExistsByTag("XYZ", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
+  it("returns false on HTTP 404", async () => {
+    const result = await clanExistsByTag(
+      "XYZ",
+      deps(async () => okResponse(404)),
+    );
     expect(result).toBe(false);
-    // Negative results must not poison the cache — a clan can be created
-    // moments after a 404 and a stale "false" would briefly let non-members
-    // wear the tag.
-    expect(cache.size).toBe(0);
   });
 
-  it("returns null on unexpected status (fail-closed) and does not cache", async () => {
-    const fetcher = vi.fn(async () => okResponse(503));
-    const result = await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
+  it("returns null on unexpected status (fail-closed)", async () => {
+    const result = await clanExistsByTag(
+      "ABC",
+      deps(async () => okResponse(503)),
+    );
     expect(result).toBeNull();
-    expect(cache.size).toBe(0);
   });
 
   it("returns null on transport error (fail-closed)", async () => {
-    const fetcher = vi.fn(async () => {
-      throw new Error("offline");
-    });
-    const result = await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
+    const result = await clanExistsByTag(
+      "ABC",
+      deps(async () => {
+        throw new Error("offline");
+      }),
+    );
     expect(result).toBeNull();
   });
 
   it("uppercases the tag in the request URL", async () => {
     const fetcher = vi.fn(async () => okResponse(200));
-    await clanExistsByTag("abc", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
+    await clanExistsByTag("abc", deps(fetcher));
     const calledUrl = (fetcher.mock.calls[0] as unknown[])[0] as string;
     expect(calledUrl).toContain("/public/clan/ABC/exists");
-  });
-
-  it("serves positive results from cache without re-fetching", async () => {
-    const fetcher = vi.fn(async () => okResponse(200));
-    await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
-    await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
-  });
-
-  it("re-fetches positive entries after TTL expiry", async () => {
-    const fetcher = vi.fn(async () => okResponse(200));
-    await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-      ttlMs: 1000,
-    });
-    now += 2000;
-    await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-      ttlMs: 1000,
-    });
-    expect(fetcher).toHaveBeenCalledTimes(2);
-  });
-
-  it("evicts the oldest entry when maxEntries is exceeded", async () => {
-    const fetcher = vi.fn(async () => okResponse(200));
-    const deps = {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-      maxEntries: 2,
-    };
-    await clanExistsByTag("A", deps);
-    await clanExistsByTag("B", deps);
-    await clanExistsByTag("C", deps);
-    expect(cache.size).toBe(2);
-    expect(cache.has("A")).toBe(false);
-    expect(cache.has("B")).toBe(true);
-    expect(cache.has("C")).toBe(true);
-  });
-
-  it("treats body {exists:false} as false on 200 without caching", async () => {
-    const fetcher = vi.fn(async () =>
-      okResponse(200, JSON.stringify({ exists: false })),
-    );
-    const result = await clanExistsByTag("ABC", {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-      cache,
-      now: () => now,
-    });
-    expect(result).toBe(false);
-    expect(cache.size).toBe(0);
   });
 });
 

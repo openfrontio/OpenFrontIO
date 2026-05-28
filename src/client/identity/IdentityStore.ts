@@ -1,7 +1,5 @@
 import { sanitizeClanTag } from "../../core/Util";
 import {
-  MAX_CLAN_TAG_LENGTH,
-  MIN_CLAN_TAG_LENGTH,
   validateClanTag,
   validateUsername,
 } from "../../core/validations/username";
@@ -36,18 +34,13 @@ const state: IdentityState = {
   ready: false,
 };
 
-let lastInput: { username: string; clanTag: string } = {
-  username: "",
-  clanTag: "",
-};
-
-function recomputeReady() {
-  state.ready =
-    state.username.valid && state.clanTag.valid && !state.clanTagChecking;
-}
+let lastInput = { username: "", clanTag: "" };
 
 function emit() {
-  recomputeReady();
+  // Play is gated until the username is valid AND the clan tag is proven OK
+  // (owned or fictional). While a check is in flight, nothing is proven yet.
+  state.ready =
+    state.username.valid && state.clanTag.valid && !state.clanTagChecking;
   for (const listener of listeners) listener(state);
 }
 
@@ -67,19 +60,10 @@ export function getUsernameForSubmit(): string {
   return state.username.value;
 }
 
-// Mirrors the legacy ClanTagInput.getValue contract: only emit a non-null
-// value when the tag is valid AND meets length AND format. Empty / pending /
-// failed states submit as null so the server falls back to "no tag".
 export function getClanTagForSubmit(): string | null {
-  // Don't submit a tag while the ownership check is in flight — callers
-  // either gate on `state.ready` first or await `awaitIdentityReady()`.
   if (state.clanTagChecking) return null;
   const { value, valid } = state.clanTag;
-  if (!valid) return null;
-  if (value.length < MIN_CLAN_TAG_LENGTH) return null;
-  if (value.length > MAX_CLAN_TAG_LENGTH) return null;
-  if (!validateClanTag(value).isValid) return null;
-  return value;
+  return valid && value.length > 0 ? value : null;
 }
 
 export function setUsername(raw: string) {
@@ -91,9 +75,7 @@ export function setUsername(raw: string) {
     valid: result.isValid,
     error: result.isValid ? "" : (result.error ?? ""),
   };
-  if (result.isValid) {
-    localStorage.setItem(USERNAME_KEY, trimmed);
-  }
+  if (result.isValid) localStorage.setItem(USERNAME_KEY, trimmed);
   emit();
 }
 
@@ -107,12 +89,12 @@ export function setClanTag(raw: string, options: { immediate?: boolean } = {}) {
   const tag = sanitizeClanTag(raw);
   const result = validateClanTag(tag);
 
-  // Cancel any pending/in-flight ownership work. checkCounter++ marks stale
-  // chains; resolving the prior debounce lets awaitReady() callers unblock.
+  // A new value supersedes any pending/in-flight check and unblocks
+  // awaitIdentityReady() callers waiting on the prior one.
   if (clanCheckTimer !== null) clearTimeout(clanCheckTimer);
   clanCheckTimer = null;
   clanCheckCounter++;
-  if (resolveDebounce) resolveDebounce();
+  resolveDebounce?.();
   resolveDebounce = null;
 
   state.clanTag = {
@@ -122,8 +104,6 @@ export function setClanTag(raw: string, options: { immediate?: boolean } = {}) {
   };
 
   if (!result.isValid || tag.length === 0) {
-    // Nothing to ask the server about. Wipe the stored tag so a reload
-    // doesn't restore a stale value that no longer matches input.
     state.clanTagChecking = false;
     localStorage.setItem(CLAN_TAG_KEY, "");
     currentCheck = Promise.resolve();
@@ -131,15 +111,15 @@ export function setClanTag(raw: string, options: { immediate?: boolean } = {}) {
     return;
   }
 
+  // Well-formed tag: nothing is proven until the ownership check resolves.
   state.clanTagChecking = true;
   emit();
 
   const generation = clanCheckCounter;
-  const run = (): Promise<void> => {
-    if (generation !== clanCheckCounter) return Promise.resolve();
-    return runOwnershipCheck(tag, generation);
-  };
-
+  const run = () =>
+    generation === clanCheckCounter
+      ? runOwnershipCheck(tag, generation)
+      : Promise.resolve();
   if (options.immediate) {
     currentCheck = run();
   } else {
@@ -156,6 +136,9 @@ export function setClanTag(raw: string, options: { immediate?: boolean } = {}) {
   }
 }
 
+// Members are always accepted. A non-member keeps a tag only if the clan is
+// fictional; a real clan they don't belong to, or anything we can't verify,
+// is rejected so play stays gated until the tag is proven.
 async function runOwnershipCheck(tag: string, generation: number) {
   const stillCurrent = () =>
     generation === clanCheckCounter && state.clanTag.value === tag;
@@ -165,16 +148,16 @@ async function runOwnershipCheck(tag: string, generation: number) {
   const myTags = me
     ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
     : [];
-
-  if (!myTags.includes(tag.toUpperCase())) {
-    const exists = await fetchClanExists(tag);
-    if (!stillCurrent()) return;
-    if (exists !== false) {
-      rejectTag(tag);
-      return;
-    }
+  if (myTags.includes(tag.toUpperCase())) {
+    acceptTag(tag);
+    return;
   }
-  acceptTag(tag);
+
+  const exists = await fetchClanExists(tag);
+  if (!stillCurrent()) return;
+  if (exists === false) acceptTag(tag);
+  else if (exists === true) rejectTag(tag, "username.tag_not_member");
+  else rejectTag(tag, "username.tag_check_failed");
 }
 
 function acceptTag(tag: string) {
@@ -184,19 +167,14 @@ function acceptTag(tag: string) {
   emit();
 }
 
-function rejectTag(tag: string) {
-  state.clanTag = {
-    value: tag,
-    valid: false,
-    error: "username.tag_not_member",
-  };
+function rejectTag(tag: string, error: string) {
+  state.clanTag = { value: tag, valid: false, error };
   state.clanTagChecking = false;
   localStorage.removeItem(CLAN_TAG_KEY);
   emit();
 }
 
-// Resolves once any in-flight async clan check settles. Returns the final
-// ready state so callers can branch without a second read.
+// Resolves once any in-flight clan check settles; returns the final ready state.
 export async function awaitIdentityReady(): Promise<boolean> {
   let last: Promise<void> | undefined;
   while (currentCheck !== last) {
@@ -206,28 +184,21 @@ export async function awaitIdentityReady(): Promise<boolean> {
   return state.ready;
 }
 
-// Re-runs sync validation against the last raw input so error messages get
-// re-translated when the active language changes. Does NOT re-trigger the
-// async ownership check (the cached result is still correct).
+// Re-runs sync validation against the last raw input so error strings get
+// re-translated on a language change. A confirmed ownership error (i18n key,
+// format-valid) is preserved.
 export function revalidateIdentityTranslations() {
   const trimmed = lastInput.username.trim();
-  const usernameResult = validateUsername(trimmed);
+  const u = validateUsername(trimmed);
   state.username = {
     value: trimmed,
-    valid: usernameResult.isValid,
-    error: usernameResult.isValid ? "" : (usernameResult.error ?? ""),
+    valid: u.isValid,
+    error: u.isValid ? "" : (u.error ?? ""),
   };
-
   const tag = sanitizeClanTag(lastInput.clanTag);
-  const tagResult = validateClanTag(tag);
-  // Preserve any existing ownership error (it's already an i18n key); only
-  // refresh the format-level error so language changes pick up new strings.
-  if (!tagResult.isValid) {
-    state.clanTag = {
-      value: tag,
-      valid: false,
-      error: tagResult.error ?? "",
-    };
+  const t = validateClanTag(tag);
+  if (!t.isValid) {
+    state.clanTag = { value: tag, valid: false, error: t.error ?? "" };
   }
   emit();
 }
@@ -236,18 +207,11 @@ let initialized = false;
 export function initIdentityFromStorage() {
   if (initialized) return;
   initialized = true;
-  const storedUsername = localStorage.getItem(USERNAME_KEY) ?? "";
-  setUsername(storedUsername);
-  const storedClanTag = localStorage.getItem(CLAN_TAG_KEY) ?? "";
-  if (storedClanTag.length > 0) {
-    setClanTag(storedClanTag, { immediate: true });
-  } else {
-    setClanTag("", { immediate: true });
-  }
+  setUsername(localStorage.getItem(USERNAME_KEY) ?? "");
+  setClanTag(localStorage.getItem(CLAN_TAG_KEY) ?? "", { immediate: true });
 }
 
-// Test-only reset; not part of the public surface but exported so unit tests
-// can wipe singleton state between cases.
+// Test-only reset for the singleton module state.
 export function __resetIdentityStoreForTests() {
   initialized = false;
   listeners.clear();

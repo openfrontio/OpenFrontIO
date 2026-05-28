@@ -7,7 +7,6 @@ import {
 } from "../core/validations/username";
 import { IdentityReadyController } from "./identity/IdentityReadyController";
 import {
-  awaitIdentityReady,
   getClanTagForSubmit,
   initIdentityFromStorage,
   revalidateIdentityTranslations,
@@ -94,9 +93,9 @@ export class ClanTagInput extends LitElement {
 
   private translatedError(raw: string): string {
     if (!raw) return "";
-    // Ownership errors are stored as i18n keys (with optional tag param);
-    // format errors are already-translated strings from validateClanTag.
-    if (raw === "username.tag_not_member") {
+    // Ownership errors are stored as i18n keys; format errors are already
+    // translated strings from validateClanTag.
+    if (raw.startsWith("username.")) {
       return translateText(raw, { tag: this.identity.state.clanTag.value });
     }
     return raw;
@@ -120,12 +119,6 @@ export class ClanTagInput extends LitElement {
       );
     }
     input.value = sanitized;
-  }
-
-  // Resolves once any in-flight async ownership check settles. Returns
-  // immediately when nothing is in flight.
-  public async awaitValidation(): Promise<void> {
-    await awaitIdentityReady();
   }
 
   public showValidationFeedback() {
