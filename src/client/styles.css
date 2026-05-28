@@ -667,10 +667,11 @@ news-button .active button::after {
 
 /* Cinematic skin-preview mode: hide the normal in-game HUD so the player can
    just watch their previewed cosmetic spread across the map. The game canvas,
-   <preview-finish-button>, and <preview-complete-modal> stay visible. */
+   the bottom build bar (<unit-display>), <preview-finish-button>, and
+   <preview-complete-modal> stay visible; the Ctrl+click build popup
+   (<build-menu>) is hidden. */
 body.preview-mode build-menu,
 body.preview-mode control-panel,
-body.preview-mode unit-display,
 body.preview-mode attacks-display,
 body.preview-mode chat-display,
 body.preview-mode events-display,

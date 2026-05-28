@@ -1234,6 +1234,8 @@
   },
   "preview": {
     "finish": "Finish preview",
+    "light_theme": "Light theme",
+    "dark_theme": "Dark theme",
     "complete_title": "Preview Complete",
     "complete_subtitle": "Like what you see? Make it yours.",
     "exit": "Back to menu",
