@@ -47,6 +47,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
+  ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -66,7 +67,7 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { GameView as WebGLGameView } from "./render/gl";
+import { createDebugGui, GameView as WebGLGameView } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
@@ -477,6 +478,17 @@ async function createClientGame(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
     );
+
+    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    eventBus.on(ToggleRenderDebugGuiEvent, () => {
+      if (debugGui === null) {
+        debugGui = createDebugGui(view.getSettings());
+        debugGui.open();
+      } else {
+        debugGui.destroy();
+        debugGui = null;
+      }
+    });
 
     const gameRenderer = createRenderer(
       inputOverlay,
