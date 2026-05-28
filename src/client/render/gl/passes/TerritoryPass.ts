@@ -38,13 +38,18 @@ export class TerritoryPass {
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
+  private uIsTeamMode: WebGLUniformLocation;
   private highlightOwner = 0;
+  private isTeamMode = false;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
   private paletteTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
+  private skinAtlasTex: WebGLTexture;
+  private skinLayerTex: WebGLTexture;
+  private skinAnchorTex: WebGLTexture;
 
   private altView = false;
   private showPatterns = true;
@@ -78,6 +83,9 @@ export class TerritoryPass {
     paletteTex: WebGLTexture,
     patternMetaTex: WebGLTexture,
     patternDataTex: WebGLTexture,
+    skinAtlasTex: WebGLTexture,
+    skinLayerTex: WebGLTexture,
+    skinAnchorTex: WebGLTexture,
     settings: RenderSettings,
   ) {
     this.gl = gl;
@@ -88,6 +96,9 @@ export class TerritoryPass {
     this.paletteTex = paletteTex;
     this.patternMetaTex = patternMetaTex;
     this.patternDataTex = patternDataTex;
+    this.skinAtlasTex = skinAtlasTex;
+    this.skinLayerTex = skinLayerTex;
+    this.skinAnchorTex = skinAnchorTex;
     this.cpuTileState = new Uint16Array(mapW * mapH);
 
     this.nBuckets = Math.max(1, settings.tileDrip.bucketCount | 0);
@@ -129,12 +140,16 @@ export class TerritoryPass {
       "uHighlightBrighten",
     )!;
     this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
+    this.uIsTeamMode = gl.getUniformLocation(this.program, "uIsTeamMode")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 1);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPatternMeta"), 2);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPatternData"), 3);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAtlas"), 4);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uSkinLayer"), 5);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAnchor"), 6);
 
     this.vao = createMapQuad(gl, mapW, mapH);
   }
@@ -365,6 +380,19 @@ export class TerritoryPass {
     this.showPatterns = show;
   }
 
+  /**
+   * Update the skin atlas texture handle. Called once at game start after
+   * the renderer learns the locked-in skin URL set.
+   */
+  setSkinAtlas(tex: WebGLTexture): void {
+    this.skinAtlasTex = tex;
+  }
+
+  /** Whether this game has teams (controls skin tinting). */
+  setTeamMode(isTeamMode: boolean): void {
+    this.isTeamMode = isTeamMode;
+  }
+
   /** Set the hovered player's smallID for territory-fill brightening (0 = off). */
   setHighlightOwner(ownerID: number): void {
     this.highlightOwner = ownerID;
@@ -396,6 +424,7 @@ export class TerritoryPass {
       this.uShowPatterns,
       this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,
     );
+    gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
@@ -405,6 +434,12 @@ export class TerritoryPass {
     gl.bindTexture(gl.TEXTURE_2D, this.patternMetaTex);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.patternDataTex);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.skinAtlasTex);
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.skinLayerTex);
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.skinAnchorTex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);

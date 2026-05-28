@@ -18,6 +18,7 @@ import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerPattern,
+  PlayerSkin,
 } from "../core/Schemas";
 import { simpleHash } from "../core/Util";
 
@@ -203,8 +204,25 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         return { type: "forbidden", reason: "invalid flag: " + message };
       }
     }
+    if (refs.skinName) {
+      try {
+        cosmetics.skin = this.isSkinAllowed(flares, refs.skinName);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { type: "forbidden", reason: "invalid skin: " + message };
+      }
+    }
 
     return { type: "allowed", cosmetics };
+  }
+
+  isSkinAllowed(flares: string[], name: string): PlayerSkin {
+    const found = this.cosmetics.skins?.[name];
+    if (!found) throw new Error(`Skin ${name} not found`);
+    if (flares.includes("skin:*") || flares.includes(`skin:${found.name}`)) {
+      return { name: found.name, url: found.url };
+    }
+    throw new Error(`No flares for skin ${name}`);
   }
 
   isPatternAllowed(

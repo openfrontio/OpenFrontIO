@@ -56,6 +56,37 @@ const flagChecker = new PrivilegeCheckerImpl(
   bannedWords,
 );
 
+const skinCosmetics = {
+  patterns: {},
+  colorPalettes: {},
+  flags: {},
+  skins: {
+    mountain: {
+      name: "mountain",
+      url: "https://example.com/mountain.png",
+      affiliateCode: null,
+      product: { productId: "prod_1", priceId: "price_1", price: "$4.99" },
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "common",
+    },
+    forest: {
+      name: "forest",
+      url: "https://example.com/forest.png",
+      affiliateCode: null,
+      product: null,
+      priceSoft: undefined,
+      priceHard: undefined,
+      rarity: "rare",
+    },
+  },
+};
+const skinChecker = new PrivilegeCheckerImpl(
+  skinCosmetics,
+  mockDecoder,
+  bannedWords,
+);
+
 describe("UsernameCensor", () => {
   describe("isProfane (via matcher.hasMatch)", () => {
     test("detects exact banned words", () => {
@@ -360,5 +391,131 @@ describe("Flag validation in isAllowed", () => {
     if (result.type === "allowed") {
       expect(result.cosmetics.flag).toBeUndefined();
     }
+  });
+});
+
+describe("Skin validation", () => {
+  describe("isSkinAllowed (direct)", () => {
+    test("returns skin when user has wildcard flare", () => {
+      const result = skinChecker.isSkinAllowed(["skin:*"], "mountain");
+      expect(result).toEqual({
+        name: "mountain",
+        url: "https://example.com/mountain.png",
+      });
+    });
+
+    test("returns skin when user has exact-match flare", () => {
+      const result = skinChecker.isSkinAllowed(["skin:mountain"], "mountain");
+      expect(result).toEqual({
+        name: "mountain",
+        url: "https://example.com/mountain.png",
+      });
+    });
+
+    test("ignores unrelated flares", () => {
+      expect(() =>
+        skinChecker.isSkinAllowed(
+          ["skin:forest", "pattern:*", "flag:*"],
+          "mountain",
+        ),
+      ).toThrow(/No flares for skin mountain/);
+    });
+
+    test("throws when user has no skin flares", () => {
+      expect(() => skinChecker.isSkinAllowed([], "mountain")).toThrow(
+        /No flares for skin mountain/,
+      );
+    });
+
+    test("throws when skin does not exist in cosmetics", () => {
+      expect(() =>
+        skinChecker.isSkinAllowed(["skin:*"], "nonexistent"),
+      ).toThrow(/Skin nonexistent not found/);
+    });
+
+    test("throws when skin does not exist even with exact-match flare", () => {
+      // Forged refs.skinName must not bypass the existence check.
+      expect(() =>
+        skinChecker.isSkinAllowed(["skin:nonexistent"], "nonexistent"),
+      ).toThrow(/Skin nonexistent not found/);
+    });
+
+    test("throws when checker has no skins map at all", () => {
+      // checker is constructed with mockCosmetics (no skins key).
+      expect(() => checker.isSkinAllowed(["skin:*"], "anything")).toThrow(
+        /Skin anything not found/,
+      );
+    });
+  });
+
+  describe("isAllowed integration", () => {
+    test("allows valid skin with wildcard flare", () => {
+      const result = skinChecker.isAllowed(["skin:*"], {
+        skinName: "mountain",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.skin).toEqual({
+          name: "mountain",
+          url: "https://example.com/mountain.png",
+        });
+      }
+    });
+
+    test("allows valid skin with exact-match flare", () => {
+      const result = skinChecker.isAllowed(["skin:forest"], {
+        skinName: "forest",
+      });
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.skin).toEqual({
+          name: "forest",
+          url: "https://example.com/forest.png",
+        });
+      }
+    });
+
+    test("rejects skin when user lacks flare", () => {
+      const result = skinChecker.isAllowed([], { skinName: "mountain" });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/invalid skin/);
+      }
+    });
+
+    test("rejects skin when flare is for a different skin", () => {
+      const result = skinChecker.isAllowed(["skin:forest"], {
+        skinName: "mountain",
+      });
+      expect(result.type).toBe("forbidden");
+    });
+
+    test("rejects nonexistent skin", () => {
+      const result = skinChecker.isAllowed(["skin:*"], {
+        skinName: "ghost",
+      });
+      expect(result.type).toBe("forbidden");
+      if (result.type === "forbidden") {
+        expect(result.reason).toMatch(/Skin ghost not found/);
+      }
+    });
+
+    test("no skin in refs leaves cosmetics.skin undefined", () => {
+      const result = skinChecker.isAllowed(["skin:*"], {});
+      expect(result.type).toBe("allowed");
+      if (result.type === "allowed") {
+        expect(result.cosmetics.skin).toBeUndefined();
+      }
+    });
+
+    test("invalid skin short-circuits and does not return other cosmetics", () => {
+      // pattern is valid (no pattern requested), color is valid, skin is invalid —
+      // the whole result must be forbidden, with no partial cosmetics leaking out.
+      const result = skinChecker.isAllowed(["color:red"], {
+        color: "red",
+        skinName: "mountain",
+      });
+      expect(result.type).toBe("forbidden");
+    });
   });
 });
