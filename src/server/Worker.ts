@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { type UserMeResponse } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -27,6 +28,7 @@ import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
+import { clanExistsByTag, resolveClanTag } from "./Privilege";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -357,29 +359,17 @@ export async function startWorker() {
         }
 
         // Normalize username and clan tag before any rejoin/join handling.
-        // If this connection maps to an existing lobby client, we still want
-        // the latest pre-join identity to be reflected.
         const { clanTag: censoredClanTag, username: censoredUsername } =
           privilegeRefresher
             .get()
             .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
-        // Try to reconnect an existing client (e.g., page refresh)
-        // If successful, skip all authorization
-        if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-            clanTag: censoredClanTag,
-          })
-        ) {
-          return;
-        }
-
-        let flares: string[] | undefined;
-        let publicId: string | undefined;
-        let friends: string[] = [];
-
+        // Fetch the user profile up front. It's needed here so the clan-tag
+        // ownership check can run *before* the reconnect path below — otherwise
+        // a page refresh would let a player swap to an unvalidated tag — and is
+        // reused for flares/cosmetics on new joins.
         const allowedFlares = ServerEnv.allowedFlares();
+        let userMeResponse: UserMeResponse | null = null;
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
@@ -397,21 +387,58 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          flares = result.response.player.flares;
-          publicId = result.response.player.publicId;
-          friends = result.response.player.friends;
+          userMeResponse = result.response;
+        }
 
-          if (allowedFlares !== undefined) {
-            const allowed =
-              allowedFlares.length === 0 ||
-              allowedFlares.some((f) => flares?.includes(f));
-            if (!allowed) {
-              log.warn(
-                "Forbidden: player without an allowed flare attempted to join game",
-              );
-              ws.close(1002, "Forbidden");
-              return;
-            }
+        // Enforce clan tag ownership. A player can wear a tag only if they're a
+        // member; if they aren't and the tag belongs to a real clan, drop it to
+        // prevent impersonation. Fictional tags pass through.
+        const resolution = await resolveClanTag(
+          censoredClanTag,
+          userMeResponse,
+          (tag) =>
+            clanExistsByTag(tag, {
+              baseUrl: ServerEnv.jwtIssuer(),
+              onWarn: (event, ctx) => log.warn(event, ctx),
+            }),
+        );
+        if (resolution.dropped) {
+          log.warn("Dropped clan tag: player is not a member", {
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
+            clanTag: censoredClanTag,
+            reason: resolution.reason,
+          });
+        }
+        const resolvedClanTag = resolution.tag;
+
+        // Try to reconnect an existing client (e.g., page refresh). Pre-game,
+        // username and clan tag pick up the latest validated values from this
+        // connection.
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: resolvedClanTag,
+          })
+        ) {
+          return;
+        }
+
+        // New client — finish the join checks.
+        const flares = userMeResponse?.player.flares;
+        const publicId = userMeResponse?.player.publicId;
+        const friends = userMeResponse?.player.friends ?? [];
+
+        if (userMeResponse !== null && allowedFlares !== undefined) {
+          const allowed =
+            allowedFlares.length === 0 ||
+            allowedFlares.some((f) => flares?.includes(f));
+          if (!allowed) {
+            log.warn(
+              "Forbidden: player without an allowed flare attempted to join game",
+            );
+            ws.close(1002, "Forbidden");
+            return;
           }
         }
 
@@ -463,7 +490,7 @@ export async function startWorker() {
           flares,
           ip,
           censoredUsername,
-          censoredClanTag,
+          resolvedClanTag,
           ws,
           cosmeticResult.cosmetics,
           publicId,

@@ -2,20 +2,45 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../src/client/Api", () => ({
   getApiBase: vi.fn(() => "http://localhost:3000"),
+  getUserMe: vi.fn(),
 }));
 
 vi.mock("../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
 
+import { getUserMe } from "../../../src/client/Api";
 import {
+  checkClanTagOwnership,
   fetchClanDetail,
+  fetchClanExists,
   fetchClanGames,
   fetchClanLeaderboard,
   fetchClanMembers,
   fetchClanRequests,
   fetchClans,
 } from "../../../src/client/ClanApi";
+import type { UserMeResponse } from "../../../src/core/ApiSchemas";
+
+const userWithClans = (tags: string[]): UserMeResponse =>
+  ({
+    user: {},
+    player: {
+      publicId: "p1",
+      adfree: false,
+      flares: [],
+      achievements: { singleplayerMap: [] },
+      friends: [],
+      subscription: null,
+      clans: tags.map((tag) => ({
+        tag,
+        name: tag,
+        role: "member" as const,
+        joinedAt: "2024-01-01T00:00:00.000Z",
+        memberCount: 1,
+      })),
+    },
+  }) as unknown as UserMeResponse;
 
 const okJson = (data: unknown, status = 200) => ({
   ok: true,
@@ -35,6 +60,104 @@ const mockFetch = (impl: (...args: unknown[]) => unknown) =>
 beforeEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+describe("fetchClanExists", () => {
+  const status = (s: number) => ({ status: s });
+
+  it("returns true on HTTP 200", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(200))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBe(true);
+  });
+
+  it("returns false on HTTP 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(404))),
+    );
+    await expect(fetchClanExists("XYZ")).resolves.toBe(false);
+  });
+
+  it("returns null on unexpected status (5xx)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(503))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBeNull();
+  });
+
+  it("returns null on transport error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    await expect(fetchClanExists("ABC")).resolves.toBeNull();
+  });
+
+  it("uppercases and URL-encodes the tag in the request URL", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(status(200)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    await fetchClanExists("abc");
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    expect(calledUrl).toContain("/public/clan/ABC/exists");
+  });
+});
+
+describe("checkClanTagOwnership", () => {
+  const status = (s: number) => ({ status: s });
+
+  it("accepts a tag the user is a member of without probing existence", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans(["abc"]));
+    const fetchSpy = vi.fn(() => Promise.resolve(status(200)));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: "ABC",
+      error: null,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts a fictional tag (clan does not exist)", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans(["other"]));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(404))),
+    );
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: "ABC",
+      error: null,
+    });
+  });
+
+  it("rejects a real clan the user does not belong to", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(200))),
+    );
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: null,
+      error: "username.tag_not_member",
+    });
+  });
+
+  it("rejects on an inconclusive existence check", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(status(503))),
+    );
+    await expect(checkClanTagOwnership("ABC")).resolves.toEqual({
+      tag: null,
+      error: "username.tag_check_failed",
+    });
+  });
 });
 
 describe("fetchClanLeaderboard", () => {

@@ -10,6 +10,7 @@ import {
   validateClanTag,
   validateUsername,
 } from "../core/validations/username";
+import { checkClanTagOwnership } from "./ClanApi";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 
 interface LangSelectorLike {
@@ -27,8 +28,18 @@ export class UsernameInput extends LitElement {
   @state() private clanTag: string = "";
 
   @property({ type: String }) validationError: string = "";
+  // Ownership-check feedback (i18n key) shown inline beneath the tag input. This
+  // is advisory only — it does not gate play; the tag is stripped on submit and
+  // the server re-checks authoritatively.
+  @state() private clanTagOwnershipError: string = "";
+  @state() private clanCheckPending: boolean = false;
   private _isValid: boolean = true;
   private _lastValidatedLang: string | null = null;
+
+  // Latest in-flight ownership check. `clanCheckGen` discards stale results so
+  // only the most recent keystroke updates the UI / resolves the submit value.
+  private clanCheckGen = 0;
+  private clanCheck: Promise<string | null> = Promise.resolve(null);
 
   // Remove static styles since we're using Tailwind
 
@@ -47,6 +58,33 @@ export class UsernameInput extends LitElement {
       validateClanTag(this.clanTag).isValid
       ? this.clanTag
       : null;
+  }
+
+  // Resolves to the clan tag to actually submit (null when it should be
+  // dropped). The join flow awaits this so the ownership check — kicked off on
+  // input — can run in parallel with the WebSocket handshake.
+  public getClanCheck(): Promise<string | null> {
+    return this.clanCheck;
+  }
+
+  private startClanCheck() {
+    const gen = ++this.clanCheckGen;
+    const tag = this.clanTag;
+    if (tag.length === 0 || !validateClanTag(tag).isValid) {
+      this.clanTagOwnershipError = "";
+      this.clanCheckPending = false;
+      this.clanCheck = Promise.resolve(null);
+      return;
+    }
+    this.clanTagOwnershipError = "";
+    this.clanCheckPending = true;
+    this.clanCheck = checkClanTagOwnership(tag).then((res) => {
+      if (gen === this.clanCheckGen) {
+        this.clanTagOwnershipError = res.error ?? "";
+        this.clanCheckPending = false;
+      }
+      return res.tag;
+    });
   }
 
   connectedCallback() {
@@ -89,6 +127,7 @@ export class UsernameInput extends LitElement {
       this.clanTag = localStorage.getItem(clanTagKey) ?? "";
       this.baseUsername = storedUsername;
       this.validateAndStore();
+      this.startClanCheck();
     } else {
       this.baseUsername = genAnonUsername();
       this.validateAndStore();
@@ -98,15 +137,25 @@ export class UsernameInput extends LitElement {
   render() {
     return html`
       <div class="flex items-center w-full h-full gap-2">
-        <input
-          type="text"
-          .value=${this.clanTag}
-          @input=${this.handleClanTagChange}
-          placeholder="${translateText("username.tag")}"
-          minlength="${MIN_CLAN_TAG_LENGTH}"
-          maxlength="${MAX_CLAN_TAG_LENGTH}"
-          class="w-[6rem] text-xl font-medium tracking-wider text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
-        />
+        <div class="relative flex items-center shrink-0">
+          <input
+            type="text"
+            .value=${this.clanTag}
+            @input=${this.handleClanTagChange}
+            placeholder="${translateText("username.tag")}"
+            minlength="${MIN_CLAN_TAG_LENGTH}"
+            maxlength="${MAX_CLAN_TAG_LENGTH}"
+            aria-busy=${this.clanCheckPending ? "true" : "false"}
+            aria-invalid=${this.clanTagOwnershipError ? "true" : "false"}
+            class="w-[6rem] text-xl font-medium tracking-wider text-center uppercase bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
+          />
+          ${this.clanCheckPending
+            ? html`<span
+                class="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-white/30 border-t-white/80 rounded-full animate-spin pointer-events-none"
+                aria-hidden="true"
+              ></span>`
+            : null}
+        </div>
         <input
           type="text"
           .value=${this.baseUsername}
@@ -124,7 +173,16 @@ export class UsernameInput extends LitElement {
           >
             ${this.validationError}
           </div>`
-        : null}
+        : this.clanTagOwnershipError
+          ? html`<div
+              id="clan-tag-validation-error"
+              class="absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap"
+            >
+              ${translateText(this.clanTagOwnershipError, {
+                tag: this.clanTag,
+              })}
+            </div>`
+          : null}
     `;
   }
 
@@ -151,6 +209,7 @@ export class UsernameInput extends LitElement {
     }
     this.clanTag = val;
     this.validateAndStore();
+    this.startClanCheck();
   }
 
   private handleUsernameChange(e: Event) {

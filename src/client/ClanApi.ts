@@ -1,3 +1,4 @@
+import { clanExistsApiPath } from "../core/ApiSchemas";
 import {
   type ClanBansResponse,
   ClanBansResponseSchema,
@@ -16,8 +17,10 @@ import {
   ClanRequestsResponseSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
-import { getApiBase } from "./Api";
+import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
+
+const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
 export type {
   ClanBan,
   ClanBansResponse,
@@ -123,6 +126,46 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   } catch {
     return false;
   }
+}
+
+// Public existence probe (no auth). null = inconclusive (timeout / error /
+// unexpected status); the caller decides how to handle it.
+export async function fetchClanExists(tag: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(`${getApiBase()}${clanExistsApiPath(tag)}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
+    });
+    if (res.status === 200) return true;
+    if (res.status === 404) return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Client-side mirror of the server's clan-tag ownership rule (see
+ * resolveClanTag in Privilege.ts): members keep their tag, non-members keep a
+ * fictional tag, and a real clan they don't belong to — or anything we can't
+ * verify — is rejected. Resolves to the tag to submit (null when dropped) plus
+ * an i18n error key for inline feedback. The server re-checks authoritatively.
+ */
+export async function checkClanTagOwnership(
+  tag: string,
+): Promise<{ tag: string | null; error: string | null }> {
+  const me = await getUserMe();
+  const myTags = me
+    ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
+    : [];
+  if (myTags.includes(tag.toUpperCase())) {
+    return { tag, error: null };
+  }
+
+  const exists = await fetchClanExists(tag);
+  if (exists === false) return { tag, error: null };
+  if (exists === true) return { tag: null, error: "username.tag_not_member" };
+  return { tag: null, error: "username.tag_check_failed" };
 }
 
 export type ClanMemberSort =
