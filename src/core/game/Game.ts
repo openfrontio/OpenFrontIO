@@ -178,7 +178,7 @@ export enum GameMapType {
   Korea = "Korea",
   Balkans = "Balkans",
   Labyrinth = "Labyrinth",
-  Onion = "Onion"
+  Onion = "Onion",
 }
 
 export type GameMapName = keyof typeof GameMapType;
