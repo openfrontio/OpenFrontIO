@@ -230,15 +230,6 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
-  private toggleStructureSprites() {
-    this.userSettings.toggleStructureSprites();
-
-    console.log(
-      "🏠 Structure sprites:",
-      this.userSettings.structureSprites() ? "ON" : "OFF",
-    );
-  }
-
   private toggleCursorCostLabel() {
     this.userSettings.toggleCursorCostLabel();
 
@@ -785,15 +776,6 @@ export class UserSettingModal extends BaseModal {
         id="special-effect-toggle"
         .checked=${this.userSettings.fxLayer()}
         @change=${this.toggleFxLayer}
-      ></setting-toggle>
-
-      <!-- 🏠 Structure Sprites -->
-      <setting-toggle
-        label="${translateText("user_setting.structure_sprites_label")}"
-        description="${translateText("user_setting.structure_sprites_desc")}"
-        id="structure_sprites-toggle"
-        .checked=${this.userSettings.structureSprites()}
-        @change=${this.toggleStructureSprites}
       ></setting-toggle>
 
       <!-- 💰 Cursor Price Pill -->

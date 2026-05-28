@@ -158,10 +158,6 @@ export class UserSettings {
     return this.getBool("settings.specialEffects", true);
   }
 
-  structureSprites() {
-    return this.getBool("settings.structureSprites", true);
-  }
-
   darkMode() {
     return this.getBool(DARK_MODE_KEY, false);
   }
@@ -225,10 +221,6 @@ export class UserSettings {
 
   toggleFxLayer() {
     this.setBool("settings.specialEffects", !this.fxLayer());
-  }
-
-  toggleStructureSprites() {
-    this.setBool("settings.structureSprites", !this.structureSprites());
   }
 
   toggleCursorCostLabel() {

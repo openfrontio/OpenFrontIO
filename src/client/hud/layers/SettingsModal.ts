@@ -17,7 +17,6 @@ import {
   SetSoundEffectsVolumeEvent,
 } from "../../sound/Sounds";
 import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
-const structureIcon = assetUrl("images/CityIconWhite.svg");
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
@@ -130,11 +129,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onToggleEmojisButtonClick() {
     this.userSettings.toggleEmojis();
-    this.requestUpdate();
-  }
-
-  private onToggleStructureSpritesButtonClick() {
-    this.userSettings.toggleStructureSprites();
     this.requestUpdate();
   }
 
@@ -405,31 +399,6 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.alertFrame()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleStructureSpritesButtonClick}"
-            >
-              <img
-                src=${structureIcon}
-                alt="structureSprites"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.structure_sprites_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.structure_sprites_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.structureSprites()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

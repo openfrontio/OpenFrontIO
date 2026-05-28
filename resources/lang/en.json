@@ -800,8 +800,6 @@
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
-    "structure_sprites_label": "Structure Sprites",
-    "structure_sprites_desc": "Toggle structure sprites",
     "cursor_cost_label_label": "Cursor Build Cost",
     "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "anonymous_names_label": "Hidden Names",
