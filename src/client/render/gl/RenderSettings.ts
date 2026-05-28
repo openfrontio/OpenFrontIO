@@ -229,6 +229,10 @@ export interface RenderSettings {
     minScreenScale: number; // minimum world-scale when zoomed out (prevents vanishing)
     cullZoom: number; // popups hidden below this zoom level
   };
+  ghostCost: {
+    screenScale: number; // screen-relative em scale; divided by zoom each frame for fixed on-screen size
+    screenYOffset: number; // screen-relative downward offset from icon center; divided by zoom each frame for fixed on-screen gap
+  };
   spawnOverlay: {
     highlightRadius: number; // tile highlight radius (squared internally)
     highlightAlpha: number; // tile highlight opacity (0–1)

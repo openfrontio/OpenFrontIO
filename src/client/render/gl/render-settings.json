@@ -244,6 +244,10 @@
     "minScreenScale": 0.15,
     "cullZoom": 0.3
   },
+  "ghostCost": {
+    "screenScale": 30,
+    "screenYOffset": 50
+  },
   "spawnOverlay": {
     "highlightRadius": 9,
     "highlightAlpha": 1.0,
