@@ -6,7 +6,11 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  RefreshGraphicsEvent,
+  ToggleRenderDebugGuiEvent,
+} from "../../InputHandler";
 import { translateText } from "../../Utils";
 import {
   SetBackgroundMusicVolumeEvent,
@@ -172,6 +176,11 @@ export class SettingsModal extends LitElement implements Controller {
   private onTogglePerformanceOverlayButtonClick() {
     this.userSettings.togglePerformanceOverlay();
     this.requestUpdate();
+  }
+
+  private onRenderDebugGuiButtonClick() {
+    this.eventBus.emit(new ToggleRenderDebugGuiEvent());
+    this.closeModal();
   }
 
   private onExitButtonClick() {
@@ -501,30 +510,58 @@ export class SettingsModal extends LitElement implements Controller {
               </div>
             </button>
 
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onTogglePerformanceOverlayButtonClick}"
-            >
-              <img
-                src=${settingsIcon}
-                alt="performanceIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.performance_overlay_label")}
+            <div class="border-t border-slate-600 pt-3 mt-4">
+              <div
+                class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+              >
+                ${translateText("user_setting.development_only")}
+              </div>
+
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                @click="${this.onTogglePerformanceOverlayButtonClick}"
+              >
+                <img
+                  src=${settingsIcon}
+                  alt="performanceIcon"
+                  width="20"
+                  height="20"
+                />
+                <div class="flex-1">
+                  <div class="font-medium">
+                    ${translateText("user_setting.performance_overlay_label")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("user_setting.performance_overlay_desc")}
+                  </div>
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.performance_overlay_desc")}
+                  ${this.userSettings.performanceOverlay()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")}
                 </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.performanceOverlay()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
+              </button>
+
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                @click="${this.onRenderDebugGuiButtonClick}"
+              >
+                <img
+                  src=${settingsIcon}
+                  alt="renderDebugGui"
+                  width="20"
+                  height="20"
+                />
+                <div class="flex-1">
+                  <div class="font-medium">
+                    ${translateText("user_setting.render_debug_gui")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("user_setting.render_debug_gui_desc")}
+                  </div>
+                </div>
+              </button>
+            </div>
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button

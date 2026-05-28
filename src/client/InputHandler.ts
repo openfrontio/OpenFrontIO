@@ -84,6 +84,8 @@ export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
 
+export class ToggleRenderDebugGuiEvent implements GameEvent {}
+
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
