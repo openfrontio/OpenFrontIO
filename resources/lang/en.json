@@ -1229,7 +1229,15 @@
     "login_required": "You must be logged in to purchase with currency.",
     "not_enough_currency": "Not enough currency for this purchase.",
     "purchase_failed": "Purchase failed. Please try again.",
-    "purchase_success": "Purchase succeeded: {name}"
+    "purchase_success": "Purchase succeeded: {name}",
+    "preview_skin": "Preview Skin"
+  },
+  "preview": {
+    "finish": "Finish preview",
+    "complete_title": "Preview Complete",
+    "complete_subtitle": "Like what you see? Make it yours.",
+    "exit": "Back to menu",
+    "keep_watching": "Keep watching"
   },
   "territory_patterns": {
     "title": "Skins",

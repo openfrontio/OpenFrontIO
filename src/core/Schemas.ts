@@ -257,6 +257,10 @@ export const GameConfigSchema = z.object({
   disableClanTags: z.boolean().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
+  // Singleplayer-only "skin preview" sandbox: the human auto-spawns in the
+  // map centre with a huge army and auto-expands into the wilderness so the
+  // player can watch a cosmetic spread across their territory. Never saved.
+  isPreview: z.boolean().optional(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks

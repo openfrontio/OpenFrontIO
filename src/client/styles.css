@@ -664,3 +664,32 @@ news-button .active button::after {
 .remove-player-btn:hover {
   background: #ff6666;
 }
+
+/* Cinematic skin-preview mode: hide the normal in-game HUD so the player can
+   just watch their previewed cosmetic spread across the map. The game canvas,
+   <preview-finish-button>, and <preview-complete-modal> stay visible. */
+body.preview-mode build-menu,
+body.preview-mode control-panel,
+body.preview-mode unit-display,
+body.preview-mode attacks-display,
+body.preview-mode chat-display,
+body.preview-mode events-display,
+body.preview-mode actionable-events,
+body.preview-mode game-right-sidebar,
+body.preview-mode replay-panel,
+body.preview-mode player-panel,
+body.preview-mode spawn-timer,
+body.preview-mode immunity-timer,
+body.preview-mode in-game-promo,
+body.preview-mode alert-frame,
+body.preview-mode chat-modal,
+body.preview-mode multi-tab-modal,
+body.preview-mode game-left-sidebar,
+body.preview-mode performance-overlay,
+body.preview-mode player-info-overlay,
+body.preview-mode leader-board,
+body.preview-mode team-stats,
+body.preview-mode heads-up-message,
+body.preview-mode emoji-table {
+  display: none !important;
+}

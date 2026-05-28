@@ -156,6 +156,49 @@ export function getSpawnTiles(
   return spawnTiles;
 }
 
+/**
+ * Finds the unowned land tile nearest the geometric centre of the map.
+ *
+ * Used by the singleplayer skin-preview sandbox to spawn the player "in the
+ * middle of the map". Scans outward in square rings (Chebyshev distance) from
+ * the centre, so the result is deterministic. Returns null only if the map has
+ * no unowned land at all.
+ */
+export function findCenterSpawnTile(game: Game): TileRef | null {
+  const width = game.width();
+  const height = game.height();
+  const cx = Math.floor(width / 2);
+  const cy = Math.floor(height / 2);
+
+  const valid = (x: number, y: number): TileRef | null => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return null;
+    const t = game.ref(x, y);
+    return game.isLand(t) && !game.hasOwner(t) ? t : null;
+  };
+
+  const center = valid(cx, cy);
+  if (center !== null) return center;
+
+  const maxR = Math.max(width, height);
+  for (let r = 1; r <= maxR; r++) {
+    // Top and bottom edges of the ring.
+    for (let dx = -r; dx <= r; dx++) {
+      const top = valid(cx + dx, cy - r);
+      if (top !== null) return top;
+      const bottom = valid(cx + dx, cy + r);
+      if (bottom !== null) return bottom;
+    }
+    // Left and right edges (excluding the corners already checked above).
+    for (let dy = -r + 1; dy <= r - 1; dy++) {
+      const left = valid(cx - r, cy + dy);
+      if (left !== null) return left;
+      const right = valid(cx + r, cy + dy);
+      if (right !== null) return right;
+    }
+  }
+  return null;
+}
+
 export function closestTile(
   gm: GameMap,
   refs: Iterable<TileRef>,

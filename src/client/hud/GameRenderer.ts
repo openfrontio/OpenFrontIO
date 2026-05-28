@@ -33,12 +33,18 @@ import { MultiTabModal } from "./layers/MultiTabModal";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { PreviewCompleteModal } from "./layers/PreviewCompleteModal";
+import { PreviewFinishButton } from "./layers/PreviewFinishButton";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { TeamStats } from "./layers/TeamStats";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
+
+// Startup zoom for skin previews, as a multiple of the whole-map fit (1 = whole
+// map). Higher zooms in closer on the centre spawn. Tune to taste.
+const PREVIEW_CAMERA_ZOOM = 1;
 
 export function createRenderer(
   inputEl: HTMLElement,
@@ -164,6 +170,24 @@ export function createRenderer(
   }
   winModal.eventBus = eventBus;
   winModal.game = game;
+
+  const previewCompleteModal = document.querySelector(
+    "preview-complete-modal",
+  ) as PreviewCompleteModal;
+  if (!(previewCompleteModal instanceof PreviewCompleteModal)) {
+    console.error("preview complete modal not found");
+  }
+  previewCompleteModal.eventBus = eventBus;
+  previewCompleteModal.game = game;
+
+  const previewFinishButton = document.querySelector(
+    "preview-finish-button",
+  ) as PreviewFinishButton;
+  if (!(previewFinishButton instanceof PreviewFinishButton)) {
+    console.error("preview finish button not found");
+  }
+  previewFinishButton.eventBus = eventBus;
+  previewFinishButton.game = game;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -307,6 +331,8 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     winModal,
+    previewCompleteModal,
+    previewFinishButton,
     replayPanel,
     settingsModal,
     teamStats,
@@ -323,6 +349,8 @@ export function createRenderer(
     uiState,
     layers,
     performanceOverlay,
+    // Skin preview: zoom in on the centre spawn; otherwise show the whole map.
+    game.config().isPreview() ? PREVIEW_CAMERA_ZOOM : 0.9,
   );
 }
 
@@ -334,6 +362,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Controller[],
     private performanceOverlay: PerformanceOverlay,
+    private startupZoom: number = 0.9,
   ) {}
 
   initialize() {
@@ -343,8 +372,9 @@ export class GameRenderer {
       this.transformHandler.updateCanvasBoundingRect(),
     );
 
-    //show whole map on startup
-    this.transformHandler.centerAll(0.9);
+    // Skin preview zooms in on the centre spawn; normal games show the whole
+    // map (see startupZoom in createRenderer).
+    this.transformHandler.centerAll(this.startupZoom);
   }
 
   tick() {

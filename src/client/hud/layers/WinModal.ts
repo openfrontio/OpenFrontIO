@@ -257,6 +257,11 @@ export class WinModal extends LitElement implements Controller {
   init() {}
 
   tick() {
+    // Skin previews use their own <preview-complete-modal>; never show the
+    // win/death modal (and there's no win check in preview games anyway).
+    if (this.game.config().isPreview()) {
+      return;
+    }
     const myPlayer = this.game.myPlayer();
     if (
       !this.hasShownDeathModal &&

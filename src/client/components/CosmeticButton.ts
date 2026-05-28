@@ -35,6 +35,11 @@ export class CosmeticButton extends LitElement {
   @property({ type: Function })
   onPurchase?: (resolved: ResolvedCosmetic, method: PaymentMethod) => void;
 
+  /** When set (patterns/skins only), shows a "Preview" button that launches a
+   * singleplayer sandbox to try the cosmetic on the map before buying. */
+  @property({ type: Function })
+  onPreview?: (resolved: ResolvedCosmetic) => void;
+
   /** True if the user already has a subscription (any tier). */
   @property({ type: Boolean })
   userHasSubscription: boolean = false;
@@ -238,6 +243,17 @@ export class CosmeticButton extends LitElement {
             ${this.renderPreview()}
           </div>
         </button>
+        ${(isPattern || isSkin) && this.onPreview
+          ? html`<button
+              class="w-full px-3 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer"
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this.onPreview?.(this.resolved);
+              }}
+            >
+              ${translateText("store.preview_skin")}
+            </button>`
+          : nothing}
         ${isOwnedSubscription
           ? html`<div
               class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"

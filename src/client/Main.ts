@@ -823,6 +823,7 @@ class Client {
       console.log("joining lobby, stopping existing game");
       this.lobbyHandle.stop(true);
       document.body.classList.remove("in-game");
+      document.body.classList.remove("preview-mode");
     }
     if (lobby.source === "public") {
       this.joinModal?.open({
@@ -928,6 +929,11 @@ class Client {
       crazyGamesSDK.loadingStop();
       crazyGamesSDK.gameplayStart();
       document.body.classList.add("in-game");
+      // Cinematic skin-preview mode hides the normal HUD (see styles.css).
+      document.body.classList.toggle(
+        "preview-mode",
+        lobby.gameStartInfo?.config.isPreview === true,
+      );
 
       // Ensure there's a homepage entry in history before adding the lobby entry
       if (window.location.hash === "" || window.location.hash === "#") {
@@ -975,6 +981,7 @@ class Client {
     }
 
     document.body.classList.remove("in-game");
+    document.body.classList.remove("preview-mode");
 
     if (this.joinModal.isOpen()) {
       this.joinModal.close();

@@ -60,6 +60,11 @@ export type PaymentMethod = "dollar" | "hard" | "soft";
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
+  // When invoked from inside a live game (e.g. the skin-preview modal), skip the
+  // store-menu navigations that assume you're already in the menu: don't bounce
+  // to the packs tab on insufficient funds, and on success return home rather
+  // than reloading the (now-invalid) game URL.
+  opts: { fromGame?: boolean } = {},
 ): Promise<void> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
@@ -145,7 +150,7 @@ export async function purchaseCosmetic(
       : (userMe.player.currency?.soft ?? 0);
   if (balance < price) {
     alert(translateText("store.not_enough_currency"));
-    if (method === "hard") {
+    if (method === "hard" && !opts.fromGame) {
       // Send the user to the packs tab so they can top up plutonium.
       window.location.hash = "#modal=store&tab=packs";
     }
@@ -165,7 +170,13 @@ export async function purchaseCosmetic(
   }
   alert(translateText("store.purchase_success", { name: c.name }));
   invalidateUserMe();
-  window.location.reload();
+  if (opts.fromGame) {
+    // Reloading the game URL would try to rejoin a game that no longer exists,
+    // so go home; the newly-owned cosmetic applies on the fresh load.
+    window.location.href = "/";
+  } else {
+    window.location.reload();
+  }
 }
 
 function simpleHash(str: string): string {

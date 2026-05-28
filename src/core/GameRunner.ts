@@ -1,6 +1,7 @@
 import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { Executor } from "./execution/ExecutionManager";
+import { PreviewAutoExpandExecution } from "./execution/PreviewAutoExpandExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -97,22 +98,29 @@ export class GameRunner {
   ) {}
 
   init() {
-    if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
+    const config = this.game.config();
+    if (config.gameConfig().gameType !== GameType.Singleplayer) {
       this.game.addExecution(new SpawnTimerExecution());
     }
-    if (this.game.config().isRandomSpawn()) {
-      this.game.addExecution(...this.execManager.spawnPlayers());
+    if (config.isPreview()) {
+      // Skin-preview sandbox: auto-spawn the human in the map centre and let
+      // PreviewAutoExpandExecution expand them across the wilderness. No bots,
+      // nations, or win check — the preview ends only when the user finishes.
+      this.game.addExecution(...this.execManager.spawnPreviewPlayers());
+      this.game.addExecution(new PreviewAutoExpandExecution());
+    } else {
+      if (config.isRandomSpawn()) {
+        this.game.addExecution(...this.execManager.spawnPlayers());
+      }
+      if (config.bots() > 0) {
+        this.game.addExecution(...this.execManager.spawnTribes(config.bots()));
+      }
+      if (config.spawnNations()) {
+        this.game.addExecution(...this.execManager.nationExecutions());
+      }
+      this.game.addExecution(new WinCheckExecution());
     }
-    if (this.game.config().bots() > 0) {
-      this.game.addExecution(
-        ...this.execManager.spawnTribes(this.game.config().bots()),
-      );
-    }
-    if (this.game.config().spawnNations()) {
-      this.game.addExecution(...this.execManager.nationExecutions());
-    }
-    this.game.addExecution(new WinCheckExecution());
-    if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
+    if (!config.isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(
         new RecomputeRailClusterExecution(this.game.railNetwork()),
       );

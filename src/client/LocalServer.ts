@@ -268,6 +268,10 @@ export class LocalServer {
     if (this.isReplay) {
       return;
     }
+    // Skin previews are throwaway sandboxes — never archive them.
+    if (this.lobbyConfig.gameStartInfo?.config.isPreview) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),

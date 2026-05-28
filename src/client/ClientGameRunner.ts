@@ -572,12 +572,20 @@ export class ClientGameRunner {
    * (when the player is not alive or doesn't exist)
    */
   public shouldPreventWindowClose(): boolean {
+    // Skin previews are throwaway sandboxes — leaving should never prompt.
+    if (this.lobby.gameStartInfo?.config.isPreview) {
+      return false;
+    }
     // Show confirmation dialog if player is alive in the game
     return !!this.myPlayer?.isAlive();
   }
 
   private async saveGame(update: WinUpdate) {
     if (!this.clientID) {
+      return;
+    }
+    // Skin previews are throwaway sandboxes — never record them.
+    if (this.lobby.gameStartInfo?.config.isPreview) {
       return;
     }
     const players: PlayerRecord[] = [
@@ -771,7 +779,9 @@ export class ClientGameRunner {
           !this.gameView.inSpawnPhase() &&
           !hasGoneToPlayer &&
           this.gameView.myPlayer() &&
-          this.userSettings.goToPlayer()
+          this.userSettings.goToPlayer() &&
+          // Skin preview keeps its own centred camera (see GameRenderer).
+          !this.gameView.config().isPreview()
         ) {
           hasGoneToPlayer = true;
           this.eventBus.emit(new GoToPlayerEvent(this.gameView.myPlayer()!, 8));

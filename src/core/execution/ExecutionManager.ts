@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, PlayerType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -27,6 +27,7 @@ import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
+import { findCenterSpawnTile } from "./Util";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
 export class Executor {
@@ -132,6 +133,18 @@ export class Executor {
 
   spawnPlayers(): SpawnExecution[] {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
+  }
+
+  // Spawn every human player in the centre of the map. Used by the singleplayer
+  // skin-preview sandbox so the player starts "in the middle" without clicking.
+  spawnPreviewPlayers(): SpawnExecution[] {
+    const center = findCenterSpawnTile(this.mg) ?? undefined;
+    const execs: SpawnExecution[] = [];
+    for (const player of this.mg.allPlayers()) {
+      if (player.type() !== PlayerType.Human) continue;
+      execs.push(new SpawnExecution(this.gameID, player.info(), center));
+    }
+    return execs;
   }
 
   nationExecutions(): Execution[] {

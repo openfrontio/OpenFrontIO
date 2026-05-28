@@ -13,6 +13,7 @@ import {
   purchaseCosmetic,
   resolveCosmetics,
 } from "./Cosmetics";
+import { launchSkinPreview } from "./Preview";
 import { translateText } from "./Utils";
 
 type StoreTab = "patterns" | "flags" | "packs" | "subscriptions";
@@ -93,6 +94,7 @@ export class StoreModal extends BaseModal {
             <cosmetic-button
               .resolved=${r}
               .onPurchase=${purchaseCosmetic}
+              .onPreview=${launchSkinPreview}
             ></cosmetic-button>
           `,
         )}
@@ -261,6 +263,7 @@ export class StoreModal extends BaseModal {
             <cosmetic-button
               .resolved=${r}
               .onPurchase=${purchaseCosmetic}
+              .onPreview=${launchSkinPreview}
             ></cosmetic-button>
           `,
         )}

@@ -97,6 +97,10 @@ export class Config {
     return this._isReplay;
   }
 
+  isPreview(): boolean {
+    return this._gameConfig.isPreview ?? false;
+  }
+
   traitorDefenseDebuff(): number {
     return 0.5;
   }
