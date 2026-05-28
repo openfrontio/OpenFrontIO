@@ -16,6 +16,7 @@ import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "../../sound/Sounds";
+import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const structureIcon = assetUrl("images/CityIconWhite.svg");
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
@@ -104,10 +105,10 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  public closeModal() {
+  public closeModal({ keepPause = false }: { keepPause?: boolean } = {}) {
     this.isVisible = false;
     this.requestUpdate();
-    this.pauseGame(false);
+    if (!keepPause) this.pauseGame(false);
   }
 
   private pauseGame(pause: boolean) {
@@ -181,6 +182,17 @@ export class SettingsModal extends LitElement implements Controller {
   private onRenderDebugGuiButtonClick() {
     this.eventBus.emit(new ToggleRenderDebugGuiEvent());
     this.closeModal();
+  }
+
+  private onGraphicsSettingsButtonClick() {
+    this.eventBus.emit(
+      new ShowGraphicsSettingsModalEvent(
+        true,
+        this.shouldPause,
+        this.wasPausedWhenOpened,
+      ),
+    );
+    this.closeModal({ keepPause: true });
   }
 
   private onExitButtonClick() {
@@ -507,6 +519,26 @@ export class SettingsModal extends LitElement implements Controller {
                 ${this.userSettings.leftClickOpensMenu()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onGraphicsSettingsButtonClick}"
+            >
+              <img
+                src=${settingsIcon}
+                alt="graphicsSettings"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.graphics_settings_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.graphics_settings_desc")}
+                </div>
               </div>
             </button>
 

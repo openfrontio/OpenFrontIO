@@ -83,9 +83,9 @@ export class HeadsUpMessage extends LitElement implements Controller {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
-    if (updates && updates[GameUpdateType.GamePaused].length > 0) {
-      const pauseUpdate = updates[GameUpdateType.GamePaused][0];
-      this.isPaused = pauseUpdate.paused;
+    const pauseUpdates = updates?.[GameUpdateType.GamePaused];
+    if (pauseUpdates && pauseUpdates.length > 0) {
+      this.isPaused = pauseUpdates[pauseUpdates.length - 1].paused;
     }
 
     const showImmunityHudDuration = 10 * 10;
