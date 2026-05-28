@@ -604,8 +604,9 @@
     "venice": "Venice",
     "korea": "Korea",
     "indiansubcontinent": "Indian Subcontinent",
-    "labyrinth": "Labyrinth",
-    "balkans": "Balkans"
+    "balkans": "Balkans",
+    "yellowsea": "Yellow Sea",
+    "labyrinth": "Labyrinth"
   },
   "map_categories": {
     "featured": "Featured",
