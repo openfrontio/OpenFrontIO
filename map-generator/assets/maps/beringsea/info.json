@@ -121,5 +121,21 @@
       "name": "Magadan",
       "flag": "ru"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1600,
+        "width": 1375,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1600,
+        "width": 1125,
+        "x": 1375,
+        "y": 0
+      }
+    ]
+  }
 }

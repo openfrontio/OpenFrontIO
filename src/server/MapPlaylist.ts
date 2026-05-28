@@ -131,6 +131,18 @@ const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
   [GameMapType.Baikal, 2],
   [GameMapType.FourIslands, 4],
   [GameMapType.Luna, 2],
+  [GameMapType.StraitOfGibraltar, 2],
+  [GameMapType.StraitOfHormuz, 2],
+  [GameMapType.Aegean, 2],
+  [GameMapType.BeringSea, 2],
+  [GameMapType.BeringStrait, 2],
+  [GameMapType.BosphorusStraits, 2],
+  [GameMapType.Conakry, 2],
+  [GameMapType.Pluto, 2],
+  [GameMapType.FalklandIslands, 2],
+  [GameMapType.TradersDream, 2],
+  [GameMapType.Surrounded, 4],
+  [GameMapType.GulfOfStLawrence, 3],
 ]);
 
 type ModifierKey =
