@@ -126,5 +126,21 @@
       "flag": "tr",
       "name": "Esenyurt"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 612,
+        "width": 500,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 612,
+        "width": 500,
+        "x": 500,
+        "y": 0
+      }
+    ]
+  }
 }

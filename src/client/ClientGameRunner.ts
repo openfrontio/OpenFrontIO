@@ -31,6 +31,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   DARK_MODE_KEY,
+  GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
@@ -67,7 +68,11 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { createDebugGui, GameView as WebGLGameView } from "./render/gl";
+import {
+  createDebugGui,
+  generateRenderSettings,
+  GameView as WebGLGameView,
+} from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
@@ -479,6 +484,22 @@ async function createClientGame(
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
     );
 
+    const graphicsListenerAbort = new AbortController();
+    const applyGraphicsOverrides = (): void => {
+      const generated = generateRenderSettings(
+        userSettings.graphicsOverrides(),
+      );
+      const live = view.getSettings();
+      Object.assign(live.name, generated.name);
+      Object.assign(live.structure, generated.structure);
+    };
+    applyGraphicsOverrides();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      applyGraphicsOverrides,
+      { signal: graphicsListenerAbort.signal },
+    );
+
     let debugGui: ReturnType<typeof createDebugGui> | null = null;
     eventBus.on(ToggleRenderDebugGuiEvent, () => {
       if (debugGui === null) {
@@ -524,6 +545,7 @@ async function createClientGame(
       soundManager,
       userSettings,
       webglBuilder,
+      graphicsListenerAbort,
     );
   } catch (err) {
     soundManager.dispose();
@@ -557,6 +579,7 @@ export class ClientGameRunner {
     private soundManager: SoundManager,
     private userSettings: UserSettings,
     private webglBuilder: WebGLFrameBuilder | null = null,
+    private graphicsListenerAbort: AbortController | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -813,6 +836,7 @@ export class ClientGameRunner {
 
   public stop() {
     this.soundManager.dispose();
+    this.graphicsListenerAbort?.abort();
     if (!this.isActive) return;
 
     this.isActive = false;

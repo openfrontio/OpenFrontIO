@@ -116,5 +116,21 @@
       "flag": "gn",
       "name": "Dioumaya"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1000,
+        "width": 1290,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1000,
+        "width": 1166,
+        "x": 1290,
+        "y": 0
+      }
+    ]
+  }
 }
