@@ -1,3 +1,7 @@
+import {
+  GraphicsOverrides,
+  GraphicsOverridesSchema,
+} from "../../client/hud/layers/GraphicsSettingsModal";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -53,6 +57,7 @@ export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
+export const GRAPHICS_KEY = "settings.graphics";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -352,6 +357,23 @@ export class UserSettings {
 
   setAttackRatio(value: number): void {
     this.setFloat("settings.attackRatio", value);
+  }
+
+  // Returns {} if missing, unparseable, or fails schema validation.
+  graphicsOverrides(): GraphicsOverrides {
+    const raw = this.getString(GRAPHICS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = GraphicsOverridesSchema.safeParse(JSON.parse(raw));
+      if (parsed.success) return parsed.data;
+    } catch {
+      // fall through
+    }
+    return {};
+  }
+
+  setGraphicsOverrides(value: GraphicsOverrides): void {
+    this.setString(GRAPHICS_KEY, JSON.stringify(value));
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object

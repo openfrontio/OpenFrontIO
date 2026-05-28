@@ -31,6 +31,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   DARK_MODE_KEY,
+  GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
@@ -67,7 +68,11 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { createDebugGui, GameView as WebGLGameView } from "./render/gl";
+import {
+  createDebugGui,
+  generateRenderSettings,
+  GameView as WebGLGameView,
+} from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
@@ -477,6 +482,19 @@ async function createClientGame(
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
+    );
+
+    const applyGraphicsOverrides = (): void => {
+      const generated = generateRenderSettings(
+        userSettings.graphicsOverrides(),
+      );
+      const live = view.getSettings();
+      Object.assign(live.name, generated.name);
+    };
+    applyGraphicsOverrides();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      applyGraphicsOverrides,
     );
 
     let debugGui: ReturnType<typeof createDebugGui> | null = null;

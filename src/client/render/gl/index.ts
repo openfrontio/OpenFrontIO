@@ -10,7 +10,11 @@ export type {
 } from "./Events";
 export { GameView } from "./GameView";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
-export { createRenderSettings, dumpSettings } from "./RenderSettings";
+export {
+  createRenderSettings,
+  dumpSettings,
+  generateRenderSettings,
+} from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
 export { deepAssign, deepDiff } from "./SettingsUtils";
 export { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";

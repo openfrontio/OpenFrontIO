@@ -1,3 +1,4 @@
+import { GraphicsOverrides } from "../../hud/layers/GraphicsSettingsModal";
 import defaults from "./render-settings.json";
 
 export interface RenderSettings {
@@ -258,6 +259,23 @@ export interface RenderSettings {
 /** Create a fresh settings object with defaults from render-settings.json. */
 export function createRenderSettings(): RenderSettings {
   return JSON.parse(JSON.stringify(defaults)) as RenderSettings;
+}
+
+/**
+ * Generate a fresh RenderSettings by layering user overrides on top of the
+ * render-settings.json defaults. Pure — does not mutate any input.
+ */
+export function generateRenderSettings(
+  overrides: GraphicsOverrides,
+): RenderSettings {
+  const settings = createRenderSettings();
+  if (overrides.name?.nameScaleFactor !== undefined) {
+    settings.name.nameScaleFactor = overrides.name.nameScaleFactor;
+  }
+  if (overrides.name?.cullThreshold !== undefined) {
+    settings.name.cullThreshold = overrides.name.cullThreshold;
+  }
+  return settings;
 }
 
 /** Dump current settings to a downloadable JSON file. */
