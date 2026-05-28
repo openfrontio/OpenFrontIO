@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 2148,
-    "num_land_tiles": 1194108,
+    "num_land_tiles": 1193914,
     "width": 1092
   },
   "map16x": {
     "height": 537,
-    "num_land_tiles": 71937,
+    "num_land_tiles": 71922,
     "width": 273
   },
   "map4x": {
     "height": 1074,
-    "num_land_tiles": 294112,
+    "num_land_tiles": 294064,
     "width": 546
   },
   "name": "Korea",
