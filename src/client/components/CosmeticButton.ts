@@ -221,39 +221,45 @@ export class CosmeticButton extends LitElement {
           : undefined}
         .name=${this.displayName}
       >
-        <button
-          class="group relative flex flex-col items-center w-full ${isPattern ||
-          isSkin
+        <div
+          class="flex flex-col items-center w-full ${isPattern || isSkin
             ? "gap-2"
-            : "gap-1"} rounded-lg cursor-pointer transition-all duration-200 flex-1"
-          @click=${() => this.handleClick()}
+            : "gap-1"}"
         >
-          ${(c?.product ?? priceHard ?? priceSoft)
-            ? html`<cosmetic-info
-                .artist=${artist}
-                .rarity=${c!.rarity}
-                .colorPalette=${this.resolved.colorPalette?.name}
-                .showAdFree=${isPurchasable}
-              ></cosmetic-info>`
-            : nothing}
-
-          <div
-            class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 border border-white/10 group-hover:border-white/20 transition-colors duration-200 overflow-hidden"
+          <button
+            class="group relative flex flex-col items-center w-full ${isPattern ||
+            isSkin
+              ? "gap-2"
+              : "gap-1"} rounded-lg cursor-pointer transition-all duration-200"
+            @click=${() => this.handleClick()}
           >
-            ${this.renderPreview()}
-          </div>
-        </button>
-        ${(isPattern || isSkin) && this.onPreview
-          ? html`<button
-              class="w-full px-3 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer"
-              @click=${(e: Event) => {
-                e.stopPropagation();
-                this.onPreview?.(this.resolved);
-              }}
+            ${(c?.product ?? priceHard ?? priceSoft)
+              ? html`<cosmetic-info
+                  .artist=${artist}
+                  .rarity=${c!.rarity}
+                  .colorPalette=${this.resolved.colorPalette?.name}
+                  .showAdFree=${isPurchasable}
+                ></cosmetic-info>`
+              : nothing}
+
+            <div
+              class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 border border-white/10 group-hover:border-white/20 transition-colors duration-200 overflow-hidden"
             >
-              ${translateText("store.preview_skin")}
-            </button>`
-          : nothing}
+              ${this.renderPreview()}
+            </div>
+          </button>
+          ${(isPattern || isSkin) && this.onPreview
+            ? html`<button
+                class="w-full px-3 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this.onPreview?.(this.resolved);
+                }}
+              >
+                ${translateText("store.preview_skin")}
+              </button>`
+            : nothing}
+        </div>
         ${isOwnedSubscription
           ? html`<div
               class="w-full mt-2 px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold uppercase tracking-wider text-center"
