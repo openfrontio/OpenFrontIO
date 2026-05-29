@@ -366,6 +366,17 @@ export async function startWorker() {
             .get()
             .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
+        // Try to reconnect an existing client (e.g., page refresh)
+        // If successful, skip all authorization
+        if (
+          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
+            username: censoredUsername,
+            clanTag: censoredClanTag,
+          })
+        ) {
+          return;
+        }
+
         let flares: string[] | undefined;
         let publicId: string | undefined;
         let friends: string[] = [];
@@ -393,10 +404,24 @@ export async function startWorker() {
           flares = result.response.player.flares;
           publicId = result.response.player.publicId;
           friends = result.response.player.friends;
+
+          if (allowedFlares !== undefined) {
+            const allowed =
+              allowedFlares.length === 0 ||
+              allowedFlares.some((f) => flares?.includes(f));
+            if (!allowed) {
+              log.warn(
+                "Forbidden: player without an allowed flare attempted to join game",
+              );
+              ws.close(1002, "Forbidden");
+              return;
+            }
+          }
         }
 
-        // Enforce clan tag ownership before the rejoin below, so a page
-        // refresh can't bypass the check by swapping in an unvalidated tag.
+        // Enforce clan tag ownership: a player can wear a tag only if they're
+        // a member; a real clan they're not in (or an unverifiable tag) is
+        // dropped to prevent impersonation. Fictional tags pass through.
         const resolution = await privilegeRefresher
           .get()
           .resolveClanTag(censoredClanTag, userMeResponse);
@@ -409,30 +434,6 @@ export async function startWorker() {
           });
         }
         const resolvedClanTag = resolution.tag;
-
-        // Try to reconnect an existing client (e.g., page refresh).
-        // If successful, skip the remaining join checks.
-        if (
-          gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
-            username: censoredUsername,
-            clanTag: resolvedClanTag,
-          })
-        ) {
-          return;
-        }
-
-        if (userMeResponse !== null && allowedFlares !== undefined) {
-          const allowed =
-            allowedFlares.length === 0 ||
-            allowedFlares.some((f) => flares?.includes(f));
-          if (!allowed) {
-            log.warn(
-              "Forbidden: player without an allowed flare attempted to join game",
-            );
-            ws.close(1002, "Forbidden");
-            return;
-          }
-        }
 
         const cosmeticResult = privilegeRefresher
           .get()
