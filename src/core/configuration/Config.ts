@@ -138,6 +138,9 @@ export class Config {
     // So defense modifier is between [5, 2.5]
     return 5 - falloutRatio * 2;
   }
+  msPerTick(): number {
+    return 100;
+  }
   SAMCooldown(): number {
     return 90;
   }
