@@ -28,7 +28,6 @@ import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
-import { clanExistsByTag, resolveClanTag } from "./Privilege";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -75,6 +74,7 @@ export async function startWorker() {
     ServerEnv.jwtIssuer() + "/cosmetics.json",
     ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
+    ServerEnv.jwtIssuer(),
     log,
   );
   privilegeRefresher.start();
@@ -359,17 +359,19 @@ export async function startWorker() {
         }
 
         // Normalize username and clan tag before any rejoin/join handling.
+        // If this connection maps to an existing lobby client, we still want
+        // the latest pre-join identity to be reflected.
         const { clanTag: censoredClanTag, username: censoredUsername } =
           privilegeRefresher
             .get()
             .censor(clientMsg.username, clientMsg.clanTag ?? null);
 
-        // Fetch the user profile up front. It's needed here so the clan-tag
-        // ownership check can run *before* the reconnect path below — otherwise
-        // a page refresh would let a player swap to an unvalidated tag — and is
-        // reused for flares/cosmetics on new joins.
-        const allowedFlares = ServerEnv.allowedFlares();
+        let flares: string[] | undefined;
+        let publicId: string | undefined;
+        let friends: string[] = [];
         let userMeResponse: UserMeResponse | null = null;
+
+        const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
@@ -388,20 +390,16 @@ export async function startWorker() {
             return;
           }
           userMeResponse = result.response;
+          flares = result.response.player.flares;
+          publicId = result.response.player.publicId;
+          friends = result.response.player.friends;
         }
 
-        // Enforce clan tag ownership. A player can wear a tag only if they're a
-        // member; if they aren't and the tag belongs to a real clan, drop it to
-        // prevent impersonation. Fictional tags pass through.
-        const resolution = await resolveClanTag(
-          censoredClanTag,
-          userMeResponse,
-          (tag) =>
-            clanExistsByTag(tag, {
-              baseUrl: ServerEnv.jwtIssuer(),
-              onWarn: (event, ctx) => log.warn(event, ctx),
-            }),
-        );
+        // Enforce clan tag ownership before the rejoin below, so a page
+        // refresh can't bypass the check by swapping in an unvalidated tag.
+        const resolution = await privilegeRefresher
+          .get()
+          .resolveClanTag(censoredClanTag, userMeResponse);
         if (resolution.dropped) {
           log.warn("Dropped clan tag: player is not a member", {
             persistentID: persistentId,
@@ -412,9 +410,8 @@ export async function startWorker() {
         }
         const resolvedClanTag = resolution.tag;
 
-        // Try to reconnect an existing client (e.g., page refresh). Pre-game,
-        // username and clan tag pick up the latest validated values from this
-        // connection.
+        // Try to reconnect an existing client (e.g., page refresh).
+        // If successful, skip the remaining join checks.
         if (
           gm.rejoinClient(ws, persistentId, clientMsg.gameID, 0, {
             username: censoredUsername,
@@ -423,11 +420,6 @@ export async function startWorker() {
         ) {
           return;
         }
-
-        // New client — finish the join checks.
-        const flares = userMeResponse?.player.flares;
-        const publicId = userMeResponse?.player.publicId;
-        const friends = userMeResponse?.player.friends ?? [];
 
         if (userMeResponse !== null && allowedFlares !== undefined) {
           const allowed =

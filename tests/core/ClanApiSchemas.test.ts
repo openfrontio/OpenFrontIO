@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clanExistsApiPath } from "../../src/core/ApiSchemas";
+import { clanExistsApiPath } from "../../src/core/ClanApiSchemas";
 
 describe("clanExistsApiPath", () => {
   it("uppercases and URL-encodes the tag", () => {

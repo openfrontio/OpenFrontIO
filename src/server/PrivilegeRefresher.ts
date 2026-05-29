@@ -22,6 +22,7 @@ export class PrivilegeRefresher {
     private cosmeticsEndpoint: string,
     private profaneWordsEndpoint: string,
     private apiKey: string,
+    private clanApiBaseUrl: string,
     parentLog: Logger,
     private refreshInterval: number = 1000 * 60 * 3,
   ) {
@@ -96,6 +97,10 @@ export class PrivilegeRefresher {
         result.data,
         base64url.decode,
         bannedWords,
+        {
+          baseUrl: this.clanApiBaseUrl,
+          onWarn: (event, ctx) => this.log.warn(event, ctx),
+        },
       );
       this.cosmeticFlagUrls = new Set(
         Object.values(result.data.flags).map((f) => f.url),

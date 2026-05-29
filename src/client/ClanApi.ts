@@ -1,9 +1,9 @@
-import { clanExistsApiPath } from "../core/ApiSchemas";
 import {
   type ClanBansResponse,
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  clanExistsApiPath,
   type ClanGameFilter,
   type ClanGamesResponse,
   ClanGamesResponseSchema,

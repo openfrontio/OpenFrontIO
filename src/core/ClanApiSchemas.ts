@@ -3,6 +3,12 @@ import { ClanTagSchema } from "./Schemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
+// Existence-probe path (200 = exists, 404 = not); uppercased to match the
+// canonical tag form. Shared so the client probe and server enforcement agree.
+export function clanExistsApiPath(tag: string): string {
+  return `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
+}
+
 export const ClanLeaderboardEntrySchema = z.object({
   clanTag: RequiredClanTagSchema,
   games: z.number(),
