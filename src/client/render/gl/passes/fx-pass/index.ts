@@ -8,7 +8,7 @@
  * interceptions) are coordinated here so each sub-pass stays self-contained.
  */
 
-import { MS_PER_TICK, NUKE_EXPLOSION_RADII } from "../../../GameConstants";
+import type { Config } from "../../../../../core/configuration/Config";
 import type {
   AttackRingInput,
   ConquestFx,
@@ -18,7 +18,7 @@ import type {
 import type { RenderSettings } from "../../RenderSettings";
 import { FxAttackRingPass } from "./FxAttackRingPass";
 import { FxShockwavePass } from "./FxShockwavePass";
-import { FxSpritePass } from "./FxSpritePass";
+import { FxSpritePass, NUKE_EXPLOSION_RADII } from "./FxSpritePass";
 
 export type { AttackRingInput } from "../../../types";
 
@@ -33,9 +33,10 @@ export class FxPass {
     gl: WebGL2RenderingContext,
     header: RendererConfig,
     settings: RenderSettings,
+    private config: Config,
   ) {
     this.mapW = header.mapWidth;
-    this.spritePass = new FxSpritePass(gl, header, settings);
+    this.spritePass = new FxSpritePass(gl, header, settings, config);
     this.shockwavePass = new FxShockwavePass(gl, settings);
     this.attackRingPass = new FxAttackRingPass(gl, settings);
   }
@@ -47,7 +48,7 @@ export class FxPass {
   applyDeadUnits(deadUnits: DeadUnitFx[]): void {
     const now = this.timeFn();
     for (const unit of deadUnits) {
-      const startMs = now - (unit.tickAge ?? 0) * MS_PER_TICK;
+      const startMs = now - (unit.tickAge ?? 0) * this.config.msPerTick();
       this.spawnUnit(unit, startMs);
     }
   }

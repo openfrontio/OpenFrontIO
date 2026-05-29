@@ -72,6 +72,8 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
+          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -122,6 +124,8 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
+          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -172,6 +176,8 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
+          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -222,6 +228,8 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
+          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |

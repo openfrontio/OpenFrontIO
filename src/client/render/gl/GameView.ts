@@ -8,6 +8,7 @@
  * Consumers only touch GameView — they never import GPURenderer or Camera.
  */
 
+import type { Config } from "../../../core/configuration/Config";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -51,6 +52,7 @@ export class GameView {
     private header: RendererConfig,
     private terrainBytes: Uint8Array,
     private paletteData: Float32Array,
+    private config: Config,
     private raf?: typeof requestAnimationFrame,
     private caf?: typeof cancelAnimationFrame,
   ) {
@@ -78,6 +80,7 @@ export class GameView {
       this.header,
       this.terrainBytes,
       this.paletteData,
+      this.config,
       this.raf,
       this.caf,
     );

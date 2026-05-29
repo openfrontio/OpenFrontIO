@@ -7,6 +7,7 @@
  *  - Ghost cost label: persistent build-cost number under the ghost cursor
  */
 
+import type { Config } from "../../../../core/configuration/Config";
 import type { BonusEvent, ConquestFx } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { createProgram } from "../utils/GlUtils";
@@ -31,8 +32,6 @@ const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 const FLOATS_PER_INSTANCE = 10;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 const CONQUEST_LIFETIME_MS = 2500;
-/** Nominal game tick rate — 100ms per tick. */
-const MS_PER_TICK = 100;
 /** Tiles below conquered name location (matches upstream DynamicUILayer). */
 const CONQUEST_Y_OFFSET = 8;
 /** World-space font size for conquest popups. */
@@ -152,7 +151,11 @@ export class WorldTextPass {
     return this.timeFn();
   }
 
-  constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
+  constructor(
+    gl: WebGL2RenderingContext,
+    settings: RenderSettings,
+    private config: Config,
+  ) {
     this.gl = gl;
     this.settings = settings;
 
@@ -273,7 +276,7 @@ export class WorldTextPass {
   applyConquestEvents(events: ConquestFx[]): void {
     const now = this.now();
     for (const evt of events) {
-      const startMs = now - (evt.tickAge ?? 0) * MS_PER_TICK;
+      const startMs = now - (evt.tickAge ?? 0) * this.config.msPerTick();
       if (now - startMs >= CONQUEST_LIFETIME_MS) continue;
       this.active.push({
         x: evt.x,

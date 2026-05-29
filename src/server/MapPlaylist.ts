@@ -91,6 +91,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   NorthwestPassage: 5,
   Pangaea: 5,
   Passage: 4,
+  Onion: 2,
   Pluto: 6,
   SanFrancisco: 3,
   Sierpinski: 10,
