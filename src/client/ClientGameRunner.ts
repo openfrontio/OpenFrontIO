@@ -241,7 +241,10 @@ export function joinLobby(
 
 // Build the WebGL view + its glCanvas. Must run before createRenderer so the
 // controllers can be wired directly to the view.
-function createWebGLView(terrainMap: TerrainMapData): {
+function createWebGLView(
+  terrainMap: TerrainMapData,
+  config: Config,
+): {
   view: WebGLGameView;
   glCanvas: HTMLCanvasElement;
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
@@ -295,6 +298,7 @@ function createWebGLView(terrainMap: TerrainMapData): {
     },
     terrainBytes,
     palette,
+    config,
     captureRaf,
     captureCaf,
   );
@@ -463,8 +467,10 @@ async function createClientGame(
 
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
-    const { view, glCanvas, cachedWebGLFrameCallback } =
-      createWebGLView(gameMap);
+    const { view, glCanvas, cachedWebGLFrameCallback } = createWebGLView(
+      gameMap,
+      config,
+    );
 
     // Bind the WebGL renderer's day/night mode to the existing darkMode
     // UserSetting so the in-game map matches the rest of the UI. Initial

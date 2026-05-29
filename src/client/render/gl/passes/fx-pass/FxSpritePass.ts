@@ -6,10 +6,13 @@
  * Pre-built by generate-sprite-atlases.mjs.
  */
 
-import { MS_PER_TICK, NUKE_EXPLOSION_RADII } from "../../../GameConstants";
+import type { Config } from "../../../../../core/configuration/Config";
 import type { ConquestFx, DeadUnitFx, RendererConfig } from "../../../types";
 import {
   STRUCTURE_TYPES,
+  UT_ATOM_BOMB,
+  UT_HYDROGEN_BOMB,
+  UT_MIRV_WARHEAD,
   UT_SHELL,
   UT_TRAIN,
   UT_WARSHIP,
@@ -131,6 +134,17 @@ const FX_CONFIG: FxTypeConfig[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Nuke explosion radii — visual-only (FxLayer source, not Config). These are
+// the shockwave/debris scatter sizes, not the gameplay damage radii.
+// ---------------------------------------------------------------------------
+
+export const NUKE_EXPLOSION_RADII: Readonly<Record<string, number>> = {
+  [UT_ATOM_BOMB]: 70,
+  [UT_HYDROGEN_BOMB]: 160,
+  [UT_MIRV_WARHEAD]: 70,
+};
+
+// ---------------------------------------------------------------------------
 // Nuke debris plan
 // ---------------------------------------------------------------------------
 
@@ -196,6 +210,7 @@ export class FxSpritePass {
     gl: WebGL2RenderingContext,
     header: RendererConfig,
     settings: RenderSettings,
+    private config: Config,
   ) {
     this.gl = gl;
     this.mapW = header.mapWidth;
@@ -319,7 +334,7 @@ export class FxSpritePass {
     const now = this.timeFn();
     const fx = this.settings.fx;
     for (const evt of events) {
-      const startMs = now - (evt.tickAge ?? 0) * MS_PER_TICK;
+      const startMs = now - (evt.tickAge ?? 0) * this.config.msPerTick();
       if (now - startMs >= fx.conquestLifetimeMs) continue;
       this.activeFx.push({
         x: evt.x,

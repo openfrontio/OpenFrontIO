@@ -9,6 +9,7 @@
  *     structure levels → bars → bloom → trails → missiles → fx → conquest → names
  */
 
+import type { Config } from "../../../core/configuration/Config";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -185,6 +186,7 @@ export class GPURenderer {
     header: RendererConfig,
     terrainBytes: Uint8Array,
     paletteData: Float32Array,
+    config: Config,
     raf: typeof requestAnimationFrame = requestAnimationFrame.bind(window),
     caf: typeof cancelAnimationFrame = cancelAnimationFrame.bind(window),
   ) {
@@ -435,9 +437,9 @@ export class GPURenderer {
     this.structureLevelPass = new StructureLevelPass(gl, header, this.settings);
     this.unitPass = new UnitPass(gl, header, this.paletteTex, this.settings);
     this.namePass = new NamePass(gl, header, paletteData, this.settings);
-    this.fxPass = new FxPass(gl, header, this.settings);
-    this.barPass = new BarPass(gl, header, this.settings);
-    this.worldTextPass = new WorldTextPass(gl, this.settings);
+    this.fxPass = new FxPass(gl, header, this.settings, config);
+    this.barPass = new BarPass(gl, header, this.settings, config);
+    this.worldTextPass = new WorldTextPass(gl, this.settings, config);
     this.worldTextPass.setMapWidth(this.mapW);
     this.radialMenuPass = new RadialMenuPass(gl);
     this.selectionBoxPass = new SelectionBoxPass(gl);
