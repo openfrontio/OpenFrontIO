@@ -179,6 +179,7 @@ export enum GameMapType {
   Balkans = "Balkans",
   YellowSea = "Yellow Sea",
   Labyrinth = "Labyrinth",
+  Caribbean = "Caribbean",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -249,6 +250,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.NorthwestPassage,
     GameMapType.Venice,
     GameMapType.YellowSea,
+    GameMapType.Caribbean,
   ],
   fantasy: [
     GameMapType.Pangaea,

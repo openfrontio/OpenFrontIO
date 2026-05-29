@@ -251,6 +251,11 @@
     "name": "Barbados"
   },
   {
+    "code": "Barbuda",
+    "continent": "North America",
+    "name": "Barbuda"
+  },
+  {
     "code": "Babylonia",
     "continent": "Asia",
     "name": "Babylonia"
@@ -1497,6 +1502,11 @@
     "name": "Morocco"
   },
   {
+    "code": "Mosquito Kingdom",
+    "continent": "North America",
+    "name": "Mosquito Kingdom"
+  },
+  {
     "code": "mz",
     "continent": "Africa",
     "name": "Mozambique"
@@ -1548,6 +1558,11 @@
     "code": "Nevada",
     "continent": "North America",
     "name": "Nevada"
+  },
+  {
+    "code": "Nevis",
+    "continent": "North America",
+    "name": "Nevis"
   },
   {
     "code": "newbrunswick",
@@ -2560,6 +2575,11 @@
     "code": "ye",
     "continent": "Asia",
     "name": "Yemen"
+  },
+  {
+    "code": "Yucatan",
+    "continent": "North America",
+    "name": "Yucatan"
   },
   {
     "code": "yugoslavia",
