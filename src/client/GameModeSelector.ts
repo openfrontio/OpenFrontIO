@@ -302,6 +302,13 @@ export class GameModeSelector extends LitElement {
       modifierLabels.sort((a, b) => a.length - b.length);
     }
 
+    // Add "TEAMING PROHIBITED" label to FFA games
+    if (lobby.gameConfig?.gameMode === GameMode.FFA) {
+      modifierLabels.unshift(
+        translateText("public_game_modifier.teaming_prohibited"),
+      );
+    }
+
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}

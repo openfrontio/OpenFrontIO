@@ -772,7 +772,8 @@
     "peace_time": "4min Peace",
     "peace_time_label": "PVP Immunity",
     "water_nukes": "Water Nukes",
-    "water_nukes_label": "Water Nukes"
+    "water_nukes_label": "Water Nukes",
+    "teaming_prohibited": "Teaming Prohibited"
   },
   "select_lang": {
     "title": "Select Language"
