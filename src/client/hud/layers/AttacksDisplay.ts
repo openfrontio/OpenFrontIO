@@ -1,6 +1,8 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { MS_PER_TICK } from "src/client/render/GameConstants";
+import { MS_PER_TICK } from "../../render/GameConstants";
+// Diagnostic: import an unrelated file from render/ to see if it resolves.
+// If this also fails on Linux CI, the issue is render/ as a whole, not GameConstants.
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
@@ -11,6 +13,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
+import { UT_TRANSPORT } from "../../render/types/UnitType";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
@@ -25,6 +28,7 @@ import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
 import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
 import { estimateBoatEtaSeconds } from "./boatEta";
+void UT_TRANSPORT;
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
