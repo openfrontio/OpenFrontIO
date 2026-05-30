@@ -1,9 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-// Diagnostic: removed GameConstants import; keeping UnitType import to test whether
-// `render/types/UnitType` can resolve at all from hud/layers/. If this commit's CI
-// build SUCCEEDS (apart from MS_PER_TICK being undefined and us not using it), then
-// it's specifically `render/GameConstants` that rolldown can't resolve.
+// Diagnostic: same file contents as GameConstants.ts but under a new name.
+// If this import resolves on CI, the failure is keyed on the filename, not contents.
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
@@ -14,6 +12,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
+import { MS_PER_TICK } from "../../render/TickConstants";
 import { UT_TRANSPORT } from "../../render/types/UnitType";
 import {
   GoToPlayerEvent,
@@ -392,7 +391,7 @@ export class AttacksDisplay extends LitElement implements Controller {
       this.retreatState.delete(boatId);
       return {
         progress: planProgress,
-        etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, 100),
+        etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, MS_PER_TICK),
       };
     }
 
@@ -426,7 +425,7 @@ export class AttacksDisplay extends LitElement implements Controller {
 
     return {
       progress: state.snapshot * (1 - fraction),
-      etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, 100),
+      etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, MS_PER_TICK),
     };
   }
 
