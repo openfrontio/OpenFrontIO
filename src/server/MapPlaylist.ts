@@ -50,6 +50,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   BlackSea: 6,
   BosphorusStraits: 3,
   Britannia: 5,
+  Caribbean: 5,
   Caucasus: 5,
   Conakry: 3,
   DanishStraits: 5,
@@ -72,6 +73,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Italia: 6,
   Japan: 6,
   Korea: 5,
+  Labyrinth: 6,
   Lemnos: 3,
   Lisbon: 4,
   LosAngeles: 8,
@@ -89,6 +91,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   NorthwestPassage: 5,
   Pangaea: 5,
   Passage: 4,
+  Onion: 2,
   Pluto: 6,
   SanFrancisco: 3,
   Sierpinski: 10,
@@ -106,8 +109,6 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   World: 20,
   YellowSea: 5,
   Yenisei: 6,
-  Labyrinth: 6,
-  Onion: 2,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
