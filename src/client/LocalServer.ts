@@ -324,6 +324,13 @@ export class LocalServer {
             keepalive: true, // Ensures request completes even if page unloads
           });
         })
+        .then((response) => {
+          if (response && !response.ok) {
+            console.error(
+              `Failed to archive singleplayer game: HTTP ${response.status} ${response.statusText}`,
+            );
+          }
+        })
         .catch((error) => {
           console.error("Failed to archive singleplayer game:", error);
         });
