@@ -3,6 +3,50 @@
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
 
+html.rtl-text {
+  --font-display:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Tahoma, sans-serif;
+}
+
+html.rtl-text p,
+html.rtl-text td,
+html.rtl-text th,
+html.rtl-text li,
+html.rtl-text h1,
+html.rtl-text h2,
+html.rtl-text h3,
+html.rtl-text .prose,
+html.rtl-text .text-start,
+html.rtl-text .text-left {
+  direction: rtl;
+  text-align: right;
+}
+
+html.rtl-text ul,
+html.rtl-text ol {
+  padding-left: 0 !important;
+  padding-right: 1.25rem !important;
+}
+
+html.rtl-text .pl-4 {
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+html.rtl-text .pl-5 {
+  padding-left: 0 !important;
+  padding-right: 1.25rem !important;
+}
+
+html.rtl-text font-mono,
+html.rtl-text .font-mono,
+html.rtl-text kbd,
+html.rtl-text code {
+  direction: ltr;
+  display: inline-block;
+}
+
 @theme {
   --default-ring-width: 3px;
   --default-ring-color: var(--color-malibu-blue);
