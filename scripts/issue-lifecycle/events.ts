@@ -1,4 +1,5 @@
 import type { Octokit } from "@octokit/rest";
+import { COMMENTS } from "./config";
 import { type Action, applyActions, describeAction, getIssue } from "./github";
 import { syncApprovalLabel } from "./rules/approval-label-sync";
 import { enforceAssignmentInvariant } from "./rules/assignment-invariant";
@@ -52,6 +53,18 @@ export async function runEvent(
     buckets.push({
       rule: "approval-label-sync",
       actions: syncApprovalLabel(issue),
+    });
+  }
+
+  if (eventName === "opened" && issue.milestone === null) {
+    buckets.push({
+      rule: "new-issue-greeting",
+      actions: [
+        {
+          type: "comment",
+          body: COMMENTS.NEW_ISSUE_NOT_APPROVED(issue.user?.login ?? "there"),
+        },
+      ],
     });
   }
 
