@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { MS_PER_TICK } from "src/client/render/GameConstants";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
@@ -22,7 +23,6 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
-import { MS_PER_TICK } from "../../render/GameConstants";
 import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
 import { estimateBoatEtaSeconds } from "./boatEta";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
