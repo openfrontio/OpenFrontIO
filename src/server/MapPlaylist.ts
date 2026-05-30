@@ -50,6 +50,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   BlackSea: 6,
   BosphorusStraits: 3,
   Britannia: 5,
+  Caribbean: 5,
   Caucasus: 5,
   Conakry: 3,
   DanishStraits: 5,
@@ -71,6 +72,8 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   IndianSubcontinent: 8,
   Italia: 6,
   Japan: 6,
+  Korea: 5,
+  Labyrinth: 6,
   Lemnos: 3,
   Lisbon: 4,
   LosAngeles: 8,
@@ -88,6 +91,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   NorthwestPassage: 5,
   Pangaea: 5,
   Passage: 4,
+  Onion: 2,
   Pluto: 6,
   SanFrancisco: 3,
   Sierpinski: 10,
@@ -103,6 +107,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   TwoLakes: 6,
   Venice: 6,
   World: 20,
+  YellowSea: 5,
   Yenisei: 6,
 };
 
@@ -128,6 +133,18 @@ const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
   [GameMapType.Baikal, 2],
   [GameMapType.FourIslands, 4],
   [GameMapType.Luna, 2],
+  [GameMapType.StraitOfGibraltar, 2],
+  [GameMapType.StraitOfHormuz, 2],
+  [GameMapType.Aegean, 2],
+  [GameMapType.BeringSea, 2],
+  [GameMapType.BeringStrait, 2],
+  [GameMapType.BosphorusStraits, 2],
+  [GameMapType.Conakry, 2],
+  [GameMapType.Pluto, 2],
+  [GameMapType.FalklandIslands, 2],
+  [GameMapType.TradersDream, 2],
+  [GameMapType.Surrounded, 4],
+  [GameMapType.GulfOfStLawrence, 3],
 ]);
 
 type ModifierKey =

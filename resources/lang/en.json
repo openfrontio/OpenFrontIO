@@ -602,8 +602,13 @@
     "danishstraits": "Danish Straits",
     "northwestpassage": "Northwest Passage",
     "venice": "Venice",
+    "korea": "Korea",
     "indiansubcontinent": "Indian Subcontinent",
-    "balkans": "Balkans"
+    "balkans": "Balkans",
+    "onion": "Onion",
+    "yellowsea": "Yellow Sea",
+    "labyrinth": "Labyrinth",
+    "caribbean": "Caribbean"
   },
   "map_categories": {
     "featured": "Featured",
@@ -798,8 +803,6 @@
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
-    "structure_sprites_label": "Structure Sprites",
-    "structure_sprites_desc": "Toggle structure sprites",
     "cursor_cost_label_label": "Cursor Build Cost",
     "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "anonymous_names_label": "Hidden Names",
@@ -822,6 +825,11 @@
     "go_to_player_desc": "Toggle zooming in on the player in the beginning of a game.",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
+    "render_debug_gui": "Render Debug GUI",
+    "render_debug_gui_desc": "Toggle the renderer tuning panel",
+    "development_only": "Development Only",
+    "graphics_settings_label": "Graphics Settings",
+    "graphics_settings_desc": "Adjust how the map looks",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -909,6 +917,22 @@
     "background_music_volume": "Background Music Volume",
     "sound_effects_volume": "Sound Effects Volume",
     "keybind_conflict_error": "The key {key} is already bound to another action."
+  },
+  "graphics_setting": {
+    "title": "Graphics Settings",
+    "section_name_labels": "Name Labels",
+    "name_scale_label": "Name Scale",
+    "name_cull_label": "Minimum name size",
+    "name_cull_desc": "Hide names smaller than this size",
+    "colored_names_label": "Name color",
+    "colored_names_desc": "Show player names in their player color or in black",
+    "colored": "Colored",
+    "black": "Black",
+    "section_structure_icons": "Structure Icons",
+    "classic_icons_label": "Classic icons",
+    "classic_icons_desc": "Lighter outline with near-black interior",
+    "reset_label": "Reset to defaults",
+    "reset_desc": "Clear all graphics overrides"
   },
   "chat": {
     "title": "Quick Chat",

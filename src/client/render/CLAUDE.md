@@ -37,7 +37,6 @@ each frame (and animate from local time, e.g. the spawn-overlay breath).
 
 | Path                      | Purpose                                                                                                                                                               |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GameConstants.ts`        | Top-level constants shared across passes (`MS_PER_TICK`, nuke radii, etc.)                                                                                            |
 | `types/`                  | Shared TS interfaces: `FrameData`, `UnitState`, `PlayerState`, `RendererConfig`, pass-input shapes (`GhostPreviewData`, `NukeTrajectoryData`, `SpawnCenter`, …)       |
 | `frame/`                  | Frame-data accumulators + per-tick derivations (CPU-side, no GL)                                                                                                      |
 | `frame/derive/`           | Pure derivations that turn raw simulation state into renderer-ready shapes (attack rings, alliance clusters, relation matrix, player status, nuke telegraphs)         |

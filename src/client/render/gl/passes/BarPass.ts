@@ -10,12 +10,8 @@
  *   → instance VBO (x, y, progress) → GPU colored rectangle
  */
 
-import {
-  CONSTRUCTION_DURATIONS,
-  DELETION_MARK_DURATION,
-  missileReadiness,
-  WARSHIP_MAX_HEALTH,
-} from "../../GameConstants";
+import type { Config } from "../../../../core/configuration/Config";
+import { UnitType } from "../../../../core/game/Game";
 import type { RendererConfig, UnitState } from "../../types";
 import { UT_MISSILE_SILO, UT_SAM_LAUNCHER } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
@@ -60,15 +56,18 @@ export class BarPass {
   private progressCount = 0;
 
   private mapW: number;
+  private warshipMaxHealth: number;
 
   constructor(
     gl: WebGL2RenderingContext,
     header: RendererConfig,
     settings: RenderSettings,
+    private config: Config,
   ) {
     this.gl = gl;
     this.settings = settings;
     this.mapW = header.mapWidth;
+    this.warshipMaxHealth = config.unitInfo(UnitType.Warship).maxHealth ?? 0;
 
     // --- Shader program ---
     this.program = createProgram(gl, barVertSrc, barFragSrc);
@@ -130,10 +129,10 @@ export class BarPass {
       if (
         unit.health === null ||
         unit.health <= 0 ||
-        unit.health >= WARSHIP_MAX_HEALTH
+        unit.health >= this.warshipMaxHealth
       )
         continue;
-      this.pushHealth(unit, unit.health / WARSHIP_MAX_HEALTH);
+      this.pushHealth(unit, unit.health / this.warshipMaxHealth);
     }
 
     // --- Progress bars (structures) ---
@@ -234,12 +233,17 @@ export class BarPass {
     // Deletion progress (reverse countdown — takes priority over other bars)
     if (unit.markedForDeletion !== false) {
       const remaining = unit.markedForDeletion - gameTick;
-      return Math.max(0, Math.min(1, remaining / DELETION_MARK_DURATION));
+      return Math.max(
+        0,
+        Math.min(1, remaining / this.config.deletionMarkDuration()),
+      );
     }
 
     // Construction progress
     if (unit.underConstruction && unit.constructionStartTick !== null) {
-      const duration = CONSTRUCTION_DURATIONS[unit.unitType] ?? 50;
+      const duration =
+        this.config.unitInfo(unit.unitType as UnitType).constructionDuration ??
+        50;
       const elapsed = gameTick - unit.constructionStartTick;
       return Math.min(1, Math.max(0, elapsed / duration));
     }
@@ -249,15 +253,31 @@ export class BarPass {
       unit.unitType === UT_MISSILE_SILO ||
       unit.unitType === UT_SAM_LAUNCHER
     ) {
-      const readiness = missileReadiness(
-        unit.unitType,
-        unit.level,
-        unit.missileTimerQueue,
-        gameTick,
-      );
+      const readiness = this.missileReadiness(unit, gameTick);
       if (readiness < 1) return readiness;
     }
 
     return null;
+  }
+
+  private missileReadiness(unit: UnitState, gameTick: number): number {
+    const maxMissiles = unit.level;
+    const reloading = unit.missileTimerQueue.length;
+    if (reloading === 0) return 1;
+
+    const ready = maxMissiles - reloading;
+    if (ready === 0 && maxMissiles > 1) return 0;
+
+    const cooldown =
+      unit.unitType === UT_SAM_LAUNCHER
+        ? this.config.SAMCooldown()
+        : this.config.SiloCooldown();
+
+    let readiness = ready / maxMissiles;
+    for (const timer of unit.missileTimerQueue) {
+      const progress = gameTick - timer;
+      readiness += progress / cooldown / maxMissiles;
+    }
+    return Math.max(0, Math.min(1, readiness));
   }
 }

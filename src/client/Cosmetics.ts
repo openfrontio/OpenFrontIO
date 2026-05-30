@@ -8,6 +8,7 @@ import {
   Pack,
   Pattern,
   Product,
+  Skin,
   Subscription,
 } from "../core/CosmeticSchemas";
 import {
@@ -30,6 +31,29 @@ export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
 
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
+let __cosmeticsCache: Cosmetics | null = null;
+
+/**
+ * Synchronous accessor for the most recently resolved cosmetics. Returns null
+ * before the first successful `fetchCosmetics()` call. Useful when a code path
+ * cannot await (e.g. WebGL per-frame sync).
+ */
+export function getCachedCosmetics(): Cosmetics | null {
+  return __cosmeticsCache;
+}
+
+/**
+ * Resolve the local player's selected skin from UserSettings + cached
+ * cosmetics. Returns null if no skin is selected, cosmetics aren't loaded,
+ * or the saved skin no longer exists.
+ */
+export function getLocalSelectedSkin(): { name: string; url: string } | null {
+  const skinName = new UserSettings().getSelectedSkinName();
+  if (!skinName) return null;
+  const skin = __cosmeticsCache?.skins?.[skinName];
+  if (!skin) return null;
+  return { name: skin.name, url: skin.url };
+}
 
 export type PaymentMethod = "dollar" | "hard" | "soft";
 
@@ -175,6 +199,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         .map((k) => k + (result.data.patterns[k].product ? "sale" : ""))
         .join(",");
       __cosmeticsHash = simpleHash(hashInput);
+      __cosmeticsCache = result.data;
       return result.data;
     } catch (error) {
       console.error("Error getting cosmetics:", error);
@@ -309,12 +334,31 @@ export function flagRelationship(
   );
 }
 
+export function skinRelationship(
+  skin: Skin,
+  userMeResponse: UserMeResponse | false,
+  affiliateCode: string | null,
+): "owned" | "purchasable" | "blocked" {
+  return cosmeticRelationship(
+    {
+      wildcardFlare: "skin:*",
+      requiredFlare: `skin:${skin.name}`,
+      product: skin.product,
+      priceSoft: skin.priceSoft,
+      priceHard: skin.priceHard,
+      affiliateCode,
+      itemAffiliateCode: skin.affiliateCode ?? null,
+    },
+    userMeResponse,
+  );
+}
+
 export type ResolvedCosmetic = {
-  type: "pattern" | "flag" | "pack" | "subscription";
-  cosmetic: Pattern | Flag | Pack | Subscription | null;
+  type: "pattern" | "skin" | "flag" | "pack" | "subscription";
+  cosmetic: Pattern | Skin | Flag | Pack | Subscription | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";
-  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "flag:cool_flag" */
+  /** Unique key for selection/identity, e.g. "pattern:hearts:red" or "skin:mountain" */
   key: string;
 };
 
@@ -374,6 +418,19 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key: `flag:${flagKey}`,
+    });
+  }
+
+  // Skins (image-based territory cosmetics). No separate "default" entry —
+  // the pattern default doubles as "no skin": selecting it clears both.
+  for (const [skinKey, skin] of Object.entries(cosmetics.skins ?? {})) {
+    const rel = skinRelationship(skin, userMeResponse, affiliateCode);
+    result.push({
+      type: "skin",
+      cosmetic: skin,
+      colorPalette: null,
+      relationship: rel,
+      key: `skin:${skinKey}`,
     });
   }
 
@@ -479,10 +536,32 @@ export async function getPlayerCosmeticsRefs(): Promise<PlayerCosmeticRefs> {
     userSettings.clearFlag();
   }
 
+  let skinName = userSettings.getSelectedSkinName() ?? undefined;
+  if (skinName) {
+    const skin = cosmetics?.skins?.[skinName];
+    if (cosmetics && !skin) {
+      // Cosmetics loaded but the saved skin no longer exists.
+      skinName = undefined;
+    } else if (skin) {
+      const userMe = await getUserMe();
+      if (userMe) {
+        const flares = userMe.player.flares ?? [];
+        const hasWildcard = flares.includes("skin:*");
+        if (!hasWildcard && !flares.includes(`skin:${skin.name}`)) {
+          skinName = undefined;
+        }
+      }
+    }
+    if (skinName === undefined) {
+      userSettings.setSelectedPatternName(undefined);
+    }
+  }
+
   return {
     flag: flag ?? undefined,
     patternName: pattern?.name ?? undefined,
     patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+    skinName,
   };
 }
 
@@ -517,6 +596,13 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
         patternData: devPattern.patternData,
         colorPalette: devPattern.colorPalette,
       };
+    }
+  }
+
+  if (refs.skinName && cosmetics) {
+    const skin = cosmetics.skins?.[refs.skinName];
+    if (skin) {
+      result.skin = { name: refs.skinName, url: skin.url };
     }
   }
 

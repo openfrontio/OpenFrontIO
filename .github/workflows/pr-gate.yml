@@ -1,0 +1,36 @@
+name: 🚪 PR Gate
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  gate:
+    name: Evaluate gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout base
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install gate deps
+        working-directory: scripts/pr-gate
+        run: npm install --no-audit --no-fund --ignore-scripts
+      - name: Run gate
+        working-directory: scripts/pr-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DRY_RUN: ${{ vars.PR_GATE_DRY_RUN || 'true' }}
+        run: npx tsx index.ts

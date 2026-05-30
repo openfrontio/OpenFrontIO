@@ -1,0 +1,20 @@
+{
+  "name": "onion",
+  "nations": [
+    {
+      "coordinates": [51, 188],
+      "name": "Leafer Confederation",
+      "flag": ""
+    },
+    {
+      "coordinates": [252, 199],
+      "name": "Outer Enclave",
+      "flag": ""
+    },
+    {
+      "coordinates": [252, 233],
+      "name": "Inner Tribe",
+      "flag": ""
+    }
+  ]
+}

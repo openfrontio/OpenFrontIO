@@ -7,6 +7,7 @@
  *  - Ghost cost label: persistent build-cost number under the ghost cursor
  */
 
+import type { Config } from "../../../../core/configuration/Config";
 import type { BonusEvent, ConquestFx } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { createProgram } from "../utils/GlUtils";
@@ -31,17 +32,11 @@ const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 const FLOATS_PER_INSTANCE = 10;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 const CONQUEST_LIFETIME_MS = 2500;
-/** Nominal game tick rate — 100ms per tick. */
-const MS_PER_TICK = 100;
 /** Tiles below conquered name location (matches upstream DynamicUILayer). */
 const CONQUEST_Y_OFFSET = 8;
 /** World-space font size for conquest popups. */
 const CONQUEST_SCALE = 6;
 const CONQUEST_OUTLINE_WIDTH = 2.0;
-/** Tiles below the ghost icon center for the cost label. */
-const GHOST_COST_Y_OFFSET = 3;
-/** World-space font size — smaller than popups so it sits unobtrusively under the icon. */
-const GHOST_COST_SCALE = 4;
 /** Matches player-name outline width for a consistent UI look. */
 const GHOST_COST_OUTLINE_WIDTH = 1.4;
 /**
@@ -156,7 +151,11 @@ export class WorldTextPass {
     return this.timeFn();
   }
 
-  constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
+  constructor(
+    gl: WebGL2RenderingContext,
+    settings: RenderSettings,
+    private config: Config,
+  ) {
     this.gl = gl;
     this.settings = settings;
 
@@ -277,7 +276,7 @@ export class WorldTextPass {
   applyConquestEvents(events: ConquestFx[]): void {
     const now = this.now();
     for (const evt of events) {
-      const startMs = now - (evt.tickAge ?? 0) * MS_PER_TICK;
+      const startMs = now - (evt.tickAge ?? 0) * this.config.msPerTick();
       if (now - startMs >= CONQUEST_LIFETIME_MS) continue;
       this.active.push({
         x: evt.x,
@@ -351,9 +350,10 @@ export class WorldTextPass {
     }
     // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
     // pass raw tile coords here — same convention as the other popup entries.
+    // Y offset is applied in rebuildInstances (zoom-relative).
     this.ghostCostLabel = {
       x: label.tileX,
-      y: label.tileY + GHOST_COST_Y_OFFSET,
+      y: label.tileY,
       text: renderNumber(label.cost),
       colorR: r,
       colorG: g,
@@ -474,8 +474,12 @@ export class WorldTextPass {
     // Ghost cost label — persistent, no fade or rise. layoutString already
     // centers cursors around 0, so passing the tile coord places the text
     // centered on the tile (vertex shader adds the +0.5 tile-center offset).
+    // Scale is divided by zoom so the chip keeps a constant on-screen size.
     const label = this.ghostCostLabel;
     if (label) {
+      const invZoom = 1 / Math.max(zoom, 0.0001);
+      const ghostScale = this.settings.ghostCost.screenScale * invZoom;
+      const ghostY = label.y + this.settings.ghostCost.screenYOffset * invZoom;
       layoutString(
         label.text,
         this.glyph,
@@ -490,14 +494,14 @@ export class WorldTextPass {
 
         const off = count * FLOATS_PER_INSTANCE;
         this.instanceData[off + 0] = label.x;
-        this.instanceData[off + 1] = label.y;
+        this.instanceData[off + 1] = ghostY;
         this.instanceData[off + 2] = this.cursors[i];
         this.instanceData[off + 3] = this.charCodes[i];
         this.instanceData[off + 4] = 1;
         this.instanceData[off + 5] = label.colorR;
         this.instanceData[off + 6] = label.colorG;
         this.instanceData[off + 7] = label.colorB;
-        this.instanceData[off + 8] = GHOST_COST_SCALE;
+        this.instanceData[off + 8] = ghostScale;
         this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
         count++;
       }

@@ -1,0 +1,35 @@
+name: 🧹 Issue Lifecycle (cron)
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  sweep:
+    name: Daily sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install deps
+        working-directory: scripts/issue-lifecycle
+        run: npm install --no-audit --no-fund --ignore-scripts
+      - name: Run daily sweep
+        working-directory: scripts/issue-lifecycle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ vars.ISSUE_LIFECYCLE_DRY_RUN || 'true' }}
+        run: npx tsx index.ts --mode cron

@@ -494,7 +494,13 @@ export class GameView implements GameMap {
       this._unitStates,
       this._map.width(),
     );
-    f.attackRings = extractAttackRings(this._unitStates, this._map.width());
+    f.attackRings = this._myPlayer
+      ? extractAttackRings(
+          this._unitStates,
+          this._map.width(),
+          this._myPlayer.smallID(),
+        )
+      : [];
     f.structuresDirty = this._structuresDirty;
 
     // First populate: signal "full upload required" by nulling changedTiles.
@@ -528,7 +534,9 @@ export class GameView implements GameMap {
         reachedTarget: u.reachedTarget,
       });
     }
+    const myID = this._myPlayer?.id();
     for (const c of gu.updates[GameUpdateType.ConquestEvent] ?? []) {
+      if (c.conquerorId !== myID) continue;
       const conquered = this._players.get(c.conqueredId);
       if (conquered === undefined) continue;
       const loc = conquered.nameLocation();

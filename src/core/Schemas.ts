@@ -133,6 +133,7 @@ export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
+export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -537,6 +538,12 @@ export const PlayerCosmeticRefsSchema = z.object({
   color: z.string().optional(),
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
+  skinName: CosmeticNameSchema.optional(),
+});
+
+export const PlayerSkinSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
 });
 
 // Server converts refs to the actual cosmetics here
@@ -544,6 +551,7 @@ export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
+  skin: PlayerSkinSchema.optional(),
 });
 
 export const PlayerSchema = z.object({
