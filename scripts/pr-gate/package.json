@@ -1,0 +1,11 @@
+{
+  "name": "openfrontio-pr-gate",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic GitHub Action that gates incoming PRs. See README.md.",
+  "dependencies": {
+    "@octokit/rest": "^21.0.2",
+    "tsx": "^4.21.0"
+  }
+}
