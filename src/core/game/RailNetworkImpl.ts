@@ -238,7 +238,6 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
-    
     if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
       return [];
     }
