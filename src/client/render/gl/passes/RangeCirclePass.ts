@@ -87,7 +87,7 @@ export class RangeCirclePass {
 
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uRadius, this.secondRadius);
-    gl.uniform3f(this.uColor, 0.839, 0.839, 0.839)
+    gl.uniform3f(this.uColor, 0.839, 0.839, 0.839);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
