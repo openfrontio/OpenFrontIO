@@ -1,0 +1,12 @@
+{
+  "name": "openfrontio-claude-cron",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Daily cron that uses Claude to triage GitHub issues and produce a maintainer digest. See README.md.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@octokit/rest": "^21.0.2",
+    "tsx": "^4.21.0"
+  }
+}

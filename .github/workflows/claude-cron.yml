@@ -1,0 +1,38 @@
+name: 🤖 Claude Triage & Digest (cron)
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
+
+jobs:
+  run:
+    name: Daily triage and digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install deps
+        working-directory: scripts/claude-cron
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: Run Claude triage and digest
+        working-directory: scripts/claude-cron
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DRY_RUN: ${{ vars.CLAUDE_CRON_DRY_RUN || 'true' }}
+        run: npx tsx index.ts

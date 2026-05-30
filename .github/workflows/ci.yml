@@ -44,6 +44,10 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      # The claude-cron package has its own node_modules with the SDKs that
+      # its tests transitively need. Root vitest discovers those tests but
+      # can't resolve their imports unless this is installed.
+      - run: cd scripts/claude-cron && npm ci --no-audit --no-fund --ignore-scripts
       - run: npm run test:coverage
 
   eslint:
@@ -57,6 +61,7 @@ jobs:
           node-version: "24"
           cache: "npm"
       - run: npm ci
+      - run: cd scripts/claude-cron && npm ci --no-audit --no-fund --ignore-scripts
       - run: npx eslint --format gha
 
   prettier:

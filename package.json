@@ -20,7 +20,7 @@
     "lint:fix": "eslint --fix",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
-    "inst": "npm ci --ignore-scripts"
+    "inst": "npm ci --ignore-scripts && (cd scripts/claude-cron && npm ci --no-audit --no-fund --ignore-scripts)"
   },
   "lint-staged": {
     "**/*": [
