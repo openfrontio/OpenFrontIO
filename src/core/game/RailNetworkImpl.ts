@@ -240,7 +240,7 @@ export class RailNetworkImpl implements RailNetwork {
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
     // Factories already show their radius, so we'll exclude from ghost rails
     // in order not to clutter the interface too much.
-    if (![UnitType.City, UnitType.Port].includes(unitType)) {
+    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
       return [];
     }
 
