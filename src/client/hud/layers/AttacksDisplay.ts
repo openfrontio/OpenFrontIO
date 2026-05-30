@@ -111,6 +111,11 @@ export class AttacksDisplay extends LitElement implements Controller {
       .units()
       .filter((u) => u.type() === UnitType.TransportShip);
 
+    const activeBoatIds = new Set<number>();
+    for (const boat of this.outgoingBoats) activeBoatIds.add(boat.id());
+    for (const boat of this.incomingBoats) activeBoatIds.add(boat.id());
+    this.pruneBoatProgressMaps(activeBoatIds);
+
     this.requestUpdate();
   }
 
@@ -344,19 +349,89 @@ export class AttacksDisplay extends LitElement implements Controller {
     return player?.displayName() ?? "";
   }
 
+  // Last outbound progress seen for each boat, used to snapshot the fill at retreat start.
+  private lastOutboundProgress = new Map<number, number>();
+  // Retreat state: snapshot of outbound progress, the game tick retreat began, and the
+  // highest decay fraction we've ever shown (clamped non-decreasing). The total retreat
+  // duration is *recomputed each frame* from elapsed-since-retreat + plan-remaining,
+  // so plan replacements (pathfinder rebuilds extending the path) don't cause the fill
+  // to bottom out before the boat actually arrives.
+  private retreatState = new Map<
+    number,
+    { snapshot: number; retreatStartTick: number; lastFraction: number }
+  >();
+
   private getBoatMotion(
     boat: UnitView,
   ): { progress: number; etaSeconds: number } | null {
     const plan = this.game.motionPlans().get(boat.id());
     if (!plan) return null;
-    const totalTicks = (plan.path.length - 1) * plan.ticksPerStep;
-    if (totalTicks <= 0) return { progress: 1, etaSeconds: 0 };
-    const elapsedTicks = this.game.ticks() - plan.startTick;
-    const remainingTicks = Math.max(0, totalTicks - elapsedTicks);
+
+    const planTotalTicks = (plan.path.length - 1) * plan.ticksPerStep;
+    let planProgress: number;
+    let planRemainingTicks: number;
+    if (planTotalTicks <= 0) {
+      planProgress = 1;
+      planRemainingTicks = 0;
+    } else {
+      const elapsedTicks = this.game.ticks() - plan.startTick;
+      planRemainingTicks = Math.max(0, planTotalTicks - elapsedTicks);
+      planProgress = Math.min(1, Math.max(0, elapsedTicks / planTotalTicks));
+    }
+
+    const boatId = boat.id();
+    const isRetreating = boat.transportShipState().isRetreating;
+
+    if (!isRetreating) {
+      this.lastOutboundProgress.set(boatId, planProgress);
+      this.retreatState.delete(boatId);
+      return {
+        progress: planProgress,
+        etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, MS_PER_TICK),
+      };
+    }
+
+    let state = this.retreatState.get(boatId);
+    if (state === undefined) {
+      state = {
+        snapshot: this.lastOutboundProgress.get(boatId) ?? 0,
+        // Anchor to the retreat plan's startTick so the fill timeline matches
+        // the actual retreat journey even if our first observation lands a
+        // few ticks late (e.g. panel was collapsed when the user clicked X).
+        retreatStartTick: plan.startTick,
+        lastFraction: 0,
+      };
+      this.retreatState.set(boatId, state);
+    }
+    const elapsedSinceRetreat = Math.max(
+      0,
+      this.game.ticks() - state.retreatStartTick,
+    );
+    // Estimate total retreat duration dynamically: ticks already spent + ticks the
+    // current plan still has remaining. Survives plan re-recording mid-retreat.
+    const totalEstimated = Math.max(
+      1,
+      elapsedSinceRetreat + planRemainingTicks,
+    );
+    const computedFraction = Math.min(1, elapsedSinceRetreat / totalEstimated);
+    // Clamp non-decreasing so a plan replacement that *lengthens* the journey
+    // can only freeze the fill in place, never bounce it back up.
+    const fraction = Math.max(state.lastFraction, computedFraction);
+    state.lastFraction = fraction;
+
     return {
-      progress: Math.min(1, Math.max(0, elapsedTicks / totalTicks)),
-      etaSeconds: estimateBoatEtaSeconds(remainingTicks, MS_PER_TICK),
+      progress: state.snapshot * (1 - fraction),
+      etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, MS_PER_TICK),
     };
+  }
+
+  private pruneBoatProgressMaps(activeBoatIds: Set<number>) {
+    for (const id of this.lastOutboundProgress.keys()) {
+      if (!activeBoatIds.has(id)) this.lastOutboundProgress.delete(id);
+    }
+    for (const id of this.retreatState.keys()) {
+      if (!activeBoatIds.has(id)) this.retreatState.delete(id);
+    }
   }
 
   private renderBoatIcon(boat: UnitView) {
