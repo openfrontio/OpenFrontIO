@@ -369,56 +369,33 @@ export class AttacksDisplay extends LitElement implements Controller {
     />`;
   }
 
-  private renderProgressBar(
-    progress: number,
-    etaSeconds: number,
-    color: string,
-  ) {
-    const pct = Math.round(progress * 100);
-    const showCountdown = etaSeconds > 0 && etaSeconds <= 5;
-    return html`<div
-      class="w-10 h-2 rounded-full bg-gray-900/60 overflow-hidden shrink-0 relative"
-    >
-      <div
-        class="h-full rounded-full ${color}"
-        style="width: ${pct}%; transition: width 100ms linear"
-      ></div>
-      ${showCountdown
-        ? html`<span
-            class="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white leading-none"
-            >${etaSeconds}</span
-          >`
-        : ""}
-    </div>`;
-  }
-
   private renderBoatRow(
     boat: UnitView,
     opts: {
       color: string;
-      barColor: string;
+      fillColor: string;
       label: string;
       showCancel: boolean;
     },
   ) {
     const motion = this.getBoatMotion(boat);
     const isRetreating = boat.transportShipState().isRetreating;
+    const pct = motion ? Math.round(motion.progress * 100) : 0;
     return html`
       <div
-        class="flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
+        class="relative isolate flex items-center gap-0.5 w-full bg-gray-800/92 backdrop-blur-sm sm:rounded-lg px-1.5 py-0.5 overflow-hidden"
       >
+        ${motion
+          ? html`<div
+              class="absolute inset-y-0 left-0 -z-10 ${opts.fillColor}"
+              style="width: ${pct}%; transition: width 100ms linear"
+            ></div>`
+          : ""}
         ${this.renderButton({
           content: html`${this.renderBoatIcon(boat)}
             <span class="inline-block min-w-[3rem] text-right"
               >${renderTroops(boat.troops())}</span
             >
-            ${motion
-              ? this.renderProgressBar(
-                  motion.progress,
-                  motion.etaSeconds,
-                  opts.barColor,
-                )
-              : ""}
             <span class="truncate text-xs ml-1">${opts.label}</span>`,
           onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
           className: `text-left ${opts.color} inline-flex items-center gap-0.5 lg:gap-1 min-w-0`,
@@ -446,7 +423,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.outgoingBoats.map((boat) =>
       this.renderBoatRow(boat, {
         color: "text-aquarius",
-        barColor: "bg-malibu-blue",
+        fillColor: "bg-malibu-blue/30",
         label: this.getBoatTargetName(boat),
         showCancel: true,
       }),
@@ -459,7 +436,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this.incomingBoats.map((boat) =>
       this.renderBoatRow(boat, {
         color: "text-red-400",
-        barColor: "bg-red-400",
+        fillColor: "bg-red-400/30",
         label: boat.owner()?.displayName() ?? "",
         showCancel: false,
       }),
