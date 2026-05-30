@@ -1,8 +1,9 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { MS_PER_TICK } from "../../render/GameConstants";
-// Diagnostic: import an unrelated file from render/ to see if it resolves.
-// If this also fails on Linux CI, the issue is render/ as a whole, not GameConstants.
+// Diagnostic: removed GameConstants import; keeping UnitType import to test whether
+// `render/types/UnitType` can resolve at all from hud/layers/. If this commit's CI
+// build SUCCEEDS (apart from MS_PER_TICK being undefined and us not using it), then
+// it's specifically `render/GameConstants` that rolldown can't resolve.
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
@@ -391,7 +392,7 @@ export class AttacksDisplay extends LitElement implements Controller {
       this.retreatState.delete(boatId);
       return {
         progress: planProgress,
-        etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, MS_PER_TICK),
+        etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, 100),
       };
     }
 
@@ -425,7 +426,7 @@ export class AttacksDisplay extends LitElement implements Controller {
 
     return {
       progress: state.snapshot * (1 - fraction),
-      etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, MS_PER_TICK),
+      etaSeconds: estimateBoatEtaSeconds(planRemainingTicks, 100),
     };
   }
 
