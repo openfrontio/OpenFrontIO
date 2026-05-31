@@ -92,7 +92,10 @@ export class GameServer {
   > = new Map();
 
   // Public-lobby map votes, keyed by persistentID so each player gets one
-  // vote that survives reconnects and can be switched or cleared.
+  // vote that survives reconnects and can be switched or cleared. Tallies are
+  // an advisory signal only: persistentID is not bound to a verified human, so
+  // they are not sybil-resistant and downstream rotation logic should treat
+  // them as soft input rather than ballot-grade counts.
   private mapVotes: Map<string, "up" | "down"> = new Map();
 
   private _hasEnded = false;
@@ -523,12 +526,10 @@ export class GameServer {
               }
               case "map_vote": {
                 // Public-lobby only; recorded server-side and never relayed
-                // into the simulation. Broadcast updated tallies on change.
-                if (
-                  this.applyMapVote(client.persistentID, stampedIntent.vote)
-                ) {
-                  this.broadcastLobbyInfo();
-                }
+                // into the simulation. The updated tally rides the existing
+                // 1s lobby-info broadcast, so we don't fan out per vote
+                // (which an unprivileged client could otherwise drive).
+                this.applyMapVote(client.persistentID, stampedIntent.vote);
                 return;
               }
               case "toggle_pause": {
@@ -611,6 +612,9 @@ export class GameServer {
       if (!this._hasStarted) {
         // Remove persistentId if the game has not started to prevent going over max players
         this.persistentIdToClientId.delete(client.persistentID);
+        // Drop the leaver's map vote so the tally and the start() summary
+        // reflect only players still present.
+        this.mapVotes.delete(client.persistentID);
         // Close lobby when host leaves before game starts
         if (
           !this.isPublic() &&
@@ -644,6 +648,7 @@ export class GameServer {
       // Remove persistentId if the game has not started to prevent going over max players
       if (!this._hasStarted) {
         this.persistentIdToClientId.delete(client.persistentID);
+        this.mapVotes.delete(client.persistentID);
       }
     }
   }
@@ -658,21 +663,23 @@ export class GameServer {
     return this.activeClients.length;
   }
 
-  // Records a player's map vote. Only accepted for public lobbies still in the
-  // Lobby phase. "up"/"down" set (and overwrite) the vote, "clear" removes it.
-  // Returns true if the vote was accepted (i.e. state may have changed).
+  // Records a player's map vote. Accepted only while a public lobby is still
+  // waiting (not yet prestarted/started/ended). "up"/"down" set (or switch)
+  // the vote, "clear" removes it. Returns true only if the tally changed.
   public applyMapVote(
     persistentID: string,
     vote: "up" | "down" | "clear",
   ): boolean {
-    if (!this.isPublic() || this.phase() !== GamePhase.Lobby) {
+    if (!this.isPublic() || this.hasStarted() || this._hasEnded) {
       return false;
     }
     if (vote === "clear") {
-      this.mapVotes.delete(persistentID);
-    } else {
-      this.mapVotes.set(persistentID, vote);
+      return this.mapVotes.delete(persistentID);
     }
+    if (this.mapVotes.get(persistentID) === vote) {
+      return false;
+    }
+    this.mapVotes.set(persistentID, vote);
     return true;
   }
 
@@ -1101,6 +1108,8 @@ export class GameServer {
     }
 
     this.kickedPersistentIds.add(clientToKick.persistentID);
+    // Drop any map vote from the kicked player so the tally stays accurate.
+    this.mapVotes.delete(clientToKick.persistentID);
 
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {

@@ -324,6 +324,10 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
+    // Reset vote state before reconciling, so a stale cooldown from the
+    // previous lobby doesn't block this lobby's tally from rendering.
+    this.mapVotes = null;
+    this.clearVoteCooldown();
     this.startLobbyUpdates();
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
@@ -379,6 +383,8 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
+    this.mapVotes = null;
+    this.clearVoteCooldown();
   }
 
   disconnectedCallback() {
@@ -656,6 +662,7 @@ export class JoinLobbyModal extends BaseModal {
         <button
           type="button"
           ?disabled=${this.voteCooldownActive}
+          aria-pressed=${myVote === "up" ? "true" : "false"}
           @click=${() => this.castVote("up")}
           aria-label=${translateText("public_lobby.upvote")}
           title=${translateText("public_lobby.upvote")}
@@ -669,6 +676,7 @@ export class JoinLobbyModal extends BaseModal {
         <button
           type="button"
           ?disabled=${this.voteCooldownActive}
+          aria-pressed=${myVote === "down" ? "true" : "false"}
           @click=${() => this.castVote("down")}
           aria-label=${translateText("public_lobby.downvote")}
           title=${translateText("public_lobby.downvote")}
