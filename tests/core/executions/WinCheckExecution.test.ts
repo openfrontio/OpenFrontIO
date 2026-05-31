@@ -401,7 +401,7 @@ describe("WinCheckExecution - Nation Winners", () => {
 });
 
 describe("WinCheckExecution - 1v1 Ranked Mode", () => {
-  test("should set winner when only one human remains connected", async () => {
+  test("should NOT set winner immediately when one human disconnects (grace period)", async () => {
     // Setup game with 1v1 ranked mode and two human players
     const game = await setup(
       "big_plains",
@@ -419,8 +419,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
 
     const human1 = game.player("Player1");
     const human2 = game.player("Player2");
-
-    // Skip spawn phase
 
     // Assign some territory to both players
     let human1Count = 0;
@@ -443,18 +441,17 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const setWinnerSpy = vi.fn();
     game.setWinner = setWinnerSpy;
 
-    // Initialize and run win check
+    // Initialize and run win check — should NOT declare winner yet
     const winCheck = new WinCheckExecution();
     winCheck.init(game, 0);
     winCheck.checkWinnerFFA();
 
-    // Verify the remaining connected human is declared winner
-    expect(setWinnerSpy).toHaveBeenCalledWith(human1, expect.anything());
-    expect(winCheck.isActive()).toBe(false);
+    // Grace period just started — no winner yet
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
   });
 
-  test("should not set winner when multiple humans are still connected", async () => {
-    // Setup game with 1v1 ranked mode and two human players
+  test("should set winner after grace period expires", async () => {
     const game = await setup(
       "big_plains",
       {
@@ -472,9 +469,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human1 = game.player("Player1");
     const human2 = game.player("Player2");
 
-    // Skip spawn phase
-
-    // Assign territory to both players
     let human1Count = 0;
     let human2Count = 0;
     game.map().forEachTile((tile) => {
@@ -488,26 +482,31 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
       }
     });
 
-    // Both players remain connected
-    expect(human1.isDisconnected()).toBe(false);
-    expect(human2.isDisconnected()).toBe(false);
+    human2.markDisconnected(true);
 
-    // Mock setWinner to capture calls
     const setWinnerSpy = vi.fn();
     game.setWinner = setWinnerSpy;
 
-    // Initialize and run win check
     const winCheck = new WinCheckExecution();
     winCheck.init(game, 0);
-    winCheck.checkWinnerFFA();
 
-    // Verify no winner declared yet (both players still connected)
+    // First call starts grace period
+    winCheck.checkWinnerFFA();
     expect(setWinnerSpy).not.toHaveBeenCalled();
-    expect(winCheck.isActive()).toBe(true);
+
+    // Advance ticks past grace period (300 ticks)
+    game.endSpawnPhase();
+    for (let i = 0; i < 310; i++) {
+      game.executeNextTick();
+    }
+
+    // Now check again — grace period should have expired
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).toHaveBeenCalledWith(human1, expect.anything());
+    expect(winCheck.isActive()).toBe(false);
   });
 
-  test("should not set winner when no humans remain connected", async () => {
-    // Setup game with 1v1 ranked mode and two human players
+  test("should reset grace period if disconnected player reconnects", async () => {
     const game = await setup(
       "big_plains",
       {
@@ -525,28 +524,132 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const human1 = game.player("Player1");
     const human2 = game.player("Player2");
 
-    // Skip spawn phase
+    let human1Count = 0;
+    let human2Count = 0;
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      if (human1Count < 10) {
+        human1.conquer(tile);
+        human1Count++;
+      } else if (human2Count < 10) {
+        human2.conquer(tile);
+        human2Count++;
+      }
+    });
 
-    // Both players disconnect
-    human1.markDisconnected(true);
     human2.markDisconnected(true);
 
-    // Mock setWinner to capture calls
     const setWinnerSpy = vi.fn();
     game.setWinner = setWinnerSpy;
 
-    // Initialize and run win check
     const winCheck = new WinCheckExecution();
     winCheck.init(game, 0);
+
+    // Start grace period
+    winCheck.checkWinnerFFA();
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+
+    // Advance some ticks (but not past grace period)
+    game.endSpawnPhase();
+    for (let i = 0; i < 100; i++) {
+      game.executeNextTick();
+    }
+
+    // Player reconnects
+    human2.markDisconnected(false);
     winCheck.checkWinnerFFA();
 
-    // Verify no winner declared (no connected humans)
+    // Advance ticks past what would have been the grace period
+    for (let i = 0; i < 250; i++) {
+      game.executeNextTick();
+    }
+
+    winCheck.checkWinnerFFA();
+
+    // Should NOT have declared a winner because the player reconnected
     expect(setWinnerSpy).not.toHaveBeenCalled();
     expect(winCheck.isActive()).toBe(true);
   });
 
-  test("should ignore bots and nations in 1v1 ranked mode", async () => {
-    // Setup game with 1v1 ranked mode, one human, one bot, and one nation
+  test("should not set winner when multiple humans are still connected", async () => {
+    const game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        gameMode: GameMode.FFA,
+        instantBuild: true,
+        rankedType: RankedType.OneVOne,
+      },
+      [
+        playerInfo("Player1", PlayerType.Human),
+        playerInfo("Player2", PlayerType.Human),
+      ],
+    );
+
+    const human1 = game.player("Player1");
+    const human2 = game.player("Player2");
+
+    let human1Count = 0;
+    let human2Count = 0;
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      if (human1Count < 10) {
+        human1.conquer(tile);
+        human1Count++;
+      } else if (human2Count < 10) {
+        human2.conquer(tile);
+        human2Count++;
+      }
+    });
+
+    expect(human1.isDisconnected()).toBe(false);
+    expect(human2.isDisconnected()).toBe(false);
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("should not set winner immediately when both players disconnect", async () => {
+    const game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        gameMode: GameMode.FFA,
+        instantBuild: true,
+        rankedType: RankedType.OneVOne,
+      },
+      [
+        playerInfo("Player1", PlayerType.Human),
+        playerInfo("Player2", PlayerType.Human),
+      ],
+    );
+
+    const human1 = game.player("Player1");
+    const human2 = game.player("Player2");
+
+    human1.markDisconnected(true);
+    human2.markDisconnected(true);
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    winCheck.checkWinnerFFA();
+
+    // No grace timer was started (both disconnected simultaneously)
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("should ignore bots and nations in 1v1 ranked mode (only 1 human = no opponent)", async () => {
     const game = await setup(
       "big_plains",
       {
@@ -566,9 +669,6 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
     const bot = game.player("BotPlayer");
     const nation = game.player("NationPlayer");
 
-    // Skip spawn phase
-
-    // Assign territory to all players
     let humanCount = 0;
     let botCount = 0;
     let nationCount = 0;
@@ -586,17 +686,16 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
       }
     });
 
-    // Mock setWinner to capture calls
     const setWinnerSpy = vi.fn();
     game.setWinner = setWinnerSpy;
 
-    // Initialize and run win check
     const winCheck = new WinCheckExecution();
     winCheck.init(game, 0);
     winCheck.checkWinnerFFA();
 
-    // Verify human is declared winner (only one human player)
-    expect(setWinnerSpy).toHaveBeenCalledWith(human, expect.anything());
-    expect(winCheck.isActive()).toBe(false);
+    // Only 1 human total (allHumans.length !== 2), so 1v1 disconnect logic
+    // does NOT apply. Falls through to normal FFA win check.
+    // Whether winner is set depends on tile % threshold (won't be met with 10 tiles).
+    expect(winCheck.isActive()).toBe(true);
   });
 });

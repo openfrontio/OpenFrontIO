@@ -205,7 +205,6 @@ export class AttackExecution implements Execution {
 
     const survivors = this.attack.troops() - deaths;
     this._owner.addTroops(survivors);
-    this.attack.delete();
     this.active = false;
 
     // Not all retreats are canceled attacks
@@ -213,6 +212,7 @@ export class AttackExecution implements Execution {
       // Record stats
       this.mg.stats().attackCancel(this._owner, this.target, survivors);
     }
+    this.attack.delete();
   }
 
   tick(ticks: number) {
