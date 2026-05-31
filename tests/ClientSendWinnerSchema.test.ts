@@ -49,7 +49,7 @@ describe("ClientSendWinnerSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("allPlayersStats is stripped / ignored when not provided", () => {
+  test("allPlayersStats is absent (undefined) when not provided by sender", () => {
     const result = ClientSendWinnerSchema.safeParse({
       type: "winner",
       winner: validWinner,
