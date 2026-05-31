@@ -18,7 +18,7 @@ import {
   decompressGameRecord,
   replacer,
 } from "../core/Util";
-import { getPersistentID } from "./Auth";
+import { getPersistentID, getPlayToken, isLoggedIn } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,
@@ -297,27 +297,44 @@ export class LocalServer {
       console.error("Error parsing game record", error);
       return;
     }
-    const workerPath = ClientEnv.workerPath(
-      this.lobbyConfig.gameStartInfo.gameID,
-    );
+    isLoggedIn().then((loggedIn) => {
+      if (!loggedIn) {
+        console.log(
+          "Player is not logged in, skipping singleplayer game archiving",
+        );
+        return;
+      }
 
-    const jsonString = JSON.stringify(result.data, replacer);
+      const workerPath = ClientEnv.workerPath(
+        this.lobbyConfig.gameStartInfo!.gameID,
+      );
 
-    compress(jsonString)
-      .then((compressedData) => {
-        return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Encoding": "gzip",
-          },
-          body: compressedData,
-          keepalive: true, // Ensures request completes even if page unloads
+      const jsonString = JSON.stringify(result.data, replacer);
+
+      Promise.all([compress(jsonString), getPlayToken()])
+        .then(([compressedData, token]) => {
+          return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Content-Encoding": "gzip",
+              Authorization: `Bearer ${token}`,
+            },
+            body: compressedData,
+            keepalive: true, // Ensures request completes even if page unloads
+          });
+        })
+        .then((response) => {
+          if (response && !response.ok) {
+            console.error(
+              `Failed to archive singleplayer game: HTTP ${response.status} ${response.statusText}`,
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to archive singleplayer game:", error);
         });
-      })
-      .catch((error) => {
-        console.error("Failed to archive singleplayer game:", error);
-      });
+    });
   }
 }
 

@@ -212,12 +212,21 @@ export class GameServer {
         clientID: client.clientID,
       });
 
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "full-lobby",
-        } satisfies ServerErrorMessage),
-      );
+      try {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(
+            JSON.stringify({
+              type: "error",
+              error: "full-lobby",
+            } satisfies ServerErrorMessage),
+          );
+        }
+      } catch (error) {
+        this.log.error(`error sending full-lobby message for game ${this.id}`, {
+          clientID: client.clientID,
+          error,
+        });
+      }
       return "rejected";
     }
 
@@ -610,6 +619,9 @@ export class GameServer {
           }
           this._hasEnded = true;
         }
+      } else if (!this._hasEnded) {
+        // Check if remaining clients have reached a winner consensus
+        this.checkWinnerConsensus();
       }
     });
     client.ws.on("error", (error: Error) => {
@@ -1254,8 +1266,11 @@ export class GameServer {
     potentialWinner.ips.add(client.ip);
 
     const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+    const activeVotes = [...potentialWinner.ips].filter((ip) =>
+      activeUniqueIPs.has(ip),
+    ).length;
 
-    const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
+    const ratio = `${activeVotes}/${activeUniqueIPs.size}`;
     this.log.info(
       `received winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
       {
@@ -1263,18 +1278,46 @@ export class GameServer {
       },
     );
 
-    if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+    if (activeVotes * 2 <= activeUniqueIPs.size) {
       return;
     }
 
     // Vote succeeded
     this.winner = potentialWinner.winner;
     this.log.info(
-      `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+      `Winner determined by ${activeVotes}/${activeUniqueIPs.size} active IPs`,
       {
         winnerKey: winnerKey,
       },
     );
     this.archiveGame();
+  }
+
+  private checkWinnerConsensus() {
+    if (this.winner !== null || this._hasEnded) {
+      return;
+    }
+
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+    if (activeUniqueIPs.size === 0) {
+      return;
+    }
+
+    for (const [winnerKey, potentialWinner] of this.winnerVotes.entries()) {
+      const activeVotes = [...potentialWinner.ips].filter((ip) =>
+        activeUniqueIPs.has(ip),
+      ).length;
+      if (activeVotes * 2 > activeUniqueIPs.size) {
+        this.winner = potentialWinner.winner;
+        this.log.info(
+          `Winner determined by ${activeVotes}/${activeUniqueIPs.size} active IPs after client disconnect`,
+          {
+            winnerKey: winnerKey,
+          },
+        );
+        this.archiveGame();
+        return;
+      }
+    }
   }
 }

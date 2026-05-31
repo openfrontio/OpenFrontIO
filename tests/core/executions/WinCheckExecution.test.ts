@@ -80,6 +80,39 @@ describe("WinCheckExecution", () => {
     expect(mg.setWinner).not.toHaveBeenCalled();
   });
 
+  it("should not set winner when all land is fallout", () => {
+    const player = {
+      numTilesOwned: vi.fn(() => 50),
+      name: vi.fn(() => "P1"),
+    };
+    mg.players = vi.fn(() => [player]);
+    mg.numLandTiles = vi.fn(() => 100);
+    mg.numTilesWithFallout = vi.fn(() => 100);
+    winCheck.checkWinnerFFA();
+    expect(mg.setWinner).not.toHaveBeenCalled();
+  });
+
+  it("should not set team winner when all land is fallout", () => {
+    mg.config = vi.fn(() => ({
+      gameConfig: vi.fn(() => ({
+        maxTimerValue: 5,
+        gameMode: GameMode.Team,
+      })),
+      percentageTilesOwnedToWin: vi.fn(() => 50),
+    }));
+    winCheck.init(mg, 0);
+    mg.players = vi.fn(() => [
+      {
+        team: vi.fn(() => ColoredTeams.Red),
+        numTilesOwned: vi.fn(() => 50),
+      },
+    ]);
+    mg.numLandTiles = vi.fn(() => 100);
+    mg.numTilesWithFallout = vi.fn(() => 100);
+    winCheck.checkWinnerTeam();
+    expect(mg.setWinner).not.toHaveBeenCalled();
+  });
+
   it("should return false for activeDuringSpawnPhase", () => {
     expect(winCheck.activeDuringSpawnPhase()).toBe(false);
   });

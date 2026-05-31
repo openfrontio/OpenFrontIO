@@ -274,6 +274,23 @@ export async function startWorker() {
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
     try {
+      let persistentID: string;
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.substring("Bearer ".length);
+        const tokenResult = await verifyClientToken(token);
+        if (tokenResult.type === "success") {
+          persistentID = tokenResult.persistentId;
+        } else {
+          log.warn(
+            `Invalid token for archive_singleplayer_game: ${tokenResult.message}`,
+          );
+          return res.status(401).json({ error: "Invalid token" });
+        }
+      } else {
+        return res.status(401).json({ error: "Authorization header required" });
+      }
+
       const record = req.body;
 
       const result = PartialGameRecordSchema.safeParse(record);
@@ -299,6 +316,17 @@ export async function startWorker() {
           gameID: gameRecord.info.gameID,
         });
         return res.status(400).json({ error: "Invalid request" });
+      }
+
+      const player = result.data.info.players[0];
+      if (player.persistentID !== persistentID) {
+        log.warn("Authenticated user does not match record persistentID", {
+          tokenUser: persistentID,
+          recordUser: player.persistentID,
+        });
+        return res
+          .status(403)
+          .json({ error: "Unauthorized user for this record" });
       }
 
       log.info("archiving singleplayer game", {
