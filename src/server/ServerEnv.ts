@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { JWK } from "jose";
 import { z } from "zod";
 import { GameEnv, parseGameEnv } from "../core/configuration/Config";
@@ -165,6 +166,25 @@ export class ServerEnv {
       throw new Error("ADMIN_TOKEN not set");
     }
     return token;
+  }
+  static verifyAdminKey(providedKey: string): boolean {
+    let expected: string;
+    try {
+      expected = ServerEnv.adminToken();
+    } catch {
+      return false;
+    }
+    if (!expected) return false;
+
+    // Use SHA-256 hashing to produce fixed-length 32-byte buffers,
+    // which prevents timing attacks when compared via timingSafeEqual.
+    const expectedHash = crypto.createHash("sha256").update(expected).digest();
+    const providedHash = crypto
+      .createHash("sha256")
+      .update(providedKey)
+      .digest();
+
+    return crypto.timingSafeEqual(expectedHash, providedHash);
   }
   static allowedFlares(): string[] | undefined {
     const raw = process.env.ALLOWED_FLARES;
