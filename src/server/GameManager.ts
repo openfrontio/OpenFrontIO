@@ -78,6 +78,7 @@ export class GameManager {
         maxTimerValue: undefined,
         instantBuild: false,
         randomSpawn: false,
+        expandedLeaderboard: false,
         gameMode: GameMode.FFA,
         bots: 400,
         disabledUnits: [],

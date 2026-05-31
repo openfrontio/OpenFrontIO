@@ -223,6 +223,7 @@
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
     "water_nukes": "Water nukes",
+    "expanded_leaderboard": "Expanded leaderboard",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -690,6 +691,7 @@
     "compact_map": "Compact Map",
     "disable_alliances": "Disable alliances",
     "water_nukes": "Water nukes",
+    "expanded_leaderboard": "Expanded leaderboard",
     "enables_title": "Disable Units",
     "player": "Player",
     "players": "Players",
@@ -1068,8 +1070,11 @@
     "sams": "SAMs",
     "warships": "Warships",
     "cities": "Cities",
+    "max_tiles": "Max tiles",
+    "max_land": "Max land %",
     "show_control": "Show Control",
-    "show_units": "Show Units"
+    "show_units": "Show Units",
+    "show_expanded": "Show Expanded"
   },
   "events_display": {
     "retreating": "retreating",
