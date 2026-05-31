@@ -18,6 +18,7 @@ import {
   GameInfo,
   GameRecordSchema,
   LobbyInfoEvent,
+  MapVotes,
   PublicGameInfo,
 } from "../core/Schemas";
 import {
@@ -31,6 +32,7 @@ import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { SendMapVoteIntentEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
@@ -55,9 +57,12 @@ export class JoinLobbyModal extends BaseModal {
   @state() private serverTimeOffset: number = 0;
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
+  @state() private mapVotes: MapVotes | null = null;
+  @state() private voteCooldownActive: boolean = false;
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
+  private voteCooldownTimerId: number | null = null;
   private handledJoinTimeout = false;
 
   private isPrivateLobby(): boolean {
@@ -378,6 +383,7 @@ export class JoinLobbyModal extends BaseModal {
 
   disconnectedCallback() {
     this.clearCountdownTimer();
+    this.clearVoteCooldown();
     this.stopLobbyUpdates();
     super.disconnectedCallback();
   }
@@ -604,6 +610,7 @@ export class JoinLobbyModal extends BaseModal {
         <div class="flex flex-col gap-1">
           <span class="text-lg font-bold text-white">${mapName}</span>
           <span class="text-sm text-white/60">${modeSubtitle}</span>
+          ${this.renderMapVote()}
         </div>
       </div>
       ${cards.length > 0
@@ -613,6 +620,112 @@ export class JoinLobbyModal extends BaseModal {
         : html``}
       ${this.renderDisabledUnits()} ${this.renderHostCheats()}
     `;
+  }
+
+  // Upvote/downvote control for the lobby's map. Only public lobbies vote;
+  // the live tally and the player's own vote arrive via lobby_info broadcasts.
+  private renderMapVote(): TemplateResult {
+    if (this.gameConfig?.gameType !== GameType.Public) {
+      return html``;
+    }
+    const myVote = this.mapVotes?.myVote ?? null;
+    const up = this.mapVotes?.up ?? 0;
+    const down = this.mapVotes?.down ?? 0;
+    const thumbUp = html`<svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-4 w-4"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+    >
+      <path
+        d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"
+      ></path>
+    </svg>`;
+    const thumbDown = html`<svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-4 w-4"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+    >
+      <path
+        d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.106-1.79l-.05-.025A4 4 0 0011.057 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z"
+      ></path>
+    </svg>`;
+    return html`
+      <div class="flex items-center gap-2 mt-1">
+        <button
+          type="button"
+          ?disabled=${this.voteCooldownActive}
+          @click=${() => this.castVote("up")}
+          aria-label=${translateText("public_lobby.upvote")}
+          title=${translateText("public_lobby.upvote")}
+          class="flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors disabled:opacity-60 ${myVote ===
+          "up"
+            ? "bg-green-600/80 text-white"
+            : "bg-white/10 text-white/80 hover:bg-white/20"}"
+        >
+          ${thumbUp}<span>${up}</span>
+        </button>
+        <button
+          type="button"
+          ?disabled=${this.voteCooldownActive}
+          @click=${() => this.castVote("down")}
+          aria-label=${translateText("public_lobby.downvote")}
+          title=${translateText("public_lobby.downvote")}
+          class="flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors disabled:opacity-60 ${myVote ===
+          "down"
+            ? "bg-red-600/80 text-white"
+            : "bg-white/10 text-white/80 hover:bg-white/20"}"
+        >
+          ${thumbDown}<span>${down}</span>
+        </button>
+      </div>
+    `;
+  }
+
+  private castVote(vote: "up" | "down") {
+    if (!this.eventBus || this.voteCooldownActive) {
+      return;
+    }
+    const current = this.mapVotes?.myVote ?? null;
+    // Clicking the active direction toggles the vote off.
+    const next = current === vote ? "clear" : vote;
+    // Optimistically update for instant feedback; the next lobby_info
+    // broadcast reconciles with the authoritative tally.
+    const up = this.mapVotes?.up ?? 0;
+    const down = this.mapVotes?.down ?? 0;
+    this.mapVotes = {
+      up: Math.max(
+        0,
+        up - (current === "up" ? 1 : 0) + (next === "up" ? 1 : 0),
+      ),
+      down: Math.max(
+        0,
+        down - (current === "down" ? 1 : 0) + (next === "down" ? 1 : 0),
+      ),
+      myVote: next === "clear" ? null : next,
+    };
+    this.eventBus.emit(new SendMapVoteIntentEvent(next));
+    this.startVoteCooldown();
+  }
+
+  private startVoteCooldown() {
+    this.voteCooldownActive = true;
+    if (this.voteCooldownTimerId !== null) {
+      window.clearTimeout(this.voteCooldownTimerId);
+    }
+    this.voteCooldownTimerId = window.setTimeout(() => {
+      this.voteCooldownActive = false;
+      this.voteCooldownTimerId = null;
+    }, 400);
+  }
+
+  private clearVoteCooldown() {
+    if (this.voteCooldownTimerId !== null) {
+      window.clearTimeout(this.voteCooldownTimerId);
+      this.voteCooldownTimerId = null;
+    }
+    this.voteCooldownActive = false;
   }
 
   private renderDisabledUnits(): TemplateResult {
@@ -745,6 +858,12 @@ export class JoinLobbyModal extends BaseModal {
       "lobbyCreatorClientID" in lobby
         ? (lobby.lobbyCreatorClientID ?? null)
         : null;
+
+    // Reconcile with the authoritative tally from the server. Skipped while a
+    // local cooldown is active so an in-flight optimistic vote isn't clobbered.
+    if (!this.voteCooldownActive) {
+      this.mapVotes = lobby.mapVotes ?? null;
+    }
   }
 
   private startLobbyUpdates() {

@@ -170,6 +170,10 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+export class SendMapVoteIntentEvent implements GameEvent {
+  constructor(public readonly vote: "up" | "down" | "clear") {}
+}
+
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
@@ -260,6 +264,9 @@ export class Transport {
 
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
+    );
+    this.eventBus.on(SendMapVoteIntentEvent, (e) =>
+      this.onSendMapVoteIntent(e),
     );
 
     this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
@@ -637,6 +644,13 @@ export class Transport {
     this.sendIntent({
       type: "kick_player",
       target: event.target,
+    });
+  }
+
+  private onSendMapVoteIntent(event: SendMapVoteIntentEvent) {
+    this.sendIntent({
+      type: "map_vote",
+      vote: event.vote,
     });
   }
 

@@ -93,6 +93,8 @@ export class WorkerLobbyService {
           startsAt: gi.startsAt,
           gameConfig: gi.gameConfig,
           publicGameType: gi.publicGameType!,
+          // Counts only (gameInfo() never sets myVote in the base tally).
+          mapVotes: gi.mapVotes,
         } satisfies PublicGameInfo;
       });
     process.send?.({ type: "lobbyList", lobbies } satisfies WorkerLobbyList);

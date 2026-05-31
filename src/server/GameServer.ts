@@ -91,6 +91,10 @@ export class GameServer {
     { winner: ClientSendWinnerMessage; ips: Set<string> }
   > = new Map();
 
+  // Public-lobby map votes, keyed by persistentID so each player gets one
+  // vote that survives reconnects and can be switched or cleared.
+  private mapVotes: Map<string, "up" | "down"> = new Map();
+
   private _hasEnded = false;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -517,6 +521,16 @@ export class GameServer {
                 this.start();
                 return;
               }
+              case "map_vote": {
+                // Public-lobby only; recorded server-side and never relayed
+                // into the simulation. Broadcast updated tallies on change.
+                if (
+                  this.applyMapVote(client.persistentID, stampedIntent.vote)
+                ) {
+                  this.broadcastLobbyInfo();
+                }
+                return;
+              }
               case "toggle_pause": {
                 // Only lobby creator can pause/resume
                 if (client.clientID !== this.lobbyCreatorID) {
@@ -644,6 +658,37 @@ export class GameServer {
     return this.activeClients.length;
   }
 
+  // Records a player's map vote. Only accepted for public lobbies still in the
+  // Lobby phase. "up"/"down" set (and overwrite) the vote, "clear" removes it.
+  // Returns true if the vote was accepted (i.e. state may have changed).
+  public applyMapVote(
+    persistentID: string,
+    vote: "up" | "down" | "clear",
+  ): boolean {
+    if (!this.isPublic() || this.phase() !== GamePhase.Lobby) {
+      return false;
+    }
+    if (vote === "clear") {
+      this.mapVotes.delete(persistentID);
+    } else {
+      this.mapVotes.set(persistentID, vote);
+    }
+    return true;
+  }
+
+  private mapVoteTally(): { up: number; down: number } {
+    let up = 0;
+    let down = 0;
+    for (const vote of this.mapVotes.values()) {
+      if (vote === "up") {
+        up++;
+      } else {
+        down++;
+      }
+    }
+    return { up, down };
+  }
+
   public numDesyncedClients(): number {
     return this.outOfSyncClients.size;
   }
@@ -715,9 +760,20 @@ export class GameServer {
     const lobbyInfo = this.gameInfo();
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
+        // Attach this recipient's own vote so the client can highlight it.
+        // Clone the tally per client so myVote is never shared across sends.
+        const lobby = lobbyInfo.mapVotes
+          ? {
+              ...lobbyInfo,
+              mapVotes: {
+                ...lobbyInfo.mapVotes,
+                myVote: this.mapVotes.get(c.persistentID) ?? null,
+              },
+            }
+          : lobbyInfo;
         const msg = JSON.stringify({
           type: "lobby_info",
-          lobby: lobbyInfo,
+          lobby,
           myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
@@ -734,6 +790,17 @@ export class GameServer {
     // Set last ping to start so we don't immediately stop the game
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
+
+    // Emit a structured summary of the lobby's map votes so rotation
+    // frequency can be informed by aggregating these across games.
+    if (this.isPublic()) {
+      this.log.info("map_vote_summary", {
+        gameID: this.id,
+        gameMap: this.gameConfig.gameMap,
+        ...this.mapVoteTally(),
+        numClients: this.numClients(),
+      });
+    }
 
     const friendsFor = this.buildFriendsLookup();
 
@@ -986,6 +1053,8 @@ export class GameServer {
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
+      // Counts only here; per-client myVote is attached in broadcastLobbyInfo.
+      mapVotes: this.isPublic() ? this.mapVoteTally() : undefined,
     };
   }
 

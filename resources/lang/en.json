@@ -649,7 +649,9 @@
     "players_per_team": "of {num}",
     "started": "Started",
     "status": "Status",
-    "join_timeout": "You didn't enter the game in time."
+    "join_timeout": "You didn't enter the game in time.",
+    "upvote": "Upvote map",
+    "downvote": "Downvote map"
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",

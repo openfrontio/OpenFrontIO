@@ -51,7 +51,8 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | StartGameIntent;
+  | StartGameIntent
+  | MapVoteIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -86,6 +87,7 @@ export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
 export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
+export type MapVoteIntent = z.infer<typeof MapVoteIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -160,6 +162,16 @@ const ClientInfoSchema = z.object({
   friends: z.array(z.string()).optional(),
 });
 
+// Tally of upvotes/downvotes for a public lobby's map. `myVote` is only
+// populated on the per-client GameInfo broadcast (the requesting client's own
+// vote); it is absent on the public lobby list.
+export const MapVotesSchema = z.object({
+  up: z.number().int().nonnegative(),
+  down: z.number().int().nonnegative(),
+  myVote: z.enum(["up", "down"]).nullable().optional(),
+});
+export type MapVotes = z.infer<typeof MapVotesSchema>;
+
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
@@ -168,6 +180,7 @@ export const GameInfoSchema = z.object({
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema.optional(),
+  mapVotes: MapVotesSchema.optional(),
 });
 
 export const PublicGameInfoSchema = z.object({
@@ -176,6 +189,7 @@ export const PublicGameInfoSchema = z.object({
   startsAt: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
   publicGameType: PublicGameTypeSchema,
+  mapVotes: MapVotesSchema.optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -463,6 +477,14 @@ export const StartGameIntentSchema = z.object({
   type: z.literal("start_game"),
 });
 
+export const MapVoteIntentSchema = z.object({
+  type: z.literal("map_vote"),
+  // "up"/"down" cast (or switch) the player's vote for the lobby's map;
+  // "clear" removes their vote. Lobby-only; handled server-side and never
+  // relayed into the deterministic simulation.
+  vote: z.enum(["up", "down", "clear"]),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -489,6 +511,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   StartGameIntentSchema,
+  MapVoteIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
