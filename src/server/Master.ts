@@ -14,6 +14,8 @@ import { renderAppShell } from "./RenderHtml";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 
+import { isCloudflareOrLoopbackIp } from "./Cloudflare";
+
 const playlist = new MapPlaylist();
 let lobbyService: MasterLobbyService;
 
@@ -57,6 +59,32 @@ app.use(
 );
 
 app.set("trust proxy", 3);
+
+if (ServerEnv.env() === GameEnv.Prod || ServerEnv.env() === GameEnv.Preprod) {
+  app.use((req, res, next) => {
+    const clientIp = req.socket.remoteAddress ?? "";
+    if (!isCloudflareOrLoopbackIp(clientIp)) {
+      log.warn(
+        `Bypassed Cloudflare proxy. Direct connection from non-Cloudflare IP: ${clientIp}`,
+      );
+      return res.status(403).send("Forbidden: Direct IP access is blocked.");
+    }
+
+    const host = req.headers.host ?? "";
+    const isIpHost = /^[0-9.:]+$/.test(host);
+    if (
+      isIpHost &&
+      !clientIp.includes("127.0.0.1") &&
+      !clientIp.includes("::1")
+    ) {
+      log.warn(`Bypassed Cloudflare proxy. Host header was an IP: ${host}`);
+      return res.status(403).send("Forbidden: Direct IP access is blocked.");
+    }
+
+    next();
+  });
+}
+
 app.use(
   rateLimit({
     windowMs: 1000, // 1 second

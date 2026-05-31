@@ -25,6 +25,7 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
+import { isCloudflareOrLoopbackIp } from "./Cloudflare";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
@@ -104,6 +105,32 @@ export async function startWorker() {
   });
 
   app.set("trust proxy", 3);
+
+  if (ServerEnv.env() === GameEnv.Prod || ServerEnv.env() === GameEnv.Preprod) {
+    app.use((req, res, next) => {
+      const clientIp = req.socket.remoteAddress ?? "";
+      if (!isCloudflareOrLoopbackIp(clientIp)) {
+        log.warn(
+          `Bypassed Cloudflare proxy. Direct connection from non-Cloudflare IP: ${clientIp}`,
+        );
+        return res.status(403).send("Forbidden: Direct IP access is blocked.");
+      }
+
+      const host = req.headers.host ?? "";
+      const isIpHost = /^[0-9.:]+$/.test(host);
+      if (
+        isIpHost &&
+        !clientIp.includes("127.0.0.1") &&
+        !clientIp.includes("::1")
+      ) {
+        log.warn(`Bypassed Cloudflare proxy. Host header was an IP: ${host}`);
+        return res.status(403).send("Forbidden: Direct IP access is blocked.");
+      }
+
+      next();
+    });
+  }
+
   app.use(compression());
 
   app.use(
@@ -291,8 +318,24 @@ export async function startWorker() {
     }
   });
 
-  // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
+    if (
+      ServerEnv.env() === GameEnv.Prod ||
+      ServerEnv.env() === GameEnv.Preprod
+    ) {
+      const host = req.headers.host ?? "";
+      const isIpHost = /^[0-9.:]+$/.test(host);
+      const hasCfHeader = Boolean(req.headers["cf-connecting-ip"]);
+
+      if (isIpHost || !hasCfHeader) {
+        log.warn(
+          `WebSocket connection bypassed Cloudflare proxy. Host: ${host}`,
+        );
+        ws.close(1002, "Forbidden");
+        return;
+      }
+    }
+
     ws.on("message", async (message: string) => {
       const ip = getClientIp(req);
 
