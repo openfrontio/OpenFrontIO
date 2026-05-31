@@ -17,6 +17,8 @@ interface TeamEntry {
   totalScoreStr: string;
   totalGold: string;
   totalMaxTroops: string;
+  peakTiles: string;
+  peakLandPercent: string;
   totalSAMs: string;
   totalLaunchers: string;
   totalWarShips: string;
@@ -24,6 +26,8 @@ interface TeamEntry {
   totalScoreSort: number;
   players: PlayerView[];
 }
+
+type TeamStatsViewMode = "control" | "units" | "expanded";
 
 @customElement("team-stats")
 export class TeamStats extends LitElement implements Controller {
@@ -33,8 +37,9 @@ export class TeamStats extends LitElement implements Controller {
   @property({ type: Boolean }) visible = false;
   teams: TeamEntry[] = [];
   private _shownOnInit = false;
-  private showUnits = false;
+  private viewMode: TeamStatsViewMode = "control";
   private _myTeam: Team | null = null;
+  private teamPeaks = new Map<Team, { maxTiles: number; maxLandRatio: number }>();
 
   createRenderRoot() {
     return this; // use light DOM for Tailwind
@@ -43,11 +48,14 @@ export class TeamStats extends LitElement implements Controller {
   init() {}
 
   getTickIntervalMs() {
-    return 1000;
+    return 100;
   }
 
   tick() {
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
+    if (this.expandedLeaderboardEnabled) {
+      this.updateTeamPeaks();
+    }
 
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
       this._shownOnInit = true;
@@ -57,6 +65,35 @@ export class TeamStats extends LitElement implements Controller {
     if (!this.visible) return;
 
     this.updateTeamStats();
+  }
+
+  private get expandedLeaderboardEnabled(): boolean {
+    return this.game.config().expandedLeaderboard();
+  }
+
+  private updateTeamPeaks() {
+    const grouped: Record<Team, number> = {};
+    const numTilesWithoutFallout =
+      this.game.numLandTiles() - this.game.numTilesWithFallout();
+    for (const player of this.game.playerViews()) {
+      const team = player.team();
+      if (team === null || !player.isAlive()) continue;
+      grouped[team] = (grouped[team] ?? 0) + player.numTilesOwned();
+    }
+
+    for (const [rawTeam, totalTiles] of Object.entries(grouped)) {
+      const team = rawTeam as Team;
+      const previous = this.teamPeaks.get(team) ?? {
+        maxTiles: 0,
+        maxLandRatio: 0,
+      };
+      const landRatio =
+        numTilesWithoutFallout > 0 ? totalTiles / numTilesWithoutFallout : 0;
+      this.teamPeaks.set(team, {
+        maxTiles: Math.max(previous.maxTiles, totalTiles),
+        maxLandRatio: Math.max(previous.maxLandRatio, landRatio),
+      });
+    }
   }
 
   private updateTeamStats() {
@@ -104,6 +141,9 @@ export class TeamStats extends LitElement implements Controller {
         const numTilesWithoutFallout =
           this.game.numLandTiles() - this.game.numTilesWithFallout();
         const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
+        const teamPeaks = this.teamPeaks.get(rawTeam as Team);
+        const maxTiles = teamPeaks?.maxTiles ?? totalScoreSort;
+        const maxLandRatio = teamPeaks?.maxLandRatio ?? totalScorePercent;
 
         return {
           teamName,
@@ -112,6 +152,8 @@ export class TeamStats extends LitElement implements Controller {
           totalScoreSort,
           totalGold: renderNumber(totalGold),
           totalMaxTroops: renderTroops(totalMaxTroops),
+          peakTiles: renderNumber(maxTiles),
+          peakLandPercent: formatPercentage(maxLandRatio),
           players: teamPlayers,
 
           totalLaunchers: renderNumber(totalLaunchers),
@@ -125,8 +167,36 @@ export class TeamStats extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  private toggleViewMode() {
+    if (this.viewMode === "control") {
+      this.viewMode = "units";
+      return;
+    }
+    if (this.viewMode === "units") {
+      this.viewMode = this.expandedLeaderboardEnabled ? "expanded" : "control";
+      return;
+    }
+    this.viewMode = "control";
+  }
+
+  private buttonLabelKey(): string {
+    if (this.viewMode === "control") return "leaderboard.show_units";
+    if (this.viewMode === "units") {
+      return this.expandedLeaderboardEnabled
+        ? "leaderboard.show_expanded"
+        : "leaderboard.show_control";
+    }
+    return "leaderboard.show_control";
+  }
+
   render() {
     if (!this.visible) return html``;
+    const currentViewMode =
+      !this.expandedLeaderboardEnabled && this.viewMode === "expanded"
+        ? "control"
+        : this.viewMode;
+    const showUnits = currentViewMode === "units";
+    const showExpanded = currentViewMode === "expanded";
 
     return html`
       <div
@@ -135,14 +205,14 @@ export class TeamStats extends LitElement implements Controller {
       >
         <div
           class="grid w-full grid-cols-[repeat(var(--cols),1fr)]"
-          style="--cols:${this.showUnits ? 5 : 4};"
+          style="--cols:${showUnits ? 5 : showExpanded ? 3 : 4};"
         >
           <!-- Header -->
           <div class="contents font-bold bg-slate-700/60">
             <div class="p-1.5 md:p-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
             </div>
-            ${this.showUnits
+            ${showUnits
               ? html`
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
@@ -165,6 +235,19 @@ export class TeamStats extends LitElement implements Controller {
                     ${translateText("leaderboard.cities")}
                   </div>
                 `
+              : showExpanded
+                ? html`
+                    <div
+                      class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    >
+                      ${translateText("leaderboard.max_tiles")}
+                    </div>
+                    <div
+                      class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
+                    >
+                      ${translateText("leaderboard.max_land")}
+                    </div>
+                  `
               : html`
                   <div
                     class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
@@ -186,7 +269,7 @@ export class TeamStats extends LitElement implements Controller {
 
           <!-- Data rows -->
           ${this.teams.map((team) =>
-            this.showUnits
+            showUnits
               ? html`
                   <div
                     class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
@@ -210,6 +293,24 @@ export class TeamStats extends LitElement implements Controller {
                     </div>
                   </div>
                 `
+              : showExpanded
+                ? html`
+                    <div
+                      class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
+                        ? "font-bold"
+                        : ""}"
+                    >
+                      <div class="py-1.5 border-b border-slate-500">
+                        ${team.teamName}
+                      </div>
+                      <div class="py-1.5 border-b border-slate-500">
+                        ${team.peakTiles}
+                      </div>
+                      <div class="py-1.5 border-b border-slate-500">
+                        ${team.peakLandPercent}
+                      </div>
+                    </div>
+                  `
               : html`
                   <div
                     class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
@@ -234,15 +335,13 @@ export class TeamStats extends LitElement implements Controller {
         </div>
         <button
           class="team-stats-button"
-          aria-pressed=${String(this.showUnits)}
+          aria-pressed=${String(showUnits || showExpanded)}
           @click=${() => {
-            this.showUnits = !this.showUnits;
+            this.toggleViewMode();
             this.requestUpdate();
           }}
         >
-          ${this.showUnits
-            ? translateText("leaderboard.show_control")
-            : translateText("leaderboard.show_units")}
+          ${translateText(this.buttonLabelKey())}
         </button>
       </div>
     `;

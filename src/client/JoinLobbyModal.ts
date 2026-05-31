@@ -534,6 +534,13 @@ export class JoinLobbyModal extends BaseModal {
           .value=${translateText("common.enabled")}
         ></lobby-config-item>`,
       );
+    if (c.expandedLeaderboard)
+      cards.push(
+        html`<lobby-config-item
+          .label=${translateText("host_modal.expanded_leaderboard")}
+          .value=${translateText("common.enabled")}
+        ></lobby-config-item>`,
+      );
     if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
       cards.push(
         html`<lobby-config-item

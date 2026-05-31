@@ -187,6 +187,9 @@ export class Config {
   waterNukes(): boolean {
     return this._gameConfig.waterNukes ?? false;
   }
+  expandedLeaderboard(): boolean {
+    return this._gameConfig.expandedLeaderboard ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }

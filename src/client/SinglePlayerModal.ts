@@ -59,6 +59,7 @@ const DEFAULT_OPTIONS = {
   disabledUnits: [] as UnitType[],
   disableAlliances: false,
   waterNukes: false,
+  expandedLeaderboard: false,
 } as const;
 
 @customElement("single-player-modal")
@@ -97,6 +98,8 @@ export class SinglePlayerModal extends BaseModal {
   ];
   @state() private disableAlliances: boolean = DEFAULT_OPTIONS.disableAlliances;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
+  @state() private expandedLeaderboard: boolean =
+    DEFAULT_OPTIONS.expandedLeaderboard;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -317,6 +320,10 @@ export class SinglePlayerModal extends BaseModal {
                     labelKey: "single_modal.water_nukes",
                     checked: this.waterNukes,
                   },
+                  {
+                    labelKey: "single_modal.expanded_leaderboard",
+                    checked: this.expandedLeaderboard,
+                  },
                 ],
                 inputCards,
               },
@@ -378,6 +385,7 @@ export class SinglePlayerModal extends BaseModal {
       this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disableAlliances !== DEFAULT_OPTIONS.disableAlliances ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
+      this.expandedLeaderboard !== DEFAULT_OPTIONS.expandedLeaderboard ||
       this.disabledUnits.length > 0
     );
   }
@@ -406,6 +414,7 @@ export class SinglePlayerModal extends BaseModal {
     this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
     this.disableAlliances = DEFAULT_OPTIONS.disableAlliances;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
+    this.expandedLeaderboard = DEFAULT_OPTIONS.expandedLeaderboard;
   }
 
   protected onOpen(): void {
@@ -490,6 +499,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "single_modal.water_nukes":
         this.waterNukes = checked;
+        break;
+      case "single_modal.expanded_leaderboard":
+        this.expandedLeaderboard = checked;
         break;
       default:
         break;
@@ -699,6 +711,7 @@ export class SinglePlayerModal extends BaseModal {
                 : {}),
               ...(this.disableAlliances ? { disableAlliances: true } : {}),
               ...(this.waterNukes ? { waterNukes: true } : {}),
+              expandedLeaderboard: this.expandedLeaderboard,
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },
