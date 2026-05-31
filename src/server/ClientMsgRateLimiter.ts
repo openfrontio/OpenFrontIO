@@ -4,12 +4,14 @@ import { ClientID } from "../core/Schemas";
 const INTENTS_PER_SECOND = 10;
 const INTENTS_PER_MINUTE = 150;
 const MAX_INTENT_SIZE = 2000;
-const TOTAL_BYTES = 2 * 1024 * 1024; // 2MB per client
+const TOTAL_BYTES = 2 * 1024 * 1024; // 2MB per client per window
+const BYTE_WINDOW_MS = 60_000; // Sliding window of 60 seconds
 export type RateLimitResult = "ok" | "limit" | "kick";
 
 interface ClientBucket {
   perSecond: RateLimiter;
   perMinute: RateLimiter;
+  byteEvents: Array<{ at: number; bytes: number }>;
   totalBytes: number;
 }
 
@@ -18,6 +20,19 @@ export class ClientMsgRateLimiter {
 
   check(clientID: ClientID, type: string, bytes: number): RateLimitResult {
     const bucket = this.getOrCreate(clientID);
+
+    // Rolling-window byte accounting: evict events older than BYTE_WINDOW_MS
+    // so throughput is measured over a true sliding window instead of
+    // accumulating bytes for the entire game duration (which would
+    // false-kick legitimate long-running clients).
+    const now = Date.now();
+    const cutoff = now - BYTE_WINDOW_MS;
+    while (bucket.byteEvents.length > 0 && bucket.byteEvents[0].at < cutoff) {
+      const evicted = bucket.byteEvents.shift()!;
+      bucket.totalBytes -= evicted.bytes;
+    }
+
+    bucket.byteEvents.push({ at: now, bytes });
     bucket.totalBytes += bytes;
 
     if (bucket.totalBytes >= TOTAL_BYTES) return "kick";
@@ -56,6 +71,7 @@ export class ClientMsgRateLimiter {
         tokensPerInterval: INTENTS_PER_MINUTE,
         interval: "minute",
       }),
+      byteEvents: [],
       totalBytes: 0,
     };
     this.buckets.set(clientID, bucket);
