@@ -101,5 +101,21 @@
       "name": "Al Wakrah",
       "flag": ""
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 700,
+        "width": 1300,
+        "x": 0,
+        "y": 500
+      },
+      {
+        "height": 500,
+        "width": 1800,
+        "x": 0,
+        "y": 0
+      }
+    ]
+  }
 }

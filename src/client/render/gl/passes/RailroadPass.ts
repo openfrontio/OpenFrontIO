@@ -98,6 +98,7 @@ export class RailroadPass {
   private uZoom: WebGLUniformLocation;
   private uRailDetailZoom: WebGLUniformLocation;
   private uRailAlpha: WebGLUniformLocation;
+  private uRailFade: WebGLUniformLocation;
   private uGhostOwnerID: WebGLUniformLocation;
 
   private mapW: number;
@@ -145,6 +146,7 @@ export class RailroadPass {
       "uRailDetailZoom",
     )!;
     this.uRailAlpha = gl.getUniformLocation(this.program, "uRailAlpha")!;
+    this.uRailFade = gl.getUniformLocation(this.program, "uRailFade")!;
     this.uGhostOwnerID = gl.getUniformLocation(this.program, "uGhostOwnerID")!;
 
     // Texture unit bindings + ghost defaults
@@ -265,8 +267,16 @@ export class RailroadPass {
     const gl = this.gl;
     const rs = this.settings.railroad;
 
-    // Skip entirely when below minimum zoom
-    if (zoom < rs.railMinZoom) return;
+    // Fade out as zoom drops below railMinZoom; fully invisible at railMinZoom - railFadeRange
+    const fadeRange = Math.max(rs.railFadeRange, 0);
+    const fadeStart = rs.railMinZoom - fadeRange;
+    const fade =
+      fadeRange <= 0
+        ? zoom >= rs.railMinZoom
+          ? 1
+          : 0
+        : Math.min(1, Math.max(0, (zoom - fadeStart) / fadeRange));
+    if (fade <= 0) return;
 
     // Flush CPU railroad state → GPU
     if (this.railroadDirty) {
@@ -310,6 +320,7 @@ export class RailroadPass {
     gl.uniform1f(this.uZoom, zoom);
     gl.uniform1f(this.uRailDetailZoom, rs.railDetailZoom);
     gl.uniform1f(this.uRailAlpha, rs.railAlpha);
+    gl.uniform1f(this.uRailFade, fade);
     gl.uniform1f(this.uGhostOwnerID, this.ghostOwnerID);
 
     // Bind textures: 0=railroad, 1=tile, 2=palette, 3=terrain, 4=ghostRail

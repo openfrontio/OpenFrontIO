@@ -96,5 +96,21 @@
       "flag": "",
       "name": "Free Pluto State"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1300,
+        "width": 1050,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1300,
+        "width": 1050,
+        "x": 1050,
+        "y": 0
+      }
+    ]
+  }
 }

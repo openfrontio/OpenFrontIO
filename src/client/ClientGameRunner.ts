@@ -31,6 +31,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   DARK_MODE_KEY,
+  GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
@@ -47,6 +48,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
+  ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -66,7 +68,11 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { GameView as WebGLGameView } from "./render/gl";
+import {
+  createDebugGui,
+  generateRenderSettings,
+  GameView as WebGLGameView,
+} from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 
@@ -235,7 +241,10 @@ export function joinLobby(
 
 // Build the WebGL view + its glCanvas. Must run before createRenderer so the
 // controllers can be wired directly to the view.
-function createWebGLView(terrainMap: TerrainMapData): {
+function createWebGLView(
+  terrainMap: TerrainMapData,
+  config: Config,
+): {
   view: WebGLGameView;
   glCanvas: HTMLCanvasElement;
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
@@ -289,6 +298,7 @@ function createWebGLView(terrainMap: TerrainMapData): {
     },
     terrainBytes,
     palette,
+    config,
     captureRaf,
     captureCaf,
   );
@@ -457,8 +467,10 @@ async function createClientGame(
 
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
-    const { view, glCanvas, cachedWebGLFrameCallback } =
-      createWebGLView(gameMap);
+    const { view, glCanvas, cachedWebGLFrameCallback } = createWebGLView(
+      gameMap,
+      config,
+    );
 
     // Bind the WebGL renderer's day/night mode to the existing darkMode
     // UserSetting so the in-game map matches the rest of the UI. Initial
@@ -477,6 +489,33 @@ async function createClientGame(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
     );
+
+    const graphicsListenerAbort = new AbortController();
+    const applyGraphicsOverrides = (): void => {
+      const generated = generateRenderSettings(
+        userSettings.graphicsOverrides(),
+      );
+      const live = view.getSettings();
+      Object.assign(live.name, generated.name);
+      Object.assign(live.structure, generated.structure);
+    };
+    applyGraphicsOverrides();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      applyGraphicsOverrides,
+      { signal: graphicsListenerAbort.signal },
+    );
+
+    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    eventBus.on(ToggleRenderDebugGuiEvent, () => {
+      if (debugGui === null) {
+        debugGui = createDebugGui(view.getSettings());
+        debugGui.open();
+      } else {
+        debugGui.destroy();
+        debugGui = null;
+      }
+    });
 
     const gameRenderer = createRenderer(
       inputOverlay,
@@ -512,6 +551,7 @@ async function createClientGame(
       soundManager,
       userSettings,
       webglBuilder,
+      graphicsListenerAbort,
     );
   } catch (err) {
     soundManager.dispose();
@@ -545,6 +585,7 @@ export class ClientGameRunner {
     private soundManager: SoundManager,
     private userSettings: UserSettings,
     private webglBuilder: WebGLFrameBuilder | null = null,
+    private graphicsListenerAbort: AbortController | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -801,6 +842,7 @@ export class ClientGameRunner {
 
   public stop() {
     this.soundManager.dispose();
+    this.graphicsListenerAbort?.abort();
     if (!this.isActive) return;
 
     this.isActive = false;

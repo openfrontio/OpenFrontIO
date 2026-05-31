@@ -71,7 +71,7 @@ export class StoreModal extends BaseModal {
       this.affiliateCode,
     ).filter(
       (r) =>
-        r.type === "pattern" &&
+        (r.type === "pattern" || r.type === "skin") &&
         r.relationship !== "blocked" &&
         r.relationship !== "owned",
     );
@@ -237,7 +237,10 @@ export class StoreModal extends BaseModal {
       this.affiliateCode,
     ).filter(
       (r) =>
-        (r.type === "pattern" || r.type === "flag" || r.type === "pack") &&
+        (r.type === "pattern" ||
+          r.type === "skin" ||
+          r.type === "flag" ||
+          r.type === "pack") &&
         r.relationship === "purchasable",
     );
 

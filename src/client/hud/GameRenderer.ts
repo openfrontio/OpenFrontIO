@@ -24,6 +24,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GraphicsSettingsModal } from "./layers/GraphicsSettingsModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
@@ -190,6 +191,15 @@ export function createRenderer(
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
 
+  const graphicsSettingsModal = document.querySelector(
+    "graphics-settings-modal",
+  ) as GraphicsSettingsModal;
+  if (!(graphicsSettingsModal instanceof GraphicsSettingsModal)) {
+    console.error("graphics settings modal not found");
+  }
+  graphicsSettingsModal.userSettings = userSettings;
+  graphicsSettingsModal.eventBus = eventBus;
+
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
     console.error("unit display not found");
@@ -309,6 +319,7 @@ export function createRenderer(
     winModal,
     replayPanel,
     settingsModal,
+    graphicsSettingsModal,
     teamStats,
     playerPanel,
     headsUpMessage,

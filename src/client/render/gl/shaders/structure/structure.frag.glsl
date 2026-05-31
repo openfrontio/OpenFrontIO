@@ -11,6 +11,10 @@ uniform int   uAltView;
 uniform int   uHighlightMask;   // bitmask of atlas columns to highlight (0 = off)
 uniform float uHighlightOutlineW; // outline width for highlighted structures
 uniform float uHighlightDimAlpha; // alpha multiplier for non-highlighted structures
+uniform float uFillDarken;      // HSV value multiplier on icon fill
+uniform float uBorderDarken;    // HSV value multiplier on icon border
+uniform float uIconAlpha;       // global multiplier on final icon alpha
+uniform vec3  uIconColor;       // color of the inner icon glyph (was white)
 
 in vec2  vLocalPos;
 in vec2  vAtlasUV;
@@ -91,8 +95,8 @@ void main() {
 
   if (uAltView != 0 && vUnderConstruction < 0.5) {
     vec3 ac = texelFetch(uAffiliation, ivec2(int(vOwnerID), 1), 0).rgb;
-    fillColor = vec4(darken(ac, 0.65), 1.0);
-    borderColor = vec4(darken(ac, 0.35), 1.0);
+    fillColor = vec4(darken(ac, uFillDarken), 1.0);
+    borderColor = vec4(darken(ac, uBorderDarken), 1.0);
   } else if (vUnderConstruction > 0.5) {
     fillColor = vec4(198.0/255.0, 198.0/255.0, 198.0/255.0, 1.0);
     borderColor = vec4(127.0/255.0, 127.0/255.0, 127.0/255.0, 1.0);
@@ -102,8 +106,8 @@ void main() {
     borderColor = texture(uPalette, vec2(u, 0.75));
     // Darken via HSV value so hue/saturation stay intact
     // vScale < 1.0 = darker, > 1.0 = brighter
-    fillColor.rgb = darken(fillColor.rgb, 0.65);
-    borderColor.rgb = darken(borderColor.rgb, 0.35);
+    fillColor.rgb = darken(fillColor.rgb, uFillDarken);
+    borderColor.rgb = darken(borderColor.rgb, uBorderDarken);
     fillColor.a = 1.0;
     borderColor.a = 1.0;
   }
@@ -127,8 +131,8 @@ void main() {
     iconAlpha = iconSample.a * borderMask * inBounds;
   }
 
-  // Composite: white icon over player-colored shape
-  vec3 finalRGB = mix(bgColor.rgb, vec3(1.0), iconAlpha);
+  // Composite: tinted icon over player-colored shape
+  vec3 finalRGB = mix(bgColor.rgb, uIconColor, iconAlpha);
 
   // Red X overlay for units marked for deletion
   if (vMarkedForDeletion > 0.5) {
@@ -147,7 +151,7 @@ void main() {
   float tintActive = step(0.01, dot(uOutlineColor, uOutlineColor));
   finalRGB = mix(finalRGB, uOutlineColor, tintActive * 0.5);
 
-  float finalAlpha = bgColor.a * outerAlpha * uGhostAlpha;
+  float finalAlpha = bgColor.a * outerAlpha * uGhostAlpha * uIconAlpha;
 
   // Build-button hover highlight: white outline on matching types, dim the rest
   if (uHighlightMask != 0) {

@@ -30,6 +30,14 @@ export class WebGLFrameBuilder {
   private readonly patternData: Uint8Array;
 
   private readonly knownSmallIDs = new Set<number>();
+  /**
+   * Last spawn tile pushed to the renderer per smallID. Players can re-pick
+   * spawn during the spawn phase, so this tracks the latest value rather than
+   * just first-seen — re-uploads only when the tile actually changes.
+   */
+  private readonly lastSpawnTile = new Map<number, number>();
+  /** Skin atlas allocated once on first syncPlayers — player set is locked at game start. */
+  private skinsInitialized = false;
   // The renderer needs to know which player is "me" so affiliation tint,
   // unit colors, and SAM-radius perspective work. Push it once the local
   // player's update arrives (may take several ticks during join).
@@ -46,15 +54,40 @@ export class WebGLFrameBuilder {
   /** Drop internal caches to force a full re-upload of state on the next update(). */
   clearCaches(): void {
     this.knownSmallIDs.clear();
+    this.lastSpawnTile.clear();
     this.localPlayerSmallID = 0;
+    this.skinsInitialized = false;
   }
 
   update(gameView: GameView): void {
     this.syncPlayers(gameView);
+    this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncTerrainDeltas(gameView);
     uploadFrameData(this.view, gameView.frameData());
+  }
+
+  /**
+   * Push each player's current spawn tile to the renderer as the skin anchor
+   * (image center lines up with this tile). Players re-pick spawn during the
+   * spawn phase, so we re-upload whenever the tile changes, not just on first
+   * sighting. Once spawn phase ends, spawnTile is locked and this becomes a
+   * no-op via the cache check.
+   */
+  private syncPlayerSpawns(gameView: GameView): void {
+    for (const p of gameView.players()) {
+      const smallID = p.smallID();
+      const spawnTile = p.state.spawnTile;
+      if (spawnTile === undefined) continue;
+      if (this.lastSpawnTile.get(smallID) === spawnTile) continue;
+      this.lastSpawnTile.set(smallID, spawnTile);
+      this.view.setPlayerSpawn(
+        smallID,
+        gameView.x(spawnTile),
+        gameView.y(spawnTile),
+      );
+    }
   }
 
   /**
@@ -126,6 +159,15 @@ export class WebGLFrameBuilder {
   }
 
   private syncPlayers(gameView: GameView): void {
+    if (!this.skinsInitialized) {
+      this.skinsInitialized = true;
+      const urls = new Set<string>();
+      for (const p of gameView.players()) {
+        const url = p.cosmetics.skin?.url;
+        if (url) urls.add(assetUrl(url));
+      }
+      this.view.initSkinAtlas([...urls]);
+    }
     const newPlayers: PlayerStatic[] = [];
     for (const p of gameView.players()) {
       const smallID = p.smallID();
@@ -139,6 +181,11 @@ export class WebGLFrameBuilder {
       // custom flag). assetUrl() passes URLs through and rewrites paths.
       const flagRef = p.cosmetics.flag;
       const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
+
+      const skin = p.cosmetics.skin;
+      if (skin?.url) {
+        this.view.setPlayerSkin(smallID, assetUrl(skin.url));
+      }
 
       const pattern = p.cosmetics.pattern;
       if (pattern && pattern.patternData) {

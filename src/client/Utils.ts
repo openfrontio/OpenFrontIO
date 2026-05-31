@@ -428,7 +428,6 @@ export const translateText = (
 
   const langSelector = getCachedLangSelector();
   if (!langSelector) {
-    console.warn("LangSelector not found in DOM");
     return key;
   }
 
