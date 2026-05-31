@@ -251,6 +251,7 @@ describe("InputHandler AutoUpgrade", () => {
       });
       inputHandler["lastPointerDownX"] = 149;
       inputHandler["lastPointerDownY"] = 249;
+      inputHandler["pointerDown"] = true;
 
       inputHandler["onPointerUp"](pointerEvent);
 
@@ -265,6 +266,31 @@ describe("InputHandler AutoUpgrade", () => {
       );
       expect(emittedTypes).toContain("MouseUpEvent");
       expect(emittedTypes).not.toContain("ContextMenuEvent");
+    });
+
+    test("should ignore pointerup when pointerDown is false during spawn phase", () => {
+      mockGameView.inSpawnPhase = () => true;
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      inputHandler["userSettings"].leftClickOpensMenu = () => true;
+
+      const pointerEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["lastPointerDownX"] = 149;
+      inputHandler["lastPointerDownY"] = 249;
+      inputHandler["pointerDown"] = false;
+
+      inputHandler["onPointerUp"](pointerEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+      expect(mockEmit).not.toHaveBeenCalled();
     });
 
     test("should suppress/ignore context menu events during spawn phase", () => {
