@@ -22,8 +22,8 @@ vi.mock("../../src/server/Archive", () => ({
 }));
 
 import { GameType } from "../../src/core/game/Game";
-import { Client } from "../../src/server/Client";
 import { archive } from "../../src/server/Archive";
+import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
 
 function makeMockWs(ip = "1.2.3.4") {
@@ -82,12 +82,9 @@ describe("GameServer - winner message security", () => {
   });
 
   it("archives with undefined stats regardless of client-supplied allPlayersStats", async () => {
-    const game = new GameServer(
-      "test-game",
-      mockLogger,
-      Date.now(),
-      { gameType: GameType.Private } as any,
-    );
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+    } as any);
 
     const { client: c1, ws: ws1 } = makeClient("cid-1", "pid-1", "1.2.3.4");
     const { client: c2, ws: ws2 } = makeClient("cid-2", "pid-2", "5.6.7.8");
