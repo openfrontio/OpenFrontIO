@@ -183,6 +183,74 @@ describe("Donate troops to a non ally", () => {
   });
 });
 
+describe("Donate gold with null goldNum (auto-donate fallback)", () => {
+  it("Should auto-donate 1/3 of sender gold when goldNum is null", async () => {
+    const game = await setup("ocean_and_land", {
+      infiniteGold: false,
+      donateGold: true,
+    });
+    const gameID: GameID = "game_id";
+
+    const donorInfo = new PlayerInfo(
+      "donor",
+      PlayerType.Human,
+      null,
+      "donor_id",
+    );
+    const recipientInfo = new PlayerInfo(
+      "recipient",
+      PlayerType.Human,
+      null,
+      "recipient_id",
+    );
+
+    game.addPlayer(donorInfo);
+    game.addPlayer(recipientInfo);
+
+    const donor = game.player(donorInfo.id);
+    const recipient = game.player(recipientInfo.id);
+
+    // Spawn both players
+    const spawnA = game.ref(0, 10);
+    const spawnB = game.ref(0, 15);
+
+    game.addExecution(
+      new SpawnExecution(gameID, donorInfo, spawnA),
+      new SpawnExecution(gameID, recipientInfo, spawnB),
+    );
+
+    // donor sends alliance request to recipient
+    const allianceRequest = donor.createAllianceRequest(recipient);
+    expect(allianceRequest).not.toBeNull();
+
+    // recipient accepts the alliance request
+    if (allianceRequest) {
+      allianceRequest.accept();
+    }
+    game.executeNextTick();
+
+    // Give donor a known amount of gold
+    donor.addGold(9000n);
+    const donorGoldBefore = donor.gold();
+    const recipientGoldBefore = recipient.gold();
+
+    // Pass null as goldNum — should trigger auto-donate of sender.gold() / 3n
+    game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, null));
+
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+
+    // Donor should have lost gold
+    expect(donor.gold() < donorGoldBefore).toBe(true);
+    // Recipient should have received gold
+    expect(recipient.gold() > recipientGoldBefore).toBe(true);
+    // Check donor lost roughly 1/3 of their gold
+    const donorLost = donorGoldBefore - donor.gold();
+    expect(donorLost).toBeGreaterThan(0n);
+  });
+});
+
 describe("Donate Gold to a non ally", () => {
   it("Gold should not be donated", async () => {
     const game = await setup("ocean_and_land", {
