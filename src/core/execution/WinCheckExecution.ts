@@ -110,6 +110,11 @@ export class WinCheckExecution implements Execution {
       }
     }
 
+    const max = sorted[0];
+    const timeElapsed = this.mg.elapsedGameSeconds();
+    const numTilesWithoutFallout =
+      this.mg.numLandTiles() - this.mg.numTilesWithFallout();
+
     if (numTilesWithoutFallout <= 0) {
       return;
     }
