@@ -776,6 +776,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateGold(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -803,6 +806,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateTroops(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -830,6 +836,9 @@ export class PlayerImpl implements Player {
   }
 
   donateTroops(recipient: Player, troops: number): boolean {
+    // Defense-in-depth: canDonateTroops already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (troops <= 0) return false;
     const removed = this.removeTroops(troops);
     if (removed === 0) return false;
@@ -847,6 +856,9 @@ export class PlayerImpl implements Player {
   }
 
   donateGold(recipient: Player, gold: Gold): boolean {
+    // Defense-in-depth: canDonateGold already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
@@ -969,6 +981,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other === this) {
+      return true;
+    }
     if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }

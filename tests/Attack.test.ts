@@ -527,4 +527,19 @@ describe("Attack immunity", () => {
     constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
     expect(playerA.units(UnitType.AtomBomb)).toHaveLength(1);
   });
+
+  test("Should abort TransportShipExecution when target is the attacker itself", async () => {
+    // Wait for spawn immunity to end to ensure it doesn't prematurely abort the execution
+    waitForImmunityToEnd();
+
+    // playerA tries to send a transport ship targeting one of playerA's own tiles (spawn tile at 7, 0)
+    const selfTarget = game.ref(7, 0);
+    const exec = new TransportShipExecution(playerA, selfTarget, 10);
+    game.addExecution(exec);
+    game.executeNextTick();
+
+    // Verify it aborted immediately: active is false, and no transport ship unit spawned
+    expect(exec.isActive()).toBe(false);
+    expect(playerA.units(UnitType.TransportShip)).toHaveLength(0);
+  });
 });

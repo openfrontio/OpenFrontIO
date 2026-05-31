@@ -91,6 +91,11 @@ export class TransportShipExecution implements Execution {
       }
     }
 
+    if (this.target === this.attacker) {
+      this.active = false;
+      return;
+    }
+
     if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
       this.active = false;
       return;
