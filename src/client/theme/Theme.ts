@@ -19,11 +19,6 @@ export interface Theme {
   falloutColor(): Colord;
   font(): string;
   textColor(playerInfo: PlayerView): string;
-  // unit color for alternate view
-  selfColor(): Colord;
-  allyColor(): Colord;
-  neutralColor(): Colord;
-  enemyColor(): Colord;
   spawnHighlightColor(): Colord;
   spawnHighlightSelfColor(): Colord;
   spawnHighlightTeamColor(): Colord;

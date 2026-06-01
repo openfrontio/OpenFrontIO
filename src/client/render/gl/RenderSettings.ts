@@ -80,6 +80,21 @@ export interface RenderSettings {
     embargoTintRatio: number;
     friendlyTintRatio: number;
   };
+  /** Alt-view affiliation colors (0–1 RGB). */
+  affiliation: {
+    selfR: number;
+    selfG: number;
+    selfB: number;
+    allyR: number;
+    allyG: number;
+    allyB: number;
+    neutralR: number;
+    neutralG: number;
+    neutralB: number;
+    enemyR: number;
+    enemyG: number;
+    enemyB: number;
+  };
   railroad: {
     railMinZoom: number;
     railFadeRange: number;
