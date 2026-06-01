@@ -1271,7 +1271,8 @@
     "adfree": "ad-free for life!",
     "hard": "Plutonium",
     "soft": "Caps",
-    "per_day": "/day"
+    "per_day": "/day",
+    "free": "+{numFree} BONUS!"
   },
   "flag_input": {
     "title": "Select Flag",

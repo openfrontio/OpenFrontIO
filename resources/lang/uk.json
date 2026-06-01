@@ -54,8 +54,8 @@
     "go_to_troubleshooting": "До сторінки усунення неполадок"
   },
   "news": {
-    "github_link": "на GitHub",
-    "title": "Список змін"
+    "title": "Список змін",
+    "github_link": "на GitHub"
   },
   "troubleshooting": {
     "title": "Усунення неполадок",
@@ -66,7 +66,7 @@
     "platform": "Платформа",
     "copied_to_clipboard": "Інформацію скопійовано до буфера обміну! Не забудьте поділитися нею на нашому Discord, якщо вам потрібна допомога.",
     "os": "ОС",
-    "device_pixel_ratio": "Коефіцієнт пікселів пристрою",
+    "device_pixel_ratio": "Піксельне співвідношення пристрою (DPR)",
     "chromium_tip": "OpenFront працює найкраще у Chromium-браузерах.",
     "hardware_acceleration_tip": "Для оптимальної продуктивності увімкніть апаратне прискорення в налаштуваннях браузера.",
     "renderer": "Візуалізатор",
@@ -106,6 +106,9 @@
     "action_ratio_change": "Зменшити/Збільшити коефіцієнт атаки",
     "action_reset_gfx": "Скинути графіку",
     "action_auto_upgrade": "Автопокращення найближчої будівлі",
+    "action_warship_multiselect": "Обрати декілька військових кораблів (перетягуйте, щоб виділити область)",
+    "action_warship_selectall": "Обрати всі свої військові кораблі",
+    "drag": "перетягування",
     "ui_section": "Ігровий інтерфейс",
     "ui_leaderboard": "Таблиця лідерів",
     "ui_your_team": "Ваша команда:",
@@ -185,7 +188,8 @@
     "exit_confirmation": "Ви впевнені, що хочете вийти з гри?",
     "bomb_direction": "Траєкторія польоту атомної/водородної бомби",
     "icon_alt_player_leaderboard": "Значок таблиці лідерів гравців",
-    "icon_alt_team_leaderboard": "Значок таблиці лідерів команди"
+    "icon_alt_team_leaderboard": "Значок таблиці лідерів команди",
+    "game_id_tooltip": "ID гри"
   },
   "single_modal": {
     "random_spawn": "Випадкова поява",
@@ -235,7 +239,7 @@
     "clear_session": "Очистити сесію",
     "failed_to_send_recovery_email": "Не вдалося надіслати електронний лист для відновлення",
     "enter_email_address": "Будь ласка, введіть адресу електронної пошти",
-    "personal_player_id": "Персональний ID гравця:"
+    "public_player_id": "Публічний ID гравця:"
   },
   "leaderboard_modal": {
     "title": "Таблиця лідерів",
@@ -252,9 +256,9 @@
     "elo": "ELO",
     "win_score": "Рахунок перемог",
     "win_score_tooltip": "Зважені перемоги на основі участі клану та складності матчу",
-    "loss_score": "Рахунок поразок",
-    "loss_score_tooltip": "Зважені поразки на основі участі клану та складності матчу",
-    "win_loss_ratio": "Перемоги/Поразки",
+    "loss_score": "Рахунок невдач",
+    "loss_score_tooltip": "Зважені невдачі на основі участі клану та складності матчу",
+    "win_loss_ratio": "Перемоги/Невдачі",
     "ratio": "Коефіцієнт",
     "rank": "Ранг",
     "try_again": "Спробувати ще раз",
@@ -331,10 +335,10 @@
     "svalmel": "Свалмел",
     "manicouagan": "Манікуаган",
     "lemnos": "Лемнос",
-    "tourney1": "Турнір 2 команди",
-    "tourney2": "Турнір 3 команди",
-    "tourney3": "Турнір 4 команди",
-    "tourney4": "Турнір 8 команд",
+    "tourney1": "Турнір на 2 команди",
+    "tourney2": "Турнір на 3 команди",
+    "tourney3": "Турнір на 4 команди",
+    "tourney4": "Турнір на 8 команд",
     "passage": "Прохід",
     "sierpinski": "Серпінський",
     "thebox": "Коробка",
@@ -354,13 +358,18 @@
     "sanfrancisco": "Сан-Франциско",
     "aegean": "Егейськ",
     "milkyway": "Чумацький Шлях",
+    "marenostrum": "Mare Nostrum",
     "dyslexdria": "Дислексдрія",
     "greatlakes": "Великі озера",
     "straitofmalacca": "Малаккська протока",
     "luna": "Луна",
     "conakry": "Конакрі",
     "caucasus": "Кавказ",
-    "mediterranean": "Середземноморʼя"
+    "losangeles": "Лос-Анджелес",
+    "beringsea": "Берингове море",
+    "antarctica": "Антарктида",
+    "archipelagosea": "Архіпелагове море",
+    "bajacalifornia": "Нижня Каліфорнія"
   },
   "map_categories": {
     "featured": "Рекомендовані",
@@ -441,7 +450,7 @@
     "compact_map": "Компактна мапа",
     "disable_alliances": "Вимкнути союзи",
     "water_nukes": "Водяні бомби",
-    "enables_title": "Вимикання юніти",
+    "enables_title": "Вимикання юнітів",
     "player": "Гравець",
     "players": "Гравці(в)",
     "nation_players": "Нації",
@@ -554,8 +563,6 @@
     "alert_frame_desc": "Перемкнути рамку тривоги. Якщо увімкнено, рамка показуватиметься, коли вас зраджують або атакують по суші.",
     "special_effects_label": "Спецефекти",
     "special_effects_desc": "Перемкнути спецефекти. Вимкніть для поліпшення продуктивності",
-    "structure_sprites_label": "Спрайти споруд",
-    "structure_sprites_desc": "Перемкнути спрайти споруд",
     "cursor_cost_label_label": "Вартість будування під указівником",
     "cursor_cost_label_desc": "Показати вартість будівництва під указівником",
     "anonymous_names_label": "Приховані імена",
@@ -628,6 +635,11 @@
     "boat_attack_desc": "Відправити човен на клітинку під указівником.",
     "ground_attack": "Наземна атака",
     "ground_attack_desc": "Відправити наземну атаку на клітинку під указівником.",
+    "ally_keybinds": "Призначення клавіш для союзів",
+    "request_alliance": "Запросити до союзу",
+    "request_alliance_desc": "Надіслати запит на союз гравцю, чия клітинка знаходиться під вашим указівником.",
+    "break_alliance": "Розірвати союз (зрадити)",
+    "break_alliance_desc": "Розірвати союз із гравцем, чия клітинка знаходиться під вашим указівником.",
     "swap_direction": "Змінити напрямок ракети",
     "swap_direction_desc": "Перемкнути напрямок ракети (угору/вниз).",
     "zoom_controls": "Масштабування",
@@ -655,7 +667,9 @@
     "exit_game_info": "Повернутися до головного меню",
     "background_music_volume": "Гучність фонової музики",
     "sound_effects_volume": "Гучність звукових ефектів",
-    "keybind_conflict_error": "Клавішу {key} вже привʼязано до іншої дії."
+    "keybind_conflict_error": "Клавішу {key} вже привʼязано до іншої дії.",
+    "structure_sprites_label": "Спрайти споруд",
+    "structure_sprites_desc": "Перемкнути спрайти споруд"
   },
   "chat": {
     "title": "Швидкий чат",
@@ -759,6 +773,7 @@
       "city": "Збільшує ліміт населення",
       "factory": "Прокладає залізничні колії та створює поїзди"
     },
+    "warship_shift_hint": "Утримуйте Shift і перетягуйте, щоб виділити декілька військових кораблів одночасно",
     "not_enough_money": "Недостатньо коштів"
   },
   "win_modal": {
@@ -781,7 +796,6 @@
     "youtube_tutorial": "Потрібна допомога?"
   },
   "leaderboard": {
-    "hide": "Приховати",
     "player": "Гравець",
     "team": "Команда",
     "owned": "Влада",
@@ -792,10 +806,10 @@
     "warships": "Військові кораблі",
     "cities": "Міста",
     "show_control": "Показати підконтрольні території",
-    "show_units": "Показати юніти"
+    "show_units": "Показати юніти",
+    "hide": "Приховати"
   },
   "events_display": {
-    "events": "Події",
     "retreating": "відступає",
     "alliance_request_status": "{name} {status} запрошення до союзу",
     "alliance_accepted": "приймає",
@@ -812,6 +826,7 @@
     "sent_emoji": "Надіслано {name}: {emoji}",
     "renew_alliance": "Запит на поновлення",
     "request_alliance": "{name} запрошує до союзу!",
+    "alliance_request_sent": "Запрошення до союзу надіслано до {name}.",
     "focus": "Оглянути",
     "accept_alliance": "Прийняти",
     "reject_alliance": "Відхилити",
@@ -822,10 +837,9 @@
     "betrayal_debuff_ends": "Залишилося {time} сек до закінчення покарання зрадника",
     "attack_cancelled_retreat": "Атаку скасовано, {troops} солдатів загинули під час відступу",
     "received_gold_from_captured_ship": "Отримано {gold} золота з корабля, захопленого у {name}",
-    "received_gold_from_trade": "Отримано {gold} золота від торгівлі з {name}",
     "received_gold_from_conquest": "Завойовано {name}, отримано {gold} од. золота",
     "conquered_no_gold": "Завойовано {name} (не грав, золота не отримано)",
-    "missile_intercepted": "{unit} перехоплює ракету",
+    "missile_intercepted": "Перехоплено ракету «{unit}»",
     "mirv_warheads_intercepted": "{count, plural, one {Перехоплено {count} боєголовку РГЧ ІН} few {Перехоплено {count} боєголовки РГЧ ІН} many {Перехоплено {count} боєголовок РГЧ ІН} other {Перехоплено {count} боєголовок РГЧ ІН}}",
     "sent_troops_to_player": "Відправлено {troops} військ до {name}",
     "received_troops_from_player": "Отримано {troops} військ від {name}",
@@ -834,7 +848,9 @@
     "unit_captured_by_enemy": "{name} захоплює ваш юніт «{unit}»",
     "captured_enemy_unit": "Захоплено юніт «{unit}» у {name}",
     "unit_destroyed": "Ваш юніт «{unit}» було знищено",
-    "no_boats_available": "Немає доступних човнів, максимум — {max}"
+    "no_boats_available": "Немає доступних човнів, максимум — {max}",
+    "events": "Події",
+    "received_gold_from_trade": "Отримано {gold} золота від торгівлі з {name}"
   },
   "player_type": {
     "player": "Гравець",
@@ -880,6 +896,7 @@
   "kick_reason": {
     "duplicate_session": "Вигнано з гри (можливо, ви грали на іншій вкладці)",
     "lobby_creator": "Вигнано власником лобі",
+    "admin": "Вигнано адміністратором",
     "host_left": "Хост покинув лобі."
   },
   "send_troops_modal": {
@@ -1054,8 +1071,8 @@
     "ranked_1v1": "1v1",
     "mode": "Режим",
     "stats_wins": "Перемоги",
-    "stats_losses": "Поразки",
-    "stats_wlr": "Коефіцієнт перемог:поразок",
+    "stats_losses": "Невдачі",
+    "stats_wlr": "Коефіцієнт П:Н",
     "stats_games_played": "Зіграні ігри",
     "no_stats": "Немає даних для цієї вибірки."
   },
@@ -1072,6 +1089,23 @@
     "warning": "УВАГА",
     "dismiss": "Відхилити",
     "go_to_item": "Перейти до пункту {num}",
-    "firefox_warning": "OpenFront.io не погано працює з браузерами на основі [Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Ми рекомендуємо використовувати [Chromium-браузер](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) для найкращої продуктивності."
+    "firefox_warning": "OpenFront.io погано працює з браузерами на основі [Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Ми рекомендуємо використовувати [браузери на основі Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) для найкращої продуктивності."
+  },
+  "ios_banner": {
+    "text": "Для повноекранного режиму додайте OpenFront на головний екран",
+    "how": "Як",
+    "later": "Пізніше",
+    "never": "Ніколи",
+    "modal_title": "Повноекранний режим на iOS",
+    "modal_desc": "Ваш браузер не підтримує повноекранний режим, але ви можете додати OpenFront на свій домашній екран для зануреного досвіду:",
+    "step_share": "Натисніть кнопку «Поділитися» у своєму браузері",
+    "step_scroll_and_tap": "Прокрутіть донизу і торкніться",
+    "step_add_to_home_label": "Додати на головний екран",
+    "step_open": "Відкрийте з домашнього екрана — гра запуститься в повноекранному режимі без адресного рядка",
+    "got_it": "Зрозуміло"
+  },
+  "fullscreen": {
+    "enter": "Увійти до повноекранного режиму",
+    "exit": "Вийти з повноекранного режиму"
   }
 }
