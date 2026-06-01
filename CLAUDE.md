@@ -13,7 +13,8 @@ npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
 npm run lint             # ESLint
 npm run lint:fix         # ESLint with auto-fix
-npm run format           # Prettier
+npm run format           # Prettier (default formatter during Oxfmt migration)
+npm run format:oxfmt     # Oxfmt (opt-in incremental migration formatter)
 npm run build-prod       # Production build
 ```
 

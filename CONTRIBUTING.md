@@ -68,11 +68,16 @@ git checkout -b fix/issue-number-bug-name
 
 ### Coding Standards
 
-We enforce code quality using ESLint and Prettier.
+We enforce code quality using ESLint and Prettier. Oxfmt is available during
+the incremental formatter migration, but it is not the default formatter yet.
 
 - **Format Code**:
   ```bash
   npm run format
+  ```
+- **Format Code with Oxfmt**:
+  ```bash
+  npm run format:oxfmt
   ```
 - **Lint Code**:
   ```bash
