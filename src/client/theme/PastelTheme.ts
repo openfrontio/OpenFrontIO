@@ -1,8 +1,8 @@
 import { Colord, colord, LabaColor } from "colord";
-import { PseudoRandom } from "../PseudoRandom";
-import { PlayerType, Team, TerrainType } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
+import { PseudoRandom } from "../../core/PseudoRandom";
+import { PlayerType, Team, TerrainType } from "../../core/game/Game";
+import { GameMap, TileRef } from "../../core/game/GameMap";
+import { PlayerView } from "../../core/game/GameView";
 import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Theme";

@@ -7,10 +7,10 @@
  */
 
 import { colord } from "colord";
+import { Theme } from "../../src/client/theme/Theme";
 import { GameView } from "../../src/client/view/GameView";
 import { PlayerView } from "../../src/client/view/PlayerView";
 import { Config } from "../../src/core/configuration/Config";
-import { Theme } from "../../src/core/configuration/Theme";
 import {
   NameViewData,
   PlayerType,

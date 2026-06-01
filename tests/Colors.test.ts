@@ -2,7 +2,7 @@ import { colord, Colord } from "colord";
 import {
   ColorAllocator,
   selectDistinctColorIndex,
-} from "../src/core/configuration/ColorAllocator";
+} from "../src/client/theme/ColorAllocator";
 import {
   blue,
   botColor,
@@ -12,7 +12,7 @@ import {
   red,
   teal,
   yellow,
-} from "../src/core/configuration/Colors";
+} from "../src/client/theme/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
