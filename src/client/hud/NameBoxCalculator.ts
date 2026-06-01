@@ -124,6 +124,7 @@ export function createGrid(
         grid[x - scaledBoundingBox.min.x][y - scaledBoundingBox.min.y] =
           game.isLake(tile) ||
           game.isShore(tile) ||
+          (game.isOcean(tile) && game.magnitude(tile) < 10) ||
           game.owner(tile) === player ||
           game.hasFallout(tile);
       }
