@@ -154,9 +154,7 @@ export async function startWorker() {
         log.warn(`Invalid creator token: ${result.message}`);
         return res.status(401).json({ error: "Invalid creator token" });
       }
-    } else if (
-      !req.headers[ServerEnv.adminHeader()] // Public games use admin token instead
-    ) {
+    } else {
       return res
         .status(400)
         .json({ error: "Authorization header required to create a game" });
@@ -175,14 +173,13 @@ export async function startWorker() {
     }
 
     const gc = result.data;
-    if (
-      gc?.gameType === GameType.Public &&
-      req.headers[ServerEnv.adminHeader()] !== ServerEnv.adminToken()
-    ) {
+    if (gc?.gameType === GameType.Public) {
       log.warn(
-        `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
+        `cannot create public game ${id}, ip ${ipAnonymize(clientIP)}: public games cannot be created via the API`,
       );
-      return res.status(401).send("Unauthorized");
+      return res
+        .status(400)
+        .json({ error: "Public games cannot be created via this endpoint" });
     }
 
     // Double-check this worker should host this game
