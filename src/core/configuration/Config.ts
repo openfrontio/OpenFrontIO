@@ -246,10 +246,10 @@ export class Config {
     return 15;
   }
   trainStationMaxRange(): number {
-    return 100;
+    return 110;
   }
   railroadMaxSize(): number {
-    return 120;
+    return 110;
   }
 
   tradeShipGold(dist: number, player: Player | PlayerView): Gold {

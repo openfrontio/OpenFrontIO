@@ -331,7 +331,6 @@ export class BuildPreviewController implements Controller {
         break;
       case UnitType.Factory:
         rangeRadius = this.game.config().trainStationMaxRange();
-        secondRadius = this.game.config().railroadMaxSize();
         break;
       case UnitType.DefensePost:
         rangeRadius = this.game.config().defensePostRange();
