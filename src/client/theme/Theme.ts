@@ -1,7 +1,7 @@
 import { Colord } from "colord";
-import { Team } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
+import { Team } from "../../core/game/Game";
+import { GameMap, TileRef } from "../../core/game/GameMap";
+import { PlayerView } from "../../core/game/GameView";
 
 export interface Theme {
   teamColor(team: Team): Colord;

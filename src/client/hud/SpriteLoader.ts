@@ -1,5 +1,5 @@
 import { Colord } from "colord";
-import { Theme } from "src/core/configuration/Theme";
+import { Theme } from "src/client/theme/Theme";
 import { assetUrl } from "../../core/AssetUrls";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
