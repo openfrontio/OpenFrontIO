@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameType } from "../../../core/game/Game";
+import { GameMode, GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
@@ -179,6 +179,23 @@ export class HeadsUpMessage extends LitElement implements Controller {
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}
               >
                 ${this.getMessage()}
+              </div>
+            `
+          : null}
+        ${this.game.inSpawnPhase() &&
+        this.game.config().gameConfig().gameMode === GameMode.FFA
+          ? html`
+              <div
+                class="fixed top-[25%] left-1/2 -translate-x-1/2 z-[799]
+                            inline-flex items-center justify-center min-h-8 lg:min-h-10
+                            w-fit max-w-[90vw]
+                            bg-amber-500/70 rounded-md lg:rounded-lg
+                            backdrop-blur-xs text-white text-md lg:text-xl px-3 lg:px-4 py-1
+                            text-center break-words"
+                style="word-wrap: break-word; hyphens: auto;"
+                @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+              >
+                ${translateText("heads_up_message.ffa_collusion")}
               </div>
             `
           : null}
