@@ -178,8 +178,9 @@ export enum GameMapType {
   Korea = "Korea",
   Balkans = "Balkans",
   YellowSea = "Yellow Sea",
-  ChoppingBlock = "Chopping Block",
   Labyrinth = "Labyrinth",
+  ChoppingBlock = "Chopping Block",
+  Caribbean = "Caribbean",
   Onion = "Onion",
 }
 
@@ -251,6 +252,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.NorthwestPassage,
     GameMapType.Venice,
     GameMapType.YellowSea,
+    GameMapType.Caribbean,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -270,9 +272,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
   arcade: [
     GameMapType.TheBox,
-    GameMapType.ChoppingBlock,
     GameMapType.Didier,
     GameMapType.DidierFrance,
+    GameMapType.ChoppingBlock,
     GameMapType.Labyrinth,
     GameMapType.Sierpinski,
     GameMapType.Onion,
