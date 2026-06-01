@@ -808,6 +808,8 @@ export interface Player {
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean;
   outgoingEmojis(): EmojiMessage[];
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
+  canSendQuickChat(recipient: Player): boolean;
+  recordQuickChat(recipient: Player): void;
 
   // Donation
   canDonateGold(recipient: Player): boolean;
