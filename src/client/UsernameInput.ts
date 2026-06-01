@@ -70,13 +70,12 @@ export class UsernameInput extends LitElement {
   private startClanCheck() {
     const gen = ++this.clanCheckGen;
     const tag = this.clanTag;
+    this.clanTagOwnershipError = "";
     if (tag.length === 0 || !validateClanTag(tag).isValid) {
-      this.clanTagOwnershipError = "";
       this.clanCheckPending = false;
       this.clanCheck = Promise.resolve(null);
       return;
     }
-    this.clanTagOwnershipError = "";
     this.clanCheckPending = true;
     this.clanCheck = checkClanTagOwnership(tag).then((res) => {
       if (gen === this.clanCheckGen) {
