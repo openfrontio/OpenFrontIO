@@ -478,7 +478,7 @@ export class GPURenderer {
     this.sceneTarget = { fbo: sceneFbo, tex: sceneTex, w: 1, h: 1 };
 
     // --- Alt-view passes ---
-    this.affiliationPalette = new AffiliationPalette(gl);
+    this.affiliationPalette = new AffiliationPalette(gl, this.settings);
     const affTex = this.affiliationPalette.getTexture();
     this.borderStampPass.setAffiliationTex(affTex);
     this.unitPass.setAffiliationTex(affTex);
