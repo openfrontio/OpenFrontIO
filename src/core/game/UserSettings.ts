@@ -239,8 +239,6 @@ export class UserSettings {
 
   // For development only. Used for testing patterns, set in the console manually.
   getDevOnlyPattern(): PlayerPattern | undefined {
-    if (process.env.GAME_ENV !== "dev") return undefined;
-
     const data = localStorage.getItem("dev-pattern") ?? undefined;
     if (data === undefined) return undefined;
     return {
