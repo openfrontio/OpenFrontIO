@@ -146,11 +146,9 @@ export async function fetchClanExists(tag: string): Promise<boolean | null> {
 }
 
 /**
- * Client-side mirror of the server's clan-tag ownership rule (see
- * resolveClanTag in Privilege.ts): members keep their tag, non-members keep a
- * fictional tag, and a real clan they don't belong to — or anything we can't
- * verify — is rejected. Resolves to the tag to submit (null when dropped) plus
- * an i18n error key for inline feedback. The server re-checks authoritatively.
+ * Client-side mirror of the server's clan-tag ownership rule (resolveClanTag in
+ * Privilege.ts), for instant inline feedback. Returns the tag to submit (null
+ * if dropped) and an i18n error key. The server re-checks authoritatively.
  */
 export async function checkClanTagOwnership(
   tag: string,
