@@ -79,6 +79,12 @@ export interface RenderSettings {
     defensePostRange: number;
     embargoTintRatio: number;
     friendlyTintRatio: number;
+    embargoTintR: number;
+    embargoTintG: number;
+    embargoTintB: number;
+    friendlyTintR: number;
+    friendlyTintG: number;
+    friendlyTintB: number;
   };
   /** Alt-view affiliation colors (0–1 RGB). */
   affiliation: {
