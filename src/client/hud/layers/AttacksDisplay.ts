@@ -350,6 +350,25 @@ export class AttacksDisplay extends LitElement implements Controller {
     />`;
   }
 
+  private getBoatETA(boat: UnitView): string {
+    const plan = this.game.motionPlans().get(boat.id());
+    if (!plan) return "";
+
+    const planSteps = plan.path.length;
+    const planTicks = planSteps * plan.ticksPerStep;
+    const planEndTick = plan.startTick + planTicks;
+
+    const remainingTicks = planEndTick - this.game.ticks();
+    if (remainingTicks <= 0) return "0s";
+    const remainingMs = remainingTicks * this.game.config().msPerTick();
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+
+    // e.g. return 1s, 35s, 59s, 1m, 1m1s, 1m59s, 2m, etc
+    const m = Math.floor(remainingSeconds / 60); // minutes
+    const s = remainingSeconds % 60; // seconds
+    return (m ? `${m}m` : "") + (s ? `${s}s` : "");
+  }
+
   private renderBoats() {
     if (this.outgoingBoats.length === 0) return html``;
 
@@ -365,6 +384,9 @@ export class AttacksDisplay extends LitElement implements Controller {
               >
               <span class="truncate text-xs ml-1"
                 >${this.getBoatTargetName(boat)}</span
+              >
+              <span class="text-xs ml-1 text-slate-300"
+                >${this.getBoatETA(boat)}</span
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
@@ -401,6 +423,9 @@ export class AttacksDisplay extends LitElement implements Controller {
               >
               <span class="truncate text-xs ml-1"
                 >${boat.owner()?.displayName()}</span
+              >
+              <span class="text-xs ml-1 text-slate-300"
+                >${this.getBoatETA(boat)}</span
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
