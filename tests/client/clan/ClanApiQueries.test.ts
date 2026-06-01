@@ -12,6 +12,7 @@ vi.mock("../../../src/client/Auth", () => ({
 import { getUserMe } from "../../../src/client/Api";
 import {
   checkClanTagOwnership,
+  clanExistsApiPath,
   fetchClanDetail,
   fetchClanExists,
   fetchClanGames,
@@ -60,6 +61,13 @@ const mockFetch = (impl: (...args: unknown[]) => unknown) =>
 beforeEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+describe("clanExistsApiPath", () => {
+  it("uppercases and URL-encodes the tag", () => {
+    expect(clanExistsApiPath("abc")).toBe("/public/clan/ABC/exists");
+    expect(clanExistsApiPath("a/b")).toBe("/public/clan/A%2FB/exists");
+  });
 });
 
 describe("fetchClanExists", () => {

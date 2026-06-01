@@ -522,9 +522,6 @@ describe("Skin validation", () => {
   });
 });
 
-const okResponse = (status: number): Response =>
-  ({ status }) as unknown as Response;
-
 const userWithClans = (tags: string[]): UserMeResponse =>
   ({
     user: {},
@@ -546,97 +543,64 @@ const userWithClans = (tags: string[]): UserMeResponse =>
   }) as UserMeResponse;
 
 describe("PrivilegeCheckerImpl#resolveClanTag", () => {
-  const makeChecker = (fetcher: () => Promise<Response>) =>
-    new PrivilegeCheckerImpl(mockCosmetics, mockDecoder, bannedWords, {
-      baseUrl: "https://auth.example",
-      fetcher: fetcher as unknown as typeof fetch,
-    });
+  // Reserved tags are stored uppercase, exactly as PrivilegeRefresher loads them.
+  const makeChecker = (reservedTags: string[]) =>
+    new PrivilegeCheckerImpl(
+      mockCosmetics,
+      mockDecoder,
+      bannedWords,
+      new Set(reservedTags),
+    );
 
-  it("passes a null tag through unchanged without probing", async () => {
-    const fetcher = vi.fn();
-    const result = await makeChecker(fetcher).resolveClanTag(null, null);
+  it("passes a null tag through unchanged", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag(null, null);
     expect(result).toEqual({ tag: null, dropped: false });
-    expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("accepts a member's tag without probing (case-insensitive)", async () => {
-    const fetcher = vi.fn();
+  it("accepts a member's tag without consulting the reserved set (case-insensitive)", () => {
     const me = userWithClans(["abc"]);
-    const result = await makeChecker(fetcher).resolveClanTag("ABC", me);
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", me);
     expect(result).toEqual({ tag: "ABC", dropped: false });
-    expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("drops a real clan tag the player does not belong to (HTTP 200)", async () => {
+  it("drops a reserved tag the player does not belong to (impersonation)", () => {
     const me = userWithClans(["other"]);
-    const result = await makeChecker(async () =>
-      okResponse(200),
-    ).resolveClanTag("ABC", me);
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", me);
     expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
   });
 
-  it("keeps a fictional tag matching no real clan (HTTP 404)", async () => {
-    const result = await makeChecker(async () =>
-      okResponse(404),
-    ).resolveClanTag("ABC", null);
+  it("keeps a fictional tag matching no reserved clan", () => {
+    const result = makeChecker(["OTHER"]).resolveClanTag("ABC", null);
     expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
-  it("drops the tag on an unexpected status (fail-closed)", async () => {
-    const result = await makeChecker(async () =>
-      okResponse(503),
-    ).resolveClanTag("ABC", null);
-    expect(result).toEqual({
-      tag: null,
-      dropped: true,
-      reason: "inconclusive",
-    });
+  it("matches the reserved set case-insensitively", () => {
+    const me = userWithClans(["other"]);
+    const result = makeChecker(["ABC"]).resolveClanTag("abc", me);
+    expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
   });
 
-  it("drops the tag on a transport error (fail-closed)", async () => {
-    const result = await makeChecker(async () => {
-      throw new Error("offline");
-    }).resolveClanTag("ABC", null);
-    expect(result).toEqual({
-      tag: null,
-      dropped: true,
-      reason: "inconclusive",
-    });
-  });
-
-  it("treats anonymous users as members of no clans and probes upstream", async () => {
-    const fetcher = vi.fn(async () => okResponse(200));
-    const result = await makeChecker(fetcher).resolveClanTag("ABC", null);
-    expect(result.dropped).toBe(true);
-    expect(fetcher).toHaveBeenCalledTimes(1);
-  });
-
-  it("uppercases the tag in the request URL", async () => {
-    const fetcher = vi.fn(async () => okResponse(200));
-    await makeChecker(fetcher).resolveClanTag("abc", null);
-    const calledUrl = (fetcher.mock.calls[0] as unknown[])[0] as string;
-    expect(calledUrl).toContain("/public/clan/ABC/exists");
+  it("treats anonymous users as members of no clans", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", null);
+    expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
   });
 });
 
 describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
   const checker = new FailOpenPrivilegeChecker();
 
-  it("passes a null tag through unchanged", async () => {
-    const result = await checker.resolveClanTag(null, null);
+  it("passes a null tag through unchanged", () => {
+    const result = checker.resolveClanTag(null, null);
     expect(result).toEqual({ tag: null, dropped: false });
   });
 
-  it("keeps a member's tag (known from userMe, no probe needed)", async () => {
-    const result = await checker.resolveClanTag("ABC", userWithClans(["abc"]));
+  it("keeps a member's tag (known from userMe, no lookup needed)", () => {
+    const result = checker.resolveClanTag("ABC", userWithClans(["abc"]));
     expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
-  it("drops a non-member's tag fail-closed (cannot verify while infra is down)", async () => {
-    const result = await checker.resolveClanTag(
-      "ABC",
-      userWithClans(["other"]),
-    );
+  it("drops a non-member's tag fail-closed (no reserved set while infra is down)", () => {
+    const result = checker.resolveClanTag("ABC", userWithClans(["other"]));
     expect(result).toEqual({
       tag: null,
       dropped: true,
@@ -644,8 +608,8 @@ describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
     });
   });
 
-  it("drops an anonymous user's tag fail-closed", async () => {
-    const result = await checker.resolveClanTag("ABC", null);
+  it("drops an anonymous user's tag fail-closed", () => {
+    const result = checker.resolveClanTag("ABC", null);
     expect(result.dropped).toBe(true);
   });
 });

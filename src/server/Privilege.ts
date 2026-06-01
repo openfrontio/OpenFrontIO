@@ -12,7 +12,6 @@ import {
 import countries from "resources/countries.json";
 
 import { type UserMeResponse } from "../core/ApiSchemas";
-import { clanExistsApiPath } from "../core/ClanApiSchemas";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
@@ -153,23 +152,11 @@ function censorWithMatcher(
   return { username: censoredName, clanTag: censoredClanTag };
 }
 
-export const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
-
 export type ClanTagResolution = {
   tag: string | null;
   dropped: boolean;
   reason?: "exists" | "inconclusive";
 };
-
-/** Dependencies for the clan-existence probe; fetcher/onWarn injected in tests. */
-export interface ClanProbeOptions {
-  /** Base URL of the upstream auth API (issuer). */
-  baseUrl: string;
-  /** Injected so tests can stub network behavior. */
-  fetcher?: typeof fetch;
-  /** Logger callback for unexpected statuses / transport errors. */
-  onWarn?: (event: string, ctx: Record<string, unknown>) => void;
-}
 
 /** True when the player is a member of the (case-insensitive) clan tag. */
 function userOwnsClanTag(
@@ -186,27 +173,27 @@ function userOwnsClanTag(
 
 /**
  * Shared clan-tag resolution used by every PrivilegeChecker. Members keep
- * their tag without a probe; for non-members the existence result decides:
+ * their tag without a lookup; for non-members the reserved-tag result decides:
  *   false -> fictional tag, keep it
  *   true  -> a real clan they aren't in, drop it (impersonation)
- *   null  -> inconclusive, drop it fail-closed
+ *   null  -> reserved set unknown, drop it fail-closed
  * `reason` lets callers log the drop.
  */
-async function resolveClanTagWith(
+function resolveClanTagWith(
   censoredTag: string | null,
   userMeResponse: UserMeResponse | null,
-  clanExists: (tag: string) => Promise<boolean | null>,
-): Promise<ClanTagResolution> {
+  isReserved: (tag: string) => boolean | null,
+): ClanTagResolution {
   if (censoredTag === null) return { tag: null, dropped: false };
   if (userOwnsClanTag(censoredTag, userMeResponse)) {
     return { tag: censoredTag, dropped: false };
   }
-  const exists = await clanExists(censoredTag);
-  if (exists === false) return { tag: censoredTag, dropped: false };
+  const reserved = isReserved(censoredTag);
+  if (reserved === false) return { tag: censoredTag, dropped: false };
   return {
     tag: null,
     dropped: true,
-    reason: exists === true ? "exists" : "inconclusive",
+    reason: reserved === true ? "exists" : "inconclusive",
   };
 }
 
@@ -227,7 +214,7 @@ export interface PrivilegeChecker {
   resolveClanTag(
     censoredTag: string | null,
     userMeResponse: UserMeResponse | null,
-  ): Promise<ClanTagResolution>;
+  ): ClanTagResolution;
 }
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
@@ -237,49 +224,20 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     private cosmetics: Cosmetics,
     private b64urlDecode: (base64: string) => Uint8Array,
     bannedWords: string[],
-    private clanProbe: ClanProbeOptions = { baseUrl: "" },
+    // Every registered clan tag (uppercase). Polled by PrivilegeRefresher so
+    // ownership is resolved in memory — no per-join existence probe.
+    private reservedClanTags: Set<string> = new Set(),
   ) {
     this.matcher = createMatcher(bannedWords);
   }
 
-  async resolveClanTag(
+  resolveClanTag(
     censoredTag: string | null,
     userMeResponse: UserMeResponse | null,
-  ): Promise<ClanTagResolution> {
+  ): ClanTagResolution {
     return resolveClanTagWith(censoredTag, userMeResponse, (tag) =>
-      this.clanExistsByTag(tag),
+      this.reservedClanTags.has(tag.toUpperCase()),
     );
-  }
-
-  /**
-   * Returns true if the tag matches a real clan upstream, false if it does
-   * not, and null when the result is inconclusive (transport error, timeout,
-   * or unexpected status). Callers treat null as fail-closed.
-   */
-  private async clanExistsByTag(tag: string): Promise<boolean | null> {
-    const fetcher = this.clanProbe.fetcher ?? fetch;
-    try {
-      const response = await fetcher(
-        `${this.clanProbe.baseUrl}${clanExistsApiPath(tag)}`,
-        {
-          headers: { Accept: "application/json" },
-          signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
-        },
-      );
-      if (response.status === 200) return true;
-      if (response.status === 404) return false;
-      this.clanProbe.onWarn?.(
-        "clanExistsByTag: unexpected status, failing closed",
-        { tag: tag.toUpperCase(), status: response.status },
-      );
-      return null;
-    } catch (e) {
-      this.clanProbe.onWarn?.("clanExistsByTag: fetch failed, failing closed", {
-        tag: tag.toUpperCase(),
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return null;
-    }
   }
 
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
@@ -434,13 +392,14 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
     return censorWithMatcher(username, clanTag, defaultMatcher);
   }
 
-  // Cosmetics infra is unavailable, so we can't confirm whether a tag belongs
-  // to a real clan. Members are known from userMe (no probe needed) and keep
-  // their tag; every other tag is dropped fail-closed to block impersonation.
-  async resolveClanTag(
+  // Cosmetics infra is unavailable, so we have no reserved-tag list to confirm
+  // whether a tag belongs to a real clan. Members are known from userMe (no
+  // lookup needed) and keep their tag; every other tag is dropped fail-closed
+  // to block impersonation.
+  resolveClanTag(
     censoredTag: string | null,
     userMeResponse: UserMeResponse | null,
-  ): Promise<ClanTagResolution> {
-    return resolveClanTagWith(censoredTag, userMeResponse, async () => null);
+  ): ClanTagResolution {
+    return resolveClanTagWith(censoredTag, userMeResponse, () => null);
   }
 }

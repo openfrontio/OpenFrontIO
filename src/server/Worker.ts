@@ -74,7 +74,7 @@ export async function startWorker() {
     ServerEnv.jwtIssuer() + "/cosmetics.json",
     ServerEnv.jwtIssuer() + "/profane_words_game_server",
     ServerEnv.apiKey(),
-    ServerEnv.jwtIssuer(),
+    ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
   );
   privilegeRefresher.start();
@@ -422,7 +422,7 @@ export async function startWorker() {
         // Enforce clan tag ownership: a player can wear a tag only if they're
         // a member; a real clan they're not in (or an unverifiable tag) is
         // dropped to prevent impersonation. Fictional tags pass through.
-        const resolution = await privilegeRefresher
+        const resolution = privilegeRefresher
           .get()
           .resolveClanTag(censoredClanTag, userMeResponse);
         if (resolution.dropped) {

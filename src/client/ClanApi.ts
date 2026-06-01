@@ -3,7 +3,6 @@ import {
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
-  clanExistsApiPath,
   type ClanGameFilter,
   type ClanGamesResponse,
   ClanGamesResponseSchema,
@@ -126,6 +125,12 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   } catch {
     return false;
   }
+}
+
+// Existence-probe path (200 = exists, 404 = not); uppercased to the canonical
+// tag form so it matches the server's route.
+export function clanExistsApiPath(tag: string): string {
+  return `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
 }
 
 // Public existence probe (no auth). null = inconclusive (timeout / error /
