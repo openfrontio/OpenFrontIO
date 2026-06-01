@@ -75,7 +75,13 @@
     "highlightThicken": 2,
     "defensePostRange": 30,
     "embargoTintRatio": 0.35,
-    "friendlyTintRatio": 0.35
+    "friendlyTintRatio": 0.35,
+    "embargoTintR": 1,
+    "embargoTintG": 0,
+    "embargoTintB": 0,
+    "friendlyTintR": 0,
+    "friendlyTintG": 1,
+    "friendlyTintB": 0
   },
   "affiliation": {
     "selfR": 0,
