@@ -127,17 +127,13 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   }
 }
 
-// Existence-probe path (200 = exists, 404 = not); uppercased to the canonical
-// tag form so it matches the server's route.
-export function clanExistsApiPath(tag: string): string {
-  return `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
-}
-
 // Public existence probe (no auth). null = inconclusive (timeout / error /
-// unexpected status); the caller decides how to handle it.
+// unexpected status); the caller decides how to handle it. The tag is
+// uppercased to the canonical form so it matches the server's route.
 export async function fetchClanExists(tag: string): Promise<boolean | null> {
   try {
-    const res = await fetch(`${getApiBase()}${clanExistsApiPath(tag)}`, {
+    const path = `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
+    const res = await fetch(`${getApiBase()}${path}`, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
     });

@@ -158,7 +158,6 @@ export type ClanTagResolution = {
   reason?: "exists" | "inconclusive";
 };
 
-/** True when the player is a member of the (case-insensitive) clan tag. */
 function userOwnsClanTag(
   censoredTag: string,
   userMeResponse: UserMeResponse | null,

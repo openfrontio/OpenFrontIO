@@ -12,7 +12,6 @@ vi.mock("../../../src/client/Auth", () => ({
 import { getUserMe } from "../../../src/client/Api";
 import {
   checkClanTagOwnership,
-  clanExistsApiPath,
   fetchClanDetail,
   fetchClanExists,
   fetchClanGames,
@@ -63,13 +62,6 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("clanExistsApiPath", () => {
-  it("uppercases and URL-encodes the tag", () => {
-    expect(clanExistsApiPath("abc")).toBe("/public/clan/ABC/exists");
-    expect(clanExistsApiPath("a/b")).toBe("/public/clan/A%2FB/exists");
-  });
-});
-
 describe("fetchClanExists", () => {
   const status = (s: number) => ({ status: s });
 
@@ -112,8 +104,13 @@ describe("fetchClanExists", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
     await fetchClanExists("abc");
-    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-    expect(calledUrl).toContain("/public/clan/ABC/exists");
+    expect(fetchSpy.mock.calls[0]![0] as string).toContain(
+      "/public/clan/ABC/exists",
+    );
+    await fetchClanExists("a/b");
+    expect(fetchSpy.mock.calls[1]![0] as string).toContain(
+      "/public/clan/A%2FB/exists",
+    );
   });
 });
 

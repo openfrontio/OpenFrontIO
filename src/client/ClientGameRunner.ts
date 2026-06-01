@@ -80,10 +80,8 @@ export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
-  // In-flight clan-tag ownership check (kicked off as the player types). When
-  // present, the join is gated on it: it resolves to the tag to actually
-  // submit (null when dropped), and runs in parallel with the WS handshake so
-  // only the joinGame() send waits on it.
+  // In-flight clan-tag ownership check; resolves to the tag to submit (null if
+  // it failed). Runs parallel to the WS handshake — only the join waits on it.
   clanTagCheck?: Promise<string | null>;
   playerRole: string | null;
   gameID: GameID;
@@ -122,9 +120,7 @@ export function joinLobby(
   let currentGameRunner: ClientGameRunner | null = null;
 
   const onconnect = async () => {
-    // Gate the join on the clan-tag ownership check. The WS handshake already
-    // ran in parallel; only the submit waits. Strip the tag if it didn't pass —
-    // the server re-checks authoritatively regardless.
+    // Drop the tag if the ownership check failed; the server re-checks anyway.
     if (lobbyConfig.clanTagCheck !== undefined) {
       lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
     }
