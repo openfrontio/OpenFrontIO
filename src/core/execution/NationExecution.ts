@@ -161,6 +161,11 @@ export class NationExecution implements Execution {
       return;
     }
 
+    // Spawn phase already ended but our SpawnExecution hasn't fired yet — wait.
+    if (this.spawnExecAdded && !this.player.hasSpawned()) {
+      return;
+    }
+
     if (!this.player.isAlive()) {
       //removeOnDeath is called from nation's PlayerExecution
       this.active = false;
