@@ -2,9 +2,9 @@ import { colord, Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import Color from "colorjs.io";
-import { ColoredTeams, Team } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { simpleHash } from "../Util";
+import { ColoredTeams, Team } from "../../core/game/Game";
+import { PseudoRandom } from "../../core/PseudoRandom";
+import { simpleHash } from "../../core/Util";
 import {
   blueTeamColors,
   botTeamColors,

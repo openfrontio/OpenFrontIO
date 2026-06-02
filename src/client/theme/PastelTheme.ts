@@ -1,8 +1,8 @@
 import { Colord, colord, LabaColor } from "colord";
-import { PseudoRandom } from "../PseudoRandom";
-import { PlayerType, Team, TerrainType } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
+import { PseudoRandom } from "../../core/PseudoRandom";
+import { PlayerType, Team, TerrainType } from "../../core/game/Game";
+import { GameMap, TileRef } from "../../core/game/GameMap";
+import { PlayerView } from "../../core/game/GameView";
 import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Theme";
@@ -25,15 +25,6 @@ export class PastelTheme implements Theme {
   ];
   private water = colord("rgb(70,132,180)");
   private shorelineWater = colord("rgb(100,143,255)");
-
-  /** Alternate View colors for self, green */
-  private _selfColor = colord("rgb(0,255,0)");
-  /** Alternate View colors for allies, yellow */
-  private _allyColor = colord("rgb(255,255,0)");
-  /** Alternate View colors for neutral, gray */
-  private _neutralColor = colord("rgb(128,128,128)");
-  /** Alternate View colors for enemies, red */
-  private _enemyColor = colord("rgb(255,0,0)");
 
   /** Default spawn highlight colors for other players in FFA, yellow */
   private _spawnHighlightColor = colord("rgb(255,213,79)");
@@ -195,19 +186,6 @@ export class PastelTheme implements Theme {
 
   font(): string {
     return "Overpass, sans-serif";
-  }
-
-  selfColor(): Colord {
-    return this._selfColor;
-  }
-  allyColor(): Colord {
-    return this._allyColor;
-  }
-  neutralColor(): Colord {
-    return this._neutralColor;
-  }
-  enemyColor(): Colord {
-    return this._enemyColor;
   }
 
   spawnHighlightColor(): Colord {

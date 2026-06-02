@@ -75,6 +75,7 @@ import {
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
+import { themeProvider } from "./theme/ThemeProvider";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -110,6 +111,7 @@ export function joinLobby(
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
   const userSettings: UserSettings = new UserSettings();
+  themeProvider.reset(); // fresh colour allocators for this game
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);

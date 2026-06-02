@@ -79,6 +79,27 @@ export interface RenderSettings {
     defensePostRange: number;
     embargoTintRatio: number;
     friendlyTintRatio: number;
+    embargoTintR: number;
+    embargoTintG: number;
+    embargoTintB: number;
+    friendlyTintR: number;
+    friendlyTintG: number;
+    friendlyTintB: number;
+  };
+  /** Alt-view affiliation colors (0–1 RGB). */
+  affiliation: {
+    selfR: number;
+    selfG: number;
+    selfB: number;
+    allyR: number;
+    allyG: number;
+    allyB: number;
+    neutralR: number;
+    neutralG: number;
+    neutralB: number;
+    enemyR: number;
+    enemyG: number;
+    enemyB: number;
   };
   railroad: {
     railMinZoom: number;

@@ -1,6 +1,6 @@
 import { Colord, colord } from "colord";
-import { TerrainType } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
+import { TerrainType } from "../../core/game/Game";
+import { GameMap, TileRef } from "../../core/game/GameMap";
 import { PastelTheme } from "./PastelTheme";
 
 export class PastelThemeDark extends PastelTheme {
