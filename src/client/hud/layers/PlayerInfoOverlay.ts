@@ -18,6 +18,7 @@ import {
   MouseMoveEvent,
   TouchEvent,
 } from "../../InputHandler";
+import { themeProvider } from "../../theme/ThemeProvider";
 import { TransformHandler } from "../../TransformHandler";
 import {
   getTranslatedPlayerTeamLabel,
@@ -360,9 +361,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   >
                   <span class="text-xs font-normal text-gray-400"
                     >[<span
-                      style="color: ${this.game
-                        .config()
-                        .theme()
+                      style="color: ${themeProvider
+                        .current()
                         .teamColor(player.team()!)
                         .toHex()}"
                       >${playerTeam}</span

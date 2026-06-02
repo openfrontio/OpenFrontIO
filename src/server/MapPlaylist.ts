@@ -96,6 +96,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   SanFrancisco: 3,
   Sierpinski: 10,
   SouthAmerica: 5,
+  SoutheastAsia: 5,
   StraitOfGibraltar: 5,
   StraitOfHormuz: 4,
   StraitOfMalacca: 4,

@@ -8,6 +8,7 @@
  * Rebuilt when localPlayerID or relationship data changes.
  */
 
+import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize } from "./ColorUtils";
 import { createTexture2D } from "./GlUtils";
 
@@ -15,20 +16,6 @@ import { createTexture2D } from "./GlUtils";
 const RELATION_NEUTRAL = 0;
 const RELATION_FRIENDLY = 1;
 const RELATION_EMBARGO = 2;
-
-// Affiliation RGB values (upstream PastelTheme)
-const SELF_R = 0,
-  SELF_G = 255,
-  SELF_B = 0;
-const ALLY_R = 255,
-  ALLY_G = 255,
-  ALLY_B = 0;
-const NEUTRAL_R = 128,
-  NEUTRAL_G = 128,
-  NEUTRAL_B = 128;
-const ENEMY_R = 255,
-  ENEMY_G = 0,
-  ENEMY_B = 0;
 
 const TEX_W = getPaletteSize(); // 4096 — covers full 12-bit smallID range
 const TEX_H = 2;
@@ -44,7 +31,10 @@ export class AffiliationPalette {
   private relationData: Uint8Array | null = null;
   private relationSize = 0;
 
-  constructor(gl: WebGL2RenderingContext) {
+  constructor(
+    gl: WebGL2RenderingContext,
+    private settings: RenderSettings,
+  ) {
     this.gl = gl;
     this.rebuild(); // initialize to spectator-mode defaults (gray borders, red units)
     this.tex = createTexture2D(gl, {
@@ -99,6 +89,22 @@ export class AffiliationPalette {
     const lp = this.localPlayerID;
     const rel = this.relationData;
     const rs = this.relationSize;
+
+    // Affiliation RGB values (0–1) from render-settings, expanded to 0–255.
+    const a = this.settings.affiliation;
+    const to255 = (v: number) => Math.round(v * 255);
+    const SELF_R = to255(a.selfR),
+      SELF_G = to255(a.selfG),
+      SELF_B = to255(a.selfB);
+    const ALLY_R = to255(a.allyR),
+      ALLY_G = to255(a.allyG),
+      ALLY_B = to255(a.allyB);
+    const NEUTRAL_R = to255(a.neutralR),
+      NEUTRAL_G = to255(a.neutralG),
+      NEUTRAL_B = to255(a.neutralB);
+    const ENEMY_R = to255(a.enemyR),
+      ENEMY_G = to255(a.enemyG),
+      ENEMY_B = to255(a.enemyB);
 
     for (let owner = 0; owner < TEX_W; owner++) {
       // Determine relationship

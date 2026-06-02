@@ -7,10 +7,10 @@
  */
 
 import { colord } from "colord";
+import { Theme } from "../../src/client/theme/Theme";
 import { GameView } from "../../src/client/view/GameView";
 import { PlayerView } from "../../src/client/view/PlayerView";
 import { Config } from "../../src/core/configuration/Config";
-import { Theme } from "../../src/core/configuration/Theme";
 import {
   NameViewData,
   PlayerType,
@@ -45,10 +45,6 @@ export function stubTheme(): Theme {
     falloutColor: () => white,
     font: () => "Arial",
     textColor: () => "#000000",
-    selfColor: () => white,
-    allyColor: () => white,
-    neutralColor: () => grey,
-    enemyColor: () => grey,
     spawnHighlightColor: () => white,
     spawnHighlightSelfColor: () => white,
     spawnHighlightTeamColor: () => white,
