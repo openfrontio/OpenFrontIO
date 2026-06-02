@@ -47,8 +47,7 @@ export class NightCompositePass {
   // -------------------------------------------------------------------------
 
   getAmbient(): number {
-    const dn = this.settings.dayNight;
-    return dn.mode === "dark" ? dn.nightAmbient : dn.dayAmbient;
+    return this.settings.lighting.ambient;
   }
 
   // -------------------------------------------------------------------------

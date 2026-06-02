@@ -13,10 +13,10 @@ export { GraphicsOverridesSchema } from "./GraphicsOverrides";
 export type { GraphicsOverrides } from "./GraphicsOverrides";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
 export {
-  createRenderSettings,
-  dumpSettings,
-  generateRenderSettings,
-} from "./RenderSettings";
+  applyDarkModeOverride,
+  applyGraphicsOverrides,
+} from "./RenderOverrides";
+export { createRenderSettings, dumpSettings } from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
 export { deepAssign, deepDiff } from "./SettingsUtils";
 export { buildTerrainRGBA, getPaletteSize } from "./utils/ColorUtils";

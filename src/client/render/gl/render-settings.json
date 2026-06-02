@@ -44,10 +44,9 @@
     "particleStrength": 1,
     "particleFreshScale": 0.2
   },
-  "dayNight": {
-    "mode": "light",
-    "nightAmbient": 0.15,
-    "dayAmbient": 1,
+  "lighting": {
+    "ambient": 1,
+    "enabled": false,
     "falloffPower": 2,
     "falloutLightR": 0.15,
     "falloutLightG": 0.95,
