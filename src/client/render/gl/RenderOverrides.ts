@@ -65,8 +65,28 @@ export function applyGraphicsOverrides(
     settings.name.outlineB = channel;
   }
   if (overrides.accessibility?.colorblind === true) {
-    // Colorblind-friendly color overrides (affiliation/tint colors, etc.) are
-    // applied here. Wired now; the actual values land in a follow-up commit.
+    // Swap the red/green friend-foe encoding (the most common confusion axis)
+    // for a colorblind-safe blue/orange pairing (Okabe-Ito).
+    // Alt-view affiliation borders: self/ally in the blue family, enemy orange.
+    settings.affiliation.selfR = 0;
+    settings.affiliation.selfG = 0.447;
+    settings.affiliation.selfB = 0.698;
+    settings.affiliation.allyR = 0.337;
+    settings.affiliation.allyG = 0.706;
+    settings.affiliation.allyB = 0.914;
+    settings.affiliation.enemyR = 0.835;
+    settings.affiliation.enemyG = 0.369;
+    settings.affiliation.enemyB = 0;
+    // Normal-view relationship border tints: friendly blue, enemy orange,
+    // applied strongly so the cue doesn't rely on subtle hue.
+    settings.mapOverlay.friendlyTintR = 0;
+    settings.mapOverlay.friendlyTintG = 0.447;
+    settings.mapOverlay.friendlyTintB = 0.698;
+    settings.mapOverlay.embargoTintR = 0.835;
+    settings.mapOverlay.embargoTintG = 0.369;
+    settings.mapOverlay.embargoTintB = 0;
+    settings.mapOverlay.friendlyTintRatio = 0.6;
+    settings.mapOverlay.embargoTintRatio = 0.6;
   }
 }
 
