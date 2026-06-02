@@ -39,6 +39,7 @@ export class TeamStats extends LitElement implements Controller {
   private _shownOnInit = false;
   private viewMode: TeamStatsViewMode = "control";
   private _myTeam: Team | null = null;
+  // prettier-ignore
   private teamPeaks = new Map<Team, { maxTiles: number; maxLandRatio: number }>();
 
   createRenderRoot() {
@@ -198,6 +199,7 @@ export class TeamStats extends LitElement implements Controller {
     const showUnits = currentViewMode === "units";
     const showExpanded = currentViewMode === "expanded";
 
+    // prettier-ignore
     return html`
       <div
         class="max-h-[30vh] overflow-x-hidden overflow-y-auto grid bg-slate-800/85 w-full text-white text-xs md:text-sm mt-2 rounded-lg"
