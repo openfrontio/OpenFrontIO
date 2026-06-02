@@ -208,7 +208,15 @@ export class Leaderboard extends LitElement implements Controller {
   }
 
   private toggleViewMode() {
+    if (!this.expandedLeaderboardEnabled) {
+      this._viewMode = "control";
+      return;
+    }
     this._viewMode = this._viewMode === "control" ? "expanded" : "control";
+  }
+
+  private get expandedLeaderboardEnabled(): boolean {
+    return this.game?.config().expandedLeaderboard() ?? false;
   }
 
   private handleRowClickPlayer(player: PlayerView) {
@@ -220,7 +228,11 @@ export class Leaderboard extends LitElement implements Controller {
     if (!this.visible) {
       return html``;
     }
-    const showExpanded = this._viewMode === "expanded";
+    const currentViewMode =
+      !this.expandedLeaderboardEnabled && this._viewMode === "expanded"
+        ? "control"
+        : this._viewMode;
+    const showExpanded = currentViewMode === "expanded";
     return html`
       <div
         class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh] mt-2 ${this
@@ -382,18 +394,20 @@ export class Leaderboard extends LitElement implements Controller {
       >
         ${this.showTopFive ? "+" : "-"}
       </button>
-      <button
-        class="mt-2 p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm 
-        border rounded-md border-slate-500 transition-colors
-        text-white mx-auto block hover:bg-white/10 bg-gray-700/50"
-        @click=${() => this.toggleViewMode()}
-      >
-        ${translateText(
-          this._viewMode === "control"
-            ? "leaderboard.show_expanded"
-            : "leaderboard.show_control",
-        )}
-      </button>
+      ${this.expandedLeaderboardEnabled
+        ? html`<button
+            class="mt-2 p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm 
+            border rounded-md border-slate-500 transition-colors
+            text-white mx-auto block hover:bg-white/10 bg-gray-700/50"
+            @click=${() => this.toggleViewMode()}
+          >
+            ${translateText(
+              currentViewMode === "control"
+                ? "leaderboard.show_expanded"
+                : "leaderboard.show_control",
+            )}
+          </button>`
+        : html``}
     `;
   }
 }

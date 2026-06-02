@@ -67,6 +67,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
+  @state() private expandedLeaderboard: boolean = false;
   @state() private compactMap: boolean = false;
   @state() private goldMultiplier: boolean = false;
   @state() private goldMultiplierValue: number | undefined = undefined;
@@ -332,6 +333,10 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.randomSpawn,
                   },
                   {
+                    labelKey: "leaderboard.show_expanded",
+                    checked: this.expandedLeaderboard,
+                  },
+                  {
                     labelKey: "host_modal.donate_gold",
                     checked: this.donateGold,
                   },
@@ -529,6 +534,7 @@ export class HostLobbyModal extends BaseModal {
     this.maxTimerValue = undefined;
     this.instantBuild = false;
     this.randomSpawn = false;
+    this.expandedLeaderboard = false;
     this.compactMap = false;
     this.useRandomMap = false;
     this.disabledUnits = [];
@@ -608,6 +614,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.random_spawn":
         this.handleRandomSpawnChange(checked);
+        break;
+      case "leaderboard.show_expanded":
+        this.expandedLeaderboard = checked;
+        this.putGameConfig();
         break;
       case "host_modal.donate_gold":
         this.handleDonateGoldChange(checked);
@@ -954,6 +964,7 @@ export class HostLobbyModal extends BaseModal {
             donateTroops: this.donateTroops,
             instantBuild: this.instantBuild,
             randomSpawn: this.randomSpawn,
+            expandedLeaderboard: this.expandedLeaderboard,
             gameMode: this.gameMode,
             disabledUnits: this.disabledUnits,
             spawnImmunityDuration: this.spawnImmunity
