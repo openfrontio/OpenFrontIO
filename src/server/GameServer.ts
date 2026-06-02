@@ -181,9 +181,6 @@ export class GameServer {
     if (gameConfig.waterNukes !== undefined) {
       this.gameConfig.waterNukes = gameConfig.waterNukes ?? undefined;
     }
-    if (gameConfig.expandedLeaderboard !== undefined) {
-      this.gameConfig.expandedLeaderboard = gameConfig.expandedLeaderboard;
-    }
     this.gameConfig.hostCheats = gameConfig.hostCheats;
   }
 

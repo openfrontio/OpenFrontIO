@@ -74,7 +74,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private disableAlliances: boolean = false;
   @state() private waterNukes: boolean = false;
-  @state() private expandedLeaderboard: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -361,10 +360,6 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "host_modal.expanded_leaderboard",
-                    checked: this.expandedLeaderboard,
-                  },
-                  {
                     labelKey: "host_modal.host_cheats",
                     checked: this.hostCheatsEnabled,
                   },
@@ -546,7 +541,6 @@ export class HostLobbyModal extends BaseModal {
     this.startingGoldValue = undefined;
     this.disableAlliances = false;
     this.waterNukes = false;
-    this.expandedLeaderboard = false;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
     this.hostCheatInfiniteTroops = false;
@@ -636,10 +630,6 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.water_nukes":
         this.waterNukes = checked;
-        this.putGameConfig();
-        break;
-      case "host_modal.expanded_leaderboard":
-        this.expandedLeaderboard = checked;
         this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -983,7 +973,6 @@ export class HostLobbyModal extends BaseModal {
                 : null,
             disableAlliances: this.disableAlliances || null,
             waterNukes: this.waterNukes ? true : null,
-            expandedLeaderboard: this.expandedLeaderboard,
             hostCheats: this.hostCheatsEnabled
               ? {
                   infiniteGold: this.hostCheatInfiniteGold || undefined,
