@@ -575,7 +575,15 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
     result.flag = await resolveFlagUrl(refs.flag);
   }
 
-  if (refs.patternName && cosmetics) {
+  const devPattern = new UserSettings().getDevOnlyPattern();
+
+  if (devPattern) {
+    result.pattern = {
+      name: devPattern.name,
+      patternData: devPattern.patternData,
+      colorPalette: devPattern.colorPalette,
+    };
+  } else if (refs.patternName && cosmetics) {
     const pattern = cosmetics.patterns[refs.patternName];
 
     if (pattern) {
@@ -585,16 +593,6 @@ export async function getPlayerCosmetics(): Promise<PlayerCosmetics> {
         colorPalette: refs.patternColorPaletteName
           ? cosmetics.colorPalettes?.[refs.patternColorPaletteName]
           : undefined,
-      };
-    }
-  } else {
-    const devPattern = new UserSettings().getDevOnlyPattern();
-
-    if (devPattern) {
-      result.pattern = {
-        name: devPattern.name,
-        patternData: devPattern.patternData,
-        colorPalette: devPattern.colorPalette,
       };
     }
   }
