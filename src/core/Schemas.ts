@@ -183,6 +183,28 @@ export const PublicGamesSchema = z.object({
   games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
+// Wire message sent from server to lobby WebSocket clients.
+// "full" carries the complete snapshot; "counts" carries only the
+// per-lobby player counts, which change far more often than the rest.
+export const PublicLobbyFullSchema = z.object({
+  type: z.literal("full"),
+  serverTime: z.number(),
+  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+});
+
+export const PublicLobbyCountsSchema = z.object({
+  type: z.literal("counts"),
+  serverTime: z.number(),
+  counts: z.record(z.string(), z.number()),
+});
+
+export const PublicLobbyMessageSchema = z.discriminatedUnion("type", [
+  PublicLobbyFullSchema,
+  PublicLobbyCountsSchema,
+]);
+
+export type PublicLobbyMessage = z.infer<typeof PublicLobbyMessageSchema>;
+
 export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,
