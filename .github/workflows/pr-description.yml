@@ -12,7 +12,8 @@ on:
       - opened
       - synchronize
 
-permissions: {}
+permissions:
+  pull-requests: read
 
 jobs:
   validate-description:
@@ -72,6 +73,21 @@ jobs:
               // Get the pull request data
               const milestone = context.payload.pull_request.milestone;
               if (!milestone) {
+                const { owner, repo } = context.repo;
+                const { data: files } = await github.rest.pulls.listFiles({
+                  owner,
+                  repo,
+                  pull_number: context.payload.pull_request.number,
+                  per_page: 100,
+                });
+                const totalLines = files.reduce(
+                  (sum, file) => sum + file.additions + file.deletions,
+                  0,
+                );
+                if (totalLines <= 50) {
+                  console.log(`✅ Small fix without milestone: ${totalLines} changed lines.`);
+                  return;
+                }
                 core.setFailed('❌ Reviewer must assign a Milestone to this Pull request before merging.');
                 return;
               }
