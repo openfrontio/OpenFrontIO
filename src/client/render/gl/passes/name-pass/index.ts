@@ -98,6 +98,9 @@ export class NamePass {
   // Reusable per-tick lookup maps (avoid allocation + GC)
   private alivePlayerIDs = new Set<string>();
   private troopsByPlayerID = new Map<string, number>();
+
+  // Hovered player's small ID (0 = no highlight, matches TerritoryPass).
+  private highlightOwnerID = 0;
   private playerStateByID = new Map<string, PlayerState>();
 
   constructor(
@@ -498,7 +501,7 @@ export class NamePass {
     // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]
     d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
-    d[off + 18] = 0;
+    d[off + 18] = slot.static.smallID;
     d[off + 19] = 0;
 
     // Column 5: crown, traitor, disconnected, alliance
@@ -525,6 +528,10 @@ export class NamePass {
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
+
+  setHighlightOwner(ownerID: number): void {
+    this.highlightOwnerID = ownerID;
+  }
 
   draw(cameraMatrix: Float32Array, ambient: number): void {
     if (!this.textProgram.ready) return;
@@ -583,6 +590,7 @@ export class NamePass {
       this.vao,
       this.maxPlayers,
       ambient,
+      this.highlightOwnerID,
     );
     this.statusIconProgram.draw(cameraMatrix, this.settings, this.vao);
     this.iconProgram.draw(cameraMatrix, this.settings, this.vao);

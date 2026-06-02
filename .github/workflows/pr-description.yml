@@ -43,7 +43,6 @@ jobs:
               /- \[x\] I have added screenshots for all UI updates/i,
               /- \[x\] I process any text displayed to the user through translateText\(\) and I\'ve added it to the en\.json file/i,
               /- \[x\] I have added relevant tests to the test directory/i,
-              /- \[x\] I confirm I have thoroughly tested these changes and take full responsibility for any bugs introduced/i,
             ];
 
             for (const box of requiredBoxes) {

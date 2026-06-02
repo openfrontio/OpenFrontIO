@@ -192,7 +192,7 @@ export class FalloutLightPass {
     tick: number,
   ): void {
     const gl = this.gl;
-    const dn = this.settings.dayNight;
+    const dn = this.settings.lighting;
     const fb = this.settings.falloutBloom;
 
     // Step 1: Extract fallout light in tile space

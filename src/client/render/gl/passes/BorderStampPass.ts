@@ -27,6 +27,8 @@ export class BorderStampPass {
   private uDefenseCheckerDarken: WebGLUniformLocation;
   private uEmbargoTintRatio: WebGLUniformLocation;
   private uFriendlyTintRatio: WebGLUniformLocation;
+  private uEmbargoTint: WebGLUniformLocation;
+  private uFriendlyTint: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
@@ -79,6 +81,8 @@ export class BorderStampPass {
       this.program,
       "uFriendlyTintRatio",
     )!;
+    this.uEmbargoTint = gl.getUniformLocation(this.program, "uEmbargoTint")!;
+    this.uFriendlyTint = gl.getUniformLocation(this.program, "uFriendlyTint")!;
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
 
     gl.useProgram(this.program);
@@ -109,6 +113,18 @@ export class BorderStampPass {
     gl.uniform1f(this.uDefenseCheckerDarken, mo.defenseCheckerDarken);
     gl.uniform1f(this.uEmbargoTintRatio, mo.embargoTintRatio);
     gl.uniform1f(this.uFriendlyTintRatio, mo.friendlyTintRatio);
+    gl.uniform3f(
+      this.uEmbargoTint,
+      mo.embargoTintR,
+      mo.embargoTintG,
+      mo.embargoTintB,
+    );
+    gl.uniform3f(
+      this.uFriendlyTint,
+      mo.friendlyTintR,
+      mo.friendlyTintG,
+      mo.friendlyTintB,
+    );
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
 
     gl.activeTexture(gl.TEXTURE0);

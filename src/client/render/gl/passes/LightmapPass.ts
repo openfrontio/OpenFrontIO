@@ -166,7 +166,7 @@ export class LightmapPass {
     const zoom = Math.abs(cameraMatrix[0]);
     const mapSize = Math.max(this.mapW, this.mapH);
     const blurScale = Math.min(
-      (zoom * mapSize) / this.settings.dayNight.blurZoomDivisor,
+      (zoom * mapSize) / this.settings.lighting.blurZoomDivisor,
       1.0,
     );
 

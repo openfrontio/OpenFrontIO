@@ -335,12 +335,24 @@ export class BuildPreviewController implements Controller {
         rangeRadius = this.game.config().defensePostRange();
         break;
     }
+    let radiusTileX = this.game.x(tileRef);
+    let radiusTileY = this.game.y(tileRef);
+    if (
+      rangeRadius > 0 &&
+      u.canUpgrade !== false &&
+      upgradeTargetTile !== null
+    ) {
+      radiusTileX = this.game.x(upgradeTargetTile);
+      radiusTileY = this.game.y(upgradeTargetTile);
+    }
 
     const cost = u.cost;
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
       tileY: this.game.y(tileRef),
+      radiusTileX,
+      radiusTileY,
       canBuild: u.canBuild !== false,
       canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),

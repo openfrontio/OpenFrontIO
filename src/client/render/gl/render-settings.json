@@ -44,10 +44,9 @@
     "particleStrength": 1,
     "particleFreshScale": 0.2
   },
-  "dayNight": {
-    "mode": "light",
-    "nightAmbient": 0.15,
-    "dayAmbient": 1,
+  "lighting": {
+    "ambient": 1,
+    "enabled": false,
     "falloffPower": 2,
     "falloutLightR": 0.15,
     "falloutLightG": 0.95,
@@ -75,7 +74,27 @@
     "highlightThicken": 2,
     "defensePostRange": 30,
     "embargoTintRatio": 0.35,
-    "friendlyTintRatio": 0.35
+    "friendlyTintRatio": 0.35,
+    "embargoTintR": 1,
+    "embargoTintG": 0,
+    "embargoTintB": 0,
+    "friendlyTintR": 0,
+    "friendlyTintG": 1,
+    "friendlyTintB": 0
+  },
+  "affiliation": {
+    "selfR": 0,
+    "selfG": 1,
+    "selfB": 0,
+    "allyR": 1,
+    "allyG": 1,
+    "allyB": 0,
+    "neutralR": 0.502,
+    "neutralG": 0.502,
+    "neutralB": 0.502,
+    "enemyR": 1,
+    "enemyG": 0,
+    "enemyB": 0
   },
   "railroad": {
     "railMinZoom": 4,

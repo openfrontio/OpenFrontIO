@@ -27,6 +27,7 @@ uniform float uCullThreshold;
 uniform float uNameScaleFactor;
 uniform float uNameScaleCap;
 uniform float uTroopSizeMultiplier;
+uniform float uHighlightOwnerID;
 
 out vec2 vUV;
 out vec4 vPlayerColor;  // player territory color (rgb) + alpha
@@ -45,6 +46,8 @@ void main() {
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd2 = texelFetch(uPlayerData, ivec2(2, playerIdx), 0); // r, g, b, a
   vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, isHuman, 0
+  vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayerIdx, emojiAtlasIdx, smallID, 0
+  float smallID = pd4.z;
 
   // Early out: dead player
   if (pd1.w <= 0.0) {
@@ -90,16 +93,19 @@ void main() {
   float nameWorldScale = (nameSize * nameScale) / uFontSize;
   float worldScale = nameWorldScale;
 
+  bool isHighlighted = uHighlightOwnerID > 0.0 && smallID == uHighlightOwnerID;
+
   // Troop count is smaller
   if (lineIdx == 1) {
     worldScale *= uTroopSizeMultiplier;
   }
 
-  // Zoom-based culling: compute screen-space size and skip if too small
+  // Zoom-based culling: compute screen-space size and skip if too small.
+  // Highlighted (hovered) names bypass the cull so they're always visible.
   // uCamera[0][0] is the x-scale component of the camera matrix
   float cameraScale = length(vec2(uCamera[0][0], uCamera[1][0]));
   float screenSize = nameWorldScale * uBase * cameraScale;
-  if (screenSize < uCullThreshold) {
+  if (screenSize < uCullThreshold && !isHighlighted) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);

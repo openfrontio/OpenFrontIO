@@ -478,7 +478,7 @@ export class GPURenderer {
     this.sceneTarget = { fbo: sceneFbo, tex: sceneTex, w: 1, h: 1 };
 
     // --- Alt-view passes ---
-    this.affiliationPalette = new AffiliationPalette(gl);
+    this.affiliationPalette = new AffiliationPalette(gl, this.settings);
     const affTex = this.affiliationPalette.getTexture();
     this.borderStampPass.setAffiliationTex(affTex);
     this.unitPass.setAffiliationTex(affTex);
@@ -919,6 +919,7 @@ export class GPURenderer {
   setHighlightOwner(ownerID: number): void {
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
+    this.namePass.setHighlightOwner(ownerID);
   }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.structurePass.setHighlightTypes(unitTypes);
@@ -1208,9 +1209,9 @@ export class GPURenderer {
     const zoom = this.camera.zoom;
     const cw = this.canvas.width;
     const ch = this.canvas.height;
-    const nightActive = this.isNightActive();
+    const compositingActive = this.isLightCompositingActive();
 
-    if (nightActive) {
+    if (compositingActive) {
       this.resizeSceneTargetIfNeeded(cw, ch);
       const sceneTex = toTarget(this.gl, this.sceneTarget, () =>
         this.drawBaseLayer(cam),
@@ -1226,8 +1227,8 @@ export class GPURenderer {
     this.renderOverlays(cam, zoom);
   }
 
-  private isNightActive(): boolean {
-    return this.settings.dayNight.mode === "dark";
+  private isLightCompositingActive(): boolean {
+    return this.settings.lighting.enabled;
   }
 
   private resizeSceneTargetIfNeeded(cw: number, ch: number): void {
