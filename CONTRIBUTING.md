@@ -6,6 +6,8 @@ We welcome contributions from everyone. By participating in this project, you ag
 
 ## Quick Links
 
+TEST
+
 - **Game**: [https://openfront.io/](https://openfront.io/)
 - **Discord**: [Join the Development Discord](https://discord.gg/K9zernJB5z)
 - **Translations**: [Crowdin Project](https://crowdin.com/project/openfront-mls)
