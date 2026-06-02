@@ -82,6 +82,13 @@ export class SAMMissileExecution implements Execution {
         return;
       } else if (result.status === PathStatus.NEXT) {
         this.SAMMissile.move(result.node);
+      } else if (result.status === PathStatus.NOT_FOUND) {
+        if (this.target.isActive()) {
+          this.target.setTargetedBySAM(false);
+        }
+        this.SAMMissile.delete(false);
+        this.active = false;
+        return;
       }
     }
   }
