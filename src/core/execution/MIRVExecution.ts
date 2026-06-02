@@ -109,6 +109,10 @@ export class MirvExecution implements Execution {
       return;
     } else if (result.status === PathStatus.NEXT) {
       this.nuke.move(result.node);
+    } else if (result.status === PathStatus.NOT_FOUND) {
+      this.nuke.delete(false);
+      this.active = false;
+      return;
     }
   }
 
