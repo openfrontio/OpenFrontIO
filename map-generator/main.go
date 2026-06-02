@@ -91,6 +91,7 @@ var maps = []struct {
 	{Name: "sanfrancisco"},
 	{Name: "sierpinski"},
 	{Name: "southamerica"},
+	{Name: "southeastasia"},
 	{Name: "straitofgibraltar"},
 	{Name: "straitofhormuz"},
 	{Name: "straitofmalacca"},
