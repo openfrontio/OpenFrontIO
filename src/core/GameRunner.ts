@@ -100,6 +100,9 @@ export class GameRunner {
     if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
       this.game.addExecution(new SpawnTimerExecution());
     }
+    if (this.game.config().spawnNations()) {
+      this.game.addExecution(...this.execManager.nationExecutions());
+    }
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
@@ -107,9 +110,6 @@ export class GameRunner {
       this.game.addExecution(
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
-    }
-    if (this.game.config().spawnNations()) {
-      this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
