@@ -70,6 +70,8 @@ export class RangeCirclePass {
     const gl = this.gl;
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
+    gl.bindVertexArray(this.vao);
+
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uRadius, this.radius);
     if (this.warning) {
@@ -77,8 +79,6 @@ export class RangeCirclePass {
     } else {
       gl.uniform3f(this.uColor, 1.0, 1.0, 1.0);
     }
-
-    gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
