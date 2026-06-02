@@ -919,6 +919,7 @@ export class GPURenderer {
   setHighlightOwner(ownerID: number): void {
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
+    this.namePass.setHighlightOwner(ownerID);
   }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
     this.structurePass.setHighlightTypes(unitTypes);
