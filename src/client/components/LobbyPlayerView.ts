@@ -16,7 +16,8 @@ import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
-import { PastelTheme } from "../theme/PastelTheme";
+import { Theme } from "../theme/Theme";
+import { themeProvider } from "../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -37,7 +38,9 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
 
-  private theme: PastelTheme = new PastelTheme();
+  private get theme(): Theme {
+    return themeProvider.current();
+  }
   @state() private showTeamColors: boolean = false;
   private userSettings: UserSettings = new UserSettings();
 
