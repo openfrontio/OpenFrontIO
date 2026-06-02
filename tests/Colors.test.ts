@@ -13,6 +13,7 @@ import {
   teal,
   yellow,
 } from "../src/client/theme/Colors";
+import { PastelTheme } from "../src/client/theme/PastelTheme";
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
@@ -80,71 +81,35 @@ describe("ColorAllocator", () => {
     expect(c1.isEqual(c1Again)).toBe(true);
     expect(c2.isEqual(c2Again)).toBe(true);
   });
+});
 
-  test("assignTeamColor returns the base color from the team", () => {
-    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
-    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
-    expect(allocator.assignTeamColor(ColoredTeams.Purple)).toEqual(purple);
-    expect(allocator.assignTeamColor(ColoredTeams.Yellow)).toEqual(yellow);
-    expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(orange);
-    expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(green);
-    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
-    expect(allocator.assignTeamColor(ColoredTeams.Humans)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Nations)).toEqual(red);
+describe("PastelTheme team colors", () => {
+  test("teamColor returns the base color from the team", () => {
+    const theme = new PastelTheme();
+    expect(theme.teamColor(ColoredTeams.Blue)).toEqual(blue);
+    expect(theme.teamColor(ColoredTeams.Red)).toEqual(red);
+    expect(theme.teamColor(ColoredTeams.Teal)).toEqual(teal);
+    expect(theme.teamColor(ColoredTeams.Purple)).toEqual(purple);
+    expect(theme.teamColor(ColoredTeams.Yellow)).toEqual(yellow);
+    expect(theme.teamColor(ColoredTeams.Orange)).toEqual(orange);
+    expect(theme.teamColor(ColoredTeams.Green)).toEqual(green);
+    expect(theme.teamColor(ColoredTeams.Bot)).toEqual(botColor);
+    expect(theme.teamColor(ColoredTeams.Humans)).toEqual(blue);
+    expect(theme.teamColor(ColoredTeams.Nations)).toEqual(red);
   });
 
-  test("assignTeamPlayerColor always returns the same color for the same playerID", () => {
-    const playerId = "player123";
-
-    const blueColor1 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerId,
-    );
-    const blueColor2 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerId,
-    );
-
-    expect(blueColor1.isEqual(blueColor2)).toBe(true);
-
-    const redColor1 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerId,
-    );
-    const redColor2 = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerId,
-    );
-
-    expect(redColor1.isEqual(redColor2)).toBe(true);
+  test("teamColorForPlayer is stable for the same playerID", () => {
+    const theme = new PastelTheme();
+    const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
+    const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player123");
+    expect(a.isEqual(b)).toBe(true);
   });
 
-  test("assignTeamPlayerColor returns a different color when the playerID is different", () => {
-    const playerIdOne = "player1";
-    const playerIdTwo = "player2";
-
-    const blueColorPlayerOne = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerIdOne,
-    );
-    const blueColorPlayerTwo = allocator.assignTeamPlayerColor(
-      ColoredTeams.Blue,
-      playerIdTwo,
-    );
-
-    expect(blueColorPlayerOne.isEqual(blueColorPlayerTwo)).toBe(false);
-
-    const redColorPlayerOne = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerIdOne,
-    );
-    const redColorPlayerTwo = allocator.assignTeamPlayerColor(
-      ColoredTeams.Red,
-      playerIdTwo,
-    );
-
-    expect(redColorPlayerOne.isEqual(redColorPlayerTwo)).toBe(false);
+  test("teamColorForPlayer differs for different playerIDs", () => {
+    const theme = new PastelTheme();
+    const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player1");
+    const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player2");
+    expect(a.isEqual(b)).toBe(false);
   });
 });
 
