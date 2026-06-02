@@ -64,6 +64,10 @@ export function applyGraphicsOverrides(
     settings.name.outlineG = channel;
     settings.name.outlineB = channel;
   }
+  if (overrides.accessibility?.colorblind === true) {
+    // Colorblind-friendly color overrides (affiliation/tint colors, etc.) are
+    // applied here. Wired now; the actual values land in a follow-up commit.
+  }
 }
 
 export function applyDarkModeOverride(
