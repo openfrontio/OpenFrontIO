@@ -82,7 +82,6 @@ export class GameManager {
         bots: 400,
         disabledUnits: [],
         ...gameConfig,
-        expandedLeaderboard: true,
       },
       creatorPersistentID,
       startsAt,
