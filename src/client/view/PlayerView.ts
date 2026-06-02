@@ -29,6 +29,7 @@ import {
 } from "../../core/game/GameUpdates";
 import { UserSettings } from "../../core/game/UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
+import { themeProvider } from "../theme/ThemeProvider";
 import { GameView } from "./GameView";
 import { UnitView } from "./UnitView";
 
@@ -133,7 +134,7 @@ export class PlayerView {
       this.anonymousName = createRandomName(data.name!, data.playerType!);
     }
 
-    const theme = this.game.config().theme();
+    const theme = themeProvider.current();
 
     const defaultTerritoryColor = theme.territoryColor(this);
     const defaultBorderColor = theme.borderColor(defaultTerritoryColor);

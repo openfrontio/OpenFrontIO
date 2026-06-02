@@ -10,6 +10,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { Controller } from "../../Controller";
+import { themeProvider } from "../../theme/ThemeProvider";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
@@ -166,7 +167,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     const cached = this.spriteDataURLCache.get(key);
     if (cached) return cached;
     try {
-      const canvas = getColoredSprite(unit, this.game.config().theme());
+      const canvas = getColoredSprite(unit, themeProvider.current());
       const dataURL = canvas.toDataURL();
       this.spriteDataURLCache.set(key, dataURL);
       return dataURL;
