@@ -212,12 +212,21 @@ export class GameServer {
         clientID: client.clientID,
       });
 
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "full-lobby",
-        } satisfies ServerErrorMessage),
-      );
+      try {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(
+            JSON.stringify({
+              type: "error",
+              error: "full-lobby",
+            } satisfies ServerErrorMessage),
+          );
+        }
+      } catch (error) {
+        this.log.error(`error sending full-lobby message for game ${this.id}`, {
+          clientID: client.clientID,
+          error,
+        });
+      }
       return "rejected";
     }
 
