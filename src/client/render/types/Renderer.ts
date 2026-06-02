@@ -152,6 +152,8 @@ export interface GhostPreviewData {
   ghostType: string; // UnitType string ("City", "Port", etc.)
   tileX: number; // Hover tile X
   tileY: number; // Hover tile Y
+  radiusTileX: number;
+  radiusTileY: number;
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost

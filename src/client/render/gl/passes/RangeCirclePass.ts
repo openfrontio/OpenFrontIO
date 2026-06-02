@@ -54,8 +54,8 @@ export class RangeCirclePass {
 
   updateGhostPreview(data: GhostPreviewData | null): void {
     if (data && data.rangeRadius > 0) {
-      this.centerX = data.tileX;
-      this.centerY = data.tileY;
+      this.centerX = data.radiusTileX;
+      this.centerY = data.radiusTileY;
       this.radius = data.rangeRadius;
       this.warning = data.rangeWarning;
     } else {
