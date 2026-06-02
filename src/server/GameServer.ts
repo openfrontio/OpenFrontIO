@@ -1263,7 +1263,7 @@ export class GameServer {
       },
     );
 
-    if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+    if (potentialWinner.ips.size * 2 <= activeUniqueIPs.size) {
       return;
     }
 
