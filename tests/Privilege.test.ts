@@ -1,4 +1,3 @@
-import type { UserMeResponse } from "../src/core/ApiSchemas";
 import {
   createMatcher,
   FailOpenPrivilegeChecker,
@@ -522,26 +521,6 @@ describe("Skin validation", () => {
   });
 });
 
-const userWithClans = (tags: string[]): UserMeResponse =>
-  ({
-    user: {},
-    player: {
-      publicId: "p1",
-      adfree: false,
-      flares: [],
-      achievements: { singleplayerMap: [] },
-      friends: [],
-      subscription: null,
-      clans: tags.map((tag) => ({
-        tag,
-        name: tag,
-        role: "member" as const,
-        joinedAt: new Date().toISOString(),
-        memberCount: 1,
-      })),
-    },
-  }) as UserMeResponse;
-
 describe("PrivilegeCheckerImpl#resolveClanTag", () => {
   // Reserved tags are stored uppercase, exactly as PrivilegeRefresher loads them.
   const makeChecker = (reservedTags: string[]) =>
@@ -553,35 +532,32 @@ describe("PrivilegeCheckerImpl#resolveClanTag", () => {
     );
 
   it("passes a null tag through unchanged", () => {
-    const result = makeChecker(["ABC"]).resolveClanTag(null, null);
+    const result = makeChecker(["ABC"]).resolveClanTag(null, []);
     expect(result).toEqual({ tag: null, dropped: false });
   });
 
   it("accepts a member's tag without consulting the reserved set (case-insensitive)", () => {
-    const me = userWithClans(["abc"]);
-    const result = makeChecker(["ABC"]).resolveClanTag("ABC", me);
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["abc"]);
     expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
   it("drops a reserved tag the player does not belong to (impersonation)", () => {
-    const me = userWithClans(["other"]);
-    const result = makeChecker(["ABC"]).resolveClanTag("ABC", me);
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["other"]);
     expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
   });
 
   it("keeps a fictional tag matching no reserved clan", () => {
-    const result = makeChecker(["OTHER"]).resolveClanTag("ABC", null);
+    const result = makeChecker(["OTHER"]).resolveClanTag("ABC", []);
     expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
   it("matches the reserved set case-insensitively", () => {
-    const me = userWithClans(["other"]);
-    const result = makeChecker(["ABC"]).resolveClanTag("abc", me);
+    const result = makeChecker(["ABC"]).resolveClanTag("abc", ["other"]);
     expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
   });
 
   it("treats anonymous users as members of no clans", () => {
-    const result = makeChecker(["ABC"]).resolveClanTag("ABC", null);
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", []);
     expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
   });
 });
@@ -590,17 +566,17 @@ describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
   const checker = new FailOpenPrivilegeChecker();
 
   it("passes a null tag through unchanged", () => {
-    const result = checker.resolveClanTag(null, null);
+    const result = checker.resolveClanTag(null, []);
     expect(result).toEqual({ tag: null, dropped: false });
   });
 
-  it("keeps a member's tag (known from userMe, no lookup needed)", () => {
-    const result = checker.resolveClanTag("ABC", userWithClans(["abc"]));
+  it("keeps a member's tag (known from owned tags, no lookup needed)", () => {
+    const result = checker.resolveClanTag("ABC", ["abc"]);
     expect(result).toEqual({ tag: "ABC", dropped: false });
   });
 
   it("drops a non-member's tag fail-closed (no reserved set while infra is down)", () => {
-    const result = checker.resolveClanTag("ABC", userWithClans(["other"]));
+    const result = checker.resolveClanTag("ABC", ["other"]);
     expect(result).toEqual({
       tag: null,
       dropped: true,
@@ -609,7 +585,7 @@ describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
   });
 
   it("drops an anonymous user's tag fail-closed", () => {
-    const result = checker.resolveClanTag("ABC", null);
+    const result = checker.resolveClanTag("ABC", []);
     expect(result.dropped).toBe(true);
   });
 });

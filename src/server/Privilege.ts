@@ -11,7 +11,6 @@ import {
 } from "obscenity";
 import countries from "resources/countries.json";
 
-import { type UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
@@ -158,42 +157,31 @@ export type ClanTagResolution = {
   reason?: "exists" | "inconclusive";
 };
 
-function userOwnsClanTag(
-  censoredTag: string,
-  userMeResponse: UserMeResponse | null,
-): boolean {
-  const userClanTags = new Set(
-    userMeResponse
-      ? (userMeResponse.player.clans ?? []).map((c) => c.tag.toUpperCase())
-      : [],
-  );
-  return userClanTags.has(censoredTag.toUpperCase());
-}
-
 /**
- * Shared clan-tag resolution used by every PrivilegeChecker. Members keep
- * their tag without a lookup; for non-members the reserved-tag result decides:
- *   false -> fictional tag, keep it
- *   true  -> a real clan they aren't in, drop it (impersonation)
- *   null  -> reserved set unknown, drop it fail-closed
- * `reason` lets callers log the drop.
+ * Shared clan-tag resolution used by every PrivilegeChecker:
+ *   member                           -> keep the tag (no reserved-set lookup)
+ *   non-member, tag not reserved     -> fictional tag, keep it
+ *   non-member, tag reserved         -> a real clan they aren't in, drop it
+ *   non-member, reserved set unknown -> drop fail-closed
+ * `ownedClanTags` are the player's own tags; `reservedTags` is every registered
+ * tag (uppercase), or null when that set is unavailable. `reason` lets callers
+ * log the drop.
  */
 function resolveClanTagWith(
   censoredTag: string | null,
-  userMeResponse: UserMeResponse | null,
-  isReserved: (tag: string) => boolean | null,
+  ownedClanTags: string[],
+  reservedTags: Set<string> | null,
 ): ClanTagResolution {
   if (censoredTag === null) return { tag: null, dropped: false };
-  if (userOwnsClanTag(censoredTag, userMeResponse)) {
+  const tag = censoredTag.toUpperCase();
+  if (ownedClanTags.some((t) => t.toUpperCase() === tag)) {
     return { tag: censoredTag, dropped: false };
   }
-  const reserved = isReserved(censoredTag);
-  if (reserved === false) return { tag: censoredTag, dropped: false };
-  return {
-    tag: null,
-    dropped: true,
-    reason: reserved === true ? "exists" : "inconclusive",
-  };
+  if (reservedTags === null) {
+    return { tag: null, dropped: true, reason: "inconclusive" };
+  }
+  if (!reservedTags.has(tag)) return { tag: censoredTag, dropped: false };
+  return { tag: null, dropped: true, reason: "exists" };
 }
 
 type CosmeticResult =
@@ -209,10 +197,11 @@ export interface PrivilegeChecker {
   /**
    * Decide whether a player may wear the given (already-censored) clan tag.
    * Members keep their tag; impersonated or unverifiable tags are dropped.
+   * `ownedClanTags` are the tags the player belongs to.
    */
   resolveClanTag(
     censoredTag: string | null,
-    userMeResponse: UserMeResponse | null,
+    ownedClanTags: string[],
   ): ClanTagResolution;
 }
 
@@ -232,10 +221,12 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 
   resolveClanTag(
     censoredTag: string | null,
-    userMeResponse: UserMeResponse | null,
+    ownedClanTags: string[],
   ): ClanTagResolution {
-    return resolveClanTagWith(censoredTag, userMeResponse, (tag) =>
-      this.reservedClanTags.has(tag.toUpperCase()),
+    return resolveClanTagWith(
+      censoredTag,
+      ownedClanTags,
+      this.reservedClanTags,
     );
   }
 
@@ -392,13 +383,13 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   }
 
   // Cosmetics infra is unavailable, so we have no reserved-tag list to confirm
-  // whether a tag belongs to a real clan. Members are known from userMe (no
-  // lookup needed) and keep their tag; every other tag is dropped fail-closed
-  // to block impersonation.
+  // whether a tag belongs to a real clan. Members are still known from their
+  // own tag list and keep it; every other tag is dropped fail-closed to block
+  // impersonation.
   resolveClanTag(
     censoredTag: string | null,
-    userMeResponse: UserMeResponse | null,
+    ownedClanTags: string[],
   ): ClanTagResolution {
-    return resolveClanTagWith(censoredTag, userMeResponse, () => null);
+    return resolveClanTagWith(censoredTag, ownedClanTags, null);
   }
 }

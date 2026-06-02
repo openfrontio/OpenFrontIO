@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { type UserMeResponse } from "../core/ApiSchemas";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
@@ -380,7 +379,7 @@ export async function startWorker() {
         let flares: string[] | undefined;
         let publicId: string | undefined;
         let friends: string[] = [];
-        let userMeResponse: UserMeResponse | null = null;
+        let ownedClanTags: string[] = [];
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
@@ -400,10 +399,10 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
-          userMeResponse = result.response;
           flares = result.response.player.flares;
           publicId = result.response.player.publicId;
           friends = result.response.player.friends;
+          ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -424,7 +423,7 @@ export async function startWorker() {
         // dropped to prevent impersonation. Fictional tags pass through.
         const resolution = privilegeRefresher
           .get()
-          .resolveClanTag(censoredClanTag, userMeResponse);
+          .resolveClanTag(censoredClanTag, ownedClanTags);
         if (resolution.dropped) {
           log.warn("Dropped clan tag: player is not a member", {
             persistentID: persistentId,
