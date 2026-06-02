@@ -248,6 +248,10 @@ export class NukeExecution implements Execution {
       this.nuke.move(result.node);
       // Update index so SAM can interpolate future position
       this.nuke.setTrajectoryIndex(this.pathFinder.currentIndex());
+    } else if (result.status === PathStatus.NOT_FOUND) {
+      this.nuke.delete(false);
+      this.active = false;
+      return;
     }
   }
 
