@@ -630,6 +630,19 @@ export class GameServer {
       // Remove persistentId if the game has not started to prevent going over max players
       if (!this._hasStarted) {
         this.persistentIdToClientId.delete(client.persistentID);
+        // Close lobby when host leaves before game starts
+        if (
+          !this.isPublic() &&
+          client.persistentID === this.creatorPersistentID
+        ) {
+          this.log.info("Host left due to early socket close, closing lobby", {
+            gameID: this.id,
+          });
+          for (const c of [...this.activeClients]) {
+            this.kickClient(c.clientID, KICK_REASON_HOST_LEFT);
+          }
+          this._hasEnded = true;
+        }
       }
     }
   }
