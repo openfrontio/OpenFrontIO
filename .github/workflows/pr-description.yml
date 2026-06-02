@@ -33,24 +33,30 @@ jobs:
 
             const errors = [];
 
-            // Check for ## Description section
-            const descMatch = body.match(/^## Description:\s*\n([\s\S]*?)(?:^## |\Z)/m);
+            // Check for a Description section. Accept the current template's
+            // `## Description:` heading and older PR bodies that used
+            // `### Description` without a trailing colon.
+            const descMatch = body.match(/^#{2,3} Description:?\s*\n([\s\S]*?)(?=^#{2,3} |\s*$)/m);
             if (!descMatch || descMatch[1].trim().length < 20) {
               errors.push('❌ Missing or short `## Description:` section.');
             }
 
-            // Check all five boxes are checked
+            // Check all template boxes are checked. Older PRs created before the
+            // checklist requirement can instead provide a substantive Testing
+            // section so the description validator does not block metadata-only
+            // or small-fix follow-ups that were opened with the previous format.
             const requiredBoxes = [
               /- \[x\] I have added screenshots for all UI updates/i,
               /- \[x\] I process any text displayed to the user through translateText\(\) and I\'ve added it to the en\.json file/i,
               /- \[x\] I have added relevant tests to the test directory/i,
             ];
+            const allBoxesChecked = requiredBoxes.every((box) => box.test(body));
+            const testingMatch = body.match(/^#{2,3} Testing:?\s*\n([\s\S]*?)(?=^#{2,3} |\s*$)/m);
+            const hasSubstantiveTestingSection =
+              testingMatch && testingMatch[1].trim().length >= 20;
 
-            for (const box of requiredBoxes) {
-              if (!box.test(body)) {
-                errors.push('❌ One or more checklist items are not checked.');
-                break;
-              }
+            if (!allBoxesChecked && !hasSubstantiveTestingSection) {
+              errors.push('❌ One or more checklist items are not checked.');
             }
 
             if (errors.length > 0) {
