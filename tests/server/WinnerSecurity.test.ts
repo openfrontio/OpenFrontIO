@@ -79,6 +79,7 @@ describe("GameServer - winner message security", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it("archives with undefined stats regardless of client-supplied allPlayersStats", async () => {
