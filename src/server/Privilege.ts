@@ -154,34 +154,28 @@ function censorWithMatcher(
 export type ClanTagResolution = {
   tag: string | null;
   dropped: boolean;
-  reason?: "exists" | "inconclusive";
 };
 
 /**
- * Shared clan-tag resolution used by every PrivilegeChecker:
- *   member                           -> keep the tag (no reserved-set lookup)
- *   non-member, tag not reserved     -> fictional tag, keep it
- *   non-member, tag reserved         -> a real clan they aren't in, drop it
- *   non-member, reserved set unknown -> drop fail-closed
- * `ownedClanTags` are the player's own tags; `reservedTags` is every registered
- * tag (uppercase), or null when that set is unavailable. `reason` lets callers
- * log the drop.
+ * The clan-tag ownership rule, shared by every PrivilegeChecker:
+ *   - member of the clan             -> keep the tag
+ *   - not a member, tag not reserved -> fictional tag, keep it
+ *   - otherwise                      -> drop it (impersonation)
+ * `reservedTags` is every registered tag (uppercase); null means the reserved
+ * list is unavailable (cosmetics infra still loading), in which case an
+ * unverifiable tag counts as reserved and is dropped fail-closed.
  */
-function resolveClanTagWith(
+function decideClanTag(
   censoredTag: string | null,
   ownedClanTags: string[],
   reservedTags: Set<string> | null,
 ): ClanTagResolution {
   if (censoredTag === null) return { tag: null, dropped: false };
   const tag = censoredTag.toUpperCase();
-  if (ownedClanTags.some((t) => t.toUpperCase() === tag)) {
-    return { tag: censoredTag, dropped: false };
-  }
-  if (reservedTags === null) {
-    return { tag: null, dropped: true, reason: "inconclusive" };
-  }
-  if (!reservedTags.has(tag)) return { tag: censoredTag, dropped: false };
-  return { tag: null, dropped: true, reason: "exists" };
+  const isMember = ownedClanTags.some((t) => t.toUpperCase() === tag);
+  const isReserved = reservedTags === null || reservedTags.has(tag);
+  if (isMember || !isReserved) return { tag: censoredTag, dropped: false };
+  return { tag: null, dropped: true };
 }
 
 type CosmeticResult =
@@ -223,11 +217,7 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     censoredTag: string | null,
     ownedClanTags: string[],
   ): ClanTagResolution {
-    return resolveClanTagWith(
-      censoredTag,
-      ownedClanTags,
-      this.reservedClanTags,
-    );
+    return decideClanTag(censoredTag, ownedClanTags, this.reservedClanTags);
   }
 
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
@@ -382,14 +372,13 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
     return censorWithMatcher(username, clanTag, defaultMatcher);
   }
 
-  // Cosmetics infra is unavailable, so we have no reserved-tag list to confirm
-  // whether a tag belongs to a real clan. Members are still known from their
-  // own tag list and keep it; every other tag is dropped fail-closed to block
-  // impersonation.
+  // No reserved-tag list while cosmetics infra is unavailable (null), so a
+  // non-member's tag is treated as reserved and dropped fail-closed to block
+  // impersonation. Members are still known from their own tag list.
   resolveClanTag(
     censoredTag: string | null,
     ownedClanTags: string[],
   ): ClanTagResolution {
-    return resolveClanTagWith(censoredTag, ownedClanTags, null);
+    return decideClanTag(censoredTag, ownedClanTags, null);
   }
 }

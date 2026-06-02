@@ -543,7 +543,7 @@ describe("PrivilegeCheckerImpl#resolveClanTag", () => {
 
   it("drops a reserved tag the player does not belong to (impersonation)", () => {
     const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["other"]);
-    expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
+    expect(result).toEqual({ tag: null, dropped: true });
   });
 
   it("keeps a fictional tag matching no reserved clan", () => {
@@ -553,12 +553,12 @@ describe("PrivilegeCheckerImpl#resolveClanTag", () => {
 
   it("matches the reserved set case-insensitively", () => {
     const result = makeChecker(["ABC"]).resolveClanTag("abc", ["other"]);
-    expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
+    expect(result).toEqual({ tag: null, dropped: true });
   });
 
   it("treats anonymous users as members of no clans", () => {
     const result = makeChecker(["ABC"]).resolveClanTag("ABC", []);
-    expect(result).toEqual({ tag: null, dropped: true, reason: "exists" });
+    expect(result).toEqual({ tag: null, dropped: true });
   });
 });
 
@@ -577,11 +577,7 @@ describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
 
   it("drops a non-member's tag fail-closed (no reserved set while infra is down)", () => {
     const result = checker.resolveClanTag("ABC", ["other"]);
-    expect(result).toEqual({
-      tag: null,
-      dropped: true,
-      reason: "inconclusive",
-    });
+    expect(result).toEqual({ tag: null, dropped: true });
   });
 
   it("drops an anonymous user's tag fail-closed", () => {

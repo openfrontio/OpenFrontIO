@@ -429,7 +429,6 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
             clanTag: censoredClanTag,
-            reason: resolution.reason,
           });
         }
         const resolvedClanTag = resolution.tag;
