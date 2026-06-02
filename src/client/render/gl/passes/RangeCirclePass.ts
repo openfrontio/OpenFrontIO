@@ -26,7 +26,6 @@ export class RangeCirclePass {
   private centerX = 0;
   private centerY = 0;
   private radius = 0;
-  private secondRadius = 0;
   private warning = false;
 
   constructor(gl: WebGL2RenderingContext) {
@@ -59,7 +58,6 @@ export class RangeCirclePass {
       this.centerY = data.tileY;
       this.radius = data.rangeRadius;
       this.warning = data.rangeWarning;
-      this.secondRadius = data.secondRadius;
     } else {
       this.radius = 0;
       this.warning = false;
@@ -81,13 +79,6 @@ export class RangeCirclePass {
     } else {
       gl.uniform3f(this.uColor, 1.0, 1.0, 1.0);
     }
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    if (this.secondRadius <= 0) return;
-
-    gl.uniform2f(this.uCenter, this.centerX, this.centerY);
-    gl.uniform1f(this.uRadius, this.secondRadius);
-    gl.uniform3f(this.uColor, 0.839, 0.839, 0.839);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 

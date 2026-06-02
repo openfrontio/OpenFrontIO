@@ -249,7 +249,7 @@ export class Config {
     return 110;
   }
   railroadMaxSize(): number {
-    return 110;
+    return this.trainStationMaxRange();
   }
 
   tradeShipGold(dist: number, player: Player | PlayerView): Gold {
