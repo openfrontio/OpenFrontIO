@@ -1,4 +1,3 @@
-import { GraphicsOverrides } from "./GraphicsOverrides";
 import defaults from "./render-settings.json";
 
 export interface RenderSettings {
@@ -47,10 +46,9 @@ export interface RenderSettings {
     particleStrength: number;
     particleFreshScale: number;
   };
-  dayNight: {
-    mode: "light" | "dark";
-    nightAmbient: number;
-    dayAmbient: number;
+  lighting: {
+    ambient: number;
+    enabled: boolean;
     falloffPower: number;
     falloutLightR: number;
     falloutLightG: number;
@@ -294,46 +292,6 @@ export interface RenderSettings {
 /** Create a fresh settings object with defaults from render-settings.json. */
 export function createRenderSettings(): RenderSettings {
   return JSON.parse(JSON.stringify(defaults)) as RenderSettings;
-}
-
-/**
- * Generate a fresh RenderSettings by layering user overrides on top of the
- * render-settings.json defaults. Pure — does not mutate any input.
- */
-export function generateRenderSettings(
-  overrides: GraphicsOverrides,
-): RenderSettings {
-  const settings = createRenderSettings();
-  if (overrides.name?.nameScaleFactor !== undefined) {
-    settings.name.nameScaleFactor = overrides.name.nameScaleFactor;
-  }
-  if (overrides.name?.cullThreshold !== undefined) {
-    settings.name.cullThreshold = overrides.name.cullThreshold;
-  }
-  if (overrides.structure?.classicIcons === true) {
-    // Classic look: lighter player-colored shape behind a dark icon glyph,
-    // with a touch of translucency.
-    settings.structure.borderDarken = 0.7;
-    settings.structure.fillDarken = 1.0;
-    settings.structure.iconR = 0;
-    settings.structure.iconG = 0;
-    settings.structure.iconB = 0;
-    settings.structure.iconAlpha = 0.75;
-  }
-  if (overrides.name?.darkNames !== undefined) {
-    const dark = overrides.name.darkNames;
-    // Dark: black fill + player-colored outline. Force outline RGB to black
-    // so the shader's defaultFill ramp (mix(uOutlineColor, black, fillT))
-    // collapses to pure black regardless of ambient.
-    // Colored: player-colored fill + white outline (defaults from JSON).
-    settings.name.fillUsePlayerColor = !dark;
-    settings.name.outlineUsePlayerColor = dark;
-    const channel = dark ? 0 : 1;
-    settings.name.outlineR = channel;
-    settings.name.outlineG = channel;
-    settings.name.outlineB = channel;
-  }
-  return settings;
 }
 
 /** Dump current settings to a downloadable JSON file. */

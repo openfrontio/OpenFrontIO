@@ -1208,9 +1208,9 @@ export class GPURenderer {
     const zoom = this.camera.zoom;
     const cw = this.canvas.width;
     const ch = this.canvas.height;
-    const nightActive = this.isNightActive();
+    const compositingActive = this.isLightCompositingActive();
 
-    if (nightActive) {
+    if (compositingActive) {
       this.resizeSceneTargetIfNeeded(cw, ch);
       const sceneTex = toTarget(this.gl, this.sceneTarget, () =>
         this.drawBaseLayer(cam),
@@ -1226,8 +1226,8 @@ export class GPURenderer {
     this.renderOverlays(cam, zoom);
   }
 
-  private isNightActive(): boolean {
-    return this.settings.dayNight.mode === "dark";
+  private isLightCompositingActive(): boolean {
+    return this.settings.lighting.enabled;
   }
 
   private resizeSceneTargetIfNeeded(cw: number, ch: number): void {

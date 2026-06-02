@@ -69,8 +69,11 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import {
+  applyDarkModeOverride,
+  applyGraphicsOverrides,
   createDebugGui,
-  generateRenderSettings,
+  createRenderSettings,
+  deepAssign,
   GameView as WebGLGameView,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
@@ -474,18 +477,6 @@ async function createClientGame(
       config,
     );
 
-    // Bind the WebGL renderer's day/night mode to the existing darkMode
-    // UserSetting so the in-game map matches the rest of the UI. Initial
-    // apply + live updates via the per-key settings-changed event.
-    const applyDayNightMode = (isDark: boolean): void => {
-      view.getSettings().dayNight.mode = isDark ? "dark" : "light";
-    };
-    applyDayNightMode(userSettings.darkMode());
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
-    );
-
     view.setShowPatterns(userSettings.territoryPatterns());
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
@@ -493,18 +484,21 @@ async function createClientGame(
     );
 
     const graphicsListenerAbort = new AbortController();
-    const applyGraphicsOverrides = (): void => {
-      const generated = generateRenderSettings(
-        userSettings.graphicsOverrides(),
-      );
+    const regenerateRenderSettings = (): void => {
       const live = view.getSettings();
-      Object.assign(live.name, generated.name);
-      Object.assign(live.structure, generated.structure);
+      deepAssign(live, createRenderSettings());
+      applyGraphicsOverrides(live, userSettings.graphicsOverrides());
+      applyDarkModeOverride(live, userSettings.darkMode());
     };
-    applyGraphicsOverrides();
+    regenerateRenderSettings();
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      applyGraphicsOverrides,
+      regenerateRenderSettings,
+      { signal: graphicsListenerAbort.signal },
+    );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
+      regenerateRenderSettings,
       { signal: graphicsListenerAbort.signal },
     );
 

@@ -1,9 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
 import {
-  createRenderSettings,
-  generateRenderSettings,
-} from "../src/client/render/gl/RenderSettings";
+  GraphicsOverrides,
+  GraphicsOverridesSchema,
+} from "../src/client/render/gl/GraphicsOverrides";
+import { applyGraphicsOverrides } from "../src/client/render/gl/RenderOverrides";
+import { createRenderSettings } from "../src/client/render/gl/RenderSettings";
+
+function gen(overrides: GraphicsOverrides) {
+  const settings = createRenderSettings();
+  applyGraphicsOverrides(settings, overrides);
+  return settings;
+}
 
 describe("GraphicsOverridesSchema", () => {
   test("accepts empty object", () => {
@@ -51,16 +58,16 @@ describe("GraphicsOverridesSchema", () => {
   });
 });
 
-describe("generateRenderSettings", () => {
+describe("applyGraphicsOverrides", () => {
   test("with empty overrides matches createRenderSettings defaults", () => {
-    const fromGen = generateRenderSettings({});
+    const fromGen = gen({});
     const fromCreate = createRenderSettings();
     expect(fromGen).toEqual(fromCreate);
   });
 
   test("returns a fresh object each call (no shared mutation)", () => {
-    const a = generateRenderSettings({});
-    const b = generateRenderSettings({});
+    const a = gen({});
+    const b = gen({});
     expect(a).not.toBe(b);
     expect(a.name).not.toBe(b.name);
     a.name.nameScaleFactor = 999;
@@ -70,27 +77,24 @@ describe("generateRenderSettings", () => {
   test("does not mutate the overrides input", () => {
     const overrides = { name: { darkNames: true as const } };
     const snapshot = JSON.parse(JSON.stringify(overrides));
-    generateRenderSettings(overrides);
+    gen(overrides);
     expect(overrides).toEqual(snapshot);
   });
 
   test("applies nameScaleFactor override", () => {
-    const settings = generateRenderSettings({ name: { nameScaleFactor: 1.3 } });
+    const settings = gen({ name: { nameScaleFactor: 1.3 } });
     expect(settings.name.nameScaleFactor).toBe(1.3);
   });
 
   test("applies cullThreshold override (including 0)", () => {
-    expect(
-      generateRenderSettings({ name: { cullThreshold: 0.03 } }).name
-        .cullThreshold,
-    ).toBe(0.03);
-    expect(
-      generateRenderSettings({ name: { cullThreshold: 0 } }).name.cullThreshold,
-    ).toBe(0);
+    expect(gen({ name: { cullThreshold: 0.03 } }).name.cullThreshold).toBe(
+      0.03,
+    );
+    expect(gen({ name: { cullThreshold: 0 } }).name.cullThreshold).toBe(0);
   });
 
   test("darkNames=true → black fill + player-colored outline + outline RGB 0", () => {
-    const s = generateRenderSettings({ name: { darkNames: true } }).name;
+    const s = gen({ name: { darkNames: true } }).name;
     expect(s.fillUsePlayerColor).toBe(false);
     expect(s.outlineUsePlayerColor).toBe(true);
     expect(s.outlineR).toBe(0);
@@ -99,7 +103,7 @@ describe("generateRenderSettings", () => {
   });
 
   test("darkNames=false → player-colored fill + white outline + outline RGB 1", () => {
-    const s = generateRenderSettings({ name: { darkNames: false } }).name;
+    const s = gen({ name: { darkNames: false } }).name;
     expect(s.fillUsePlayerColor).toBe(true);
     expect(s.outlineUsePlayerColor).toBe(false);
     expect(s.outlineR).toBe(1);
@@ -109,13 +113,13 @@ describe("generateRenderSettings", () => {
 
   test("only-darkNames override leaves nameScale/cull at defaults", () => {
     const defaults = createRenderSettings().name;
-    const s = generateRenderSettings({ name: { darkNames: true } }).name;
+    const s = gen({ name: { darkNames: true } }).name;
     expect(s.nameScaleFactor).toBe(defaults.nameScaleFactor);
     expect(s.cullThreshold).toBe(defaults.cullThreshold);
   });
 
   test("combined overrides all apply together", () => {
-    const s = generateRenderSettings({
+    const s = gen({
       name: { nameScaleFactor: 0.9, cullThreshold: 0.01, darkNames: true },
     }).name;
     expect(s.nameScaleFactor).toBe(0.9);
@@ -127,16 +131,16 @@ describe("generateRenderSettings", () => {
 
   test("settings outside the name slice are untouched by name overrides", () => {
     const defaults = createRenderSettings();
-    const s = generateRenderSettings({
+    const s = gen({
       name: { nameScaleFactor: 0.6, darkNames: true },
     });
     expect(s.passEnabled).toEqual(defaults.passEnabled);
-    expect(s.dayNight).toEqual(defaults.dayNight);
+    expect(s.lighting).toEqual(defaults.lighting);
     expect(s.structure).toEqual(defaults.structure);
   });
 
   test("classicIcons=true → light shape + dark icon + 0.75 alpha", () => {
-    const s = generateRenderSettings({
+    const s = gen({
       structure: { classicIcons: true },
     }).structure;
     // Shape (circle behind) is mostly player color, lightly darkened.
@@ -152,14 +156,14 @@ describe("generateRenderSettings", () => {
 
   test("classicIcons=false or absent → keeps render-settings.json defaults (fully opaque)", () => {
     const defaults = createRenderSettings().structure;
-    const off = generateRenderSettings({
+    const off = gen({
       structure: { classicIcons: false },
     }).structure;
     expect(off.borderDarken).toBe(defaults.borderDarken);
     expect(off.fillDarken).toBe(defaults.fillDarken);
     expect(off.iconR).toBe(defaults.iconR);
     expect(off.iconAlpha).toBe(1);
-    const absent = generateRenderSettings({ structure: {} }).structure;
+    const absent = gen({ structure: {} }).structure;
     expect(absent.borderDarken).toBe(defaults.borderDarken);
     expect(absent.fillDarken).toBe(defaults.fillDarken);
     expect(absent.iconR).toBe(defaults.iconR);
@@ -167,7 +171,7 @@ describe("generateRenderSettings", () => {
   });
 
   test("classicIcons + name overrides compose independently", () => {
-    const s = generateRenderSettings({
+    const s = gen({
       name: { darkNames: true, nameScaleFactor: 0.9 },
       structure: { classicIcons: true },
     });
