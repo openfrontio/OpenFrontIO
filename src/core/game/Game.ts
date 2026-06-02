@@ -181,6 +181,7 @@ export enum GameMapType {
   Labyrinth = "Labyrinth",
   Caribbean = "Caribbean",
   Onion = "Onion",
+  SoutheastAsia = "SoutheastAsia",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -252,6 +253,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Venice,
     GameMapType.YellowSea,
     GameMapType.Caribbean,
+    GameMapType.SoutheastAsia,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -808,6 +810,8 @@ export interface Player {
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean;
   outgoingEmojis(): EmojiMessage[];
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
+  canSendQuickChat(recipient: Player): boolean;
+  recordQuickChat(recipient: Player): void;
 
   // Donation
   canDonateGold(recipient: Player): boolean;

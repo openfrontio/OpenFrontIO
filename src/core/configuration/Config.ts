@@ -249,10 +249,10 @@ export class Config {
     return 15;
   }
   trainStationMaxRange(): number {
-    return 100;
+    return 110;
   }
   railroadMaxSize(): number {
-    return 120;
+    return this.trainStationMaxRange();
   }
 
   tradeShipGold(dist: number, player: Player | PlayerView): Gold {
@@ -515,6 +515,9 @@ export class Config {
   }
   emojiMessageCooldown(): Tick {
     return 5 * 10;
+  }
+  quickChatCooldown(): Tick {
+    return 3 * 10;
   }
   targetDuration(): Tick {
     return 10 * 10;
