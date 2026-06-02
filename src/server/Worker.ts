@@ -233,6 +233,20 @@ export async function startWorker() {
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
     try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith("Bearer ")) {
+        return res
+          .status(401)
+          .json({ error: "Authorization header required to archive a game" });
+      }
+      const token = authHeader.substring("Bearer ".length);
+      const verifyResult = await verifyClientToken(token);
+      if (verifyResult.type === "error") {
+        log.warn(`Invalid singleplayer archive token: ${verifyResult.message}`);
+        return res.status(401).json({ error: "Invalid token" });
+      }
+      const persistentId = verifyResult.persistentId;
+
       const record = req.body;
 
       const result = PartialGameRecordSchema.safeParse(record);
@@ -253,11 +267,24 @@ export async function startWorker() {
         return res.status(400).json({ error: "Invalid request" });
       }
 
-      if (result.data.info.players.length !== 1) {
+      if (gameRecord.info.players.length !== 1) {
         log.warn(`cannot archive singleplayer game multiple players`, {
           gameID: gameRecord.info.gameID,
         });
         return res.status(400).json({ error: "Invalid request" });
+      }
+
+      const playerRecord = gameRecord.info.players[0];
+      if (playerRecord.persistentID !== persistentId) {
+        log.warn(
+          `cannot archive singleplayer game: player ID mismatch (player: ${playerRecord.persistentID}, token: ${persistentId})`,
+          {
+            gameID: gameRecord.info.gameID,
+          },
+        );
+        return res
+          .status(403)
+          .json({ error: "Forbidden: persistentID mismatch" });
       }
 
       log.info("archiving singleplayer game", {
