@@ -842,6 +842,7 @@ class Client {
       turnstileToken: await this.getTurnstileToken(lobby),
       playerName: this.usernameInput?.getUsername() ?? genAnonUsername(),
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
       gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
       gameRecord: lobby.gameRecord,
