@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 1500,
-    "num_land_tiles": 1098655,
+    "num_land_tiles": 1069645,
     "width": 2000
   },
   "map16x": {
     "height": 375,
-    "num_land_tiles": 67229,
+    "num_land_tiles": 64964,
     "width": 500
   },
   "map4x": {
     "height": 750,
-    "num_land_tiles": 272688,
+    "num_land_tiles": 264736,
     "width": 1000
   },
   "name": "Iceland",
