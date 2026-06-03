@@ -147,8 +147,7 @@ describe("selectDistinctColor", () => {
     ];
 
     const result = selectDistinctColorIndex(availableColors, assignedColors);
-    expect(result).not.toBeNull();
-    const rgb = availableColors[result!].toRgb();
+    const rgb = availableColors[result].toRgb();
     expect([
       { r: 0, g: 255, b: 0, a: 1 },
       { r: 0, g: 0, b: 255, a: 1 },

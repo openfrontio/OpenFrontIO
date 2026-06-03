@@ -50,8 +50,10 @@ export class ColorAllocator {
       selectedIndex = rand.nextInt(0, this.availableColors.length);
     } else {
       const assignedColors = Array.from(this.assigned.values());
-      selectedIndex =
-        selectDistinctColorIndex(this.availableColors, assignedColors) ?? 0;
+      selectedIndex = selectDistinctColorIndex(
+        this.availableColors,
+        assignedColors,
+      );
     }
 
     const color = this.availableColors.splice(selectedIndex, 1)[0];
@@ -68,7 +70,7 @@ export class ColorAllocator {
 export function selectDistinctColorIndex(
   availableColors: Colord[],
   assignedColors: Colord[],
-): number | null {
+): number {
   if (assignedColors.length === 0) {
     throw new Error("No assigned colors");
   }
