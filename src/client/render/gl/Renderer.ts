@@ -158,6 +158,16 @@ export class GPURenderer {
   onFrame: ((ms: number) => void) | null = null;
   afterRender: ((canvas: HTMLCanvasElement) => void) | null = null;
 
+  // Deferred GPU timer
+  private gpuTimerExt: {
+    TIME_ELAPSED_EXT: number;
+    GPU_DISJOINT_EXT: number;
+  } | null = null;
+  private gpuQueries: (WebGLQuery | null)[] = [];
+  private gpuQueryIssued: boolean[] = [];
+  private gpuQueryIdx = 0;
+  private static readonly GPU_QUERY_DEPTH = 3;
+
   // Hit-testing references
   private lastUnits: Map<number, UnitState> = new Map();
   private lastStructures: Map<number, UnitState> = new Map();
@@ -207,6 +217,18 @@ export class GPURenderer {
     const floatExt = gl.getExtension("EXT_color_buffer_float");
     if (!floatExt)
       console.warn("EXT_color_buffer_float not available — palette may fail");
+
+    this.gpuTimerExt = gl.getExtension(
+      "EXT_disjoint_timer_query_webgl2",
+    ) as typeof this.gpuTimerExt;
+    if (this.gpuTimerExt) {
+      for (let i = 0; i < GPURenderer.GPU_QUERY_DEPTH; i++) {
+        this.gpuQueries.push(gl.createQuery());
+        this.gpuQueryIssued.push(false);
+      }
+    } else {
+      console.warn("EXT_disjoint_timer_query_webgl2 not available");
+    }
 
     const mapW = header.mapWidth;
     const mapH = header.mapHeight;
@@ -1166,9 +1188,41 @@ export class GPURenderer {
   draw(): void {
     const now = performance.now();
     this.trackFps(now);
+
+    // Deferred GPU timer: read result issued GPU_QUERY_DEPTH frames ago
+    // (by now the GPU has finished it, so the read is non-blocking).
+    const gl = this.gl;
+    const ext = this.gpuTimerExt;
+    const slot = this.gpuQueryIdx;
+    if (ext) {
+      const prevQuery = this.gpuQueries[slot];
+      if (prevQuery && this.gpuQueryIssued[slot]) {
+        const available = gl.getQueryParameter(
+          prevQuery,
+          gl.QUERY_RESULT_AVAILABLE,
+        );
+        const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT);
+        if (available && !disjoint) {
+          const ns = gl.getQueryParameter(prevQuery, gl.QUERY_RESULT) as number;
+          const ms = ns / 1e6;
+          if (ms > 12) console.log(`[GPU] ${ms.toFixed(1)}ms`);
+        }
+      }
+      if (prevQuery) {
+        gl.beginQuery(ext.TIME_ELAPSED_EXT, prevQuery);
+        this.gpuQueryIssued[slot] = true;
+      }
+    }
+
     this.uploadTextures();
     this.computeTextures();
     this.renderFrame();
+
+    if (ext && this.gpuQueries[slot]) {
+      gl.endQuery(ext.TIME_ELAPSED_EXT);
+      this.gpuQueryIdx = (slot + 1) % GPURenderer.GPU_QUERY_DEPTH;
+    }
+
     if (this.onFrame) this.onFrame(performance.now() - now);
     if (this.afterRender) this.afterRender(this.canvas);
   }

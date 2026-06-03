@@ -380,8 +380,15 @@ function mountWebGLFrameLoop(
   // TransformHandler, pushes it to WebGL, and synchronously invokes the
   // renderer's captured frame callback (which draws). One RAF = one
   // synchronized camera-update + WebGL render.
-  const driveFrame = (): void => {
+  let lastRafTime = performance.now();
+  const driveFrame = (now: number): void => {
+    const dt = now - lastRafTime;
+    lastRafTime = now;
+    if (dt > 20) console.log(`[rAF gap] ${dt.toFixed(1)}ms`);
+    const cpuStart = performance.now();
     syncCamera();
+    const cpuMs = performance.now() - cpuStart;
+    if (cpuMs > 10) console.log(`[CPU frame] ${cpuMs.toFixed(1)}ms`);
     requestAnimationFrame(driveFrame);
   };
   requestAnimationFrame(driveFrame);
