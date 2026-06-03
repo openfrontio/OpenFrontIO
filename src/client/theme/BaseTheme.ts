@@ -51,15 +51,21 @@ export abstract class BaseTheme implements Theme {
   }
 
   // --- Color data: concrete themes provide these ---
+  /** Color pool for human players. */
   protected abstract humanPalette(): Colord[];
+  /** Color pool for bot players. */
   protected abstract botPalette(): Colord[];
+  /** Color pool for nation (FFA AI) players. */
   protected abstract nationPalette(): Colord[];
+  /** Extra colors used once the human pool is exhausted. */
   protected abstract fallbackPalette(): Colord[];
   /** Per-team color variations; index 0 is the team's base color. */
   protected abstract teamColorVariations(team: Team): Colord[];
+  /** Color for a terrain tile, based on its type and elevation magnitude. */
   abstract terrainColor(gm: GameMap, tile: TileRef): Colord;
 
   // --- Allocation dispatch (overridable) ---
+  /** Base color for a team (the first entry of its variations). */
   teamColor(team: Team): Colord {
     const rgb = this.teamColorVariations(team)[0].toRgb();
     return colord({
@@ -69,6 +75,11 @@ export abstract class BaseTheme implements Theme {
     });
   }
 
+  /**
+   * Color for a player's territory: a per-player variation when the player is
+   * on a team, otherwise a distinct color allocated from the matching pool
+   * (human / bot / nation).
+   */
   territoryColor(player: PlayerView): Colord {
     const team = player.team();
     if (team !== null) {
@@ -96,6 +107,11 @@ export abstract class BaseTheme implements Theme {
   }
 
   // --- Shared color math ---
+  /**
+   * Derive the light/dark color pair used to render a structure icon over a
+   * territory, nudging luminance until the two reach a minimum contrast so the
+   * icon stays legible on any fill.
+   */
   structureColors(territoryColor: Colord): { light: Colord; dark: Colord } {
     // Convert territory color to LAB color space. Territory color is rendered in game with alpha = 150/255, use that here.
     const lightLAB = territoryColor.alpha(150 / 255).toLab();
@@ -122,15 +138,13 @@ export abstract class BaseTheme implements Theme {
           Dark color: ${colord(darkLAB).toRgbString()},
           Contrast: ${contrast}`);
         break;
-
-        // Increase the light color if the "loop limit" has been reach
-        // (probably due to the dark color already being as dark as it can be)
       } else if (loopCount > loopLimit) {
+        // Increase the light color once the loop limit is reached (probably
+        // because the dark color is already as dark as it can get).
         lightLAB.l = this.clamp(lightLAB.l + luminanceChange);
-
-        // Decrease the dark color first to keep the light color as close
-        // to the territory color as possible
       } else {
+        // Decrease the dark color first to keep the light color as close
+        // to the territory color as possible.
         darkLAB.l = this.clamp(darkLAB.l - luminanceChange);
       }
 
@@ -141,19 +155,25 @@ export abstract class BaseTheme implements Theme {
     return { light: colord(lightLAB), dark: colord(darkLAB) };
   }
 
+  /** Perceptual (CIE76 delta-E) distance between two LAB colors. */
   private contrast(first: LabaColor, second: LabaColor): number {
     return colord(first).delta(colord(second));
   }
 
+  /** Clamp a number into the inclusive [low, high] range (default 0–100). */
   private clamp(num: number, low: number = 0, high: number = 100): number {
     return Math.min(Math.max(low, num), high);
   }
 
-  // Don't call directly, use PlayerView
+  /**
+   * Border color for a territory. Don't call directly — use PlayerView.
+   * Themes override this to change how borders relate to the fill.
+   */
   borderColor(territoryColor: Colord): Colord {
     return territoryColor.darken(0.125);
   }
 
+  /** Light/dark border pair used to render a defended (fortified) border. */
   defendedBorderColors(territoryColor: Colord): {
     light: Colord;
     dark: Colord;
@@ -164,35 +184,44 @@ export abstract class BaseTheme implements Theme {
     };
   }
 
+  /** Border color used to highlight the currently focused player. */
   focusedBorderColor(): Colord {
     return colord("rgb(230,230,230)");
   }
 
+  /** Player name text color (darker for humans, gray for AI). */
   textColor(player: PlayerView): string {
     return player.type() === PlayerType.Human ? "#000000" : "#4D4D4D";
   }
 
+  /** Map background color. */
   backgroundColor(): Colord {
     return this.background;
   }
 
+  /** A random color from the fallout palette (for the nuke fallout effect). */
   falloutColor(): Colord {
     return this.rand.randElement(this.falloutColors);
   }
 
+  /** Font stack used for in-map text. */
   font(): string {
     return "Overpass, sans-serif";
   }
 
+  /** Highlight color for a spawnable tile during the spawn phase. */
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
   }
+  /** Spawn highlight color for the local player's own tiles. */
   spawnHighlightSelfColor(): Colord {
     return this._spawnHighlightSelfColor;
   }
+  /** Spawn highlight color for teammates' tiles. */
   spawnHighlightTeamColor(): Colord {
     return this._spawnHighlightTeamColor;
   }
+  /** Spawn highlight color for enemies' tiles. */
   spawnHighlightEnemyColor(): Colord {
     return this._spawnHighlightEnemyColor;
   }

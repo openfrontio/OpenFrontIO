@@ -3,6 +3,7 @@ import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/client/theme/ColorAllocator";
+import { ColorblindTheme } from "../src/client/theme/ColorblindTheme";
 import {
   blue,
   botColor,
@@ -110,6 +111,29 @@ describe("PastelTheme team colors", () => {
     const a = theme.teamColorForPlayer(ColoredTeams.Blue, "player1");
     const b = theme.teamColorForPlayer(ColoredTeams.Blue, "player2");
     expect(a.isEqual(b)).toBe(false);
+  });
+});
+
+describe("ColorblindTheme", () => {
+  test("applies a palette distinct from PastelTheme", () => {
+    const pastel = new PastelTheme();
+    const colorblind = new ColorblindTheme();
+
+    // At least one team's base color should differ — the colorblind theme
+    // swaps the team palettes for CVD-safe (Okabe-Ito) colors.
+    const teams = [
+      ColoredTeams.Blue,
+      ColoredTeams.Red,
+      ColoredTeams.Teal,
+      ColoredTeams.Purple,
+      ColoredTeams.Yellow,
+      ColoredTeams.Orange,
+      ColoredTeams.Green,
+    ];
+    const anyDifferent = teams.some(
+      (team) => !pastel.teamColor(team).isEqual(colorblind.teamColor(team)),
+    );
+    expect(anyDifferent).toBe(true);
   });
 });
 

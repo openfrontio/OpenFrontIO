@@ -20,6 +20,7 @@ import { PastelTheme } from "./PastelTheme";
  * allocation logic from BaseTheme via PastelTheme.
  */
 export class ColorblindTheme extends PastelTheme {
+  /** All player pools share the single CVD-safe, lightness-varied palette. */
   protected humanPalette(): Colord[] {
     return colorblindColors;
   }
@@ -30,6 +31,7 @@ export class ColorblindTheme extends PastelTheme {
     return colorblindColors;
   }
 
+  /** Colorblind-safe per-team variations (blue/orange-anchored Okabe-Ito). */
   protected teamColorVariations(team: Team): Colord[] {
     switch (team) {
       case ColoredTeams.Blue:
@@ -57,28 +59,33 @@ export class ColorblindTheme extends PastelTheme {
     }
   }
 
-  // Fill-derived border, darkened *relative* to each fill's own lightness
-  // rather than by a fixed amount. An absolute darken (e.g. .darken(0.3))
-  // pushes already-dark fills to near-black while barely touching light ones,
-  // so borders read inconsistently across nations. Scaling lightness keeps
-  // every border the same proportion darker than its territory — distinct, but
-  // still hued and never collapsing to black. Friend/foe tints are mixed on top
-  // in the border shader.
+  /**
+   * Fill-derived border, darkened *relative* to each fill's own lightness
+   * rather than by a fixed amount. An absolute darken (e.g. .darken(0.3))
+   * pushes already-dark fills to near-black while barely touching light ones,
+   * so borders read inconsistently across nations. Scaling lightness keeps
+   * every border the same proportion darker than its territory — distinct, but
+   * still hued and never collapsing to black. Friend/foe tints are mixed on top
+   * in the border shader.
+   */
   borderColor(territoryColor: Colord): Colord {
     const hsl = territoryColor.toHsl();
     return colord({ ...hsl, l: hsl.l * 0.6 });
   }
 
-  // CVD-tuned terrain: separate elevation bands by *lightness* (the cue all
-  // colorblindness types keep) rather than the green→brown→gray hue ramp, which
-  // blurs plains↔hills under red-green CVD. Dark plains → mid hills → bright
-  // mountains. Water/shore are inherited (blue is already CVD-safe).
+  /**
+   * CVD-tuned terrain: separate elevation bands by *lightness* (the cue all
+   * colorblindness types keep) rather than the green→brown→gray hue ramp, which
+   * blurs plains↔hills under red-green CVD. Dark plains → mid hills → bright
+   * mountains. Water/shore are inherited (blue is already CVD-safe).
+   */
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {
       return this.shore;
     }
-    switch (gm.terrainType(tile)) {
+    const type = gm.terrainType(tile);
+    switch (type) {
       case TerrainType.Ocean:
       case TerrainType.Lake: {
         const w = this.water.rgba;
@@ -97,6 +104,11 @@ export class ColorblindTheme extends PastelTheme {
         return colord({ r: 165 + 2 * mag, g: 145 + 2 * mag, b: 105 + mag });
       case TerrainType.Mountain: // near-white, brightest band
         return colord({ r: 225 + mag / 2, g: 225 + mag / 2, b: 228 + mag / 2 });
+      default: {
+        // Exhaustiveness guard: a new TerrainType is a compile error here.
+        const _exhaustive: never = type;
+        return _exhaustive;
+      }
     }
   }
 }

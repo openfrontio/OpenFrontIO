@@ -17,6 +17,11 @@ import {
   yellowTeamColors,
 } from "./Colors";
 
+/**
+ * Default light theme — soft pastel player palettes and a naturalistic
+ * (green → tan → white) terrain ramp. Other themes extend it to reuse the
+ * shared terrain/water colors while swapping palettes.
+ */
 export class PastelTheme extends BaseTheme {
   protected shore = colord("rgb(204,203,158)");
   protected water = colord("rgb(70,132,180)");
@@ -62,20 +67,25 @@ export class PastelTheme extends BaseTheme {
     }
   }
 
-  // | Terrain Type      | Magnitude | Base Color Logic                                | Visual Description                                                   |
-  // | :---------------- | :-------- | :---------------------------------------------- | :------------------------------------------------------------------- |
-  // | **Shore (Land)**  | N/A       | Fixed: `rgb(204, 203, 158)`                   | Sandy beige. Overrides other land types if adjacent to water.        |
-  // | **Plains**        | 0 - 9     | `rgb(190, 220, 138)` - `rgb(190, 202, 138)` | Light green. Gets slightly darker/less green as magnitude increases. |
-  // | **Highland**      | 10 - 19   | `rgb(220, 203, 158)` - `rgb(238, 221, 176)` | Tan/Beige. Gets lighter as magnitude increases.                      |
-  // | **Mountain**      | 20 - 30   | `rgb(240, 240, 240)` - `rgb(245, 245, 245)` | Grayscale (White/Grey). Represents snow caps or rocky peaks.         |
-  // | **Water (Shore)** | 0         | Fixed: `rgb(100, 143, 255)`                   | Light blue near land.                                                |
-  // | **Water (Deep)**  | 1 - 10+   | `rgb(70, 132, 180)` - `rgb(61, 123, 171)`   | Darker blue, adjusted slightly by distance to land.                  |
+  /**
+   * Naturalistic terrain ramp by type and elevation magnitude:
+   *
+   * | Terrain Type      | Magnitude | Base Color Logic                                | Visual Description                                                   |
+   * | :---------------- | :-------- | :---------------------------------------------- | :------------------------------------------------------------------- |
+   * | **Shore (Land)**  | N/A       | Fixed: `rgb(204, 203, 158)`                   | Sandy beige. Overrides other land types if adjacent to water.        |
+   * | **Plains**        | 0 - 9     | `rgb(190, 220, 138)` - `rgb(190, 202, 138)` | Light green. Gets slightly darker/less green as magnitude increases. |
+   * | **Highland**      | 10 - 19   | `rgb(220, 203, 158)` - `rgb(238, 221, 176)` | Tan/Beige. Gets lighter as magnitude increases.                      |
+   * | **Mountain**      | 20 - 30   | `rgb(240, 240, 240)` - `rgb(245, 245, 245)` | Grayscale (White/Grey). Represents snow caps or rocky peaks.         |
+   * | **Water (Shore)** | 0         | Fixed: `rgb(100, 143, 255)`                   | Light blue near land.                                                |
+   * | **Water (Deep)**  | 1 - 10+   | `rgb(70, 132, 180)` - `rgb(61, 123, 171)`   | Darker blue, adjusted slightly by distance to land.                  |
+   */
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {
       return this.shore;
     }
-    switch (gm.terrainType(tile)) {
+    const type = gm.terrainType(tile);
+    switch (type) {
       case TerrainType.Ocean: {
         const w = this.water.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
@@ -105,6 +115,11 @@ export class PastelTheme extends BaseTheme {
           g: 230 + mag / 2,
           b: 230 + mag / 2,
         });
+      default: {
+        // Exhaustiveness guard: a new TerrainType is a compile error here.
+        const _exhaustive: never = type;
+        return _exhaustive;
+      }
     }
   }
 }

@@ -206,12 +206,14 @@ export class UserSettingModal extends BaseModal {
     console.log("🌙 Dark Mode:", this.userSettings.darkMode() ? "ON" : "OFF");
   }
 
+  /** Whether colorblind mode is currently enabled in the graphics overrides. */
   private colorblindMode(): boolean {
     return (
       this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
     );
   }
 
+  /** Flip the colorblind-mode graphics override and persist it. */
   private toggleColorblindMode() {
     const overrides = this.userSettings.graphicsOverrides();
     this.userSettings.setGraphicsOverrides({

@@ -3,6 +3,11 @@ import type { RenderSettings } from "./RenderSettings";
 
 const DARK_AMBIENT = 0.35;
 
+/**
+ * Apply the user's graphics overrides onto a RenderSettings in place: name
+ * scaling, classic/dark structure and name styling, and the colorblind-safe
+ * affiliation/tint palette.
+ */
 export function applyGraphicsOverrides(
   settings: RenderSettings,
   overrides: GraphicsOverrides,
@@ -93,6 +98,7 @@ export function applyGraphicsOverrides(
   }
 }
 
+/** Apply dark-mode lighting (ambient + enabled) onto settings when active. */
 export function applyDarkModeOverride(
   settings: RenderSettings,
   isDark: boolean,

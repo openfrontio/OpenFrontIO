@@ -23,6 +23,13 @@ export class ColorAllocator {
     this.fallbackColors = [...colors, ...fallback];
   }
 
+  /**
+   * Return the color assigned to `id`, allocating one on first request. New
+   * colors are chosen to be as visually distinct as possible from those already
+   * handed out (falling back to random selection once the pool is large or
+   * exhausted, for performance). Assignments are stable for the allocator's
+   * lifetime.
+   */
   assignColor(id: string): Colord {
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
@@ -53,8 +60,11 @@ export class ColorAllocator {
   }
 }
 
-// Select a distinct color index from the available colors that
-// is most different from the assigned colors
+/**
+ * Index of the available color that is most perceptually different from the
+ * already-assigned colors (the one whose nearest assigned neighbor is farthest
+ * away, by delta-E 2000). Throws if no colors have been assigned yet.
+ */
 export function selectDistinctColorIndex(
   availableColors: Colord[],
   assignedColors: Colord[],
@@ -79,16 +89,19 @@ export function selectDistinctColorIndex(
   return maxIndex;
 }
 
+/** Smallest delta-E 2000 distance from `lab1` to any of the assigned colors. */
 function minDeltaE(lab1: Color, assignedLabColors: Color[]) {
   return assignedLabColors.reduce((min, assigned) => {
     return Math.min(min, deltaE2000(lab1, assigned));
   }, Infinity);
 }
 
+/** Perceptual distance between two colors using the CIEDE2000 formula. */
 function deltaE2000(c1: Color, c2: Color): number {
   return c1.deltaE(c2, "2000");
 }
 
+/** Convert a colord color to a colorjs.io LAB color for delta-E math. */
 function toColor(colord: Colord): Color {
   const lab = colord.toLab();
   return new Color("lab", [lab.l, lab.a, lab.b]);
