@@ -1,5 +1,6 @@
 import {
   createMatcher,
+  FailOpenPrivilegeChecker,
   PrivilegeCheckerImpl,
   shadowNames,
 } from "../src/server/Privilege";
@@ -517,5 +518,70 @@ describe("Skin validation", () => {
       });
       expect(result.type).toBe("forbidden");
     });
+  });
+});
+
+describe("PrivilegeCheckerImpl#resolveClanTag", () => {
+  // Reserved tags are stored uppercase, exactly as PrivilegeRefresher loads them.
+  const makeChecker = (reservedTags: string[]) =>
+    new PrivilegeCheckerImpl(
+      mockCosmetics,
+      mockDecoder,
+      bannedWords,
+      new Set(reservedTags),
+    );
+
+  it("passes a null tag through unchanged", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag(null, []);
+    expect(result).toEqual({ tag: null, dropped: false });
+  });
+
+  it("accepts a member's tag without consulting the reserved set (case-insensitive)", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["abc"]);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("drops a reserved tag the player does not belong to (impersonation)", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", ["other"]);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+
+  it("keeps a fictional tag matching no reserved clan", () => {
+    const result = makeChecker(["OTHER"]).resolveClanTag("ABC", []);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("matches the reserved set case-insensitively", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("abc", ["other"]);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+
+  it("treats anonymous users as members of no clans", () => {
+    const result = makeChecker(["ABC"]).resolveClanTag("ABC", []);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+});
+
+describe("FailOpenPrivilegeChecker#resolveClanTag", () => {
+  const checker = new FailOpenPrivilegeChecker();
+
+  it("passes a null tag through unchanged", () => {
+    const result = checker.resolveClanTag(null, []);
+    expect(result).toEqual({ tag: null, dropped: false });
+  });
+
+  it("keeps a member's tag (known from owned tags, no lookup needed)", () => {
+    const result = checker.resolveClanTag("ABC", ["abc"]);
+    expect(result).toEqual({ tag: "ABC", dropped: false });
+  });
+
+  it("drops a non-member's tag fail-closed (no reserved set while infra is down)", () => {
+    const result = checker.resolveClanTag("ABC", ["other"]);
+    expect(result).toEqual({ tag: null, dropped: true });
+  });
+
+  it("drops an anonymous user's tag fail-closed", () => {
+    const result = checker.resolveClanTag("ABC", []);
+    expect(result.dropped).toBe(true);
   });
 });
