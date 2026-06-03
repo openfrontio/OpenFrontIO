@@ -1,3 +1,5 @@
+import { getEffectiveDpr } from "../../utilities/Dpr";
+
 /**
  * 2D camera: pan/zoom → column-major mat3 for WebGL2 vertex shaders.
  *
@@ -44,7 +46,7 @@ export class Camera {
 
   /** Update canvas pixel dimensions. Triggers initial fitMap on first call. */
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     this.canvasW = Math.round(cssWidth * dpr);
     this.canvasH = Math.round(cssHeight * dpr);
     if (this.needsInitialFit) {
@@ -163,7 +165,7 @@ export class Camera {
 
   /** Convert screen pixel position to world coordinates. */
   screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     const ndcX = ((screenX * dpr) / this.canvasW) * 2 - 1;
     const ndcY = -(((screenY * dpr) / this.canvasH) * 2 - 1);
     const sx = (this.zoom * 2) / this.canvasW;
@@ -176,7 +178,7 @@ export class Camera {
 
   /** Convert world coordinates to screen pixel position (CSS pixels). */
   worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     return {
       x: (this.zoom * (worldX - this.offsetX)) / dpr + this.canvasW / (2 * dpr),
       y: (this.zoom * (worldY - this.offsetY)) / dpr + this.canvasH / (2 * dpr),

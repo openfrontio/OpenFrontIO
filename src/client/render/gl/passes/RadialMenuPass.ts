@@ -22,6 +22,7 @@ import iconVertSrc from "../shaders/radial-menu/icon.vert.glsl?raw";
 
 import emojiAtlasMeta from "resources/atlases/emoji-atlas-meta.json";
 import { assetUrl } from "src/core/AssetUrls";
+import { getEffectiveDpr } from "../../../utilities/Dpr";
 
 const emojiAtlasUrl = assetUrl("atlases/emoji-atlas.png");
 
@@ -437,7 +438,7 @@ export class RadialMenuPass {
     if (this.items.length === 0 && !this.centerItem) return;
 
     const gl = this.gl;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     const vw = gl.drawingBufferWidth;
     const vh = gl.drawingBufferHeight;
     const ax = this.anchorX * dpr;
@@ -491,7 +492,7 @@ export class RadialMenuPass {
     centerHovered: boolean,
   ): void {
     const gl = this.gl;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     const n = items.length;
     const hasCenter = centerItem !== null;
     const outerR = cfg.outerR * dpr;

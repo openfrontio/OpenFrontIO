@@ -79,6 +79,7 @@ import {
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
 import { themeProvider } from "./theme/ThemeProvider";
+import { getEffectiveDpr } from "./utilities/Dpr";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -344,7 +345,7 @@ function mountWebGLFrameLoop(
 
   const syncCamera = (): void => {
     const scale = transformHandler.scale;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     const centerX =
       transformHandler.offsetX +
       mapWidth / 2 +

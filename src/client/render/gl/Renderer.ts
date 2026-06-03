@@ -10,6 +10,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
+import { getEffectiveDpr } from "../../utilities/Dpr";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -544,7 +545,7 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   resize(cssWidth: number, cssHeight: number): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr();
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
     this.camera.resize(cssWidth, cssHeight);
