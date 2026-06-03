@@ -52,6 +52,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Britannia: 5,
   Caribbean: 5,
   Caucasus: 5,
+  ChoppingBlock: 5,
   Conakry: 3,
   DanishStraits: 5,
   DeglaciatedAntarctica: 4,
@@ -146,6 +147,7 @@ const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
   [GameMapType.TradersDream, 2],
   [GameMapType.Surrounded, 4],
   [GameMapType.GulfOfStLawrence, 3],
+  [GameMapType.ChoppingBlock, 4],
 ]);
 
 type ModifierKey =
@@ -190,6 +192,7 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Baikal,
   GameMapType.Luna,
   GameMapType.ArchipelagoSea,
+  GameMapType.ChoppingBlock,
 ]);
 
 // Maps that are entirely land.
