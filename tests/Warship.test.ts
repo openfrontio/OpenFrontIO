@@ -916,3 +916,35 @@ describe("Warship", () => {
     expect(tradeShip.owner()).toBe(player1);
   });
 });
+
+test("Warship doesn't accept a new patrol tile if in a different water component", async () => {
+  const newPatrolTile = game.ref(coastX + 5, 15);
+
+  const warship = player1.buildUnit(
+    UnitType.Warship,
+    game.ref(coastX + 1, 10),
+    {
+      patrolTile: game.ref(coastX + 1, 10),
+    },
+  );
+
+  game.addExecution(new WarshipExecution(warship));
+
+  // Mock different water components
+  game.getWaterComponent = (tile: TileRef) => {
+    if (tile === newPatrolTile) return 1;
+    return 2;
+  };
+
+  game.hasWaterComponent = (tile: TileRef, component: number) => {
+    return game.getWaterComponent(tile) === component;
+  };
+
+  game.addExecution(
+    new MoveWarshipExecution(player1, [warship.id()], newPatrolTile),
+  );
+
+  executeTicks(game, 10);
+
+  expect(warship.warshipState().patrolTile).toBe(game.ref(coastX + 1, 10));
+});
