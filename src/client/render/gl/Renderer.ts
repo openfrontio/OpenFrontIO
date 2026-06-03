@@ -210,6 +210,7 @@ export class GPURenderer {
       alpha: false,
       antialias: false,
       powerPreference: "high-performance",
+      desynchronized: true,
     });
     if (!gl) throw new Error("WebGL2 not supported");
     this.gl = gl;
