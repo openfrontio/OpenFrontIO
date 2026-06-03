@@ -48,9 +48,6 @@ export class AttacksDisplay extends LitElement implements Controller {
   }
 
   init() {
-    // Preload the unit sprites so boat rows can render their tinted icon.
-    // This previously ran from a deleted canvas layer, leaving the sprite
-    // map empty (see issue #4100).
     loadAllSprites().catch((err) =>
       console.error("Failed to preload attack display sprites:", err),
     );
