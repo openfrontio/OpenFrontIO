@@ -23,7 +23,7 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
-import { getColoredSprite } from "../SpriteLoader";
+import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
@@ -47,7 +47,14 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this;
   }
 
-  init() {}
+  init() {
+    // Preload the unit sprites so boat rows can render their tinted icon.
+    // This previously ran from a deleted canvas layer, leaving the sprite
+    // map empty (see issue #4100).
+    loadAllSprites().catch((err) =>
+      console.error("Failed to preload attack display sprites:", err),
+    );
+  }
 
   tick() {
     this.active = true;
