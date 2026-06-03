@@ -1,5 +1,6 @@
-import { Colord } from "colord";
-import { ColoredTeams, Team } from "../../core/game/Game";
+import { Colord, colord } from "colord";
+import { ColoredTeams, Team, TerrainType } from "../../core/game/Game";
+import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
   botTeamColors,
   cbBlueTeamColors,
@@ -53,6 +54,49 @@ export class ColorblindTheme extends PastelTheme {
         return cbRedTeamColors;
       default:
         return [this.humanColorAllocator.assignColor(team)];
+    }
+  }
+
+  // Fill-derived border, darkened *relative* to each fill's own lightness
+  // rather than by a fixed amount. An absolute darken (e.g. .darken(0.3))
+  // pushes already-dark fills to near-black while barely touching light ones,
+  // so borders read inconsistently across nations. Scaling lightness keeps
+  // every border the same proportion darker than its territory — distinct, but
+  // still hued and never collapsing to black. Friend/foe tints are mixed on top
+  // in the border shader.
+  borderColor(territoryColor: Colord): Colord {
+    const hsl = territoryColor.toHsl();
+    return colord({ ...hsl, l: hsl.l * 0.6 });
+  }
+
+  // CVD-tuned terrain: separate elevation bands by *lightness* (the cue all
+  // colorblindness types keep) rather than the green→brown→gray hue ramp, which
+  // blurs plains↔hills under red-green CVD. Dark plains → mid hills → bright
+  // mountains. Water/shore are inherited (blue is already CVD-safe).
+  terrainColor(gm: GameMap, tile: TileRef): Colord {
+    const mag = gm.magnitude(tile);
+    if (gm.isShore(tile)) {
+      return this.shore;
+    }
+    switch (gm.terrainType(tile)) {
+      case TerrainType.Ocean:
+      case TerrainType.Lake: {
+        const w = this.water.rgba;
+        if (gm.isShoreline(tile) && gm.isWater(tile)) {
+          return this.shorelineWater;
+        }
+        return colord({
+          r: Math.max(w.r - 10 + (11 - Math.min(mag, 10)), 0),
+          g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
+          b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
+        });
+      }
+      case TerrainType.Plains: // dark green, low lightness
+        return colord({ r: 90, g: 140 - mag, b: 70 });
+      case TerrainType.Highland: // mid ochre, clearly lighter than plains
+        return colord({ r: 165 + 2 * mag, g: 145 + 2 * mag, b: 105 + mag });
+      case TerrainType.Mountain: // near-white, brightest band
+        return colord({ r: 225 + mag / 2, g: 225 + mag / 2, b: 228 + mag / 2 });
     }
   }
 }

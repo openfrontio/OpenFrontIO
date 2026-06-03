@@ -85,8 +85,11 @@ export function applyGraphicsOverrides(
     settings.mapOverlay.embargoTintR = 0.835;
     settings.mapOverlay.embargoTintG = 0.369;
     settings.mapOverlay.embargoTintB = 0;
-    settings.mapOverlay.friendlyTintRatio = 0.6;
-    settings.mapOverlay.embargoTintRatio = 0.6;
+    // Strong ratio so the friend/foe tint dominates the darkened territory
+    // border — neutral keeps its (darkened) fill hue, ally reads blue, enemy
+    // reads orange.
+    settings.mapOverlay.friendlyTintRatio = 0.85;
+    settings.mapOverlay.embargoTintRatio = 0.85;
   }
 }
 
