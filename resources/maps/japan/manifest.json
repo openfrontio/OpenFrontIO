@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 2500,
-    "num_land_tiles": 488183,
+    "num_land_tiles": 478894,
     "width": 2500
   },
   "map16x": {
     "height": 625,
-    "num_land_tiles": 28618,
+    "num_land_tiles": 28027,
     "width": 625
   },
   "map4x": {
     "height": 1250,
-    "num_land_tiles": 119231,
+    "num_land_tiles": 116922,
     "width": 1250
   },
   "name": "japan",
