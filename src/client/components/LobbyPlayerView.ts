@@ -65,6 +65,7 @@ export class LobbyTeamView extends LitElement {
     return this.nationCount;
   }
 
+  /** Recompute the team preview when an input affecting team layout changes. */
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events

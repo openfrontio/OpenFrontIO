@@ -13,6 +13,7 @@ import { buildPreview } from "../../src/server/GamePreviewBuilder";
 
 const origin = "https://example.com";
 
+/** Build a minimal live-lobby GameInfo stub around a gameConfig for buildPreview. */
 function lobby(gameConfig: any) {
   return { gameConfig, clients: [{ username: "host" }] } as any;
 }
