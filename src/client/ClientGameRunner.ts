@@ -84,6 +84,9 @@ export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
+  // In-flight clan-tag ownership check; resolves to the tag to submit (null if
+  // it failed). Runs parallel to the WS handshake — only the join waits on it.
+  clanTagCheck?: Promise<string | null>;
   playerRole: string | null;
   gameID: GameID;
   turnstileToken: string | null;
@@ -121,7 +124,11 @@ export function joinLobby(
 
   let currentGameRunner: ClientGameRunner | null = null;
 
-  const onconnect = () => {
+  const onconnect = async () => {
+    // Drop the tag if the ownership check failed; the server re-checks anyway.
+    if (lobbyConfig.clanTagCheck !== undefined) {
+      lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
+    }
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     transport.joinGame();
