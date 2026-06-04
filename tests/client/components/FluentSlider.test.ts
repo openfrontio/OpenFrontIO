@@ -329,6 +329,50 @@ describe("FluentSlider", () => {
 
       expect(slider.value).toBe(180);
     });
+
+    it("offers a reset button only once moved off the hidden default", async () => {
+      slider.min = 0;
+      slider.max = 400;
+      slider.defaultValue = 247;
+      slider.hideDefaultValue = true;
+      slider.defaultLabelKey = "common.map_default";
+
+      // At default: no reset button.
+      slider.value = 247;
+      await slider.updateComplete;
+      expect(slider.querySelector("button")).toBeNull();
+
+      // Moved off default: reset button appears.
+      slider.value = 180;
+      await slider.updateComplete;
+      expect(slider.querySelector("button")).toBeTruthy();
+    });
+
+    it("resets to the default value (and re-parks) when reset is clicked", async () => {
+      const eventSpy = vi.fn();
+      slider.addEventListener("value-changed", eventSpy);
+
+      slider.min = 0;
+      slider.max = 400;
+      slider.defaultValue = 247;
+      slider.value = 180;
+      slider.hideDefaultValue = true;
+      slider.defaultLabelKey = "common.map_default";
+      await slider.updateComplete;
+
+      const resetButton = slider.querySelector("button") as HTMLButtonElement;
+      expect(resetButton).toBeTruthy();
+      resetButton.click();
+      await slider.updateComplete;
+
+      // Back to the (hidden) default, re-parked at center, change dispatched.
+      expect(slider.value).toBe(247);
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      const rangeInput = slider.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      expect(rangeInput.valueAsNumber).toBe(200);
+    });
   });
 
   describe("Edge Cases", () => {

@@ -37,6 +37,13 @@ export class FluentSlider extends LitElement {
     );
   }
 
+  private resetToDefault() {
+    if (this.defaultValue === undefined) return;
+    this.value = this.defaultValue;
+    this.isEditing = false;
+    this.dispatchValueChange();
+  }
+
   private handleSliderInput(e: Event) {
     const target = e.target as HTMLInputElement;
     this.value = target.valueAsNumber;
@@ -163,6 +170,18 @@ export class FluentSlider extends LitElement {
                           >`
                     : this.value}
               </span>`}
+          ${this.hideDefaultValue &&
+          this.defaultValue !== undefined &&
+          this.value !== this.defaultValue &&
+          this.defaultLabelKey
+            ? html`<button
+                type="button"
+                class="text-xs lowercase text-white/40 hover:text-white underline underline-offset-2 mt-1 cursor-pointer bg-transparent border-none"
+                @click=${this.resetToDefault}
+              >
+                ↺ ${translateText(this.defaultLabelKey)}
+              </button>`
+            : ""}
         </div>
       </div>
     `;
