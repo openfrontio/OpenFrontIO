@@ -18,7 +18,6 @@ export async function getPR(
     number: data.number,
     body: data.body ?? null,
     user: { login: data.user?.login ?? "" },
-    author_association: data.author_association,
     labels: (data.labels ?? [])
       .map((l) => l.name ?? "")
       .filter((name) => name.length > 0),
@@ -35,6 +34,22 @@ export async function getPRFiles(
     per_page: 100,
   });
   return files.map((f) => ({ additions: f.additions, deletions: f.deletions }));
+}
+
+export async function getRepoPermission(
+  octokit: Octokit,
+  username: string,
+): Promise<string> {
+  try {
+    const { data } = await octokit.rest.repos.getCollaboratorPermissionLevel({
+      ...REPO,
+      username,
+    });
+    return data.permission;
+  } catch (err) {
+    if (isStatus(err, 404)) return "none";
+    throw err;
+  }
 }
 
 export async function getIssue(

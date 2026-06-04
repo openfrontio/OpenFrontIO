@@ -1,10 +1,6 @@
 export const REPO = { owner: "openfrontio", repo: "OpenFrontIO" } as const;
 
-export const TRUSTED_AUTHOR_ASSOCIATIONS = [
-  "OWNER",
-  "MEMBER",
-  "COLLABORATOR",
-] as const;
+export const TRUSTED_REPO_PERMISSIONS = ["admin", "maintain", "write"] as const;
 
 export const SMALL_FIX_LINE_THRESHOLD = 50;
 
