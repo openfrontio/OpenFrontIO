@@ -288,6 +288,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  /** Merge a patch into the accessibility graphics overrides and persist it. */
+  private patchAccessibility(
+    patch: Partial<GraphicsOverrides["accessibility"]>,
+  ) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      accessibility: { ...current.accessibility, ...patch },
+    });
+    this.requestUpdate();
+  }
+
   private currentSpecialEffects(): boolean {
     return (
       this.userSettings.graphicsOverrides().passEnabled?.fx ??
@@ -297,6 +309,18 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
 
   private onToggleSpecialEffects() {
     this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
+  }
+
+  /** Whether colorblind mode is currently enabled. */
+  private currentColorblind(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().accessibility?.colorblind ?? false
+    );
+  }
+
+  /** Toggle colorblind-friendly colors. */
+  private onToggleColorblind() {
+    this.patchAccessibility({ colorblind: !this.currentColorblind() });
   }
 
   private onNameScaleChange(event: Event) {
@@ -339,6 +363,7 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const territoryAlpha = this.currentTerritoryAlpha();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
     const railThickness = this.currentRailThickness();
+    const colorblind = this.currentColorblind();
 
     return html`
       <div
@@ -670,6 +695,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_accessibility")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleColorblind}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.colorblind_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.colorblind_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${colorblind
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
