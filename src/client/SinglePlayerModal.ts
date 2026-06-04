@@ -290,6 +290,9 @@ export class SinglePlayerModal extends BaseModal {
                   defaultValue: this.defaultNationCount,
                   labelKey: "single_modal.nations",
                   disabledKey: "single_modal.nations_disabled",
+                  // Random map: show "Map default" without the count, which
+                  // would otherwise reveal the hidden map.
+                  hideDefaultValue: this.useRandomMap,
                 },
                 toggles: [
                   {
