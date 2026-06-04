@@ -5,6 +5,7 @@ uniform sampler2D uHeatTex;
 uniform usampler2D uTileTex;
 uniform vec2 uMapSize;
 uniform float uTick;
+uniform float uTileScale;
 uniform vec3 uFalloutLightColor;
 uniform float uFalloutLightIntensity;
 uniform float uFalloutLightThreshold;
@@ -16,7 +17,9 @@ uniform float uParticleFlickerSpeed;
 uniform float uParticleFreshScale;
 out vec4 fragColor;
 void main() {
-  ivec2 tc = ivec2(gl_FragCoord.xy);
+  // FBO is mapW/uTileScale × mapH/uTileScale; each output pixel samples one
+  // tile near the center of its uTileScale×uTileScale source block.
+  ivec2 tc = ivec2(gl_FragCoord.xy * uTileScale);
   if (tc.x >= int(uMapSize.x) || tc.y >= int(uMapSize.y)) discard;
 
   uint raw = texelFetch(uTileTex, tc, 0).r;

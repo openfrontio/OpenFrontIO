@@ -2,12 +2,19 @@
  * FalloutBloomPass — soft radioactive glow around irradiated tiles.
  *
  * Tile-space pipeline (camera-independent, zero shimmer):
- *   1. Extract — compute per-tile bloom at map resolution (mapW x mapH)
- *   2. Blur   — two iterations of separable 9-tap Gaussian in tile space
+ *   1. Extract — compute per-tile bloom at mapW/BLOOM_TILE_SCALE resolution
+ *   2. Blur   — one separable 5-tap Gaussian pass
  *   3. Composite — camera-projected map quad samples blurred texture (LINEAR)
+ *
+ * Bloom buffers are sub-tile resolution because the output is heavily blurred
+ * and composited with LINEAR sampling — going to 1/16 the fragments cuts
+ * fill-rate cost on low-end GPUs (fillrate-bound by the per-fragment Gaussian
+ * texture reads).
  *
  * Heat management is handled by HeatManager (shared with LightmapPass).
  */
+
+const BLOOM_TILE_SCALE = 8;
 
 import type { RenderSettings } from "../RenderSettings";
 import {
@@ -42,6 +49,7 @@ export class FalloutBloomPass {
   // Uniforms — extract
   private uExtractMapSize: WebGLUniformLocation;
   private uExtractTick: WebGLUniformLocation;
+  private uExtractTileScale: WebGLUniformLocation;
   private uBroilSpeedCold: WebGLUniformLocation;
   private uBroilSpeedHot: WebGLUniformLocation;
   private uNoiseFreq1: WebGLUniformLocation;
@@ -73,7 +81,9 @@ export class FalloutBloomPass {
   // Uniforms — blur
   private uBlurDir: WebGLUniformLocation;
 
-  // FBOs (map resolution — fixed size)
+  // FBOs (mapW/BLOOM_TILE_SCALE × mapH/BLOOM_TILE_SCALE — fixed size)
+  private bloomW: number;
+  private bloomH: number;
   private fboA: WebGLFramebuffer;
   private fboB: WebGLFramebuffer;
   private texA: WebGLTexture;
@@ -106,6 +116,10 @@ export class FalloutBloomPass {
     );
     this.uExtractMapSize = gl.getUniformLocation(this.extractProg, "uMapSize")!;
     this.uExtractTick = gl.getUniformLocation(this.extractProg, "uTick")!;
+    this.uExtractTileScale = gl.getUniformLocation(
+      this.extractProg,
+      "uTileScale",
+    )!;
     this.uBroilSpeedCold = gl.getUniformLocation(
       this.extractProg,
       "uBroilSpeedCold",
@@ -206,9 +220,11 @@ export class FalloutBloomPass {
     gl.useProgram(this.compositeProg);
     gl.uniform1i(gl.getUniformLocation(this.compositeProg, "uTex"), 0);
 
-    // --- FBO textures (map resolution) ---
-    this.texA = this.createBloomTex(mapW, mapH);
-    this.texB = this.createBloomTex(mapW, mapH);
+    // --- FBO textures (sub-tile resolution) ---
+    this.bloomW = Math.max(1, Math.floor(mapW / BLOOM_TILE_SCALE));
+    this.bloomH = Math.max(1, Math.floor(mapH / BLOOM_TILE_SCALE));
+    this.texA = this.createBloomTex(this.bloomW, this.bloomH);
+    this.texB = this.createBloomTex(this.bloomW, this.bloomH);
     this.fboA = gl.createFramebuffer()!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboA);
     gl.framebufferTexture2D(
@@ -264,10 +280,12 @@ export class FalloutBloomPass {
     const ch = canvas.height;
     const mw = this.mapW;
     const mh = this.mapH;
+    const bw = this.bloomW;
+    const bh = this.bloomH;
 
-    // --- 1. Extract: tile-space bloom ---
+    // --- 1. Extract: sub-tile-space bloom ---
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboA);
-    gl.viewport(0, 0, mw, mh);
+    gl.viewport(0, 0, bw, bh);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
@@ -275,6 +293,7 @@ export class FalloutBloomPass {
     gl.useProgram(this.extractProg);
     gl.uniform2f(this.uExtractMapSize, mw, mh);
     gl.uniform1f(this.uExtractTick, tick);
+    gl.uniform1f(this.uExtractTileScale, BLOOM_TILE_SCALE);
 
     const fb = this.settings.falloutBloom;
     gl.uniform1f(this.uBroilSpeedCold, fb.broilSpeedCold);
@@ -317,26 +336,24 @@ export class FalloutBloomPass {
     gl.bindVertexArray(this.quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    // --- 2. Blur: 2 iterations of separable H+V Gaussian ---
+    // --- 2. Blur: single separable H+V 5-tap Gaussian ---
     gl.useProgram(this.blurProg);
     gl.bindVertexArray(this.quadVao);
 
-    for (let iter = 0; iter < 2; iter++) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboB);
-      gl.viewport(0, 0, mw, mh);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform2f(this.uBlurDir, 1.0 / mw, 0);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.texA);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboB);
+    gl.viewport(0, 0, bw, bh);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(this.uBlurDir, 1.0 / bw, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.texA);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboA);
-      gl.viewport(0, 0, mw, mh);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform2f(this.uBlurDir, 0, 1.0 / mh);
-      gl.bindTexture(gl.TEXTURE_2D, this.texB);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboA);
+    gl.viewport(0, 0, bw, bh);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(this.uBlurDir, 0, 1.0 / bh);
+    gl.bindTexture(gl.TEXTURE_2D, this.texB);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     // --- 3. Composite: camera-projected map quad → screen ---
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

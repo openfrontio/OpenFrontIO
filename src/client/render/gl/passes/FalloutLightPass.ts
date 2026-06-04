@@ -2,10 +2,16 @@
  * FalloutLightPass — tile-space fallout light extraction + composite.
  *
  * Extracted from LightmapPass. Two-step:
- *   1. Extract fallout light at tile resolution (mapW x mapH) — reads heat and
- *      computes the same particle flicker as FalloutBloomPass inline
+ *   1. Extract fallout light at mapW/LIGHT_TILE_SCALE × mapH/LIGHT_TILE_SCALE
+ *      — reads heat and computes the same particle flicker as FalloutBloomPass inline
  *   2. Composite into the target lightmap FBO via camera-projected map quad (additive)
+ *
+ * Extract runs at sub-tile resolution because the lightmap chain blurs the
+ * combined output afterward — going to 1/64 the fragments cuts fill-rate cost
+ * on low-end GPUs at no perceptible quality loss.
  */
+
+const LIGHT_TILE_SCALE = 8;
 
 import type { RenderSettings } from "../RenderSettings";
 import {
@@ -39,6 +45,7 @@ export class FalloutLightPass {
   private uEmberLightColor: WebGLUniformLocation;
   private uEmberLightIntensity: WebGLUniformLocation;
   private uFalloutTick: WebGLUniformLocation;
+  private uFalloutTileScale: WebGLUniformLocation;
   private uParticleThresholdUnowned: WebGLUniformLocation;
   private uParticleThresholdOwned: WebGLUniformLocation;
   private uParticleFlickerSpeed: WebGLUniformLocation;
@@ -49,7 +56,9 @@ export class FalloutLightPass {
   private uFalloutCompositeCam: WebGLUniformLocation;
   private uFalloutCompositeMapSize: WebGLUniformLocation;
 
-  // Tile-space FBO
+  // Sub-tile-space FBO (mapW/LIGHT_TILE_SCALE × mapH/LIGHT_TILE_SCALE)
+  private lightW: number;
+  private lightH: number;
   private falloutFbo: WebGLFramebuffer;
   private falloutTex: WebGLTexture;
 
@@ -103,6 +112,10 @@ export class FalloutLightPass {
       "uEmberLightIntensity",
     )!;
     this.uFalloutTick = gl.getUniformLocation(this.falloutLightProg, "uTick")!;
+    this.uFalloutTileScale = gl.getUniformLocation(
+      this.falloutLightProg,
+      "uTileScale",
+    )!;
     this.uParticleThresholdUnowned = gl.getUniformLocation(
       this.falloutLightProg,
       "uParticleThresholdUnowned",
@@ -140,8 +153,10 @@ export class FalloutLightPass {
     gl.useProgram(this.falloutCompositeProg);
     gl.uniform1i(gl.getUniformLocation(this.falloutCompositeProg, "uTex"), 0);
 
-    // Tile-space FBO (map resolution)
-    this.falloutTex = this.createRGBA8Tex(mapW, mapH);
+    // Sub-tile-space FBO
+    this.lightW = Math.max(1, Math.floor(mapW / LIGHT_TILE_SCALE));
+    this.lightH = Math.max(1, Math.floor(mapH / LIGHT_TILE_SCALE));
+    this.falloutTex = this.createRGBA8Tex(this.lightW, this.lightH);
     this.falloutFbo = gl.createFramebuffer()!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.falloutFbo);
     gl.framebufferTexture2D(
@@ -195,15 +210,16 @@ export class FalloutLightPass {
     const dn = this.settings.lighting;
     const fb = this.settings.falloutBloom;
 
-    // Step 1: Extract fallout light in tile space
+    // Step 1: Extract fallout light in sub-tile space
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.falloutFbo);
-    gl.viewport(0, 0, this.mapW, this.mapH);
+    gl.viewport(0, 0, this.lightW, this.lightH);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
 
     gl.useProgram(this.falloutLightProg);
     gl.uniform2f(this.uFalloutMapSize, this.mapW, this.mapH);
+    gl.uniform1f(this.uFalloutTileScale, LIGHT_TILE_SCALE);
     gl.uniform3f(
       this.uFalloutLightColor,
       dn.falloutLightR,
