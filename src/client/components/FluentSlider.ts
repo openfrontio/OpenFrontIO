@@ -16,6 +16,12 @@ export class FluentSlider extends LitElement {
   @property({ type: String }) disabledKey = "";
   @property({ type: Number }) defaultValue: number | undefined = undefined;
   @property({ type: String }) defaultLabelKey = "";
+  /**
+   * When true, render only the default label (not the numeric value) while the
+   * slider sits at its default position. Used to hide the map's nation count
+   * for "Random" lobbies, where the number would reveal the map.
+   */
+  @property({ type: Boolean }) hideDefaultValue = false;
 
   @state() private isEditing = false;
 
@@ -136,10 +142,14 @@ export class FluentSlider extends LitElement {
                   : this.defaultValue !== undefined &&
                       this.value === this.defaultValue &&
                       this.defaultLabelKey
-                    ? html`${this.value}
-                        <span class="text-white/40 uppercase"
-                          >(${translateText(this.defaultLabelKey)})</span
+                    ? this.hideDefaultValue
+                      ? html`<span class="text-white/40 uppercase"
+                          >${translateText(this.defaultLabelKey)}</span
                         >`
+                      : html`${this.value}
+                          <span class="text-white/40 uppercase"
+                            >(${translateText(this.defaultLabelKey)})</span
+                          >`
                     : this.value}
               </span>`}
         </div>

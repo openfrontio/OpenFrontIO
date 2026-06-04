@@ -85,4 +85,30 @@ describe("GameLifecycle", () => {
     await expect(game.end()).resolves.toBeUndefined();
     expect((game as any)._hasEnded).toBe(true);
   });
+
+  it("clears the randomMap flag at prestart (reveals the map at start)", () => {
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+      gameMap: "plains",
+      gameMapSize: 100,
+      randomMap: true,
+    } as any);
+
+    expect((game as any).gameConfig.randomMap).toBe(true);
+    game.prestart();
+    // The concrete map is untouched; only the "hide it" flag is cleared.
+    expect((game as any).gameConfig.randomMap).toBe(false);
+    expect((game as any).gameConfig.gameMap).toBe("plains");
+  });
+
+  it("persists the randomMap flag through updateGameConfig", () => {
+    const game = new GameServer("test-game", mockLogger, Date.now(), {
+      gameType: GameType.Private,
+      gameMap: "plains",
+      randomMap: false,
+    } as any);
+
+    game.updateGameConfig({ randomMap: true } as any);
+    expect((game as any).gameConfig.randomMap).toBe(true);
+  });
 });

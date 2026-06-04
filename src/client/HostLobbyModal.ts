@@ -323,6 +323,9 @@ export class HostLobbyModal extends BaseModal {
                   defaultValue: this.defaultNationCount,
                   labelKey: "host_modal.nations",
                   disabledKey: "host_modal.nations_disabled",
+                  // Random lobby: show "Map default" without the count, which
+                  // would otherwise reveal the (hidden) map.
+                  hideDefaultValue: this.useRandomMap,
                 },
                 toggles: [
                   {
@@ -409,6 +412,7 @@ export class HostLobbyModal extends BaseModal {
             .currentClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
+            .randomMap=${this.useRandomMap}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-player-view>
         </div>
@@ -945,6 +949,7 @@ export class HostLobbyModal extends BaseModal {
         detail: {
           config: {
             gameMap: this.selectedMap,
+            randomMap: this.useRandomMap,
             gameMapSize: this.compactMap
               ? GameMapSize.Compact
               : GameMapSize.Normal,

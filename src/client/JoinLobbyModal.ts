@@ -156,6 +156,7 @@ export class JoinLobbyModal extends BaseModal {
                           this.gameConfig?.nations ?? "default",
                           this.nationCount,
                         )}
+                        .randomMap=${this.gameConfig?.randomMap === true}
                       ></lobby-player-view>
                     `
                   : ""}
@@ -410,11 +411,15 @@ export class JoinLobbyModal extends BaseModal {
     if (!this.gameConfig) return html``;
 
     const c = this.gameConfig;
-    const mapName = getMapName(c.gameMap);
+    // A "Random" lobby keeps the concrete map hidden until the game starts.
+    const isRandomMap = c.randomMap === true;
+    const mapName = isRandomMap
+      ? translateText("map.random")
+      : getMapName(c.gameMap);
     const normalizedMap = normaliseMapKey(c.gameMap);
-    const thumbnailUrl = assetUrl(
-      `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
-    );
+    const thumbnailUrl = isRandomMap
+      ? assetUrl("images/RandomMap.webp")
+      : assetUrl(`maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`);
     const isTeam = c.gameMode === GameMode.Team;
 
     let modeSubtitle: string;

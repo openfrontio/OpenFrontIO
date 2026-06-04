@@ -37,6 +37,8 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
+  /** When true (a "Random" lobby), hide the nation count so it can't reveal the map. */
+  @property({ type: Boolean }) randomMap: boolean = false;
 
   private get theme(): Theme {
     return themeProvider.current();
@@ -84,10 +86,13 @@ export class LobbyTeamView extends LitElement {
               ? translateText("host_modal.player")
               : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
-            ${this.effectiveNationCount}
-            ${this.effectiveNationCount === 1
-              ? translateText("host_modal.nation_player")
-              : translateText("host_modal.nation_players")}
+            ${this.randomMap
+              ? html`${translateText("common.map_default")}
+                ${translateText("host_modal.nation_players")}`
+              : html`${this.effectiveNationCount}
+                ${this.effectiveNationCount === 1
+                  ? translateText("host_modal.nation_player")
+                  : translateText("host_modal.nation_players")}`}
           </div>
         </div>
         <div

@@ -198,6 +198,7 @@ export interface GameConfigSettingsData {
       labelKey: string;
       disabledKey: string;
       hidden?: boolean;
+      hideDefaultValue?: boolean;
     };
     toggles: ToggleOptionConfig[];
     inputCards: TemplateResult[];
@@ -468,6 +469,8 @@ export class GameConfigSettings extends LitElement {
                       .value=${settings.options.nations.value}
                       .defaultValue=${settings.options.nations.defaultValue}
                       defaultLabelKey="common.map_default"
+                      .hideDefaultValue=${settings.options.nations
+                        .hideDefaultValue ?? false}
                       labelKey=${settings.options.nations.labelKey}
                       disabledKey=${settings.options.nations.disabledKey}
                       @value-changed=${this.handleNationsChanged}

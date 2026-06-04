@@ -519,6 +519,7 @@
   },
   "map": {
     "map": "Map",
+    "random": "Random",
     "featured": "Featured",
     "all": "All",
     "world": "World",
