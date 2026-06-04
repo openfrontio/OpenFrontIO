@@ -6,7 +6,10 @@ vi.mock("../../src/server/RuntimeAssetManifest", () => ({
   getRuntimeAssetManifest: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("../../src/server/ServerEnv", () => ({
-  ServerEnv: { cdnBase: () => "" },
+  ServerEnv: {
+    /** Empty CDN base so asset URLs resolve to same-origin paths in tests. */
+    cdnBase: () => "",
+  },
 }));
 
 import { buildPreview } from "../../src/server/GamePreviewBuilder";
