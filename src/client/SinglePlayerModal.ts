@@ -198,6 +198,7 @@ export class SinglePlayerModal extends BaseModal {
     });
   }
 
+  /** Render the single-player setup body: game config settings. */
   protected renderBody() {
     const inputCards = [
       html`<toggle-input-card

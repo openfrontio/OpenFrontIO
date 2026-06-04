@@ -179,6 +179,7 @@ export class HostLobbyModal extends BaseModal {
     });
   }
 
+  /** Render the host lobby body: game config settings and the player list. */
   protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
@@ -938,6 +939,7 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
+  /** Push the host's current lobby settings to the server as a config update. */
   private async putGameConfig() {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes
       ? this.spawnImmunityDurationMinutes * 60 * 10

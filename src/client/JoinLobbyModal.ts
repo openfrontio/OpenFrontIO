@@ -96,6 +96,7 @@ export class JoinLobbyModal extends BaseModal {
     });
   }
 
+  /** Render the join lobby body: game config preview and the player list. */
   protected renderBody() {
     // Pre-join state: show lobby ID input form
     if (!this.currentLobbyId) {
@@ -407,6 +408,7 @@ export class JoinLobbyModal extends BaseModal {
 
   // --- Game config rendering ---
 
+  /** Render the lobby's map, mode, and option cards (map hidden when random). */
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 

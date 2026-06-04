@@ -55,4 +55,19 @@ describe("GamePreview — random map", () => {
     expect(meta.image.toLowerCase()).toContain("europe");
     expect(meta.title).toContain("Europe");
   });
+
+  test("shows the concrete map when randomMap is omitted (the common case)", async () => {
+    // randomMap is optional, so most normal lobbies never set it at all.
+    const meta = await buildPreview(
+      "game3",
+      origin,
+      "w0",
+      lobby({ gameMap: "Europe", gameType: "Private", gameMode: "FFA" }),
+      null,
+    );
+
+    expect(meta.image.toLowerCase()).toContain("europe");
+    expect(meta.image).not.toContain("RandomMap.webp");
+    expect(meta.title).toContain("Europe");
+  });
 });

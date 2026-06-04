@@ -118,6 +118,7 @@ export class GameServer {
       : undefined;
   }
 
+  /** Merge an allowed subset of config fields from a lobby host's update. */
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
@@ -651,6 +652,7 @@ export class GameServer {
     return this.outOfSyncClients.size;
   }
 
+  /** Begin the start sequence: reveal the map and broadcast prestart to clients. */
   public prestart() {
     if (this.hasStarted()) {
       return;

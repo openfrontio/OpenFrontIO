@@ -52,6 +52,13 @@ export class LobbyTeamView extends LitElement {
    * controls the nation count via the slider.
    */
   private get effectiveNationCount(): number {
+    // A "Random" lobby must not reveal the map's nation count — not in the
+    // header, and not via anything derived from it (team-card totals, team
+    // sizing, player totals). Treat it as 0 everywhere; the header shows
+    // "Map default" via its own randomMap branch instead.
+    if (this.randomMap) {
+      return 0;
+    }
     if (this.isPublicGame && this.teamCount === HumansVsNations) {
       return this.clients.length;
     }
@@ -66,7 +73,8 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
       changedProperties.has("nationCount") ||
-      changedProperties.has("isPublicGame")
+      changedProperties.has("isPublicGame") ||
+      changedProperties.has("randomMap")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
@@ -74,6 +82,7 @@ export class LobbyTeamView extends LitElement {
     }
   }
 
+  /** Render the player/nation summary header and the team or FFA roster. */
   render() {
     return html`
       <div class="border-t border-white/10 pt-6">

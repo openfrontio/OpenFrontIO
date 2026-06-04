@@ -310,6 +310,7 @@ export class GameConfigSettings extends LitElement {
     });
   }
 
+  /** Render the map picker, difficulty, sliders, and option toggles. */
   render() {
     if (!this.settings) return nothing;
     const settings = this.settings;

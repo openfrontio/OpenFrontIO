@@ -134,6 +134,11 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Build the OpenGraph/social preview (title, description, image, join URL) for
+ * a game link from its live lobby and/or archived public info. A pre-start
+ * "Random" lobby is shown with a generic placeholder so the map isn't spoiled.
+ */
 export async function buildPreview(
   gameID: string,
   origin: string,

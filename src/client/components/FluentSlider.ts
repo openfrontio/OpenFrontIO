@@ -37,6 +37,7 @@ export class FluentSlider extends LitElement {
     );
   }
 
+  /** Restore the slider to its default value and notify listeners. */
   private resetToDefault() {
     if (this.defaultValue === undefined) return;
     this.value = this.defaultValue;
@@ -84,6 +85,7 @@ export class FluentSlider extends LitElement {
     this.updateComplete.then(() => this.numberInput?.focus());
   }
 
+  /** Render the range input, its value label, and the optional reset button. */
   render() {
     // For a hidden default (a "Random" lobby), the real value would reveal the
     // map's nation count via the thumb's *position*, not just the number. While
