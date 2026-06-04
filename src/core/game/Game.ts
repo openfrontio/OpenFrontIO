@@ -181,6 +181,7 @@ export enum GameMapType {
   Labyrinth = "Labyrinth",
   Caribbean = "Caribbean",
   Onion = "Onion",
+  ChoppingBlock = "Chopping Block",
   SoutheastAsia = "SoutheastAsia",
 }
 
@@ -273,6 +274,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
   arcade: [
     GameMapType.TheBox,
+    GameMapType.ChoppingBlock,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Labyrinth,
