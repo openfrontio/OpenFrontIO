@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   checkApprovedWork,
   checkBypass,
-  checkOrgMember,
+  checkRepoAccess,
   checkSmallFix,
   evaluate,
   parseLinkedIssues,
@@ -88,7 +88,6 @@ const makePR = (overrides: Partial<PRMetadata> = {}): PRMetadata => ({
   number: 1,
   body: null,
   user: { login: "alice" },
-  author_association: "CONTRIBUTOR",
   labels: [],
   ...overrides,
 });
@@ -110,20 +109,20 @@ describe("checkBypass", () => {
   });
 });
 
-describe("checkOrgMember", () => {
-  it("passes for OWNER, MEMBER, COLLABORATOR", () => {
-    for (const assoc of ["OWNER", "MEMBER", "COLLABORATOR"]) {
-      expect(checkOrgMember(makePR({ author_association: assoc })).action).toBe(
-        "pass",
-      );
+describe("checkRepoAccess", () => {
+  it("passes for admin, maintain, write permissions", async () => {
+    for (const permission of ["admin", "maintain", "write"]) {
+      const get = vi.fn(async () => permission);
+      const r = await checkRepoAccess(makePR(), get);
+      expect(r.action).toBe("pass");
     }
   });
 
-  it("returns next for untrusted associations", () => {
-    for (const assoc of ["CONTRIBUTOR", "NONE", "FIRST_TIME_CONTRIBUTOR"]) {
-      expect(checkOrgMember(makePR({ author_association: assoc })).action).toBe(
-        "next",
-      );
+  it("returns next for untrusted permissions", async () => {
+    for (const permission of ["read", "none", "triage"]) {
+      const get = vi.fn(async () => permission);
+      const r = await checkRepoAccess(makePR(), get);
+      expect(r.action).toBe("next");
     }
   });
 });
@@ -238,15 +237,17 @@ describe("evaluate (priority ordering)", () => {
       makePR({ labels: ["bypass-pr-check"] }),
       [{ additions: 5000, deletions: 0 }],
       async () => null,
+      async () => "none",
     );
     expect(r.action).toBe("pass");
   });
 
-  it("rule 1 — org member with a huge PR passes", async () => {
+  it("rule 1 — repo write access with a huge PR passes", async () => {
     const r = await evaluate(
-      makePR({ author_association: "MEMBER" }),
+      makePR(),
       [{ additions: 5000, deletions: 0 }],
       async () => null,
+      async () => "write",
     );
     expect(r.action).toBe("pass");
   });
@@ -256,6 +257,7 @@ describe("evaluate (priority ordering)", () => {
       makePR(),
       [{ additions: 10, deletions: 5 }],
       async () => null,
+      async () => "none",
     );
     expect(r.action).toBe("pass");
     if (r.action === "pass") expect(r.labelToAdd).toBe("small-fix");
@@ -266,6 +268,7 @@ describe("evaluate (priority ordering)", () => {
       makePR({ body: "Closes #5" }),
       [{ additions: 200, deletions: 50 }],
       async () => makeIssue(),
+      async () => "none",
     );
     expect(r.action).toBe("pass");
   });
@@ -275,6 +278,7 @@ describe("evaluate (priority ordering)", () => {
       makePR(),
       [{ additions: 200, deletions: 50 }],
       async () => null,
+      async () => "none",
     );
     expect(r.action).toBe("close");
   });
