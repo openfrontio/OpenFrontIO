@@ -3,7 +3,10 @@ import defaults from "./render-settings.json";
 export interface RenderSettings {
   passEnabled: {
     terrain: boolean;
-    mapOverlay: boolean;
+    territory: boolean;
+    borderCompute: boolean;
+    borderStamp: boolean;
+    trail: boolean;
     territoryPatterns: boolean;
     structure: boolean;
     unit: boolean;

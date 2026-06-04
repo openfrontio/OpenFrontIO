@@ -1,7 +1,10 @@
 {
   "passEnabled": {
     "terrain": true,
-    "mapOverlay": true,
+    "territory": true,
+    "borderCompute": true,
+    "borderStamp": true,
+    "trail": true,
     "territoryPatterns": true,
     "structure": true,
     "unit": true,

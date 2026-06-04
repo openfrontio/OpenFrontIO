@@ -20,6 +20,7 @@ import { OWNER_MASK, TILE_DEFINES } from "../utils/TileCodec";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
+import { TileScatterPass } from "./TileScatterPass";
 
 export class TerritoryPass {
   private gl: WebGL2RenderingContext;
@@ -58,9 +59,18 @@ export class TerritoryPass {
   private cpuTileState: Uint16Array;
   private tilesDirty = false;
 
-  /** Dirty row range for partial tile upload. Infinity/-1 = full upload. */
-  private dirtyRowMin = Infinity;
-  private dirtyRowMax = -1;
+  /**
+   * True after a full state replacement (initial load / seek). flushTileTexture
+   * uploads the full cpuTileState via texSubImage2D and discards any queued
+   * scatter patches — those are already covered by the full upload.
+   */
+  private fullUploadPending = false;
+
+  /**
+   * GPU scatter pass for per-frame patches. Replaces the old dirty-row bbox
+   * upload — constant cost regardless of how spatially scattered patches are.
+   */
+  private scatter!: TileScatterPass;
 
   /**
    * Drip buckets — round-robin staggering of tile updates across render frames.
@@ -152,6 +162,8 @@ export class TerritoryPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAnchor"), 6);
 
     this.vao = createMapQuad(gl, mapW, mapH);
+
+    this.scatter = new TileScatterPass(gl, mapW, mapH, tileTex);
   }
 
   // ---------------------------------------------------------------------------
@@ -162,8 +174,8 @@ export class TerritoryPass {
   uploadFullTileState(tileState: Uint16Array): void {
     this.cpuTileState.set(tileState);
     this.clearDripBuckets();
-    this.dirtyRowMin = Infinity;
-    this.dirtyRowMax = -1;
+    this.scatter.clear();
+    this.fullUploadPending = true;
     this.tilesDirty = true;
   }
 
@@ -171,8 +183,8 @@ export class TerritoryPass {
   setLiveRef(tileState: Uint16Array): void {
     this.cpuTileState.set(tileState);
     this.clearDripBuckets();
-    this.dirtyRowMin = Infinity;
-    this.dirtyRowMax = -1;
+    this.scatter.clear();
+    this.fullUploadPending = true;
     this.tilesDirty = true;
   }
 
@@ -180,12 +192,15 @@ export class TerritoryPass {
   uploadDeltaTiles(changedTiles: TilePair[]): void {
     const ts = this.cpuTileState;
     const w = this.mapW;
+    const pending = this.fullUploadPending;
     for (let i = 0; i < changedTiles.length; i++) {
       const tp = changedTiles[i];
       ts[tp.ref] = tp.state;
-      const row = (tp.ref / w) | 0;
-      if (row < this.dirtyRowMin) this.dirtyRowMin = row;
-      if (row > this.dirtyRowMax) this.dirtyRowMax = row;
+      if (!pending) {
+        const x = tp.ref % w;
+        const y = (tp.ref - x) / w;
+        this.scatter.push(x, y, tp.state);
+      }
     }
     this.tilesDirty = true;
   }
@@ -209,28 +224,19 @@ export class TerritoryPass {
   drainDripBucket(): void {
     const bucket = this.dripBuckets[this.currentBucket];
     if (bucket.length > 0) {
-      const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
-
-      if (isFullUploadPending) {
-        // Full upload pending: skip tracking dirty rows, just flush data
-        for (let i = 0; i < bucket.length; i += 2) {
-          this.cpuTileState[bucket[i]] = bucket[i + 1];
+      const ts = this.cpuTileState;
+      const w = this.mapW;
+      const pending = this.fullUploadPending;
+      for (let i = 0; i < bucket.length; i += 2) {
+        const ref = bucket[i];
+        const state = bucket[i + 1];
+        ts[ref] = state;
+        if (!pending) {
+          const x = ref % w;
+          const y = (ref - x) / w;
+          this.scatter.push(x, y, state);
         }
-      } else {
-        const w = this.mapW;
-        let minRow = this.dirtyRowMin;
-        let maxRow = this.dirtyRowMax;
-        for (let i = 0; i < bucket.length; i += 2) {
-          const ref = bucket[i];
-          this.cpuTileState[ref] = bucket[i + 1];
-          const row = (ref / w) | 0;
-          if (row < minRow) minRow = row;
-          if (row > maxRow) maxRow = row;
-        }
-        this.dirtyRowMin = minRow;
-        this.dirtyRowMax = maxRow;
       }
-
       bucket.length = 0;
       this.tilesDirty = true;
     }
@@ -243,39 +249,25 @@ export class TerritoryPass {
    */
   flushAllDripBuckets(): void {
     let any = false;
-    const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
-
-    if (isFullUploadPending) {
-      for (let b = 0; b < this.nBuckets; b++) {
-        const bucket = this.dripBuckets[b];
-        if (bucket.length === 0) continue;
-        any = true;
-        for (let i = 0; i < bucket.length; i += 2) {
-          this.cpuTileState[bucket[i]] = bucket[i + 1];
+    const ts = this.cpuTileState;
+    const w = this.mapW;
+    const pending = this.fullUploadPending;
+    for (let b = 0; b < this.nBuckets; b++) {
+      const bucket = this.dripBuckets[b];
+      if (bucket.length === 0) continue;
+      any = true;
+      for (let i = 0; i < bucket.length; i += 2) {
+        const ref = bucket[i];
+        const state = bucket[i + 1];
+        ts[ref] = state;
+        if (!pending) {
+          const x = ref % w;
+          const y = (ref - x) / w;
+          this.scatter.push(x, y, state);
         }
-        bucket.length = 0;
       }
-    } else {
-      const w = this.mapW;
-      let minRow = this.dirtyRowMin;
-      let maxRow = this.dirtyRowMax;
-      for (let b = 0; b < this.nBuckets; b++) {
-        const bucket = this.dripBuckets[b];
-        if (bucket.length === 0) continue;
-        any = true;
-        for (let i = 0; i < bucket.length; i += 2) {
-          const ref = bucket[i];
-          this.cpuTileState[ref] = bucket[i + 1];
-          const row = (ref / w) | 0;
-          if (row < minRow) minRow = row;
-          if (row > maxRow) maxRow = row;
-        }
-        bucket.length = 0;
-      }
-      this.dirtyRowMin = minRow;
-      this.dirtyRowMax = maxRow;
+      bucket.length = 0;
     }
-
     if (any) {
       this.tilesDirty = true;
     }
@@ -331,28 +323,13 @@ export class TerritoryPass {
   flushTileTexture(): boolean {
     if (!this.tilesDirty) return false;
     const gl = this.gl;
-    const src = this.cpuTileState;
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
+    let uploaded = false;
 
-    if (this.dirtyRowMax >= 0) {
-      // Partial upload — only dirty rows
-      const minRow = this.dirtyRowMin;
-      const rowCount = this.dirtyRowMax - minRow + 1;
-      const offset = minRow * this.mapW;
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        minRow,
-        this.mapW,
-        rowCount,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_SHORT,
-        src.subarray(offset, offset + rowCount * this.mapW),
-      );
-    } else {
-      // Full upload (first tick, seek, replay full frame, etc.)
+    if (this.fullUploadPending) {
+      // Full upload (first tick, seek, replay full frame, etc.) — supersedes
+      // any queued scatter patches.
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
@@ -362,14 +339,20 @@ export class TerritoryPass {
         this.mapH,
         gl.RED_INTEGER,
         gl.UNSIGNED_SHORT,
-        src,
+        this.cpuTileState,
       );
+      this.scatter.clear();
+      this.fullUploadPending = false;
+      uploaded = true;
+    } else if (this.scatter.count > 0) {
+      // Per-frame patches — scatter via FBO + POINTS draw. Constant cost in
+      // patch count regardless of spatial distribution.
+      this.scatter.flush();
+      uploaded = true;
     }
 
-    this.dirtyRowMin = Infinity;
-    this.dirtyRowMax = -1;
     this.tilesDirty = false;
-    return true;
+    return uploaded;
   }
 
   setAltView(active: boolean): void {
@@ -449,6 +432,7 @@ export class TerritoryPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
+    this.scatter.dispose();
     // tileTex, paletteTex, patternMetaTex, patternDataTex owned by GPUResources / renderer
   }
 }
