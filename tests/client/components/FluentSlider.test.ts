@@ -278,6 +278,59 @@ describe("FluentSlider", () => {
     });
   });
 
+  describe("Hidden default (Random lobby)", () => {
+    it("parks the thumb at the track center when at a hidden default", async () => {
+      slider.min = 0;
+      slider.max = 400;
+      slider.defaultValue = 247;
+      slider.value = 247;
+      slider.hideDefaultValue = true;
+      await slider.updateComplete;
+
+      const rangeInput = slider.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+
+      // Thumb shows the center (200), NOT the real count (247) that would
+      // otherwise reveal the hidden map.
+      expect(rangeInput.valueAsNumber).toBe(200);
+      // The underlying value is untouched.
+      expect(slider.value).toBe(247);
+    });
+
+    it("tracks the real position once moved off the default", async () => {
+      slider.min = 0;
+      slider.max = 400;
+      slider.defaultValue = 247;
+      slider.value = 300;
+      slider.hideDefaultValue = true;
+      await slider.updateComplete;
+
+      const rangeInput = slider.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      expect(rangeInput.valueAsNumber).toBe(300);
+    });
+
+    it("still reports the dragged value from the parked position", async () => {
+      slider.min = 0;
+      slider.max = 400;
+      slider.defaultValue = 247;
+      slider.value = 247;
+      slider.hideDefaultValue = true;
+      await slider.updateComplete;
+
+      const rangeInput = slider.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      rangeInput.valueAsNumber = 180;
+      rangeInput.dispatchEvent(new Event("change", { bubbles: true }));
+      await slider.updateComplete;
+
+      expect(slider.value).toBe(180);
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle min equal to max without NaN in style", async () => {
       slider.min = 100;
