@@ -181,6 +181,10 @@ export interface AttackUpdate {
  * value matches the previous emission for the same player. The first emission
  * for a player always includes all fields; consumers must handle subsequent
  * partial updates by merging into local state, not overwriting.
+ *
+ * When adding a field here, also wire it into diffPlayerUpdate() and
+ * applyStateUpdate() in GameUpdateUtils.ts — otherwise it is only ever sent on
+ * the first emission and later changes are silently dropped.
  */
 export interface PlayerUpdate {
   type: GameUpdateType.Player;

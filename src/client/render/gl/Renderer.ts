@@ -333,6 +333,11 @@ export class GPURenderer {
       this.skinAnchorTex,
       this.settings,
     );
+    // Route per-tile changes to the border pass so it can scatter-recompute
+    // just the affected tiles instead of rebuilding the whole map.
+    this.territoryPass.setBorderPatchConsumer((x, y) =>
+      this.borderPass.patchTile(x, y),
+    );
 
     // --- Spawn overlay (needs tileTex) ---
     this.spawnOverlayPass = new SpawnOverlayPass(
@@ -1194,14 +1199,17 @@ export class GPURenderer {
     } else {
       this.territoryPass.drainDripBucket();
     }
-    if (this.territoryPass.flushTileTexture())
-      this.borderPass.notifyTilesChanged();
+    // Full uploads need a full border recompute; scatter uploads already
+    // pushed per-tile border patches via the wired `borderPatchConsumer`.
+    if (this.territoryPass.flushTileTexture() === "full") {
+      this.borderPass.markGlobalDirty();
+    }
     this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }
 
   private computeTextures(): void {
-    if (this.settings.passEnabled.mapOverlay) this.borderPass.draw();
+    if (this.settings.passEnabled.borderCompute) this.borderPass.draw();
   }
 
   private renderFrame(): void {
@@ -1259,7 +1267,7 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    if (pe.mapOverlay) this.territoryPass.draw(cam);
+    if (pe.territory) this.territoryPass.draw(cam);
   }
 
   private renderOverlays(cam: Float32Array, zoom: number): void {
@@ -1270,7 +1278,7 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.spawnOverlayPass.draw(cam);
-    if (pe.mapOverlay) this.borderStampPass.draw(cam);
+    if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
     this.samRadiusPass.draw(cam);
@@ -1285,7 +1293,7 @@ export class GPURenderer {
     this.moveIndicatorPass.draw(cam, zoom);
     this.nukeTelegraphPass.draw(cam);
     if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
-    if (pe.mapOverlay) this.trailPass.draw(cam);
+    if (pe.trail) this.trailPass.draw(cam);
     if (pe.unit) this.unitPass.drawMissiles(cam);
 
     if (pe.fx) {
