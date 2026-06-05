@@ -9,7 +9,7 @@
     "structure": true,
     "unit": true,
     "name": true,
-    "falloutBloom": false,
+    "falloutBloom": true,
     "railroad": true,
     "fx": true,
     "bar": true,

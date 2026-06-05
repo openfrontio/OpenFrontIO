@@ -73,6 +73,13 @@ export class TerritoryPass {
   private scatter!: TileScatterPass;
 
   /**
+   * Hook for forwarding tile changes to the border-compute pipeline so it can
+   * incrementally repaint affected tiles instead of rebuilding the whole map.
+   * Wired by the renderer to `borderPass.patchTile`.
+   */
+  private borderPatchConsumer: ((x: number, y: number) => void) | null = null;
+
+  /**
    * Drip buckets — round-robin staggering of tile updates across render frames.
    * Each incoming change is hashed by tile ref to a fixed bucket (stable hash
    * preserves per-tile ordering across ticks). One bucket drains per render
@@ -188,11 +195,22 @@ export class TerritoryPass {
     this.tilesDirty = true;
   }
 
+  /**
+   * Wire a consumer that will be called once per tile coordinate change while
+   * scatter mode is active (i.e., not during a full upload). The renderer
+   * hooks this to `borderPass.patchTile` so border recompute scales with the
+   * number of changed tiles instead of full map area.
+   */
+  setBorderPatchConsumer(fn: (x: number, y: number) => void): void {
+    this.borderPatchConsumer = fn;
+  }
+
   /** Apply tile deltas (during playback). */
   uploadDeltaTiles(changedTiles: TilePair[]): void {
     const ts = this.cpuTileState;
     const w = this.mapW;
     const pending = this.fullUploadPending;
+    const borderFn = this.borderPatchConsumer;
     for (let i = 0; i < changedTiles.length; i++) {
       const tp = changedTiles[i];
       ts[tp.ref] = tp.state;
@@ -200,6 +218,7 @@ export class TerritoryPass {
         const x = tp.ref % w;
         const y = (tp.ref - x) / w;
         this.scatter.push(x, y, tp.state);
+        if (borderFn) borderFn(x, y);
       }
     }
     this.tilesDirty = true;
@@ -227,6 +246,7 @@ export class TerritoryPass {
       const ts = this.cpuTileState;
       const w = this.mapW;
       const pending = this.fullUploadPending;
+      const borderFn = this.borderPatchConsumer;
       for (let i = 0; i < bucket.length; i += 2) {
         const ref = bucket[i];
         const state = bucket[i + 1];
@@ -235,6 +255,7 @@ export class TerritoryPass {
           const x = ref % w;
           const y = (ref - x) / w;
           this.scatter.push(x, y, state);
+          if (borderFn) borderFn(x, y);
         }
       }
       bucket.length = 0;
@@ -252,6 +273,7 @@ export class TerritoryPass {
     const ts = this.cpuTileState;
     const w = this.mapW;
     const pending = this.fullUploadPending;
+    const borderFn = this.borderPatchConsumer;
     for (let b = 0; b < this.nBuckets; b++) {
       const bucket = this.dripBuckets[b];
       if (bucket.length === 0) continue;
@@ -264,6 +286,7 @@ export class TerritoryPass {
           const x = ref % w;
           const y = (ref - x) / w;
           this.scatter.push(x, y, state);
+          if (borderFn) borderFn(x, y);
         }
       }
       bucket.length = 0;
@@ -319,11 +342,15 @@ export class TerritoryPass {
   // GPU flush + draw
   // ---------------------------------------------------------------------------
 
-  /** Flush tile texture to GPU early (before heat update reads it). Returns true if data was uploaded. */
-  flushTileTexture(): boolean {
-    if (!this.tilesDirty) return false;
+  /**
+   * Flush tile texture to GPU early (before heat update reads it).
+   * Return value lets the renderer decide what downstream invalidation is
+   * needed — full uploads require a full border recompute, scatter uploads
+   * already pushed per-tile border patches via `borderPatchConsumer`.
+   */
+  flushTileTexture(): "none" | "full" | "scatter" {
+    if (!this.tilesDirty) return "none";
     const gl = this.gl;
-    let uploaded = false;
 
     if (this.fullUploadPending) {
       // Full upload (first tick, seek, replay full frame, etc.) — supersedes
@@ -343,16 +370,19 @@ export class TerritoryPass {
       );
       this.scatter.clear();
       this.fullUploadPending = false;
-      uploaded = true;
-    } else if (this.scatter.count > 0) {
+      this.tilesDirty = false;
+      return "full";
+    }
+    if (this.scatter.count > 0) {
       // Per-frame patches — scatter via FBO + POINTS draw. Constant cost in
       // patch count regardless of spatial distribution.
       this.scatter.flush();
-      uploaded = true;
+      this.tilesDirty = false;
+      return "scatter";
     }
 
     this.tilesDirty = false;
-    return uploaded;
+    return "none";
   }
 
   setAltView(active: boolean): void {

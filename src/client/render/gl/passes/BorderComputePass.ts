@@ -22,6 +22,7 @@ import {
   shaderSrc,
 } from "../utils/GlUtils";
 import { TILE_DEFINES } from "../utils/TileCodec";
+import { BorderScatterPass } from "./BorderScatterPass";
 
 const MAX_DEFENSE_POSTS = 64;
 
@@ -53,12 +54,19 @@ export class BorderComputePass {
   private uDefensePostRange: WebGLUniformLocation;
 
   private highlightOwner = 0;
-  /** True when any input has changed since last draw. Starts true so first frame computes. */
-  private dirty = true;
+  /**
+   * True when something that affects ALL borders (highlight owner, relation
+   * matrix, defense posts) has changed since the last draw. Forces a full
+   * recompute next frame. Starts true so the first frame computes.
+   */
+  private globalDirty = true;
 
   /** Packed defense post data: [x, y, ownerID, 0, x, y, ownerID, 0, ...] */
   private defensePostData = new Float32Array(MAX_DEFENSE_POSTS * 4);
   private defensePostCount = 0;
+
+  /** Incremental per-tile recompute. Used between full recomputes. */
+  private scatter!: BorderScatterPass;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -142,6 +150,16 @@ export class BorderComputePass {
 
     // Store tileTex reference for binding
     this._tileTex = tileTex;
+
+    this.scatter = new BorderScatterPass(
+      gl,
+      mapW,
+      mapH,
+      this.borderTex,
+      tileTex,
+      this.relationTex,
+      settings,
+    );
   }
 
   private _tileTex: WebGLTexture;
@@ -150,7 +168,8 @@ export class BorderComputePass {
   setHighlightOwner(ownerID: number): void {
     if (ownerID === this.highlightOwner) return;
     this.highlightOwner = ownerID;
-    this.dirty = true;
+    this.scatter.setHighlightOwner(ownerID);
+    this.globalDirty = true;
   }
 
   /**
@@ -173,7 +192,7 @@ export class BorderComputePass {
       gl.UNSIGNED_BYTE,
       data,
     );
-    this.dirty = true;
+    this.globalDirty = true;
   }
 
   /** Update defense post positions for checkerboard proximity. */
@@ -189,12 +208,27 @@ export class BorderComputePass {
       data[off + 3] = 0;
     }
     this.defensePostCount = count;
-    this.dirty = true;
+    this.scatter.setDefensePostData(data, count);
+    this.globalDirty = true;
   }
 
-  /** Notify that the tile texture has been updated (ownership may have changed). */
-  notifyTilesChanged(): void {
-    this.dirty = true;
+  /**
+   * Force a full recompute next draw. Use this when tile state has been
+   * replaced wholesale (initial load, seek) — individual `patchTile` calls
+   * would be too many to be cheaper than rebuilding the whole map.
+   */
+  markGlobalDirty(): void {
+    this.globalDirty = true;
+  }
+
+  /**
+   * Notify that one tile changed owner. Schedules incremental border recompute
+   * for that tile + its 4 cardinal neighbors. Cheap: ~5 points per call.
+   * Caller is responsible for ensuring tileTex contains the new state before
+   * the next draw — TerritoryPass.flushTileTexture takes care of that.
+   */
+  patchTile(x: number, y: number): void {
+    this.scatter.pushWithNeighbors(x, y);
   }
 
   /** The border buffer texture (RG8, tile resolution). */
@@ -203,35 +237,46 @@ export class BorderComputePass {
   }
 
   /**
-   * Compute border flags for the current frame. Call before MapOverlayPass and stamp overlay.
-   * Leaves the GL state with its own FBO bound — caller must restore FBO and viewport.
+   * Update border flags for the current frame. Either a full recompute (when
+   * globalDirty is set by highlight/relation/defense-post changes) or a
+   * scatter of the per-tile patches queued via `patchTile`.
+   *
+   * Exit GL state:
+   *   - Full recompute path: `borderFbo` is still bound; viewport at map size.
+   *   - Scatter path: default framebuffer bound; viewport at map size.
+   *   - No-op path: state unchanged.
+   * Caller must restore both framebuffer and viewport before subsequent draws.
    */
   draw(): void {
-    if (!this.dirty) return;
-    this.dirty = false;
+    if (this.globalDirty) {
+      this.globalDirty = false;
+      this.scatter.clear(); // full recompute supersedes any queued patches
 
-    const gl = this.gl;
-    const mo = this.settings.mapOverlay;
+      const gl = this.gl;
+      const mo = this.settings.mapOverlay;
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.borderFbo);
-    gl.viewport(0, 0, this.mapW, this.mapH);
-    gl.disable(gl.BLEND);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.borderFbo);
+      gl.viewport(0, 0, this.mapW, this.mapH);
+      gl.disable(gl.BLEND);
 
-    gl.useProgram(this.program);
-    gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
-    gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
-    gl.uniform1i(this.uHighlightThicken, Math.floor(mo.highlightThicken));
-    gl.uniform4fv(this.uDefensePosts, this.defensePostData);
-    gl.uniform1i(this.uDefensePostCount, this.defensePostCount);
-    gl.uniform1f(this.uDefensePostRange, mo.defensePostRange);
+      gl.useProgram(this.program);
+      gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
+      gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
+      gl.uniform1i(this.uHighlightThicken, Math.floor(mo.highlightThicken));
+      gl.uniform4fv(this.uDefensePosts, this.defensePostData);
+      gl.uniform1i(this.uDefensePostCount, this.defensePostCount);
+      gl.uniform1f(this.uDefensePostRange, mo.defensePostRange);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._tileTex);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.relationTex);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this._tileTex);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.relationTex);
 
-    gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.bindVertexArray(this.vao);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    } else if (this.scatter.count > 0) {
+      this.scatter.flush();
+    }
   }
 
   dispose(): void {
@@ -240,5 +285,6 @@ export class BorderComputePass {
     gl.deleteTexture(this.borderTex);
     gl.deleteTexture(this.relationTex);
     gl.deleteFramebuffer(this.borderFbo);
+    this.scatter.dispose();
   }
 }
