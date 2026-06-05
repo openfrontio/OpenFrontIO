@@ -32,7 +32,6 @@ export class UsernameInput extends LitElement {
   // is advisory only — it does not gate play; the tag is stripped on submit and
   // the server re-checks authoritatively.
   @state() private clanTagOwnershipError: string = "";
-  @state() private joinableClanTag: string | null = null;
   @state() private clanCheckPending: boolean = false;
   private _isValid: boolean = true;
   private _lastValidatedLang: string | null = null;
@@ -72,7 +71,6 @@ export class UsernameInput extends LitElement {
     const gen = ++this.clanCheckGen;
     const tag = this.clanTag;
     this.clanTagOwnershipError = "";
-    this.joinableClanTag = null;
     if (tag.length === 0 || !validateClanTag(tag).isValid) {
       this.clanCheckPending = false;
       this.clanCheck = Promise.resolve(null);
@@ -82,7 +80,6 @@ export class UsernameInput extends LitElement {
     this.clanCheck = checkClanTagOwnership(tag).then((res) => {
       if (gen === this.clanCheckGen) {
         this.clanTagOwnershipError = res.error ?? "";
-        this.joinableClanTag = res.joinableClanTag;
         this.clanCheckPending = false;
       }
       return res.tag;
@@ -188,13 +185,13 @@ export class UsernameInput extends LitElement {
     const className =
       "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap";
 
-    if (!this.joinableClanTag) {
+    if (this.clanTagOwnershipError !== "username.tag_not_member") {
       return html`<div id="clan-tag-validation-error" class=${className}>
         ${content}
       </div>`;
     }
 
-    const tag = this.joinableClanTag;
+    const tag = this.clanTag;
     return html`<button
       id="clan-tag-validation-error"
       type="button"

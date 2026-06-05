@@ -153,29 +153,26 @@ export async function fetchClanExists(tag: string): Promise<boolean | null> {
 export async function checkClanTagOwnership(tag: string): Promise<{
   tag: string | null;
   error: string | null;
-  joinableClanTag: string | null;
 }> {
   const me = await getUserMe();
   const myTags = me
     ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
     : [];
   if (myTags.includes(tag.toUpperCase())) {
-    return { tag, error: null, joinableClanTag: null };
+    return { tag, error: null };
   }
 
   const exists = await fetchClanExists(tag);
-  if (exists === false) return { tag, error: null, joinableClanTag: null };
+  if (exists === false) return { tag, error: null };
   if (exists === true) {
     return {
       tag: null,
       error: "username.tag_not_member",
-      joinableClanTag: tag.toUpperCase(),
     };
   }
   return {
     tag: null,
     error: "username.tag_check_failed",
-    joinableClanTag: null,
   };
 }
 
