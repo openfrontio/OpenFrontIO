@@ -3,6 +3,12 @@ import { ClanTagSchema } from "./Schemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
+// Response for the game-server endpoint listing every registered clan tag.
+export const ReservedClanTagsResponseSchema = z.array(z.string());
+export type ReservedClanTagsResponse = z.infer<
+  typeof ReservedClanTagsResponseSchema
+>;
+
 export const ClanLeaderboardEntrySchema = z.object({
   clanTag: RequiredClanTagSchema,
   games: z.number(),

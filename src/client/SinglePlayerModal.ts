@@ -254,7 +254,10 @@ export class SinglePlayerModal extends BaseModal {
     ];
 
     return html`
-      <div class="px-6 pt-4 pb-6 mx-auto w-full max-w-5xl">
+      <div class="flex flex-col h-full">
+        <div
+          class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
+        >
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -338,18 +341,14 @@ export class SinglePlayerModal extends BaseModal {
         </div>
 
         <!-- Footer Action -->
-        <div class="p-6 border-t border-white/10 bg-black/20">
-          ${
-            hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
-              ? html`<div
-                  class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
-                >
-                  ${translateText(
-                    "single_modal.options_changed_no_achievements",
-                  )}
-                </div>`
-              : null
-          }
+        <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
+          ${hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
+            ? html`<div
+                class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
+              >
+                ${translateText("single_modal.options_changed_no_achievements")}
+              </div>`
+            : null}
           <o-button
             variant="primary"
             width="block"
