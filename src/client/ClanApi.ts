@@ -150,21 +150,33 @@ export async function fetchClanExists(tag: string): Promise<boolean | null> {
  * Privilege.ts), for instant inline feedback. Returns the tag to submit (null
  * if dropped) and an i18n error key. The server re-checks authoritatively.
  */
-export async function checkClanTagOwnership(
-  tag: string,
-): Promise<{ tag: string | null; error: string | null }> {
+export async function checkClanTagOwnership(tag: string): Promise<{
+  tag: string | null;
+  error: string | null;
+  joinableClanTag: string | null;
+}> {
   const me = await getUserMe();
   const myTags = me
     ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
     : [];
   if (myTags.includes(tag.toUpperCase())) {
-    return { tag, error: null };
+    return { tag, error: null, joinableClanTag: null };
   }
 
   const exists = await fetchClanExists(tag);
-  if (exists === false) return { tag, error: null };
-  if (exists === true) return { tag: null, error: "username.tag_not_member" };
-  return { tag: null, error: "username.tag_check_failed" };
+  if (exists === false) return { tag, error: null, joinableClanTag: null };
+  if (exists === true) {
+    return {
+      tag: null,
+      error: "username.tag_not_member",
+      joinableClanTag: tag.toUpperCase(),
+    };
+  }
+  return {
+    tag: null,
+    error: "username.tag_check_failed",
+    joinableClanTag: null,
+  };
 }
 
 export type ClanMemberSort =
@@ -232,6 +244,9 @@ export async function joinClan(
     }
     if (res.status === 429) {
       return { error: "clan_modal.error_rate_limited_generic" };
+    }
+    if (res.status === 401) {
+      return { error: "clan_modal.sign_in_for_clans" };
     }
     if (res.status === 403) {
       const body = await res.json().catch(() => ({}));

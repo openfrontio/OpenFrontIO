@@ -32,6 +32,7 @@ export class UsernameInput extends LitElement {
   // is advisory only — it does not gate play; the tag is stripped on submit and
   // the server re-checks authoritatively.
   @state() private clanTagOwnershipError: string = "";
+  @state() private joinableClanTag: string | null = null;
   @state() private clanCheckPending: boolean = false;
   private _isValid: boolean = true;
   private _lastValidatedLang: string | null = null;
@@ -71,6 +72,7 @@ export class UsernameInput extends LitElement {
     const gen = ++this.clanCheckGen;
     const tag = this.clanTag;
     this.clanTagOwnershipError = "";
+    this.joinableClanTag = null;
     if (tag.length === 0 || !validateClanTag(tag).isValid) {
       this.clanCheckPending = false;
       this.clanCheck = Promise.resolve(null);
@@ -80,6 +82,7 @@ export class UsernameInput extends LitElement {
     this.clanCheck = checkClanTagOwnership(tag).then((res) => {
       if (gen === this.clanCheckGen) {
         this.clanTagOwnershipError = res.error ?? "";
+        this.joinableClanTag = res.joinableClanTag;
         this.clanCheckPending = false;
       }
       return res.tag;
@@ -173,16 +176,44 @@ export class UsernameInput extends LitElement {
             ${this.validationError}
           </div>`
         : this.clanTagOwnershipError
-          ? html`<div
-              id="clan-tag-validation-error"
-              class="absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap"
-            >
-              ${translateText(this.clanTagOwnershipError, {
-                tag: this.clanTag,
-              })}
-            </div>`
+          ? this.renderClanTagOwnershipError()
           : null}
     `;
+  }
+
+  private renderClanTagOwnershipError() {
+    const content = translateText(this.clanTagOwnershipError, {
+      tag: this.clanTag,
+    });
+    const className =
+      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap";
+
+    if (!this.joinableClanTag) {
+      return html`<div id="clan-tag-validation-error" class=${className}>
+        ${content}
+      </div>`;
+    }
+
+    const tag = this.joinableClanTag;
+    return html`<button
+      id="clan-tag-validation-error"
+      type="button"
+      class="${className} underline decoration-red-200/50 underline-offset-2 hover:bg-red-800/90 focus:outline-none focus:ring-2 focus:ring-red-200/70"
+      @click=${() => this.openClanJoinModal(tag)}
+    >
+      ${content}
+    </button>`;
+  }
+
+  private openClanJoinModal(tag: string) {
+    window.showPage?.("page-clan");
+    void customElements.whenDefined("clan-modal").then(() => {
+      document
+        .querySelector<
+          HTMLElement & { open: (args: { tag: string }) => void }
+        >("clan-modal")
+        ?.open({ tag });
+    });
   }
 
   private handleClanTagChange(e: Event) {
