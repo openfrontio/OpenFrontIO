@@ -85,6 +85,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Mena: 6,
   MiddleEast: 8,
   MilkyWay: 8,
+  Dungeon: 8,
   Montreal: 6,
   NewYorkCity: 3,
   NileDelta: 4,
