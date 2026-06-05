@@ -333,6 +333,11 @@ export class GPURenderer {
       this.skinAnchorTex,
       this.settings,
     );
+    // Route per-tile changes to the border pass so it can scatter-recompute
+    // just the affected tiles instead of rebuilding the whole map.
+    this.territoryPass.setBorderPatchConsumer((x, y) =>
+      this.borderPass.patchTile(x, y),
+    );
 
     // --- Spawn overlay (needs tileTex) ---
     this.spawnOverlayPass = new SpawnOverlayPass(
@@ -1194,8 +1199,11 @@ export class GPURenderer {
     } else {
       this.territoryPass.drainDripBucket();
     }
-    if (this.territoryPass.flushTileTexture())
-      this.borderPass.notifyTilesChanged();
+    // Full uploads need a full border recompute; scatter uploads already
+    // pushed per-tile border patches via the wired `borderPatchConsumer`.
+    if (this.territoryPass.flushTileTexture() === "full") {
+      this.borderPass.markGlobalDirty();
+    }
     this.trailPass.flushTexture();
     this.heatManager.updateHeat();
   }
