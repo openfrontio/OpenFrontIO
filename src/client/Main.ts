@@ -814,7 +814,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     this.mostRecentJoinEvent = event.timeStamp;
-    if (this.usernameInput && !this.usernameInput.isValid()) {
+    if (this.usernameInput && !this.usernameInput.canPlay()) {
       return;
     }
 

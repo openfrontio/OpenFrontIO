@@ -51,7 +51,7 @@ export class GameModeSelector extends LitElement {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput | null;
-    return usernameInput ? usernameInput.isValid() : true;
+    return usernameInput ? usernameInput.canPlay() : true;
   }
 
   connectedCallback() {
@@ -67,7 +67,7 @@ export class GameModeSelector extends LitElement {
       "username-input",
     ) as UsernameInput | null;
     if (usernameInput) {
-      this.inputValid = usernameInput.isValid();
+      this.inputValid = usernameInput.canPlay();
     }
   }
 

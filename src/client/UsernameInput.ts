@@ -258,17 +258,18 @@ export class UsernameInput extends LitElement {
 
   // Broadcast play-eligibility so action buttons can disable themselves.
   private emitValidity() {
-    const isValid =
-      this._isValid && this.clanTagOwnershipError !== "username.tag_not_member";
     window.dispatchEvent(
       new CustomEvent("username-validity-change", {
-        detail: { isValid },
+        detail: { isValid: this.canPlay() },
       }),
     );
   }
 
-  public isValid(): boolean {
-    return this._isValid;
+  // Play-eligibility: syntax-valid and not blocked by clan membership.
+  public canPlay(): boolean {
+    return (
+      this._isValid && this.clanTagOwnershipError !== "username.tag_not_member"
+    );
   }
 }
 
