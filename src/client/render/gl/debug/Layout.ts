@@ -9,7 +9,10 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
   return [
     folder("Pass Enables", [
       toggle(s.passEnabled, "terrain", d.passEnabled),
-      toggle(s.passEnabled, "mapOverlay", d.passEnabled),
+      toggle(s.passEnabled, "territory", d.passEnabled),
+      toggle(s.passEnabled, "borderCompute", d.passEnabled),
+      toggle(s.passEnabled, "borderStamp", d.passEnabled),
+      toggle(s.passEnabled, "trail", d.passEnabled),
       toggle(s.passEnabled, "structure", d.passEnabled),
       toggle(s.passEnabled, "unit", d.passEnabled),
       toggle(s.passEnabled, "name", d.passEnabled),
