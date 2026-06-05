@@ -28,9 +28,10 @@ export class UsernameInput extends LitElement {
   @state() private clanTag: string = "";
 
   @property({ type: String }) validationError: string = "";
-  // Ownership-check feedback (i18n key) shown inline beneath the tag input. This
-  // is advisory only — it does not gate play; the tag is stripped on submit and
-  // the server re-checks authoritatively.
+  // Ownership-check feedback (i18n key) shown inline beneath the tag input. The
+  // "not a member" result gates the action buttons (see emitValidity); every
+  // other result is advisory — the tag is stripped on submit and the server
+  // re-checks authoritatively.
   @state() private clanTagOwnershipError: string = "";
   @state() private clanCheckPending: boolean = false;
   private _isValid: boolean = true;
@@ -71,6 +72,7 @@ export class UsernameInput extends LitElement {
     const gen = ++this.clanCheckGen;
     const tag = this.clanTag;
     this.clanTagOwnershipError = "";
+    this.emitValidity();
     if (tag.length === 0 || !validateClanTag(tag).isValid) {
       this.clanCheckPending = false;
       this.clanCheck = Promise.resolve(null);
@@ -81,6 +83,7 @@ export class UsernameInput extends LitElement {
       if (gen === this.clanCheckGen) {
         this.clanTagOwnershipError = res.error ?? "";
         this.clanCheckPending = false;
+        this.emitValidity();
       }
       return res.tag;
     });
@@ -239,6 +242,7 @@ export class UsernameInput extends LitElement {
     if (!clanTagResult.isValid) {
       this._isValid = false;
       this.validationError = clanTagResult.error ?? "";
+      this.emitValidity();
       return;
     }
 
@@ -251,32 +255,22 @@ export class UsernameInput extends LitElement {
     } else {
       this.validationError = result.error ?? "";
     }
+    this.emitValidity();
   }
 
-  public isValid(): boolean {
-    return this._isValid;
-  }
-
-  public showValidationFeedback(): void {
-    const message =
-      this.validationError || translateText("username.invalid_chars");
+  // Broadcast play-eligibility so action buttons can disable themselves.
+  private emitValidity() {
+    const isValid =
+      this._isValid && this.clanTagOwnershipError !== "username.tag_not_member";
     window.dispatchEvent(
-      new CustomEvent("show-message", {
-        detail: {
-          message,
-          color: "red",
-          duration: 2500,
-        },
+      new CustomEvent("username-validity-change", {
+        detail: { isValid },
       }),
     );
   }
 
-  public validateOrShowError(): boolean {
-    if (this.isValid()) {
-      return true;
-    }
-    this.showValidationFeedback();
-    return false;
+  public isValid(): boolean {
+    return this._isValid;
   }
 }
 

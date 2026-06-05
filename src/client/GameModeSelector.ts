@@ -34,6 +34,7 @@ const CARD_BG = "bg-surface";
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   @state() private mapAspectRatios: Map<GameMapType, number> = new Map();
+  @state() private inputValid: boolean = true;
   private serverTimeOffset: number = 0;
   private defaultLobbyTime: number = 0;
 
@@ -46,26 +47,46 @@ export class GameModeSelector extends LitElement {
   }
 
   /**
-   * Validates username input and shows error message if invalid.
-   * Returns true if valid, false otherwise.
+   * Silent backstop: the action buttons are already disabled while the input is
+   * invalid (see inputValid), so this just guards the race window. Returns true
+   * if valid, false otherwise.
    */
   private validateUsername(): boolean {
     const usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput | null;
-    return usernameInput ? usernameInput.validateOrShowError() : true;
+    return usernameInput ? usernameInput.isValid() : true;
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
     this.defaultLobbyTime = ClientEnv.gameCreationRate() / 1000;
+    window.addEventListener(
+      "username-validity-change",
+      this.handleValidityChange,
+    );
+    // Pick up the current value in case username-input validated before us.
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput | null;
+    if (usernameInput) {
+      this.inputValid = usernameInput.isValid();
+    }
   }
 
   disconnectedCallback() {
     this.stop();
+    window.removeEventListener(
+      "username-validity-change",
+      this.handleValidityChange,
+    );
     super.disconnectedCallback();
   }
+
+  private handleValidityChange = (e: Event) => {
+    this.inputValid = (e as CustomEvent).detail?.isValid ?? true;
+  };
 
   public stop() {
     this.lobbySocket.stop();
@@ -259,7 +280,11 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center"
+        ?disabled=${!this.inputValid}
+        class="flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
+          .inputValid
+          ? "opacity-50 cursor-not-allowed pointer-events-none"
+          : ""}"
       >
         ${title}
       </button>
@@ -305,7 +330,11 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)]"
+        ?disabled=${!this.inputValid}
+        class="group relative w-full h-44 sm:h-full text-white uppercase rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] bg-surface hover:shadow-[var(--shadow-lobby-card-hover)] ${!this
+          .inputValid
+          ? "opacity-50 cursor-not-allowed pointer-events-none"
+          : ""}"
       >
         <!-- Image clipped separately so overflow-hidden doesn't block absolute children -->
         <div
