@@ -17,6 +17,7 @@ export class SettingKeybind extends LitElement {
   }
 
   private listening = false;
+  private suppressNextContextMenu = false;
 
   render() {
     const currentValue = this.value === "" ? "" : this.value || this.defaultKey;
@@ -49,7 +50,8 @@ export class SettingKeybind extends LitElement {
             aria-label="${translateText("user_setting.press_a_key")}"
             tabindex="0"
             @keydown=${this.handleKeydown}
-            @click=${this.startListening}
+            @mousedown=${this.handleMousedown}
+            @contextmenu=${this.handleContextMenu}
             @blur=${this.handleBlur}
           >
             ${this.listening ? "..." : this.displayKey(displayValue)}
@@ -117,8 +119,18 @@ export class SettingKeybind extends LitElement {
     // Prevent default only for keys we're actually capturing
     e.preventDefault();
 
-    const code = e.shiftKey ? `Shift+${e.code}` : e.code;
-    const displayKey = e.shiftKey ? `Shift+${e.key.toUpperCase()}` : e.key;
+    let code: string;
+    let displayKey: string;
+    if (e.shiftKey) {
+      code = `Shift+${e.code}`;
+      displayKey = `Shift+${e.key.toUpperCase()}`;
+    } else if (e.altKey) {
+      code = `Alt+${e.code}`;
+      displayKey = code; // e.key would give special chars (e.g. ® for Alt+R); use code instead
+    } else {
+      code = e.code;
+      displayKey = e.key;
+    }
     const prevValue = this.value;
 
     // Temporarily set the value to the new code for validation in parent
@@ -135,6 +147,49 @@ export class SettingKeybind extends LitElement {
     // Otherwise, keep the new value
     this.listening = false;
     this.requestUpdate();
+  }
+
+  private handleMousedown(e: MouseEvent) {
+    if (!this.listening) {
+      this.startListening();
+      return;
+    }
+    if (!e.shiftKey && !e.altKey) return; // require a keyboard modifier
+
+    const buttonMap: Record<number, string> = {
+      0: "MouseLeft",
+      1: "MouseMiddle",
+      2: "MouseRight",
+    };
+    const buttonName = buttonMap[e.button];
+    if (!buttonName) return;
+
+    if (e.button === 2) this.suppressNextContextMenu = true;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const prefix = e.shiftKey ? "Shift+" : "Alt+";
+    const code = `${prefix}${buttonName}`;
+    const prevValue = this.value;
+
+    this.value = code;
+    this.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { action: this.action, value: code, key: code, prevValue },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    this.listening = false;
+    this.requestUpdate();
+  }
+
+  private handleContextMenu(e: MouseEvent) {
+    if (this.listening || this.suppressNextContextMenu) {
+      e.preventDefault();
+      this.suppressNextContextMenu = false;
+    }
   }
 
   private handleBlur() {

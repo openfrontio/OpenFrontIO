@@ -37,7 +37,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     modifierKey: isMac ? "MetaLeft" : "ControlLeft",
     altKey: "AltLeft",
     shiftKey: "ShiftLeft",
-    resetGfx: "KeyR",
+    resetGfx: "Alt+KeyR",
     selectAllWarships: "KeyF",
     pauseGame: "KeyP",
     gameSpeedUp: "Period",

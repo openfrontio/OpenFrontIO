@@ -330,6 +330,16 @@ export function formatKeyForDisplay(value: string): string {
     return "Shift+" + formatKeyForDisplay(value.slice(6));
   }
 
+  // Handle Alt+ prefix: format as "Alt+X"
+  if (value.startsWith("Alt+")) {
+    return "Alt+" + formatKeyForDisplay(value.slice(4));
+  }
+
+  // Handle mouse buttons
+  if (value === "MouseLeft") return "Left";
+  if (value === "MouseRight") return "Right";
+  if (value === "MouseMiddle") return "Middle";
+
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";
 

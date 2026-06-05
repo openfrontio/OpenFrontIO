@@ -212,6 +212,8 @@ export class InputHandler {
   private selectionBoxActive: boolean = false;
   // True while warships are selected via box (waiting for move target click)
   private multiSelectionActive: boolean = false;
+  // True while the configured shiftKey (box-select hold key) is held down
+  private shiftKeybindHeld: boolean = false;
 
   // Touch long-press state
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -309,8 +311,8 @@ export class InputHandler {
       let deltaX = 0;
       let deltaY = 0;
 
-      // Skip if shift is held down
-      if (this.activeKeys.has(this.keybinds.shiftKey)) {
+      // Skip if box-select key is held down
+      if (this.shiftKeybindHeld) {
         return;
       }
 
@@ -435,7 +437,6 @@ export class InputHandler {
           this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
-          this.keybinds.shiftKey,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -443,7 +444,8 @@ export class InputHandler {
 
       // Shift = warship box selection mode.
       // If a ghost structure is active, discard it first.
-      if (e.code === this.keybinds.shiftKey) {
+      if (this.keybindMatchesEvent(e, this.keybinds.shiftKey)) {
+        this.shiftKeybindHeld = true;
         if (this.uiState.ghostStructure !== null) {
           this.setGhostStructure(null);
         }
@@ -480,8 +482,7 @@ export class InputHandler {
         this.eventBus.emit(new AlternateViewEvent(false));
       }
 
-      const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      if (e.code === resetKey && this.isAltKeyHeld(e)) {
+      if (this.keybindMatchesEvent(e, this.keybinds.resetGfx ?? "Alt+KeyR")) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
@@ -518,7 +519,7 @@ export class InputHandler {
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (e.code === this.keybinds.selectAllWarships) {
+      if (this.keybindMatchesEvent(e, this.keybinds.selectAllWarships)) {
         e.preventDefault();
         this.eventBus.emit(new SelectAllWarshipsEvent());
       }
@@ -573,13 +574,13 @@ export class InputHandler {
 
       this.activeKeys.delete(e.code);
 
-      // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
-      if (
-        e.code === this.keybinds.shiftKey &&
-        !this.selectionBoxActive &&
-        !this.multiSelectionActive
-      ) {
-        this.canvas.style.cursor = "";
+      // Reset crosshair when box-select key is released (unless selection box or multi-selection still active)
+      const parsedShiftKey = this.parseKeybind(this.keybinds.shiftKey);
+      if (e.code === parsedShiftKey.code) {
+        this.shiftKeybindHeld = false;
+        if (!this.selectionBoxActive && !this.multiSelectionActive) {
+          this.canvas.style.cursor = "";
+        }
       }
     });
   }
@@ -688,6 +689,11 @@ export class InputHandler {
       } else {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
+    }
+
+    if (this.dispatchPointerKeybindActions(event)) {
+      this.suppressNextTap = false;
+      return;
     }
 
     if (this.isModifierKeyPressed(event)) {
@@ -802,7 +808,7 @@ export class InputHandler {
       // started, continue emitting selection box updates
       if (
         this.selectionBoxActive ||
-        this.activeKeys.has(this.keybinds.shiftKey) ||
+        this.shiftKeybindHeld ||
         this.longPressActive
       ) {
         this.selectionBoxActive = true;
@@ -851,24 +857,133 @@ export class InputHandler {
   }
 
   /**
-   * Parses a keybind value that may include a "Shift+" prefix.
-   * e.g. "Shift+KeyB" → { shift: true, code: "KeyB" }
-   *      "KeyB"       → { shift: false, code: "KeyB" }
+   * Parses a keybind value that may include a "Shift+" or "Alt+" prefix.
+   * e.g. "Shift+KeyB" → { shift: true, alt: false, code: "KeyB" }
+   *      "Alt+KeyR"   → { shift: false, alt: true, code: "KeyR" }
+   *      "KeyB"       → { shift: false, alt: false, code: "KeyB" }
    */
-  private parseKeybind(value: string): { shift: boolean; code: string } {
+  private parseKeybind(value: string): {
+    shift: boolean;
+    alt: boolean;
+    code: string;
+  } {
     if (value?.startsWith("Shift+")) {
-      return { shift: true, code: value.slice(6) };
+      return { shift: true, alt: false, code: value.slice(6) };
     }
-    return { shift: false, code: value };
+    if (value?.startsWith("Alt+")) {
+      return { shift: false, alt: true, code: value.slice(4) };
+    }
+    return { shift: false, alt: false, code: value };
   }
+
+  private static readonly MODIFIER_KEY_CODES = new Set([
+    "ShiftLeft",
+    "ShiftRight",
+    "AltLeft",
+    "AltRight",
+    "ControlLeft",
+    "ControlRight",
+    "MetaLeft",
+    "MetaRight",
+  ]);
 
   /**
    * Returns true if the keyboard event matches the given keybind value,
-   * including optional Shift+ prefix support.
+   * including optional Shift+ and Alt+ prefix support.
    */
   private keybindMatchesEvent(e: KeyboardEvent, keybindValue: string): boolean {
     const parsed = this.parseKeybind(keybindValue);
-    return e.code === parsed.code && e.shiftKey === parsed.shift;
+    if (e.code !== parsed.code) return false;
+    // A bare modifier-key bind (e.g. "ShiftLeft") can't be matched on flag
+    // state: pressing the key itself sets its own modifier flag to true.
+    if (
+      !parsed.shift &&
+      !parsed.alt &&
+      InputHandler.MODIFIER_KEY_CODES.has(parsed.code)
+    ) {
+      return true;
+    }
+    return e.shiftKey === parsed.shift && e.altKey === parsed.alt;
+  }
+
+  private static readonly MOUSE_BUTTON_NAMES: Record<number, string> = {
+    0: "MouseLeft",
+    1: "MouseMiddle",
+    2: "MouseRight",
+  };
+
+  private keybindMatchesPointerEvent(
+    e: PointerEvent,
+    keybindValue: string,
+  ): boolean {
+    if (!keybindValue) return false;
+    const parsed = this.parseKeybind(keybindValue);
+    const buttonName = InputHandler.MOUSE_BUTTON_NAMES[e.button];
+    return (
+      parsed.code === buttonName &&
+      e.shiftKey === parsed.shift &&
+      e.altKey === parsed.alt
+    );
+  }
+
+  private dispatchPointerKeybindActions(event: PointerEvent): boolean {
+    const actions: Array<[string, () => void]> = [
+      [
+        this.keybinds.boatAttack,
+        () => this.eventBus.emit(new DoBoatAttackEvent()),
+      ],
+      [
+        this.keybinds.groundAttack,
+        () => this.eventBus.emit(new DoGroundAttackEvent()),
+      ],
+      [
+        this.keybinds.retaliateAttack,
+        () => this.eventBus.emit(new DoRetaliateAttackEvent()),
+      ],
+      [
+        this.keybinds.requestAlliance,
+        () => this.eventBus.emit(new DoRequestAllianceEvent()),
+      ],
+      [
+        this.keybinds.breakAlliance,
+        () => this.eventBus.emit(new DoBreakAllianceEvent()),
+      ],
+      [
+        this.keybinds.swapDirection,
+        () => this.eventBus.emit(new SwapRocketDirectionEvent(true)),
+      ],
+      [
+        this.keybinds.selectAllWarships,
+        () => this.eventBus.emit(new SelectAllWarshipsEvent()),
+      ],
+      [
+        this.keybinds.centerCamera,
+        () => this.eventBus.emit(new CenterCameraEvent()),
+      ],
+      [
+        this.keybinds.pauseGame,
+        () => this.eventBus.emit(new TogglePauseIntentEvent()),
+      ],
+      [
+        this.keybinds.gameSpeedUp,
+        () => this.eventBus.emit(new GameSpeedUpIntentEvent()),
+      ],
+      [
+        this.keybinds.gameSpeedDown,
+        () => this.eventBus.emit(new GameSpeedDownIntentEvent()),
+      ],
+      [
+        this.keybinds.resetGfx ?? "Alt+KeyR",
+        () => this.eventBus.emit(new RefreshGraphicsEvent()),
+      ],
+    ];
+    for (const [keybind, action] of actions) {
+      if (this.keybindMatchesPointerEvent(event, keybind)) {
+        action();
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
