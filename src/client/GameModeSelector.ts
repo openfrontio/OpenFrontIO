@@ -46,11 +46,7 @@ export class GameModeSelector extends LitElement {
     return this;
   }
 
-  /**
-   * Silent backstop: the action buttons are already disabled while the input is
-   * invalid (see inputValid), so this just guards the race window. Returns true
-   * if valid, false otherwise.
-   */
+  // Silent backstop; the buttons are already disabled while input is invalid.
   private validateUsername(): boolean {
     const usernameInput = document.querySelector(
       "username-input",

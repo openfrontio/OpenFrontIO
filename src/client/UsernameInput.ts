@@ -28,10 +28,8 @@ export class UsernameInput extends LitElement {
   @state() private clanTag: string = "";
 
   @property({ type: String }) validationError: string = "";
-  // Ownership-check feedback (i18n key) shown inline beneath the tag input. The
-  // "not a member" result gates the action buttons (see emitValidity); every
-  // other result is advisory — the tag is stripped on submit and the server
-  // re-checks authoritatively.
+  // Ownership-check feedback (i18n key) shown inline beneath the tag input. Only
+  // "not a member" gates the buttons (see emitValidity); the rest is advisory.
   @state() private clanTagOwnershipError: string = "";
   @state() private clanCheckPending: boolean = false;
   private _isValid: boolean = true;
