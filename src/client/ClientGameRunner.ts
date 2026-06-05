@@ -497,10 +497,20 @@ async function createClientGame(
       applyGraphicsOverrides(live, userSettings.graphicsOverrides());
       applyDarkModeOverride(live, userSettings.darkMode());
     };
+    // Re-apply render settings, then re-theme and recolor players, on a
+    // graphics-override change (covers a theme switch such as colorblind mode).
+    const onGraphicsChanged = (): void => {
+      regenerateRenderSettings();
+      // A graphics override can switch the active theme (e.g. colorblind mode),
+      // so re-theme existing players and re-upload the palette to recolor their
+      // territory fills/borders live.
+      gameView.refreshPlayerColors();
+      webglBuilder.refreshPalette(gameView);
+    };
     regenerateRenderSettings();
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
-      regenerateRenderSettings,
+      onGraphicsChanged,
       { signal: graphicsListenerAbort.signal },
     );
     globalThis.addEventListener(
