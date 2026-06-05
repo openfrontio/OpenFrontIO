@@ -1,4 +1,5 @@
 **Two nations have special names in Luna.**
+
 1. The Secret Base nation have special-looking characters but they are all well suported by the game (Extended-ASCII).
 
 2. The MONOLITH nation have UNICODE characters that DO NOT render in the game-map.
