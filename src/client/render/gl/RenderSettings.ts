@@ -169,6 +169,13 @@ export interface RenderSettings {
     angryR: number;
     angryG: number;
     angryB: number;
+    // Steady soft glow rendered underneath the hydrogen bomb
+    hBombGlowScale: number; // quad enlargement factor (1 = no glow room)
+    hBombGlowR: number;
+    hBombGlowG: number;
+    hBombGlowB: number;
+    hBombGlowStrength: number; // peak opacity of the glow
+    hBombGlowInner: number; // radial falloff start (0..1, quad-space)
   };
   name: {
     lerpSpeed: number;

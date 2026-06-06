@@ -82,6 +82,9 @@ const UNIT_ORDER = [
 
 const ATLAS_COLS = UNIT_ORDER.length;
 
+/** Atlas column of the hydrogen bomb — drives the GPU glow halo. */
+const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
+
 // ---------------------------------------------------------------------------
 // Instance data layout
 // ---------------------------------------------------------------------------
@@ -175,6 +178,10 @@ export class UnitPass {
   private uFlickerSpeed: WebGLUniformLocation;
   private uAngryColor: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
+  private uHBombGlowScale: WebGLUniformLocation;
+  private uHBombGlowColor: WebGLUniformLocation;
+  private uHBombGlowStrength: WebGLUniformLocation;
+  private uHBombGlowInner: WebGLUniformLocation;
 
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
@@ -229,8 +236,8 @@ export class UnitPass {
     // Compile shaders
     this.program = createProgram(
       gl,
-      shaderSrc(unitVertSrc, { ATLAS_COLS }),
-      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize() }),
+      shaderSrc(unitVertSrc, { ATLAS_COLS, HYDROGEN_BOMB_COL }),
+      shaderSrc(unitFragSrc, { PALETTE_SIZE: getPaletteSize(), ATLAS_COLS }),
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTick = gl.getUniformLocation(this.program, "uTick")!;
@@ -239,6 +246,22 @@ export class UnitPass {
     this.uAngryColor = gl.getUniformLocation(this.program, "uAngryColor")!;
 
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
+    this.uHBombGlowScale = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowScale",
+    )!;
+    this.uHBombGlowColor = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowColor",
+    )!;
+    this.uHBombGlowStrength = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowStrength",
+    )!;
+    this.uHBombGlowInner = gl.getUniformLocation(
+      this.program,
+      "uHBombGlowInner",
+    )!;
 
     // Texture unit bindings
     gl.useProgram(this.program);
@@ -470,6 +493,15 @@ export class UnitPass {
     gl.uniform1f(this.uFlickerSpeed, us.flickerSpeed);
     gl.uniform3f(this.uAngryColor, us.angryR, us.angryG, us.angryB);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
+    gl.uniform1f(this.uHBombGlowScale, us.hBombGlowScale);
+    gl.uniform3f(
+      this.uHBombGlowColor,
+      us.hBombGlowR,
+      us.hBombGlowG,
+      us.hBombGlowB,
+    );
+    gl.uniform1f(this.uHBombGlowStrength, us.hBombGlowStrength);
+    gl.uniform1f(this.uHBombGlowInner, us.hBombGlowInner);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);

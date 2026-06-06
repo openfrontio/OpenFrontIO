@@ -8,12 +8,17 @@ uniform float uTick;
 uniform float uFlickerSpeed;
 uniform vec3  uAngryColor;
 uniform int   uAltView;
+uniform vec3  uHBombGlowColor;
+uniform float uHBombGlowStrength;
+uniform float uHBombGlowInner;
 
-in vec2  vLocalPos;
-in vec2  vAtlasUV;
+in vec2  vQuadPos;
+in vec2  vCellUV;
+flat in float vAtlasCol;
 flat in float vOwnerID;
 flat in float vFlags;
 flat in float vHash;
+flat in float vGlow;
 
 out vec4 fragColor;
 
@@ -34,10 +39,29 @@ const vec3 FLICKER_COLORS[4] = vec3[4](
 );
 
 void main() {
-  vec4 texel = texture(uAtlas, vAtlasUV);
+  // The sprite lives in the central cell-space region [0,1]; for the enlarged
+  // hydrogen-bomb quad, anything outside that range is glow-only margin.
+  vec4 texel = vec4(0.0);
+  bool inSprite = vCellUV.x >= 0.0 && vCellUV.x <= 1.0 &&
+                  vCellUV.y >= 0.0 && vCellUV.y <= 1.0;
+  if (inSprite) {
+    vec2 atlasUV = vec2((vAtlasCol + vCellUV.x) / float(ATLAS_COLS), vCellUV.y);
+    texel = texture(uAtlas, atlasUV);
+  }
 
-  // Discard fully transparent pixels
-  if (texel.a < 0.01) discard;
+  // Outside the sprite: render the steady soft glow under the hydrogen bomb,
+  // otherwise discard. Glow is suppressed in alt (affiliation) view.
+  if (texel.a < 0.01) {
+    if (vGlow > 0.5 && uAltView == 0) {
+      float d = length(vQuadPos - 0.5) * 2.0; // 0 at center → ~1 at quad edge
+      float g = (1.0 - smoothstep(uHBombGlowInner, 1.0, d)) * uHBombGlowStrength;
+      if (g > 0.001) {
+        fragColor = vec4(uHBombGlowColor, g);
+        return;
+      }
+    }
+    discard;
+  }
 
   float gray = texel.r;
 
