@@ -890,7 +890,6 @@ export interface Game extends GameMap {
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
-  alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
 
   // Immunity timer
