@@ -285,7 +285,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.buildMenu)}
+                        ${this.renderKey(keybinds.buildMenuModifier)}
                         <span class="text-white/40 font-bold">+</span>
                         <div
                           class="w-5 h-8 border border-white/40 rounded-full relative"
@@ -306,7 +306,7 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.emojiMenu)}
+                        ${this.renderKey(keybinds.emojiMenuModifier)}
                         <span class="text-white/40 font-bold">+</span>
                         <div
                           class="w-5 h-8 border border-white/40 rounded-full relative"

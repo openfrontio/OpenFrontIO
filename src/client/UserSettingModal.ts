@@ -505,22 +505,22 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
-        action="buildMenu"
+        action="buildMenuModifier"
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.buildMenu}
-        .value=${this.getKeyValue("buildMenu")}
-        .display=${this.getKeyChar("buildMenu")}
+        .defaultKey=${this.defaultKeybinds.buildMenuModifier}
+        .value=${this.getKeyValue("buildMenuModifier")}
+        .display=${this.getKeyChar("buildMenuModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="emojiMenu"
+        action="emojiMenuModifier"
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.emojiMenu}
-        .value=${this.getKeyValue("emojiMenu")}
-        .display=${this.getKeyChar("emojiMenu")}
+        .defaultKey=${this.defaultKeybinds.emojiMenuModifier}
+        .value=${this.getKeyValue("emojiMenuModifier")}
+        .display=${this.getKeyChar("emojiMenuModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

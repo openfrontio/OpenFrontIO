@@ -436,8 +436,8 @@ export class InputHandler {
           "ControlLeft",
           "ControlRight",
           this.keybinds.shiftKey,
-          this.keybinds.emojiMenu,
-          this.keybinds.buildMenu,
+          this.keybinds.emojiMenuModifier,
+          this.keybinds.buildMenuModifier,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -691,12 +691,12 @@ export class InputHandler {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
     }
-    if (this.activeKeys.has(this.keybinds.buildMenu)) {
+    if (this.activeKeys.has(this.keybinds.buildMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
-    if (this.activeKeys.has(this.keybinds.emojiMenu)) {
+    if (this.activeKeys.has(this.keybinds.emojiMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
