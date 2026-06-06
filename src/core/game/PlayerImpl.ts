@@ -102,6 +102,8 @@ export class PlayerImpl implements Player {
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
 
+  public _alliances: MutableAlliance[] = [];
+
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
@@ -487,9 +489,7 @@ export class PlayerImpl implements Player {
   }
 
   alliances(): MutableAlliance[] {
-    return this.mg.alliances_.filter(
-      (a) => a.requestor() === this || a.recipient() === this,
-    );
+    return this._alliances;
   }
 
   expiredAlliances(): Alliance[] {
