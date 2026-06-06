@@ -10,12 +10,15 @@ layout(location = 2) in vec2 aInstFlags; // atlasIdx (uint8→float), flags (uin
 uniform mat3  uCamera;
 
 uniform float uUnitSize;
+uniform float uHBombGlowScale; // quad enlargement for the hydrogen bomb glow halo
 
-out vec2  vLocalPos;
-out vec2  vAtlasUV;
+out vec2  vQuadPos;     // quad coords [0,1] — drives the radial glow falloff
+out vec2  vCellUV;      // sprite cell coords; the central 1/scale region is the sprite
+flat out float vAtlasCol;
 flat out float vOwnerID;
 flat out float vFlags;  // 0.0 = normal, 1.0 = flicker, 2.0 = angry
 flat out float vHash;   // per-instance hash for flicker phase offset
+flat out float vGlow;   // 1.0 if this instance is a hydrogen bomb (draw glow), else 0.0
 
 void main() {
   float worldX = aInstPos.x;
@@ -24,13 +27,20 @@ void main() {
 
   float atlasCol = aInstFlags.x;
   vFlags = aInstFlags.y;
+  vAtlasCol = atlasCol;
 
   // Position-based hash so each unit flickers independently
   vHash = fract(worldX * 0.1731 + worldY * 0.3179);
 
+  // Hydrogen bombs render an enlarged quad so there's room for a glow halo
+  // around the sprite. All other units keep scale 1 (no behavior change).
+  float isHBomb = step(abs(atlasCol - float(HYDROGEN_BOMB_COL)), 0.5);
+  vGlow = isHBomb;
+  float scale = mix(1.0, uHBombGlowScale, isHBomb);
+
   // UNIT_SIZE is in world-space tiles — no zoom division needed.
   // Units scale with the map like territory tiles do.
-  float halfSize = uUnitSize * 0.5;
+  float halfSize = uUnitSize * 0.5 * scale;
 
   vec2 center = vec2(worldX + 0.5, worldY + 0.5);
   vec2 worldPos = center + (aPos - 0.5) * halfSize * 2.0;
@@ -38,9 +48,9 @@ void main() {
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 
-  vLocalPos = aPos;
+  vQuadPos = aPos;
 
-  // Atlas UV: map quad [0,1] to the correct column
-  float colU = (atlasCol + aPos.x) / float(ATLAS_COLS);
-  vAtlasUV = vec2(colU, aPos.y);
+  // Map the enlarged quad back to sprite cell space: the central 1/scale
+  // portion is the sprite, anything outside [0,1] is glow-only margin.
+  vCellUV = (aPos - 0.5) * scale + 0.5;
 }

@@ -179,7 +179,13 @@
     "flickerSpeed": 0.3,
     "angryR": 0.784,
     "angryG": 0,
-    "angryB": 0
+    "angryB": 0,
+    "hBombGlowScale": 2.2,
+    "hBombGlowR": 1.0,
+    "hBombGlowG": 0.72,
+    "hBombGlowB": 0.15,
+    "hBombGlowStrength": 0.5,
+    "hBombGlowInner": 0.45
   },
   "name": {
     "lerpSpeed": 10,
