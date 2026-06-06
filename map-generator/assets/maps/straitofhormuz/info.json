@@ -105,16 +105,6 @@
       "coordinates": [56, 554],
       "name": "Bahrain",
       "flag": "bh"
-    },
-    {
-      "coordinates": [1025, 701],
-      "name": "Umm Al Quwain",
-      "flag": "ae"
-    },
-    {
-      "coordinates": [971, 788],
-      "name": "Ajman",
-      "flag": "ae"
     }
   ]
 }
