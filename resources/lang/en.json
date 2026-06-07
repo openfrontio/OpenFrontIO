@@ -611,12 +611,14 @@
     "caribbean": "Caribbean",
     "choppingblock": "Chopping Block",
     "southeastasia": "Southeast Asia",
-    "mississippiriver": "Mississippi River"
+    "mississippiriver": "Mississippi River",
+    "titan": "Titan"
   },
   "map_categories": {
     "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
+    "cosmic": "Cosmic",
     "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",

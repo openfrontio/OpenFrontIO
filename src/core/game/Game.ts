@@ -184,6 +184,7 @@ export enum GameMapType {
   ChoppingBlock = "Chopping Block",
   SoutheastAsia = "SoutheastAsia",
   MississippiRiver = "Mississippi River",
+  Titan = "Titan",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -260,8 +261,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
   fantasy: [
     GameMapType.Pangaea,
-    GameMapType.Pluto,
-    GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
@@ -270,9 +269,14 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
     GameMapType.TradersDream,
     GameMapType.Passage,
-    GameMapType.MilkyWay,
     GameMapType.Dyslexdria,
+  ],
+  cosmic: [
     GameMapType.Luna,
+    GameMapType.Mars,
+    GameMapType.Titan,
+    GameMapType.Pluto,
+    GameMapType.MilkyWay,
   ],
   arcade: [
     GameMapType.TheBox,
