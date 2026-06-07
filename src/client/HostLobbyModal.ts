@@ -279,13 +279,13 @@ export class HostLobbyModal extends BaseModal {
         .labelKey=${"host_modal.start_delay"}
         .checked=${this.startDelay}
         .inputId=${"start-delay-value"}
-        .inputMin=${1}
+        .inputMin=${0}
         .inputMax=${600}
         .inputStep=${"any"}
         .inputValue=${this.startDelayValue}
         .inputAriaLabel=${translateText("host_modal.start_delay")}
         .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
-        .defaultInputValue=${5}
+        .defaultInputValue=${3}
         .minValidOnEnable=${1}
         .onToggle=${this.handleStartDelayToggle}
         .onChange=${this.handleStartDelayValueChanges}
@@ -867,9 +867,9 @@ export class HostLobbyModal extends BaseModal {
 
   private handleStartDelayValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseBoundedFloatFromInput(input, {
-      min: 0.1,
-      max: 1000,
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 600,
     });
 
     if (value === undefined) {
@@ -1103,7 +1103,7 @@ export class HostLobbyModal extends BaseModal {
         bubbles: true,
         composed: true,
         detail: {
-          startDelay: this.startDelayValue,
+          startDelay: this.startDelayValue ?? 0,
         },
       }),
     );

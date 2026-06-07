@@ -85,7 +85,7 @@ export class WorkerLobbyService {
             });
             return;
           }
-          game.setStartsAt(msg.startsAt + 1000000);
+          game.setStartsAt(msg.startsAt);
           break;
         }
       }

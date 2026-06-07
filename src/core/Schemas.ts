@@ -483,7 +483,7 @@ export const UpdateGameConfigIntentSchema = z.object({
 
 export const StartGameIntentSchema = z.object({
   type: z.literal("start_game"),
-  startDelay: z.number(),
+  startDelay: z.number().min(0).max(600),
 });
 
 const IntentSchema = z.discriminatedUnion("type", [
