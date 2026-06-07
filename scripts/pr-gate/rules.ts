@@ -2,16 +2,17 @@ import {
   APPROVED_ISSUE_LABEL,
   LABELS,
   SMALL_FIX_LINE_THRESHOLD,
-  TRUSTED_AUTHOR_ASSOCIATIONS,
+  TRUSTED_REPO_PERMISSIONS,
 } from "./config";
 
 export type PRMetadata = {
   number: number;
   body: string | null;
   user: { login: string };
-  author_association: string;
   labels: string[];
 };
+
+export type GetRepoPermission = (username: string) => Promise<string>;
 
 export type PRFile = {
   additions: number;
@@ -53,13 +54,16 @@ export function checkBypass(pr: PRMetadata): RuleResult {
   return { action: "next" };
 }
 
-export function checkOrgMember(pr: PRMetadata): RuleResult {
-  if (
-    (TRUSTED_AUTHOR_ASSOCIATIONS as readonly string[]).includes(
-      pr.author_association,
-    )
-  ) {
-    return { action: "pass", reason: `Author is ${pr.author_association}` };
+export async function checkRepoAccess(
+  pr: PRMetadata,
+  getRepoPermission: GetRepoPermission,
+): Promise<RuleResult> {
+  const permission = await getRepoPermission(pr.user.login);
+  if ((TRUSTED_REPO_PERMISSIONS as readonly string[]).includes(permission)) {
+    return {
+      action: "pass",
+      reason: `Author has "${permission}" permission on the repo`,
+    };
   }
   return { action: "next" };
 }
@@ -104,11 +108,12 @@ export async function evaluate(
   pr: PRMetadata,
   files: PRFile[],
   getIssue: GetIssue,
+  getRepoPermission: GetRepoPermission,
 ): Promise<RuleResult> {
   const r0 = checkBypass(pr);
   if (r0.action !== "next") return r0;
 
-  const r1 = checkOrgMember(pr);
+  const r1 = await checkRepoAccess(pr, getRepoPermission);
   if (r1.action !== "next") return r1;
 
   const r2 = await checkApprovedWork(pr, getIssue);

@@ -6,6 +6,7 @@ import {
   getIssue,
   getPR,
   getPRFiles,
+  getRepoPermission,
   makeOctokit,
   postComment,
 } from "./github";
@@ -57,7 +58,12 @@ async function main(): Promise<void> {
   const pr = await getPR(octokit, prNumber);
   const files = await getPRFiles(octokit, prNumber);
 
-  const decision = await evaluate(pr, files, (n) => getIssue(octokit, n));
+  const decision = await evaluate(
+    pr,
+    files,
+    (n) => getIssue(octokit, n),
+    (u) => getRepoPermission(octokit, u),
+  );
 
   const prefix = `[pr-gate] PR #${prNumber}`;
   if (decision.action === "pass") {

@@ -44,7 +44,7 @@ const GHOST_COST_OUTLINE_WIDTH = 1.4;
  * zoom each frame so the on-screen label size stays constant regardless of
  * how far the camera is zoomed.
  */
-const ATTACK_LABEL_SCREEN_SCALE = 34.0;
+const ATTACK_LABEL_SCREEN_SCALE = 17.0;
 const ATTACK_LABEL_OUTLINE_WIDTH = 1.2;
 
 // ---------------------------------------------------------------------------
@@ -397,6 +397,9 @@ export class WorldTextPass {
 
   private rebuildInstances(now: number, zoom: number): void {
     let count = 0;
+    // canvasW in Camera is cssWidth*dpr, so `zoom` is device-px-per-world-unit.
+    // Multiply screen-relative scales by dpr to keep a constant CSS-pixel size.
+    const dpr = window.devicePixelRatio || 1;
 
     for (const popup of this.active) {
       const elapsed = now - popup.startMs;
@@ -442,7 +445,8 @@ export class WorldTextPass {
     // Attack troop labels — persistent, no fade. Controller interpolates
     // positions before pushing. Scale is divided by zoom so the label keeps
     // a constant on-screen size regardless of how zoomed-in the camera is.
-    const attackScale = ATTACK_LABEL_SCREEN_SCALE / Math.max(zoom, 0.0001);
+    const attackScale =
+      (ATTACK_LABEL_SCREEN_SCALE * dpr) / Math.max(zoom, 0.0001);
     for (const label of this.attackTroopLabels) {
       layoutString(
         label.text,
@@ -478,8 +482,9 @@ export class WorldTextPass {
     const label = this.ghostCostLabel;
     if (label) {
       const invZoom = 1 / Math.max(zoom, 0.0001);
-      const ghostScale = this.settings.ghostCost.screenScale * invZoom;
-      const ghostY = label.y + this.settings.ghostCost.screenYOffset * invZoom;
+      const ghostScale = this.settings.ghostCost.screenScale * dpr * invZoom;
+      const ghostY =
+        label.y + this.settings.ghostCost.screenYOffset * dpr * invZoom;
       layoutString(
         label.text,
         this.glyph,
@@ -536,7 +541,11 @@ export class WorldTextPass {
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uZoom, zoom);
-    gl.uniform1f(this.uMinScreenScale, this.settings.bonusPopup.minScreenScale);
+    const dpr = window.devicePixelRatio || 1;
+    gl.uniform1f(
+      this.uMinScreenScale,
+      this.settings.bonusPopup.minScreenScale * dpr,
+    );
     gl.uniform1f(this.uDistRange, this.distanceRange);
 
     gl.activeTexture(gl.TEXTURE0);

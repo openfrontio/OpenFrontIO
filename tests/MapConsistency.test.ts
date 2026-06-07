@@ -294,39 +294,68 @@ describe("Map consistency", () => {
         const info = JSON.parse(fs.readFileSync(infoPath, "utf8"));
         const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
-        type NationEntry = { name: string; coordinates: [number, number] };
-        const infoNations: NationEntry[] = (info.nations ?? []).map(
-          (n: NationEntry) => ({ name: n.name, coordinates: n.coordinates }),
-        );
-        const manifestNations: NationEntry[] = (manifest.nations ?? []).map(
-          (n: NationEntry) => ({ name: n.name, coordinates: n.coordinates }),
-        );
+        // ── Compare nations ──────────────────────────────────────────────
+        type NationEntry = {
+          name: string;
+          coordinates?: [number, number];
+        };
 
-        if (infoNations.length !== manifestNations.length) {
-          errors.push(
-            `${key}: nation count mismatch — info.json has ${infoNations.length}, manifest.json has ${manifestNations.length}`,
-          );
-          continue;
+        function compareNationArrays(
+          label: string,
+          infoArr: NationEntry[],
+          manifestArr: NationEntry[],
+        ): void {
+          if (infoArr.length !== manifestArr.length) {
+            errors.push(
+              `${key}: ${label} count mismatch — info.json has ${infoArr.length}, manifest.json has ${manifestArr.length}`,
+            );
+            return;
+          }
+          for (let i = 0; i < infoArr.length; i++) {
+            const inf = infoArr[i];
+            const man = manifestArr[i];
+            if (inf.name !== man.name) {
+              errors.push(
+                `${key}: ${label}[${i}] name mismatch — info.json "${inf.name}" vs manifest.json "${man.name}"`,
+              );
+              continue;
+            }
+            const infHasCoords = inf.coordinates !== undefined;
+            const manHasCoords = man.coordinates !== undefined;
+            if (infHasCoords !== manHasCoords) {
+              errors.push(
+                `${key}: ${label} "${inf.name}" (index ${i}) coordinate presence differs — info.json ${infHasCoords ? "has" : "missing"} coordinates, manifest.json ${manHasCoords ? "has" : "missing"} coordinates`,
+              );
+              continue;
+            }
+            if (inf.coordinates && man.coordinates) {
+              const [ix, iy] = inf.coordinates;
+              const [mx, my] = man.coordinates;
+              if (ix !== mx || iy !== my) {
+                errors.push(
+                  `${key}: ${label} "${inf.name}" (index ${i}) coordinates differ — info.json [${ix}, ${iy}] vs manifest.json [${mx}, ${my}]`,
+                );
+              }
+            }
+          }
         }
 
-        // Compare nations by index (order must match; names can be duplicated).
-        for (let i = 0; i < infoNations.length; i++) {
-          const inf = infoNations[i];
-          const man = manifestNations[i];
-          if (inf.name !== man.name) {
-            errors.push(
-              `${key}: nations[${i}] name mismatch — info.json "${inf.name}" vs manifest.json "${man.name}"`,
-            );
-            continue;
-          }
-          const [ix, iy] = inf.coordinates;
-          const [mx, my] = man.coordinates;
-          if (ix !== mx || iy !== my) {
-            errors.push(
-              `${key}: nation "${inf.name}" (index ${i}) coordinates differ — info.json [${ix}, ${iy}] vs manifest.json [${mx}, ${my}]`,
-            );
-          }
-        }
+        const toEntry = (n: NationEntry) => ({
+          name: n.name,
+          coordinates: n.coordinates,
+        });
+
+        compareNationArrays(
+          "nation",
+          (info.nations ?? []).map(toEntry),
+          (manifest.nations ?? []).map(toEntry),
+        );
+
+        compareNationArrays(
+          "additionalNation",
+          (info.additionalNations ?? []).map(toEntry),
+          (manifest.additionalNations ?? []).map(toEntry),
+        );
       } catch (err) {
         errors.push(`${key}: failed to parse JSON — ${(err as Error).message}`);
       }

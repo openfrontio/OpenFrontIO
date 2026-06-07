@@ -32,7 +32,7 @@ export interface MapManifest {
 }
 
 export interface Nation {
-  coordinates: [number, number];
+  coordinates?: [number, number];
   flag?: string;
   name: string;
 }
@@ -69,10 +69,12 @@ export async function loadTerrainMap(
 
   if (mapSize === GameMapSize.Compact) {
     manifest.nations.forEach((nation) => {
-      nation.coordinates = [
-        Math.floor(nation.coordinates[0] / 2),
-        Math.floor(nation.coordinates[1] / 2),
-      ];
+      if (nation.coordinates !== undefined) {
+        nation.coordinates = [
+          Math.floor(nation.coordinates[0] / 2),
+          Math.floor(nation.coordinates[1] / 2),
+        ];
+      }
     });
     manifest.additionalNations?.forEach((nation) => {
       if (nation.coordinates !== undefined) {

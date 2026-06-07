@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Close PR if label matches
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Maintainer-applied labels that trigger an auto-close + comment.

@@ -181,7 +181,9 @@ export enum GameMapType {
   Labyrinth = "Labyrinth",
   Caribbean = "Caribbean",
   Onion = "Onion",
+  ChoppingBlock = "Chopping Block",
   SoutheastAsia = "SoutheastAsia",
+  MississippiRiver = "Mississippi River",
   HongKong = "Hong Kong",
 }
 
@@ -255,7 +257,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.YellowSea,
     GameMapType.Caribbean,
     GameMapType.SoutheastAsia,
-    GameMapType.HongKong,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -275,6 +276,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
   arcade: [
     GameMapType.TheBox,
+    GameMapType.ChoppingBlock,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Labyrinth,
@@ -890,7 +892,6 @@ export interface Game extends GameMap {
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
-  alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
 
   // Immunity timer
