@@ -40,6 +40,7 @@ export class TerritoryPass {
   private uHighlightBrighten: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
   private uIsTeamMode: WebGLUniformLocation;
+  private uDefenseDarken: WebGLUniformLocation;
   private highlightOwner = 0;
   private isTeamMode = false;
 
@@ -51,6 +52,8 @@ export class TerritoryPass {
   private skinAtlasTex: WebGLTexture;
   private skinLayerTex: WebGLTexture;
   private skinAnchorTex: WebGLTexture;
+  private defenseCoverageTex: WebGLTexture | null = null;
+  private borderTex: WebGLTexture | null = null;
 
   private altView = false;
   private showPatterns = true;
@@ -158,6 +161,10 @@ export class TerritoryPass {
     )!;
     this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
     this.uIsTeamMode = gl.getUniformLocation(this.program, "uIsTeamMode")!;
+    this.uDefenseDarken = gl.getUniformLocation(
+      this.program,
+      "uDefenseDarken",
+    )!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
@@ -167,6 +174,8 @@ export class TerritoryPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAtlas"), 4);
     gl.uniform1i(gl.getUniformLocation(this.program, "uSkinLayer"), 5);
     gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAnchor"), 6);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uDefenseCoverageTex"), 7);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uBorderTex"), 8);
 
     this.vao = createMapQuad(gl, mapW, mapH);
 
@@ -411,6 +420,16 @@ export class TerritoryPass {
     this.highlightOwner = ownerID;
   }
 
+  /** Defense-coverage texture (R8) — darkens the fill on defended tiles. */
+  setDefenseCoverageTex(tex: WebGLTexture): void {
+    this.defenseCoverageTex = tex;
+  }
+
+  /** Border flags (RGBA8) — used to skip the defense darken on border tiles. */
+  setBorderTex(tex: WebGLTexture): void {
+    this.borderTex = tex;
+  }
+
   /** Draw territory fill + stale-nuke ground. Blending must be enabled by caller. */
   draw(cameraMatrix: Float32Array): void {
     this.flushTileTexture();
@@ -438,6 +457,7 @@ export class TerritoryPass {
       this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,
     );
     gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
+    gl.uniform1f(this.uDefenseDarken, mo.territoryDefenseDarken);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
@@ -453,6 +473,14 @@ export class TerritoryPass {
     gl.bindTexture(gl.TEXTURE_2D, this.skinLayerTex);
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_2D, this.skinAnchorTex);
+    if (this.defenseCoverageTex) {
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, this.defenseCoverageTex);
+    }
+    if (this.borderTex) {
+      gl.activeTexture(gl.TEXTURE8);
+      gl.bindTexture(gl.TEXTURE_2D, this.borderTex);
+    }
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
