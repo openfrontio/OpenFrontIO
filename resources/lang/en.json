@@ -629,6 +629,7 @@
     "game_length": "Game length",
     "pvp_immunity": "PVP immunity duration",
     "starting_gold": "Starting Gold",
+    "status": "Status",
     "host_cheats": "Host Cheats"
   },
   "public_lobby": {
@@ -707,6 +708,8 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
+    "start_delay": "Start delay (Seconds)",
+    "start_delay_placeholder": "60",
     "host_cheats": "Host Cheats",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },

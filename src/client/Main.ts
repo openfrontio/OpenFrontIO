@@ -1007,9 +1007,10 @@ class Client {
     }
   }
 
-  private handleStartGame() {
+  private handleStartGame(event: CustomEvent) {
+    const { startDelay } = event.detail;
     if (this.eventBus) {
-      this.eventBus.emit(new SendStartGameEvent());
+      this.eventBus.emit(new SendStartGameEvent(startDelay));
     }
   }
 

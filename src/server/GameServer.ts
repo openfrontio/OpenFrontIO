@@ -510,7 +510,7 @@ export class GameServer {
                   creatorID: client.clientID,
                   gameID: this.id,
                 });
-                this.start();
+                this.setStartsAt(Date.now() + stampedIntent.startDelay * 1000);
                 return;
               }
               case "toggle_pause": {
@@ -917,25 +917,6 @@ export class GameServer {
 
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
     const noActive = this.activeClients.length === 0;
-
-    if (this.gameConfig.gameType !== GameType.Public) {
-      if (this._hasStarted) {
-        if (noActive && noRecentPings) {
-          this.log.info("private game complete", {
-            gameID: this.id,
-          });
-          return GamePhase.Finished;
-        } else {
-          return GamePhase.Active;
-        }
-      } else if (this._hasEnded) {
-        return GamePhase.Finished;
-      } else {
-        return GamePhase.Lobby;
-      }
-    }
-
-    // Public Games
 
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (

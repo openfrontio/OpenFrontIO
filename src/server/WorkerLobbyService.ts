@@ -70,7 +70,7 @@ export class WorkerLobbyService {
             });
             return;
           }
-          game.setStartsAt(msg.startsAt);
+          game.setStartsAt(msg.startsAt + 1000000);
           break;
         }
       }

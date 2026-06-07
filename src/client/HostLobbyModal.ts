@@ -1,7 +1,12 @@
 import { html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { translateText } from "../client/Utils";
+import {
+  calculateServerTimeOffset,
+  getSecondsUntilServerTimestamp,
+  renderDuration,
+  translateText,
+} from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
@@ -72,6 +77,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
+  @state() private startDelay: boolean = true;
+  @state() private startDelayValue: number | undefined = 3;
   @state() private disableAlliances: boolean = false;
   @state() private waterNukes: boolean = false;
   @state() private lobbyId = "";
@@ -87,6 +94,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private hostCheatStartingGold: boolean = false;
   @state() private hostCheatStartingGoldValue: number | undefined = undefined;
   @state() private lobbyCreatorClientID: string = "";
+  @state() private lobbyStartAt: number | null = null;
+  @state() private serverTimeOffset: number = 0;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -102,6 +111,10 @@ export class HostLobbyModal extends BaseModal {
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
       return;
     }
+    if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
+      this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
+    }
+    this.lobbyStartAt = lobby.startsAt ?? null;
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
@@ -180,6 +193,22 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected renderBody() {
+    const secondsRemaining =
+      this.lobbyStartAt !== null
+        ? getSecondsUntilServerTimestamp(
+            this.lobbyStartAt,
+            this.serverTimeOffset,
+          )
+        : null;
+    const statusLabel =
+      secondsRemaining === null
+        ? null
+        : secondsRemaining > 0
+          ? translateText("public_lobby.starting_in", {
+              time: renderDuration(secondsRemaining),
+            })
+          : translateText("public_lobby.started");
+
     const inputCards = [
       html`<toggle-input-card
         .labelKey=${"host_modal.max_timer"}
@@ -245,6 +274,22 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleStartingGoldToggle}
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.start_delay"}
+        .checked=${this.startDelay}
+        .inputId=${"start-delay-value"}
+        .inputMin=${1}
+        .inputMax=${600}
+        .inputStep=${"any"}
+        .inputValue=${this.startDelayValue}
+        .inputAriaLabel=${translateText("host_modal.start_delay")}
+        .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleStartDelayToggle}
+        .onChange=${this.handleStartDelayValueChanges}
+        .onKeyDown=${this.handleStartDelayValueKeyDown}
       ></toggle-input-card>`,
     ];
 
@@ -412,18 +457,35 @@ export class HostLobbyModal extends BaseModal {
         </div>
 
         <!-- Player List / footer -->
+        ${statusLabel !== null
+          ? html`
+              <div
+                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
+              >
+                <button
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  disabled
+                >
+                  ${statusLabel}
+                </button>
+              </div>
+            `
+          : html`
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <o-button
             variant="primary"
             width="block"
             size="lg"
-            .title=${this.clients.length === 1
-              ? translateText("host_modal.waiting")
-              : translateText("host_modal.start")}
+            .title=${
+              this.clients.length === 1
+                ? translateText("host_modal.waiting")
+                : translateText("host_modal.start")
+            }
             ?disable=${this.clients.length < 2}
             @click=${this.startGame}
           ></o-button>
         </div>
+      </div>`}
       </div>
     `;
   }
@@ -737,6 +799,15 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleStartDelayToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.startDelay = checked;
+    this.startDelayValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
   private handleSpawnImmunityDurationKeyDown = (e: KeyboardEvent) => {
     preventDisallowedKeys(e, ["-", "+", "e", "E"]);
   };
@@ -772,6 +843,10 @@ export class HostLobbyModal extends BaseModal {
     preventDisallowedKeys(e, ["-", "+", "e", "E"]);
   };
 
+  private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
   private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const value = parseBoundedFloatFromInput(input, {
@@ -784,6 +859,22 @@ export class HostLobbyModal extends BaseModal {
       input.value = "";
     } else {
       this.startingGoldValue = value;
+    }
+    this.putGameConfig();
+  };
+
+  private handleStartDelayValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, {
+      min: 0.1,
+      max: 1000,
+    });
+
+    if (value === undefined) {
+      this.startDelayValue = undefined;
+      input.value = "";
+    } else {
+      this.startDelayValue = value;
     }
     this.putGameConfig();
   };
@@ -1009,6 +1100,9 @@ export class HostLobbyModal extends BaseModal {
       new CustomEvent("start-game", {
         bubbles: true,
         composed: true,
+        detail: {
+          startDelay: this.startDelayValue,
+        },
       }),
     );
   }

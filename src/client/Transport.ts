@@ -174,7 +174,9 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
 
-export class SendStartGameEvent implements GameEvent {}
+export class SendStartGameEvent implements GameEvent {
+  constructor(public readonly startDelay: number) {}
+}
 
 export class Transport {
   private socket: WebSocket | null = null;
@@ -266,7 +268,7 @@ export class Transport {
       this.onSendUpdateGameConfigIntent(e),
     );
 
-    this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
+    this.eventBus.on(SendStartGameEvent, (e) => this.onSendStartGame(e));
   }
 
   private startPing() {
@@ -647,8 +649,8 @@ export class Transport {
     });
   }
 
-  private onSendStartGame() {
-    this.sendIntent({ type: "start_game" });
+  private onSendStartGame(event: SendStartGameEvent) {
+    this.sendIntent({ type: "start_game", startDelay: event.startDelay });
   }
 
   private sendIntent(intent: Intent) {
