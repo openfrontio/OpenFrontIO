@@ -273,7 +273,7 @@
     },
     {
       "coordinates": [2344, 15],
-      "name": "Artic",
+      "name": "Arctic",
       "flag": ""
     },
     {
@@ -313,7 +313,7 @@
     },
     {
       "coordinates": [2084, 1045],
-      "name": "Bellingshausen ",
+      "name": "Bellingshausen",
       "flag": ""
     },
     {
@@ -374,7 +374,7 @@
     },
     {
       "coordinates": [1940, 914],
-      "name": "East Pacfic Plains",
+      "name": "East Pacific Plains",
       "flag": ""
     },
     {
@@ -659,7 +659,7 @@
       "flag": "dk"
     },
     {
-      "name": "SS Florizel ",
+      "name": "SS Florizel",
       "flag": "Newfoundland"
     },
     {
@@ -740,10 +740,6 @@
     },
     {
       "name": "Ourang Medan"
-    },
-    {
-      "name": "HMS Resolute",
-      "flag": "gb"
     },
     {
       "name": "Mary Celeste",
@@ -1035,11 +1031,6 @@
       "flag": ""
     },
     {
-      "coordinates": [35, 240],
-      "name": "North ",
-      "flag": ""
-    },
-    {
       "coordinates": [101, 118],
       "name": "Norwegian",
       "flag": ""
@@ -1066,7 +1057,7 @@
     },
     {
       "coordinates": [710, 570],
-      "name": "Bengal ",
+      "name": "Bengal",
       "flag": ""
     },
     {
