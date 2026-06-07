@@ -16,8 +16,10 @@ import {
   ClanRequestsResponseSchema,
   JoinClanResponseSchema,
 } from "../core/ClanApiSchemas";
-import { getApiBase } from "./Api";
+import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
+
+const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
 export type {
   ClanBan,
   ClanBansResponse,
@@ -123,6 +125,46 @@ export async function fetchClanDetail(tag: string): Promise<ClanInfo | false> {
   } catch {
     return false;
   }
+}
+
+// Public existence probe (no auth). null = inconclusive (timeout / error /
+// unexpected status); the caller decides how to handle it. The tag is
+// uppercased to the canonical form so it matches the server's route.
+export async function fetchClanExists(tag: string): Promise<boolean | null> {
+  try {
+    const path = `/public/clan/${encodeURIComponent(tag.toUpperCase())}/exists`;
+    const res = await fetch(`${getApiBase()}${path}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(CLAN_EXISTS_FETCH_TIMEOUT_MS),
+    });
+    if (res.status === 200) return true;
+    if (res.status === 404) return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Client-side mirror of the server's clan-tag ownership rule (resolveClanTag in
+ * Privilege.ts), for instant inline feedback. Returns the tag to submit (null
+ * if dropped) and an i18n error key. The server re-checks authoritatively.
+ */
+export async function checkClanTagOwnership(
+  tag: string,
+): Promise<{ tag: string | null; error: string | null }> {
+  const me = await getUserMe();
+  const myTags = me
+    ? (me.player.clans ?? []).map((c) => c.tag.toUpperCase())
+    : [];
+  if (myTags.includes(tag.toUpperCase())) {
+    return { tag, error: null };
+  }
+
+  const exists = await fetchClanExists(tag);
+  if (exists === false) return { tag, error: null };
+  if (exists === true) return { tag: null, error: "username.tag_not_member" };
+  return { tag: null, error: "username.tag_check_failed" };
 }
 
 export type ClanMemberSort =
