@@ -66,5 +66,21 @@
       "flag": "",
       "name": "Harborwick"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 960,
+        "width": 2200,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 960,
+        "width": 2200,
+        "x": 0,
+        "y": 960
+      }
+    ]
+  }
 }

@@ -152,6 +152,8 @@ export interface GhostPreviewData {
   ghostType: string; // UnitType string ("City", "Port", etc.)
   tileX: number; // Hover tile X
   tileY: number; // Hover tile Y
+  radiusTileX: number;
+  radiusTileY: number;
   canBuild: boolean; // Valid placement?
   canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
@@ -166,6 +168,8 @@ export interface GhostPreviewData {
   upgradeTargetTile: number | null;
   /** Range radius in tiles for the placement circle (0 = no circle). */
   rangeRadius: number;
+  /** True if placing here would carry a penalty (e.g. nuking an ally → traitor). */
+  rangeWarning: boolean;
 }
 
 /** Nuke trajectory preview data — Bezier control points + color thresholds. */

@@ -70,6 +70,10 @@ export class GameServer {
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
+  // Wire-only copy of gameStartInfo sent to clients. Identical to
+  // gameStartInfo unless disableClanTags is set, in which case clan tags
+  // are stripped from players. Archive uses the original gameStartInfo.
+  private wireGameStartInfo!: GameStartInfo;
 
   private log: Logger;
 
@@ -753,6 +757,15 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.wireGameStartInfo = this.gameConfig.disableClanTags
+      ? {
+          ...this.gameStartInfo,
+          players: this.gameStartInfo.players.map((p) => ({
+            ...p,
+            clanTag: null,
+          })),
+        }
+      : this.gameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -797,7 +810,7 @@ export class GameServer {
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.gameStartInfo,
+          gameStartInfo: this.wireGameStartInfo,
           lobbyCreatedAt: this.createdAt,
           myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
@@ -940,11 +953,12 @@ export class GameServer {
 
   public gameInfo(): GameInfo {
     const friendsFor = this.buildFriendsLookup();
+    const hideClanTags = this.gameConfig.disableClanTags ?? false;
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: hideClanTags ? null : (c.clanTag ?? null),
         clientID: c.clientID,
         friends: friendsFor(c),
       })),
@@ -1190,8 +1204,8 @@ export class GameServer {
       }
     }
 
-    // If half clients out of sync assume all are out of sync.
-    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
+    // If strict majority clients out of sync assume all are out of sync.
+    if (outOfSyncClients.length > Math.floor(this.activeClients.length / 2)) {
       outOfSyncClients = this.activeClients;
     }
 

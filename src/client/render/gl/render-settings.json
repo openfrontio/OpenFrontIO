@@ -1,7 +1,10 @@
 {
   "passEnabled": {
     "terrain": true,
-    "mapOverlay": true,
+    "territory": true,
+    "borderCompute": true,
+    "borderStamp": true,
+    "trail": true,
     "territoryPatterns": true,
     "structure": true,
     "unit": true,
@@ -44,10 +47,9 @@
     "particleStrength": 1,
     "particleFreshScale": 0.2
   },
-  "dayNight": {
-    "mode": "light",
-    "nightAmbient": 0.15,
-    "dayAmbient": 1,
+  "lighting": {
+    "ambient": 1,
+    "enabled": false,
     "falloffPower": 2,
     "falloutLightR": 0.15,
     "falloutLightG": 0.95,
@@ -75,10 +77,31 @@
     "highlightThicken": 2,
     "defensePostRange": 30,
     "embargoTintRatio": 0.35,
-    "friendlyTintRatio": 0.35
+    "friendlyTintRatio": 0.35,
+    "embargoTintR": 1,
+    "embargoTintG": 0,
+    "embargoTintB": 0,
+    "friendlyTintR": 0,
+    "friendlyTintG": 1,
+    "friendlyTintB": 0
+  },
+  "affiliation": {
+    "selfR": 0,
+    "selfG": 1,
+    "selfB": 0,
+    "allyR": 1,
+    "allyG": 1,
+    "allyB": 0,
+    "neutralR": 0.502,
+    "neutralG": 0.502,
+    "neutralB": 0.502,
+    "enemyR": 1,
+    "enemyG": 0,
+    "enemyB": 0
   },
   "railroad": {
     "railMinZoom": 4,
+    "railFadeRange": 2,
     "railDetailZoom": 6,
     "railAlpha": 1
   },
@@ -115,7 +138,13 @@
       }
     },
     "highlightOutlineWidth": 0.04,
-    "highlightDimAlpha": 0.3
+    "highlightDimAlpha": 0.3,
+    "fillDarken": 0.65,
+    "borderDarken": 0.35,
+    "iconAlpha": 1.0,
+    "iconR": 1.0,
+    "iconG": 1.0,
+    "iconB": 1.0
   },
   "structureLevel": {
     "scale": 1.2,
@@ -150,7 +179,13 @@
     "flickerSpeed": 0.3,
     "angryR": 0.784,
     "angryG": 0,
-    "angryB": 0
+    "angryB": 0,
+    "hBombGlowScale": 2.2,
+    "hBombGlowR": 1.0,
+    "hBombGlowG": 0.72,
+    "hBombGlowB": 0.15,
+    "hBombGlowStrength": 0.5,
+    "hBombGlowInner": 0.45
   },
   "name": {
     "lerpSpeed": 10,
@@ -159,11 +194,11 @@
     "nameScaleCap": 3,
     "troopSizeMultiplier": 0.6,
     "outlineWidth": 1.4,
-    "outlineR": 1.0,
-    "outlineG": 1.0,
-    "outlineB": 1.0,
-    "outlineUsePlayerColor": false,
-    "fillUsePlayerColor": true,
+    "outlineR": 0.0,
+    "outlineG": 0.0,
+    "outlineB": 0.0,
+    "outlineUsePlayerColor": true,
+    "fillUsePlayerColor": false,
     "emojiRowOffset": 1.4,
     "statusRowOffset": 1.4
   },
@@ -242,6 +277,10 @@
     "colorB": 1,
     "minScreenScale": 0.15,
     "cullZoom": 0.3
+  },
+  "ghostCost": {
+    "screenScale": 18,
+    "screenYOffset": 25
   },
   "spawnOverlay": {
     "highlightRadius": 9,

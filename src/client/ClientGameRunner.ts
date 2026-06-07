@@ -31,6 +31,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   DARK_MODE_KEY,
+  GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
@@ -47,6 +48,7 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
+  ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -66,14 +68,25 @@ import {
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { GameView as WebGLGameView } from "./render/gl";
+import {
+  applyDarkModeOverride,
+  applyGraphicsOverrides,
+  createDebugGui,
+  createRenderSettings,
+  deepAssign,
+  GameView as WebGLGameView,
+} from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { SoundManager } from "./sound/SoundManager";
+import { themeProvider } from "./theme/ThemeProvider";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
   playerClanTag: string | null;
+  // In-flight clan-tag ownership check; resolves to the tag to submit (null if
+  // it failed). Runs parallel to the WS handshake — only the join waits on it.
+  clanTagCheck?: Promise<string | null>;
   playerRole: string | null;
   gameID: GameID;
   turnstileToken: string | null;
@@ -104,13 +117,18 @@ export function joinLobby(
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
   const userSettings: UserSettings = new UserSettings();
+  themeProvider.reset(); // fresh colour allocators for this game
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
 
-  const onconnect = () => {
+  const onconnect = async () => {
+    // Drop the tag if the ownership check failed; the server re-checks anyway.
+    if (lobbyConfig.clanTagCheck !== undefined) {
+      lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
+    }
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     transport.joinGame();
@@ -235,7 +253,10 @@ export function joinLobby(
 
 // Build the WebGL view + its glCanvas. Must run before createRenderer so the
 // controllers can be wired directly to the view.
-function createWebGLView(terrainMap: TerrainMapData): {
+function createWebGLView(
+  terrainMap: TerrainMapData,
+  config: Config,
+): {
   view: WebGLGameView;
   glCanvas: HTMLCanvasElement;
   cachedWebGLFrameCallback: { current: FrameRequestCallback | null };
@@ -289,6 +310,7 @@ function createWebGLView(terrainMap: TerrainMapData): {
     },
     terrainBytes,
     palette,
+    config,
     captureRaf,
     captureCaf,
   );
@@ -457,19 +479,9 @@ async function createClientGame(
 
   const soundManager = new SoundManager(eventBus, userSettings);
   try {
-    const { view, glCanvas, cachedWebGLFrameCallback } =
-      createWebGLView(gameMap);
-
-    // Bind the WebGL renderer's day/night mode to the existing darkMode
-    // UserSetting so the in-game map matches the rest of the UI. Initial
-    // apply + live updates via the per-key settings-changed event.
-    const applyDayNightMode = (isDark: boolean): void => {
-      view.getSettings().dayNight.mode = isDark ? "dark" : "light";
-    };
-    applyDayNightMode(userSettings.darkMode());
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e) => applyDayNightMode((e as CustomEvent<string>).detail === "true"),
+    const { view, glCanvas, cachedWebGLFrameCallback } = createWebGLView(
+      gameMap,
+      config,
     );
 
     view.setShowPatterns(userSettings.territoryPatterns());
@@ -477,6 +489,36 @@ async function createClientGame(
       `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
       (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
     );
+
+    const graphicsListenerAbort = new AbortController();
+    const regenerateRenderSettings = (): void => {
+      const live = view.getSettings();
+      deepAssign(live, createRenderSettings());
+      applyGraphicsOverrides(live, userSettings.graphicsOverrides());
+      applyDarkModeOverride(live, userSettings.darkMode());
+    };
+    regenerateRenderSettings();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      regenerateRenderSettings,
+      { signal: graphicsListenerAbort.signal },
+    );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
+      regenerateRenderSettings,
+      { signal: graphicsListenerAbort.signal },
+    );
+
+    let debugGui: ReturnType<typeof createDebugGui> | null = null;
+    eventBus.on(ToggleRenderDebugGuiEvent, () => {
+      if (debugGui === null) {
+        debugGui = createDebugGui(view.getSettings());
+        debugGui.open();
+      } else {
+        debugGui.destroy();
+        debugGui = null;
+      }
+    });
 
     const gameRenderer = createRenderer(
       inputOverlay,
@@ -512,6 +554,7 @@ async function createClientGame(
       soundManager,
       userSettings,
       webglBuilder,
+      graphicsListenerAbort,
     );
   } catch (err) {
     soundManager.dispose();
@@ -545,6 +588,7 @@ export class ClientGameRunner {
     private soundManager: SoundManager,
     private userSettings: UserSettings,
     private webglBuilder: WebGLFrameBuilder | null = null,
+    private graphicsListenerAbort: AbortController | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -801,6 +845,7 @@ export class ClientGameRunner {
 
   public stop() {
     this.soundManager.dispose();
+    this.graphicsListenerAbort?.abort();
     if (!this.isActive) return;
 
     this.isActive = false;

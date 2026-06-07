@@ -1,0 +1,36 @@
+name: 🪧 Issue Lifecycle (events)
+
+on:
+  issues:
+    types: [opened, assigned, milestoned, demilestoned]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  handle:
+    name: Handle event
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install deps
+        working-directory: scripts/issue-lifecycle
+        run: npm install --no-audit --no-fund --ignore-scripts
+      - name: Handle issue event
+        working-directory: scripts/issue-lifecycle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ vars.ISSUE_LIFECYCLE_DRY_RUN || 'true' }}
+          EVENT_NAME: ${{ github.event.action }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: npx tsx index.ts --mode event

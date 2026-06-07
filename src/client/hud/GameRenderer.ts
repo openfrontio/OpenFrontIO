@@ -5,8 +5,10 @@ import { Controller } from "../Controller";
 import { GameStartingModal } from "../GameStartingModal";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
+import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
+import { SoundEffectController } from "../controllers/SoundEffectController";
 import { StructureHighlightController } from "../controllers/StructureHighlightController";
 import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
@@ -14,7 +16,6 @@ import { GameView as WebGLGameView } from "../render/gl";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
-import { AttackingTroopsOverlay } from "./layers/AttackingTroopsOverlay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -24,6 +25,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GraphicsSettingsModal } from "./layers/GraphicsSettingsModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
@@ -190,6 +192,15 @@ export function createRenderer(
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
 
+  const graphicsSettingsModal = document.querySelector(
+    "graphics-settings-modal",
+  ) as GraphicsSettingsModal;
+  if (!(graphicsSettingsModal instanceof GraphicsSettingsModal)) {
+    console.error("graphics settings modal not found");
+  }
+  graphicsSettingsModal.userSettings = userSettings;
+  graphicsSettingsModal.eventBus = eventBus;
+
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
     console.error("unit display not found");
@@ -283,7 +294,8 @@ export function createRenderer(
     new HoverHighlightController(game, eventBus, transformHandler, view),
     new StructureHighlightController(eventBus, view),
     new ViewModeController(eventBus, view),
-    new AttackingTroopsOverlay(game, transformHandler, eventBus, userSettings),
+    new AttackingTroopsController(game, eventBus, userSettings, view),
+    new SoundEffectController(game, eventBus),
     eventsDisplay,
     actionableEvents,
     attacksDisplay,
@@ -309,6 +321,7 @@ export function createRenderer(
     winModal,
     replayPanel,
     settingsModal,
+    graphicsSettingsModal,
     teamStats,
     playerPanel,
     headsUpMessage,

@@ -89,6 +89,7 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
+  private outgoingQuickChats_ = new Map<number, Tick>();
 
   private sentDonations: Donation[] = [];
 
@@ -100,6 +101,8 @@ export class PlayerImpl implements Player {
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
+
+  public _alliances: MutableAlliance[] = [];
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
@@ -486,9 +489,7 @@ export class PlayerImpl implements Player {
   }
 
   alliances(): MutableAlliance[] {
-    return this.mg.alliances_.filter(
-      (a) => a.requestor() === this || a.recipient() === this,
-    );
+    return this._alliances;
   }
 
   expiredAlliances(): Alliance[] {
@@ -759,7 +760,25 @@ export class PlayerImpl implements Player {
     return true;
   }
 
+  canSendQuickChat(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
+    const lastSentAt = this.outgoingQuickChats_.get(recipient.smallID());
+    return (
+      lastSentAt === undefined ||
+      this.mg.ticks() - lastSentAt >= this.mg.config().quickChatCooldown()
+    );
+  }
+
+  recordQuickChat(recipient: Player): void {
+    this.outgoingQuickChats_.set(recipient.smallID(), this.mg.ticks());
+  }
+
   canDonateGold(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -787,6 +806,9 @@ export class PlayerImpl implements Player {
   }
 
   canDonateTroops(recipient: Player): boolean {
+    if (recipient === this) {
+      return false;
+    }
     if (
       !this.isAlive() ||
       !recipient.isAlive() ||
@@ -814,6 +836,9 @@ export class PlayerImpl implements Player {
   }
 
   donateTroops(recipient: Player, troops: number): boolean {
+    // Defense-in-depth: canDonateTroops already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (troops <= 0) return false;
     const removed = this.removeTroops(troops);
     if (removed === 0) return false;
@@ -831,6 +856,9 @@ export class PlayerImpl implements Player {
   }
 
   donateGold(recipient: Player, gold: Gold): boolean {
+    // Defense-in-depth: canDonateGold already checks this, but guard here too
+    // to prevent self-donation if the method is called directly.
+    if (recipient === this) return false;
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
@@ -953,6 +981,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other === this) {
+      return true;
+    }
     if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }

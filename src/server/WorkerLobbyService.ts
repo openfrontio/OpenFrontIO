@@ -1,6 +1,10 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import {
+  PublicGameInfo,
+  PublicGames,
+  PublicLobbyMessage,
+} from "../core/Schemas";
 import { GameManager } from "./GameManager";
 import {
   MasterMessageSchema,
@@ -12,6 +16,16 @@ import { logger } from "./Logger";
 export class WorkerLobbyService {
   private readonly lobbiesWss: WebSocketServer;
   private readonly lobbyClients: Set<WebSocket> = new Set();
+  // Most recent snapshot from master, serialized on demand for new
+  // connections so they don't have to wait for the next broadcast.
+  private lastPublicGames: PublicGames | null = null;
+  // Sorted gameIDs of the last full we broadcast, or null if we've never
+  // broadcast one. When the set changes we send a fresh full; otherwise a
+  // counts-only delta is enough. This relies on master creating a new lobby
+  // whenever it sets startsAt on the previous one, so structural state
+  // (startsAt, gameConfig) rides along with a gameID change. Null (not "")
+  // is used so that an empty-lobby first broadcast still emits a full.
+  private lastFullGameIds: string | null = null;
 
   constructor(
     private readonly server: http.Server,
@@ -39,6 +53,7 @@ export class WorkerLobbyService {
       const msg = result.data;
       switch (msg.type) {
         case "lobbiesBroadcast":
+          this.lastPublicGames = msg.publicGames;
           // Forward message to all clients
           this.broadcastLobbiesToClients(msg.publicGames);
           // Update master with my lobby info
@@ -116,6 +131,17 @@ export class WorkerLobbyService {
   private setupLobbiesWebSocket() {
     this.lobbiesWss.on("connection", (ws: WebSocket) => {
       this.lobbyClients.add(ws);
+      // Prime the new client with the most recent snapshot — otherwise it
+      // would only see counts-only deltas (which it can't apply without a
+      // base) until the next structural change.
+      if (this.lastPublicGames !== null) {
+        const fullJson = JSON.stringify({
+          type: "full",
+          serverTime: this.lastPublicGames.serverTime,
+          games: this.lastPublicGames.games,
+        } satisfies PublicLobbyMessage);
+        ws.send(fullJson);
+      }
       ws.on("message", () => {
         ws.terminate();
       });
@@ -141,12 +167,43 @@ export class WorkerLobbyService {
   }
 
   private broadcastLobbiesToClients(publicGames: PublicGames) {
-    const message = JSON.stringify(publicGames);
+    const gameIds: string[] = [];
+    for (const list of Object.values(publicGames.games)) {
+      for (const lobby of list) {
+        gameIds.push(lobby.gameID);
+      }
+    }
+    gameIds.sort();
+    const fingerprint = gameIds.join(",");
+    const shouldSendFull = fingerprint !== this.lastFullGameIds;
+
+    let payload: PublicLobbyMessage;
+    if (shouldSendFull) {
+      payload = {
+        type: "full",
+        serverTime: publicGames.serverTime,
+        games: publicGames.games,
+      };
+      this.lastFullGameIds = fingerprint;
+    } else {
+      const counts: Record<string, number> = {};
+      for (const list of Object.values(publicGames.games)) {
+        for (const lobby of list) {
+          counts[lobby.gameID] = lobby.numClients;
+        }
+      }
+      payload = {
+        type: "counts",
+        serverTime: publicGames.serverTime,
+        counts,
+      };
+    }
+    const json = JSON.stringify(payload);
 
     const clientsToRemove: WebSocket[] = [];
     this.lobbyClients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
+        client.send(json);
       } else {
         clientsToRemove.push(client);
       }

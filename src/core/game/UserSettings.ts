@@ -1,3 +1,7 @@
+import {
+  GraphicsOverrides,
+  GraphicsOverridesSchema,
+} from "../../client/render/gl/GraphicsOverrides";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -30,8 +34,8 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     moveLeft: "KeyA",
     moveDown: "KeyS",
     moveRight: "KeyD",
-    modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-    altKey: "AltLeft",
+    buildMenuModifier: isMac ? "MetaLeft" : "ControlLeft",
+    emojiMenuModifier: "AltLeft",
     shiftKey: "ShiftLeft",
     resetGfx: "KeyR",
     selectAllWarships: "KeyF",
@@ -42,12 +46,18 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+/**
+ * Storage key for the player's selected territory cosmetic. Stores either
+ * `"pattern:<name>[:<palette>]"` or `"skin:<name>"` — patterns and skins are
+ * mutually exclusive, so they share one slot.
+ */
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const COLOR_KEY = "settings.territoryColor";
 export const DARK_MODE_KEY = "settings.darkMode";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
+export const GRAPHICS_KEY = "settings.graphics";
 
 export class UserSettings {
   private static cache = new Map<string, string | null>();
@@ -148,10 +158,6 @@ export class UserSettings {
     return this.getBool("settings.specialEffects", true);
   }
 
-  structureSprites() {
-    return this.getBool("settings.structureSprites", true);
-  }
-
   darkMode() {
     return this.getBool(DARK_MODE_KEY, false);
   }
@@ -217,10 +223,6 @@ export class UserSettings {
     this.setBool("settings.specialEffects", !this.fxLayer());
   }
 
-  toggleStructureSprites() {
-    this.setBool("settings.structureSprites", !this.structureSprites());
-  }
-
   toggleCursorCostLabel() {
     this.setBool("settings.cursorCostLabel", !this.cursorCostLabel());
   }
@@ -256,7 +258,11 @@ export class UserSettings {
     if (cosmetics === null) return null;
     let data = this.getCached(PATTERN_KEY);
     if (data === null) return null;
+    // Skin selections share this key — defer to getSelectedSkinName.
+    if (data.startsWith("skin:")) return null;
     const patternPrefix = "pattern:";
+    // Accept both `pattern:<name>[:<palette>]` (current) and bare `<name>[:<palette>]`
+    // (older builds wrote unprefixed) so existing localStorage values still resolve.
     if (data.startsWith(patternPrefix)) {
       data = data.slice(patternPrefix.length);
     }
@@ -270,12 +276,25 @@ export class UserSettings {
     } satisfies PlayerPattern;
   }
 
-  setSelectedPatternName(patternName: string | undefined): void {
-    if (patternName === undefined) {
+  /**
+   * Accepts a fully-prefixed cosmetic value: `"pattern:<name>[:<palette>]"`
+   * or `"skin:<name>"`. Patterns and skins share storage because they're
+   * mutually exclusive — writing one automatically clears the other.
+   */
+  setSelectedPatternName(value: string | undefined): void {
+    if (value === undefined) {
       this.removeCached(PATTERN_KEY);
     } else {
-      this.setCached(PATTERN_KEY, patternName);
+      this.setCached(PATTERN_KEY, value);
     }
+  }
+
+  /** Returns the bare skin name (no `skin:` prefix), or null if a pattern (or nothing) is selected. */
+  getSelectedSkinName(): string | null {
+    const data = this.getCached(PATTERN_KEY);
+    if (data === null) return null;
+    const skinPrefix = "skin:";
+    return data.startsWith(skinPrefix) ? data.slice(skinPrefix.length) : null;
   }
 
   getFlag(): string | null {
@@ -330,6 +349,23 @@ export class UserSettings {
 
   setAttackRatio(value: number): void {
     this.setFloat("settings.attackRatio", value);
+  }
+
+  // Returns {} if missing, unparseable, or fails schema validation.
+  graphicsOverrides(): GraphicsOverrides {
+    const raw = this.getString(GRAPHICS_KEY, "");
+    if (!raw) return {};
+    try {
+      const parsed = GraphicsOverridesSchema.safeParse(JSON.parse(raw));
+      if (parsed.success) return parsed.data;
+    } catch {
+      // fall through
+    }
+    return {};
+  }
+
+  setGraphicsOverrides(value: GraphicsOverrides): void {
+    this.setString(GRAPHICS_KEY, JSON.stringify(value));
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object

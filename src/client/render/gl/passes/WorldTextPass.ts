@@ -7,6 +7,7 @@
  *  - Ghost cost label: persistent build-cost number under the ghost cursor
  */
 
+import type { Config } from "../../../../core/configuration/Config";
 import type { BonusEvent, ConquestFx } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { createProgram } from "../utils/GlUtils";
@@ -31,19 +32,20 @@ const atlasUrl = assetUrl("atlases/msdf-atlas.png");
 const FLOATS_PER_INSTANCE = 10;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 const CONQUEST_LIFETIME_MS = 2500;
-/** Nominal game tick rate — 100ms per tick. */
-const MS_PER_TICK = 100;
 /** Tiles below conquered name location (matches upstream DynamicUILayer). */
 const CONQUEST_Y_OFFSET = 8;
 /** World-space font size for conquest popups. */
 const CONQUEST_SCALE = 6;
 const CONQUEST_OUTLINE_WIDTH = 2.0;
-/** Tiles below the ghost icon center for the cost label. */
-const GHOST_COST_Y_OFFSET = 3;
-/** World-space font size — smaller than popups so it sits unobtrusively under the icon. */
-const GHOST_COST_SCALE = 4;
 /** Matches player-name outline width for a consistent UI look. */
 const GHOST_COST_OUTLINE_WIDTH = 1.4;
+/**
+ * Screen-relative em scale for attack troop labels. Pre-divided by the current
+ * zoom each frame so the on-screen label size stays constant regardless of
+ * how far the camera is zoomed.
+ */
+const ATTACK_LABEL_SCREEN_SCALE = 17.0;
+const ATTACK_LABEL_OUTLINE_WIDTH = 1.2;
 
 // ---------------------------------------------------------------------------
 // Active popup tracking
@@ -61,6 +63,20 @@ interface ActivePopup {
   colorB: number;
   scale: number;
   outlineWidth: number;
+}
+
+/**
+ * Persistent attack-troop label rendered at a world-space position.
+ * AttackingTroopsController pushes a fresh list each frame with already-
+ * interpolated positions (smoothing happens controller-side).
+ */
+export interface AttackTroopLabel {
+  x: number;
+  y: number;
+  text: string;
+  colorR: number;
+  colorG: number;
+  colorB: number;
 }
 
 function formatGold(gold: number): string {
@@ -119,6 +135,10 @@ export class WorldTextPass {
     colorB: number;
   } | null = null;
 
+  // Persistent attack-troop labels. Controller pushes the full list each frame
+  // (already interpolated), so we just iterate and render.
+  private attackTroopLabels: AttackTroopLabel[] = [];
+
   // Settings reference
   private settings: RenderSettings;
 
@@ -131,7 +151,11 @@ export class WorldTextPass {
     return this.timeFn();
   }
 
-  constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
+  constructor(
+    gl: WebGL2RenderingContext,
+    settings: RenderSettings,
+    private config: Config,
+  ) {
     this.gl = gl;
     this.settings = settings;
 
@@ -252,7 +276,7 @@ export class WorldTextPass {
   applyConquestEvents(events: ConquestFx[]): void {
     const now = this.now();
     for (const evt of events) {
-      const startMs = now - (evt.tickAge ?? 0) * MS_PER_TICK;
+      const startMs = now - (evt.tickAge ?? 0) * this.config.msPerTick();
       if (now - startMs >= CONQUEST_LIFETIME_MS) continue;
       this.active.push({
         x: evt.x,
@@ -326,9 +350,10 @@ export class WorldTextPass {
     }
     // The vertex shader adds +0.5 to (x, y) for tile-center alignment, so we
     // pass raw tile coords here — same convention as the other popup entries.
+    // Y offset is applied in rebuildInstances (zoom-relative).
     this.ghostCostLabel = {
       x: label.tileX,
-      y: label.tileY + GHOST_COST_Y_OFFSET,
+      y: label.tileY,
       text: renderNumber(label.cost),
       colorR: r,
       colorG: g,
@@ -336,12 +361,24 @@ export class WorldTextPass {
     };
   }
 
+  /**
+   * Replace the set of attack-troop labels. Controller pushes the full list
+   * each frame with interpolated positions; empty array clears them.
+   */
+  setAttackTroopLabels(labels: AttackTroopLabel[]): void {
+    this.attackTroopLabels = labels;
+  }
+
   // -------------------------------------------------------------------------
   // Tick — cull expired, rebuild instance buffer
   // -------------------------------------------------------------------------
 
-  tick(): void {
-    if (this.active.length === 0 && this.ghostCostLabel === null) {
+  tick(zoom: number): void {
+    if (
+      this.active.length === 0 &&
+      this.ghostCostLabel === null &&
+      this.attackTroopLabels.length === 0
+    ) {
       this.instanceCount = 0;
       return;
     }
@@ -355,11 +392,14 @@ export class WorldTextPass {
       }
     }
 
-    this.rebuildInstances(now);
+    this.rebuildInstances(now, zoom);
   }
 
-  private rebuildInstances(now: number): void {
+  private rebuildInstances(now: number, zoom: number): void {
     let count = 0;
+    // canvasW in Camera is cssWidth*dpr, so `zoom` is device-px-per-world-unit.
+    // Multiply screen-relative scales by dpr to keep a constant CSS-pixel size.
+    const dpr = window.devicePixelRatio || 1;
 
     for (const popup of this.active) {
       const elapsed = now - popup.startMs;
@@ -402,11 +442,12 @@ export class WorldTextPass {
       }
     }
 
-    // Ghost cost label — persistent, no fade or rise. layoutString already
-    // centers cursors around 0, so passing the tile coord places the text
-    // centered on the tile (vertex shader adds the +0.5 tile-center offset).
-    const label = this.ghostCostLabel;
-    if (label) {
+    // Attack troop labels — persistent, no fade. Controller interpolates
+    // positions before pushing. Scale is divided by zoom so the label keeps
+    // a constant on-screen size regardless of how zoomed-in the camera is.
+    const attackScale =
+      (ATTACK_LABEL_SCREEN_SCALE * dpr) / Math.max(zoom, 0.0001);
+    for (const label of this.attackTroopLabels) {
       layoutString(
         label.text,
         this.glyph,
@@ -428,7 +469,44 @@ export class WorldTextPass {
         this.instanceData[off + 5] = label.colorR;
         this.instanceData[off + 6] = label.colorG;
         this.instanceData[off + 7] = label.colorB;
-        this.instanceData[off + 8] = GHOST_COST_SCALE;
+        this.instanceData[off + 8] = attackScale;
+        this.instanceData[off + 9] = ATTACK_LABEL_OUTLINE_WIDTH;
+        count++;
+      }
+    }
+
+    // Ghost cost label — persistent, no fade or rise. layoutString already
+    // centers cursors around 0, so passing the tile coord places the text
+    // centered on the tile (vertex shader adds the +0.5 tile-center offset).
+    // Scale is divided by zoom so the chip keeps a constant on-screen size.
+    const label = this.ghostCostLabel;
+    if (label) {
+      const invZoom = 1 / Math.max(zoom, 0.0001);
+      const ghostScale = this.settings.ghostCost.screenScale * dpr * invZoom;
+      const ghostY =
+        label.y + this.settings.ghostCost.screenYOffset * dpr * invZoom;
+      layoutString(
+        label.text,
+        this.glyph,
+        this.kernTable,
+        this.charCodes,
+        this.cursors,
+      );
+      const len = Math.min(label.text.length, MAX_CHARS);
+      for (let i = 0; i < len; i++) {
+        if (this.charCodes[i] === 0) continue;
+        if (count >= this.maxInstances) this.growBuffer();
+
+        const off = count * FLOATS_PER_INSTANCE;
+        this.instanceData[off + 0] = label.x;
+        this.instanceData[off + 1] = ghostY;
+        this.instanceData[off + 2] = this.cursors[i];
+        this.instanceData[off + 3] = this.charCodes[i];
+        this.instanceData[off + 4] = 1;
+        this.instanceData[off + 5] = label.colorR;
+        this.instanceData[off + 6] = label.colorG;
+        this.instanceData[off + 7] = label.colorB;
+        this.instanceData[off + 8] = ghostScale;
         this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
         count++;
       }
@@ -463,7 +541,11 @@ export class WorldTextPass {
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
     gl.uniform1f(this.uZoom, zoom);
-    gl.uniform1f(this.uMinScreenScale, this.settings.bonusPopup.minScreenScale);
+    const dpr = window.devicePixelRatio || 1;
+    gl.uniform1f(
+      this.uMinScreenScale,
+      this.settings.bonusPopup.minScreenScale * dpr,
+    );
     gl.uniform1f(this.uDistRange, this.distanceRange);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -495,6 +577,7 @@ export class WorldTextPass {
 
   clear(): void {
     this.active.length = 0;
+    this.attackTroopLabels = [];
     this.instanceCount = 0;
   }
 

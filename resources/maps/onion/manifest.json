@@ -1,0 +1,35 @@
+{
+  "map": {
+    "height": 512,
+    "num_land_tiles": 210555,
+    "width": 512
+  },
+  "map16x": {
+    "height": 128,
+    "num_land_tiles": 12499,
+    "width": 128
+  },
+  "map4x": {
+    "height": 256,
+    "num_land_tiles": 51713,
+    "width": 256
+  },
+  "name": "onion",
+  "nations": [
+    {
+      "coordinates": [51, 188],
+      "flag": "",
+      "name": "Leafer Confederation"
+    },
+    {
+      "coordinates": [252, 199],
+      "flag": "",
+      "name": "Outer Enclave"
+    },
+    {
+      "coordinates": [252, 233],
+      "flag": "",
+      "name": "Inner Tribe"
+    }
+  ]
+}

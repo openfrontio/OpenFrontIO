@@ -3,7 +3,10 @@ import defaults from "./render-settings.json";
 export interface RenderSettings {
   passEnabled: {
     terrain: boolean;
-    mapOverlay: boolean;
+    territory: boolean;
+    borderCompute: boolean;
+    borderStamp: boolean;
+    trail: boolean;
     territoryPatterns: boolean;
     structure: boolean;
     unit: boolean;
@@ -46,10 +49,9 @@ export interface RenderSettings {
     particleStrength: number;
     particleFreshScale: number;
   };
-  dayNight: {
-    mode: "light" | "dark";
-    nightAmbient: number;
-    dayAmbient: number;
+  lighting: {
+    ambient: number;
+    enabled: boolean;
     falloffPower: number;
     falloutLightR: number;
     falloutLightG: number;
@@ -78,9 +80,31 @@ export interface RenderSettings {
     defensePostRange: number;
     embargoTintRatio: number;
     friendlyTintRatio: number;
+    embargoTintR: number;
+    embargoTintG: number;
+    embargoTintB: number;
+    friendlyTintR: number;
+    friendlyTintG: number;
+    friendlyTintB: number;
+  };
+  /** Alt-view affiliation colors (0–1 RGB). */
+  affiliation: {
+    selfR: number;
+    selfG: number;
+    selfB: number;
+    allyR: number;
+    allyG: number;
+    allyB: number;
+    neutralR: number;
+    neutralG: number;
+    neutralB: number;
+    enemyR: number;
+    enemyG: number;
+    enemyB: number;
   };
   railroad: {
     railMinZoom: number;
+    railFadeRange: number;
     railDetailZoom: number;
     railAlpha: number;
   };
@@ -100,6 +124,16 @@ export interface RenderSettings {
     shapes: Record<string, { scale: number; iconFill: number }>;
     highlightOutlineWidth: number;
     highlightDimAlpha: number;
+    /** HSV value multiplier applied to the icon fill (interior). 1.0 = no darkening. */
+    fillDarken: number;
+    /** HSV value multiplier applied to the icon border (outer ring). 1.0 = no darkening. */
+    borderDarken: number;
+    /** Multiplier on final icon alpha. 1.0 = opaque. */
+    iconAlpha: number;
+    /** RGB color of the inner icon glyph */
+    iconR: number;
+    iconG: number;
+    iconB: number;
   };
   structureLevel: {
     scale: number;
@@ -135,6 +169,13 @@ export interface RenderSettings {
     angryR: number;
     angryG: number;
     angryB: number;
+    // Steady soft glow rendered underneath the hydrogen bomb
+    hBombGlowScale: number; // quad enlargement factor (1 = no glow room)
+    hBombGlowR: number;
+    hBombGlowG: number;
+    hBombGlowB: number;
+    hBombGlowStrength: number; // peak opacity of the glow
+    hBombGlowInner: number; // radial falloff start (0..1, quad-space)
   };
   name: {
     lerpSpeed: number;
@@ -226,6 +267,10 @@ export interface RenderSettings {
     colorB: number;
     minScreenScale: number; // minimum world-scale when zoomed out (prevents vanishing)
     cullZoom: number; // popups hidden below this zoom level
+  };
+  ghostCost: {
+    screenScale: number; // screen-relative em scale; divided by zoom each frame for fixed on-screen size
+    screenYOffset: number; // screen-relative downward offset from icon center; divided by zoom each frame for fixed on-screen gap
   };
   spawnOverlay: {
     highlightRadius: number; // tile highlight radius (squared internally)

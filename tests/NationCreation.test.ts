@@ -243,6 +243,34 @@ describe("createNationsForGame: additionalNations pool", () => {
     expect(withoutCoords!.spawnCell).toBeUndefined();
   });
 
+  test("uses coordinates from manifest nations when provided, undefined when omitted", () => {
+    const manifest: ManifestNation[] = [
+      { name: "WithCoords", coordinates: [10, 20] },
+      { name: "WithoutCoords" },
+    ];
+    const random = new PseudoRandom(5);
+
+    const nations = createNationsForGame(
+      makeGameStart(2),
+      manifest,
+      [],
+      0,
+      random,
+    );
+
+    expect(nations).toHaveLength(2);
+    const withCoords = nations.find((n) => n.playerInfo.name === "WithCoords");
+    const withoutCoords = nations.find(
+      (n) => n.playerInfo.name === "WithoutCoords",
+    );
+
+    expect(withCoords).toBeDefined();
+    expect(withoutCoords).toBeDefined();
+    expect(withCoords!.spawnCell?.x).toBe(10);
+    expect(withCoords!.spawnCell?.y).toBe(20);
+    expect(withoutCoords!.spawnCell).toBeUndefined();
+  });
+
   test("produces unique nation names overall", () => {
     const manifest = makeManifestNations(3);
     const extras = makeAdditionalNations(["Ex1", "Ex2", "Ex3"]);

@@ -175,6 +175,15 @@ export enum GameMapType {
   DanishStraits = "Danish Straits",
   NorthwestPassage = "Northwest Passage",
   Venice = "Venice",
+  Korea = "Korea",
+  Balkans = "Balkans",
+  YellowSea = "Yellow Sea",
+  Labyrinth = "Labyrinth",
+  Caribbean = "Caribbean",
+  Onion = "Onion",
+  ChoppingBlock = "Chopping Block",
+  SoutheastAsia = "SoutheastAsia",
+  MississippiRiver = "Mississippi River",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -236,12 +245,18 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BeringSea,
     GameMapType.ArchipelagoSea,
     GameMapType.BajaCalifornia,
+    GameMapType.Korea,
     GameMapType.MiddleEast,
     GameMapType.TaiwanStrait,
+    GameMapType.Balkans,
     GameMapType.IndianSubcontinent,
     GameMapType.DanishStraits,
     GameMapType.NorthwestPassage,
     GameMapType.Venice,
+    GameMapType.YellowSea,
+    GameMapType.Caribbean,
+    GameMapType.SoutheastAsia,
+    GameMapType.MississippiRiver,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -261,9 +276,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
   arcade: [
     GameMapType.TheBox,
+    GameMapType.ChoppingBlock,
     GameMapType.Didier,
     GameMapType.DidierFrance,
+    GameMapType.Labyrinth,
     GameMapType.Sierpinski,
+    GameMapType.Onion,
   ],
   tournament: [
     GameMapType.Tourney1,
@@ -796,6 +814,8 @@ export interface Player {
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean;
   outgoingEmojis(): EmojiMessage[];
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
+  canSendQuickChat(recipient: Player): boolean;
+  recordQuickChat(recipient: Player): void;
 
   // Donation
   canDonateGold(recipient: Player): boolean;
@@ -872,7 +892,6 @@ export interface Game extends GameMap {
   teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
-  alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
 
   // Immunity timer

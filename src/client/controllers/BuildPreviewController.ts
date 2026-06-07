@@ -163,18 +163,13 @@ export class BuildPreviewController implements Controller {
       }
     }
 
-    // targetingAlly is computed above for state purposes; the renderer's
-    // ghost passes derive their own "warning" visual from canBuild/canUpgrade
-    // if needed. (Leave the variable here so its eslint-no-unused doesn't trip.)
-    void targetingAlly;
-
     this.game
       ?.myPlayer()
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {
         if (!this.ghostUnit) {
           this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef);
+          this.emitGhostPreview(tileRef, targetingAlly);
           return;
         }
 
@@ -187,7 +182,7 @@ export class BuildPreviewController implements Controller {
             canUpgrade: false,
           });
           this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef);
+          this.emitGhostPreview(tileRef, targetingAlly);
           return;
         }
 
@@ -201,7 +196,7 @@ export class BuildPreviewController implements Controller {
           }
         }
 
-        this.emitGhostPreview(tileRef);
+        this.emitGhostPreview(tileRef, targetingAlly);
       });
   }
 
@@ -211,8 +206,11 @@ export class BuildPreviewController implements Controller {
    * the ghost can't be placed. smoothLoop interpolates displayed position
    * toward the target tile each frame.
    */
-  private emitGhostPreview(tileRef: TileRef | undefined): void {
-    const data = this.buildGhostPreviewData(tileRef);
+  private emitGhostPreview(
+    tileRef: TileRef | undefined,
+    targetingAlly: boolean,
+  ): void {
+    const data = this.buildGhostPreviewData(tileRef, targetingAlly);
     if (data === null) {
       this.lastGhostData = null;
       this.view.updateGhostPreview(null);
@@ -302,6 +300,7 @@ export class BuildPreviewController implements Controller {
 
   private buildGhostPreviewData(
     tileRef: TileRef | undefined,
+    targetingAlly: boolean,
   ): GhostPreviewData | null {
     if (!this.ghostUnit) return null;
     if (tileRef === undefined) return null;
@@ -336,12 +335,24 @@ export class BuildPreviewController implements Controller {
         rangeRadius = this.game.config().defensePostRange();
         break;
     }
+    let radiusTileX = this.game.x(tileRef);
+    let radiusTileY = this.game.y(tileRef);
+    if (
+      rangeRadius > 0 &&
+      u.canUpgrade !== false &&
+      upgradeTargetTile !== null
+    ) {
+      radiusTileX = this.game.x(upgradeTargetTile);
+      radiusTileY = this.game.y(upgradeTargetTile);
+    }
 
     const cost = u.cost;
     return {
       ghostType: u.type,
       tileX: this.game.x(tileRef),
       tileY: this.game.y(tileRef),
+      radiusTileX,
+      radiusTileY,
       canBuild: u.canBuild !== false,
       canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),
@@ -352,6 +363,7 @@ export class BuildPreviewController implements Controller {
       ownerID: myPlayer.smallID(),
       upgradeTargetTile,
       rangeRadius,
+      rangeWarning: targetingAlly,
     };
   }
 

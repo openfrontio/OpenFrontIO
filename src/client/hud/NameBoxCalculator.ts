@@ -13,6 +13,37 @@ export interface Rectangle {
   height: number;
 }
 
+// Spawn region diameter (see getSpawnTiles in SpawnExecution — euclidean
+// radius 4). Used to size spawn-phase names directly off the spawn tile,
+// instead of waiting on cluster recomputation.
+const SPAWN_REGION_DIAMETER = 8;
+
+/**
+ * Place a player's name during the spawn phase using their currently-selected
+ * spawn tile. Tracks re-rolls immediately, since spawnTile updates the same
+ * tick the player picks a new location.
+ */
+export function placeSpawnName(game: Game, player: Player): NameViewData {
+  const spawnTile = player.spawnTile();
+  if (spawnTile === undefined) {
+    return { x: 0, y: 0, size: 0 };
+  }
+  const fontSize = calculateFontSize(
+    {
+      x: 0,
+      y: 0,
+      width: SPAWN_REGION_DIAMETER,
+      height: SPAWN_REGION_DIAMETER,
+    },
+    player.displayName(),
+  );
+  return {
+    x: Math.ceil(game.x(spawnTile)),
+    y: Math.ceil(game.y(spawnTile) - fontSize / 3),
+    size: fontSize,
+  };
+}
+
 export function placeName(game: Game, player: Player): NameViewData {
   const boundingBox =
     player.largestClusterBoundingBox ??
@@ -93,6 +124,7 @@ export function createGrid(
         grid[x - scaledBoundingBox.min.x][y - scaledBoundingBox.min.y] =
           game.isLake(tile) ||
           game.isShore(tile) ||
+          (game.isOcean(tile) && game.magnitude(tile) < 10) ||
           game.owner(tile) === player ||
           game.hasFallout(tile);
       }

@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 1400,
-    "num_land_tiles": 859274,
+    "num_land_tiles": 746474,
     "width": 2100
   },
   "map16x": {
     "height": 350,
-    "num_land_tiles": 49216,
+    "num_land_tiles": 42072,
     "width": 525
   },
   "map4x": {
     "height": 700,
-    "num_land_tiles": 207480,
+    "num_land_tiles": 178970,
     "width": 1050
   },
   "name": "Falkland Islands",
@@ -76,5 +76,21 @@
       "flag": "fk",
       "name": "San Carlos"
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1400,
+        "width": 1050,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1400,
+        "width": 1050,
+        "x": 1050,
+        "y": 0
+      }
+    ]
+  }
 }

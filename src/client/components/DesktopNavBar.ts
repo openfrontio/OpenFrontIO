@@ -124,7 +124,7 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.leaderboard"
         ></button>
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="no-crazygames nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>

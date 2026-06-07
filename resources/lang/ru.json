@@ -54,8 +54,8 @@
     "go_to_troubleshooting": "На страницу устранения неполадок"
   },
   "news": {
-    "github_link": "на GitHub",
-    "title": "Список изменений"
+    "title": "Список изменений",
+    "github_link": "на GitHub"
   },
   "troubleshooting": {
     "title": "Устранение неполадок",
@@ -66,7 +66,7 @@
     "platform": "Платформа",
     "copied_to_clipboard": "Информация скопирована в буфер обмена! Не забудьте поделиться ней в нашем Discord, если вам нужна помощь.",
     "os": "ОС",
-    "device_pixel_ratio": "Соотношение пикселей устройства",
+    "device_pixel_ratio": "Пиксельное соотношение устройства (DPR)",
     "chromium_tip": "OpenFront лучше всего работает в браузерах на базе Chromium.",
     "hardware_acceleration_tip": "Для оптимальной производительности включите аппаратное ускорение в настройках браузера.",
     "renderer": "Визуализатор",
@@ -106,6 +106,9 @@
     "action_ratio_change": "Уменьшить/Увеличить соотношение атаки",
     "action_reset_gfx": "Сбросить графику",
     "action_auto_upgrade": "Автоулучшение ближайшего сооружения",
+    "action_warship_multiselect": "Выбрать несколько военных кораблей (перетаскивайте, чтобы выделить область)",
+    "action_warship_selectall": "Выбрать все свои военные корабли",
+    "drag": "перетаскивание",
     "ui_section": "Игровой интерфейс",
     "ui_leaderboard": "Таблица лидеров",
     "ui_your_team": "Ваша команда:",
@@ -185,7 +188,8 @@
     "exit_confirmation": "Вы уверены, что хотите выйти из игры?",
     "bomb_direction": "Траектория полёта ядерной/водородной бомбы",
     "icon_alt_player_leaderboard": "Значок таблицы лидеров игроков",
-    "icon_alt_team_leaderboard": "Значок таблицы лидеров команд"
+    "icon_alt_team_leaderboard": "Значок таблицы лидеров команд",
+    "game_id_tooltip": "ID игры"
   },
   "single_modal": {
     "random_spawn": "Случайное появление",
@@ -235,7 +239,7 @@
     "clear_session": "Очистить сессию",
     "failed_to_send_recovery_email": "Не удалось отправить письмо для восстановления",
     "enter_email_address": "Пожалуйста, введите адрес электронной почты",
-    "personal_player_id": "Персональный ID игрока:"
+    "public_player_id": "Публичный ID игрока:"
   },
   "leaderboard_modal": {
     "title": "Таблица лидеров",
@@ -331,10 +335,10 @@
     "svalmel": "Свалмель",
     "manicouagan": "Маникуаган",
     "lemnos": "Лемнос",
-    "tourney1": "Турнир 2 команды",
-    "tourney2": "Турнир 3 команды",
-    "tourney3": "Турнир 4 команды",
-    "tourney4": "Турнир 8 команд",
+    "tourney1": "Турнир на 2 команды",
+    "tourney2": "Турнир на 3 команды",
+    "tourney3": "Турнир на 4 команды",
+    "tourney4": "Турнир на 8 команд",
     "passage": "Проход",
     "sierpinski": "Серпинский",
     "thebox": "Коробка",
@@ -354,13 +358,18 @@
     "sanfrancisco": "Сан-Франциско",
     "aegean": "Эгейск",
     "milkyway": "Млечный Путь",
+    "marenostrum": "Mare Nostrum",
     "dyslexdria": "Дислексдрия",
     "greatlakes": "Великие озёра",
     "straitofmalacca": "Малаккский пролив",
     "luna": "Луна",
     "conakry": "Конакри",
     "caucasus": "Кавказ",
-    "mediterranean": "Средиземноморье"
+    "losangeles": "Лос-Анджелес",
+    "beringsea": "Берингово море",
+    "antarctica": "Антарктида",
+    "archipelagosea": "Архипелаговое море",
+    "bajacalifornia": "Нижняя Калифорния"
   },
   "map_categories": {
     "featured": "Рекомендованные",
@@ -554,8 +563,6 @@
     "alert_frame_desc": "Переключить рамку тревоги. При включении рамка будет отображаться, когда вас предают или атакуют по суше.",
     "special_effects_label": "Спецэффекты",
     "special_effects_desc": "Переключить спецэффекты. Отключите для улучшения производительности",
-    "structure_sprites_label": "Спрайты структур",
-    "structure_sprites_desc": "Переключить спрайты структур",
     "cursor_cost_label_label": "Цена постройки под указателем",
     "cursor_cost_label_desc": "Показать цену постройки под указателем",
     "anonymous_names_label": "Скрытые имена",
@@ -628,6 +635,11 @@
     "boat_attack_desc": "Отправить атаку лодкой на ячейку под указателем.",
     "ground_attack": "Наземная атака",
     "ground_attack_desc": "Отправить наземную атаку на ячейку под указателем.",
+    "ally_keybinds": "Назначение клавиш союза",
+    "request_alliance": "Попросить союз",
+    "request_alliance_desc": "Отправить запрос на союз игроку, чья ячейка находится под вашим указателем.",
+    "break_alliance": "Разорвать союз (предать)",
+    "break_alliance_desc": "Разорвать союз с игроком, чья ячейка находится под вашим указателем.",
     "swap_direction": "Поменять направление ракеты",
     "swap_direction_desc": "Переключить направление ракеты (вверх/вниз).",
     "zoom_controls": "Масштабирование",
@@ -655,7 +667,9 @@
     "exit_game_info": "Вернуться в главное меню",
     "background_music_volume": "Громкость фоновой музыки",
     "sound_effects_volume": "Громкость звуковых эффектов",
-    "keybind_conflict_error": "Клавиша {key} уже привязана к другому действию."
+    "keybind_conflict_error": "Клавиша {key} уже привязана к другому действию.",
+    "structure_sprites_label": "Спрайты структур",
+    "structure_sprites_desc": "Переключить спрайты структур"
   },
   "chat": {
     "title": "Быстрый чат",
@@ -759,6 +773,7 @@
       "city": "Увеличивает максимальное население",
       "factory": "Прокладывает железнодорожные пути и создаёт поезда"
     },
+    "warship_shift_hint": "Удерживайте Shift и перетаскивайте, чтобы выбрать несколько военных кораблей сразу",
     "not_enough_money": "Недостаточно средств"
   },
   "win_modal": {
@@ -781,7 +796,6 @@
     "youtube_tutorial": "Нужна помощь?"
   },
   "leaderboard": {
-    "hide": "Скрыть",
     "player": "Игрок",
     "team": "Команда",
     "owned": "Территории",
@@ -792,10 +806,10 @@
     "warships": "Военные корабли",
     "cities": "Города",
     "show_control": "Показать подконтрольные территории",
-    "show_units": "Показать юниты"
+    "show_units": "Показать юниты",
+    "hide": "Скрыть"
   },
   "events_display": {
-    "events": "События",
     "retreating": "отступает",
     "alliance_request_status": "{name} {status} ваш запрос",
     "alliance_accepted": "принял",
@@ -812,6 +826,7 @@
     "sent_emoji": "Отправлено {name}: {emoji}",
     "renew_alliance": "Запрос на продление",
     "request_alliance": "{name} просит союз!",
+    "alliance_request_sent": "Запрос на союз отправлен {name}.",
     "focus": "Осмотреть",
     "accept_alliance": "Принять",
     "reject_alliance": "Отклонить",
@@ -822,10 +837,9 @@
     "betrayal_debuff_ends": "Осталось {time} сек до окончания наказания предателя",
     "attack_cancelled_retreat": "Атака отменена, {troops} солдат погибло во время отступления",
     "received_gold_from_captured_ship": "Получено {gold} золота с корабля, захваченного у {name}",
-    "received_gold_from_trade": "Получено {gold} золота от торговли с {name}",
     "received_gold_from_conquest": "Завоёвано {name}, получено {gold} ед. золота",
     "conquered_no_gold": "Завоёвано {name} (не играл, золото не получено)",
-    "missile_intercepted": "{unit} перехватывает ракету",
+    "missile_intercepted": "Перехвачена ракета «{unit}»",
     "mirv_warheads_intercepted": "{count, plural, one {Перехвачено {count} боеголовку РГЧ ИН} few {Перехвачено {count} боеголовки РГЧ ИН} many {Перехвачено {count} боеголовок РГЧ ИН} other {Перехвачено {count} боеголовок РГЧ ИН}}",
     "sent_troops_to_player": "Отправлено {troops} войск к {name}",
     "received_troops_from_player": "Получено {troops} войск от {name}",
@@ -834,7 +848,9 @@
     "unit_captured_by_enemy": "{name} захватывает ваш юнит «{unit}»",
     "captured_enemy_unit": "Захвачен юнит «{unit}» у {name}",
     "unit_destroyed": "Ваш юнит «{unit}» был уничтожен",
-    "no_boats_available": "Нет доступных судов, максимум — {max}"
+    "no_boats_available": "Нет доступных судов, максимум — {max}",
+    "events": "События",
+    "received_gold_from_trade": "Получено {gold} золота от торговли с {name}"
   },
   "player_type": {
     "player": "Игрок",
@@ -880,6 +896,7 @@
   "kick_reason": {
     "duplicate_session": "Выгнано из игры (возможно, вы играли на другой вкладке)",
     "lobby_creator": "Выгнано создателем лобби",
+    "admin": "Выгнан администратором",
     "host_left": "Хост покинул лобби."
   },
   "send_troops_modal": {
@@ -1073,5 +1090,22 @@
     "dismiss": "Отклонить",
     "go_to_item": "Перейти к пункту {num}",
     "firefox_warning": "OpenFront.io плохо работает с [браузерами, основанными на Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Мы рекомендуем использовать [браузеры, основанные на Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) для лучшей производительности."
+  },
+  "ios_banner": {
+    "text": "Для полноэкранного режима добавьте OpenFront на домашний экран",
+    "how": "Как",
+    "later": "Позже",
+    "never": "Никогда",
+    "modal_title": "Полноэкранный режим на iOS",
+    "modal_desc": "Ваш браузер не поддерживает полноэкранный режим, но вы можете добавить OpenFront на домашний экран для погруженного опыта:",
+    "step_share": "Нажмите кнопку «Поделиться» в вашем браузере",
+    "step_scroll_and_tap": "Прокрутите вниз и нажмите",
+    "step_add_to_home_label": "Добавь на главный экран",
+    "step_open": "Откройте с домашнего экрана — игра запуститься в полноэкранном режиме без адресной строки",
+    "got_it": "Понятно"
+  },
+  "fullscreen": {
+    "enter": "Войти в полноэкранный режим",
+    "exit": "Выйти из полноэкранного режима"
   }
 }

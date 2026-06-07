@@ -85,6 +85,10 @@ export class StructurePass {
   private uHighlightMask: WebGLUniformLocation;
   private uHighlightOutlineW: WebGLUniformLocation;
   private uHighlightDimAlpha: WebGLUniformLocation;
+  private uFillDarken: WebGLUniformLocation;
+  private uBorderDarken: WebGLUniformLocation;
+  private uIconAlpha: WebGLUniformLocation;
+  private uIconColor: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
   private instanceBuf: DynamicInstanceBuffer;
@@ -166,6 +170,10 @@ export class StructurePass {
       this.program,
       "uHighlightDimAlpha",
     )!;
+    this.uFillDarken = gl.getUniformLocation(this.program, "uFillDarken")!;
+    this.uBorderDarken = gl.getUniformLocation(this.program, "uBorderDarken")!;
+    this.uIconAlpha = gl.getUniformLocation(this.program, "uIconAlpha")!;
+    this.uIconColor = gl.getUniformLocation(this.program, "uIconColor")!;
 
     // Texture unit bindings + ghost defaults
     gl.useProgram(this.program);
@@ -264,6 +272,7 @@ export class StructurePass {
     let count = 0;
 
     for (const unit of units.values()) {
+      if (!unit.isActive) continue;
       const atlasIdx = this.typeToAtlasCol.get(unit.unitType);
       if (atlasIdx === undefined) continue;
 
@@ -357,6 +366,10 @@ export class StructurePass {
     gl.uniform1i(this.uHighlightMask, this.highlightMask);
     gl.uniform1f(this.uHighlightOutlineW, ss.highlightOutlineWidth);
     gl.uniform1f(this.uHighlightDimAlpha, ss.highlightDimAlpha);
+    gl.uniform1f(this.uFillDarken, ss.fillDarken);
+    gl.uniform1f(this.uBorderDarken, ss.borderDarken);
+    gl.uniform1f(this.uIconAlpha, ss.iconAlpha);
+    gl.uniform3f(this.uIconColor, ss.iconR, ss.iconG, ss.iconB);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);

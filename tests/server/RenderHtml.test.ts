@@ -60,7 +60,7 @@ describe("RenderHtml", () => {
     setAppShellCacheHeaders(response);
 
     expect(headers.get("Cache-Control")).toBe(
-      "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+      "public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400",
     );
     expect(headers.get("Content-Type")).toBe("text/html");
   });

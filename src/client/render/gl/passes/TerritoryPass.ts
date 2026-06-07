@@ -20,6 +20,7 @@ import { OWNER_MASK, TILE_DEFINES } from "../utils/TileCodec";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import territoryFragSrc from "../shaders/map-overlay/territory.frag.glsl?raw";
+import { TileScatterPass } from "./TileScatterPass";
 
 export class TerritoryPass {
   private gl: WebGL2RenderingContext;
@@ -38,13 +39,18 @@ export class TerritoryPass {
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightBrighten: WebGLUniformLocation;
   private uShowPatterns: WebGLUniformLocation;
+  private uIsTeamMode: WebGLUniformLocation;
   private highlightOwner = 0;
+  private isTeamMode = false;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
   private paletteTex: WebGLTexture;
   private patternMetaTex: WebGLTexture;
   private patternDataTex: WebGLTexture;
+  private skinAtlasTex: WebGLTexture;
+  private skinLayerTex: WebGLTexture;
+  private skinAnchorTex: WebGLTexture;
 
   private altView = false;
   private showPatterns = true;
@@ -53,9 +59,25 @@ export class TerritoryPass {
   private cpuTileState: Uint16Array;
   private tilesDirty = false;
 
-  /** Dirty row range for partial tile upload. Infinity/-1 = full upload. */
-  private dirtyRowMin = Infinity;
-  private dirtyRowMax = -1;
+  /**
+   * True after a full state replacement (initial load / seek). flushTileTexture
+   * uploads the full cpuTileState via texSubImage2D and discards any queued
+   * scatter patches — those are already covered by the full upload.
+   */
+  private fullUploadPending = false;
+
+  /**
+   * GPU scatter pass for per-frame patches. Replaces the old dirty-row bbox
+   * upload — constant cost regardless of how spatially scattered patches are.
+   */
+  private scatter!: TileScatterPass;
+
+  /**
+   * Hook for forwarding tile changes to the border-compute pipeline so it can
+   * incrementally repaint affected tiles instead of rebuilding the whole map.
+   * Wired by the renderer to `borderPass.patchTile`.
+   */
+  private borderPatchConsumer: ((x: number, y: number) => void) | null = null;
 
   /**
    * Drip buckets — round-robin staggering of tile updates across render frames.
@@ -78,6 +100,9 @@ export class TerritoryPass {
     paletteTex: WebGLTexture,
     patternMetaTex: WebGLTexture,
     patternDataTex: WebGLTexture,
+    skinAtlasTex: WebGLTexture,
+    skinLayerTex: WebGLTexture,
+    skinAnchorTex: WebGLTexture,
     settings: RenderSettings,
   ) {
     this.gl = gl;
@@ -88,6 +113,9 @@ export class TerritoryPass {
     this.paletteTex = paletteTex;
     this.patternMetaTex = patternMetaTex;
     this.patternDataTex = patternDataTex;
+    this.skinAtlasTex = skinAtlasTex;
+    this.skinLayerTex = skinLayerTex;
+    this.skinAnchorTex = skinAnchorTex;
     this.cpuTileState = new Uint16Array(mapW * mapH);
 
     this.nBuckets = Math.max(1, settings.tileDrip.bucketCount | 0);
@@ -129,14 +157,20 @@ export class TerritoryPass {
       "uHighlightBrighten",
     )!;
     this.uShowPatterns = gl.getUniformLocation(this.program, "uShowPatterns")!;
+    this.uIsTeamMode = gl.getUniformLocation(this.program, "uIsTeamMode")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 1);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPatternMeta"), 2);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPatternData"), 3);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAtlas"), 4);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uSkinLayer"), 5);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uSkinAnchor"), 6);
 
     this.vao = createMapQuad(gl, mapW, mapH);
+
+    this.scatter = new TileScatterPass(gl, mapW, mapH, tileTex);
   }
 
   // ---------------------------------------------------------------------------
@@ -147,8 +181,8 @@ export class TerritoryPass {
   uploadFullTileState(tileState: Uint16Array): void {
     this.cpuTileState.set(tileState);
     this.clearDripBuckets();
-    this.dirtyRowMin = Infinity;
-    this.dirtyRowMax = -1;
+    this.scatter.clear();
+    this.fullUploadPending = true;
     this.tilesDirty = true;
   }
 
@@ -156,21 +190,36 @@ export class TerritoryPass {
   setLiveRef(tileState: Uint16Array): void {
     this.cpuTileState.set(tileState);
     this.clearDripBuckets();
-    this.dirtyRowMin = Infinity;
-    this.dirtyRowMax = -1;
+    this.scatter.clear();
+    this.fullUploadPending = true;
     this.tilesDirty = true;
+  }
+
+  /**
+   * Wire a consumer that will be called once per tile coordinate change while
+   * scatter mode is active (i.e., not during a full upload). The renderer
+   * hooks this to `borderPass.patchTile` so border recompute scales with the
+   * number of changed tiles instead of full map area.
+   */
+  setBorderPatchConsumer(fn: (x: number, y: number) => void): void {
+    this.borderPatchConsumer = fn;
   }
 
   /** Apply tile deltas (during playback). */
   uploadDeltaTiles(changedTiles: TilePair[]): void {
     const ts = this.cpuTileState;
     const w = this.mapW;
+    const pending = this.fullUploadPending;
+    const borderFn = this.borderPatchConsumer;
     for (let i = 0; i < changedTiles.length; i++) {
       const tp = changedTiles[i];
       ts[tp.ref] = tp.state;
-      const row = (tp.ref / w) | 0;
-      if (row < this.dirtyRowMin) this.dirtyRowMin = row;
-      if (row > this.dirtyRowMax) this.dirtyRowMax = row;
+      if (!pending) {
+        const x = tp.ref % w;
+        const y = (tp.ref - x) / w;
+        this.scatter.push(x, y, tp.state);
+        if (borderFn) borderFn(x, y);
+      }
     }
     this.tilesDirty = true;
   }
@@ -194,28 +243,21 @@ export class TerritoryPass {
   drainDripBucket(): void {
     const bucket = this.dripBuckets[this.currentBucket];
     if (bucket.length > 0) {
-      const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
-
-      if (isFullUploadPending) {
-        // Full upload pending: skip tracking dirty rows, just flush data
-        for (let i = 0; i < bucket.length; i += 2) {
-          this.cpuTileState[bucket[i]] = bucket[i + 1];
+      const ts = this.cpuTileState;
+      const w = this.mapW;
+      const pending = this.fullUploadPending;
+      const borderFn = this.borderPatchConsumer;
+      for (let i = 0; i < bucket.length; i += 2) {
+        const ref = bucket[i];
+        const state = bucket[i + 1];
+        ts[ref] = state;
+        if (!pending) {
+          const x = ref % w;
+          const y = (ref - x) / w;
+          this.scatter.push(x, y, state);
+          if (borderFn) borderFn(x, y);
         }
-      } else {
-        const w = this.mapW;
-        let minRow = this.dirtyRowMin;
-        let maxRow = this.dirtyRowMax;
-        for (let i = 0; i < bucket.length; i += 2) {
-          const ref = bucket[i];
-          this.cpuTileState[ref] = bucket[i + 1];
-          const row = (ref / w) | 0;
-          if (row < minRow) minRow = row;
-          if (row > maxRow) maxRow = row;
-        }
-        this.dirtyRowMin = minRow;
-        this.dirtyRowMax = maxRow;
       }
-
       bucket.length = 0;
       this.tilesDirty = true;
     }
@@ -228,39 +270,27 @@ export class TerritoryPass {
    */
   flushAllDripBuckets(): void {
     let any = false;
-    const isFullUploadPending = this.tilesDirty && this.dirtyRowMax < 0;
-
-    if (isFullUploadPending) {
-      for (let b = 0; b < this.nBuckets; b++) {
-        const bucket = this.dripBuckets[b];
-        if (bucket.length === 0) continue;
-        any = true;
-        for (let i = 0; i < bucket.length; i += 2) {
-          this.cpuTileState[bucket[i]] = bucket[i + 1];
+    const ts = this.cpuTileState;
+    const w = this.mapW;
+    const pending = this.fullUploadPending;
+    const borderFn = this.borderPatchConsumer;
+    for (let b = 0; b < this.nBuckets; b++) {
+      const bucket = this.dripBuckets[b];
+      if (bucket.length === 0) continue;
+      any = true;
+      for (let i = 0; i < bucket.length; i += 2) {
+        const ref = bucket[i];
+        const state = bucket[i + 1];
+        ts[ref] = state;
+        if (!pending) {
+          const x = ref % w;
+          const y = (ref - x) / w;
+          this.scatter.push(x, y, state);
+          if (borderFn) borderFn(x, y);
         }
-        bucket.length = 0;
       }
-    } else {
-      const w = this.mapW;
-      let minRow = this.dirtyRowMin;
-      let maxRow = this.dirtyRowMax;
-      for (let b = 0; b < this.nBuckets; b++) {
-        const bucket = this.dripBuckets[b];
-        if (bucket.length === 0) continue;
-        any = true;
-        for (let i = 0; i < bucket.length; i += 2) {
-          const ref = bucket[i];
-          this.cpuTileState[ref] = bucket[i + 1];
-          const row = (ref / w) | 0;
-          if (row < minRow) minRow = row;
-          if (row > maxRow) maxRow = row;
-        }
-        bucket.length = 0;
-      }
-      this.dirtyRowMin = minRow;
-      this.dirtyRowMax = maxRow;
+      bucket.length = 0;
     }
-
     if (any) {
       this.tilesDirty = true;
     }
@@ -312,32 +342,21 @@ export class TerritoryPass {
   // GPU flush + draw
   // ---------------------------------------------------------------------------
 
-  /** Flush tile texture to GPU early (before heat update reads it). Returns true if data was uploaded. */
-  flushTileTexture(): boolean {
-    if (!this.tilesDirty) return false;
+  /**
+   * Flush tile texture to GPU early (before heat update reads it).
+   * Return value lets the renderer decide what downstream invalidation is
+   * needed — full uploads require a full border recompute, scatter uploads
+   * already pushed per-tile border patches via `borderPatchConsumer`.
+   */
+  flushTileTexture(): "none" | "full" | "scatter" {
+    if (!this.tilesDirty) return "none";
     const gl = this.gl;
-    const src = this.cpuTileState;
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
 
-    if (this.dirtyRowMax >= 0) {
-      // Partial upload — only dirty rows
-      const minRow = this.dirtyRowMin;
-      const rowCount = this.dirtyRowMax - minRow + 1;
-      const offset = minRow * this.mapW;
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        minRow,
-        this.mapW,
-        rowCount,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_SHORT,
-        src.subarray(offset, offset + rowCount * this.mapW),
-      );
-    } else {
-      // Full upload (first tick, seek, replay full frame, etc.)
+    if (this.fullUploadPending) {
+      // Full upload (first tick, seek, replay full frame, etc.) — supersedes
+      // any queued scatter patches.
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
@@ -347,14 +366,23 @@ export class TerritoryPass {
         this.mapH,
         gl.RED_INTEGER,
         gl.UNSIGNED_SHORT,
-        src,
+        this.cpuTileState,
       );
+      this.scatter.clear();
+      this.fullUploadPending = false;
+      this.tilesDirty = false;
+      return "full";
+    }
+    if (this.scatter.count > 0) {
+      // Per-frame patches — scatter via FBO + POINTS draw. Constant cost in
+      // patch count regardless of spatial distribution.
+      this.scatter.flush();
+      this.tilesDirty = false;
+      return "scatter";
     }
 
-    this.dirtyRowMin = Infinity;
-    this.dirtyRowMax = -1;
     this.tilesDirty = false;
-    return true;
+    return "none";
   }
 
   setAltView(active: boolean): void {
@@ -363,6 +391,19 @@ export class TerritoryPass {
 
   setShowPatterns(show: boolean): void {
     this.showPatterns = show;
+  }
+
+  /**
+   * Update the skin atlas texture handle. Called once at game start after
+   * the renderer learns the locked-in skin URL set.
+   */
+  setSkinAtlas(tex: WebGLTexture): void {
+    this.skinAtlasTex = tex;
+  }
+
+  /** Whether this game has teams (controls skin tinting). */
+  setTeamMode(isTeamMode: boolean): void {
+    this.isTeamMode = isTeamMode;
   }
 
   /** Set the hovered player's smallID for territory-fill brightening (0 = off). */
@@ -396,6 +437,7 @@ export class TerritoryPass {
       this.uShowPatterns,
       this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,
     );
+    gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
@@ -405,6 +447,12 @@ export class TerritoryPass {
     gl.bindTexture(gl.TEXTURE_2D, this.patternMetaTex);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.patternDataTex);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.skinAtlasTex);
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.skinLayerTex);
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.skinAnchorTex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -414,6 +462,7 @@ export class TerritoryPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
+    this.scatter.dispose();
     // tileTex, paletteTex, patternMetaTex, patternDataTex owned by GPUResources / renderer
   }
 }

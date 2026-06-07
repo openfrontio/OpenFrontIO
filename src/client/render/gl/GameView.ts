@@ -8,6 +8,7 @@
  * Consumers only touch GameView — they never import GPURenderer or Camera.
  */
 
+import type { Config } from "../../../core/configuration/Config";
 import type {
   AttackRingInput,
   BonusEvent,
@@ -30,6 +31,7 @@ import type {
   RadialMenuItem,
 } from "./Events";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
+import type { AttackTroopLabel } from "./passes/WorldTextPass";
 import { GPURenderer } from "./Renderer";
 import type { RenderSettings } from "./RenderSettings";
 
@@ -50,6 +52,7 @@ export class GameView {
     private header: RendererConfig,
     private terrainBytes: Uint8Array,
     private paletteData: Float32Array,
+    private config: Config,
     private raf?: typeof requestAnimationFrame,
     private caf?: typeof cancelAnimationFrame,
   ) {
@@ -77,6 +80,7 @@ export class GameView {
       this.header,
       this.terrainBytes,
       this.paletteData,
+      this.config,
       this.raf,
       this.caf,
     );
@@ -263,6 +267,15 @@ export class GameView {
   ): void {
     this.renderer?.addPlayers(players, paletteData, patternMeta, patternData);
   }
+  setPlayerSkin(smallID: number, url: string): void {
+    this.renderer?.setPlayerSkin(smallID, url);
+  }
+  initSkinAtlas(urls: readonly string[]): void {
+    this.renderer?.initSkinAtlas(urls);
+  }
+  setPlayerSpawn(smallID: number, x: number, y: number): void {
+    this.renderer?.setPlayerSpawn(smallID, x, y);
+  }
   uploadRailroadState(data: Uint8Array): void {
     this.renderer?.uploadRailroadState(data);
   }
@@ -288,6 +301,9 @@ export class GameView {
   }
   applyConquestEvents(events: ConquestFx[]): void {
     this.renderer?.applyConquestEvents(events);
+  }
+  setAttackTroopLabels(labels: AttackTroopLabel[]): void {
+    this.renderer?.setAttackTroopLabels(labels);
   }
   applyBonusEvents(events: BonusEvent[]): void {
     this.renderer?.applyBonusEvents(events);

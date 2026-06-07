@@ -6,13 +6,17 @@ import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  RefreshGraphicsEvent,
+  ToggleRenderDebugGuiEvent,
+} from "../../InputHandler";
 import { translateText } from "../../Utils";
 import {
   SetBackgroundMusicVolumeEvent,
   SetSoundEffectsVolumeEvent,
 } from "../../sound/Sounds";
-const structureIcon = assetUrl("images/CityIconWhite.svg");
+import { ShowGraphicsSettingsModalEvent } from "./GraphicsSettingsModal";
 const cursorPriceIcon = assetUrl("images/CursorPriceIconWhite.svg");
 const darkModeIcon = assetUrl("images/DarkModeIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
@@ -100,10 +104,10 @@ export class SettingsModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  public closeModal() {
+  public closeModal({ keepPause = false }: { keepPause?: boolean } = {}) {
     this.isVisible = false;
     this.requestUpdate();
-    this.pauseGame(false);
+    if (!keepPause) this.pauseGame(false);
   }
 
   private pauseGame(pause: boolean) {
@@ -125,11 +129,6 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onToggleEmojisButtonClick() {
     this.userSettings.toggleEmojis();
-    this.requestUpdate();
-  }
-
-  private onToggleStructureSpritesButtonClick() {
-    this.userSettings.toggleStructureSprites();
     this.requestUpdate();
   }
 
@@ -172,6 +171,22 @@ export class SettingsModal extends LitElement implements Controller {
   private onTogglePerformanceOverlayButtonClick() {
     this.userSettings.togglePerformanceOverlay();
     this.requestUpdate();
+  }
+
+  private onRenderDebugGuiButtonClick() {
+    this.eventBus.emit(new ToggleRenderDebugGuiEvent());
+    this.closeModal();
+  }
+
+  private onGraphicsSettingsButtonClick() {
+    this.eventBus.emit(
+      new ShowGraphicsSettingsModalEvent(
+        true,
+        this.shouldPause,
+        this.wasPausedWhenOpened,
+      ),
+    );
+    this.closeModal({ keepPause: true });
   }
 
   private onExitButtonClick() {
@@ -391,31 +406,6 @@ export class SettingsModal extends LitElement implements Controller {
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleStructureSpritesButtonClick}"
-            >
-              <img
-                src=${structureIcon}
-                alt="structureSprites"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.structure_sprites_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.structure_sprites_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.structureSprites()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               @click="${this.onToggleAttackingTroopsOverlayButtonClick}"
             >
               <img src=${swordIcon} alt="swordIcon" width="20" height="20" />
@@ -503,28 +493,76 @@ export class SettingsModal extends LitElement implements Controller {
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onTogglePerformanceOverlayButtonClick}"
+              @click="${this.onGraphicsSettingsButtonClick}"
             >
               <img
                 src=${settingsIcon}
-                alt="performanceIcon"
+                alt="graphicsSettings"
                 width="20"
                 height="20"
               />
               <div class="flex-1">
                 <div class="font-medium">
-                  ${translateText("user_setting.performance_overlay_label")}
+                  ${translateText("user_setting.graphics_settings_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.performance_overlay_desc")}
+                  ${translateText("user_setting.graphics_settings_desc")}
                 </div>
               </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.performanceOverlay()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
             </button>
+
+            <div class="border-t border-slate-600 pt-3 mt-4">
+              <div
+                class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+              >
+                ${translateText("user_setting.development_only")}
+              </div>
+
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                @click="${this.onTogglePerformanceOverlayButtonClick}"
+              >
+                <img
+                  src=${settingsIcon}
+                  alt="performanceIcon"
+                  width="20"
+                  height="20"
+                />
+                <div class="flex-1">
+                  <div class="font-medium">
+                    ${translateText("user_setting.performance_overlay_label")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("user_setting.performance_overlay_desc")}
+                  </div>
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.performanceOverlay()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")}
+                </div>
+              </button>
+
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+                @click="${this.onRenderDebugGuiButtonClick}"
+              >
+                <img
+                  src=${settingsIcon}
+                  alt="renderDebugGui"
+                  width="20"
+                  height="20"
+                />
+                <div class="flex-1">
+                  <div class="font-medium">
+                    ${translateText("user_setting.render_debug_gui")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("user_setting.render_debug_gui_desc")}
+                  </div>
+                </div>
+              </button>
+            </div>
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button

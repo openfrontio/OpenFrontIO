@@ -133,6 +133,7 @@ export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
+export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
@@ -181,6 +182,28 @@ export const PublicGamesSchema = z.object({
   serverTime: z.number(),
   games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
+
+// Wire message sent from server to lobby WebSocket clients.
+// "full" carries the complete snapshot; "counts" carries only the
+// per-lobby player counts, which change far more often than the rest.
+export const PublicLobbyFullSchema = z.object({
+  type: z.literal("full"),
+  serverTime: z.number(),
+  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
+});
+
+export const PublicLobbyCountsSchema = z.object({
+  type: z.literal("counts"),
+  serverTime: z.number(),
+  counts: z.record(z.string(), z.number()),
+});
+
+export const PublicLobbyMessageSchema = z.discriminatedUnion("type", [
+  PublicLobbyFullSchema,
+  PublicLobbyCountsSchema,
+]);
+
+export type PublicLobbyMessage = z.infer<typeof PublicLobbyMessageSchema>;
 
 export class LobbyInfoEvent implements GameEvent {
   constructor(
@@ -253,6 +276,7 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
+  disableClanTags: z.boolean().optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
@@ -537,6 +561,12 @@ export const PlayerCosmeticRefsSchema = z.object({
   color: z.string().optional(),
   patternName: CosmeticNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
+  skinName: CosmeticNameSchema.optional(),
+});
+
+export const PlayerSkinSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
 });
 
 // Server converts refs to the actual cosmetics here
@@ -544,6 +574,7 @@ export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
   color: PlayerColorSchema.optional(),
+  skin: PlayerSkinSchema.optional(),
 });
 
 export const PlayerSchema = z.object({

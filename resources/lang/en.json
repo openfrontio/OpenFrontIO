@@ -602,7 +602,16 @@
     "danishstraits": "Danish Straits",
     "northwestpassage": "Northwest Passage",
     "venice": "Venice",
-    "indiansubcontinent": "Indian Subcontinent"
+    "korea": "Korea",
+    "indiansubcontinent": "Indian Subcontinent",
+    "balkans": "Balkans",
+    "onion": "Onion",
+    "yellowsea": "Yellow Sea",
+    "labyrinth": "Labyrinth",
+    "caribbean": "Caribbean",
+    "choppingblock": "Chopping Block",
+    "southeastasia": "Southeast Asia",
+    "mississippiriver": "Mississippi River"
   },
   "map_categories": {
     "featured": "Featured",
@@ -663,7 +672,9 @@
     "tag": "TAG",
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "tag_too_long": "Clan tag cannot exceed 5 characters.",
-    "tag_invalid_chars": "Clan tag can only contain letters and numbers."
+    "tag_invalid_chars": "Clan tag can only contain letters and numbers.",
+    "tag_not_member": "Join the {tag} clan before using its tag.",
+    "tag_check_failed": "Couldn't verify clan tag. Try again or remove it."
   },
   "host_modal": {
     "title": "Create Private Lobby",
@@ -800,8 +811,6 @@
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
-    "structure_sprites_label": "Structure Sprites",
-    "structure_sprites_desc": "Toggle structure sprites",
     "cursor_cost_label_label": "Cursor Build Cost",
     "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "anonymous_names_label": "Hidden Names",
@@ -824,6 +833,11 @@
     "go_to_player_desc": "Toggle zooming in on the player in the beginning of a game.",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
+    "render_debug_gui": "Render Debug GUI",
+    "render_debug_gui_desc": "Toggle the renderer tuning panel",
+    "development_only": "Development Only",
+    "graphics_settings_label": "Graphics Settings",
+    "graphics_settings_desc": "Adjust how the map looks",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -911,6 +925,22 @@
     "background_music_volume": "Background Music Volume",
     "sound_effects_volume": "Sound Effects Volume",
     "keybind_conflict_error": "The key {key} is already bound to another action."
+  },
+  "graphics_setting": {
+    "title": "Graphics Settings",
+    "section_name_labels": "Name Labels",
+    "name_scale_label": "Name Scale",
+    "name_cull_label": "Minimum name size",
+    "name_cull_desc": "Hide names smaller than this size",
+    "colored_names_label": "Name color",
+    "colored_names_desc": "Show player names in their player color or in black",
+    "colored": "Colored",
+    "black": "Black",
+    "section_structure_icons": "Structure Icons",
+    "classic_icons_label": "Classic icons",
+    "classic_icons_desc": "Lighter outline with near-black interior",
+    "reset_label": "Reset to defaults",
+    "reset_desc": "Clear all graphics overrides"
   },
   "chat": {
     "title": "Quick Chat",
@@ -1249,7 +1279,8 @@
     "adfree": "ad-free for life!",
     "hard": "Plutonium",
     "soft": "Caps",
-    "per_day": "/day"
+    "per_day": "/day",
+    "free": "+{numFree} BONUS!"
   },
   "flag_input": {
     "title": "Select Flag",

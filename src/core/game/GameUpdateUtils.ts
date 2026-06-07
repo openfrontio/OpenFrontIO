@@ -1,5 +1,11 @@
 import type { PlayerState } from "../../client/render/types";
-import { GameUpdateType, PlayerUpdate } from "./GameUpdates";
+import type { EmojiMessage } from "./Game";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  PlayerUpdate,
+} from "./GameUpdates";
 
 /**
  * Build a partial PlayerUpdate containing only fields whose value differs
@@ -8,6 +14,12 @@ import { GameUpdateType, PlayerUpdate } from "./GameUpdates";
  * `type` and `id` are always included on the returned diff. Array/object
  * fields are compared by structural equality (length + per-element);
  * `embargoes` is compared as a set; primitive fields by `===`.
+ *
+ * WARNING: this diff is field-by-field by design (no JSON.stringify, for
+ * perf — see tests/perf/DiffPlayerUpdatePerf.ts). When you add a field to
+ * PlayerUpdate, you MUST add a matching setIfDifferent(...) line here, and an
+ * apply line in applyStateUpdate below. A field missing here is never diffed,
+ * so its changes silently never reach the main thread after the first update.
  */
 export function diffPlayerUpdate(
   prev: PlayerUpdate,
@@ -62,17 +74,20 @@ export function diffPlayerUpdate(
   setIfDifferent("embargoes", stringSetEqual(prev.embargoes, next.embargoes));
   setIfDifferent(
     "outgoingEmojis",
-    jsonEqual(prev.outgoingEmojis, next.outgoingEmojis),
+    emojiArrayEqual(prev.outgoingEmojis, next.outgoingEmojis),
   );
   setIfDifferent(
     "outgoingAttacks",
-    jsonEqual(prev.outgoingAttacks, next.outgoingAttacks),
+    attackArrayEqual(prev.outgoingAttacks, next.outgoingAttacks),
   );
   setIfDifferent(
     "incomingAttacks",
-    jsonEqual(prev.incomingAttacks, next.incomingAttacks),
+    attackArrayEqual(prev.incomingAttacks, next.incomingAttacks),
   );
-  setIfDifferent("alliances", jsonEqual(prev.alliances, next.alliances));
+  setIfDifferent(
+    "alliances",
+    allianceArrayEqual(prev.alliances, next.alliances),
+  );
 
   return changed ? diff : null;
 }
@@ -144,7 +159,61 @@ function stringSetEqual(a?: Set<string>, b?: Set<string>): boolean {
   return true;
 }
 
-function jsonEqual(a: unknown, b: unknown): boolean {
+function attackArrayEqual(a?: AttackUpdate[], b?: AttackUpdate[]): boolean {
   if (a === b) return true;
-  return JSON.stringify(a) === JSON.stringify(b);
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.attackerID !== y.attackerID ||
+      x.targetID !== y.targetID ||
+      x.troops !== y.troops ||
+      x.id !== y.id ||
+      x.retreating !== y.retreating
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function allianceArrayEqual(a?: AllianceView[], b?: AllianceView[]): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.id !== y.id ||
+      x.other !== y.other ||
+      x.createdAt !== y.createdAt ||
+      x.expiresAt !== y.expiresAt ||
+      x.hasExtensionRequest !== y.hasExtensionRequest
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function emojiArrayEqual(a?: EmojiMessage[], b?: EmojiMessage[]): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.message !== y.message ||
+      x.senderID !== y.senderID ||
+      x.recipientID !== y.recipientID ||
+      x.createdAt !== y.createdAt
+    ) {
+      return false;
+    }
+  }
+  return true;
 }

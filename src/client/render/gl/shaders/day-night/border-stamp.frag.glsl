@@ -12,6 +12,8 @@ uniform float uHighlightBrighten;
 uniform float uDefenseCheckerDarken;
 uniform float uEmbargoTintRatio;
 uniform float uFriendlyTintRatio;
+uniform vec3 uEmbargoTint;
+uniform vec3 uFriendlyTint;
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -46,9 +48,9 @@ void main() {
       }
       // Relationship tint (applied BEFORE defense checkerboard, matching game)
       if (relation > 0.75) {
-        bc = mix(bc, vec3(1.0, 0.0, 0.0), uEmbargoTintRatio);
+        bc = mix(bc, uEmbargoTint, uEmbargoTintRatio);
       } else if (relation > 0.25) {
-        bc = mix(bc, vec3(0.0, 1.0, 0.0), uFriendlyTintRatio);
+        bc = mix(bc, uFriendlyTint, uFriendlyTintRatio);
       }
       // Defense bonus: checkerboard darken (applied AFTER tint, matching game)
       if (defense) {

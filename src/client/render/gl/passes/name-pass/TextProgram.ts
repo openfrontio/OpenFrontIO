@@ -41,6 +41,7 @@ export class TextProgram {
   private uNameScaleFactor: WebGLUniformLocation;
   private uNameScaleCap: WebGLUniformLocation;
   private uTroopSizeMultiplier: WebGLUniformLocation;
+  private uHighlightOwnerID: WebGLUniformLocation;
   private uOutlineWidth: WebGLUniformLocation;
   private uNightAmbient: WebGLUniformLocation;
   private uOutlineColor: WebGLUniformLocation;
@@ -105,6 +106,10 @@ export class TextProgram {
       this.program,
       "uTroopSizeMultiplier",
     )!;
+    this.uHighlightOwnerID = gl.getUniformLocation(
+      this.program,
+      "uHighlightOwnerID",
+    )!;
     this.uOutlineWidth = gl.getUniformLocation(this.program, "uOutlineWidth")!;
     this.uNightAmbient = gl.getUniformLocation(this.program, "uNightAmbient")!;
     this.uOutlineColor = gl.getUniformLocation(this.program, "uOutlineColor")!;
@@ -148,6 +153,7 @@ export class TextProgram {
     vao: WebGLVertexArrayObject,
     maxPlayers: number,
     ambient: number,
+    highlightOwnerID: number,
   ): void {
     if (!this.atlasReady) return;
 
@@ -163,6 +169,7 @@ export class TextProgram {
     gl.uniform1f(this.uNameScaleFactor, ns.nameScaleFactor);
     gl.uniform1f(this.uNameScaleCap, ns.nameScaleCap);
     gl.uniform1f(this.uTroopSizeMultiplier, ns.troopSizeMultiplier);
+    gl.uniform1f(this.uHighlightOwnerID, highlightOwnerID);
     gl.uniform1f(this.uOutlineWidth, ns.outlineWidth);
     gl.uniform1f(this.uNightAmbient, ambient);
     gl.uniform3f(this.uOutlineColor, ns.outlineR, ns.outlineG, ns.outlineB);

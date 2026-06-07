@@ -2,7 +2,7 @@ import type { TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
+import { Cosmetics, Skin } from "../core/CosmeticSchemas";
 import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -29,6 +29,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
   @state() private selectedPattern: PlayerPattern | null;
   @state() private selectedColor: string | null = null;
+  @state() private selectedSkinName: string | null = null;
   @state() private search = "";
 
   private cosmetics: Cosmetics | null = null;
@@ -66,6 +67,7 @@ export class TerritoryPatternsModal extends BaseModal {
     const cosmetics = await getPlayerCosmetics();
     this.selectedPattern = cosmetics.pattern ?? null;
     this.selectedColor = cosmetics.color?.color ?? null;
+    this.selectedSkinName = cosmetics.skin?.name ?? null;
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
@@ -84,14 +86,15 @@ export class TerritoryPatternsModal extends BaseModal {
     this.search = (event.target as HTMLInputElement).value;
   }
 
-  private renderPatternGrid(): TemplateResult {
+  /** Combined patterns + skins grid. To the user they're the same: "skins". */
+  private renderSkinGrid(): TemplateResult {
     const items = resolveCosmetics(
       this.cosmetics,
       this.userMeResponse,
       null,
     ).filter(
       (r) =>
-        r.type === "pattern" &&
+        (r.type === "pattern" || r.type === "skin") &&
         r.relationship === "owned" &&
         (r.cosmetic === null
           ? !this.search
@@ -105,11 +108,19 @@ export class TerritoryPatternsModal extends BaseModal {
         >
           ${items.map((r) => {
             const isSelected =
-              (r.cosmetic === null && this.selectedPattern === null) ||
-              (r.cosmetic !== null &&
-                this.selectedPattern?.name === r.cosmetic.name &&
-                (this.selectedPattern?.colorPalette?.name ?? null) ===
-                  (r.colorPalette?.name ?? null));
+              r.type === "pattern"
+                ? (r.cosmetic === null && this.selectedPattern === null) ||
+                  (r.cosmetic !== null &&
+                    this.selectedPattern?.name === r.cosmetic.name &&
+                    (this.selectedPattern?.colorPalette?.name ?? null) ===
+                      (r.colorPalette?.name ?? null))
+                : (() => {
+                    const skinName = (r.cosmetic as Skin | null)?.name ?? null;
+                    return (
+                      (skinName === null && this.selectedSkinName === null) ||
+                      (skinName !== null && this.selectedSkinName === skinName)
+                    );
+                  })();
             return html`
               <cosmetic-button
                 .resolved=${r}
@@ -165,7 +176,7 @@ export class TerritoryPatternsModal extends BaseModal {
           }}
         ></o-button>
       </div>
-      <div class="px-3 pb-3">${this.renderPatternGrid()}</div>
+      <div class="px-3 pb-3">${this.renderSkinGrid()}</div>
     `;
   }
 
@@ -178,8 +189,21 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private selectCosmetic(resolved: ResolvedCosmetic) {
-    if (resolved.type !== "pattern") return;
-    this.selectPattern(resolvedToPlayerPattern(resolved));
+    if (resolved.type === "pattern") {
+      this.selectPattern(resolvedToPlayerPattern(resolved));
+    } else if (resolved.type === "skin") {
+      this.selectSkin((resolved.cosmetic as Skin | null)?.name ?? null);
+    }
+  }
+
+  private selectSkin(skinName: string | null) {
+    this.userSettings.setSelectedPatternName(
+      skinName === null ? undefined : `skin:${skinName}`,
+    );
+    this.selectedSkinName = skinName;
+    this.selectedPattern = null;
+    this.refresh();
+    this.close();
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
@@ -194,6 +218,7 @@ export class TerritoryPatternsModal extends BaseModal {
       this.userSettings.setSelectedPatternName(`pattern:${name}`);
     }
     this.selectedPattern = pattern;
+    this.selectedSkinName = null;
     this.refresh();
     this.showSkinSelectedPopup();
     this.close();

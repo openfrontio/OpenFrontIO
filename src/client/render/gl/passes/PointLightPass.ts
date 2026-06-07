@@ -207,7 +207,7 @@ export class PointLightPass {
     if (this.lightCount === 0) return;
 
     const gl = this.gl;
-    const dn = this.settings.dayNight;
+    const dn = this.settings.lighting;
 
     gl.useProgram(this.lightProg);
     gl.uniformMatrix3fv(this.uLightCam, false, cameraMatrix);

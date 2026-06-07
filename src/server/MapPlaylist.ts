@@ -43,13 +43,16 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Australia: 4,
   Baikal: 5,
   BajaCalifornia: 4,
+  Balkans: 6,
   BeringSea: 5,
   BeringStrait: 2,
   BetweenTwoSeas: 5,
   BlackSea: 6,
   BosphorusStraits: 3,
   Britannia: 5,
+  Caribbean: 5,
   Caucasus: 5,
+  ChoppingBlock: 5,
   Conakry: 3,
   DanishStraits: 5,
   DeglaciatedAntarctica: 4,
@@ -70,6 +73,8 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   IndianSubcontinent: 8,
   Italia: 6,
   Japan: 6,
+  Korea: 5,
+  Labyrinth: 6,
   Lemnos: 3,
   Lisbon: 4,
   LosAngeles: 8,
@@ -80,6 +85,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   Mena: 6,
   MiddleEast: 8,
   MilkyWay: 8,
+  MississippiRiver: 3,
   Montreal: 6,
   NewYorkCity: 3,
   NileDelta: 4,
@@ -87,10 +93,12 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   NorthwestPassage: 5,
   Pangaea: 5,
   Passage: 4,
+  Onion: 2,
   Pluto: 6,
   SanFrancisco: 3,
   Sierpinski: 10,
   SouthAmerica: 5,
+  SoutheastAsia: 5,
   StraitOfGibraltar: 5,
   StraitOfHormuz: 4,
   StraitOfMalacca: 4,
@@ -102,6 +110,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   TwoLakes: 6,
   Venice: 6,
   World: 20,
+  YellowSea: 5,
   Yenisei: 6,
 };
 
@@ -127,6 +136,19 @@ const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map([
   [GameMapType.Baikal, 2],
   [GameMapType.FourIslands, 4],
   [GameMapType.Luna, 2],
+  [GameMapType.StraitOfGibraltar, 2],
+  [GameMapType.StraitOfHormuz, 2],
+  [GameMapType.Aegean, 2],
+  [GameMapType.BeringSea, 2],
+  [GameMapType.BeringStrait, 2],
+  [GameMapType.BosphorusStraits, 2],
+  [GameMapType.Conakry, 2],
+  [GameMapType.Pluto, 2],
+  [GameMapType.FalklandIslands, 2],
+  [GameMapType.TradersDream, 2],
+  [GameMapType.Surrounded, 4],
+  [GameMapType.GulfOfStLawrence, 3],
+  [GameMapType.ChoppingBlock, 4],
 ]);
 
 type ModifierKey =
@@ -171,6 +193,7 @@ const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
   GameMapType.Baikal,
   GameMapType.Luna,
   GameMapType.ArchipelagoSea,
+  GameMapType.ChoppingBlock,
 ]);
 
 // Maps that are entirely land.
@@ -245,6 +268,7 @@ export class MapPlaylist {
       bots: isCompact ? 100 : 400,
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
+      disableClanTags: mode === GameMode.FFA ? true : undefined,
     } satisfies GameConfig;
   }
 
@@ -456,6 +480,7 @@ export class MapPlaylist {
         this.getSpawnImmunityDuration(playerTeams, startingGold),
       disabledUnits,
       waterNukes: isWaterNukes ? true : undefined,
+      disableClanTags: mode === GameMode.FFA ? true : undefined,
     } satisfies GameConfig;
   }
 

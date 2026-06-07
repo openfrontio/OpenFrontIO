@@ -1,5 +1,5 @@
 import { ClientEnv } from "src/client/ClientEnv";
-import { PublicGames, PublicGamesSchema } from "../core/Schemas";
+import { PublicGames, PublicLobbyMessageSchema } from "../core/Schemas";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
@@ -19,6 +19,8 @@ export class PublicLobbySocket {
   private wsAttemptCounted = false;
   private workerPath: string = "";
   private stopped = true;
+  // Latest full snapshot, used as the base for applying counts-only deltas.
+  private lastFull: PublicGames | null = null;
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -41,6 +43,7 @@ export class PublicLobbySocket {
 
   stop() {
     this.stopped = true;
+    this.lastFull = null;
     this.disconnectWebSocket();
   }
 
@@ -51,6 +54,9 @@ export class PublicLobbySocket {
         this.ws.close();
         this.ws = null;
       }
+      // Drop any cached snapshot — the server primes new connections with a
+      // fresh full message, and a stale base could mis-merge incoming deltas.
+      this.lastFull = null;
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}${this.workerPath}/lobbies`;
@@ -78,10 +84,41 @@ export class PublicLobbySocket {
 
   private handleMessage(event: MessageEvent) {
     try {
-      const publicGames = PublicGamesSchema.parse(
+      const message = PublicLobbyMessageSchema.parse(
         JSON.parse(event.data as string),
       );
-      this.onLobbiesUpdate(publicGames);
+      if (message.type === "full") {
+        this.lastFull = {
+          serverTime: message.serverTime,
+          games: message.games,
+        };
+        this.onLobbiesUpdate(this.lastFull);
+        return;
+      }
+      // counts: patch numClients onto the last full snapshot. If we have no
+      // base yet (shouldn't happen — server primes on connect), ignore it
+      // and wait for the next full.
+      if (this.lastFull === null) {
+        return;
+      }
+      const patchedGames = { ...this.lastFull.games };
+      for (const type of Object.keys(patchedGames) as Array<
+        keyof typeof patchedGames
+      >) {
+        const list = patchedGames[type];
+        if (!list) continue;
+        patchedGames[type] = list.map((lobby) => {
+          const next = message.counts[lobby.gameID];
+          return next === undefined || next === lobby.numClients
+            ? lobby
+            : { ...lobby, numClients: next };
+        });
+      }
+      this.lastFull = {
+        serverTime: message.serverTime,
+        games: patchedGames,
+      };
+      this.onLobbiesUpdate(this.lastFull);
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {

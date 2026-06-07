@@ -2,7 +2,6 @@ import type { RenderSettings } from "../RenderSettings";
 import type { DebugNode } from "./Folder";
 import { folder } from "./Folder";
 import { color } from "./props/Color";
-import { select } from "./props/Select";
 import { slider } from "./props/Slider";
 import { toggle } from "./props/Toggle";
 
@@ -10,7 +9,10 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
   return [
     folder("Pass Enables", [
       toggle(s.passEnabled, "terrain", d.passEnabled),
-      toggle(s.passEnabled, "mapOverlay", d.passEnabled),
+      toggle(s.passEnabled, "territory", d.passEnabled),
+      toggle(s.passEnabled, "borderCompute", d.passEnabled),
+      toggle(s.passEnabled, "borderStamp", d.passEnabled),
+      toggle(s.passEnabled, "trail", d.passEnabled),
       toggle(s.passEnabled, "structure", d.passEnabled),
       toggle(s.passEnabled, "unit", d.passEnabled),
       toggle(s.passEnabled, "name", d.passEnabled),
@@ -90,30 +92,29 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       slider(s.falloutBloom, "particleFreshScale", d.falloutBloom, 0, 1, 0.01),
     ]),
 
-    folder("Day / Night", [
-      select(s.dayNight, "mode", d.dayNight, ["light", "dark"], "Mode"),
-      slider(s.dayNight, "nightAmbient", d.dayNight, 0, 1, 0.01),
-      slider(s.dayNight, "dayAmbient", d.dayNight, 0, 1, 0.01),
-      slider(s.dayNight, "falloffPower", d.dayNight, 0.5, 5, 0.1),
-      slider(s.dayNight, "falloutLightIntensity", d.dayNight, 0, 20, 0.1),
-      slider(s.dayNight, "falloutLightThreshold", d.dayNight, 0, 0.5, 0.001),
-      slider(s.dayNight, "blurZoomDivisor", d.dayNight, 1, 20, 0.5),
-      slider(s.dayNight, "lightRadiusMultiplier", d.dayNight, 0.1, 5, 0.1),
+    folder("Lighting", [
+      toggle(s.lighting, "enabled", d.lighting),
+      slider(s.lighting, "ambient", d.lighting, 0, 1, 0.01),
+      slider(s.lighting, "falloffPower", d.lighting, 0.5, 5, 0.1),
+      slider(s.lighting, "falloutLightIntensity", d.lighting, 0, 20, 0.1),
+      slider(s.lighting, "falloutLightThreshold", d.lighting, 0, 0.5, 0.001),
+      slider(s.lighting, "blurZoomDivisor", d.lighting, 1, 20, 0.5),
+      slider(s.lighting, "lightRadiusMultiplier", d.lighting, 0.1, 5, 0.1),
       color(
-        s.dayNight,
+        s.lighting,
         "falloutLightR",
         "falloutLightG",
         "falloutLightB",
-        d.dayNight,
+        d.lighting,
         "Fallout Light Color",
       ),
-      slider(s.dayNight, "emberLightIntensity", d.dayNight, 0, 20, 0.1),
+      slider(s.lighting, "emberLightIntensity", d.lighting, 0, 20, 0.1),
       color(
-        s.dayNight,
+        s.lighting,
         "emberLightR",
         "emberLightG",
         "emberLightB",
-        d.dayNight,
+        d.lighting,
         "Ember Light Color",
       ),
     ]),
@@ -162,6 +163,15 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
 
       folder("Railroad", [
         slider(s.railroad, "railMinZoom", d.railroad, 0, 10, 0.1, "Min Zoom"),
+        slider(
+          s.railroad,
+          "railFadeRange",
+          d.railroad,
+          0,
+          5,
+          0.1,
+          "Fade Range",
+        ),
         slider(
           s.railroad,
           "railDetailZoom",

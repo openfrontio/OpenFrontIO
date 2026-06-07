@@ -27,7 +27,14 @@ export class QuickChatExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (!this.sender.canSendQuickChat(this.recipient)) {
+      this.active = false;
+      return;
+    }
+
     const message = this.getMessageFromKey(this.quickChatKey);
+
+    this.sender.recordQuickChat(this.recipient);
 
     this.mg.displayChat(
       message[1],

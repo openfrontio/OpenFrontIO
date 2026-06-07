@@ -9,7 +9,13 @@ export type {
   RadialMenuSelectEvent,
 } from "./Events";
 export { GameView } from "./GameView";
+export { GraphicsOverridesSchema } from "./GraphicsOverrides";
+export type { GraphicsOverrides } from "./GraphicsOverrides";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
+export {
+  applyDarkModeOverride,
+  applyGraphicsOverrides,
+} from "./RenderOverrides";
 export { createRenderSettings, dumpSettings } from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
 export { deepAssign, deepDiff } from "./SettingsUtils";

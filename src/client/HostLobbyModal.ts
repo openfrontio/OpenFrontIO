@@ -334,7 +334,9 @@ export class HostLobbyModal extends BaseModal {
 
     return html`
       <div class="flex flex-col h-full">
-        <div class="flex-1 p-6 mx-auto w-full max-w-5xl">
+        <div
+          class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
+        >
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-10"}

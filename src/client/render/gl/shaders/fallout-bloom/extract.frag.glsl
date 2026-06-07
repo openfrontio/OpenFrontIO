@@ -4,6 +4,7 @@ precision highp usampler2D;
 uniform usampler2D uTileTex;
 uniform vec2 uMapSize;
 uniform float uTick;
+uniform float uTileScale;
 
 uniform float uBroilSpeedCold;
 uniform float uBroilSpeedHot;
@@ -54,10 +55,10 @@ float vnoise3(vec3 p) {
 }
 
 void main() {
-  // Tile-space: viewport is mapW x mapH, one fragment per tile.
-  // gl_FragCoord.xy gives exact integer tile coords — completely
-  // deterministic, independent of camera position/zoom.
-  ivec2 tc = ivec2(gl_FragCoord.xy);
+  // Bloom FBO is mapW/uTileScale × mapH/uTileScale; each output pixel maps
+  // to the center tile of its uTileScale×uTileScale block. Still deterministic
+  // and camera-independent — just sparser than 1:1.
+  ivec2 tc = ivec2(gl_FragCoord.xy * uTileScale);
   if (tc.x >= int(uMapSize.x) || tc.y >= int(uMapSize.y)) discard;
 
   uint raw = texelFetch(uTileTex, tc, 0).r;
