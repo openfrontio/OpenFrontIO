@@ -150,6 +150,8 @@ export class GPURenderer {
   private mapW = 0;
   private mapH = 0;
 
+  private dirty = true;
+
   // FPS tracking
   private frameTimes: Float64Array = new Float64Array(60);
   private frameIdx = 0;
@@ -198,7 +200,6 @@ export class GPURenderer {
     const gl = canvas.getContext("webgl2", {
       alpha: false,
       antialias: false,
-      powerPreference: "high-performance",
     });
     if (!gl) throw new Error("WebGL2 not supported");
     this.gl = gl;
@@ -507,9 +508,30 @@ export class GPURenderer {
   }
 
   private renderLoop = (): void => {
-    this.draw();
+    if (this.shouldRender()) {
+      this.dirty = false;
+      this.draw();
+    }
     this.animId = this.raf(this.renderLoop);
   };
+
+  private shouldRender(): boolean {
+    if (this.dirty) return true;
+    if (this.camera.isDirty()) return true;
+    return (
+      this.fxPass.hasActiveAnimation() ||
+      this.worldTextPass.hasActiveAnimation() ||
+      this.moveIndicatorPass.hasActiveAnimation() ||
+      this.nukeTelegraphPass.hasActiveAnimation() ||
+      this.spawnOverlayPass.hasActiveAnimation() ||
+      this.selectionBoxPass.hasActiveAnimation() ||
+      this.samRadiusPass.hasActiveAnimation()
+    );
+  }
+
+  private markDirty(): void {
+    this.dirty = true;
+  }
 
   private startLoop(): void {
     this.animId ??= this.raf(this.renderLoop);
@@ -531,6 +553,7 @@ export class GPURenderer {
     this.canvas.width = Math.round(cssWidth * dpr);
     this.canvas.height = Math.round(cssHeight * dpr);
     this.camera.resize(cssWidth, cssHeight);
+    this.markDirty();
   }
 
   screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
@@ -577,6 +600,7 @@ export class GPURenderer {
   }
   setCameraState(x: number, y: number, z: number): void {
     this.camera.setCameraState(x, y, z);
+    this.markDirty();
   }
   get zoom(): number {
     return this.camera.zoom;
@@ -592,17 +616,20 @@ export class GPURenderer {
     nukeEvents?: Array<{ tick: number; tiles: number[] }>,
     currentTick?: number,
   ): void {
+    this.markDirty();
     this.territoryPass.uploadFullTileState(tileState);
     this.trailPass.uploadFullState(trailState);
     this.heatManager.resetForSeek(tileState, nukeEvents, currentTick);
   }
 
   applyFullTiles(tileState: Uint16Array, trailState: Uint8Array): void {
+    this.markDirty();
     this.territoryPass.uploadFullTileState(tileState);
     this.trailPass.uploadFullState(trailState);
   }
 
   applyDelta(changedTiles: TilePair[], trailState: Uint8Array): void {
+    this.markDirty();
     this.territoryPass.uploadDeltaTiles(changedTiles);
     this.trailPass.uploadFullState(trailState);
   }
@@ -611,11 +638,13 @@ export class GPURenderer {
     tileState: Uint16Array,
     trailState: Uint8Array,
   ): void {
+    this.markDirty();
     this.territoryPass.setLiveRef(tileState);
     this.trailPass.setLiveRef(trailState);
   }
 
   uploadLiveDelta(tileState: Uint16Array, changedTiles: TilePair[]): void {
+    this.markDirty();
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 
@@ -624,11 +653,13 @@ export class GPURenderer {
     dirtyRowMin: number,
     dirtyRowMax: number,
   ): void {
+    this.markDirty();
     this.trailPass.applyLiveDelta(trailState, dirtyRowMin, dirtyRowMax);
   }
 
   /** Re-upload palette data to the GPU texture (e.g. when players appear after initial startup). */
   updatePalette(paletteData: Float32Array): void {
+    this.markDirty();
     const gl = this.gl;
     // Mutate the stored array in-place so all passes sharing the reference see the update.
     this.paletteData.set(paletteData);
@@ -657,6 +688,7 @@ export class GPURenderer {
     patternMeta: Float32Array,
     patternData: Uint8Array,
   ): void {
+    this.markDirty();
     this.updatePalette(paletteData);
 
     const gl = this.gl;
@@ -703,6 +735,7 @@ export class GPURenderer {
    * skin image lines up with this tile. Default (0,0) anchors at world origin.
    */
   setPlayerSpawn(smallID: number, x: number, y: number): void {
+    this.markDirty();
     const off = smallID * 2;
     this.skinAnchorCpu[off] = x;
     this.skinAnchorCpu[off + 1] = y;
@@ -731,6 +764,7 @@ export class GPURenderer {
    * decoded yet render with alpha=0 → falls through to base player color.
    */
   initSkinAtlas(urls: readonly string[]): void {
+    this.markDirty();
     this.skinAtlas.dispose();
     this.skinAtlas = new SkinAtlasArray(this.gl, urls, () => {});
     this.territoryPass.setSkinAtlas(this.skinAtlas.texture);
@@ -746,6 +780,7 @@ export class GPURenderer {
     if (layer < 0) return;
     this.skinLayerCpu[smallID] = layer + 1;
     this.uploadSkinLayerTex();
+    this.markDirty();
   }
 
   private uploadSkinLayerTex(): void {
@@ -765,10 +800,12 @@ export class GPURenderer {
   }
 
   uploadRailroadState(data: Uint8Array): void {
+    this.markDirty();
     this.railroadPass.uploadRailroadState(data);
   }
 
   updateUnits(units: Map<number, UnitState>, gameTick: number): void {
+    this.markDirty();
     this.lastUnits = units;
     this.frameTick++;
     this.unitPass.updateUnits(units, this.frameTick);
@@ -783,6 +820,7 @@ export class GPURenderer {
     snap: boolean,
     statusData?: Map<number, PlayerStatusData>,
   ): void {
+    this.markDirty();
     this.namePass.updateNames(names, players, snap, statusData);
 
     // Extract local player's allies + teammates for SAM radius coloring
@@ -801,11 +839,13 @@ export class GPURenderer {
   }
 
   updateRelations(data: Uint8Array, size: number): void {
+    this.markDirty();
     this.borderPass.updateRelations(data, size);
     this.affiliationPalette.updateRelations(data, size);
   }
 
   updateStructures(units: Map<number, UnitState>): void {
+    this.markDirty();
     this.lastStructures = units;
     this.structurePass.updateStructures(units);
     this.structureLevelPass.updateStructures(units);
@@ -826,11 +866,17 @@ export class GPURenderer {
   }
 
   applyDeadUnits(deadUnits: DeadUnitFx[]): void {
-    if (deadUnits.length > 0) this.fxPass.applyDeadUnits(deadUnits);
+    if (deadUnits.length > 0) {
+      this.markDirty();
+      this.fxPass.applyDeadUnits(deadUnits);
+    }
   }
 
   applyRailroadDust(tileRefs: number[]): void {
-    if (tileRefs.length > 0) this.fxPass.applyRailroadDust(tileRefs);
+    if (tileRefs.length > 0) {
+      this.markDirty();
+      this.fxPass.applyRailroadDust(tileRefs);
+    }
   }
 
   /**
@@ -841,12 +887,14 @@ export class GPURenderer {
    */
   applyTerrainDelta(refs: readonly number[], terrainBytes: Uint8Array): void {
     if (refs.length === 0) return;
+    this.markDirty();
     this.terrainPass.applyTerrainDelta(refs, terrainBytes);
     this.railroadPass.applyTerrainDelta(refs, terrainBytes);
   }
 
   applyConquestEvents(events: ConquestFx[]): void {
     if (events.length > 0) {
+      this.markDirty();
       this.fxPass.applyConquestEvents(events);
       this.worldTextPass.applyConquestEvents(events);
     }
@@ -855,6 +903,7 @@ export class GPURenderer {
   setAttackTroopLabels(
     labels: import("./passes/WorldTextPass").AttackTroopLabel[],
   ): void {
+    this.markDirty();
     this.worldTextPass.setAttackTroopLabels(labels);
   }
 
@@ -865,14 +914,19 @@ export class GPURenderer {
       this.localPlayerID > 0
         ? events.filter((e) => e.smallID === this.localPlayerID)
         : events;
-    if (filtered.length > 0) this.worldTextPass.applyBonusEvents(filtered);
+    if (filtered.length > 0) {
+      this.markDirty();
+      this.worldTextPass.applyBonusEvents(filtered);
+    }
   }
 
   updateAttackRings(rings: AttackRingInput[]): void {
+    this.markDirty();
     this.fxPass.updateAttackRings(rings);
   }
 
   clearFx(): void {
+    this.markDirty();
     this.fxPass.clear();
     this.worldTextPass.clear();
   }
@@ -882,6 +936,7 @@ export class GPURenderer {
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
+    this.markDirty();
     this.structurePass.updateGhostPreview(data);
     this.railroadPass.updateGhostPreview(data);
     this.rangeCirclePass.updateGhostPreview(data);
@@ -905,14 +960,17 @@ export class GPURenderer {
   }
 
   updateNukeTrajectory(data: NukeTrajectoryData | null): void {
+    this.markDirty();
     this.nukeTrajectoryPass.update(data);
   }
 
   updateNukeTelegraphs(data: NukeTelegraphData[]): void {
+    this.markDirty();
     this.nukeTelegraphPass.update(data);
   }
 
   updateSpawnOverlay(inSpawnPhase: boolean, centers: SpawnCenter[]): void {
+    this.markDirty();
     this.inSpawnPhase = inSpawnPhase;
     this.spawnOverlayPass.update(inSpawnPhase, centers);
   }
@@ -922,11 +980,13 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   setHighlightOwner(ownerID: number): void {
+    this.markDirty();
     this.borderPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
   }
   setHighlightStructureTypes(unitTypes: string[] | null): void {
+    this.markDirty();
     this.structurePass.setHighlightTypes(unitTypes);
     this.structureLevelPass.setHighlightTypes(unitTypes);
     this.samHighlightVisible =
@@ -997,6 +1057,7 @@ export class GPURenderer {
 
   setLocalPlayerID(id: number): void {
     if (id === this.localPlayerID) return;
+    this.markDirty();
     this.localPlayerID = id;
     this.samRadiusPass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
@@ -1004,10 +1065,12 @@ export class GPURenderer {
   }
 
   setSAMRadiusVisible(visible: boolean): void {
+    this.markDirty();
     this.samRadiusPass.setVisible(visible);
   }
 
   setSAMPerspective(playerID: number, allies: Set<number>): void {
+    this.markDirty();
     this.samRadiusPass.setLocalPlayer(playerID);
     this.samRadiusPass.setAllies(allies);
     this.unitPass.setLocalPlayer(playerID);
@@ -1015,14 +1078,17 @@ export class GPURenderer {
   }
 
   setSAMColorMode(mode: "perspective" | "owner"): void {
+    this.markDirty();
     this.samRadiusPass.setColorMode(mode);
   }
 
   setSAMAllianceClusters(clusters: Map<number, number>): void {
+    this.markDirty();
     this.samRadiusPass.setAllianceClusters(clusters);
   }
 
   setAltView(active: boolean): void {
+    this.markDirty();
     this.altView = active;
     this.territoryPass.setAltView(active);
     this.borderStampPass.setAltView(active);
@@ -1032,10 +1098,12 @@ export class GPURenderer {
   }
 
   setShowPatterns(active: boolean): void {
+    this.markDirty();
     this.territoryPass.setShowPatterns(active);
   }
 
   setGridView(active: boolean): void {
+    this.markDirty();
     this.gridView = active;
   }
 
@@ -1053,19 +1121,24 @@ export class GPURenderer {
     items: RadialMenuItem[],
     centerItem?: RadialMenuItem,
   ): void {
+    this.markDirty();
     this.radialMenuPass.show(anchorX, anchorY, items, centerItem);
   }
 
   hideRadialMenu(): void {
+    this.markDirty();
     this.radialMenuPass.hide();
   }
   openRadialSubMenu(subItems: RadialMenuItem[]): void {
+    this.markDirty();
     this.radialMenuPass.openSubMenu(subItems);
   }
   goBackRadialMenu(): void {
+    this.markDirty();
     this.radialMenuPass.goBack();
   }
   setRadialMenuHover(index: number): void {
+    this.markDirty();
     this.radialMenuPass.setHover(index);
   }
   radialMenuHitTest(screenX: number, screenY: number): number {
@@ -1083,6 +1156,7 @@ export class GPURenderer {
   registerRadialMenuIcons(
     icons: { key: string; img: CanvasImageSource }[],
   ): void {
+    this.markDirty();
     this.radialMenuPass.registerIcons(icons);
   }
 
@@ -1095,6 +1169,7 @@ export class GPURenderer {
   }
 
   setSelectedUnits(unitIds: readonly number[]): void {
+    this.markDirty();
     // Copy in (callers may mutate their array).
     this.selectedUnitIds.length = 0;
     for (let i = 0; i < unitIds.length; i++) {
@@ -1148,6 +1223,7 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   showMoveIndicator(tileX: number, tileY: number, ownerID: number): void {
+    this.markDirty();
     const off = ownerID * 4;
     const r = Math.min(
       1,

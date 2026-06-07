@@ -139,6 +139,10 @@ export class Camera {
     this.dirty = true;
   }
 
+  isDirty(): boolean {
+    return this.dirty;
+  }
+
   /** Return the column-major mat3 camera matrix (world → clip). */
   getMatrix(): Float32Array {
     if (this.dirty) {

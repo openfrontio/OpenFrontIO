@@ -167,6 +167,10 @@ export class SpawnOverlayPass {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
+  hasActiveAnimation(): boolean {
+    return this.active;
+  }
+
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.program);

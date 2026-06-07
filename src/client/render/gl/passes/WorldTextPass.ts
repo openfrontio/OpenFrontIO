@@ -581,6 +581,10 @@ export class WorldTextPass {
     this.instanceCount = 0;
   }
 
+  hasActiveAnimation(): boolean {
+    return this.active.length > 0;
+  }
+
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.program);

@@ -119,6 +119,14 @@ export class FxPass {
     this.attackRingPass.clear();
   }
 
+  hasActiveAnimation(): boolean {
+    return (
+      this.spritePass.hasActiveAnimation() ||
+      this.shockwavePass.hasActiveAnimation() ||
+      this.attackRingPass.hasActiveAnimation()
+    );
+  }
+
   dispose(): void {
     this.spritePass.dispose();
     this.shockwavePass.dispose();

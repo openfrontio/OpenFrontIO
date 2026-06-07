@@ -111,6 +111,10 @@ export class SelectionBoxPass {
     }
   }
 
+  hasActiveAnimation(): boolean {
+    return this.selections.length > 0;
+  }
+
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.program);

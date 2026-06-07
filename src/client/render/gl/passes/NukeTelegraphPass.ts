@@ -143,6 +143,10 @@ export class NukeTelegraphPass {
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.instanceCount);
   }
 
+  hasActiveAnimation(): boolean {
+    return this.instanceCount > 0;
+  }
+
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.program);
