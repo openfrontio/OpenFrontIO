@@ -38,6 +38,9 @@ export function applyGraphicsOverrides(
   if (overrides.railroad?.railMinZoom !== undefined) {
     settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
   }
+  if (overrides.passEnabled?.fx !== undefined) {
+    settings.passEnabled.fx = overrides.passEnabled.fx;
+  }
   if (overrides.name?.darkNames !== undefined) {
     const dark = overrides.name.darkNames;
     // Dark: black fill + player-colored outline. Force outline RGB to black

@@ -231,6 +231,26 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     this.patchStructure({ classicIcons: !this.currentClassicIcons() });
   }
 
+  private patchPassEnabled(patch: Partial<GraphicsOverrides["passEnabled"]>) {
+    const current = this.userSettings.graphicsOverrides();
+    this.userSettings.setGraphicsOverrides({
+      ...current,
+      passEnabled: { ...current.passEnabled, ...patch },
+    });
+    this.requestUpdate();
+  }
+
+  private currentSpecialEffects(): boolean {
+    return (
+      this.userSettings.graphicsOverrides().passEnabled?.fx ??
+      renderDefaults.passEnabled.fx
+    );
+  }
+
+  private onToggleSpecialEffects() {
+    this.patchPassEnabled({ fx: !this.currentSpecialEffects() });
+  }
+
   private onNameScaleChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchName({ nameScaleFactor: value });
@@ -503,6 +523,31 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
                 ${railDrawDistance.toFixed(1)}
               </div>
             </div>
+
+            <div
+              class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2"
+            >
+              ${translateText("graphics_setting.section_effects")}
+            </div>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onToggleSpecialEffects}
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.special_effects_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.special_effects_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.currentSpecialEffects()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button

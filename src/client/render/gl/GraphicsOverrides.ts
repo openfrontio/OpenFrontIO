@@ -26,6 +26,11 @@ export const GraphicsOverridesSchema = z
         railMinZoom: z.number(),
       })
       .partial(),
+    passEnabled: z
+      .object({
+        fx: z.boolean(),
+      })
+      .partial(),
   })
   .partial();
 

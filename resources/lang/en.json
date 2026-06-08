@@ -946,6 +946,7 @@
     "highlight_thicken_desc": "How much the border thickens on hover",
     "rail_distance_label": "Train track draw distance",
     "rail_distance_desc": "How far zoomed out train tracks remain visible",
+    "section_effects": "Effects",
     "reset_label": "Reset to defaults",
     "reset_desc": "Clear all graphics overrides"
   },
