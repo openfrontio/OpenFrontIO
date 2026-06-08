@@ -18,22 +18,27 @@
   "nations": [
     {
       "coordinates": [1025, 750],
+      "flag": "mk",
       "name": "Galicica"
     },
     {
       "coordinates": [1815, 820],
+      "flag": "mk",
       "name": "Pelister"
     },
     {
       "coordinates": [920, 1250],
+      "flag": "al",
       "name": "Podgorie"
     },
     {
       "coordinates": [100, 1410],
+      "flag": "al",
       "name": "Valamara"
     },
     {
       "coordinates": [1320, 1485],
+      "flag": "gr",
       "name": "Prespa"
     }
   ]
