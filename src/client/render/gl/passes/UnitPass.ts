@@ -4,9 +4,9 @@
  * Renders all mobile (non-structure) units: boats, nukes, shells, SAM
  * missiles, and MIRV warheads. All unit types are rotationally symmetric
  * — no rotation needed. Sprites are tiny grayscale PNGs colorized on the
- * GPU using the standard 3-band gray replacement (180/130/70). Shell and
- * MIRV Warhead use programmatic 3×3 white squares (colorized to border
- * color).
+ * GPU using the standard 3-band gray replacement (180/130/70). MIRV
+ * Warhead uses a programmatic 3×3 white square (colorized to border
+ * color); Shell is a single white pixel.
  *
  * Two instanced draw calls per frame — ground units and missiles are
  * split into separate buffers for correct layer ordering:
@@ -21,7 +21,7 @@
  *   Col 4: Hydrogen Bomb (9×9)
  *   Col 5: MIRV (13×13, grayscale colorized)
  *   Col 6: SAM Missile (3×3)
- *   Col 7: Shell (3×3 white square)
+ *   Col 7: Shell (1×1 white pixel)
  *   Col 8: MIRV Warhead (3×3 white square)
  *   Col 9: Train Engine (5×5)
  *   Col 10: Train Carriage (5×5)
