@@ -40,19 +40,20 @@ describe("Map manifests: nation name constraints", () => {
             // This exception handles the without-name easter-egg Nation in Luna.
             // The MONOLITH nation have UNICODE characters that DO NOT render in the game-map.
             // Precisely: each bytes of the UNICODE 16-bit code
-            // falls **outside** of the ASCII render-zone: 0x20–0x7E
+            // falls **outside** of the Extended-ASCII render-zone: [0x20–0x7E] and [0xA0-0xFF].
             // This magic trick makes its flag stand out, alone, over it's population count.
-            // However the name renders correctly in other texts (leaderboard, overlay, alliances, alerts, etc.)
+            // However the name renders correctly in other texts (leaderboard, overlay, alliances, alerts, etc.).
             return;
           }
-          // Allow only printable safe-extended-ASCII characters (0x20-0xFF), excluding (0x7F-0x9F) as white in https://www.ascii-code.com/.
-          if (!/^[\x20-\x7E\xA0-\xFF]*$/.test(name)) {
-            const excludededCharacters = [...name].filter(
-              (c) =>
-                c.charCodeAt(0) < 0x20 ||
-                (0x7f <= c.charCodeAt(0) && c.charCodeAt(0) < 0xa0) ||
-                c.charCodeAt(0) > 0xff
-            );
+          // Allow only printable safe-extended-ASCII characters
+          // within [0x20-0x7E] or [0xA0-0xFF], as in https://www.ascii-code.com/.
+          const excludededCharacters = [...name].filter(
+            (c) =>
+              c.charCodeAt(0) < 0x20 ||
+              (0x7e < c.charCodeAt(0) && c.charCodeAt(0) < 0xa0) ||
+              0xff < c.charCodeAt(0),
+          );
+          if (0 < excludededCharacters.length) {
             violations.push(
               `${manifestPath} -> nations[${idx}].name "${name}" has ${excludededCharacters.length} non valid characters: ${excludededCharacters}`,
             );
@@ -67,7 +68,11 @@ describe("Map manifests: nation name constraints", () => {
     }
 
     if (violations.length > 0) {
-      throw new Error("Nation name violations:\n" + violations.join("\n"));
+      throw new Error(
+        "Nation name violations:\n" +
+          violations.join("\n") +
+          "\nAll characters must be within non-colored region of the Extended-ASCII table: https://www.ascii-code.com/",
+      );
     }
   });
 });
