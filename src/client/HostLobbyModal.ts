@@ -1103,7 +1103,7 @@ export class HostLobbyModal extends BaseModal {
         bubbles: true,
         composed: true,
         detail: {
-          startDelay: this.startDelayValue ?? 0,
+          startDelay: this.startDelay ? (this.startDelayValue ?? 0) : 0,
         },
       }),
     );
