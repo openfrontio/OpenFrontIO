@@ -66,6 +66,7 @@
   "mapOverlay": {
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
+    "territoryDefenseDarken": 0.85,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,

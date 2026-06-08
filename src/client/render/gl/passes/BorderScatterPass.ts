@@ -26,7 +26,6 @@ import { TILE_DEFINES } from "../utils/TileCodec";
 import borderComputeFragSrc from "../shaders/border-compute/border-compute.frag.glsl?raw";
 import borderScatterVertSrc from "../shaders/border-compute/border-scatter.vert.glsl?raw";
 
-const MAX_DEFENSE_POSTS = 64;
 const FLOATS_PER_PATCH = 2;
 const INITIAL_CAPACITY = 4096;
 
@@ -42,9 +41,6 @@ export class BorderScatterPass {
   private uMapSize: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightThicken: WebGLUniformLocation;
-  private uDefensePosts: WebGLUniformLocation;
-  private uDefensePostCount: WebGLUniformLocation;
-  private uDefensePostRange: WebGLUniformLocation;
 
   private fbo: WebGLFramebuffer;
   private vao: WebGLVertexArrayObject;
@@ -52,8 +48,6 @@ export class BorderScatterPass {
 
   // Mirrored from BorderComputePass — set via setters when those change.
   private highlightOwner = 0;
-  private defensePostData = new Float32Array(MAX_DEFENSE_POSTS * 4);
-  private defensePostCount = 0;
 
   /** CPU-side patch buffer: [x, y, x, y, …]. */
   private patchData: Float32Array;
@@ -80,7 +74,7 @@ export class BorderScatterPass {
     this.program = createProgram(
       gl,
       borderScatterVertSrc,
-      shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES, MAX_DEFENSE_POSTS }),
+      shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES }),
     );
 
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
@@ -91,15 +85,6 @@ export class BorderScatterPass {
     this.uHighlightThicken = gl.getUniformLocation(
       this.program,
       "uHighlightThicken",
-    )!;
-    this.uDefensePosts = gl.getUniformLocation(this.program, "uDefensePosts")!;
-    this.uDefensePostCount = gl.getUniformLocation(
-      this.program,
-      "uDefensePostCount",
-    )!;
-    this.uDefensePostRange = gl.getUniformLocation(
-      this.program,
-      "uDefensePostRange",
     )!;
 
     gl.useProgram(this.program);
@@ -158,12 +143,6 @@ export class BorderScatterPass {
     this.highlightOwner = owner;
   }
 
-  setDefensePostData(data: Float32Array, count: number): void {
-    // Caller may mutate the source array; copy to keep ours stable.
-    this.defensePostData.set(data.subarray(0, MAX_DEFENSE_POSTS * 4));
-    this.defensePostCount = count;
-  }
-
   flush(): void {
     if (this.patchCount === 0) return;
     const gl = this.gl;
@@ -190,9 +169,6 @@ export class BorderScatterPass {
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
     gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1i(this.uHighlightThicken, Math.floor(mo.highlightThicken));
-    gl.uniform4fv(this.uDefensePosts, this.defensePostData);
-    gl.uniform1i(this.uDefensePostCount, this.defensePostCount);
-    gl.uniform1f(this.uDefensePostRange, mo.defensePostRange);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);

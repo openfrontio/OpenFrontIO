@@ -23,6 +23,24 @@ export function applyGraphicsOverrides(
     settings.structure.iconB = 0;
     settings.structure.iconAlpha = 0.75;
   }
+  if (overrides.mapOverlay?.highlightFillBrighten !== undefined) {
+    settings.mapOverlay.highlightFillBrighten =
+      overrides.mapOverlay.highlightFillBrighten;
+  }
+  if (overrides.mapOverlay?.highlightBrighten !== undefined) {
+    settings.mapOverlay.highlightBrighten =
+      overrides.mapOverlay.highlightBrighten;
+  }
+  if (overrides.mapOverlay?.highlightThicken !== undefined) {
+    settings.mapOverlay.highlightThicken =
+      overrides.mapOverlay.highlightThicken;
+  }
+  if (overrides.railroad?.railMinZoom !== undefined) {
+    settings.railroad.railMinZoom = overrides.railroad.railMinZoom;
+  }
+  if (overrides.passEnabled?.fx !== undefined) {
+    settings.passEnabled.fx = overrides.passEnabled.fx;
+  }
   if (overrides.name?.darkNames !== undefined) {
     const dark = overrides.name.darkNames;
     // Dark: black fill + player-colored outline. Force outline RGB to black

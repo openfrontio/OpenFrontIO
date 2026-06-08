@@ -68,6 +68,7 @@ export interface RenderSettings {
   mapOverlay: {
     trailAlpha: number;
     defenseCheckerDarken: number;
+    territoryDefenseDarken: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;
