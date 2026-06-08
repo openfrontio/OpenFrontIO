@@ -81,7 +81,6 @@ export class ActionableEvents extends LitElement implements Controller {
           event.allianceID === allianceID
         ),
     );
-    this.requestUpdate();
   }
 
   tick() {
@@ -186,6 +185,7 @@ export class ActionableEvents extends LitElement implements Controller {
       if (!currentAllianceIds.has(allianceId)) {
         this.removeAllianceRenewalEvents(allianceId);
         this.alliancesCheckedAt.delete(allianceId);
+        this.requestUpdate();
       }
     }
   }
