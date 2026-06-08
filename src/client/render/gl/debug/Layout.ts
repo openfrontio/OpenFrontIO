@@ -122,6 +122,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
     folder("Map Overlay", [
       slider(s.mapOverlay, "trailAlpha", d.mapOverlay, 0, 1, 0.01),
       slider(s.mapOverlay, "defenseCheckerDarken", d.mapOverlay, 0, 1, 0.01),
+      slider(s.mapOverlay, "territoryDefenseDarken", d.mapOverlay, 0, 1, 0.01),
       slider(s.mapOverlay, "staleNukeBase", d.mapOverlay, 0, 0.3, 0.005),
       slider(s.mapOverlay, "staleNukeVariation", d.mapOverlay, 0, 0.3, 0.005),
       slider(s.mapOverlay, "staleNukeAlpha", d.mapOverlay, 0, 1, 0.01),

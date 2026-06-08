@@ -5,6 +5,7 @@ precision highp usampler2D;
 uniform usampler2D uTileTex;
 uniform sampler2D uPalette;
 uniform sampler2D uBorderTex;     // RGBA8 — border flags from BorderComputePass
+uniform sampler2D uDefenseCoverageTex; // R8 — 1.0 = defended by same-owner post
 uniform sampler2D uAffiliation;   // 256×2 RGBA8 — affiliation colors (row 0 = border)
 uniform vec2 uMapSize;
 uniform int uAltView;
@@ -28,7 +29,7 @@ void main() {
   // Read pre-computed border flags from BorderComputePass
   vec4 borderData = texelFetch(uBorderTex, tc, 0);
   float borderType = borderData.r;      // 0=interior, ~0.5=normal, ~1.0=highlight
-  bool defense = borderData.b > 0.5;    // defense post proximity
+  bool defense = texelFetch(uDefenseCoverageTex, tc, 0).r > 0.5; // same-owner defense post nearby
   float relation = borderData.a;        // 0.0=neutral, ~0.5=friendly, ~1.0=embargo
 
   bool isBorder = borderType > 0.25;
