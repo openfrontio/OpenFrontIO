@@ -81,6 +81,7 @@ export class ActionableEvents extends LitElement implements Controller {
           event.allianceID === allianceID
         ),
     );
+    this.requestUpdate();
   }
 
   tick() {
