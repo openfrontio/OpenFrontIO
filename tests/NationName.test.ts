@@ -45,13 +45,13 @@ describe("Map manifests: nation name constraints", () => {
             // However the name renders correctly in other texts (leaderboard, overlay, alliances, alerts, etc.)
             return;
           }
-          // Allow only printable Extended-ASCII characters (0x20-0xFF), excluding DEL (0x7F)
-          if (!/^[\x20-\xFF]*$/.test(name) || name.includes("\x7F")) {
+          // Allow only printable safe-extended-ASCII characters (0x20-0xFF), excluding (0x7F-0x9F) as white in https://www.ascii-code.com/.
+          if (!/^[\x20-\x7E\xA0-\xFF]*$/.test(name)) {
             const excludededCharacters = [...name].filter(
               (c) =>
                 c.charCodeAt(0) < 0x20 ||
-                c.charCodeAt(0) > 0xff ||
-                c.charCodeAt(0) === 0x7f,
+                (0x7f <= c.charCodeAt(0) && c.charCodeAt(0) < 0xa0) ||
+                c.charCodeAt(0) > 0xff
             );
             violations.push(
               `${manifestPath} -> nations[${idx}].name "${name}" has ${excludededCharacters.length} non valid characters: ${excludededCharacters}`,
