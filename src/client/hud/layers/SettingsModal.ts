@@ -245,6 +245,26 @@ export class SettingsModal extends LitElement implements Controller {
           </div>
 
           <div class="p-4 flex flex-col gap-3">
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onGraphicsSettingsButtonClick}"
+            >
+              <img
+                src=${settingsIcon}
+                alt="graphicsSettings"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.graphics_settings_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.graphics_settings_desc")}
+                </div>
+              </div>
+            </button>
+
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
             >
@@ -488,26 +508,6 @@ export class SettingsModal extends LitElement implements Controller {
                 ${this.userSettings.leftClickOpensMenu()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onGraphicsSettingsButtonClick}"
-            >
-              <img
-                src=${settingsIcon}
-                alt="graphicsSettings"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.graphics_settings_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.graphics_settings_desc")}
-                </div>
               </div>
             </button>
 

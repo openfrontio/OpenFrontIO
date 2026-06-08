@@ -14,6 +14,18 @@ export const GraphicsOverridesSchema = z
         classicIcons: z.boolean(),
       })
       .partial(),
+    mapOverlay: z
+      .object({
+        highlightFillBrighten: z.number(),
+        highlightBrighten: z.number(),
+        highlightThicken: z.number(),
+      })
+      .partial(),
+    railroad: z
+      .object({
+        railMinZoom: z.number(),
+      })
+      .partial(),
   })
   .partial();
 
