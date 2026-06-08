@@ -109,6 +109,7 @@ var maps = []struct {
 	{Name: "twolakes"},
 	{Name: "venice"},
 	{Name: "world"},
+	{Name: "worldinverted"},
 	{Name: "yellowsea"},
 	{Name: "yenisei"},
 	{Name: "big_plains", IsTest: true},

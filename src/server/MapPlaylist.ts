@@ -110,6 +110,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   TwoLakes: 6,
   Venice: 6,
   World: 20,
+  WorldInverted: 8,
   YellowSea: 5,
   Yenisei: 6,
 };
