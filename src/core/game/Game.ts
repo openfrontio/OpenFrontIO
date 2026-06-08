@@ -257,6 +257,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.YellowSea,
     GameMapType.Caribbean,
     GameMapType.SoutheastAsia,
+    GameMapType.MississippiRiver,
+    GameMapType.HongKong,
   ],
   fantasy: [
     GameMapType.Pangaea,
