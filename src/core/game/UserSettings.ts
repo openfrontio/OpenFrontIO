@@ -154,10 +154,6 @@ export class UserSettings {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
 
-  fxLayer() {
-    return this.getBool("settings.specialEffects", true);
-  }
-
   darkMode() {
     return this.getBool(DARK_MODE_KEY, false);
   }
@@ -217,10 +213,6 @@ export class UserSettings {
 
   toggleLobbyIdVisibility() {
     this.setBool("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
-  }
-
-  toggleFxLayer() {
-    this.setBool("settings.specialEffects", !this.fxLayer());
   }
 
   toggleCursorCostLabel() {

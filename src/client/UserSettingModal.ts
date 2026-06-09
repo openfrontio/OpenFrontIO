@@ -221,15 +221,6 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
-  private toggleFxLayer() {
-    this.userSettings.toggleFxLayer();
-
-    console.log(
-      "💥 Special effects:",
-      this.userSettings.fxLayer() ? "ON" : "OFF",
-    );
-  }
-
   private toggleCursorCostLabel() {
     this.userSettings.toggleCursorCostLabel();
 
@@ -767,15 +758,6 @@ export class UserSettingModal extends BaseModal {
         id="alert-frame-toggle"
         .checked=${this.userSettings.alertFrame()}
         @change=${this.toggleAlertFrame}
-      ></setting-toggle>
-
-      <!-- 💥 Special effects -->
-      <setting-toggle
-        label="${translateText("user_setting.special_effects_label")}"
-        description="${translateText("user_setting.special_effects_desc")}"
-        id="special-effect-toggle"
-        .checked=${this.userSettings.fxLayer()}
-        @change=${this.toggleFxLayer}
       ></setting-toggle>
 
       <!-- 💰 Cursor Price Pill -->

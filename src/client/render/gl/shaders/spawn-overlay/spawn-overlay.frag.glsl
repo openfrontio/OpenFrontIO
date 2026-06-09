@@ -80,7 +80,8 @@ void main() {
     float solidEnd = uGradientStops.y;
     float alpha = 0.0;
     if (dist < bMinR) {
-      // Inner glow: linear ramp from 0 at center to 1 at the ring's inner edge.
+      // Inner glow: transparent at the center (so your territory shows through)
+      // ramping up to fully solid at the ring's inner edge.
       alpha = dist / max(bMinR, 0.001);
     } else if (t < solidEnd) {
       alpha = 1.0;
@@ -88,8 +89,8 @@ void main() {
       alpha = 1.0 - (t - solidEnd) / (1.0 - solidEnd);
     }
     if (alpha > 0.0) {
-      // Opacity pulses 35% → 100% in phase with the radius.
-      alpha *= 0.35 + 0.65 * uBreathRadius;
+      // Opacity pulses 65% → 100% in phase with the radius.
+      alpha *= 0.65 + 0.35 * uBreathRadius;
       result.rgb = mix(result.rgb, color, alpha * (1.0 - result.a));
       result.a = result.a + alpha * (1.0 - result.a);
     }

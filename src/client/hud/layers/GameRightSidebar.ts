@@ -111,13 +111,12 @@ export class GameRightSidebar extends LitElement implements Controller {
       this.requestUpdate();
     }
 
-    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
-
     if (this.game.inSpawnPhase()) {
-      this.timer =
-        maxTimerValue !== null && maxTimerValue !== undefined
-          ? maxTimerValue * 60
-          : 0;
+      const spawnPhaseDurationTicks = this.game.config().numSpawnPhaseTurns();
+      const currentTicks = this.game.ticks();
+      const remainingTicks = spawnPhaseDurationTicks - currentTicks;
+      const remainingSeconds = Math.ceil(remainingTicks / 10);
+      this.timer = Math.max(0, remainingSeconds);
       return;
     }
 
@@ -127,6 +126,7 @@ export class GameRightSidebar extends LitElement implements Controller {
       return;
     }
 
+    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== null && maxTimerValue !== undefined) {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
     } else {
