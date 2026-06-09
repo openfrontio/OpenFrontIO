@@ -8,7 +8,10 @@ import {
 } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
+import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
 const randomMap = assetUrl("images/RandomMap.webp");
+
+type MapTab = "featured" | "all" | "favorites";
 
 const featuredMaps: GameMapType[] = [
   GameMapType.World,
@@ -30,10 +33,15 @@ export class MapPicker extends LitElement {
     new Map();
   @property({ attribute: false }) onSelectMap?: (map: GameMapType) => void;
   @property({ attribute: false }) onSelectRandom?: () => void;
-  @state() private showAllMaps = false;
+  @state() private activeTab: MapTab = "featured";
+  @state() private favorites: GameMapType[] = getFavoriteMaps();
 
   createRenderRoot() {
     return this;
+  }
+
+  private handleToggleFavorite(mapValue: GameMapType) {
+    this.favorites = toggleFavoriteMap(mapValue);
   }
 
   private handleMapSelection(mapValue: GameMapType) {
@@ -66,6 +74,8 @@ export class MapPicker extends LitElement {
           .selected=${!this.useRandomMap && this.selectedMap === mapValue}
           .showMedals=${this.showMedals}
           .wins=${this.getWins(mapValue)}
+          .favorite=${this.favorites.includes(mapValue)}
+          .onToggleFavorite=${() => this.handleToggleFavorite(mapValue)}
           .translation=${translateText(`map.${mapKey?.toLowerCase()}`)}
         ></map-display>
       </div>
@@ -109,6 +119,55 @@ export class MapPicker extends LitElement {
     </div>`;
   }
 
+  private renderFavoriteMaps() {
+    if (this.favorites.length === 0) {
+      return html`<div
+        class="w-full flex flex-col items-center justify-center gap-3 py-12 px-4 text-center rounded-xl border border-dashed border-white/10 bg-black/20"
+      >
+        <div class="text-white/30">${starIcon(false, "w-8 h-8")}</div>
+        <p class="text-sm text-white/50 leading-relaxed max-w-xs">
+          ${translateText("map_component.favorites_empty")}
+        </p>
+      </div>`;
+    }
+    return html`<div class="w-full">
+      <h4
+        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+      >
+        ${translateText("map_categories.favorites")}
+      </h4>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        ${this.favorites.map((mapValue) => this.renderMapCard(mapValue))}
+      </div>
+    </div>`;
+  }
+
+  private renderActiveTab() {
+    switch (this.activeTab) {
+      case "all":
+        return this.renderAllMaps();
+      case "favorites":
+        return this.renderFavoriteMaps();
+      default:
+        return this.renderFeaturedMaps();
+    }
+  }
+
+  private renderTabButton(tab: MapTab, label: string) {
+    const isActive = this.activeTab === tab;
+    return html`<button
+      type="button"
+      role="tab"
+      aria-selected=${isActive}
+      class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${isActive
+        ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
+        : "text-white/60 hover:text-white"}"
+      @click=${() => (this.activeTab = tab)}
+    >
+      ${label}
+    </button>`;
+  }
+
   render() {
     return html`
       <div class="space-y-8">
@@ -116,35 +175,14 @@ export class MapPicker extends LitElement {
           <div
             role="tablist"
             aria-label="${translateText("map.map")}"
-            class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+            class="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected=${!this.showAllMaps}
-              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${this
-                .showAllMaps
-                ? "text-white/60 hover:text-white"
-                : "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"}"
-              @click=${() => (this.showAllMaps = false)}
-            >
-              ${translateText("map.featured")}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected=${this.showAllMaps}
-              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${this
-                .showAllMaps
-                ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
-                : "text-white/60 hover:text-white"}"
-              @click=${() => (this.showAllMaps = true)}
-            >
-              ${translateText("map.all")}
-            </button>
+            ${this.renderTabButton("featured", translateText("map.featured"))}
+            ${this.renderTabButton("all", translateText("map.all"))}
+            ${this.renderTabButton("favorites", translateText("map.favorites"))}
           </div>
         </div>
-        ${this.showAllMaps ? this.renderAllMaps() : this.renderFeaturedMaps()}
+        ${this.renderActiveTab()}
         <div
           class="w-full ${this.randomMapDivider
             ? "pt-4 border-t border-white/5"
