@@ -93,7 +93,7 @@ const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
  * Per-instance data (16 bytes):
  *   float x, y, ownerID   — 12 bytes (3 floats)
  *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
- *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry)
+ *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating)
  *   2 bytes padding        — aligns to 4-byte boundary
  */
 const FLOATS_PER_INSTANCE = 4;
@@ -104,6 +104,7 @@ const FLAG_NORMAL = 0;
 const FLAG_FLICKER = 1;
 const FLAG_ANGRY = 2;
 const FLAG_TRADE_FRIENDLY = 3;
+const FLAG_RETREATING = 4;
 
 /** Atlas column indices for train sub-types (resolved from trainType + loaded) */
 const TRAIN_ENGINE_COL = UNIT_ORDER.indexOf("TrainEngine");
@@ -395,6 +396,8 @@ export class UnitPass {
 
       if (atlasIdx === undefined) continue;
 
+      const isRetreatingWarship =
+        unit.unitType === UT_WARSHIP && unit.retreating;
       const isAngryWarship =
         unit.unitType === UT_WARSHIP && unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
@@ -416,13 +419,16 @@ export class UnitPass {
         }
       }
 
-      const flags = isTradeFriendly
-        ? FLAG_TRADE_FRIENDLY
-        : isAngryWarship
-          ? FLAG_ANGRY
-          : isFlicker
-            ? FLAG_FLICKER
-            : FLAG_NORMAL;
+      let flags = FLAG_NORMAL;
+      if (isTradeFriendly) {
+        flags = FLAG_TRADE_FRIENDLY;
+      } else if (isRetreatingWarship) {
+        flags = FLAG_RETREATING;
+      } else if (isAngryWarship) {
+        flags = FLAG_ANGRY;
+      } else if (isFlicker) {
+        flags = FLAG_FLICKER;
+      }
       const isMissile = MISSILE_TYPES.has(unit.unitType);
 
       const x = unit.pos % this.mapW;
