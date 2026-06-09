@@ -31,6 +31,7 @@ export class CoordinateGridPass {
   private uCellSize: WebGLUniformLocation;
   private uZoom: WebGLUniformLocation;
   private uFontSize: WebGLUniformLocation;
+  private uOpacity: WebGLUniformLocation;
 
   private mapW: number;
   private mapH: number;
@@ -57,6 +58,7 @@ export class CoordinateGridPass {
     this.uCellSize = gl.getUniformLocation(this.program, "uCellSize")!;
     this.uZoom = gl.getUniformLocation(this.program, "uZoom")!;
     this.uFontSize = gl.getUniformLocation(this.program, "uFontSize")!;
+    this.uOpacity = gl.getUniformLocation(this.program, "uOpacity")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uGlyphTex"), 0);
@@ -73,6 +75,7 @@ export class CoordinateGridPass {
     gl.uniform1f(this.uCellSize, this.cellSize);
     gl.uniform1f(this.uZoom, zoom);
     gl.uniform1f(this.uFontSize, this.settings.altView.gridFontSize);
+    gl.uniform1f(this.uOpacity, 0.5);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.glyphTex);
@@ -95,14 +98,16 @@ export class CoordinateGridPass {
     canvas.height = GLYPH_H;
 
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 4;
     ctx.fillStyle = "white";
     ctx.font = `bold ${GLYPH_H - 8}px monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
     for (let i = 0; i < CHARS.length; i++) {
+      ctx.strokeText(CHARS[i], i * GLYPH_W + GLYPH_W / 2, GLYPH_H / 2);
       ctx.fillText(CHARS[i], i * GLYPH_W + GLYPH_W / 2, GLYPH_H / 2);
     }
 
