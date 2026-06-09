@@ -23,7 +23,7 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
-import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
+import { getColoredSprite } from "../SpriteLoader";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
@@ -47,11 +47,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     return this;
   }
 
-  init() {
-    loadAllSprites().catch((err) =>
-      console.error("Failed to preload attack display sprites:", err),
-    );
-  }
+  init() {}
 
   tick() {
     this.active = true;
