@@ -256,7 +256,7 @@ export class PlayerRow extends LitElement {
       </div>`;
     } else if (this.player.flag) {
       return html`<img
-        src=${assetUrl(`flags/${this.player.flag}.svg`)}
+        src=${assetUrl(`${this.player.flag}`)}
         class="min-w-7.5 h-7.5 sm:min-w-10 sm:h-10 shrink-0"
       />`;
     }
