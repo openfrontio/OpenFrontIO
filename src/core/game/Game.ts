@@ -95,6 +95,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  WorldInverted = "World Inverted",
   GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
@@ -270,6 +271,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TradersDream,
     GameMapType.Passage,
     GameMapType.Dyslexdria,
+    GameMapType.WorldInverted,
   ],
   cosmic: [
     GameMapType.Luna,

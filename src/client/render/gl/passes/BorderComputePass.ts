@@ -5,7 +5,7 @@
  * RGBA8 texture:
  *   R = border type: 0 = interior, 0.5 = normal border, 1.0 = highlight border
  *   G = unused (was ember intensity — moved to FalloutBloomPass/FalloutLightPass)
- *   B = defense proximity: 1.0 if border tile is within range of same-owner defense post
+ *   B = unused (was defense proximity — now computed per-tile by DefenseCoveragePass)
  *
  * Both MapOverlayPass (daytime) and the night stamp overlay read this buffer
  * instead of independently computing neighbor checks. Border thickening is
@@ -23,8 +23,6 @@ import {
 } from "../utils/GlUtils";
 import { TILE_DEFINES } from "../utils/TileCodec";
 import { BorderScatterPass } from "./BorderScatterPass";
-
-const MAX_DEFENSE_POSTS = 64;
 
 /** Max player smallID supported by the relationship texture. */
 const RELATION_TEX_SIZE = 1024;
@@ -49,21 +47,14 @@ export class BorderComputePass {
   private uMapSize: WebGLUniformLocation;
   private uHighlightOwner: WebGLUniformLocation;
   private uHighlightThicken: WebGLUniformLocation;
-  private uDefensePosts: WebGLUniformLocation;
-  private uDefensePostCount: WebGLUniformLocation;
-  private uDefensePostRange: WebGLUniformLocation;
 
   private highlightOwner = 0;
   /**
    * True when something that affects ALL borders (highlight owner, relation
-   * matrix, defense posts) has changed since the last draw. Forces a full
-   * recompute next frame. Starts true so the first frame computes.
+   * matrix) has changed since the last draw. Forces a full recompute next
+   * frame. Starts true so the first frame computes.
    */
   private globalDirty = true;
-
-  /** Packed defense post data: [x, y, ownerID, 0, x, y, ownerID, 0, ...] */
-  private defensePostData = new Float32Array(MAX_DEFENSE_POSTS * 4);
-  private defensePostCount = 0;
 
   /** Incremental per-tile recompute. Used between full recomputes. */
   private scatter!: BorderScatterPass;
@@ -83,7 +74,7 @@ export class BorderComputePass {
     this.program = createProgram(
       gl,
       fullscreenNoUvVertSrc,
-      shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES, MAX_DEFENSE_POSTS }),
+      shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES }),
     );
 
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
@@ -94,15 +85,6 @@ export class BorderComputePass {
     this.uHighlightThicken = gl.getUniformLocation(
       this.program,
       "uHighlightThicken",
-    )!;
-    this.uDefensePosts = gl.getUniformLocation(this.program, "uDefensePosts")!;
-    this.uDefensePostCount = gl.getUniformLocation(
-      this.program,
-      "uDefensePostCount",
-    )!;
-    this.uDefensePostRange = gl.getUniformLocation(
-      this.program,
-      "uDefensePostRange",
     )!;
 
     // Texture unit binding
@@ -195,23 +177,6 @@ export class BorderComputePass {
     this.globalDirty = true;
   }
 
-  /** Update defense post positions for checkerboard proximity. */
-  updateDefensePosts(posts: { x: number; y: number; ownerID: number }[]): void {
-    const count = Math.min(posts.length, MAX_DEFENSE_POSTS);
-    const data = this.defensePostData;
-    for (let i = 0; i < count; i++) {
-      const p = posts[i];
-      const off = i * 4;
-      data[off] = p.x;
-      data[off + 1] = p.y;
-      data[off + 2] = p.ownerID;
-      data[off + 3] = 0;
-    }
-    this.defensePostCount = count;
-    this.scatter.setDefensePostData(data, count);
-    this.globalDirty = true;
-  }
-
   /**
    * Force a full recompute next draw. Use this when tile state has been
    * replaced wholesale (initial load, seek) — individual `patchTile` calls
@@ -238,8 +203,8 @@ export class BorderComputePass {
 
   /**
    * Update border flags for the current frame. Either a full recompute (when
-   * globalDirty is set by highlight/relation/defense-post changes) or a
-   * scatter of the per-tile patches queued via `patchTile`.
+   * globalDirty is set by highlight/relation changes) or a scatter of the
+   * per-tile patches queued via `patchTile`.
    *
    * Exit GL state:
    *   - Full recompute path: `borderFbo` is still bound; viewport at map size.
@@ -263,9 +228,6 @@ export class BorderComputePass {
       gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
       gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
       gl.uniform1i(this.uHighlightThicken, Math.floor(mo.highlightThicken));
-      gl.uniform4fv(this.uDefensePosts, this.defensePostData);
-      gl.uniform1i(this.uDefensePostCount, this.defensePostCount);
-      gl.uniform1f(this.uDefensePostRange, mo.defensePostRange);
 
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this._tileTex);

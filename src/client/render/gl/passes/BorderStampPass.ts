@@ -35,6 +35,7 @@ export class BorderStampPass {
   private tileTex: WebGLTexture;
   private paletteTex: WebGLTexture;
   private borderTex: WebGLTexture;
+  private defenseCoverageTex: WebGLTexture | null = null;
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
 
@@ -90,6 +91,7 @@ export class BorderStampPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uPalette"), 1);
     gl.uniform1i(gl.getUniformLocation(this.program, "uBorderTex"), 2);
     gl.uniform1i(gl.getUniformLocation(this.program, "uAffiliation"), 3);
+    gl.uniform1i(gl.getUniformLocation(this.program, "uDefenseCoverageTex"), 4);
 
     this.vao = createMapQuad(gl, mapW, mapH);
   }
@@ -99,6 +101,9 @@ export class BorderStampPass {
   }
   setAffiliationTex(tex: WebGLTexture): void {
     this.affiliationTex = tex;
+  }
+  setDefenseCoverageTex(tex: WebGLTexture): void {
+    this.defenseCoverageTex = tex;
   }
 
   /** Draw borders + defense checkerboard. Blending must be enabled. */
@@ -136,6 +141,10 @@ export class BorderStampPass {
     if (this.affiliationTex) {
       gl.activeTexture(gl.TEXTURE3);
       gl.bindTexture(gl.TEXTURE_2D, this.affiliationTex);
+    }
+    if (this.defenseCoverageTex) {
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.defenseCoverageTex);
     }
 
     gl.bindVertexArray(this.vao);

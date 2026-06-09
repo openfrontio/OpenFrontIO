@@ -8,11 +8,6 @@ uniform vec2 uMapSize;
 uniform uint uHighlightOwner;
 uniform int uHighlightThicken; // Chebyshev radius for highlight expansion
 
-// Defense post proximity — (x, y, ownerID, _) per post
-uniform vec4 uDefensePosts[MAX_DEFENSE_POSTS];
-uniform int uDefensePostCount;
-uniform float uDefensePostRange;
-
 out vec4 fragColor;
 
 uint getOwner(ivec2 c) {
@@ -82,26 +77,10 @@ void main() {
     }
   }
 
-  // --- Defense post proximity ---
-  float defenseFlag = 0.0;
-  if (borderType > 0.0 && owner != 0u) {
-    float rangeSq = uDefensePostRange * uDefensePostRange;
-    for (int i = 0; i < MAX_DEFENSE_POSTS; i++) {
-      if (i >= uDefensePostCount) break;
-      vec4 dp = uDefensePosts[i];
-      if (uint(dp.z) != owner) continue;
-      float dx = float(tc.x) - dp.x;
-      float dy = float(tc.y) - dp.y;
-      if (dx * dx + dy * dy <= rangeSq) {
-        defenseFlag = 1.0;
-        break;
-      }
-    }
-  }
-
   // A = relationship: 0.0=neutral, 0.5=friendly, 1.0=embargo
   float relation = float(maxRel) * 0.5;
   // G channel is unused (formerly emberIntensity; ember is now computed in
-  // FalloutBloomPass and FalloutLightPass).
-  fragColor = vec4(borderType, 0.0, defenseFlag, relation);
+  // FalloutBloomPass and FalloutLightPass). B channel is unused (defense post
+  // proximity is now computed per-tile by DefenseCoveragePass).
+  fragColor = vec4(borderType, 0.0, 0.0, relation);
 }
