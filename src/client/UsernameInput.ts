@@ -7,6 +7,7 @@ import {
   MAX_USERNAME_LENGTH,
   MIN_CLAN_TAG_LENGTH,
   MIN_USERNAME_LENGTH,
+  stripInvalidUsernameChars,
   validateClanTag,
   validateUsername,
 } from "../core/validations/username";
@@ -49,6 +50,30 @@ export class UsernameInput extends LitElement {
 
   public getUsername(): string {
     return this.baseUsername.trim();
+  }
+
+  /**
+   * Programmatically set the username, e.g. from the optional "?username=" URL
+   * parameter that sites embedding OpenFront in an iframe can use to prefill a
+   * player's in-game name so it matches their identity on the host platform
+   * (instead of defaulting to an "Anon" name).
+   *
+   * The value is sanitized (reserved characters stripped) and validated; only a
+   * valid name is applied and persisted, so a malformed parameter silently
+   * leaves the existing (or anon) name untouched rather than blocking play. The
+   * server still censors profanity on join regardless of the source.
+   *
+   * @returns true if the username was applied.
+   */
+  public setUsername(username: string): boolean {
+    const sanitized = stripInvalidUsernameChars(username).trim();
+    if (!validateUsername(sanitized).isValid) {
+      return false;
+    }
+    this.baseUsername = sanitized;
+    // Persists to localStorage and broadcasts validity, exactly as if typed.
+    this.validateAndStore();
+    return true;
   }
 
   public getClanTag(): string | null {
@@ -215,7 +240,7 @@ export class UsernameInput extends LitElement {
   private handleUsernameChange(e: Event) {
     const input = e.target as HTMLInputElement;
     const originalValue = input.value;
-    const val = originalValue.replace(/[[\]]/g, "");
+    const val = stripInvalidUsernameChars(originalValue);
     if (originalValue !== val) {
       input.value = val;
       // Show toast when brackets are removed

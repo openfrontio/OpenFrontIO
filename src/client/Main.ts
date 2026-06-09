@@ -653,6 +653,10 @@ class Client {
       customElements.whenDefined("host-lobby-modal"),
     ]);
 
+    // Apply the optional "?username=" prefill before any join flow reads the
+    // username (and strip it from the URL). Used by iframe/embed integrations.
+    this.consumeUsernameUrl();
+
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = await crazyGamesSDK.getInviteGameId();
@@ -809,6 +813,35 @@ class Client {
       window.location.hash;
     history.replaceState(null, "", newUrl);
     return true;
+  }
+
+  /**
+   * Apply the optional "?username=" query parameter, then remove it from the
+   * URL.
+   *
+   * This lets external integrations (e.g. forums embedding OpenFront in an
+   * iframe) prefill each player's name so it matches their identity on the host
+   * site instead of defaulting to "Anon". Invalid values are ignored by the
+   * username input (which validates + persists). The parameter is always
+   * stripped afterwards so it never lingers in the address bar or gets copied
+   * into a shared lobby link, which would otherwise force one player's name
+   * onto everyone who opens that link.
+   */
+  private consumeUsernameUrl(): void {
+    const searchParams = new URLSearchParams(window.location.search);
+    const username = searchParams.get("username");
+    if (username === null) {
+      return;
+    }
+
+    this.usernameInput?.setUsername(username);
+
+    searchParams.delete("username");
+    const newUrl =
+      window.location.pathname +
+      (searchParams.toString() ? `?${searchParams.toString()}` : "") +
+      window.location.hash;
+    history.replaceState(null, "", newUrl);
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {

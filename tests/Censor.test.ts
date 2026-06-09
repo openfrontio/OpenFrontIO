@@ -7,6 +7,7 @@ vi.mock("../src/client/Utils", () => ({
 import {
   MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
+  stripInvalidUsernameChars,
   validateClanTag,
   validateUsername,
 } from "../src/core/validations/username";
@@ -69,6 +70,18 @@ describe("username.ts functions", () => {
     test("accepts valid clan tag", () => {
       const res = validateClanTag("AB12");
       expect(res.isValid).toBe(true);
+    });
+  });
+
+  describe("stripInvalidUsernameChars", () => {
+    test("removes square brackets to prevent clan-tag spoofing", () => {
+      expect(stripInvalidUsernameChars("[ADMIN] Bob")).toBe("ADMIN Bob");
+      expect(stripInvalidUsernameChars("Ae[va]nn")).toBe("Aevann");
+    });
+
+    test("leaves already-valid names untouched", () => {
+      expect(stripInvalidUsernameChars("Good_Name123")).toBe("Good_Name123");
+      expect(stripInvalidUsernameChars("Üser.Name")).toBe("Üser.Name");
     });
   });
 });

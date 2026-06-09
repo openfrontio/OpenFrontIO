@@ -6,6 +6,21 @@ export const MAX_USERNAME_LENGTH = 27;
 export const MIN_CLAN_TAG_LENGTH = 2;
 export const MAX_CLAN_TAG_LENGTH = 5;
 
+// Characters that are silently removed from usernames rather than rejected.
+// Square brackets are reserved for the clan-tag display format ("[TAG] Name",
+// see formatPlayerDisplayName in core/Util.ts); allowing them inside a username
+// would let a player spoof a clan tag.
+const RESERVED_USERNAME_CHARS = /[[\]]/g;
+
+/**
+ * Strip the reserved characters (square brackets) that are removed from a
+ * username instead of failing validation. Centralized so the manual username
+ * input and the optional "?username=" URL prefill sanitize identically.
+ */
+export function stripInvalidUsernameChars(username: string): string {
+  return username.replace(RESERVED_USERNAME_CHARS, "");
+}
+
 export function validateUsername(username: string): {
   isValid: boolean;
   error?: string;
