@@ -69,6 +69,10 @@ export interface RenderSettings {
     trailAlpha: number;
     defenseCheckerDarken: number;
     territoryDefenseDarken: number;
+    /** Saturation of the territory fill. 1 = full color, 0 = grayscale. */
+    territorySaturation: number;
+    /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
+    territoryAlpha: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;

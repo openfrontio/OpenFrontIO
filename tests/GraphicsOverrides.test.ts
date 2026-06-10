@@ -42,6 +42,18 @@ describe("GraphicsOverridesSchema", () => {
     }
   });
 
+  test("accepts partial mapOverlay overrides", () => {
+    const cases = [
+      { mapOverlay: {} },
+      { mapOverlay: { territorySaturation: 0.5 } },
+      { mapOverlay: { territoryAlpha: 0.8 } },
+      { mapOverlay: { territorySaturation: 0, territoryAlpha: 1 } },
+    ];
+    for (const c of cases) {
+      expect(GraphicsOverridesSchema.safeParse(c).success).toBe(true);
+    }
+  });
+
   test("rejects wrong field types", () => {
     expect(
       GraphicsOverridesSchema.safeParse({ name: { nameScaleFactor: "big" } })
@@ -53,6 +65,11 @@ describe("GraphicsOverridesSchema", () => {
     expect(
       GraphicsOverridesSchema.safeParse({
         structure: { classicIcons: "yes" },
+      }).success,
+    ).toBe(false);
+    expect(
+      GraphicsOverridesSchema.safeParse({
+        mapOverlay: { territorySaturation: "full" },
       }).success,
     ).toBe(false);
   });
@@ -168,6 +185,33 @@ describe("applyGraphicsOverrides", () => {
     expect(absent.fillDarken).toBe(defaults.fillDarken);
     expect(absent.iconR).toBe(defaults.iconR);
     expect(absent.iconAlpha).toBe(1);
+  });
+
+  test("applies territorySaturation override (including 0)", () => {
+    expect(
+      gen({ mapOverlay: { territorySaturation: 0.4 } }).mapOverlay
+        .territorySaturation,
+    ).toBe(0.4);
+    expect(
+      gen({ mapOverlay: { territorySaturation: 0 } }).mapOverlay
+        .territorySaturation,
+    ).toBe(0);
+  });
+
+  test("applies territoryAlpha override (including 0)", () => {
+    expect(
+      gen({ mapOverlay: { territoryAlpha: 0.3 } }).mapOverlay.territoryAlpha,
+    ).toBe(0.3);
+    expect(
+      gen({ mapOverlay: { territoryAlpha: 0 } }).mapOverlay.territoryAlpha,
+    ).toBe(0);
+  });
+
+  test("mapOverlay override leaves other mapOverlay fields at defaults", () => {
+    const defaults = createRenderSettings().mapOverlay;
+    const mo = gen({ mapOverlay: { territorySaturation: 0.2 } }).mapOverlay;
+    expect(mo.territoryAlpha).toBe(defaults.territoryAlpha);
+    expect(mo.territoryDefenseDarken).toBe(defaults.territoryDefenseDarken);
   });
 
   test("classicIcons + name overrides compose independently", () => {

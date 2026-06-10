@@ -19,6 +19,8 @@ export const GraphicsOverridesSchema = z
         highlightFillBrighten: z.number(),
         highlightBrighten: z.number(),
         highlightThicken: z.number(),
+        territorySaturation: z.number(),
+        territoryAlpha: z.number(),
       })
       .partial(),
     railroad: z

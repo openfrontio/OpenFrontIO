@@ -41,6 +41,8 @@ export class TerritoryPass {
   private uShowPatterns: WebGLUniformLocation;
   private uIsTeamMode: WebGLUniformLocation;
   private uDefenseDarken: WebGLUniformLocation;
+  private uSaturation: WebGLUniformLocation;
+  private uTerritoryAlpha: WebGLUniformLocation;
   private highlightOwner = 0;
   private isTeamMode = false;
 
@@ -164,6 +166,11 @@ export class TerritoryPass {
     this.uDefenseDarken = gl.getUniformLocation(
       this.program,
       "uDefenseDarken",
+    )!;
+    this.uSaturation = gl.getUniformLocation(this.program, "uSaturation")!;
+    this.uTerritoryAlpha = gl.getUniformLocation(
+      this.program,
+      "uTerritoryAlpha",
     )!;
 
     gl.useProgram(this.program);
@@ -458,6 +465,8 @@ export class TerritoryPass {
     );
     gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
     gl.uniform1f(this.uDefenseDarken, mo.territoryDefenseDarken);
+    gl.uniform1f(this.uSaturation, mo.territorySaturation);
+    gl.uniform1f(this.uTerritoryAlpha, mo.territoryAlpha);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tileTex);

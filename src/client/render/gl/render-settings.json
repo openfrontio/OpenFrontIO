@@ -67,6 +67,8 @@
     "trailAlpha": 0.588,
     "defenseCheckerDarken": 0.7,
     "territoryDefenseDarken": 0.85,
+    "territorySaturation": 1,
+    "territoryAlpha": 0.588,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,
