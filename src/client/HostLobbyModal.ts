@@ -202,12 +202,12 @@ export class HostLobbyModal extends BaseModal {
         : null;
     const statusLabel =
       secondsRemaining === null
-        ? null
-        : secondsRemaining > 0
-          ? translateText("public_lobby.starting_in", {
-              time: renderDuration(secondsRemaining),
-            })
-          : translateText("public_lobby.started");
+        ? this.clients.length === 1
+          ? translateText("host_modal.waiting")
+          : translateText("host_modal.start")
+        : translateText("private_lobby.starting_in", {
+            time: renderDuration(secondsRemaining),
+          });
 
     const inputCards = [
       html`<toggle-input-card
@@ -441,8 +441,9 @@ export class HostLobbyModal extends BaseModal {
             @bots-changed=${this.handleBotsChange}
             @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
-            @host-cheat-toggle-changed=${this
-              .handleConfigHostCheatToggleChanged}
+            @host-cheat-toggle-changed=${
+              this.handleConfigHostCheatToggleChanged
+            }
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
@@ -459,35 +460,17 @@ export class HostLobbyModal extends BaseModal {
         </div>
 
         <!-- Player List / footer -->
-        ${statusLabel !== null
-          ? html`
-              <div
-                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
-              >
-                <button
-                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
-                  disabled
-                >
-                  ${statusLabel}
-                </button>
-              </div>
-            `
-          : html`
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
           <o-button
             variant="primary"
             width="block"
             size="lg"
-            .title=${
-              this.clients.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")
-            }
+            .title=${statusLabel}
             ?disable=${this.clients.length < 2}
-            @click=${this.startGame}
+            @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
-      </div>`}
+      </div>
       </div>
     `;
   }
@@ -1090,7 +1073,7 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  private async startGame() {
+  private async toggleGameStartTimer() {
     await this.putGameConfig();
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -1100,7 +1083,7 @@ export class HostLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = false;
 
     this.dispatchEvent(
-      new CustomEvent("start-game", {
+      new CustomEvent("toggle_game_start_timer", {
         bubbles: true,
         composed: true,
       }),

@@ -638,6 +638,7 @@
     "game_length": "Game length",
     "pvp_immunity": "PVP immunity duration",
     "starting_gold": "Starting Gold",
+    "starting_in": "Starting in {time}. Click to cancel",
     "host_cheats": "Host Cheats"
   },
   "public_lobby": {

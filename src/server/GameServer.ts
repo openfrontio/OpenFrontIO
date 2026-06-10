@@ -491,7 +491,7 @@ export class GameServer {
                 this.updateGameConfig(stampedIntent.config);
                 return;
               }
-              case "start_game": {
+              case "toggle_game_start_timer": {
                 if (client.clientID !== this.lobbyCreatorID) {
                   this.log.warn(`Only lobby creator can start game`, {
                     clientID: client.clientID,
@@ -517,9 +517,13 @@ export class GameServer {
                   creatorID: client.clientID,
                   gameID: this.id,
                 });
-                this.setStartsAt(
-                  Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
-                );
+                if (this.startsAt) {
+                  this.startsAt = undefined;
+                } else {
+                  this.setStartsAt(
+                    Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
+                  );
+                }
                 return;
               }
               case "toggle_pause": {

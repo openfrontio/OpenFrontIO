@@ -174,7 +174,7 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
 
-export class SendStartGameEvent implements GameEvent {
+export class SendToggleGameStartTimer implements GameEvent {
   constructor() {}
 }
 
@@ -268,7 +268,9 @@ export class Transport {
       this.onSendUpdateGameConfigIntent(e),
     );
 
-    this.eventBus.on(SendStartGameEvent, (e) => this.onSendStartGame(e));
+    this.eventBus.on(SendToggleGameStartTimer, (e) =>
+      this.onSendToggleGameStartTimer(e),
+    );
   }
 
   private startPing() {
@@ -649,8 +651,8 @@ export class Transport {
     });
   }
 
-  private onSendStartGame(event: SendStartGameEvent) {
-    this.sendIntent({ type: "start_game" });
+  private onSendToggleGameStartTimer(event: SendToggleGameStartTimer) {
+    this.sendIntent({ type: "toggle_game_start_timer" });
   }
 
   private sendIntent(intent: Intent) {
