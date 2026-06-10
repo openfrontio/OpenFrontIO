@@ -60,15 +60,3 @@ export function layoutString(
 
   return (visualRight - visualLeft) * 0.5;
 }
-
-/** Format internal troop count for display (internal values are 10x display). */
-export function formatTroops(internalTroops: number): string {
-  const troops = internalTroops / 10;
-  if (troops >= 1_000_000) {
-    return (troops / 1_000_000).toFixed(1) + "M";
-  }
-  if (troops >= 1_000) {
-    return (troops / 1_000).toFixed(1) + "K";
-  }
-  return troops.toFixed(0);
-}

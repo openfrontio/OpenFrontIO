@@ -32,6 +32,14 @@ const HIGHLIGHT_THICKEN_MIN = 0;
 const HIGHLIGHT_THICKEN_MAX = 5;
 const HIGHLIGHT_THICKEN_STEP = 1;
 
+const TERRITORY_SAT_MIN = 0;
+const TERRITORY_SAT_MAX = 1;
+const TERRITORY_SAT_STEP = 0.01;
+
+const TERRITORY_ALPHA_MIN = 0;
+const TERRITORY_ALPHA_MAX = 1;
+const TERRITORY_ALPHA_STEP = 0.01;
+
 // Train track "draw distance" is presented inverted: a higher slider value means
 // tracks stay visible when more zoomed out, i.e. a lower railMinZoom.
 const RAIL_ZOOM_MIN = 0;
@@ -193,6 +201,20 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     );
   }
 
+  private currentTerritorySat(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.territorySaturation ??
+      renderDefaults.mapOverlay.territorySaturation
+    );
+  }
+
+  private currentTerritoryAlpha(): number {
+    return (
+      this.userSettings.graphicsOverrides().mapOverlay?.territoryAlpha ??
+      renderDefaults.mapOverlay.territoryAlpha
+    );
+  }
+
   private currentRailMinZoom(): number {
     return (
       this.userSettings.graphicsOverrides().railroad?.railMinZoom ??
@@ -213,6 +235,16 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
   private onHighlightThickenChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.patchMapOverlay({ highlightThicken: value });
+  }
+
+  private onTerritorySatChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ territorySaturation: value });
+  }
+
+  private onTerritoryAlphaChange(event: Event) {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.patchMapOverlay({ territoryAlpha: value });
   }
 
   private onRailDrawDistanceChange(event: Event) {
@@ -287,6 +319,8 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
     const highlightFill = this.currentHighlightFill();
     const highlightBrighten = this.currentHighlightBrighten();
     const highlightThicken = this.currentHighlightThicken();
+    const territorySat = this.currentTerritorySat();
+    const territoryAlpha = this.currentTerritoryAlpha();
     const railDrawDistance = RAIL_ZOOM_MAX - this.currentRailMinZoom();
 
     return html`
@@ -496,6 +530,56 @@ export class GraphicsSettingsModal extends LitElement implements Controller {
               </div>
               <div class="text-sm text-slate-400 w-12 text-right">
                 ${highlightThicken.toFixed(0)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.territory_sat_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.territory_sat_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${TERRITORY_SAT_MIN}
+                  max=${TERRITORY_SAT_MAX}
+                  step=${TERRITORY_SAT_STEP}
+                  .value=${String(territorySat)}
+                  @input=${this.onTerritorySatChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${territorySat.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("graphics_setting.territory_alpha_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("graphics_setting.territory_alpha_desc")}
+                </div>
+                <input
+                  type="range"
+                  min=${TERRITORY_ALPHA_MIN}
+                  max=${TERRITORY_ALPHA_MAX}
+                  step=${TERRITORY_ALPHA_STEP}
+                  .value=${String(territoryAlpha)}
+                  @input=${this.onTerritoryAlphaChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400 w-12 text-right">
+                ${territoryAlpha.toFixed(2)}
               </div>
             </div>
 

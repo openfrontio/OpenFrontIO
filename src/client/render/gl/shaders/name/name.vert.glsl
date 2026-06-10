@@ -31,7 +31,7 @@ uniform float uHighlightOwnerID;
 
 out vec2 vUV;
 out vec4 vPlayerColor;  // player territory color (rgb) + alpha
-out float vIsHuman;     // 1.0 for human, 0.0 for bot/nation
+out float vNameShade;     // name fill grayscale shade (0.0 = black)
 
 void main() {
   // 1. Decode instance ID → playerIdx, lineIdx, charPos
@@ -45,7 +45,7 @@ void main() {
   vec4 pd0 = texelFetch(uPlayerData, ivec2(0, playerIdx), 0); // srcX, srcY, srcScale, startTime
   vec4 pd1 = texelFetch(uPlayerData, ivec2(1, playerIdx), 0); // tgtX, tgtY, tgtScale, alive
   vec4 pd2 = texelFetch(uPlayerData, ivec2(2, playerIdx), 0); // r, g, b, a
-  vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, isHuman, 0
+  vec4 pd3 = texelFetch(uPlayerData, ivec2(3, playerIdx), 0); // nameLen, troopLen, nameShade, nameHalfWidth
   vec4 pd4 = texelFetch(uPlayerData, ivec2(4, playerIdx), 0); // flagLayerIdx, emojiAtlasIdx, smallID, 0
   float smallID = pd4.z;
 
@@ -54,7 +54,7 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
     return;
   }
 
@@ -64,7 +64,7 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
     return;
   }
 
@@ -75,7 +75,7 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
     return;
   }
 
@@ -109,7 +109,7 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
     return;
   }
 
@@ -133,7 +133,7 @@ void main() {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);
     vPlayerColor = vec4(0.0);
-    vIsHuman = 0.0;
+    vNameShade = 0.0;
     return;
   }
 
@@ -158,5 +158,5 @@ void main() {
   // 10. UV interpolation across quad
   vUV = vec2(mix(u0, u1, aPos.x), mix(v0, v1, aPos.y));
   vPlayerColor = pd2;       // player territory color (rgb) + alpha
-  vIsHuman = pd3.z;         // 1.0 = human, 0.0 = bot/nation
+  vNameShade = pd3.z;         // name fill grayscale shade (0.0 = black)
 }

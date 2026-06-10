@@ -233,6 +233,9 @@ export async function joinClan(
     if (res.status === 429) {
       return { error: "clan_modal.error_rate_limited_generic" };
     }
+    if (res.status === 401) {
+      return { error: "clan_modal.sign_in_for_clans" };
+    }
     if (res.status === 403) {
       const body = await res.json().catch(() => ({}));
       const b = body as { code?: string; reason?: string | null };

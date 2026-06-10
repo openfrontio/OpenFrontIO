@@ -521,6 +521,7 @@
     "map": "Map",
     "featured": "Featured",
     "all": "All",
+    "favorites": "Favourites",
     "world": "World",
     "worldinverted": "World Inverted",
     "giantworldmap": "Giant World Map",
@@ -612,7 +613,8 @@
     "caribbean": "Caribbean",
     "choppingblock": "Chopping Block",
     "southeastasia": "Southeast Asia",
-    "mississippiriver": "Mississippi River"
+    "mississippiriver": "Mississippi River",
+    "hongkong": "Hong Kong"
   },
   "map_categories": {
     "featured": "Featured",
@@ -621,11 +623,15 @@
     "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
-    "arcade": "Arcade"
+    "arcade": "Arcade",
+    "favorites": "Favourites"
   },
   "map_component": {
     "loading": "Loading...",
-    "error": "Error"
+    "error": "Error",
+    "favorite": "Add to favourites",
+    "unfavorite": "Remove from favourites",
+    "favorites_empty": "Click the star on any map to favourite it"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -673,7 +679,7 @@
     "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
     "tag_too_long": "Clan tag cannot exceed 5 characters.",
     "tag_invalid_chars": "Clan tag can only contain letters and numbers.",
-    "tag_not_member": "Join the {tag} clan before using its tag.",
+    "tag_not_member": "Join the {tag} clan before using its tag. Click this message to join it.",
     "tag_check_failed": "Couldn't verify clan tag. Try again or remove it."
   },
   "host_modal": {
@@ -944,6 +950,10 @@
     "highlight_brighten_desc": "How strongly the border brightens on hover (0 to disable)",
     "highlight_thicken_label": "Border highlight thickness",
     "highlight_thicken_desc": "How much the border thickens on hover",
+    "territory_sat_label": "Territory saturation",
+    "territory_sat_desc": "How vivid the territory fill colors are (lower mutes them)",
+    "territory_alpha_label": "Territory opacity",
+    "territory_alpha_desc": "How opaque the territory fill is (lower lets terrain show through)",
     "rail_distance_label": "Train track draw distance",
     "rail_distance_desc": "How far zoomed out train tracks remain visible",
     "section_effects": "Effects",
@@ -1125,8 +1135,6 @@
     "received_troops_from_player": "Received {troops} troops from {name}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "received_gold_from_player": "Received {gold} gold from {name}",
-    "unit_captured_by_enemy": "Your {unit} was captured by {name}",
-    "captured_enemy_unit": "Captured {unit} from {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "no_boats_available": "No boats available, max {max}"
   },

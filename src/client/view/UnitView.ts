@@ -226,6 +226,9 @@ export class UnitView {
   isUnderConstruction(): boolean {
     return this.state.underConstruction;
   }
+  isInCooldown(): boolean {
+    return this.state.missileTimerQueue.length === this.state.level;
+  }
   targetUnitId(): number | undefined {
     return this.state.targetUnitId ?? undefined;
   }

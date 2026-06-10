@@ -516,7 +516,6 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.ATTACK_FAILED:
     case MessageType.ALLIANCE_REJECTED:
     case MessageType.ALLIANCE_BROKEN:
-    case MessageType.UNIT_CAPTURED_BY_ENEMY:
     case MessageType.UNIT_DESTROYED:
     case MessageType.NUKE_DETONATED:
       return severityColors["fail"];

@@ -185,6 +185,7 @@ export enum GameMapType {
   ChoppingBlock = "Chopping Block",
   SoutheastAsia = "SoutheastAsia",
   MississippiRiver = "Mississippi River",
+  HongKong = "Hong Kong",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -258,6 +259,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Caribbean,
     GameMapType.SoutheastAsia,
     GameMapType.MississippiRiver,
+    GameMapType.HongKong,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -521,7 +523,6 @@ export enum TerrainType {
   Plains,
   Highland,
   Mountain,
-  Lake,
   Ocean,
 }
 
@@ -1062,7 +1063,6 @@ export enum MessageType {
   SAM_MISS,
   SAM_HIT,
   CAPTURED_ENEMY_UNIT,
-  UNIT_CAPTURED_BY_ENEMY,
   UNIT_DESTROYED,
   ALLIANCE_ACCEPTED,
   ALLIANCE_REJECTED,
@@ -1098,7 +1098,6 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
   [MessageType.SAM_HIT]: MessageCategory.ATTACK,
   [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
-  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
   [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
   [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
