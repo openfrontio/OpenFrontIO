@@ -225,6 +225,22 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
+        .labelKey=${"host_modal.start_delay"}
+        .checked=${this.startDelay}
+        .inputId=${"start-delay-value"}
+        .inputMin=${0}
+        .inputMax=${600}
+        .inputStep=${"any"}
+        .inputValue=${this.startDelayValue}
+        .inputAriaLabel=${translateText("host_modal.start_delay")}
+        .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
+        .defaultInputValue=${3}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleStartDelayToggle}
+        .onChange=${this.handleStartDelayValueChanges}
+        .onKeyDown=${this.handleStartDelayValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
         .labelKey=${"host_modal.player_immunity_duration"}
         .checked=${this.spawnImmunity}
         .inputMin=${0}
@@ -274,22 +290,6 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleStartingGoldToggle}
         .onChange=${this.handleStartingGoldValueChanges}
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
-      ></toggle-input-card>`,
-      html`<toggle-input-card
-        .labelKey=${"host_modal.start_delay"}
-        .checked=${this.startDelay}
-        .inputId=${"start-delay-value"}
-        .inputMin=${0}
-        .inputMax=${600}
-        .inputStep=${"any"}
-        .inputValue=${this.startDelayValue}
-        .inputAriaLabel=${translateText("host_modal.start_delay")}
-        .inputPlaceholder=${translateText("host_modal.start_delay_placeholder")}
-        .defaultInputValue=${3}
-        .minValidOnEnable=${1}
-        .onToggle=${this.handleStartDelayToggle}
-        .onChange=${this.handleStartDelayValueChanges}
-        .onKeyDown=${this.handleStartDelayValueKeyDown}
       ></toggle-input-card>`,
     ];
 
@@ -466,7 +466,7 @@ export class HostLobbyModal extends BaseModal {
             width="block"
             size="lg"
             .title=${statusLabel}
-            ?disable=${this.clients.length < 2}
+            ?disable=${secondsRemaining ?? this.clients.length < 2}
             @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
@@ -574,6 +574,8 @@ export class HostLobbyModal extends BaseModal {
     this.donateTroops = false;
     this.maxTimer = false;
     this.maxTimerValue = undefined;
+    this.startDelay = true;
+    this.startDelayValue = 3;
     this.instantBuild = false;
     this.randomSpawn = false;
     this.compactMap = false;

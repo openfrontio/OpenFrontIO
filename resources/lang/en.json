@@ -687,6 +687,8 @@
     "nations_disabled": "Disabled",
     "player_immunity_duration": "PVP immunity duration (minutes)",
     "max_timer": "Game length (minutes)",
+    "start_delay": "Start delay (Seconds)",
+    "start_delay_placeholder": "3",
     "mins_placeholder": "Mins",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
@@ -719,8 +721,6 @@
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting Gold (Millions)",
     "starting_gold_placeholder": "5",
-    "start_delay": "Start delay (Seconds)",
-    "start_delay_placeholder": "60",
     "host_cheats": "Host Cheats",
     "leave_confirmation": "Are you sure you want to leave the lobby?"
   },
