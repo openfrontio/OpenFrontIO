@@ -69,6 +69,7 @@ const FREQUENCY: Partial<Record<GameMapName, number>> = {
   GulfOfStLawrence: 4,
   Halkidiki: 4,
   Hawaii: 4,
+  HongKong: 6,
   Iceland: 4,
   IndianSubcontinent: 8,
   Italia: 6,
