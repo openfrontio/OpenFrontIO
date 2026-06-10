@@ -808,6 +808,8 @@
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
+    "help_messages_label": "Help Messages",
+    "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "cursor_cost_label_label": "Cursor Build Cost",
@@ -1387,6 +1389,13 @@
     "dismiss": "Dismiss",
     "go_to_item": "Go to item {num}",
     "firefox_warning": "OpenFront.io doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance."
+  },
+  "control_panel": {
+    "army_limit_warning": "You're near your army limit! Consider sending troops to teammates.",
+    "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself.",
+    "allied_afk_neighbor_info": "You can attack disconnected players even if you are allied with them.",
+    "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
+    "low_troops_warning": "You are very low on troops - You should always keep some troops for defense."
   },
   "ios_banner": {
     "text": "For fullscreen, add OpenFront to your Home Screen",

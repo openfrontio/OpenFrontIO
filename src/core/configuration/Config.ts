@@ -539,6 +539,9 @@ export class Config {
     }
     return 80;
   }
+  armyLimitWarningThreshold(): number {
+    return 0.8;
+  }
   boatMaxNumber(): number {
     if (this.isUnitDisabled(UnitType.TransportShip)) {
       return 0;
