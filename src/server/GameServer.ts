@@ -149,6 +149,9 @@ export class GameServer {
     if (gameConfig.maxTimerValue !== undefined) {
       this.gameConfig.maxTimerValue = gameConfig.maxTimerValue ?? undefined;
     }
+    if (gameConfig.startDelay !== undefined) {
+      this.gameConfig.startDelay = gameConfig.startDelay ?? undefined;
+    }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
     }
@@ -514,7 +517,9 @@ export class GameServer {
                   creatorID: client.clientID,
                   gameID: this.id,
                 });
-                this.setStartsAt(Date.now() + stampedIntent.startDelay * 1000);
+                this.setStartsAt(
+                  Date.now() + (this.gameConfig.startDelay ?? 0) * 1000,
+                );
                 return;
               }
               case "toggle_pause": {

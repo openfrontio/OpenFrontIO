@@ -1058,6 +1058,7 @@ export class HostLobbyModal extends BaseModal {
               this.defaultNationCount,
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
+            startDelay: this.startDelay === true ? this.startDelayValue : null,
             goldMultiplier:
               this.goldMultiplier === true ? this.goldMultiplierValue : null,
             startingGold:
@@ -1102,9 +1103,6 @@ export class HostLobbyModal extends BaseModal {
       new CustomEvent("start-game", {
         bubbles: true,
         composed: true,
-        detail: {
-          startDelay: this.startDelay ? (this.startDelayValue ?? 0) : 0,
-        },
       }),
     );
   }

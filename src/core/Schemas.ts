@@ -281,6 +281,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).nullable().optional(), // In minutes
+  startDelay: z.number().int().min(0).max(600).nullable().optional(), // In seconds
   spawnImmunityDuration: z.number().int().min(0).nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
@@ -483,7 +484,6 @@ export const UpdateGameConfigIntentSchema = z.object({
 
 export const StartGameIntentSchema = z.object({
   type: z.literal("start_game"),
-  startDelay: z.number().min(0).max(600),
 });
 
 const IntentSchema = z.discriminatedUnion("type", [

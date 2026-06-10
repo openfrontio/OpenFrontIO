@@ -175,7 +175,7 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
 }
 
 export class SendStartGameEvent implements GameEvent {
-  constructor(public readonly startDelay: number) {}
+  constructor() {}
 }
 
 export class Transport {
@@ -650,7 +650,7 @@ export class Transport {
   }
 
   private onSendStartGame(event: SendStartGameEvent) {
-    this.sendIntent({ type: "start_game", startDelay: event.startDelay });
+    this.sendIntent({ type: "start_game" });
   }
 
   private sendIntent(intent: Intent) {
