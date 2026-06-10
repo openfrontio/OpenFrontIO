@@ -86,8 +86,7 @@ export class ColorblindTheme extends PastelTheme {
     }
     const type = gm.terrainType(tile);
     switch (type) {
-      case TerrainType.Ocean:
-      case TerrainType.Lake: {
+      case TerrainType.Ocean: {
         const w = this.water.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
