@@ -11,7 +11,7 @@ uniform float uFillUsePlayerColor;
 
 in vec2 vUV;
 in vec4 vPlayerColor;   // player territory color (rgb) + alpha
-in float vIsHuman;      // 1.0 = human, 0.0 = bot/nation
+in float vNameShade;      // name fill grayscale shade (0.0 = black)
 out vec4 fragColor;
 
 float median(float r, float g, float b) {
@@ -22,15 +22,14 @@ void main() {
   // Degenerate fragment — skip
   if (vPlayerColor.a <= 0.0) discard;
 
-  // Stagger fill/border curves so they never share the same gray.
-  // t² for border (stays dark longer, snaps white late) and √t for fill (inverse).
-  // At midpoint t=0.5: border=0.25 (dark), fill=0.71 (light) — always distinct.
+  // Border darkens with night: t² stays dark longer, snaps toward the
+  // outline color late in the day cycle.
   float t = 1.0 - uNightAmbient;
   float borderT = t * t;
-  float fillT = sqrt(t);
 
-  // Compute fill color: player color, or cycle-aware white↔black (inverse of border)
-  vec3 defaultFill = mix(uOutlineColor, vec3(0.0), fillT);
+  // Compute fill color: player color, or per-type grayscale shade
+  // (black for human, grayer for nation/bot). Applies in day and night.
+  vec3 defaultFill = vec3(vNameShade);
   vec3 fillColor = mix(defaultFill, vPlayerColor.rgb, uFillUsePlayerColor);
 
   vec3 msd = texture(uAtlas, vUV).rgb;

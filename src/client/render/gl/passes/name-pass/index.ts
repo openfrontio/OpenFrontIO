@@ -499,10 +499,18 @@ export class NamePass {
     d[off + 10] = color[2];
     d[off + 11] = 1.0;
 
-    // Column 3: nameLen, troopLen, isHuman, nameHalfWidth
+    // Column 3: nameLen, troopLen, nameShade, nameHalfWidth
+    // Name fill darkens by type: human black, nation a bit gray, bot greyer.
+    const ns = this.settings.name;
+    let nameShade = 0.0;
+    if (slot.static.playerType === PlayerTypeEnum.Nation) {
+      nameShade = ns.nameShadeNation;
+    } else if (slot.static.playerType === PlayerTypeEnum.Bot) {
+      nameShade = ns.nameShadeBot;
+    }
     d[off + 12] = slot.nameLen;
     d[off + 13] = slot.troopLen;
-    d[off + 14] = slot.static.playerType === PlayerTypeEnum.Human ? 1.0 : 0.0;
+    d[off + 14] = nameShade;
     d[off + 15] = slot.nameHalfWidth;
 
     // Column 4: flagLayerIdx, emojiAtlasIdx, [free], [free]

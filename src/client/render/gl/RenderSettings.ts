@@ -194,6 +194,9 @@ export interface RenderSettings {
     outlineB: number;
     outlineUsePlayerColor: boolean;
     fillUsePlayerColor: boolean;
+    /** Name fill grayscale shade by player type (0 = black). Human is always 0. */
+    nameShadeNation: number;
+    nameShadeBot: number;
     emojiRowOffset: number;
     statusRowOffset: number;
   };
