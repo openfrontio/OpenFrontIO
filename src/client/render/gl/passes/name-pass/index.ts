@@ -27,6 +27,7 @@ import { PlayerTypeEnum } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
+import { renderTroops } from "../../../../Utils";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
@@ -44,7 +45,7 @@ import { DebugProgram } from "./DebugProgram";
 import { FlagAtlasArray } from "./FlagAtlasArray";
 import { IconProgram } from "./IconProgram";
 import { StatusIconProgram } from "./StatusIconProgram";
-import { formatTroops, layoutString } from "./TextLayout";
+import { layoutString } from "./TextLayout";
 import { TextProgram } from "./TextProgram";
 import type { PlayerSlot } from "./Types";
 import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
@@ -279,6 +280,7 @@ export class NamePass {
           nameLen: 0,
           troopLen: 0,
           lastTroopStr: "",
+          lastTroopBucket: -1,
           flagUrl: p.flag,
           flagLayerIdx: -1,
           emojiAtlasIdx: -1,
@@ -336,14 +338,19 @@ export class NamePass {
         dirty = true;
       }
 
-      // Write troop count string (only if changed)
-      const troops = troopsByPlayerID.get(playerID) ?? 0;
-      const troopStr = formatTroops(troops);
-      if (troopStr !== slot.lastTroopStr) {
-        slot.troopLen = Math.min(troopStr.length, MAX_CHARS);
-        slot.lastTroopStr = troopStr;
-        this.uploadStringRow(slot.index * LINES_PER_PLAYER + 1, troopStr);
-        dirty = true;
+      // Write troop count string (refreshed per slot every 500ms, staggered by
+      // slot index so updates spread across the window instead of bursting).
+      const troopBucket = Math.floor((now + (slot.index % 5) * 0.1) / 0.5);
+      if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
+        slot.lastTroopBucket = troopBucket;
+        const troops = troopsByPlayerID.get(playerID) ?? 0;
+        const troopStr = renderTroops(troops);
+        if (troopStr !== slot.lastTroopStr) {
+          slot.troopLen = Math.min(troopStr.length, MAX_CHARS);
+          slot.lastTroopStr = troopStr;
+          this.uploadStringRow(slot.index * LINES_PER_PLAYER + 1, troopStr);
+          dirty = true;
+        }
       }
 
       // Check if target position changed — only then recompute lerp source
