@@ -174,16 +174,44 @@ export class UsernameInput extends LitElement {
             ${this.validationError}
           </div>`
         : this.clanTagOwnershipError
-          ? html`<div
-              id="clan-tag-validation-error"
-              class="absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap"
-            >
-              ${translateText(this.clanTagOwnershipError, {
-                tag: this.clanTag,
-              })}
-            </div>`
+          ? this.renderClanTagOwnershipError()
           : null}
     `;
+  }
+
+  private renderClanTagOwnershipError() {
+    const content = translateText(this.clanTagOwnershipError, {
+      tag: this.clanTag,
+    });
+    const className =
+      "absolute top-full left-0 z-50 mt-1 px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg whitespace-nowrap";
+
+    if (this.clanTagOwnershipError !== "username.tag_not_member") {
+      return html`<div id="clan-tag-validation-error" class=${className}>
+        ${content}
+      </div>`;
+    }
+
+    const tag = this.clanTag;
+    return html`<button
+      id="clan-tag-validation-error"
+      type="button"
+      class="${className} underline decoration-red-200/50 underline-offset-2 hover:bg-red-800/90 focus:outline-none focus:ring-2 focus:ring-red-200/70"
+      @click=${() => this.openClanJoinModal(tag)}
+    >
+      ${content}
+    </button>`;
+  }
+
+  private openClanJoinModal(tag: string) {
+    window.showPage?.("page-clan");
+    void customElements.whenDefined("clan-modal").then(() => {
+      document
+        .querySelector<
+          HTMLElement & { open: (args: { tag: string }) => void }
+        >("clan-modal")
+        ?.open({ tag });
+    });
   }
 
   private handleClanTagChange(e: Event) {

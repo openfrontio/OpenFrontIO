@@ -1057,9 +1057,6 @@ export class GameView implements GameMap {
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
   }
-  isLake(ref: TileRef): boolean {
-    return this._map.isLake(ref);
-  }
   isShore(ref: TileRef): boolean {
     return this._map.isShore(ref);
   }

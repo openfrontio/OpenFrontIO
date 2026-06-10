@@ -1149,9 +1149,6 @@ export class GameImpl implements Game {
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
   }
-  isLake(ref: TileRef): boolean {
-    return this._map.isLake(ref);
-  }
   isShore(ref: TileRef): boolean {
     return this._map.isShore(ref);
   }

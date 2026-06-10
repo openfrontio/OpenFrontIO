@@ -24,8 +24,7 @@ export class PastelThemeDark extends PastelTheme {
       return this.darkShore;
     }
     switch (gm.terrainType(tile)) {
-      case TerrainType.Ocean:
-      case TerrainType.Lake: {
+      case TerrainType.Ocean: {
         const w = this.darkWater.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.darkShorelineWater;
