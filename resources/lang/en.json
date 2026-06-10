@@ -521,6 +521,7 @@
     "map": "Map",
     "featured": "Featured",
     "all": "All",
+    "favorites": "Favourites",
     "world": "World",
     "worldinverted": "World Inverted",
     "giantworldmap": "Giant World Map",
@@ -622,11 +623,15 @@
     "tournament": "Tournament",
     "fantasy": "Other",
     "special": "Special",
-    "arcade": "Arcade"
+    "arcade": "Arcade",
+    "favorites": "Favourites"
   },
   "map_component": {
     "loading": "Loading...",
-    "error": "Error"
+    "error": "Error",
+    "favorite": "Add to favourites",
+    "unfavorite": "Remove from favourites",
+    "favorites_empty": "Click the star on any map to favourite it"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
