@@ -308,11 +308,12 @@ export class UnitImpl implements Unit {
   }
 
   private displayMessageOnDeleted(): void {
-    if (this._type === UnitType.MIRVWarhead) {
-      return;
-    }
-
-    if (this._type === UnitType.Train && this._trainType !== TrainType.Engine) {
+    // Only warships and transport ships are worth notifying about; everything
+    // else is either visible on the map or too low-stakes to surface.
+    if (
+      this._type !== UnitType.Warship &&
+      this._type !== UnitType.TransportShip
+    ) {
       return;
     }
 
