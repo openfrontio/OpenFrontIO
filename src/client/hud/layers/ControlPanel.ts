@@ -13,7 +13,12 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, renderTroops, translateText } from "../../Utils";
+import {
+  getGamesPlayed,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
 import { PlayerView } from "../../view/PlayerView";
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
@@ -119,7 +124,8 @@ export class ControlPanel extends LitElement implements Controller {
 
     const helpEnabled = new UserSettings().helpMessages();
 
-    if (helpEnabled) {
+    // Don't target veteran players
+    if (helpEnabled && getGamesPlayed() < 20) {
       // Track outgoing attacks for 15-second threshold
       this.trackOutgoingAttacks(player);
 
