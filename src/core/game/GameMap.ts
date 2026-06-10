@@ -37,7 +37,6 @@ export interface GameMap {
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
   isWater(ref: TileRef): boolean;
-  isLake(ref: TileRef): boolean;
   isShore(ref: TileRef): boolean;
   cost(ref: TileRef): number;
   terrainType(ref: TileRef): TerrainType;
@@ -311,10 +310,6 @@ export class GameMapImpl implements GameMap {
     return !this.isLand(ref);
   }
 
-  isLake(ref: TileRef): boolean {
-    return !this.isLand(ref) && !this.isOcean(ref);
-  }
-
   isShore(ref: TileRef): boolean {
     return this.isLand(ref) && this.isShoreline(ref);
   }
@@ -332,7 +327,7 @@ export class GameMapImpl implements GameMap {
       if (magnitude < 20) return TerrainType.Highland;
       return TerrainType.Mountain;
     }
-    return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
+    return TerrainType.Ocean;
   }
 
   neighbors(ref: TileRef): TileRef[] {
